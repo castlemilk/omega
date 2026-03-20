@@ -76,8 +76,9 @@ class BrainRequest:
     recent_metrics: Dict[str, float]     # recent evaluation metrics
     relevant_memories: List[Dict]        # from MemoryKernel
     available_actions: List[str]         # verbs the node can take
-    domain_context: str                  # node.describe() output
+    domain_context: str                  # node.describe() + injected skill content
     trace_id: str = ""
+    skill_hints: List[str] = field(default_factory=list)  # tags used to load skills
 
 
 @dataclass

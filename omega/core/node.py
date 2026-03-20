@@ -93,7 +93,21 @@ class Node(ABC):
 
         node = MyNode(brain_config=BrainConfig(provider="anthropic", model="claude-sonnet-4-6"))
         node.set_brain_config(BrainConfig(provider="ollama", model="llama3"))
+
+    Skills
+    ------
+    Subclasses declare relevant skill tags via the ``skill_tags`` class attribute.
+    When ``consult_brain()`` is called, matching SKILL.md content is loaded from
+    ``omega/skills/`` and prepended to the brain's ``domain_context``::
+
+        class MyGoNode(Node):
+            skill_tags = ["go", "protobuf"]
     """
+
+    # Subclasses override to declare which skill tags apply to this node.
+    # These tags are resolved by consult_brain() against omega/skills/ and
+    # their content is injected into BrainRequest.domain_context.
+    skill_tags: List[str] = []
 
     def __init__(self, brain_config: Optional["BrainConfig"] = None) -> None:
         from omega.core.brain import create_brain, BrainConfig as _BC
@@ -138,8 +152,12 @@ class Node(ABC):
         Ask the brain for a decision.
 
         Builds a BrainRequest from the node's current state and calls
-        brain.think(). If brain is NoBrain (default), returns action="pass"
-        immediately with zero latency / cost.
+        brain.think(). Relevant SKILL.md content (based on ``skill_tags``) is
+        loaded from ``omega/skills/`` and prepended to ``domain_context`` so
+        the LLM brain has domain-specific guidance.
+
+        If brain is NoBrain (default), returns action="pass" immediately with
+        zero latency / cost.
 
         Callers should check response.action == "pass" and fall back to
         their own rule-based logic in that case.
@@ -153,13 +171,39 @@ class Node(ABC):
         Returns:
             BrainResponse with action, parameters, reasoning, confidence
         """
+        import os
         from omega.core.brain import BrainRequest
+
         state = self.get_state()
         if metrics is None:
             try:
                 metrics = self.evaluate()
             except Exception:
                 metrics = {}
+
+        # Build domain context — start with node description
+        domain_context = self.describe()
+
+        # Inject relevant skill content if this node declares skill tags.
+        # Skills are advisory: any failure here must never break brain consultation.
+        tags = list(getattr(self, "skill_tags", []))
+        if tags:
+            try:
+                from omega.core.skill_loader import SkillLoader
+                skills_root = os.path.normpath(
+                    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "skills")
+                )
+                loader = SkillLoader(skills_root)
+                skill_content = loader.load_for_tags(tags)
+                if skill_content:
+                    domain_context = (
+                        f"{domain_context}\n\n"
+                        f"# Relevant Skills\n\n"
+                        f"{skill_content}"
+                    )
+            except Exception:
+                pass  # skills are advisory — never break brain consultation
+
         request = BrainRequest(
             node_id=state.node_id,
             operation=operation,
@@ -171,8 +215,9 @@ class Node(ABC):
             recent_metrics=metrics,
             relevant_memories=memories or [],
             available_actions=self.get_capabilities(),
-            domain_context=self.describe(),
+            domain_context=domain_context,
             trace_id=trace_id,
+            skill_hints=tags,
         )
         return self.brain.think(request)
 
