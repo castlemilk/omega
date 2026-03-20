@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+service NodeService {
+  rpc Execute(ExecuteRequest) returns (ExecuteResponse);
+  rpc Evaluate(EvaluateRequest) returns (EvaluateResponse);
+  rpc Improve(ImproveRequest) returns (ImproveResponse);
+  rpc GetState(GetStateRequest) returns (GetStateResponse);
+  rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+}
+
+message ExecuteRequest {
+  string action = 1;
+  map<string, string> parameters = 2;
+  map<string, string> context = 3;
+}
+
+message ExecuteResponse {
+  bool success = 1;
+  bytes result_json = 2;
+  repeated string errors = 3;
+  map<string, double> metrics = 4;
+}
+
+message EvaluateRequest {}
+message EvaluateResponse { map<string, double> metrics = 1; }
+
+message ImproveRequest { map<string, string> feedback = 1; }
+message ImproveResponse { bool changed = 1; string new_version = 2; }
+
+message GetStateRequest {}
+message GetStateResponse {
+  string node_id = 1;
+  string name = 2;
+  string version = 3;
+  double health = 4;
+  string status = 5;
+  repeated string capabilities = 6;
+}
+
+message GetCapabilitiesRequest {}
+message GetCapabilitiesResponse { repeated string capabilities = 1; }

@@ -1,0 +1,214 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// ── Nodes ──────────────────────────────────────────────────────────────────
+
+message Node {
+  string node_id = 1;
+  string name = 2;
+  string version = 3;
+  repeated string capabilities = 4;
+  double health = 5;
+  string status = 6;
+  google.protobuf.Timestamp registered_at = 7;
+  google.protobuf.Timestamp last_updated = 8;
+  int64 executions_total = 9;
+  double error_rate = 10;
+  double avg_latency_ms = 11;
+  double p95_latency_ms = 12;
+  int64 improvement_count = 13;
+  ExecutionRecord last_execution = 14;
+}
+
+message ExecutionRecord {
+  string exec_id = 1;
+  string node_id = 2;
+  string node_name = 3;
+  string trace_id = 4;
+  string span_id = 5;
+  string action = 6;
+  google.protobuf.Timestamp started_at = 7;
+  google.protobuf.Timestamp ended_at = 8;
+  double duration_ms = 9;
+  bool success = 10;
+  string error_text = 11;
+  map<string, double> metrics = 12;
+  int64 cycle = 13;
+}
+
+// ── Traces ─────────────────────────────────────────────────────────────────
+
+message TraceSummary {
+  string trace_id = 1;
+  google.protobuf.Timestamp trace_started = 2;
+  google.protobuf.Timestamp trace_ended = 3;
+  double total_duration_ms = 4;
+  int64 span_count = 5;
+  int64 error_spans = 6;
+  int64 cycle = 7;
+}
+
+message Span {
+  string span_id = 1;
+  string trace_id = 2;
+  string parent_span_id = 3;
+  string node_id = 4;
+  string node_name = 5;
+  string operation = 6;
+  google.protobuf.Timestamp started_at = 7;
+  google.protobuf.Timestamp ended_at = 8;
+  double duration_ms = 9;
+  string status = 10;
+  int64 cycle = 11;
+}
+
+// ── Issues ─────────────────────────────────────────────────────────────────
+
+message Issue {
+  string issue_id = 1;
+  string detector = 2;
+  string severity = 3;
+  string description = 4;
+  string state = 5;
+  google.protobuf.Timestamp opened_at = 6;
+  google.protobuf.Timestamp resolved_at = 7;
+  int64 cycle_opened = 8;
+  int64 cycle_resolved = 9;
+}
+
+// ── Activity ───────────────────────────────────────────────────────────────
+
+message ActivityEntry {
+  string log_id = 1;
+  string action_type = 2;
+  string entity_type = 3;
+  string entity_id = 4;
+  google.protobuf.Timestamp recorded_at = 5;
+  int64 cycle = 6;
+}
+
+// ── Improvements ──────────────────────────────────────────────────────────
+
+message ImprovementRecord {
+  string improve_id = 1;
+  string node_id = 2;
+  string node_name = 3;
+  string from_version = 4;
+  string to_version = 5;
+  string triggered_by = 6;
+  google.protobuf.Timestamp recorded_at = 7;
+  int64 cycle = 8;
+  map<string, double> before_metrics = 9;
+  map<string, double> after_metrics = 10;
+}
+
+// ── System health ──────────────────────────────────────────────────────────
+
+message SystemHealth {
+  string status = 1;
+  double composite_score = 2;
+  double avg_node_health = 3;
+  int64 node_count = 4;
+  int64 open_issues = 5;
+  int64 error_issues = 6;
+  double uptime_seconds = 7;
+  int64 total_cycles = 8;
+}
+
+// ── Memory ─────────────────────────────────────────────────────────────────
+
+message SemanticConcept {
+  string concept = 1;
+  string content = 2;
+  double confidence = 3;
+  int64 evidence_count = 4;
+  repeated string tags = 5;
+}
+
+message EpisodeEntry {
+  string episode_id = 1;
+  string event_type = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  int64 cycle = 4;
+  double importance = 5;
+  repeated string tags = 6;
+}
+
+// ── Convergence ────────────────────────────────────────────────────────────
+
+message ConvergencePoint {
+  int64 cycle = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double score = 3;
+  double pipeline_ms = 4;
+}
+
+// ── Costs ──────────────────────────────────────────────────────────────────
+
+message CostEntry {
+  string provider = 1;
+  string node_id = 2;
+  int64 calls = 3;
+  double total_ms = 4;
+  double total_cost_usd = 5;
+}
+
+// ── Events (for streaming) ─────────────────────────────────────────────────
+
+message EventResponse {
+  string type = 1;
+  oneof payload {
+    SystemHealth health_update = 2;
+    Node node_update = 3;
+    Issue new_issue = 4;
+    ImprovementRecord improvement = 5;
+    ActivityEntry activity = 6;
+  }
+}
+
+// ── LLM Brain config ───────────────────────────────────────────────────────
+
+message BrainConfig {
+  string provider = 1;
+  string model = 2;
+  double temperature = 3;
+  int32 max_tokens = 4;
+  string system_prompt = 5;
+  map<string, string> extra_config = 6;
+}
+
+message NodeConfig {
+  string node_id = 1;
+  string node_type = 2;
+  BrainConfig brain = 3;
+  map<string, string> parameters = 4;
+  string version = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message BrainExecutionEntry {
+  string exec_id = 1;
+  string node_id = 2;
+  string provider = 3;
+  string model = 4;
+  int64 prompt_tokens = 5;
+  int64 completion_tokens = 6;
+  double latency_ms = 7;
+  bool success = 8;
+  string error_text = 9;
+  google.protobuf.Timestamp executed_at = 10;
+  int64 cycle = 11;
+}
+
+message ProviderInfo {
+  string id = 1;
+  string display_name = 2;
+  repeated string models = 3;
+  bool requires_api_key = 4;
+  bool available = 5;
+}

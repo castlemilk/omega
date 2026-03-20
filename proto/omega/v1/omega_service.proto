@@ -1,0 +1,161 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "omega/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+service OrchestratorService {
+  rpc GetHealth(GetHealthRequest) returns (GetHealthResponse);
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+  rpc ListNodeExecutions(ListNodeExecutionsRequest) returns (ListNodeExecutionsResponse);
+  rpc ListTraces(ListTracesRequest) returns (ListTracesResponse);
+  rpc GetTrace(GetTraceRequest) returns (GetTraceResponse);
+  rpc GetMetrics(GetMetricsRequest) returns (GetMetricsResponse);
+  rpc GetMetricsHistory(GetMetricsHistoryRequest) returns (GetMetricsHistoryResponse);
+  rpc ListIssues(ListIssuesRequest) returns (ListIssuesResponse);
+  rpc ListActivity(ListActivityRequest) returns (ListActivityResponse);
+  rpc ListImprovements(ListImprovementsRequest) returns (ListImprovementsResponse);
+  rpc GetNodeMemory(GetNodeMemoryRequest) returns (GetNodeMemoryResponse);
+  rpc GetConvergence(GetConvergenceRequest) returns (GetConvergenceResponse);
+  rpc GetCosts(GetCostsRequest) returns (GetCostsResponse);
+  rpc SubmitFeedback(SubmitFeedbackRequest) returns (SubmitFeedbackResponse);
+  rpc StartOrchestrator(StartOrchestratorRequest) returns (StartOrchestratorResponse);
+  rpc StopOrchestrator(StopOrchestratorRequest) returns (StopOrchestratorResponse);
+  rpc TriggerHeartbeat(TriggerHeartbeatRequest) returns (TriggerHeartbeatResponse);
+  rpc StreamEvents(StreamEventsRequest) returns (stream EventResponse);
+  rpc GetNodeConfig(GetNodeConfigRequest) returns (GetNodeConfigResponse);
+  rpc UpdateNodeBrain(UpdateNodeBrainRequest) returns (UpdateNodeBrainResponse);
+  rpc ListAvailableProviders(ListAvailableProvidersRequest) returns (ListAvailableProvidersResponse);
+  rpc GetBrainExecutionHistory(GetBrainExecutionHistoryRequest) returns (GetBrainExecutionHistoryResponse);
+}
+
+// ── Health ─────────────────────────────────────────────────────────────────
+message GetHealthRequest {}
+message GetHealthResponse { SystemHealth health = 1; }
+
+// ── Nodes ──────────────────────────────────────────────────────────────────
+message ListNodesRequest {}
+message ListNodesResponse { repeated Node nodes = 1; }
+
+message GetNodeRequest { string node_id = 1; }
+message GetNodeResponse {
+  Node node = 1;
+  repeated ExecutionRecord recent_executions = 2;
+  repeated ImprovementRecord improvements = 3;
+  repeated LatencyPoint latency_history = 4;
+}
+
+message LatencyPoint {
+  google.protobuf.Timestamp ts = 1;
+  double duration_ms = 2;
+  bool success = 3;
+}
+
+message ListNodeExecutionsRequest {
+  string node_id = 1;
+  int32 limit = 2;
+}
+message ListNodeExecutionsResponse { repeated ExecutionRecord executions = 1; }
+
+// ── Traces ─────────────────────────────────────────────────────────────────
+message ListTracesRequest { int32 limit = 1; }
+message ListTracesResponse { repeated TraceSummary traces = 1; }
+
+message GetTraceRequest { string trace_id = 1; }
+message GetTraceResponse { repeated Span spans = 1; }
+
+// ── Metrics ──────────────────────────────────────────────────────────────
+message GetMetricsRequest {}
+message GetMetricsResponse {
+  SystemHealth system = 1;
+  repeated Node nodes = 2;
+  repeated CostEntry costs = 3;
+  repeated Issue open_issues = 4;
+  repeated TraceSummary recent_traces = 5;
+}
+
+message GetMetricsHistoryRequest { string node_id = 1; }
+message GetMetricsHistoryResponse {
+  repeated NodeLatencyHistory node_histories = 1;
+}
+message NodeLatencyHistory {
+  string node_id = 1;
+  string name = 2;
+  repeated LatencyPoint history = 3;
+}
+
+// ── Issues ─────────────────────────────────────────────────────────────────
+message ListIssuesRequest { string state_filter = 1; }
+message ListIssuesResponse { repeated Issue issues = 1; }
+
+// ── Activity ──────────────────────────────────────────────────────────────
+message ListActivityRequest { int32 limit = 1; }
+message ListActivityResponse { repeated ActivityEntry entries = 1; }
+
+// ── Improvements ──────────────────────────────────────────────────────────
+message ListImprovementsRequest {
+  string node_id = 1;
+  int32 limit = 2;
+}
+message ListImprovementsResponse { repeated ImprovementRecord improvements = 1; }
+
+// ── Memory ─────────────────────────────────────────────────────────────────
+message GetNodeMemoryRequest { string node_id = 1; }
+message GetNodeMemoryResponse {
+  string namespace = 1;
+  int64 episodic_count = 2;
+  int64 semantic_count = 3;
+  repeated SemanticConcept top_semantic = 4;
+  repeated EpisodeEntry recent_episodes = 5;
+}
+
+// ── Convergence ─────────────────────────────────────────────────────────────
+message GetConvergenceRequest { int32 limit = 1; }
+message GetConvergenceResponse { repeated ConvergencePoint points = 1; }
+
+// ── Costs ─────────────────────────────────────────────────────────────────
+message GetCostsRequest {}
+message GetCostsResponse { repeated CostEntry costs = 1; }
+
+// ── Feedback ─────────────────────────────────────────────────────────────
+message SubmitFeedbackRequest {
+  string text = 1;
+  string target_node = 2;
+}
+message SubmitFeedbackResponse { bool ok = 1; }
+
+// ── Orchestrator control ─────────────────────────────────────────────────
+message StartOrchestratorRequest { int32 heartbeat_secs = 1; }
+message StartOrchestratorResponse { bool started = 1; string message = 2; }
+
+message StopOrchestratorRequest {}
+message StopOrchestratorResponse { bool stopped = 1; string message = 2; }
+
+message TriggerHeartbeatRequest {}
+message TriggerHeartbeatResponse { bool triggered = 1; string message = 2; }
+
+// ── Streaming ─────────────────────────────────────────────────────────────
+message StreamEventsRequest { int32 poll_interval_ms = 1; }
+
+// ── Brain config ──────────────────────────────────────────────────────────
+message GetNodeConfigRequest { string node_id = 1; }
+message GetNodeConfigResponse { NodeConfig config = 1; }
+
+message UpdateNodeBrainRequest {
+  string node_id = 1;
+  BrainConfig brain = 2;
+}
+message UpdateNodeBrainResponse { NodeConfig config = 1; }
+
+message ListAvailableProvidersRequest {}
+message ListAvailableProvidersResponse { repeated ProviderInfo providers = 1; }
+
+message GetBrainExecutionHistoryRequest {
+  string node_id = 1;
+  int32 limit = 2;
+}
+message GetBrainExecutionHistoryResponse { repeated BrainExecutionEntry entries = 1; }
