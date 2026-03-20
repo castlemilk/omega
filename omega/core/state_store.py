@@ -619,6 +619,37 @@ class StateStore:
         return result
 
     # ------------------------------------------------------------------
+    # DashboardNode helpers
+    # ------------------------------------------------------------------
+
+    def get_nodes_with_recent_metrics(self, minutes: int = 10) -> List[Dict]:
+        """
+        Return node records that have at least one execution in the last N minutes.
+
+        Used by DashboardNode.metric_coverage_audit to compute coverage score.
+        """
+        cutoff = time.time() - minutes * 60
+        rows = self._conn.execute(
+            """SELECT DISTINCT n.node_id, n.name, n.version, n.health, n.status
+               FROM nodes n
+               INNER JOIN node_executions e ON e.node_id = n.node_id
+               WHERE e.started_at >= ?""",
+            (cutoff,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_latest_execution_time(self) -> Optional[float]:
+        """
+        Return the Unix timestamp of the most recent node execution.
+
+        Returns None if there are no executions yet.
+        """
+        row = self._conn.execute(
+            "SELECT MAX(started_at) as latest FROM node_executions"
+        ).fetchone()
+        return row["latest"] if row and row["latest"] is not None else None
+
+    # ------------------------------------------------------------------
     # Brain execution log
     # ------------------------------------------------------------------
 

@@ -68,6 +68,7 @@ from omega.nodes.vectora import (
     ReportingNode,
     LintNode,
     DataIntegrityNode,
+    DashboardNode,
 )
 from omega.nodes.vectora.verification import (
     VerificationNode,
@@ -140,6 +141,11 @@ class VectoraSystem:
         self.property_tests = PropertyTestNode()
         self.invariants     = InvariantDiscoveryNode()
         self.convergence    = ConvergenceMonitorNode()
+        # DashboardNode — passed the live StateStore so it can audit metric coverage
+        self.dashboard = DashboardNode(
+            state_store=self.state_store,
+            api_base_url="http://localhost:8080",
+        )
 
         # ── Orchestrator (health tracking, evaluation) ───────────────────────
         self.orchestrator = Orchestrator(name="vectora", db_path=DB_PATH)
@@ -148,6 +154,7 @@ class VectoraSystem:
             self.orchestrator.register_node(node)
         for node in [self.verification, self.property_tests, self.invariants, self.convergence]:
             self.orchestrator.register_node(node)
+        self.orchestrator.register_node(self.dashboard)
 
         # ── Register all nodes in StateStore ─────────────────────────────────
         for node in [self.ingestion, self.signals, self.strategy,
@@ -173,6 +180,19 @@ class VectoraSystem:
                 capabilities=state.capabilities,
                 health=state.health,
             )
+        # Register DashboardNode
+        dash_state = self.dashboard.get_state()
+        self.state_store.upsert_node(
+            node_id=dash_state.node_id,
+            name=dash_state.name,
+            version=dash_state.version,
+            capabilities=dash_state.capabilities,
+            health=dash_state.health,
+        )
+        self.state_store.log_activity(
+            "node_registered", "node", dash_state.node_id,
+            {"name": dash_state.name, "version": dash_state.version},
+        )
 
         # ── Goal spec ─────────────────────────────────────────────────────────
         spec = (
@@ -566,6 +586,41 @@ class VectoraSystem:
                 if confirmed:
                     logger.info("    Invariants: %d confirmed", len(confirmed))
 
+        # ── Dashboard health check ─────────────────────────────────────────────
+        dash_out, _ = self.tracer.execute_with_tracing(
+            self.dashboard,
+            NodeInput(
+                action="api_health_check",
+                parameters={},
+                context={"cycle": cycle},
+            ),
+            parent_ctx=root_ctx,
+        )
+        if dash_out.success and dash_out.result:
+            dr = dash_out.result
+            checks_ok = len(dr.get("checks", []))
+            api_issues = len([i for i in dr.get("issues", []) if "endpoint" in i])
+            cov = dr.get("coverage", {})
+            logger.info(
+                "    Dashboard: %d endpoints OK, %d unreachable | "
+                "coverage=%.0f%% | freshness=%.2f",
+                checks_ok,
+                api_issues,
+                dash_out.metrics.get("coverage_score", 0) * 100,
+                dash_out.metrics.get("freshness_score", 0),
+            )
+            # Sync API issues to StateStore
+            for iss in dr.get("issues", []):
+                if "endpoint" in iss:
+                    self.state_store.open_issue(
+                        issue_id=f"dashboard_api_{iss['endpoint'].replace('/', '_')}_{cycle}",
+                        detector="DashboardNode",
+                        severity=iss.get("severity", "medium"),
+                        description=f"API endpoint unreachable: {iss['endpoint']}",
+                        context={"endpoint": iss["endpoint"], "error": iss.get("error", "")},
+                        cycle=cycle,
+                    )
+
         # ── Self-improvement pass ─────────────────────────────────────────────
         fb_summary = self.feedback.get_improvement_feedback()
         improved_nodes = self._run_improvement_pass(system_metrics, fb_summary, cycle)
@@ -616,6 +671,7 @@ class VectoraSystem:
             (self.integrity,      "DataIntegrityNode"),
             (self.verification,   "VerificationNode"),
             (self.property_tests, "PropertyTestNode"),
+            (self.dashboard,      "DashboardNode"),
             # Note: InvariantDiscoveryNode and ConvergenceMonitorNode don't self-improve
         ]
 

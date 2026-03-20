@@ -29,6 +29,7 @@ from omega.nodes.vectora.verification import (
     InvariantDiscoveryNode,
     ConvergenceMonitorNode,
 )
+from omega.nodes.vectora.dashboard import DashboardNode
 
 __all__ = [
     "DataIngestionNode",
@@ -42,4 +43,5 @@ __all__ = [
     "PropertyTestNode",
     "InvariantDiscoveryNode",
     "ConvergenceMonitorNode",
+    "DashboardNode",
 ]
