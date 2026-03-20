@@ -1,0 +1,25 @@
+#!/bin/sh
+set -e
+
+echo "Running pre-commit quality gates..."
+
+# Go checks
+echo "→ go vet"
+go vet ./...
+
+echo "→ go test (fast)"
+go test ./... -timeout 30s -count=1
+
+# golangci-lint (optional — skip if not installed)
+if which golangci-lint > /dev/null 2>&1; then
+  echo "→ golangci-lint"
+  golangci-lint run ./...
+fi
+
+# Frontend checks
+if [ -d dashboard ] && [ -f dashboard/package.json ]; then
+  echo "→ frontend typecheck"
+  cd dashboard && npm run typecheck && cd ..
+fi
+
+echo "✓ All quality gates passed"

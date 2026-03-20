@@ -16,12 +16,12 @@ import (
 
 func main() {
 	// Ensure DB files exist (Python orchestrator creates them on first run)
-	os.MkdirAll("/tmp", 0755)
+	_ = os.MkdirAll("/tmp", 0755) //nolint:errcheck
 	for _, p := range []string{db.StateDBPath, db.MemoryDBPath} {
 		if _, err := os.Stat(p); os.IsNotExist(err) {
 			f, _ := os.Create(p)
 			if f != nil {
-				f.Close()
+				f.Close() //nolint:errcheck
 			}
 		}
 	}

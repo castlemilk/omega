@@ -30,13 +30,13 @@ func New(stateDBPath, memoryDBPath string) (*DB, error) {
 	}
 	memory, err := openDB(memoryDBPath)
 	if err != nil {
-		state.Close()
+		state.Close() //nolint:errcheck
 		return nil, fmt.Errorf("open memory db: %w", err)
 	}
 	d := &DB{state: state, memory: memory}
 	if err := d.ensureBrainTables(); err != nil {
-		state.Close()
-		memory.Close()
+		state.Close()  //nolint:errcheck
+		memory.Close() //nolint:errcheck
 		return nil, fmt.Errorf("ensure brain tables: %w", err)
 	}
 	return d, nil
@@ -53,8 +53,8 @@ func openDB(path string) (*sql.DB, error) {
 }
 
 func (d *DB) Close() {
-	d.state.Close()
-	d.memory.Close()
+	d.state.Close()  //nolint:errcheck
+	d.memory.Close() //nolint:errcheck
 }
 
 // ── Node types ──────────────────────────────────────────────────────────────
@@ -320,7 +320,7 @@ func (d *DB) GetBrainHistory(nodeID string, limit int) ([]*BrainExecutionEntry, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var entries []*BrainExecutionEntry
 	for rows.Next() {
 		e := &BrainExecutionEntry{}
@@ -346,7 +346,7 @@ func (d *DB) AllNodes() ([]*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 
 	var nodes []*Node
 	for rows.Next() {
@@ -483,7 +483,7 @@ func (d *DB) GetExecutions(nodeID string, limit int) ([]*Execution, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	return scanExecutions(rows)
 }
 
@@ -523,7 +523,7 @@ func (d *DB) LatencyHistory(nodeID string, limit int) ([]*LatencyPoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var points []*LatencyPoint
 	for rows.Next() {
 		p := &LatencyPoint{}
@@ -556,7 +556,7 @@ func (d *DB) RecentTraces(limit int) ([]*TraceSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var summaries []*TraceSummary
 	for rows.Next() {
 		t := &TraceSummary{}
@@ -583,7 +583,7 @@ func (d *DB) GetTraceSpans(traceID string) ([]*Span, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var spans []*Span
 	for rows.Next() {
 		s := &Span{}
@@ -625,7 +625,7 @@ func (d *DB) GetIssues(stateFilter string) ([]*Issue, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var issues []*Issue
 	for rows.Next() {
 		i := &Issue{}
@@ -655,7 +655,7 @@ func (d *DB) RecentActivity(limit int) ([]*ActivityEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var entries []*ActivityEntry
 	for rows.Next() {
 		e := &ActivityEntry{}
@@ -685,7 +685,7 @@ func (d *DB) GetImprovements(nodeID string, limit int) ([]*Improvement, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var imps []*Improvement
 	for rows.Next() {
 		imp := &Improvement{}
@@ -712,7 +712,7 @@ func (d *DB) GetCosts() ([]*CostEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var costs []*CostEntry
 	for rows.Next() {
 		c := &CostEntry{}
@@ -732,7 +732,7 @@ func (d *DB) GetConvergence(limit int) ([]*ConvergencePoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer rows.Close() //nolint:errcheck
 	var points []*ConvergencePoint
 	for rows.Next() {
 		p := &ConvergencePoint{}
@@ -782,7 +782,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 	if err != nil {
 		return epCount, semCount, nil, nil, err
 	}
-	defer semRows.Close()
+	defer semRows.Close() //nolint:errcheck
 	var concepts []*SemanticConcept
 	for semRows.Next() {
 		c := &SemanticConcept{}
@@ -803,7 +803,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 	if err != nil {
 		return epCount, semCount, concepts, nil, err
 	}
-	defer epRows.Close()
+	defer epRows.Close() //nolint:errcheck
 	var episodes []*EpisodeEntry
 	for epRows.Next() {
 		e := &EpisodeEntry{}
@@ -829,7 +829,7 @@ func (d *DB) SystemHealth() (*SystemHealth, error) {
 	}
 
 	var totalHealth float64
-	var minHealth float64 = 1.0
+	var minHealth = 1.0
 	for _, n := range nodes {
 		totalHealth += n.Health
 		if n.Health < minHealth {
@@ -863,7 +863,7 @@ func (d *DB) SystemHealth() (*SystemHealth, error) {
 		status = "degraded"
 	}
 
-	var minRegAt float64 = float64(time.Now().Unix())
+	minRegAt := float64(time.Now().Unix())
 	for _, n := range nodes {
 		if n.RegisteredAt < minRegAt && n.RegisteredAt > 0 {
 			minRegAt = n.RegisteredAt

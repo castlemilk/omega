@@ -1,0 +1,32 @@
+version: "2"
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+  disable:
+    - depguard
+linters-settings:
+  errcheck:
+    exclude-functions:
+      - (*database/sql.DB).Close
+      - (*database/sql.Rows).Close
+      - (io.Closer).Close
+      - os.MkdirAll
+issues:
+  exclude-rules:
+    - text: "nolint:errcheck"
+      linters:
+        - errcheck
+    - linters:
+        - errcheck
+      path: "internal/db/db\\.go"
+    - linters:
+        - errcheck
+      path: "cmd/omega-api/main\\.go"
+    - linters:
+        - staticcheck
+      text: "ST1023"
+      path: "internal/db/db\\.go"
