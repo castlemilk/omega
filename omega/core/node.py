@@ -193,7 +193,10 @@ class Node(ABC):
                 skills_root = os.path.normpath(
                     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "skills")
                 )
-                loader = SkillLoader(skills_root)
+                # Cache loader per node instance to avoid repeated filesystem scans
+                if not hasattr(self, "_skill_loader") or self._skill_loader._root != skills_root:
+                    object.__setattr__(self, "_skill_loader", SkillLoader(skills_root))
+                loader = self._skill_loader
                 skill_content = loader.load_for_tags(tags)
                 if skill_content:
                     domain_context = (
