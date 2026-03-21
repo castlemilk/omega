@@ -32,7 +32,7 @@ import logging
 import math
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 from omega.core.memory import MemoryKernel, SemanticMemory
 
@@ -43,6 +43,7 @@ logger = logging.getLogger("omega.core.memory_v2")
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _student_t_pdf(x: float, df: float, loc: float, scale: float) -> float:
     """
     Unnormalised Student-t kernel: (1 + ((x-loc)/scale)^2 / df)^(-(df+1)/2).
@@ -51,23 +52,25 @@ def _student_t_pdf(x: float, df: float, loc: float, scale: float) -> float:
     so the normalisation constant is omitted for efficiency.
     """
     z = (x - loc) / max(scale, 1e-10)
-    return (1.0 + z * z / max(df, 1.0)) ** (-(df + 1.0) / 2.0)
+    return float((1.0 + z * z / max(df, 1.0)) ** (-(df + 1.0) / 2.0))
 
 
 # ---------------------------------------------------------------------------
 # BOCPDRegimeDetector
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class RegimeState:
     """Snapshot of the detector's belief about the current market regime."""
-    regime_id: str           # UUID; changes whenever a changepoint is detected
+
+    regime_id: str  # UUID; changes whenever a changepoint is detected
     changepoint_prob: float  # P(run_length == 0) after the latest update
     regime_start_cycle: int
     mean_estimate: float
     variance_estimate: float
     observations_in_regime: int
-    label: str               # "normal" | "trending" | "volatile" | "crash"
+    label: str  # "normal" | "trending" | "volatile" | "crash"
 
 
 class BOCPDRegimeDetector:
@@ -88,7 +91,7 @@ class BOCPDRegimeDetector:
         prior_mean: float = 0.0,
         prior_var: float = 1.0,
     ) -> None:
-        self._hazard = hazard_rate          # P(changepoint at each step)
+        self._hazard = hazard_rate  # P(changepoint at each step)
         self._prior_mean = prior_mean
         self._prior_var = prior_var
 
@@ -126,13 +129,13 @@ class BOCPDRegimeDetector:
 
             # update sufficient stats for the grown run length
             prev_stats = self._stats.get(rl, (0, self._prior_mean, 0.0))
-            n, mu, M2 = prev_stats
+            n, mu, m2 = prev_stats
             n_new = n + 1
             delta = observation - mu
             mu_new = mu + delta / n_new
             delta2 = observation - mu_new
-            M2_new = M2 + delta * delta2
-            new_stats[grown_rl] = (n_new, mu_new, M2_new)
+            m2_new = m2 + delta * delta2
+            new_stats[grown_rl] = (n_new, mu_new, m2_new)
 
         # --- changepoint probability: run length resets to 0 -----------------
         # Sum over all run lengths weighted by hazard * their current prob
@@ -164,7 +167,8 @@ class BOCPDRegimeDetector:
         if changepoint_detected:
             logger.info(
                 "BOCPD: changepoint detected at cycle %d (P=%.3f), new regime",
-                self._cycle, cp_prob,
+                self._cycle,
+                cp_prob,
             )
             self._regime_id = str(uuid.uuid4())
             self._regime_start_cycle = self._cycle
@@ -225,9 +229,9 @@ class BOCPDRegimeDetector:
                 loc=self._prior_mean,
                 scale=math.sqrt(self._prior_var),
             )
-        n, mu, M2 = stats
+        n, mu, m2 = stats
         # sample variance estimate
-        s2 = M2 / max(n, 1)
+        s2 = m2 / max(n, 1)
         # predictive scale: sqrt(s2 * (1 + 1/n))
         scale = math.sqrt(max(s2, 1e-10) * (1.0 + 1.0 / max(n, 1)))
         return _student_t_pdf(observation, df=float(n), loc=mu, scale=scale)
@@ -248,6 +252,7 @@ class BOCPDRegimeDetector:
 # ---------------------------------------------------------------------------
 # SlidingWindowRegimeDetector  (default; simpler than BOCPD)
 # ---------------------------------------------------------------------------
+
 
 class SlidingWindowRegimeDetector:
     """
@@ -287,7 +292,7 @@ class SlidingWindowRegimeDetector:
         self._cycle += 1
         self._observations.append(observation)
         if len(self._observations) > self._window:
-            self._observations = self._observations[-self._window:]
+            self._observations = self._observations[-self._window :]
 
         mean, var = self._rolling_stats()
         vol = math.sqrt(var)
@@ -301,7 +306,9 @@ class SlidingWindowRegimeDetector:
             changepoint_prob = 0.8
             logger.info(
                 "SlidingWindow: regime change %s → %s at cycle %d",
-                self._last_label, label, self._cycle,
+                self._last_label,
+                label,
+                self._cycle,
             )
         self._last_label = label
 
@@ -318,7 +325,6 @@ class SlidingWindowRegimeDetector:
     def current_regime(self) -> RegimeState:
         """Return the current regime state without consuming a new observation."""
         mean, var = self._rolling_stats()
-        vol = math.sqrt(var)
         return RegimeState(
             regime_id=self._regime_id,
             changepoint_prob=0.0,
@@ -353,6 +359,7 @@ class SlidingWindowRegimeDetector:
 # ---------------------------------------------------------------------------
 # RegimeTaggedSemanticStore
 # ---------------------------------------------------------------------------
+
 
 class RegimeTaggedSemanticStore:
     """
@@ -412,6 +419,7 @@ class RegimeTaggedSemanticStore:
 # EWCProtection
 # ---------------------------------------------------------------------------
 
+
 class EWCProtection:
     """
     Elastic Weight Consolidation (EWC) regulariser.
@@ -463,10 +471,7 @@ class EWCProtection:
                 accum[pname] = accum.get(pname, 0.0) + grad * grad
                 counts[pname] = counts.get(pname, 0) + 1
 
-        fisher = {
-            pname: accum[pname] / counts[pname]
-            for pname in accum
-        }
+        fisher = {pname: accum[pname] / counts[pname] for pname in accum}
         if task_id is not None:
             self._fisher[task_id] = fisher
         return fisher
@@ -562,6 +567,7 @@ class EWCProtection:
 # DempsterShaferFusion
 # ---------------------------------------------------------------------------
 
+
 class DempsterShaferFusion:
     """
     Dempster-Shafer evidence theory for combining contradictory multi-source signals.
@@ -616,7 +622,9 @@ class DempsterShaferFusion:
             normalised[uncertainty_key] = normalised.get(uncertainty_key, 0.0) + remainder
 
         self._evidence[source] = normalised
-        logger.debug("DS: added evidence from source '%s' (%d focal elements)", source, len(normalised))
+        logger.debug(
+            "DS: added evidence from source '%s' (%d focal elements)", source, len(normalised)
+        )
 
     _CONFLICT_FALLBACK_THRESHOLD: float = 0.3
 
@@ -639,8 +647,7 @@ class DempsterShaferFusion:
         conflict = self._compute_conflict()
         if conflict > self._CONFLICT_FALLBACK_THRESHOLD and len(sources) > 1:
             logger.warning(
-                "DS: high conflict (K=%.3f > %.1f), falling back to "
-                "confidence-weighted averaging",
+                "DS: high conflict (K=%.3f > %.1f), falling back to confidence-weighted averaging",
                 conflict,
                 self._CONFLICT_FALLBACK_THRESHOLD,
             )
@@ -673,11 +680,7 @@ class DempsterShaferFusion:
         """
         combined = self._combine_raw()
         a = frozenset([hypothesis])
-        return sum(
-            mass
-            for fkey, mass in combined.items()
-            if fkey and fkey.issubset(a)
-        )
+        return sum(mass for fkey, mass in combined.items() if fkey and fkey.issubset(a))
 
     def plausibility(self, hypothesis: str) -> float:
         """
@@ -725,10 +728,7 @@ class DempsterShaferFusion:
         source_confidence: dict[str, float] = {}
         uncertainty_key = frozenset(self._frame)
         for src, masses in self._evidence.items():
-            committed = sum(
-                mass for fkey, mass in masses.items()
-                if fkey != uncertainty_key
-            )
+            committed = sum(mass for fkey, mass in masses.items() if fkey != uncertainty_key)
             source_confidence[src] = max(committed, 1e-10)
 
         total_confidence = sum(source_confidence.values()) or 1.0
@@ -836,7 +836,9 @@ class DempsterShaferFusion:
                     for c, mc in source.items():
                         intersection = b & c
                         if intersection:
-                            new_combined[intersection] = new_combined.get(intersection, 0.0) + mb * mc / norm_factor
+                            new_combined[intersection] = (
+                                new_combined.get(intersection, 0.0) + mb * mc / norm_factor
+                            )
                 combined = new_combined
             else:
                 combined = {frozenset(self._frame): 1.0}
@@ -848,15 +850,17 @@ class DempsterShaferFusion:
 # ContradictionResolver
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Resolution:
     """The output of ContradictionResolver.resolve()."""
-    conclusion: str                   # most likely outcome
-    confidence: float                 # 0→1
-    conflict_level: float             # DS conflict K
-    regime_context: str               # current regime label
+
+    conclusion: str  # most likely outcome
+    confidence: float  # 0→1
+    conflict_level: float  # DS conflict K
+    regime_context: str  # current regime label
     evidence_summary: dict[str, float]  # source → evidence strength
-    used_entrenchment: bool           # whether AGM belief revision fired
+    used_entrenchment: bool  # whether AGM belief revision fired
 
 
 class ContradictionResolver:
@@ -866,7 +870,7 @@ class ContradictionResolver:
     contradictory) observations.
     """
 
-    _DEFAULT_FRAME = ["bull", "bear", "neutral", "volatile"]
+    _DEFAULT_FRAME: ClassVar[list[str]] = ["bull", "bear", "neutral", "volatile"]
 
     def __init__(
         self,
@@ -912,13 +916,10 @@ class ContradictionResolver:
 
         # --- Step 1: evidence strengths --------------------------------------
         strengths: dict[str, float] = {
-            obs["source"]: abs(obs.get("value", 0.0))
-            for obs in observations
+            obs["source"]: abs(obs.get("value", 0.0)) for obs in observations
         }
         total_strength = sum(strengths.values()) or 1.0
-        normalised: dict[str, float] = {
-            src: s / total_strength for src, s in strengths.items()
-        }
+        normalised: dict[str, float] = {src: s / total_strength for src, s in strengths.items()}
 
         # --- Step 2: preliminary DS combine to check conflict ----------------
         self._ds.reset()
@@ -986,6 +987,7 @@ class ContradictionResolver:
 # MemoryKernelV2
 # ---------------------------------------------------------------------------
 
+
 class MemoryKernelV2(MemoryKernel):
     """
     Extended MemoryKernel with regime-awareness, catastrophic forgetting
@@ -1025,7 +1027,9 @@ class MemoryKernelV2(MemoryKernel):
         self._current_regime: RegimeState | None = None
         logger.info(
             "MemoryKernelV2 initialised (db=%s, ewc=%s, bocpd=%s)",
-            db_path, ewc_enabled, advanced_bocpd,
+            db_path,
+            ewc_enabled,
+            advanced_bocpd,
         )
 
     # ------------------------------------------------------------------ regime
@@ -1038,10 +1042,8 @@ class MemoryKernelV2(MemoryKernel):
           - logs the transition
           - snapshots EWC params (working memory snapshot as surrogate params)
         """
-        prev_regime_id = (
-            self._current_regime.regime_id if self._current_regime else None
-        )
-        new_regime = self.regime_detector.update(observation)
+        prev_regime_id = self._current_regime.regime_id if self._current_regime else None
+        new_regime: RegimeState = self.regime_detector.update(observation)
         self._current_regime = new_regime
 
         if new_regime.changepoint_prob > 0.5 and new_regime.regime_id != prev_regime_id:
@@ -1055,9 +1057,7 @@ class MemoryKernelV2(MemoryKernel):
             if self.ewc_enabled and self.ewc is not None and prev_regime_id:
                 working = self.working_snapshot()
                 numeric_params = {
-                    k: float(v)
-                    for k, v in working.items()
-                    if isinstance(v, (int, float))
+                    k: float(v) for k, v in working.items() if isinstance(v, (int, float))
                 }
                 if numeric_params:
                     self.ewc.snapshot_params(numeric_params, task_id=prev_regime_id)
@@ -1143,9 +1143,9 @@ class MemoryKernelV2(MemoryKernel):
                 f"regime_type:{regime.label}",
             ]
             existing_tags = [
-                t for t in mem.tags
-                if not t.startswith("regime:")
-                and not t.startswith("regime_type:")
+                t
+                for t in mem.tags
+                if not t.startswith("regime:") and not t.startswith("regime_type:")
             ]
             self.store_semantic(
                 concept=concept,
