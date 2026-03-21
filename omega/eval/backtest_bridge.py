@@ -45,6 +45,7 @@ from omega.core.autonomy import AutonomyLevel
 from omega.core.orchestrator_v2 import OmegaOrchestrator
 from omega.eval.baselines import BaselineResult, buy_and_hold, sma_crossover
 from omega.eval.metrics import EvalReport, TradeRecord, build_eval_report
+from omega.eval.significance import sharpe_is_significant
 from omega.nodes.vectora.vectora_node import VectoraNode
 
 logger = logging.getLogger("omega.eval.backtest_bridge")
@@ -429,9 +430,16 @@ class OmegaBacktestBridge:
             result.n_bars,
             r.n_trades,
         )
+        sig, point, (ci_lo, ci_hi) = sharpe_is_significant(
+            result.returns, periods_per_year=self.periods_per_year
+        )
         logger.info(
-            "  Strategy: Sharpe=%.3f MaxDD=%.1f%% TotalRet=%.1f%%",
-            r.sharpe,
+            "  Strategy: Sharpe=%.3f [95%% CI: %.3f, %.3f] significant=%s"
+            " MaxDD=%.1f%% TotalRet=%.1f%%",
+            point,
+            ci_lo,
+            ci_hi,
+            sig,
             r.max_drawdown * 100,
             r.total_return * 100,
         )
