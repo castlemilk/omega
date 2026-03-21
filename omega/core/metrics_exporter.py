@@ -43,13 +43,27 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 _DURATION_BUCKETS: tuple[float, ...] = (
-    0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0
+    0.001,
+    0.005,
+    0.01,
+    0.025,
+    0.05,
+    0.1,
+    0.25,
+    0.5,
+    1.0,
+    2.5,
+    5.0,
+    10.0,
+    30.0,
+    60.0,
 )
 
 
 # ---------------------------------------------------------------------------
 # In-memory histogram accumulator
 # ---------------------------------------------------------------------------
+
 
 class _Histogram:
     """Thread-safe in-memory Prometheus histogram."""
@@ -82,14 +96,15 @@ class _Histogram:
             for i, b in enumerate(self._buckets):
                 lines.append(f'{name}_bucket{bucket_prefix}le="{b}"}} {self._counts[i]}')
             lines.append(f'{name}_bucket{bucket_prefix}le="+Inf"}} {self._count}')
-            lines.append(f'{name}_sum{plain_prefix} {self._sum:.6f}')
-            lines.append(f'{name}_count{plain_prefix} {self._count}')
+            lines.append(f"{name}_sum{plain_prefix} {self._sum:.6f}")
+            lines.append(f"{name}_count{plain_prefix} {self._count}")
         return lines
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _labels(d: dict[str, str]) -> str:
     """Format a label dict as Prometheus label string (no braces)."""
@@ -98,12 +113,13 @@ def _labels(d: dict[str, str]) -> str:
 
 def _sanitize(s: str) -> str:
     """Replace characters invalid in label values."""
-    return s.replace('"', "'").replace('\n', ' ')
+    return s.replace('"', "'").replace("\n", " ")
 
 
 # ---------------------------------------------------------------------------
 # MetricsExporter
 # ---------------------------------------------------------------------------
+
 
 class MetricsExporter:
     """
@@ -140,8 +156,8 @@ class MetricsExporter:
         self._heartbeat_histo = _Histogram()
 
         # -- In-memory counters (incremented directly; DB is source for others)
-        self._improvement_total: dict[str, int] = {}   # result -> count
-        self._alignment_total: dict[str, int] = {}     # decision -> count
+        self._improvement_total: dict[str, int] = {}  # result -> count
+        self._alignment_total: dict[str, int] = {}  # decision -> count
         self._adversarial_total: dict[tuple[str, str], int] = {}  # (ring, severity) -> count
 
         # -- Gauges updated from heartbeat
@@ -170,9 +186,7 @@ class MetricsExporter:
                 self._node_histograms[key] = _Histogram()
         self._node_histograms[key].observe(duration_s)
 
-    def record_brain_request(
-        self, node_id: str, provider: str, latency_s: float
-    ) -> None:
+    def record_brain_request(self, node_id: str, provider: str, latency_s: float) -> None:
         """Record a brain (LLM) request latency."""
         with self._lock:
             if provider not in self._brain_histograms:
@@ -388,7 +402,6 @@ class MetricsExporter:
             ).fetchall()
             for row in rows:
                 nid = _sanitize(str(row["node_id"]))
-                nname = _sanitize(str(row["node_name"]))
                 prov = _sanitize(str(row["provider"]))
                 cnt = int(row["cnt"])
                 lines.append(
@@ -494,10 +507,7 @@ class MetricsExporter:
                 if self.path in ("/metrics", "/metrics/"):
                     body = exporter.render().encode("utf-8")
                     self.send_response(200)
-                    self.send_header(
-                        "Content-Type",
-                        "text/plain; version=0.0.4; charset=utf-8"
-                    )
+                    self.send_header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
                     self.send_header("Content-Length", str(len(body)))
                     self.end_headers()
                     self.wfile.write(body)
@@ -506,7 +516,7 @@ class MetricsExporter:
                     self.end_headers()
                     self.wfile.write(b"404 - only /metrics is served here\n")
 
-            def log_message(self, fmt: str, *args: Any) -> None:  # type: ignore[override]
+            def log_message(self, fmt: str, *args: Any) -> None:
                 pass  # silence request logs
 
         server = HTTPServer(("", self._port), _Handler)
