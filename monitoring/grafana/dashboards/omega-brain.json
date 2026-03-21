@@ -1,0 +1,131 @@
+{
+  "__inputs": [],
+  "__requires": [
+    {"type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0"}
+  ],
+  "annotations": {"list": []},
+  "description": "LLM brain usage — request rate, latency by provider",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Total Brain Requests",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(omega_brain_request_total)", "legendFormat": ""}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.5}, {"color": "red", "value": 2}]}, "unit": "s"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Brain Latency p95",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, sum(rate(omega_brain_latency_seconds_bucket[10m])) by (le))", "legendFormat": ""}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "reqps"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Brain Request Rate",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(omega_brain_request_total[5m]))", "legendFormat": ""}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Active Providers",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "count(sum by (provider) (omega_brain_request_total))", "legendFormat": ""}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "s"},
+        "overrides": []
+      },
+      "gridPos": {"h": 9, "w": 14, "x": 0, "y": 4},
+      "id": 5,
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "right"}, "tooltip": {"mode": "multi"}},
+      "title": "Brain Latency by Provider",
+      "type": "timeseries",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.50, sum by (provider, le) (rate(omega_brain_latency_seconds_bucket[5m])))", "legendFormat": "{{provider}} p50"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, sum by (provider, le) (rate(omega_brain_latency_seconds_bucket[5m])))", "legendFormat": "{{provider}} p95"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99, sum by (provider, le) (rate(omega_brain_latency_seconds_bucket[5m])))", "legendFormat": "{{provider}} p99"}
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "reqps"},
+        "overrides": []
+      },
+      "gridPos": {"h": 9, "w": 10, "x": 14, "y": 4},
+      "id": 6,
+      "options": {"legend": {"calcs": ["mean", "lastNotNull"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Brain Requests per Provider",
+      "type": "timeseries",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (provider) (rate(omega_brain_request_total[5m]))", "legendFormat": "{{provider}}"}
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"displayMode": "color-background"},
+          "unit": "short"
+        },
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "latency_p95"}, "properties": [{"id": "unit", "value": "s"}]},
+          {"matcher": {"id": "byName", "options": "total_requests"}, "properties": [{"id": "unit", "value": "short"}]}
+        ]
+      },
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 13},
+      "id": 7,
+      "options": {"footer": {"show": false}, "showHeader": true},
+      "title": "Brain Request Breakdown by Node & Provider",
+      "type": "table",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (node_id, provider) (omega_brain_request_total)", "legendFormat": "", "instant": true, "format": "table"}
+      ],
+      "transformations": [
+        {"id": "organize", "options": {"renameByName": {"node_id": "Node", "provider": "Provider", "Value": "Requests"}}}
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["omega", "brain", "llm"],
+  "time": {"from": "now-3h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Omega — Brain (LLM)",
+  "uid": "omega-brain",
+  "version": 1
+}

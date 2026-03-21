@@ -60,6 +60,7 @@ from omega.core.orchestrator import Orchestrator
 from omega.core.state_store import StateStore
 from omega.core.tracing import Tracer, create_tracer
 from omega.core.metrics import MetricsCollector
+from omega.core.metrics_exporter import MetricsExporter
 from omega.core.analyzer import SystemAnalyzer
 from omega.core.alignment import AlignmentLayer
 from omega.core.adversarial import AdversarialPressure
@@ -264,6 +265,13 @@ class VectoraSystem:
         self._last_signals: Dict[str, Any] = {}
         self._last_portfolio: Dict[str, Any] = {}
         self._last_risk: Dict[str, Any] = {}
+
+        # Metrics exporter — attached via attach_metrics_exporter() when --metrics is used
+        self._mex: Optional[MetricsExporter] = None
+
+    def attach_metrics_exporter(self, mex: MetricsExporter) -> None:
+        """Attach a MetricsExporter; called from main() when --metrics flag is set."""
+        self._mex = mex
 
     def run_heartbeat(self) -> Dict[str, Any]:
         """Execute one full heartbeat cycle."""
@@ -845,6 +853,23 @@ class VectoraSystem:
         self._print_iteration_summary(cycle, system_metrics, score, improved_nodes,
                                       pipeline_ms, mem_summary)
 
+        # ── Flush metrics exporter ────────────────────────────────────────────
+        self._flush_metrics(
+            pipeline_ms=pipeline_ms,
+            signals=signals,
+            portfolio=portfolio,
+            node_outputs=[
+                (self.ingestion,  ingest_out),
+                (self.signals,    sig_out),
+                (self.strategy,   strat_out),
+                (self.risk,       risk_out),
+                (self.reporting,  report_out),
+                (self.lint,       lint_out),
+                (self.integrity,  integrity_out),
+            ],
+            improved_count=len(improved_nodes),
+        )
+
         self._iteration += 1
         return {
             "iteration": cycle,
@@ -852,6 +877,45 @@ class VectoraSystem:
             "system_metrics": system_metrics,
             "improved_nodes": improved_nodes,
         }
+
+    def _flush_metrics(
+        self,
+        pipeline_ms: float,
+        signals: Dict[str, Any],
+        portfolio: Dict[str, Any],
+        node_outputs: List,
+        improved_count: int,
+    ) -> None:
+        """Push heartbeat data into the MetricsExporter (no-op if not attached)."""
+        if self._mex is None:
+            return
+        mex = self._mex
+
+        # Heartbeat duration
+        mex.record_heartbeat(pipeline_ms / 1000.0)
+
+        # Per-node execution durations
+        for node, output in node_outputs:
+            state = node.get_state()
+            mex.record_node_execution(
+                node_id=state.node_id,
+                node_type=state.name,
+                duration_s=output.metrics.get("latency_ms", 0.0) / 1000.0,
+                success=output.success,
+            )
+
+        # Improvement counter (per-cycle count, not cumulative — DB is cumulative)
+        for _ in range(improved_count):
+            mex.record_improvement(result="improved")
+
+        # Signal values
+        if signals:
+            mex.update_signals(signals)
+
+        # Portfolio gross exposure
+        weights = portfolio.get("weights", {})
+        gross_exposure = sum(abs(v) for v in weights.values()) if weights else 0.0
+        mex.update_portfolio_exposure(gross_exposure)
 
     def _run_improvement_pass(
         self,
@@ -1130,6 +1194,14 @@ def main():
         "--feedback", action="store_true",
         help="Prompt for human feedback between heartbeats"
     )
+    parser.add_argument(
+        "--metrics", action="store_true",
+        help="Start Prometheus metrics exporter on --metrics-port"
+    )
+    parser.add_argument(
+        "--metrics-port", type=int, default=9090,
+        help="Port for Prometheus /metrics endpoint (default: 9090)"
+    )
     args = parser.parse_args()
 
     print("\n" + "═" * 68)
@@ -1145,6 +1217,17 @@ def main():
     print("  [Architecture is pluggable — add SentimentIngestionNode for social signals]\n")
 
     system = VectoraSystem()
+
+    if args.metrics:
+        mex = MetricsExporter(
+            state_store=system.state_store,
+            memory_kernel=system.memory,
+            port=args.metrics_port,
+        )
+        system.attach_metrics_exporter(mex)
+        mex.start()
+        logger.info("Metrics exporter started — http://localhost:%d/metrics", args.metrics_port)
+
     iteration_count = 0
 
     try:

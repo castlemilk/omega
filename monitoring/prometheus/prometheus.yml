@@ -1,0 +1,32 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    project: "omega"
+
+# Alertmanager (not configured — extend here if needed)
+alerting:
+  alertmanagers: []
+
+rule_files: []
+
+scrape_configs:
+  # Python metrics exporter (omega node layer)
+  - job_name: "omega-python"
+    static_configs:
+      - targets: ["host.docker.internal:9090"]
+        labels:
+          layer: "python"
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          layer: "infra"
+
+storage:
+  tsdb:
+    retention.time: 15d
