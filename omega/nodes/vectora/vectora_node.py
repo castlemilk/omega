@@ -359,6 +359,17 @@ class VectoraNode(Node):
         if out.success and out.result:
             result = out.result
             if isinstance(result, dict):
+                # Inject composite signal direction so the backtest bridge's
+                # _proposals_to_position can determine long vs short.
+                # Without this, _proposals_to_position always sees weight=1.0
+                # (always long) and no trades ever change direction.
+                composites = [
+                    sig.get("composite", 0.0)
+                    for sig in flat_signals.values()
+                    if isinstance(sig, dict) and "composite" in sig
+                ]
+                if composites:
+                    result.setdefault("composite", sum(composites) / len(composites))
                 return [result]
             if isinstance(result, list):
                 return result
