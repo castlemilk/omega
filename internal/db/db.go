@@ -1,5 +1,5 @@
-// Package db provides read-only access to the Omega SQLite state and memory databases.
-// The Python node layer writes; this Go layer reads.
+// Package db provides read/write access to the Omega SQLite state and memory databases.
+// Go is the authoritative writer; Python calls Go via Connect-RPC to persist state.
 package db
 
 import (
@@ -54,6 +54,14 @@ func New(stateDBPath, memoryDBPath string) (*DB, error) {
 	}
 	challengeDB, _ := openDB(ChallengeDBPath) // nil if file not yet created by Python
 	d := &DB{state: state, memory: memory, challenge: challengeDB}
+	if err := d.ensureStateTables(); err != nil {
+		state.Close()  //nolint:errcheck,gosec
+		memory.Close() //nolint:errcheck,gosec
+		if challengeDB != nil {
+			challengeDB.Close() //nolint:errcheck,gosec
+		}
+		return nil, fmt.Errorf("ensure state tables: %w", err)
+	}
 	if err := d.ensureBrainTables(); err != nil {
 		state.Close()  //nolint:errcheck,gosec
 		memory.Close() //nolint:errcheck,gosec
@@ -74,6 +82,10 @@ func openDB(path string) (*sql.DB, error) {
 	db.SetMaxIdleConns(1)
 	return db, db.Ping()
 }
+
+// StateDB exposes the underlying state sql.DB for test helpers.
+// Production code should use the typed methods on DB instead.
+func (d *DB) StateDB() *sql.DB { return d.state }
 
 func (d *DB) Close() {
 	d.state.Close()  //nolint:errcheck,gosec
@@ -264,6 +276,160 @@ type BrainExecutionEntry struct {
 	ErrorText        string
 	ExecutedAt       float64
 	Cycle            int64
+}
+
+// ── Schema bootstrap ───────────────────────────────────────────────────────────
+
+// ensureStateTables creates all core state tables that Python's _SCHEMA previously
+// created on startup. Go now owns schema creation.
+func (d *DB) ensureStateTables() error {
+	_, err := d.state.Exec(`
+		CREATE TABLE IF NOT EXISTS nodes (
+			node_id             TEXT PRIMARY KEY,
+			name                TEXT NOT NULL,
+			version             TEXT NOT NULL DEFAULT '1.0',
+			capabilities_json   TEXT NOT NULL DEFAULT '[]',
+			health              REAL NOT NULL DEFAULT 1.0,
+			status              TEXT NOT NULL DEFAULT 'active',
+			brain_config_json   TEXT NOT NULL DEFAULT '{"provider":"none"}',
+			registered_at       REAL NOT NULL,
+			last_updated        REAL NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS node_executions (
+			exec_id      TEXT PRIMARY KEY,
+			node_id      TEXT NOT NULL,
+			node_name    TEXT NOT NULL,
+			trace_id     TEXT,
+			span_id      TEXT,
+			action       TEXT NOT NULL,
+			started_at   REAL NOT NULL,
+			ended_at     REAL,
+			duration_ms  REAL,
+			success      INTEGER NOT NULL DEFAULT 1,
+			error_text   TEXT,
+			metrics_json TEXT NOT NULL DEFAULT '{}',
+			cycle        INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE TABLE IF NOT EXISTS traces (
+			span_id         TEXT PRIMARY KEY,
+			trace_id        TEXT NOT NULL,
+			parent_span_id  TEXT,
+			node_id         TEXT,
+			node_name       TEXT,
+			operation       TEXT NOT NULL,
+			started_at      REAL NOT NULL,
+			ended_at        REAL,
+			duration_ms     REAL,
+			status          TEXT NOT NULL DEFAULT 'ok',
+			metadata_json   TEXT NOT NULL DEFAULT '{}',
+			cycle           INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE TABLE IF NOT EXISTS cost_events (
+			cost_id             TEXT PRIMARY KEY,
+			node_id             TEXT NOT NULL,
+			exec_id             TEXT,
+			provider            TEXT NOT NULL,
+			call_type           TEXT NOT NULL,
+			duration_ms         REAL NOT NULL DEFAULT 0,
+			estimated_cost_usd  REAL NOT NULL DEFAULT 0.0,
+			metadata_json       TEXT NOT NULL DEFAULT '{}',
+			recorded_at         REAL NOT NULL,
+			cycle               INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE TABLE IF NOT EXISTS issues (
+			issue_id        TEXT PRIMARY KEY,
+			detector        TEXT NOT NULL,
+			severity        TEXT NOT NULL DEFAULT 'warning',
+			description     TEXT NOT NULL,
+			context_json    TEXT NOT NULL DEFAULT '{}',
+			state           TEXT NOT NULL DEFAULT 'pending',
+			opened_at       REAL NOT NULL,
+			resolved_at     REAL,
+			cycle_opened    INTEGER NOT NULL DEFAULT 0,
+			cycle_resolved  INTEGER
+		);
+		CREATE TABLE IF NOT EXISTS activity_log (
+			log_id       TEXT PRIMARY KEY,
+			action_type  TEXT NOT NULL,
+			entity_type  TEXT NOT NULL,
+			entity_id    TEXT NOT NULL,
+			data_json    TEXT NOT NULL DEFAULT '{}',
+			recorded_at  REAL NOT NULL,
+			cycle        INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE TABLE IF NOT EXISTS improvement_log (
+			improve_id           TEXT PRIMARY KEY,
+			node_id              TEXT NOT NULL,
+			node_name            TEXT NOT NULL,
+			from_version         TEXT NOT NULL,
+			to_version           TEXT NOT NULL,
+			before_metrics_json  TEXT NOT NULL DEFAULT '{}',
+			after_metrics_json   TEXT NOT NULL DEFAULT '{}',
+			triggered_by         TEXT NOT NULL DEFAULT 'metrics',
+			recorded_at          REAL NOT NULL,
+			cycle                INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE TABLE IF NOT EXISTS config_revisions (
+			revision_id  TEXT PRIMARY KEY,
+			node_id      TEXT NOT NULL,
+			version      TEXT NOT NULL,
+			config_json  TEXT NOT NULL DEFAULT '{}',
+			recorded_at  REAL NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS brain_executions (
+			brain_exec_id   TEXT PRIMARY KEY,
+			node_id         TEXT NOT NULL,
+			node_name       TEXT NOT NULL,
+			provider        TEXT NOT NULL DEFAULT 'none',
+			model           TEXT NOT NULL DEFAULT '',
+			operation       TEXT NOT NULL,
+			action_decided  TEXT NOT NULL,
+			parameters_json TEXT NOT NULL DEFAULT '{}',
+			reasoning       TEXT NOT NULL DEFAULT '',
+			confidence      REAL NOT NULL DEFAULT 0.0,
+			outcome         TEXT NOT NULL DEFAULT 'pending',
+			latency_ms      REAL NOT NULL DEFAULT 0.0,
+			trace_id        TEXT NOT NULL DEFAULT '',
+			recorded_at     REAL NOT NULL,
+			cycle           INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE TABLE IF NOT EXISTS alignment_decisions (
+			decision_id         TEXT PRIMARY KEY,
+			cycle               INTEGER NOT NULL DEFAULT 0,
+			approved            INTEGER NOT NULL DEFAULT 1,
+			violations_json     TEXT NOT NULL DEFAULT '[]',
+			pareto_ranks_json   TEXT NOT NULL DEFAULT '{}',
+			adjustments_json    TEXT NOT NULL DEFAULT '{}',
+			vcg_payments_json   TEXT NOT NULL DEFAULT '{}',
+			goodhart_warning    INTEGER NOT NULL DEFAULT 0,
+			recorded_at         REAL NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS adversarial_results (
+			result_id           TEXT PRIMARY KEY,
+			cycle               INTEGER NOT NULL DEFAULT 0,
+			ring                INTEGER NOT NULL DEFAULT 1,
+			flagged             INTEGER NOT NULL DEFAULT 0,
+			max_disagreement    REAL NOT NULL DEFAULT 0.0,
+			scenario_count      INTEGER NOT NULL DEFAULT 0,
+			failure_cases_json  TEXT NOT NULL DEFAULT '[]',
+			details_json        TEXT NOT NULL DEFAULT '{}',
+			recorded_at         REAL NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS goal_tracking (
+			tracking_id         TEXT PRIMARY KEY,
+			cycle               INTEGER NOT NULL DEFAULT 0,
+			approved            INTEGER NOT NULL DEFAULT 1,
+			composite_score     REAL NOT NULL DEFAULT 0.0,
+			scorecard_json      TEXT NOT NULL DEFAULT '{}',
+			nash_weights_json   TEXT NOT NULL DEFAULT '{}',
+			tracking_error      REAL NOT NULL DEFAULT 0.0,
+			control_action_json TEXT NOT NULL DEFAULT '{}',
+			subtasks_json       TEXT NOT NULL DEFAULT '[]',
+			violations_json     TEXT NOT NULL DEFAULT '[]',
+			recorded_at         REAL NOT NULL
+		);
+	`)
+	return err
 }
 
 // ── Brain config DB methods ────────────────────────────────────────────────────
