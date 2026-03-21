@@ -2,16 +2,22 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Server, GitBranch, BarChart2,
   AlertTriangle, Brain, TrendingUp,
+  ShieldCheck, Swords, Target, Sword, History,
 } from "lucide-react";
 
 const NAV = [
-  { to: "/",            icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/nodes",       icon: Server,          label: "Nodes" },
-  { to: "/traces",      icon: GitBranch,       label: "Traces" },
-  { to: "/metrics",     icon: BarChart2,       label: "Metrics" },
-  { to: "/issues",      icon: AlertTriangle,   label: "Issues" },
-  { to: "/memory",      icon: Brain,           label: "Memory" },
-  { to: "/convergence", icon: TrendingUp,      label: "Convergence" },
+  { to: "/",             icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/nodes",        icon: Server,          label: "Nodes" },
+  { to: "/traces",       icon: GitBranch,       label: "Traces" },
+  { to: "/metrics",      icon: BarChart2,       label: "Metrics" },
+  { to: "/issues",       icon: AlertTriangle,   label: "Issues" },
+  { to: "/memory",       icon: Brain,           label: "Memory" },
+  { to: "/convergence",  icon: TrendingUp,      label: "Convergence" },
+  { to: "/alignment",    icon: ShieldCheck,     label: "Alignment" },
+  { to: "/adversarial",  icon: Swords,          label: "Adversarial" },
+  { to: "/goals",        icon: Target,          label: "Goals" },
+  { to: "/challenges",   icon: Sword,           label: "Challenges" },
+  { to: "/improvements", icon: History,         label: "Improvements" },
 ];
 
 export default function Sidebar() {

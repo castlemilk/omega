@@ -1744,6 +1744,634 @@ func (x *ProviderInfo) GetAvailable() bool {
 	return false
 }
 
+type AlignmentDecision struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	DecisionId      string                 `protobuf:"bytes,1,opt,name=decision_id,json=decisionId,proto3" json:"decision_id,omitempty"`
+	Cycle           int64                  `protobuf:"varint,2,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	Approved        bool                   `protobuf:"varint,3,opt,name=approved,proto3" json:"approved,omitempty"`
+	Reasons         []string               `protobuf:"bytes,4,rep,name=reasons,proto3" json:"reasons,omitempty"`
+	TargetSubsystem string                 `protobuf:"bytes,5,opt,name=target_subsystem,json=targetSubsystem,proto3" json:"target_subsystem,omitempty"`
+	RecordedAt      *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *AlignmentDecision) Reset() {
+	*x = AlignmentDecision{}
+	mi := &file_omega_v1_types_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AlignmentDecision) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AlignmentDecision) ProtoMessage() {}
+
+func (x *AlignmentDecision) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AlignmentDecision.ProtoReflect.Descriptor instead.
+func (*AlignmentDecision) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *AlignmentDecision) GetDecisionId() string {
+	if x != nil {
+		return x.DecisionId
+	}
+	return ""
+}
+
+func (x *AlignmentDecision) GetCycle() int64 {
+	if x != nil {
+		return x.Cycle
+	}
+	return 0
+}
+
+func (x *AlignmentDecision) GetApproved() bool {
+	if x != nil {
+		return x.Approved
+	}
+	return false
+}
+
+func (x *AlignmentDecision) GetReasons() []string {
+	if x != nil {
+		return x.Reasons
+	}
+	return nil
+}
+
+func (x *AlignmentDecision) GetTargetSubsystem() string {
+	if x != nil {
+		return x.TargetSubsystem
+	}
+	return ""
+}
+
+func (x *AlignmentDecision) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+type AdversarialResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ResultId      string                 `protobuf:"bytes,1,opt,name=result_id,json=resultId,proto3" json:"result_id,omitempty"`
+	Cycle         int64                  `protobuf:"varint,2,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	Ring          int32                  `protobuf:"varint,3,opt,name=ring,proto3" json:"ring,omitempty"`
+	Flags         []string               `protobuf:"bytes,4,rep,name=flags,proto3" json:"flags,omitempty"`
+	Severity      string                 `protobuf:"bytes,5,opt,name=severity,proto3" json:"severity,omitempty"`
+	RecordedAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AdversarialResult) Reset() {
+	*x = AdversarialResult{}
+	mi := &file_omega_v1_types_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AdversarialResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AdversarialResult) ProtoMessage() {}
+
+func (x *AdversarialResult) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AdversarialResult.ProtoReflect.Descriptor instead.
+func (*AdversarialResult) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *AdversarialResult) GetResultId() string {
+	if x != nil {
+		return x.ResultId
+	}
+	return ""
+}
+
+func (x *AdversarialResult) GetCycle() int64 {
+	if x != nil {
+		return x.Cycle
+	}
+	return 0
+}
+
+func (x *AdversarialResult) GetRing() int32 {
+	if x != nil {
+		return x.Ring
+	}
+	return 0
+}
+
+func (x *AdversarialResult) GetFlags() []string {
+	if x != nil {
+		return x.Flags
+	}
+	return nil
+}
+
+func (x *AdversarialResult) GetSeverity() string {
+	if x != nil {
+		return x.Severity
+	}
+	return ""
+}
+
+func (x *AdversarialResult) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+type GoalState struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Cycle                int64                  `protobuf:"varint,1,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	ConstitutionalChecks map[string]bool        `protobuf:"bytes,2,rep,name=constitutional_checks,json=constitutionalChecks,proto3" json:"constitutional_checks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	ScorecardValues      map[string]float64     `protobuf:"bytes,3,rep,name=scorecard_values,json=scorecardValues,proto3" json:"scorecard_values,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	ActiveTasks          []string               `protobuf:"bytes,4,rep,name=active_tasks,json=activeTasks,proto3" json:"active_tasks,omitempty"`
+	RecordedAt           *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *GoalState) Reset() {
+	*x = GoalState{}
+	mi := &file_omega_v1_types_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GoalState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GoalState) ProtoMessage() {}
+
+func (x *GoalState) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GoalState.ProtoReflect.Descriptor instead.
+func (*GoalState) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GoalState) GetCycle() int64 {
+	if x != nil {
+		return x.Cycle
+	}
+	return 0
+}
+
+func (x *GoalState) GetConstitutionalChecks() map[string]bool {
+	if x != nil {
+		return x.ConstitutionalChecks
+	}
+	return nil
+}
+
+func (x *GoalState) GetScorecardValues() map[string]float64 {
+	if x != nil {
+		return x.ScorecardValues
+	}
+	return nil
+}
+
+func (x *GoalState) GetActiveTasks() []string {
+	if x != nil {
+		return x.ActiveTasks
+	}
+	return nil
+}
+
+func (x *GoalState) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+type Challenge struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	ChallengeId     string                 `protobuf:"bytes,1,opt,name=challenge_id,json=challengeId,proto3" json:"challenge_id,omitempty"`
+	Status          string                 `protobuf:"bytes,2,opt,name=status,proto3" json:"status,omitempty"`
+	Severity        string                 `protobuf:"bytes,3,opt,name=severity,proto3" json:"severity,omitempty"`
+	TargetSubsystem string                 `protobuf:"bytes,4,opt,name=target_subsystem,json=targetSubsystem,proto3" json:"target_subsystem,omitempty"`
+	Description     string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	CreatedAt       *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Challenge) Reset() {
+	*x = Challenge{}
+	mi := &file_omega_v1_types_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Challenge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Challenge) ProtoMessage() {}
+
+func (x *Challenge) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Challenge.ProtoReflect.Descriptor instead.
+func (*Challenge) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *Challenge) GetChallengeId() string {
+	if x != nil {
+		return x.ChallengeId
+	}
+	return ""
+}
+
+func (x *Challenge) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Challenge) GetSeverity() string {
+	if x != nil {
+		return x.Severity
+	}
+	return ""
+}
+
+func (x *Challenge) GetTargetSubsystem() string {
+	if x != nil {
+		return x.TargetSubsystem
+	}
+	return ""
+}
+
+func (x *Challenge) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Challenge) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Challenge) GetUpdatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return nil
+}
+
+type MemoryStats struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	EpisodicCount      int64                  `protobuf:"varint,1,opt,name=episodic_count,json=episodicCount,proto3" json:"episodic_count,omitempty"`
+	SemanticCount      int64                  `protobuf:"varint,2,opt,name=semantic_count,json=semanticCount,proto3" json:"semantic_count,omitempty"`
+	RegimeHistory      []string               `protobuf:"bytes,3,rep,name=regime_history,json=regimeHistory,proto3" json:"regime_history,omitempty"`
+	ContradictionCount int64                  `protobuf:"varint,4,opt,name=contradiction_count,json=contradictionCount,proto3" json:"contradiction_count,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *MemoryStats) Reset() {
+	*x = MemoryStats{}
+	mi := &file_omega_v1_types_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MemoryStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MemoryStats) ProtoMessage() {}
+
+func (x *MemoryStats) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MemoryStats.ProtoReflect.Descriptor instead.
+func (*MemoryStats) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *MemoryStats) GetEpisodicCount() int64 {
+	if x != nil {
+		return x.EpisodicCount
+	}
+	return 0
+}
+
+func (x *MemoryStats) GetSemanticCount() int64 {
+	if x != nil {
+		return x.SemanticCount
+	}
+	return 0
+}
+
+func (x *MemoryStats) GetRegimeHistory() []string {
+	if x != nil {
+		return x.RegimeHistory
+	}
+	return nil
+}
+
+func (x *MemoryStats) GetContradictionCount() int64 {
+	if x != nil {
+		return x.ContradictionCount
+	}
+	return 0
+}
+
+type GateResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	GateId        string                 `protobuf:"bytes,1,opt,name=gate_id,json=gateId,proto3" json:"gate_id,omitempty"`
+	Cycle         int64                  `protobuf:"varint,2,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	GateName      string                 `protobuf:"bytes,3,opt,name=gate_name,json=gateName,proto3" json:"gate_name,omitempty"`
+	Result        string                 `protobuf:"bytes,4,opt,name=result,proto3" json:"result,omitempty"`
+	Details       string                 `protobuf:"bytes,5,opt,name=details,proto3" json:"details,omitempty"`
+	CheckedAt     *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=checked_at,json=checkedAt,proto3" json:"checked_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GateResult) Reset() {
+	*x = GateResult{}
+	mi := &file_omega_v1_types_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GateResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GateResult) ProtoMessage() {}
+
+func (x *GateResult) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GateResult.ProtoReflect.Descriptor instead.
+func (*GateResult) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GateResult) GetGateId() string {
+	if x != nil {
+		return x.GateId
+	}
+	return ""
+}
+
+func (x *GateResult) GetCycle() int64 {
+	if x != nil {
+		return x.Cycle
+	}
+	return 0
+}
+
+func (x *GateResult) GetGateName() string {
+	if x != nil {
+		return x.GateName
+	}
+	return ""
+}
+
+func (x *GateResult) GetResult() string {
+	if x != nil {
+		return x.Result
+	}
+	return ""
+}
+
+func (x *GateResult) GetDetails() string {
+	if x != nil {
+		return x.Details
+	}
+	return ""
+}
+
+func (x *GateResult) GetCheckedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CheckedAt
+	}
+	return nil
+}
+
+type ImprovementDetail struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	ImproveId            string                 `protobuf:"bytes,1,opt,name=improve_id,json=improveId,proto3" json:"improve_id,omitempty"`
+	NodeId               string                 `protobuf:"bytes,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	NodeName             string                 `protobuf:"bytes,3,opt,name=node_name,json=nodeName,proto3" json:"node_name,omitempty"`
+	FromVersion          string                 `protobuf:"bytes,4,opt,name=from_version,json=fromVersion,proto3" json:"from_version,omitempty"`
+	ToVersion            string                 `protobuf:"bytes,5,opt,name=to_version,json=toVersion,proto3" json:"to_version,omitempty"`
+	TriggeredBy          string                 `protobuf:"bytes,6,opt,name=triggered_by,json=triggeredBy,proto3" json:"triggered_by,omitempty"`
+	RecordedAt           *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	Cycle                int64                  `protobuf:"varint,8,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	BeforeMetrics        map[string]float64     `protobuf:"bytes,9,rep,name=before_metrics,json=beforeMetrics,proto3" json:"before_metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	AfterMetrics         map[string]float64     `protobuf:"bytes,10,rep,name=after_metrics,json=afterMetrics,proto3" json:"after_metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	AlignmentApproved    bool                   `protobuf:"varint,11,opt,name=alignment_approved,json=alignmentApproved,proto3" json:"alignment_approved,omitempty"`
+	HasAlignmentDecision bool                   `protobuf:"varint,12,opt,name=has_alignment_decision,json=hasAlignmentDecision,proto3" json:"has_alignment_decision,omitempty"`
+	AlignmentReasons     []string               `protobuf:"bytes,13,rep,name=alignment_reasons,json=alignmentReasons,proto3" json:"alignment_reasons,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ImprovementDetail) Reset() {
+	*x = ImprovementDetail{}
+	mi := &file_omega_v1_types_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ImprovementDetail) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ImprovementDetail) ProtoMessage() {}
+
+func (x *ImprovementDetail) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ImprovementDetail.ProtoReflect.Descriptor instead.
+func (*ImprovementDetail) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *ImprovementDetail) GetImproveId() string {
+	if x != nil {
+		return x.ImproveId
+	}
+	return ""
+}
+
+func (x *ImprovementDetail) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *ImprovementDetail) GetNodeName() string {
+	if x != nil {
+		return x.NodeName
+	}
+	return ""
+}
+
+func (x *ImprovementDetail) GetFromVersion() string {
+	if x != nil {
+		return x.FromVersion
+	}
+	return ""
+}
+
+func (x *ImprovementDetail) GetToVersion() string {
+	if x != nil {
+		return x.ToVersion
+	}
+	return ""
+}
+
+func (x *ImprovementDetail) GetTriggeredBy() string {
+	if x != nil {
+		return x.TriggeredBy
+	}
+	return ""
+}
+
+func (x *ImprovementDetail) GetRecordedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return nil
+}
+
+func (x *ImprovementDetail) GetCycle() int64 {
+	if x != nil {
+		return x.Cycle
+	}
+	return 0
+}
+
+func (x *ImprovementDetail) GetBeforeMetrics() map[string]float64 {
+	if x != nil {
+		return x.BeforeMetrics
+	}
+	return nil
+}
+
+func (x *ImprovementDetail) GetAfterMetrics() map[string]float64 {
+	if x != nil {
+		return x.AfterMetrics
+	}
+	return nil
+}
+
+func (x *ImprovementDetail) GetAlignmentApproved() bool {
+	if x != nil {
+		return x.AlignmentApproved
+	}
+	return false
+}
+
+func (x *ImprovementDetail) GetHasAlignmentDecision() bool {
+	if x != nil {
+		return x.HasAlignmentDecision
+	}
+	return false
+}
+
+func (x *ImprovementDetail) GetAlignmentReasons() []string {
+	if x != nil {
+		return x.AlignmentReasons
+	}
+	return nil
+}
+
 var File_omega_v1_types_proto protoreflect.FileDescriptor
 
 const file_omega_v1_types_proto_rawDesc = "" +
@@ -1952,7 +2580,85 @@ const file_omega_v1_types_proto_rawDesc = "" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12\x16\n" +
 	"\x06models\x18\x03 \x03(\tR\x06models\x12(\n" +
 	"\x10requires_api_key\x18\x04 \x01(\bR\x0erequiresApiKey\x12\x1c\n" +
-	"\tavailable\x18\x05 \x01(\bR\tavailableB\x91\x01\n" +
+	"\tavailable\x18\x05 \x01(\bR\tavailable\"\xe8\x01\n" +
+	"\x11AlignmentDecision\x12\x1f\n" +
+	"\vdecision_id\x18\x01 \x01(\tR\n" +
+	"decisionId\x12\x14\n" +
+	"\x05cycle\x18\x02 \x01(\x03R\x05cycle\x12\x1a\n" +
+	"\bapproved\x18\x03 \x01(\bR\bapproved\x12\x18\n" +
+	"\areasons\x18\x04 \x03(\tR\areasons\x12)\n" +
+	"\x10target_subsystem\x18\x05 \x01(\tR\x0ftargetSubsystem\x12;\n" +
+	"\vrecorded_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\"\xc9\x01\n" +
+	"\x11AdversarialResult\x12\x1b\n" +
+	"\tresult_id\x18\x01 \x01(\tR\bresultId\x12\x14\n" +
+	"\x05cycle\x18\x02 \x01(\x03R\x05cycle\x12\x12\n" +
+	"\x04ring\x18\x03 \x01(\x05R\x04ring\x12\x14\n" +
+	"\x05flags\x18\x04 \x03(\tR\x05flags\x12\x1a\n" +
+	"\bseverity\x18\x05 \x01(\tR\bseverity\x12;\n" +
+	"\vrecorded_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\"\xc7\x03\n" +
+	"\tGoalState\x12\x14\n" +
+	"\x05cycle\x18\x01 \x01(\x03R\x05cycle\x12b\n" +
+	"\x15constitutional_checks\x18\x02 \x03(\v2-.omega.v1.GoalState.ConstitutionalChecksEntryR\x14constitutionalChecks\x12S\n" +
+	"\x10scorecard_values\x18\x03 \x03(\v2(.omega.v1.GoalState.ScorecardValuesEntryR\x0fscorecardValues\x12!\n" +
+	"\factive_tasks\x18\x04 \x03(\tR\vactiveTasks\x12;\n" +
+	"\vrecorded_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\x1aG\n" +
+	"\x19ConstitutionalChecksEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\bR\x05value:\x028\x01\x1aB\n" +
+	"\x14ScorecardValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xa5\x02\n" +
+	"\tChallenge\x12!\n" +
+	"\fchallenge_id\x18\x01 \x01(\tR\vchallengeId\x12\x16\n" +
+	"\x06status\x18\x02 \x01(\tR\x06status\x12\x1a\n" +
+	"\bseverity\x18\x03 \x01(\tR\bseverity\x12)\n" +
+	"\x10target_subsystem\x18\x04 \x01(\tR\x0ftargetSubsystem\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x129\n" +
+	"\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x129\n" +
+	"\n" +
+	"updated_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\"\xb3\x01\n" +
+	"\vMemoryStats\x12%\n" +
+	"\x0eepisodic_count\x18\x01 \x01(\x03R\repisodicCount\x12%\n" +
+	"\x0esemantic_count\x18\x02 \x01(\x03R\rsemanticCount\x12%\n" +
+	"\x0eregime_history\x18\x03 \x03(\tR\rregimeHistory\x12/\n" +
+	"\x13contradiction_count\x18\x04 \x01(\x03R\x12contradictionCount\"\xc5\x01\n" +
+	"\n" +
+	"GateResult\x12\x17\n" +
+	"\agate_id\x18\x01 \x01(\tR\x06gateId\x12\x14\n" +
+	"\x05cycle\x18\x02 \x01(\x03R\x05cycle\x12\x1b\n" +
+	"\tgate_name\x18\x03 \x01(\tR\bgateName\x12\x16\n" +
+	"\x06result\x18\x04 \x01(\tR\x06result\x12\x18\n" +
+	"\adetails\x18\x05 \x01(\tR\adetails\x129\n" +
+	"\n" +
+	"checked_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcheckedAt\"\xe0\x05\n" +
+	"\x11ImprovementDetail\x12\x1d\n" +
+	"\n" +
+	"improve_id\x18\x01 \x01(\tR\timproveId\x12\x17\n" +
+	"\anode_id\x18\x02 \x01(\tR\x06nodeId\x12\x1b\n" +
+	"\tnode_name\x18\x03 \x01(\tR\bnodeName\x12!\n" +
+	"\ffrom_version\x18\x04 \x01(\tR\vfromVersion\x12\x1d\n" +
+	"\n" +
+	"to_version\x18\x05 \x01(\tR\ttoVersion\x12!\n" +
+	"\ftriggered_by\x18\x06 \x01(\tR\vtriggeredBy\x12;\n" +
+	"\vrecorded_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"recordedAt\x12\x14\n" +
+	"\x05cycle\x18\b \x01(\x03R\x05cycle\x12U\n" +
+	"\x0ebefore_metrics\x18\t \x03(\v2..omega.v1.ImprovementDetail.BeforeMetricsEntryR\rbeforeMetrics\x12R\n" +
+	"\rafter_metrics\x18\n" +
+	" \x03(\v2-.omega.v1.ImprovementDetail.AfterMetricsEntryR\fafterMetrics\x12-\n" +
+	"\x12alignment_approved\x18\v \x01(\bR\x11alignmentApproved\x124\n" +
+	"\x16has_alignment_decision\x18\f \x01(\bR\x14hasAlignmentDecision\x12+\n" +
+	"\x11alignment_reasons\x18\r \x03(\tR\x10alignmentReasons\x1a@\n" +
+	"\x12BeforeMetricsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\x1a?\n" +
+	"\x11AfterMetricsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01B\x91\x01\n" +
 	"\fcom.omega.v1B\n" +
 	"TypesProtoP\x01Z4github.com/benebsworth/omega/gen/go/omega/v1;omegav1\xa2\x02\x03OXX\xaa\x02\bOmega.V1\xca\x02\bOmega\\V1\xe2\x02\x14Omega\\V1\\GPBMetadata\xea\x02\tOmega::V1b\x06proto3"
 
@@ -1968,7 +2674,7 @@ func file_omega_v1_types_proto_rawDescGZIP() []byte {
 	return file_omega_v1_types_proto_rawDescData
 }
 
-var file_omega_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_omega_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
 var file_omega_v1_types_proto_goTypes = []any{
 	(*Node)(nil),                  // 0: omega.v1.Node
 	(*ExecutionRecord)(nil),       // 1: omega.v1.ExecutionRecord
@@ -1987,47 +2693,69 @@ var file_omega_v1_types_proto_goTypes = []any{
 	(*NodeConfig)(nil),            // 14: omega.v1.NodeConfig
 	(*BrainExecutionEntry)(nil),   // 15: omega.v1.BrainExecutionEntry
 	(*ProviderInfo)(nil),          // 16: omega.v1.ProviderInfo
-	nil,                           // 17: omega.v1.ExecutionRecord.MetricsEntry
-	nil,                           // 18: omega.v1.ImprovementRecord.BeforeMetricsEntry
-	nil,                           // 19: omega.v1.ImprovementRecord.AfterMetricsEntry
-	nil,                           // 20: omega.v1.BrainConfig.ExtraConfigEntry
-	nil,                           // 21: omega.v1.NodeConfig.ParametersEntry
-	(*timestamppb.Timestamp)(nil), // 22: google.protobuf.Timestamp
+	(*AlignmentDecision)(nil),     // 17: omega.v1.AlignmentDecision
+	(*AdversarialResult)(nil),     // 18: omega.v1.AdversarialResult
+	(*GoalState)(nil),             // 19: omega.v1.GoalState
+	(*Challenge)(nil),             // 20: omega.v1.Challenge
+	(*MemoryStats)(nil),           // 21: omega.v1.MemoryStats
+	(*GateResult)(nil),            // 22: omega.v1.GateResult
+	(*ImprovementDetail)(nil),     // 23: omega.v1.ImprovementDetail
+	nil,                           // 24: omega.v1.ExecutionRecord.MetricsEntry
+	nil,                           // 25: omega.v1.ImprovementRecord.BeforeMetricsEntry
+	nil,                           // 26: omega.v1.ImprovementRecord.AfterMetricsEntry
+	nil,                           // 27: omega.v1.BrainConfig.ExtraConfigEntry
+	nil,                           // 28: omega.v1.NodeConfig.ParametersEntry
+	nil,                           // 29: omega.v1.GoalState.ConstitutionalChecksEntry
+	nil,                           // 30: omega.v1.GoalState.ScorecardValuesEntry
+	nil,                           // 31: omega.v1.ImprovementDetail.BeforeMetricsEntry
+	nil,                           // 32: omega.v1.ImprovementDetail.AfterMetricsEntry
+	(*timestamppb.Timestamp)(nil), // 33: google.protobuf.Timestamp
 }
 var file_omega_v1_types_proto_depIdxs = []int32{
-	22, // 0: omega.v1.Node.registered_at:type_name -> google.protobuf.Timestamp
-	22, // 1: omega.v1.Node.last_updated:type_name -> google.protobuf.Timestamp
+	33, // 0: omega.v1.Node.registered_at:type_name -> google.protobuf.Timestamp
+	33, // 1: omega.v1.Node.last_updated:type_name -> google.protobuf.Timestamp
 	1,  // 2: omega.v1.Node.last_execution:type_name -> omega.v1.ExecutionRecord
-	22, // 3: omega.v1.ExecutionRecord.started_at:type_name -> google.protobuf.Timestamp
-	22, // 4: omega.v1.ExecutionRecord.ended_at:type_name -> google.protobuf.Timestamp
-	17, // 5: omega.v1.ExecutionRecord.metrics:type_name -> omega.v1.ExecutionRecord.MetricsEntry
-	22, // 6: omega.v1.TraceSummary.trace_started:type_name -> google.protobuf.Timestamp
-	22, // 7: omega.v1.TraceSummary.trace_ended:type_name -> google.protobuf.Timestamp
-	22, // 8: omega.v1.Span.started_at:type_name -> google.protobuf.Timestamp
-	22, // 9: omega.v1.Span.ended_at:type_name -> google.protobuf.Timestamp
-	22, // 10: omega.v1.Issue.opened_at:type_name -> google.protobuf.Timestamp
-	22, // 11: omega.v1.Issue.resolved_at:type_name -> google.protobuf.Timestamp
-	22, // 12: omega.v1.ActivityEntry.recorded_at:type_name -> google.protobuf.Timestamp
-	22, // 13: omega.v1.ImprovementRecord.recorded_at:type_name -> google.protobuf.Timestamp
-	18, // 14: omega.v1.ImprovementRecord.before_metrics:type_name -> omega.v1.ImprovementRecord.BeforeMetricsEntry
-	19, // 15: omega.v1.ImprovementRecord.after_metrics:type_name -> omega.v1.ImprovementRecord.AfterMetricsEntry
-	22, // 16: omega.v1.EpisodeEntry.timestamp:type_name -> google.protobuf.Timestamp
-	22, // 17: omega.v1.ConvergencePoint.timestamp:type_name -> google.protobuf.Timestamp
+	33, // 3: omega.v1.ExecutionRecord.started_at:type_name -> google.protobuf.Timestamp
+	33, // 4: omega.v1.ExecutionRecord.ended_at:type_name -> google.protobuf.Timestamp
+	24, // 5: omega.v1.ExecutionRecord.metrics:type_name -> omega.v1.ExecutionRecord.MetricsEntry
+	33, // 6: omega.v1.TraceSummary.trace_started:type_name -> google.protobuf.Timestamp
+	33, // 7: omega.v1.TraceSummary.trace_ended:type_name -> google.protobuf.Timestamp
+	33, // 8: omega.v1.Span.started_at:type_name -> google.protobuf.Timestamp
+	33, // 9: omega.v1.Span.ended_at:type_name -> google.protobuf.Timestamp
+	33, // 10: omega.v1.Issue.opened_at:type_name -> google.protobuf.Timestamp
+	33, // 11: omega.v1.Issue.resolved_at:type_name -> google.protobuf.Timestamp
+	33, // 12: omega.v1.ActivityEntry.recorded_at:type_name -> google.protobuf.Timestamp
+	33, // 13: omega.v1.ImprovementRecord.recorded_at:type_name -> google.protobuf.Timestamp
+	25, // 14: omega.v1.ImprovementRecord.before_metrics:type_name -> omega.v1.ImprovementRecord.BeforeMetricsEntry
+	26, // 15: omega.v1.ImprovementRecord.after_metrics:type_name -> omega.v1.ImprovementRecord.AfterMetricsEntry
+	33, // 16: omega.v1.EpisodeEntry.timestamp:type_name -> google.protobuf.Timestamp
+	33, // 17: omega.v1.ConvergencePoint.timestamp:type_name -> google.protobuf.Timestamp
 	7,  // 18: omega.v1.EventResponse.health_update:type_name -> omega.v1.SystemHealth
 	0,  // 19: omega.v1.EventResponse.node_update:type_name -> omega.v1.Node
 	4,  // 20: omega.v1.EventResponse.new_issue:type_name -> omega.v1.Issue
 	6,  // 21: omega.v1.EventResponse.improvement:type_name -> omega.v1.ImprovementRecord
 	5,  // 22: omega.v1.EventResponse.activity:type_name -> omega.v1.ActivityEntry
-	20, // 23: omega.v1.BrainConfig.extra_config:type_name -> omega.v1.BrainConfig.ExtraConfigEntry
+	27, // 23: omega.v1.BrainConfig.extra_config:type_name -> omega.v1.BrainConfig.ExtraConfigEntry
 	13, // 24: omega.v1.NodeConfig.brain:type_name -> omega.v1.BrainConfig
-	21, // 25: omega.v1.NodeConfig.parameters:type_name -> omega.v1.NodeConfig.ParametersEntry
-	22, // 26: omega.v1.NodeConfig.updated_at:type_name -> google.protobuf.Timestamp
-	22, // 27: omega.v1.BrainExecutionEntry.executed_at:type_name -> google.protobuf.Timestamp
-	28, // [28:28] is the sub-list for method output_type
-	28, // [28:28] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	28, // 25: omega.v1.NodeConfig.parameters:type_name -> omega.v1.NodeConfig.ParametersEntry
+	33, // 26: omega.v1.NodeConfig.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 27: omega.v1.BrainExecutionEntry.executed_at:type_name -> google.protobuf.Timestamp
+	33, // 28: omega.v1.AlignmentDecision.recorded_at:type_name -> google.protobuf.Timestamp
+	33, // 29: omega.v1.AdversarialResult.recorded_at:type_name -> google.protobuf.Timestamp
+	29, // 30: omega.v1.GoalState.constitutional_checks:type_name -> omega.v1.GoalState.ConstitutionalChecksEntry
+	30, // 31: omega.v1.GoalState.scorecard_values:type_name -> omega.v1.GoalState.ScorecardValuesEntry
+	33, // 32: omega.v1.GoalState.recorded_at:type_name -> google.protobuf.Timestamp
+	33, // 33: omega.v1.Challenge.created_at:type_name -> google.protobuf.Timestamp
+	33, // 34: omega.v1.Challenge.updated_at:type_name -> google.protobuf.Timestamp
+	33, // 35: omega.v1.GateResult.checked_at:type_name -> google.protobuf.Timestamp
+	33, // 36: omega.v1.ImprovementDetail.recorded_at:type_name -> google.protobuf.Timestamp
+	31, // 37: omega.v1.ImprovementDetail.before_metrics:type_name -> omega.v1.ImprovementDetail.BeforeMetricsEntry
+	32, // 38: omega.v1.ImprovementDetail.after_metrics:type_name -> omega.v1.ImprovementDetail.AfterMetricsEntry
+	39, // [39:39] is the sub-list for method output_type
+	39, // [39:39] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_types_proto_init() }
@@ -2048,7 +2776,7 @@ func file_omega_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_types_proto_rawDesc), len(file_omega_v1_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   33,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

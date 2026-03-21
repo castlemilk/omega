@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { GetBrainExecutionHistoryRequest, GetBrainExecutionHistoryResponse, GetConvergenceRequest, GetConvergenceResponse, GetCostsRequest, GetCostsResponse, GetHealthRequest, GetHealthResponse, GetMetricsHistoryRequest, GetMetricsHistoryResponse, GetMetricsRequest, GetMetricsResponse, GetNodeConfigRequest, GetNodeConfigResponse, GetNodeMemoryRequest, GetNodeMemoryResponse, GetNodeRequest, GetNodeResponse, GetTraceRequest, GetTraceResponse, ListActivityRequest, ListActivityResponse, ListAvailableProvidersRequest, ListAvailableProvidersResponse, ListImprovementsRequest, ListImprovementsResponse, ListIssuesRequest, ListIssuesResponse, ListNodeExecutionsRequest, ListNodeExecutionsResponse, ListNodesRequest, ListNodesResponse, ListTracesRequest, ListTracesResponse, StartOrchestratorRequest, StartOrchestratorResponse, StopOrchestratorRequest, StopOrchestratorResponse, StreamEventsRequest, SubmitFeedbackRequest, SubmitFeedbackResponse, TriggerHeartbeatRequest, TriggerHeartbeatResponse, UpdateNodeBrainRequest, UpdateNodeBrainResponse } from "./omega_service_pb.js";
+import { GetAdversarialResultsRequest, GetAdversarialResultsResponse, GetAlignmentDecisionsRequest, GetAlignmentDecisionsResponse, GetBrainExecutionHistoryRequest, GetBrainExecutionHistoryResponse, GetChallengesRequest, GetChallengesResponse, GetConvergenceRequest, GetConvergenceResponse, GetCostsRequest, GetCostsResponse, GetGoalTrackingRequest, GetGoalTrackingResponse, GetHealthRequest, GetHealthResponse, GetImprovementHistoryRequest, GetImprovementHistoryResponse, GetMemoryStatsRequest, GetMemoryStatsResponse, GetMetricsHistoryRequest, GetMetricsHistoryResponse, GetMetricsRequest, GetMetricsResponse, GetNodeConfigRequest, GetNodeConfigResponse, GetNodeMemoryRequest, GetNodeMemoryResponse, GetNodeRequest, GetNodeResponse, GetTraceRequest, GetTraceResponse, GetVerificationGatesRequest, GetVerificationGatesResponse, ListActivityRequest, ListActivityResponse, ListAvailableProvidersRequest, ListAvailableProvidersResponse, ListImprovementsRequest, ListImprovementsResponse, ListIssuesRequest, ListIssuesResponse, ListNodeExecutionsRequest, ListNodeExecutionsResponse, ListNodesRequest, ListNodesResponse, ListTracesRequest, ListTracesResponse, StartOrchestratorRequest, StartOrchestratorResponse, StopOrchestratorRequest, StopOrchestratorResponse, StreamEventsRequest, SubmitFeedbackRequest, SubmitFeedbackResponse, TriggerHeartbeatRequest, TriggerHeartbeatResponse, UpdateNodeBrainRequest, UpdateNodeBrainResponse } from "./omega_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 import { EventResponse } from "./types_pb.js";
 
@@ -218,6 +218,69 @@ export const OrchestratorService = {
       name: "GetBrainExecutionHistory",
       I: GetBrainExecutionHistoryRequest,
       O: GetBrainExecutionHistoryResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.OrchestratorService.GetAlignmentDecisions
+     */
+    getAlignmentDecisions: {
+      name: "GetAlignmentDecisions",
+      I: GetAlignmentDecisionsRequest,
+      O: GetAlignmentDecisionsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.OrchestratorService.GetAdversarialResults
+     */
+    getAdversarialResults: {
+      name: "GetAdversarialResults",
+      I: GetAdversarialResultsRequest,
+      O: GetAdversarialResultsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.OrchestratorService.GetGoalTracking
+     */
+    getGoalTracking: {
+      name: "GetGoalTracking",
+      I: GetGoalTrackingRequest,
+      O: GetGoalTrackingResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.OrchestratorService.GetChallenges
+     */
+    getChallenges: {
+      name: "GetChallenges",
+      I: GetChallengesRequest,
+      O: GetChallengesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.OrchestratorService.GetMemoryStats
+     */
+    getMemoryStats: {
+      name: "GetMemoryStats",
+      I: GetMemoryStatsRequest,
+      O: GetMemoryStatsResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.OrchestratorService.GetVerificationGates
+     */
+    getVerificationGates: {
+      name: "GetVerificationGates",
+      I: GetVerificationGatesRequest,
+      O: GetVerificationGatesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.OrchestratorService.GetImprovementHistory
+     */
+    getImprovementHistory: {
+      name: "GetImprovementHistory",
+      I: GetImprovementHistoryRequest,
+      O: GetImprovementHistoryResponse,
       kind: MethodKind.Unary,
     },
   }

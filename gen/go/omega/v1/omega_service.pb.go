@@ -2232,6 +2232,613 @@ func (x *GetBrainExecutionHistoryResponse) GetEntries() []*BrainExecutionEntry {
 	return nil
 }
 
+// ── Alignment decisions ────────────────────────────────────────────────────
+type GetAlignmentDecisionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAlignmentDecisionsRequest) Reset() {
+	*x = GetAlignmentDecisionsRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAlignmentDecisionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAlignmentDecisionsRequest) ProtoMessage() {}
+
+func (x *GetAlignmentDecisionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAlignmentDecisionsRequest.ProtoReflect.Descriptor instead.
+func (*GetAlignmentDecisionsRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *GetAlignmentDecisionsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type GetAlignmentDecisionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Decisions     []*AlignmentDecision   `protobuf:"bytes,1,rep,name=decisions,proto3" json:"decisions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAlignmentDecisionsResponse) Reset() {
+	*x = GetAlignmentDecisionsResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAlignmentDecisionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAlignmentDecisionsResponse) ProtoMessage() {}
+
+func (x *GetAlignmentDecisionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAlignmentDecisionsResponse.ProtoReflect.Descriptor instead.
+func (*GetAlignmentDecisionsResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *GetAlignmentDecisionsResponse) GetDecisions() []*AlignmentDecision {
+	if x != nil {
+		return x.Decisions
+	}
+	return nil
+}
+
+// ── Adversarial results ────────────────────────────────────────────────────
+type GetAdversarialResultsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAdversarialResultsRequest) Reset() {
+	*x = GetAdversarialResultsRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAdversarialResultsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAdversarialResultsRequest) ProtoMessage() {}
+
+func (x *GetAdversarialResultsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAdversarialResultsRequest.ProtoReflect.Descriptor instead.
+func (*GetAdversarialResultsRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *GetAdversarialResultsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type GetAdversarialResultsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Results       []*AdversarialResult   `protobuf:"bytes,1,rep,name=results,proto3" json:"results,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetAdversarialResultsResponse) Reset() {
+	*x = GetAdversarialResultsResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetAdversarialResultsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetAdversarialResultsResponse) ProtoMessage() {}
+
+func (x *GetAdversarialResultsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetAdversarialResultsResponse.ProtoReflect.Descriptor instead.
+func (*GetAdversarialResultsResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *GetAdversarialResultsResponse) GetResults() []*AdversarialResult {
+	if x != nil {
+		return x.Results
+	}
+	return nil
+}
+
+// ── Goal tracking ──────────────────────────────────────────────────────────
+type GetGoalTrackingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetGoalTrackingRequest) Reset() {
+	*x = GetGoalTrackingRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetGoalTrackingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetGoalTrackingRequest) ProtoMessage() {}
+
+func (x *GetGoalTrackingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetGoalTrackingRequest.ProtoReflect.Descriptor instead.
+func (*GetGoalTrackingRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{51}
+}
+
+type GetGoalTrackingResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	State         *GoalState             `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetGoalTrackingResponse) Reset() {
+	*x = GetGoalTrackingResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetGoalTrackingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetGoalTrackingResponse) ProtoMessage() {}
+
+func (x *GetGoalTrackingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetGoalTrackingResponse.ProtoReflect.Descriptor instead.
+func (*GetGoalTrackingResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *GetGoalTrackingResponse) GetState() *GoalState {
+	if x != nil {
+		return x.State
+	}
+	return nil
+}
+
+// ── Challenges ─────────────────────────────────────────────────────────────
+type GetChallengesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StatusFilter  string                 `protobuf:"bytes,1,opt,name=status_filter,json=statusFilter,proto3" json:"status_filter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetChallengesRequest) Reset() {
+	*x = GetChallengesRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetChallengesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetChallengesRequest) ProtoMessage() {}
+
+func (x *GetChallengesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetChallengesRequest.ProtoReflect.Descriptor instead.
+func (*GetChallengesRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *GetChallengesRequest) GetStatusFilter() string {
+	if x != nil {
+		return x.StatusFilter
+	}
+	return ""
+}
+
+type GetChallengesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Challenges    []*Challenge           `protobuf:"bytes,1,rep,name=challenges,proto3" json:"challenges,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetChallengesResponse) Reset() {
+	*x = GetChallengesResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetChallengesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetChallengesResponse) ProtoMessage() {}
+
+func (x *GetChallengesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetChallengesResponse.ProtoReflect.Descriptor instead.
+func (*GetChallengesResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *GetChallengesResponse) GetChallenges() []*Challenge {
+	if x != nil {
+		return x.Challenges
+	}
+	return nil
+}
+
+// ── Memory stats ───────────────────────────────────────────────────────────
+type GetMemoryStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMemoryStatsRequest) Reset() {
+	*x = GetMemoryStatsRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMemoryStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMemoryStatsRequest) ProtoMessage() {}
+
+func (x *GetMemoryStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMemoryStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetMemoryStatsRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{55}
+}
+
+type GetMemoryStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stats         *MemoryStats           `protobuf:"bytes,1,opt,name=stats,proto3" json:"stats,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMemoryStatsResponse) Reset() {
+	*x = GetMemoryStatsResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMemoryStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMemoryStatsResponse) ProtoMessage() {}
+
+func (x *GetMemoryStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMemoryStatsResponse.ProtoReflect.Descriptor instead.
+func (*GetMemoryStatsResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *GetMemoryStatsResponse) GetStats() *MemoryStats {
+	if x != nil {
+		return x.Stats
+	}
+	return nil
+}
+
+// ── Verification gates ─────────────────────────────────────────────────────
+type GetVerificationGatesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetVerificationGatesRequest) Reset() {
+	*x = GetVerificationGatesRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVerificationGatesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVerificationGatesRequest) ProtoMessage() {}
+
+func (x *GetVerificationGatesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVerificationGatesRequest.ProtoReflect.Descriptor instead.
+func (*GetVerificationGatesRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *GetVerificationGatesRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type GetVerificationGatesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Gates         []*GateResult          `protobuf:"bytes,1,rep,name=gates,proto3" json:"gates,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetVerificationGatesResponse) Reset() {
+	*x = GetVerificationGatesResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetVerificationGatesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetVerificationGatesResponse) ProtoMessage() {}
+
+func (x *GetVerificationGatesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetVerificationGatesResponse.ProtoReflect.Descriptor instead.
+func (*GetVerificationGatesResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *GetVerificationGatesResponse) GetGates() []*GateResult {
+	if x != nil {
+		return x.Gates
+	}
+	return nil
+}
+
+// ── Improvement history ────────────────────────────────────────────────────
+type GetImprovementHistoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetImprovementHistoryRequest) Reset() {
+	*x = GetImprovementHistoryRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetImprovementHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetImprovementHistoryRequest) ProtoMessage() {}
+
+func (x *GetImprovementHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetImprovementHistoryRequest.ProtoReflect.Descriptor instead.
+func (*GetImprovementHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *GetImprovementHistoryRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type GetImprovementHistoryResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Records       []*ImprovementDetail   `protobuf:"bytes,1,rep,name=records,proto3" json:"records,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetImprovementHistoryResponse) Reset() {
+	*x = GetImprovementHistoryResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetImprovementHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetImprovementHistoryResponse) ProtoMessage() {}
+
+func (x *GetImprovementHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetImprovementHistoryResponse.ProtoReflect.Descriptor instead.
+func (*GetImprovementHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *GetImprovementHistoryResponse) GetRecords() []*ImprovementDetail {
+	if x != nil {
+		return x.Records
+	}
+	return nil
+}
+
 var File_omega_v1_omega_service_proto protoreflect.FileDescriptor
 
 const file_omega_v1_omega_service_proto_rawDesc = "" +
@@ -2351,7 +2958,35 @@ const file_omega_v1_omega_service_proto_rawDesc = "" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\"[\n" +
 	" GetBrainExecutionHistoryResponse\x127\n" +
-	"\aentries\x18\x01 \x03(\v2\x1d.omega.v1.BrainExecutionEntryR\aentries2\x8f\x0f\n" +
+	"\aentries\x18\x01 \x03(\v2\x1d.omega.v1.BrainExecutionEntryR\aentries\"4\n" +
+	"\x1cGetAlignmentDecisionsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\"Z\n" +
+	"\x1dGetAlignmentDecisionsResponse\x129\n" +
+	"\tdecisions\x18\x01 \x03(\v2\x1b.omega.v1.AlignmentDecisionR\tdecisions\"4\n" +
+	"\x1cGetAdversarialResultsRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\"V\n" +
+	"\x1dGetAdversarialResultsResponse\x125\n" +
+	"\aresults\x18\x01 \x03(\v2\x1b.omega.v1.AdversarialResultR\aresults\"\x18\n" +
+	"\x16GetGoalTrackingRequest\"D\n" +
+	"\x17GetGoalTrackingResponse\x12)\n" +
+	"\x05state\x18\x01 \x01(\v2\x13.omega.v1.GoalStateR\x05state\";\n" +
+	"\x14GetChallengesRequest\x12#\n" +
+	"\rstatus_filter\x18\x01 \x01(\tR\fstatusFilter\"L\n" +
+	"\x15GetChallengesResponse\x123\n" +
+	"\n" +
+	"challenges\x18\x01 \x03(\v2\x13.omega.v1.ChallengeR\n" +
+	"challenges\"\x17\n" +
+	"\x15GetMemoryStatsRequest\"E\n" +
+	"\x16GetMemoryStatsResponse\x12+\n" +
+	"\x05stats\x18\x01 \x01(\v2\x15.omega.v1.MemoryStatsR\x05stats\"3\n" +
+	"\x1bGetVerificationGatesRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\"J\n" +
+	"\x1cGetVerificationGatesResponse\x12*\n" +
+	"\x05gates\x18\x01 \x03(\v2\x14.omega.v1.GateResultR\x05gates\"4\n" +
+	"\x1cGetImprovementHistoryRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\"V\n" +
+	"\x1dGetImprovementHistoryResponse\x125\n" +
+	"\arecords\x18\x01 \x03(\v2\x1b.omega.v1.ImprovementDetailR\arecords2\xb3\x14\n" +
 	"\x13OrchestratorService\x12D\n" +
 	"\tGetHealth\x12\x1a.omega.v1.GetHealthRequest\x1a\x1b.omega.v1.GetHealthResponse\x12D\n" +
 	"\tListNodes\x12\x1a.omega.v1.ListNodesRequest\x1a\x1b.omega.v1.ListNodesResponse\x12>\n" +
@@ -2378,7 +3013,14 @@ const file_omega_v1_omega_service_proto_rawDesc = "" +
 	"\rGetNodeConfig\x12\x1e.omega.v1.GetNodeConfigRequest\x1a\x1f.omega.v1.GetNodeConfigResponse\x12V\n" +
 	"\x0fUpdateNodeBrain\x12 .omega.v1.UpdateNodeBrainRequest\x1a!.omega.v1.UpdateNodeBrainResponse\x12k\n" +
 	"\x16ListAvailableProviders\x12'.omega.v1.ListAvailableProvidersRequest\x1a(.omega.v1.ListAvailableProvidersResponse\x12q\n" +
-	"\x18GetBrainExecutionHistory\x12).omega.v1.GetBrainExecutionHistoryRequest\x1a*.omega.v1.GetBrainExecutionHistoryResponseB\x98\x01\n" +
+	"\x18GetBrainExecutionHistory\x12).omega.v1.GetBrainExecutionHistoryRequest\x1a*.omega.v1.GetBrainExecutionHistoryResponse\x12h\n" +
+	"\x15GetAlignmentDecisions\x12&.omega.v1.GetAlignmentDecisionsRequest\x1a'.omega.v1.GetAlignmentDecisionsResponse\x12h\n" +
+	"\x15GetAdversarialResults\x12&.omega.v1.GetAdversarialResultsRequest\x1a'.omega.v1.GetAdversarialResultsResponse\x12V\n" +
+	"\x0fGetGoalTracking\x12 .omega.v1.GetGoalTrackingRequest\x1a!.omega.v1.GetGoalTrackingResponse\x12P\n" +
+	"\rGetChallenges\x12\x1e.omega.v1.GetChallengesRequest\x1a\x1f.omega.v1.GetChallengesResponse\x12S\n" +
+	"\x0eGetMemoryStats\x12\x1f.omega.v1.GetMemoryStatsRequest\x1a .omega.v1.GetMemoryStatsResponse\x12e\n" +
+	"\x14GetVerificationGates\x12%.omega.v1.GetVerificationGatesRequest\x1a&.omega.v1.GetVerificationGatesResponse\x12h\n" +
+	"\x15GetImprovementHistory\x12&.omega.v1.GetImprovementHistoryRequest\x1a'.omega.v1.GetImprovementHistoryResponseB\x98\x01\n" +
 	"\fcom.omega.v1B\x11OmegaServiceProtoP\x01Z4github.com/benebsworth/omega/gen/go/omega/v1;omegav1\xa2\x02\x03OXX\xaa\x02\bOmega.V1\xca\x02\bOmega\\V1\xe2\x02\x14Omega\\V1\\GPBMetadata\xea\x02\tOmega::V1b\x06proto3"
 
 var (
@@ -2393,7 +3035,7 @@ func file_omega_v1_omega_service_proto_rawDescGZIP() []byte {
 	return file_omega_v1_omega_service_proto_rawDescData
 }
 
-var file_omega_v1_omega_service_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_omega_v1_omega_service_proto_msgTypes = make([]protoimpl.MessageInfo, 61)
 var file_omega_v1_omega_service_proto_goTypes = []any{
 	(*GetHealthRequest)(nil),                 // 0: omega.v1.GetHealthRequest
 	(*GetHealthResponse)(nil),                // 1: omega.v1.GetHealthResponse
@@ -2442,106 +3084,148 @@ var file_omega_v1_omega_service_proto_goTypes = []any{
 	(*ListAvailableProvidersResponse)(nil),   // 44: omega.v1.ListAvailableProvidersResponse
 	(*GetBrainExecutionHistoryRequest)(nil),  // 45: omega.v1.GetBrainExecutionHistoryRequest
 	(*GetBrainExecutionHistoryResponse)(nil), // 46: omega.v1.GetBrainExecutionHistoryResponse
-	(*SystemHealth)(nil),                     // 47: omega.v1.SystemHealth
-	(*Node)(nil),                             // 48: omega.v1.Node
-	(*ExecutionRecord)(nil),                  // 49: omega.v1.ExecutionRecord
-	(*ImprovementRecord)(nil),                // 50: omega.v1.ImprovementRecord
-	(*timestamppb.Timestamp)(nil),            // 51: google.protobuf.Timestamp
-	(*TraceSummary)(nil),                     // 52: omega.v1.TraceSummary
-	(*Span)(nil),                             // 53: omega.v1.Span
-	(*CostEntry)(nil),                        // 54: omega.v1.CostEntry
-	(*Issue)(nil),                            // 55: omega.v1.Issue
-	(*ActivityEntry)(nil),                    // 56: omega.v1.ActivityEntry
-	(*SemanticConcept)(nil),                  // 57: omega.v1.SemanticConcept
-	(*EpisodeEntry)(nil),                     // 58: omega.v1.EpisodeEntry
-	(*ConvergencePoint)(nil),                 // 59: omega.v1.ConvergencePoint
-	(*NodeConfig)(nil),                       // 60: omega.v1.NodeConfig
-	(*BrainConfig)(nil),                      // 61: omega.v1.BrainConfig
-	(*ProviderInfo)(nil),                     // 62: omega.v1.ProviderInfo
-	(*BrainExecutionEntry)(nil),              // 63: omega.v1.BrainExecutionEntry
-	(*EventResponse)(nil),                    // 64: omega.v1.EventResponse
+	(*GetAlignmentDecisionsRequest)(nil),     // 47: omega.v1.GetAlignmentDecisionsRequest
+	(*GetAlignmentDecisionsResponse)(nil),    // 48: omega.v1.GetAlignmentDecisionsResponse
+	(*GetAdversarialResultsRequest)(nil),     // 49: omega.v1.GetAdversarialResultsRequest
+	(*GetAdversarialResultsResponse)(nil),    // 50: omega.v1.GetAdversarialResultsResponse
+	(*GetGoalTrackingRequest)(nil),           // 51: omega.v1.GetGoalTrackingRequest
+	(*GetGoalTrackingResponse)(nil),          // 52: omega.v1.GetGoalTrackingResponse
+	(*GetChallengesRequest)(nil),             // 53: omega.v1.GetChallengesRequest
+	(*GetChallengesResponse)(nil),            // 54: omega.v1.GetChallengesResponse
+	(*GetMemoryStatsRequest)(nil),            // 55: omega.v1.GetMemoryStatsRequest
+	(*GetMemoryStatsResponse)(nil),           // 56: omega.v1.GetMemoryStatsResponse
+	(*GetVerificationGatesRequest)(nil),      // 57: omega.v1.GetVerificationGatesRequest
+	(*GetVerificationGatesResponse)(nil),     // 58: omega.v1.GetVerificationGatesResponse
+	(*GetImprovementHistoryRequest)(nil),     // 59: omega.v1.GetImprovementHistoryRequest
+	(*GetImprovementHistoryResponse)(nil),    // 60: omega.v1.GetImprovementHistoryResponse
+	(*SystemHealth)(nil),                     // 61: omega.v1.SystemHealth
+	(*Node)(nil),                             // 62: omega.v1.Node
+	(*ExecutionRecord)(nil),                  // 63: omega.v1.ExecutionRecord
+	(*ImprovementRecord)(nil),                // 64: omega.v1.ImprovementRecord
+	(*timestamppb.Timestamp)(nil),            // 65: google.protobuf.Timestamp
+	(*TraceSummary)(nil),                     // 66: omega.v1.TraceSummary
+	(*Span)(nil),                             // 67: omega.v1.Span
+	(*CostEntry)(nil),                        // 68: omega.v1.CostEntry
+	(*Issue)(nil),                            // 69: omega.v1.Issue
+	(*ActivityEntry)(nil),                    // 70: omega.v1.ActivityEntry
+	(*SemanticConcept)(nil),                  // 71: omega.v1.SemanticConcept
+	(*EpisodeEntry)(nil),                     // 72: omega.v1.EpisodeEntry
+	(*ConvergencePoint)(nil),                 // 73: omega.v1.ConvergencePoint
+	(*NodeConfig)(nil),                       // 74: omega.v1.NodeConfig
+	(*BrainConfig)(nil),                      // 75: omega.v1.BrainConfig
+	(*ProviderInfo)(nil),                     // 76: omega.v1.ProviderInfo
+	(*BrainExecutionEntry)(nil),              // 77: omega.v1.BrainExecutionEntry
+	(*AlignmentDecision)(nil),                // 78: omega.v1.AlignmentDecision
+	(*AdversarialResult)(nil),                // 79: omega.v1.AdversarialResult
+	(*GoalState)(nil),                        // 80: omega.v1.GoalState
+	(*Challenge)(nil),                        // 81: omega.v1.Challenge
+	(*MemoryStats)(nil),                      // 82: omega.v1.MemoryStats
+	(*GateResult)(nil),                       // 83: omega.v1.GateResult
+	(*ImprovementDetail)(nil),                // 84: omega.v1.ImprovementDetail
+	(*EventResponse)(nil),                    // 85: omega.v1.EventResponse
 }
 var file_omega_v1_omega_service_proto_depIdxs = []int32{
-	47, // 0: omega.v1.GetHealthResponse.health:type_name -> omega.v1.SystemHealth
-	48, // 1: omega.v1.ListNodesResponse.nodes:type_name -> omega.v1.Node
-	48, // 2: omega.v1.GetNodeResponse.node:type_name -> omega.v1.Node
-	49, // 3: omega.v1.GetNodeResponse.recent_executions:type_name -> omega.v1.ExecutionRecord
-	50, // 4: omega.v1.GetNodeResponse.improvements:type_name -> omega.v1.ImprovementRecord
+	61, // 0: omega.v1.GetHealthResponse.health:type_name -> omega.v1.SystemHealth
+	62, // 1: omega.v1.ListNodesResponse.nodes:type_name -> omega.v1.Node
+	62, // 2: omega.v1.GetNodeResponse.node:type_name -> omega.v1.Node
+	63, // 3: omega.v1.GetNodeResponse.recent_executions:type_name -> omega.v1.ExecutionRecord
+	64, // 4: omega.v1.GetNodeResponse.improvements:type_name -> omega.v1.ImprovementRecord
 	6,  // 5: omega.v1.GetNodeResponse.latency_history:type_name -> omega.v1.LatencyPoint
-	51, // 6: omega.v1.LatencyPoint.ts:type_name -> google.protobuf.Timestamp
-	49, // 7: omega.v1.ListNodeExecutionsResponse.executions:type_name -> omega.v1.ExecutionRecord
-	52, // 8: omega.v1.ListTracesResponse.traces:type_name -> omega.v1.TraceSummary
-	53, // 9: omega.v1.GetTraceResponse.spans:type_name -> omega.v1.Span
-	47, // 10: omega.v1.GetMetricsResponse.system:type_name -> omega.v1.SystemHealth
-	48, // 11: omega.v1.GetMetricsResponse.nodes:type_name -> omega.v1.Node
-	54, // 12: omega.v1.GetMetricsResponse.costs:type_name -> omega.v1.CostEntry
-	55, // 13: omega.v1.GetMetricsResponse.open_issues:type_name -> omega.v1.Issue
-	52, // 14: omega.v1.GetMetricsResponse.recent_traces:type_name -> omega.v1.TraceSummary
+	65, // 6: omega.v1.LatencyPoint.ts:type_name -> google.protobuf.Timestamp
+	63, // 7: omega.v1.ListNodeExecutionsResponse.executions:type_name -> omega.v1.ExecutionRecord
+	66, // 8: omega.v1.ListTracesResponse.traces:type_name -> omega.v1.TraceSummary
+	67, // 9: omega.v1.GetTraceResponse.spans:type_name -> omega.v1.Span
+	61, // 10: omega.v1.GetMetricsResponse.system:type_name -> omega.v1.SystemHealth
+	62, // 11: omega.v1.GetMetricsResponse.nodes:type_name -> omega.v1.Node
+	68, // 12: omega.v1.GetMetricsResponse.costs:type_name -> omega.v1.CostEntry
+	69, // 13: omega.v1.GetMetricsResponse.open_issues:type_name -> omega.v1.Issue
+	66, // 14: omega.v1.GetMetricsResponse.recent_traces:type_name -> omega.v1.TraceSummary
 	17, // 15: omega.v1.GetMetricsHistoryResponse.node_histories:type_name -> omega.v1.NodeLatencyHistory
 	6,  // 16: omega.v1.NodeLatencyHistory.history:type_name -> omega.v1.LatencyPoint
-	55, // 17: omega.v1.ListIssuesResponse.issues:type_name -> omega.v1.Issue
-	56, // 18: omega.v1.ListActivityResponse.entries:type_name -> omega.v1.ActivityEntry
-	50, // 19: omega.v1.ListImprovementsResponse.improvements:type_name -> omega.v1.ImprovementRecord
-	57, // 20: omega.v1.GetNodeMemoryResponse.top_semantic:type_name -> omega.v1.SemanticConcept
-	58, // 21: omega.v1.GetNodeMemoryResponse.recent_episodes:type_name -> omega.v1.EpisodeEntry
-	59, // 22: omega.v1.GetConvergenceResponse.points:type_name -> omega.v1.ConvergencePoint
-	54, // 23: omega.v1.GetCostsResponse.costs:type_name -> omega.v1.CostEntry
-	60, // 24: omega.v1.GetNodeConfigResponse.config:type_name -> omega.v1.NodeConfig
-	61, // 25: omega.v1.UpdateNodeBrainRequest.brain:type_name -> omega.v1.BrainConfig
-	60, // 26: omega.v1.UpdateNodeBrainResponse.config:type_name -> omega.v1.NodeConfig
-	62, // 27: omega.v1.ListAvailableProvidersResponse.providers:type_name -> omega.v1.ProviderInfo
-	63, // 28: omega.v1.GetBrainExecutionHistoryResponse.entries:type_name -> omega.v1.BrainExecutionEntry
-	0,  // 29: omega.v1.OrchestratorService.GetHealth:input_type -> omega.v1.GetHealthRequest
-	2,  // 30: omega.v1.OrchestratorService.ListNodes:input_type -> omega.v1.ListNodesRequest
-	4,  // 31: omega.v1.OrchestratorService.GetNode:input_type -> omega.v1.GetNodeRequest
-	7,  // 32: omega.v1.OrchestratorService.ListNodeExecutions:input_type -> omega.v1.ListNodeExecutionsRequest
-	9,  // 33: omega.v1.OrchestratorService.ListTraces:input_type -> omega.v1.ListTracesRequest
-	11, // 34: omega.v1.OrchestratorService.GetTrace:input_type -> omega.v1.GetTraceRequest
-	13, // 35: omega.v1.OrchestratorService.GetMetrics:input_type -> omega.v1.GetMetricsRequest
-	15, // 36: omega.v1.OrchestratorService.GetMetricsHistory:input_type -> omega.v1.GetMetricsHistoryRequest
-	18, // 37: omega.v1.OrchestratorService.ListIssues:input_type -> omega.v1.ListIssuesRequest
-	20, // 38: omega.v1.OrchestratorService.ListActivity:input_type -> omega.v1.ListActivityRequest
-	22, // 39: omega.v1.OrchestratorService.ListImprovements:input_type -> omega.v1.ListImprovementsRequest
-	24, // 40: omega.v1.OrchestratorService.GetNodeMemory:input_type -> omega.v1.GetNodeMemoryRequest
-	26, // 41: omega.v1.OrchestratorService.GetConvergence:input_type -> omega.v1.GetConvergenceRequest
-	28, // 42: omega.v1.OrchestratorService.GetCosts:input_type -> omega.v1.GetCostsRequest
-	30, // 43: omega.v1.OrchestratorService.SubmitFeedback:input_type -> omega.v1.SubmitFeedbackRequest
-	32, // 44: omega.v1.OrchestratorService.StartOrchestrator:input_type -> omega.v1.StartOrchestratorRequest
-	34, // 45: omega.v1.OrchestratorService.StopOrchestrator:input_type -> omega.v1.StopOrchestratorRequest
-	36, // 46: omega.v1.OrchestratorService.TriggerHeartbeat:input_type -> omega.v1.TriggerHeartbeatRequest
-	38, // 47: omega.v1.OrchestratorService.StreamEvents:input_type -> omega.v1.StreamEventsRequest
-	39, // 48: omega.v1.OrchestratorService.GetNodeConfig:input_type -> omega.v1.GetNodeConfigRequest
-	41, // 49: omega.v1.OrchestratorService.UpdateNodeBrain:input_type -> omega.v1.UpdateNodeBrainRequest
-	43, // 50: omega.v1.OrchestratorService.ListAvailableProviders:input_type -> omega.v1.ListAvailableProvidersRequest
-	45, // 51: omega.v1.OrchestratorService.GetBrainExecutionHistory:input_type -> omega.v1.GetBrainExecutionHistoryRequest
-	1,  // 52: omega.v1.OrchestratorService.GetHealth:output_type -> omega.v1.GetHealthResponse
-	3,  // 53: omega.v1.OrchestratorService.ListNodes:output_type -> omega.v1.ListNodesResponse
-	5,  // 54: omega.v1.OrchestratorService.GetNode:output_type -> omega.v1.GetNodeResponse
-	8,  // 55: omega.v1.OrchestratorService.ListNodeExecutions:output_type -> omega.v1.ListNodeExecutionsResponse
-	10, // 56: omega.v1.OrchestratorService.ListTraces:output_type -> omega.v1.ListTracesResponse
-	12, // 57: omega.v1.OrchestratorService.GetTrace:output_type -> omega.v1.GetTraceResponse
-	14, // 58: omega.v1.OrchestratorService.GetMetrics:output_type -> omega.v1.GetMetricsResponse
-	16, // 59: omega.v1.OrchestratorService.GetMetricsHistory:output_type -> omega.v1.GetMetricsHistoryResponse
-	19, // 60: omega.v1.OrchestratorService.ListIssues:output_type -> omega.v1.ListIssuesResponse
-	21, // 61: omega.v1.OrchestratorService.ListActivity:output_type -> omega.v1.ListActivityResponse
-	23, // 62: omega.v1.OrchestratorService.ListImprovements:output_type -> omega.v1.ListImprovementsResponse
-	25, // 63: omega.v1.OrchestratorService.GetNodeMemory:output_type -> omega.v1.GetNodeMemoryResponse
-	27, // 64: omega.v1.OrchestratorService.GetConvergence:output_type -> omega.v1.GetConvergenceResponse
-	29, // 65: omega.v1.OrchestratorService.GetCosts:output_type -> omega.v1.GetCostsResponse
-	31, // 66: omega.v1.OrchestratorService.SubmitFeedback:output_type -> omega.v1.SubmitFeedbackResponse
-	33, // 67: omega.v1.OrchestratorService.StartOrchestrator:output_type -> omega.v1.StartOrchestratorResponse
-	35, // 68: omega.v1.OrchestratorService.StopOrchestrator:output_type -> omega.v1.StopOrchestratorResponse
-	37, // 69: omega.v1.OrchestratorService.TriggerHeartbeat:output_type -> omega.v1.TriggerHeartbeatResponse
-	64, // 70: omega.v1.OrchestratorService.StreamEvents:output_type -> omega.v1.EventResponse
-	40, // 71: omega.v1.OrchestratorService.GetNodeConfig:output_type -> omega.v1.GetNodeConfigResponse
-	42, // 72: omega.v1.OrchestratorService.UpdateNodeBrain:output_type -> omega.v1.UpdateNodeBrainResponse
-	44, // 73: omega.v1.OrchestratorService.ListAvailableProviders:output_type -> omega.v1.ListAvailableProvidersResponse
-	46, // 74: omega.v1.OrchestratorService.GetBrainExecutionHistory:output_type -> omega.v1.GetBrainExecutionHistoryResponse
-	52, // [52:75] is the sub-list for method output_type
-	29, // [29:52] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	69, // 17: omega.v1.ListIssuesResponse.issues:type_name -> omega.v1.Issue
+	70, // 18: omega.v1.ListActivityResponse.entries:type_name -> omega.v1.ActivityEntry
+	64, // 19: omega.v1.ListImprovementsResponse.improvements:type_name -> omega.v1.ImprovementRecord
+	71, // 20: omega.v1.GetNodeMemoryResponse.top_semantic:type_name -> omega.v1.SemanticConcept
+	72, // 21: omega.v1.GetNodeMemoryResponse.recent_episodes:type_name -> omega.v1.EpisodeEntry
+	73, // 22: omega.v1.GetConvergenceResponse.points:type_name -> omega.v1.ConvergencePoint
+	68, // 23: omega.v1.GetCostsResponse.costs:type_name -> omega.v1.CostEntry
+	74, // 24: omega.v1.GetNodeConfigResponse.config:type_name -> omega.v1.NodeConfig
+	75, // 25: omega.v1.UpdateNodeBrainRequest.brain:type_name -> omega.v1.BrainConfig
+	74, // 26: omega.v1.UpdateNodeBrainResponse.config:type_name -> omega.v1.NodeConfig
+	76, // 27: omega.v1.ListAvailableProvidersResponse.providers:type_name -> omega.v1.ProviderInfo
+	77, // 28: omega.v1.GetBrainExecutionHistoryResponse.entries:type_name -> omega.v1.BrainExecutionEntry
+	78, // 29: omega.v1.GetAlignmentDecisionsResponse.decisions:type_name -> omega.v1.AlignmentDecision
+	79, // 30: omega.v1.GetAdversarialResultsResponse.results:type_name -> omega.v1.AdversarialResult
+	80, // 31: omega.v1.GetGoalTrackingResponse.state:type_name -> omega.v1.GoalState
+	81, // 32: omega.v1.GetChallengesResponse.challenges:type_name -> omega.v1.Challenge
+	82, // 33: omega.v1.GetMemoryStatsResponse.stats:type_name -> omega.v1.MemoryStats
+	83, // 34: omega.v1.GetVerificationGatesResponse.gates:type_name -> omega.v1.GateResult
+	84, // 35: omega.v1.GetImprovementHistoryResponse.records:type_name -> omega.v1.ImprovementDetail
+	0,  // 36: omega.v1.OrchestratorService.GetHealth:input_type -> omega.v1.GetHealthRequest
+	2,  // 37: omega.v1.OrchestratorService.ListNodes:input_type -> omega.v1.ListNodesRequest
+	4,  // 38: omega.v1.OrchestratorService.GetNode:input_type -> omega.v1.GetNodeRequest
+	7,  // 39: omega.v1.OrchestratorService.ListNodeExecutions:input_type -> omega.v1.ListNodeExecutionsRequest
+	9,  // 40: omega.v1.OrchestratorService.ListTraces:input_type -> omega.v1.ListTracesRequest
+	11, // 41: omega.v1.OrchestratorService.GetTrace:input_type -> omega.v1.GetTraceRequest
+	13, // 42: omega.v1.OrchestratorService.GetMetrics:input_type -> omega.v1.GetMetricsRequest
+	15, // 43: omega.v1.OrchestratorService.GetMetricsHistory:input_type -> omega.v1.GetMetricsHistoryRequest
+	18, // 44: omega.v1.OrchestratorService.ListIssues:input_type -> omega.v1.ListIssuesRequest
+	20, // 45: omega.v1.OrchestratorService.ListActivity:input_type -> omega.v1.ListActivityRequest
+	22, // 46: omega.v1.OrchestratorService.ListImprovements:input_type -> omega.v1.ListImprovementsRequest
+	24, // 47: omega.v1.OrchestratorService.GetNodeMemory:input_type -> omega.v1.GetNodeMemoryRequest
+	26, // 48: omega.v1.OrchestratorService.GetConvergence:input_type -> omega.v1.GetConvergenceRequest
+	28, // 49: omega.v1.OrchestratorService.GetCosts:input_type -> omega.v1.GetCostsRequest
+	30, // 50: omega.v1.OrchestratorService.SubmitFeedback:input_type -> omega.v1.SubmitFeedbackRequest
+	32, // 51: omega.v1.OrchestratorService.StartOrchestrator:input_type -> omega.v1.StartOrchestratorRequest
+	34, // 52: omega.v1.OrchestratorService.StopOrchestrator:input_type -> omega.v1.StopOrchestratorRequest
+	36, // 53: omega.v1.OrchestratorService.TriggerHeartbeat:input_type -> omega.v1.TriggerHeartbeatRequest
+	38, // 54: omega.v1.OrchestratorService.StreamEvents:input_type -> omega.v1.StreamEventsRequest
+	39, // 55: omega.v1.OrchestratorService.GetNodeConfig:input_type -> omega.v1.GetNodeConfigRequest
+	41, // 56: omega.v1.OrchestratorService.UpdateNodeBrain:input_type -> omega.v1.UpdateNodeBrainRequest
+	43, // 57: omega.v1.OrchestratorService.ListAvailableProviders:input_type -> omega.v1.ListAvailableProvidersRequest
+	45, // 58: omega.v1.OrchestratorService.GetBrainExecutionHistory:input_type -> omega.v1.GetBrainExecutionHistoryRequest
+	47, // 59: omega.v1.OrchestratorService.GetAlignmentDecisions:input_type -> omega.v1.GetAlignmentDecisionsRequest
+	49, // 60: omega.v1.OrchestratorService.GetAdversarialResults:input_type -> omega.v1.GetAdversarialResultsRequest
+	51, // 61: omega.v1.OrchestratorService.GetGoalTracking:input_type -> omega.v1.GetGoalTrackingRequest
+	53, // 62: omega.v1.OrchestratorService.GetChallenges:input_type -> omega.v1.GetChallengesRequest
+	55, // 63: omega.v1.OrchestratorService.GetMemoryStats:input_type -> omega.v1.GetMemoryStatsRequest
+	57, // 64: omega.v1.OrchestratorService.GetVerificationGates:input_type -> omega.v1.GetVerificationGatesRequest
+	59, // 65: omega.v1.OrchestratorService.GetImprovementHistory:input_type -> omega.v1.GetImprovementHistoryRequest
+	1,  // 66: omega.v1.OrchestratorService.GetHealth:output_type -> omega.v1.GetHealthResponse
+	3,  // 67: omega.v1.OrchestratorService.ListNodes:output_type -> omega.v1.ListNodesResponse
+	5,  // 68: omega.v1.OrchestratorService.GetNode:output_type -> omega.v1.GetNodeResponse
+	8,  // 69: omega.v1.OrchestratorService.ListNodeExecutions:output_type -> omega.v1.ListNodeExecutionsResponse
+	10, // 70: omega.v1.OrchestratorService.ListTraces:output_type -> omega.v1.ListTracesResponse
+	12, // 71: omega.v1.OrchestratorService.GetTrace:output_type -> omega.v1.GetTraceResponse
+	14, // 72: omega.v1.OrchestratorService.GetMetrics:output_type -> omega.v1.GetMetricsResponse
+	16, // 73: omega.v1.OrchestratorService.GetMetricsHistory:output_type -> omega.v1.GetMetricsHistoryResponse
+	19, // 74: omega.v1.OrchestratorService.ListIssues:output_type -> omega.v1.ListIssuesResponse
+	21, // 75: omega.v1.OrchestratorService.ListActivity:output_type -> omega.v1.ListActivityResponse
+	23, // 76: omega.v1.OrchestratorService.ListImprovements:output_type -> omega.v1.ListImprovementsResponse
+	25, // 77: omega.v1.OrchestratorService.GetNodeMemory:output_type -> omega.v1.GetNodeMemoryResponse
+	27, // 78: omega.v1.OrchestratorService.GetConvergence:output_type -> omega.v1.GetConvergenceResponse
+	29, // 79: omega.v1.OrchestratorService.GetCosts:output_type -> omega.v1.GetCostsResponse
+	31, // 80: omega.v1.OrchestratorService.SubmitFeedback:output_type -> omega.v1.SubmitFeedbackResponse
+	33, // 81: omega.v1.OrchestratorService.StartOrchestrator:output_type -> omega.v1.StartOrchestratorResponse
+	35, // 82: omega.v1.OrchestratorService.StopOrchestrator:output_type -> omega.v1.StopOrchestratorResponse
+	37, // 83: omega.v1.OrchestratorService.TriggerHeartbeat:output_type -> omega.v1.TriggerHeartbeatResponse
+	85, // 84: omega.v1.OrchestratorService.StreamEvents:output_type -> omega.v1.EventResponse
+	40, // 85: omega.v1.OrchestratorService.GetNodeConfig:output_type -> omega.v1.GetNodeConfigResponse
+	42, // 86: omega.v1.OrchestratorService.UpdateNodeBrain:output_type -> omega.v1.UpdateNodeBrainResponse
+	44, // 87: omega.v1.OrchestratorService.ListAvailableProviders:output_type -> omega.v1.ListAvailableProvidersResponse
+	46, // 88: omega.v1.OrchestratorService.GetBrainExecutionHistory:output_type -> omega.v1.GetBrainExecutionHistoryResponse
+	48, // 89: omega.v1.OrchestratorService.GetAlignmentDecisions:output_type -> omega.v1.GetAlignmentDecisionsResponse
+	50, // 90: omega.v1.OrchestratorService.GetAdversarialResults:output_type -> omega.v1.GetAdversarialResultsResponse
+	52, // 91: omega.v1.OrchestratorService.GetGoalTracking:output_type -> omega.v1.GetGoalTrackingResponse
+	54, // 92: omega.v1.OrchestratorService.GetChallenges:output_type -> omega.v1.GetChallengesResponse
+	56, // 93: omega.v1.OrchestratorService.GetMemoryStats:output_type -> omega.v1.GetMemoryStatsResponse
+	58, // 94: omega.v1.OrchestratorService.GetVerificationGates:output_type -> omega.v1.GetVerificationGatesResponse
+	60, // 95: omega.v1.OrchestratorService.GetImprovementHistory:output_type -> omega.v1.GetImprovementHistoryResponse
+	66, // [66:96] is the sub-list for method output_type
+	36, // [36:66] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_omega_service_proto_init() }
@@ -2556,7 +3240,7 @@ func file_omega_v1_omega_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_omega_service_proto_rawDesc), len(file_omega_v1_omega_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   47,
+			NumMessages:   61,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
