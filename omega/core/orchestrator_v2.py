@@ -693,9 +693,12 @@ class OmegaOrchestrator:
             nid = state.node_id
             health_rec = self._node_health.get(nid)
             if health_rec:
-                sharpe = result.metrics.get("sharpe", health_rec.avg_health)
-                drawdown = result.metrics.get("max_drawdown", 0.0)
-                self._autonomy.record_cycle(nid, sharpe=sharpe, drawdown=abs(drawdown))
+                # Pass full metrics dict — autonomy controller maps to its
+                # configured PerformanceMetric list generically.
+                cycle_metrics = dict(result.metrics)
+                if "sharpe" not in cycle_metrics:
+                    cycle_metrics["sharpe"] = health_rec.avg_health
+                self._autonomy.record_cycle(nid, metrics=cycle_metrics)
                 # Attempt promotion every 10 cycles
                 if cycle_num % 10 == 0:
                     transition = self._autonomy.promote_node(nid)
