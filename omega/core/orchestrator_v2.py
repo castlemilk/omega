@@ -325,7 +325,7 @@ class OmegaOrchestrator:
         poll_outputs = self._step_data_poll(ctx, result, log)
         signal_data = self._step_signals(ctx, result, poll_outputs, log)
         proposals = self._step_strategy(ctx, result, signal_data, log)
-        clean_proposals = self._step_adversarial(ctx, result, proposals, log)
+        clean_proposals = self._step_adversarial(ctx, result, proposals, signal_data, log)
         self._step_execute(ctx, result, clean_proposals, log)
 
         # 8. Post-cycle
@@ -478,45 +478,164 @@ class OmegaOrchestrator:
         ctx: CycleContext,
         result: CycleResult,
         proposals: list[dict[str, Any]],
+        signal_data: dict[str, Any],
         log: Any,
     ) -> list[dict[str, Any]]:
-        """Run adversarial checks; return clean proposals."""
+        """Run adversarial checks via AdversarialPressureV2; return clean proposals."""
         if not proposals:
             return []
-        if self._adversarial is None:
-            return proposals
 
+        # Drop malformed proposals before any further processing
         clean: list[dict[str, Any]] = []
         for proposal in proposals:
-            try:
-                # AdversarialPressureV2 expects signal variants; adapt as needed
-                flagged = False
-                # Simple heuristic check: any proposal lacking essential fields
-                if not isinstance(proposal, dict):
-                    flagged = True
-                if not flagged:
-                    clean.append(proposal)
-                else:
-                    result.add_adversarial_flag(
-                        ring="ring0",
-                        severity="warning",
-                        reason="malformed_proposal",
-                        details={"proposal": str(proposal)[:200]},
-                    )
-                    if self._metrics:
-                        self._metrics.record_adversarial_flag("ring0", "warning")
-            except Exception as exc:
-                result.error_count += 1
-                log.error("adversarial check failed: %s", exc)
-                clean.append(proposal)  # fail-open
+            if not isinstance(proposal, dict):
+                result.add_adversarial_flag(
+                    ring="ring0",
+                    severity="warning",
+                    reason="malformed_proposal",
+                    details={"proposal": str(proposal)[:200]},
+                )
+                if self._metrics:
+                    self._metrics.record_adversarial_flag("ring0", "warning")
+            else:
+                clean.append(proposal)
 
-        # Check if any node triggered a critical DA flag → demote autonomy
+        if self._adversarial is None:
+            if result.had_critical_flag:
+                for node_id in ctx.active_node_ids:
+                    self._autonomy.check_and_demote(node_id, da_critical=True)
+                    log.warning(
+                        "Critical adversarial flag → autonomy demotion for node %s", node_id
+                    )
+            return clean
+
+        # --- Build variant_outputs for Ring 1 ---
+        # Each signal-producing node is a "variant"; outputs are its numeric signals.
+        variant_outputs: dict[str, dict[str, float]] = {}
+        for node_id, signals in signal_data.items():
+            if not isinstance(signals, dict):
+                continue
+            flat: dict[str, float] = {}
+            for k, v in signals.items():
+                if isinstance(v, (int, float)):
+                    flat[k] = float(v)
+                elif isinstance(v, dict):
+                    for sub_k, sub_v in v.items():
+                        if isinstance(sub_v, (int, float)):
+                            flat[f"{k}_{sub_k}"] = float(sub_v)
+            if flat:
+                variant_outputs[node_id] = flat
+
+        # Fallback: synthesise variant_outputs from proposal weights if no signal data
+        if not variant_outputs:
+            for i, prop in enumerate(clean):
+                nid = prop.get("node_id", f"proposal_{i}")
+                variant_outputs[nid] = {"weight": float(prop.get("weight", 0.0))}
+
+        # --- Build current_signals (flat ticker → value) ---
+        current_signals: dict[str, float] = {}
+        for signals in signal_data.values():
+            if not isinstance(signals, dict):
+                continue
+            for k, v in signals.items():
+                if isinstance(v, (int, float)):
+                    current_signals[k] = float(v)
+                elif isinstance(v, dict) and "composite_signal" in v:
+                    current_signals[k] = float(v["composite_signal"])
+
+        strategy_params: dict[str, Any] = {
+            "proposal_count": len(clean),
+            "regime": ctx.regime,
+        }
+
+        # --- Call AdversarialPressureV2 ---
+        try:
+            adv_report = self._adversarial.run_v2(
+                cycle=ctx.cycle_number,
+                variant_outputs=variant_outputs,
+                current_signals=current_signals,
+                strategy_params=strategy_params,
+            )
+        except Exception as exc:
+            result.error_count += 1
+            log.error("AdversarialPressureV2.run_v2 failed: %s", exc)
+            return clean  # fail-open
+
+        ring1_result = adv_report.base_report.ring1_result
+        ring1_flagged = ring1_result is not None and ring1_result.flagged
+        attribution = adv_report.attribution
+
+        if ring1_flagged:
+            assert ring1_result is not None  # narrowing for type checker
+            outlier_nodes: set[str] = set(attribution.outlier_variants) if attribution else set()
+            log.warning(
+                "Ring 1 fired [cycle=%d]: max_disagreement=%.3f outliers=%s threshold=%.3f",
+                ctx.cycle_number,
+                ring1_result.max_disagreement,
+                list(outlier_nodes),
+                adv_report.current_threshold,
+            )
+            result.add_adversarial_flag(
+                ring="ring1",
+                severity="warning",
+                reason="ensemble_disagreement",
+                details={
+                    "max_disagreement": ring1_result.max_disagreement,
+                    "disagreeing_variants": ring1_result.disagreeing_variants,
+                    "outlier_nodes": list(outlier_nodes),
+                    "attribution_confidence": attribution.confidence if attribution else 0.0,
+                    "threshold": adv_report.current_threshold,
+                },
+            )
+            if self._metrics:
+                self._metrics.record_adversarial_flag("ring1", "warning")
+
+        # --- Apply adversarial decisions to each proposal ---
+        approved: list[dict[str, Any]] = []
+        for proposal in clean:
+            if not ring1_flagged:
+                approved.append(proposal)
+                continue
+
+            node_id = proposal.get("node_id", "")
+            autonomy_level = proposal.get("autonomy_level", AutonomyLevel.PICO.value)
+
+            if autonomy_level == AutonomyLevel.SUPERVISED.value:
+                # SUPERVISED: block the trade — Ring 1 flag requires human review
+                log.warning(
+                    "SUPERVISED mode: blocking proposal from node %s (Ring 1 fired)", node_id
+                )
+                result.add_adversarial_flag(
+                    ring="ring1",
+                    severity="critical",
+                    reason="supervised_block",
+                    details={"node_id": node_id, "symbol": proposal.get("symbol", "unknown")},
+                )
+                if self._metrics:
+                    self._metrics.record_adversarial_flag("ring1", "critical")
+                # do NOT append — proposal is blocked
+            elif autonomy_level == AutonomyLevel.AUTONOMOUS.value:
+                # AUTONOMOUS: reduce position size by 50%
+                modified = dict(proposal)
+                original_weight = float(modified.get("weight", 1.0))
+                modified["weight"] = original_weight * 0.5
+                modified["adversarial_reduced"] = True
+                log.info(
+                    "AUTONOMOUS mode: 50%% position reduction for node %s (Ring 1 fired)",
+                    node_id,
+                )
+                approved.append(modified)
+            else:
+                # PICO or unknown: pass through (deterministic strategies are trusted)
+                approved.append(proposal)
+
+        # Critical flag → demote autonomy for all active nodes
         if result.had_critical_flag:
             for node_id in ctx.active_node_ids:
                 self._autonomy.check_and_demote(node_id, da_critical=True)
                 log.warning("Critical adversarial flag → autonomy demotion for node %s", node_id)
 
-        return clean
+        return approved
 
     def _step_execute(
         self,

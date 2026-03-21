@@ -42,7 +42,6 @@ from enum import Enum
 from typing import Any
 
 from omega.core.autonomy import AutonomyLevel
-from omega.core.orchestrator_v2 import OmegaOrchestrator
 from omega.eval.baselines import BaselineResult, buy_and_hold, sma_crossover
 from omega.eval.metrics import EvalReport, TradeRecord, build_eval_report
 from omega.nodes.vectora.vectora_node import VectoraNode
@@ -130,7 +129,9 @@ class OmegaBacktestBridge:
         self.commission = commission
         self.periods_per_year = periods_per_year
 
-        # Build orchestrator with a VectoraNode
+        # Build orchestrator with a VectoraNode (lazy import breaks circular dependency)
+        from omega.core.orchestrator_v2 import OmegaOrchestrator
+
         self._node = VectoraNode()
         self._orchestrator = OmegaOrchestrator(name=f"backtest_{mode.value}")
         self._orchestrator.register_node(self._node, activate=True)

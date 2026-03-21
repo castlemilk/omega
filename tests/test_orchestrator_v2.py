@@ -415,3 +415,184 @@ class TestNodeHealthTracking:
         orch.run_one_cycle()
         health_rec = orch._node_health[nid]
         assert health_rec._consecutive_errors >= 1
+
+
+# ---------------------------------------------------------------------------
+# AdversarialPressureV2 integration
+# ---------------------------------------------------------------------------
+
+
+class AlwaysFlagAdversarial:
+    """Mock adversarial layer that always fires Ring 1."""
+
+    def __init__(self) -> None:
+        self.call_count = 0
+        self.last_cycle: int | None = None
+        self.last_variant_outputs: dict | None = None
+
+    def run_v2(
+        self,
+        cycle: int,
+        variant_outputs: dict,
+        current_signals: dict,
+        strategy_params: dict,
+        fitness_fn: Any = None,
+        strategy_callable: Any = None,
+    ):
+        from omega.core.adversarial import AdversarialReport, DisagreementResult
+        from omega.core.adversarial_v2 import AdversarialReportV2, AttributionResult
+
+        self.call_count += 1
+        self.last_cycle = cycle
+        self.last_variant_outputs = variant_outputs
+
+        ring1 = DisagreementResult(
+            flagged=True,
+            max_disagreement=0.95,
+            disagreeing_variants=list(variant_outputs.keys()),
+            outputs=variant_outputs,
+        )
+        base = AdversarialReport(
+            cycle=cycle,
+            ring1_result=ring1,
+            ring2_scenarios=[],
+            ring3_result=None,
+            failure_cases=[],
+        )
+        attribution = AttributionResult(
+            outlier_variants=list(variant_outputs.keys())[:1],
+            outlier_scores={k: 1.0 for k in variant_outputs},
+            method="mock",
+            confidence=0.99,
+        )
+        return AdversarialReportV2(
+            base_report=base,
+            attribution=attribution,
+            threshold_adjustment=None,
+            fp_summary={},
+            ring2_sim_report=None,
+            ring2_activated=False,
+            current_threshold=0.20,
+        )
+
+
+class TestAdversarialIntegration:
+    def test_adversarial_run_v2_is_called(self):
+        """When adversarial is set and proposals exist, run_v2 must be called."""
+        mock_adv = AlwaysFlagAdversarial()
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        node = StrategyNode("strat", capabilities=["construct_portfolio"])
+        orch.register_node(node)
+
+        orch.run_one_cycle()
+
+        assert mock_adv.call_count == 1, "run_v2 was never called — Ring 1 still dead"
+
+    def test_adversarial_receives_cycle_number(self):
+        mock_adv = AlwaysFlagAdversarial()
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        orch.register_node(StrategyNode("strat", capabilities=["construct_portfolio"]))
+
+        orch.run_one_cycle()
+        orch.run_one_cycle()
+
+        assert mock_adv.last_cycle == 1
+
+    def test_adversarial_flag_recorded_in_result(self):
+        """When Ring 1 fires, the CycleResult must record adversarial flags."""
+        mock_adv = AlwaysFlagAdversarial()
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        orch.register_node(StrategyNode("strat", capabilities=["construct_portfolio"]))
+
+        result = orch.run_one_cycle()
+
+        assert result.had_adversarial_flag, "no adversarial flag recorded"
+        ring1_flags = [f for f in result.adversarial_flags if f.get("ring") == "ring1"]
+        assert ring1_flags, "ring1 flag not found in result"
+        assert ring1_flags[0]["reason"] == "ensemble_disagreement"
+
+    def test_supervised_proposals_blocked_on_flag(self):
+        """In SUPERVISED mode, flagged proposals must be blocked (not executed)."""
+        mock_adv = AlwaysFlagAdversarial()
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        node = StrategyNode("strat", capabilities=["construct_portfolio"])
+        orch.register_node(node)
+
+        # Force node to SUPERVISED autonomy level
+        nid = node._nid
+        orch._autonomy.get_state(nid).level = AutonomyLevel.SUPERVISED
+
+        result = orch.run_one_cycle()
+
+        # Proposals should have been blocked → zero trades executed
+        assert result.trades_executed == 0, (
+            f"Expected 0 trades (blocked by adversarial), got {result.trades_executed}"
+        )
+        critical_flags = [
+            f for f in result.adversarial_flags if f.get("reason") == "supervised_block"
+        ]
+        assert critical_flags, "supervised_block flag not recorded"
+
+    def test_autonomous_proposals_weight_halved_on_flag(self):
+        """In AUTONOMOUS mode, flagged proposals must have weight reduced by 50%."""
+        mock_adv = AlwaysFlagAdversarial()
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        node = StrategyNode("strat", capabilities=["construct_portfolio"])
+        orch.register_node(node)
+
+        # Force node to AUTONOMOUS
+        nid = node._nid
+        orch._autonomy.get_state(nid).level = AutonomyLevel.AUTONOMOUS
+
+        result = orch.run_one_cycle()
+
+        # Proposals should pass through but with reduced weight
+        assert result.trades_executed >= 1, "Expected trades to execute (with reduced weight)"
+        ring1_flags = [f for f in result.adversarial_flags if f.get("ring") == "ring1"]
+        assert ring1_flags, "ring1 flag not recorded"
+
+    def test_adversarial_not_called_without_proposals(self):
+        """If no proposals, run_v2 must not be called (nothing to evaluate)."""
+        mock_adv = AlwaysFlagAdversarial()
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        # No strategy-capable node → no proposals
+        orch.register_node(StubNode("data", capabilities=["poll"]))
+
+        orch.run_one_cycle()
+
+        assert mock_adv.call_count == 0
+
+    def test_adversarial_variant_outputs_built_from_signal_data(self):
+        """variant_outputs passed to run_v2 should include data from signal-producing nodes."""
+        mock_adv = AlwaysFlagAdversarial()
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+
+        class SignalAndStrategyNode(StubNode):
+            def execute(self, inp: NodeInput) -> NodeOutput:
+                self._exec_count += 1
+                if inp.action == "compute_signals":
+                    return NodeOutput(
+                        request_id=inp.request_id,
+                        success=True,
+                        result={"BTC": 0.8, "ETH": 0.3},
+                        metrics={},
+                    )
+                if inp.action == "construct_portfolio":
+                    return NodeOutput(
+                        request_id=inp.request_id,
+                        success=True,
+                        result=[{"symbol": "BTCUSDT", "side": "buy", "weight": 0.5}],
+                        metrics={},
+                    )
+                return NodeOutput(request_id=inp.request_id, success=True, result={}, metrics={})
+
+        node = SignalAndStrategyNode(
+            "combo", capabilities=["compute_signals", "construct_portfolio"]
+        )
+        orch.register_node(node)
+        orch.run_one_cycle()
+
+        assert mock_adv.call_count == 1
+        assert mock_adv.last_variant_outputs is not None
+        # Should contain the node's signal data
+        assert any("BTC" in v for v in mock_adv.last_variant_outputs.values())
