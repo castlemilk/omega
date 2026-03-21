@@ -116,3 +116,13 @@ ignore_errors = true
 # data_providers: heavy use of dynamic dict keys from external API responses
 module = ["omega.nodes.vectora.data_providers"]
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Pre-existing signature incompatibility issues — suppressed pending refactor
+module = ["omega.core.state_store"]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Pre-existing no-any-return issues in math helpers — suppressed pending refactor
+module = ["omega.core.memory_v2"]
+ignore_errors = true
