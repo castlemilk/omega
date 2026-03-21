@@ -29,9 +29,9 @@ from typing import Any, ClassVar
 from omega.core.improvement_engine import (
     ImprovementEvaluator,
     _max_drawdown,
-    _sharpe_ratio,
     composite_score,
 )
+from omega.eval.sharpe import sharpe_ratio as _sharpe_ratio
 
 logger = logging.getLogger("omega.core.backtest_evaluator")
 
