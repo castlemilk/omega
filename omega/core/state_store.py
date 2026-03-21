@@ -131,6 +131,44 @@ CREATE TABLE IF NOT EXISTS brain_executions (
     recorded_at     REAL NOT NULL,
     cycle           INTEGER NOT NULL DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS alignment_decisions (
+    decision_id         TEXT PRIMARY KEY,
+    cycle               INTEGER NOT NULL DEFAULT 0,
+    approved            INTEGER NOT NULL DEFAULT 1,
+    violations_json     TEXT NOT NULL DEFAULT '[]',
+    pareto_ranks_json   TEXT NOT NULL DEFAULT '{}',
+    adjustments_json    TEXT NOT NULL DEFAULT '{}',
+    vcg_payments_json   TEXT NOT NULL DEFAULT '{}',
+    goodhart_warning    INTEGER NOT NULL DEFAULT 0,
+    recorded_at         REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS adversarial_results (
+    result_id           TEXT PRIMARY KEY,
+    cycle               INTEGER NOT NULL DEFAULT 0,
+    ring                INTEGER NOT NULL DEFAULT 1,
+    flagged             INTEGER NOT NULL DEFAULT 0,
+    max_disagreement    REAL NOT NULL DEFAULT 0.0,
+    scenario_count      INTEGER NOT NULL DEFAULT 0,
+    failure_cases_json  TEXT NOT NULL DEFAULT '[]',
+    details_json        TEXT NOT NULL DEFAULT '{}',
+    recorded_at         REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS goal_tracking (
+    tracking_id         TEXT PRIMARY KEY,
+    cycle               INTEGER NOT NULL DEFAULT 0,
+    approved            INTEGER NOT NULL DEFAULT 1,
+    composite_score     REAL NOT NULL DEFAULT 0.0,
+    scorecard_json      TEXT NOT NULL DEFAULT '{}',
+    nash_weights_json   TEXT NOT NULL DEFAULT '{}',
+    tracking_error      REAL NOT NULL DEFAULT 0.0,
+    control_action_json TEXT NOT NULL DEFAULT '{}',
+    subtasks_json       TEXT NOT NULL DEFAULT '[]',
+    violations_json     TEXT NOT NULL DEFAULT '[]',
+    recorded_at         REAL NOT NULL
+);
 """
 
 
@@ -770,6 +808,172 @@ class StateStore:
         query += " GROUP BY provider, model, outcome"
         rows = self._conn.execute(query, params).fetchall()
         return {"by_provider_outcome": [dict(r) for r in rows]}
+
+    # ------------------------------------------------------------------
+    # Alignment decisions
+    # ------------------------------------------------------------------
+
+    def record_alignment_decision(
+        self,
+        cycle: int,
+        approved: bool,
+        violations: Optional[List] = None,
+        pareto_ranks: Optional[Dict] = None,
+        adjustments: Optional[Dict] = None,
+        vcg_payments: Optional[Dict] = None,
+        goodhart_warning: bool = False,
+    ) -> str:
+        decision_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO alignment_decisions
+               (decision_id, cycle, approved, violations_json, pareto_ranks_json,
+                adjustments_json, vcg_payments_json, goodhart_warning, recorded_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                decision_id, cycle, 1 if approved else 0,
+                json.dumps(violations or []),
+                json.dumps(pareto_ranks or {}),
+                json.dumps(adjustments or {}),
+                json.dumps(vcg_payments or {}),
+                1 if goodhart_warning else 0,
+                time.time(),
+            ),
+        )
+        self._conn.commit()
+        return decision_id
+
+    def get_alignment_decisions(
+        self, since_cycle: Optional[int] = None, limit: int = 20
+    ) -> List[Dict]:
+        query = "SELECT * FROM alignment_decisions WHERE 1=1"
+        params: List = []
+        if since_cycle is not None:
+            query += " AND cycle >= ?"
+            params.append(since_cycle)
+        query += " ORDER BY recorded_at DESC LIMIT ?"
+        params.append(limit)
+        rows = self._conn.execute(query, params).fetchall()
+        result = []
+        for row in rows:
+            d = dict(row)
+            d["violations"] = json.loads(d.pop("violations_json", "[]"))
+            d["pareto_ranks"] = json.loads(d.pop("pareto_ranks_json", "{}"))
+            d["adjustments"] = json.loads(d.pop("adjustments_json", "{}"))
+            d["vcg_payments"] = json.loads(d.pop("vcg_payments_json", "{}"))
+            result.append(d)
+        return result
+
+    # ------------------------------------------------------------------
+    # Adversarial results
+    # ------------------------------------------------------------------
+
+    def record_adversarial_result(
+        self,
+        cycle: int,
+        ring: int,
+        flagged: bool,
+        max_disagreement: float = 0.0,
+        scenario_count: int = 0,
+        failure_cases: Optional[List] = None,
+        details: Optional[Dict] = None,
+    ) -> str:
+        result_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO adversarial_results
+               (result_id, cycle, ring, flagged, max_disagreement,
+                scenario_count, failure_cases_json, details_json, recorded_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                result_id, cycle, ring, 1 if flagged else 0,
+                max_disagreement, scenario_count,
+                json.dumps(failure_cases or []),
+                json.dumps(details or {}),
+                time.time(),
+            ),
+        )
+        self._conn.commit()
+        return result_id
+
+    def get_adversarial_results(
+        self, since_cycle: Optional[int] = None, ring: Optional[int] = None, limit: int = 20
+    ) -> List[Dict]:
+        query = "SELECT * FROM adversarial_results WHERE 1=1"
+        params: List = []
+        if since_cycle is not None:
+            query += " AND cycle >= ?"
+            params.append(since_cycle)
+        if ring is not None:
+            query += " AND ring = ?"
+            params.append(ring)
+        query += " ORDER BY recorded_at DESC LIMIT ?"
+        params.append(limit)
+        rows = self._conn.execute(query, params).fetchall()
+        result = []
+        for row in rows:
+            d = dict(row)
+            d["failure_cases"] = json.loads(d.pop("failure_cases_json", "[]"))
+            d["details"] = json.loads(d.pop("details_json", "{}"))
+            result.append(d)
+        return result
+
+    # ------------------------------------------------------------------
+    # Goal tracking
+    # ------------------------------------------------------------------
+
+    def record_goal_tracking(
+        self,
+        cycle: int,
+        approved: bool,
+        composite_score: float,
+        scorecard: Optional[Dict] = None,
+        nash_weights: Optional[Dict] = None,
+        tracking_error: float = 0.0,
+        control_action: Optional[Dict] = None,
+        subtasks: Optional[List] = None,
+        violations: Optional[List] = None,
+    ) -> str:
+        tracking_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO goal_tracking
+               (tracking_id, cycle, approved, composite_score, scorecard_json,
+                nash_weights_json, tracking_error, control_action_json,
+                subtasks_json, violations_json, recorded_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                tracking_id, cycle, 1 if approved else 0, composite_score,
+                json.dumps(scorecard or {}),
+                json.dumps(nash_weights or {}),
+                tracking_error,
+                json.dumps(control_action or {}),
+                json.dumps(subtasks or []),
+                json.dumps(violations or []),
+                time.time(),
+            ),
+        )
+        self._conn.commit()
+        return tracking_id
+
+    def get_goal_tracking(
+        self, since_cycle: Optional[int] = None, limit: int = 20
+    ) -> List[Dict]:
+        query = "SELECT * FROM goal_tracking WHERE 1=1"
+        params: List = []
+        if since_cycle is not None:
+            query += " AND cycle >= ?"
+            params.append(since_cycle)
+        query += " ORDER BY recorded_at DESC LIMIT ?"
+        params.append(limit)
+        rows = self._conn.execute(query, params).fetchall()
+        result = []
+        for row in rows:
+            d = dict(row)
+            d["scorecard"] = json.loads(d.pop("scorecard_json", "{}"))
+            d["nash_weights"] = json.loads(d.pop("nash_weights_json", "{}"))
+            d["control_action"] = json.loads(d.pop("control_action_json", "{}"))
+            d["subtasks"] = json.loads(d.pop("subtasks_json", "[]"))
+            d["violations"] = json.loads(d.pop("violations_json", "[]"))
+            result.append(d)
+        return result
 
     def set_node_brain_config(self, node_id: str, brain_config: Dict) -> None:
         """

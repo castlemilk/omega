@@ -54,12 +54,16 @@ from typing import Any, Dict, List, Optional
 from omega.core.evaluator import GoalSpec
 from omega.core.feedback import FeedbackEngine
 from omega.core.memory import MemoryKernel
+from omega.core.memory_v2 import MemoryKernelV2
 from omega.core.node import NodeInput
 from omega.core.orchestrator import Orchestrator
 from omega.core.state_store import StateStore
 from omega.core.tracing import Tracer, create_tracer
 from omega.core.metrics import MetricsCollector
 from omega.core.analyzer import SystemAnalyzer
+from omega.core.alignment import AlignmentLayer
+from omega.core.adversarial import AdversarialPressure
+from omega.core.goals import GoalArchitecture
 from omega.nodes.vectora import (
     DataIngestionNode,
     SignalGenerationNode,
@@ -120,8 +124,13 @@ class VectoraSystem:
 
     def __init__(self) -> None:
         # ── Core infrastructure ──────────────────────────────────────────────
-        self.memory = MemoryKernel(db_path=MEMORY_DB_PATH)
+        self.memory = MemoryKernelV2(db_path=MEMORY_DB_PATH)
         self.feedback = FeedbackEngine(memory=self.memory)
+
+        # ── Research subsystems (alignment, adversarial pressure, goals) ─────
+        self.alignment = AlignmentLayer()
+        self.adversarial = AdversarialPressure()
+        self.goals = GoalArchitecture()
 
         # ── Observability infrastructure ─────────────────────────────────────
         self.state_store = StateStore(db_path=STATE_DB_PATH)
@@ -222,6 +231,18 @@ class VectoraSystem:
         # ── Memory: begin cycle ───────────────────────────────────────────────
         self.memory.begin_cycle(cycle)
         self.memory.set_working("cycle", cycle)
+
+        # ── Goal Architecture: evaluate current goal state ───────────────────
+        goal_decision = self.goals.step(
+            metrics={},  # populated later with system_metrics; initial step uses defaults
+            system_state={"health": 1.0},
+            cycle=cycle,
+        )
+        logger.info(
+            "[goals] approved=%s score=%.3f tracking_err=%.3f subtasks=%d",
+            goal_decision.approved, goal_decision.composite_score,
+            goal_decision.tracking_error, len(goal_decision.subtasks),
+        )
 
         # ── Start distributed trace for this heartbeat ────────────────────────
         root_ctx = self.tracer.start_trace(operation="heartbeat", cycle=cycle)
@@ -621,9 +642,107 @@ class VectoraSystem:
                         cycle=cycle,
                     )
 
-        # ── Self-improvement pass ─────────────────────────────────────────────
+        # ── Memory v2: regime update from Sharpe as market indicator ─────────
+        regime_obs = system_metrics.get("sharpe_ratio", 0.0)
+        regime_state = self.memory.update_regime(regime_obs)
+        self.memory.set_working("regime", regime_state.label)
+        logger.info(
+            "[memory_v2] regime=%s cp_prob=%.2f mean=%.3f",
+            regime_state.label, regime_state.changepoint_prob, regime_state.mean_estimate,
+        )
+
+        # ── Adversarial pressure ──────────────────────────────────────────────
+        # Ring 1 uses signals as variant outputs (single variant for now)
+        variant_signals = {"primary": {t: float(s.get("composite", 0)) for t, s in signals.items()}}
+        adv_report = self.adversarial.run(
+            cycle=cycle,
+            variant_outputs=variant_signals,
+            current_signals={t: float(s.get("composite", 0)) for t, s in signals.items()},
+            strategy_params={"method": portfolio.get("method", "equal"), "positions": portfolio.get("positions", 0)},
+        )
+        if adv_report.ring1_result and adv_report.ring1_result.flagged:
+            logger.warning(
+                "[adversarial] Ring 1 disagreement flagged — max_dist=%.3f",
+                adv_report.ring1_result.max_disagreement,
+            )
+        if adv_report.ring2_scenarios:
+            logger.info(
+                "[adversarial] Ring 2 generated %d adversarial scenarios (top severity=%.2f)",
+                len(adv_report.ring2_scenarios),
+                max(s.severity for s in adv_report.ring2_scenarios),
+            )
+        # Persist adversarial result
+        self.state_store.record_adversarial_result(
+            cycle=cycle,
+            ring=1,
+            flagged=adv_report.ring1_result.flagged if adv_report.ring1_result else False,
+            max_disagreement=adv_report.ring1_result.max_disagreement if adv_report.ring1_result else 0.0,
+            scenario_count=len(adv_report.ring2_scenarios),
+            failure_cases=adv_report.failure_cases,
+        )
+
+        # ── Alignment check before improvement ───────────────────────────────
+        node_metrics_map = {
+            node.get_state().name: node.evaluate()
+            for node in [self.ingestion, self.signals, self.strategy,
+                         self.risk, self.reporting]
+        }
+        portfolio_weights = portfolio.get("weights", {})
+        alignment_decision = self.alignment.check_improvement_cycle(
+            node_metrics_map=node_metrics_map,
+            system_metrics=system_metrics,
+            portfolio=portfolio_weights,
+            cycle=cycle,
+        )
+        # Persist alignment decision
+        self.state_store.record_alignment_decision(
+            cycle=cycle,
+            approved=alignment_decision.approved,
+            violations=alignment_decision.violations,
+            pareto_ranks={k: int(v) for k, v in alignment_decision.pareto_ranks.items()},
+            adjustments=alignment_decision.adjustments,
+            vcg_payments=alignment_decision.vcg_payments,
+            goodhart_warning=alignment_decision.goodhart_warning,
+        )
+        if not alignment_decision.approved:
+            logger.warning(
+                "[alignment] BLOCKED improvement: violations=%s",
+                alignment_decision.violations,
+            )
+        elif alignment_decision.goodhart_warning:
+            logger.warning("[alignment] Goodhart divergence detected — improvement proceeding with caution")
+        else:
+            logger.info("[alignment] Approved. Pareto ranks: %s", dict(list(alignment_decision.pareto_ranks.items())[:3]))
+
+        # ── Goal tracking: update with real system_metrics ───────────────────
+        goal_decision_final = self.goals.step(
+            metrics=system_metrics,
+            system_state={
+                "health": sum(n.get_state().health for n in [self.ingestion, self.signals, self.strategy]) / 3,
+                "error_rate": system_metrics.get("error_rate", 0.0),
+                "sharpe_ratio": system_metrics.get("sharpe_ratio", 0.0),
+            },
+            cycle=cycle,
+        )
+        self.state_store.record_goal_tracking(
+            cycle=cycle,
+            approved=goal_decision_final.approved,
+            composite_score=goal_decision_final.composite_score,
+            scorecard=goal_decision_final.scorecard,
+            nash_weights=goal_decision_final.nash_weights,
+            tracking_error=goal_decision_final.tracking_error,
+            control_action=goal_decision_final.control_action,
+            subtasks=[{"name": t.name, "assigned_to": t.assigned_to} for t in goal_decision_final.subtasks],
+            violations=[v.constraint_name for v in goal_decision_final.constraint_violations],
+        )
+
+        # ── Self-improvement pass (only if alignment approves) ────────────────
         fb_summary = self.feedback.get_improvement_feedback()
-        improved_nodes = self._run_improvement_pass(system_metrics, fb_summary, cycle)
+        improved_nodes = (
+            self._run_improvement_pass(system_metrics, fb_summary, cycle)
+            if alignment_decision.approved
+            else []
+        )
 
         # ── End root trace ────────────────────────────────────────────────────
         self.tracer.end_span(root_ctx.span_id, status="ok", metadata={
@@ -642,6 +761,7 @@ class VectoraSystem:
 
         # ── Print iteration summary ───────────────────────────────────────────
         mem_summary = self.memory.summary()
+        mem_summary["regime"] = self.memory.get_working("regime", "unknown")
         self._print_iteration_summary(cycle, system_metrics, score, improved_nodes,
                                       pipeline_ms, mem_summary)
 
@@ -791,6 +911,7 @@ class VectoraSystem:
         mem_summary: Dict[str, Any],
     ) -> None:
         improved_str = ", ".join(improved) if improved else "—"
+        regime = mem_summary.get("regime", "unknown")
         print(
             f"\n{'─'*68}\n"
             f"  Heartbeat #{iteration:>3} │ Score: {score:.4f} │ {elapsed_ms/1000:.1f}s\n"
@@ -800,7 +921,7 @@ class VectoraSystem:
             f"  Indicators: {int(metrics.get('indicator_count',1))}"
             f"  Errors: {metrics.get('error_rate',0):.0%}\n"
             f"  Memory: {mem_summary.get('episodic_count',0)} episodes │ "
-            f"{mem_summary.get('semantic_count',0)} patterns learned\n"
+            f"{mem_summary.get('semantic_count',0)} patterns learned │ Regime: {regime}\n"
             f"  Improved: {improved_str}\n"
             f"{'─'*68}\n"
         )
