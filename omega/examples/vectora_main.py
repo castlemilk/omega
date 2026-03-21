@@ -76,6 +76,15 @@ from omega.nodes.vectora.verification import (
     InvariantDiscoveryNode,
     ConvergenceMonitorNode,
 )
+from omega.core.challenge_registry import ChallengeRegistry
+from omega.core.verification_gates import (
+    VerificationGateSystem,
+    PropertyGate,
+    InvariantGate,
+    RegressionGate,
+    ConvergenceGate,
+)
+from omega.nodes.devils_advocate import DevilsAdvocateNode
 
 # ─── Logging ───────────────────────────────────────────────────────────────────
 
@@ -193,6 +202,41 @@ class VectoraSystem:
             "node_registered", "node", dash_state.node_id,
             {"name": dash_state.name, "version": dash_state.version},
         )
+
+        # ── Devil's Advocate layer ────────────────────────────────────────────
+        self.challenge_registry = ChallengeRegistry(db_path=STATE_DB_PATH)
+        seeded = self.challenge_registry.seed_initial_challenges()
+        if seeded:
+            logger.info("[DA] Seeded %d initial challenges into registry", seeded)
+
+        self._gate_system = VerificationGateSystem()
+        self._gate_system.register(PropertyGate(
+            "node_health_bounded",
+            predicate=lambda ctx: all(0.0 <= v <= 1.0 for v in ctx.get("node_healths", [1.0])),
+            description="All node health scores must be in [0, 1]",
+        ))
+        self._gate_system.register(InvariantGate(
+            "sharpe_non_negative",
+            invariant=lambda ctx: ctx.get("sharpe_ratio", 0.0) >= -10.0,
+            description="Sharpe ratio must be above -10 (sanity bound)",
+        ))
+        self._gate_system.register(RegressionGate(
+            "sharpe_regression",
+            metric="sharpe_ratio",
+            direction="maximize",
+            threshold_pct=25.0,
+        ))
+        self._gate_system.register(ConvergenceGate(
+            "system_convergence",
+            metric="score",
+            window=4,
+        ))
+
+        self.devils_advocate = DevilsAdvocateNode(
+            registry=self.challenge_registry,
+            gate_system=self._gate_system,
+        )
+        self._last_metrics: Dict[str, float] = {}
 
         # ── Goal spec ─────────────────────────────────────────────────────────
         spec = (
@@ -624,6 +668,42 @@ class VectoraSystem:
         # ── Self-improvement pass ─────────────────────────────────────────────
         fb_summary = self.feedback.get_improvement_feedback()
         improved_nodes = self._run_improvement_pass(system_metrics, fb_summary, cycle)
+
+        # ── Devil's Advocate review (after improvements, before committing) ───
+        da_context = {
+            "node_healths": [
+                self.ingestion.get_state().health,
+                self.signals.get_state().health,
+                self.strategy.get_state().health,
+                self.risk.get_state().health,
+                self.reporting.get_state().health,
+            ],
+            "before": self._last_metrics,
+            "after": system_metrics,
+            "history": [s.score for s in self.orchestrator._iteration_history[-5:]],
+            "sharpe_ratio": system_metrics.get("sharpe_ratio", 0.0),
+            "subsystem": "vectora",
+        }
+        da_out = self.devils_advocate.execute(
+            NodeInput(action="architectural_review", parameters=da_context)
+        )
+        if da_out.success and da_out.result:
+            da_report = da_out.result
+            veto = da_report.get("veto", False)
+            open_count = da_report.get("open_count", 0)
+            logger.info(
+                "[DA] %s | open_challenges=%d | critical=%d | veto=%s",
+                da_report.get("verdict", "?"),
+                open_count,
+                da_report.get("critical_count", 0),
+                veto,
+            )
+            if veto:
+                logger.warning(
+                    "[DA] Improvement VETOED — unresolved CRITICAL challenges "
+                    "or gate failures detected"
+                )
+        self._last_metrics = dict(system_metrics)
 
         # ── End root trace ────────────────────────────────────────────────────
         self.tracer.end_span(root_ctx.span_id, status="ok", metadata={
