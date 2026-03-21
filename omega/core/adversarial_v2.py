@@ -562,6 +562,9 @@ class AdversarialPressureV2:
         min_ring1_flag_rate_for_ring2: float = 0.05,
         # Scenario bank seed
         scenario_seed: int | None = None,
+        # Optional domain-specific debate layer.
+        # Pass None (default) for non-trading domains; Vectora injects DebateGate().
+        debate_gate: DebateGate | None = None,
     ) -> None:
         self._base = AdversarialPressure(
             ring1_threshold=ring1_threshold,
@@ -590,9 +593,10 @@ class AdversarialPressureV2:
             gate=self._sim_gate,
         )
 
-        # DebateGate + RiskDebate for disagreement resolution
-        self.debate_gate = DebateGate()
-        self.risk_debate = RiskDebate()
+        # DebateGate + RiskDebate are optional trading-domain extensions.
+        # Non-trading domains leave these as None; Vectora injects DebateGate().
+        self.debate_gate: DebateGate | None = debate_gate
+        self.risk_debate: RiskDebate | None = RiskDebate() if debate_gate is not None else None
 
         # Expose inner rings for external access
         self.ring1 = self._base.ring1
@@ -667,33 +671,38 @@ class AdversarialPressureV2:
         debate_action: str | None = None
         debate_position_scale: float | None = None
 
-        if base_report.ring1_result and base_report.ring1_result.flagged:
+        if (
+            base_report.ring1_result
+            and base_report.ring1_result.flagged
+            and self.debate_gate is not None
+        ):
             # Build SignalContext from available signal data
             sig_ctx = self._build_signal_context(current_signals, strategy_params)
             debate_verdict = self.debate_gate.evaluate(sig_ctx)
             debate_action, debate_position_scale = DebateGate.action_from_verdict(debate_verdict)
 
             # Run risk debate using debate confidence as anchor
-            risk_ctx = RiskContext(
-                composite_signal=sig_ctx.composite_signal,
-                ic_short=sig_ctx.ic_short,
-                vol_regime=sig_ctx.vol_regime,
-                recent_sharpe=sig_ctx.recent_sharpe,
-                node_error_rate=sig_ctx.node_error_rate,
-                atl_distance=sig_ctx.atl_distance,
-                debate_confidence=debate_verdict.confidence,
-            )
-            risk_debate_result = self.risk_debate.resolve(risk_ctx)
+            if self.risk_debate is not None:
+                risk_ctx = RiskContext(
+                    composite_signal=sig_ctx.composite_signal,
+                    ic_short=sig_ctx.ic_short,
+                    vol_regime=sig_ctx.vol_regime,
+                    recent_sharpe=sig_ctx.recent_sharpe,
+                    node_error_rate=sig_ctx.node_error_rate,
+                    atl_distance=sig_ctx.atl_distance,
+                    debate_confidence=debate_verdict.confidence,
+                )
+                risk_debate_result = self.risk_debate.resolve(risk_ctx)
 
-            logger.info(
-                "AdversarialV2 DebateGate [cycle=%d]: action=%s "
-                "position_scale=%.3f confidence=%.3f risk_scale=%.3f",
-                cycle,
-                debate_action,
-                debate_position_scale,
-                debate_verdict.confidence,
-                risk_debate_result.position_scale,
-            )
+                logger.info(
+                    "AdversarialV2 DebateGate [cycle=%d]: action=%s "
+                    "position_scale=%.3f confidence=%.3f risk_scale=%.3f",
+                    cycle,
+                    debate_action,
+                    debate_position_scale,
+                    debate_verdict.confidence,
+                    risk_debate_result.position_scale,
+                )
 
         # Ring 2 simulation gate (if activated and on interval)
         ring2_sim_report: SimulationReport | None = None
