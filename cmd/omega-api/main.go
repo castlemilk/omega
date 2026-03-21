@@ -169,7 +169,10 @@ func main() {
 	_ = bus // available for event streaming integration
 
 	addr := ":8080"
-	log.Printf("Omega API listening on %s", addr)
+	if p := os.Getenv("OMEGA_API_PORT"); p != "" {
+		addr = ":" + p
+	}
+	log.Printf("Omega API listening on %s", addr) //nolint:gosec
 	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics")
 	log.Fatal(http.ListenAndServe(addr, h2c.NewHandler(withCORS(mux), &http2.Server{}))) //nolint:gosec,gocritic
 }

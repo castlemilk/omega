@@ -38,6 +38,7 @@ addopts = "-v --tb=short -n auto"
 markers = [
     "slow: marks tests as slow (deselect with -m 'not slow')",
     "integration: marks tests requiring external services",
+    "e2e: end-to-end tests against the running Go API server",
 ]
 
 [tool.coverage.run]
