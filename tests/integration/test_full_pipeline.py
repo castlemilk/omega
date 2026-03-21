@@ -85,6 +85,7 @@ class _FlagAllProposalsOrchestrator(OmegaOrchestrator):
         ctx: Any,
         result: Any,
         proposals: list[Any],
+        signal_data: Any,
         log: Any,
     ) -> list[Any]:
         for proposal in proposals:

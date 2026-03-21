@@ -31,6 +31,18 @@ from omega.core.state_store import StateStore
 logger = logging.getLogger("omega.core.improvement_engine")
 
 
+def _sharpe_ratio(returns: list[float]) -> float:
+    """Annualised Sharpe ratio. Returns 0.0 for empty/single-element inputs."""
+    if len(returns) < 2:
+        return 0.0
+    mean = sum(returns) / len(returns)
+    variance = sum((r - mean) ** 2 for r in returns) / (len(returns) - 1)
+    std = math.sqrt(variance) if variance > 0 else 0.0
+    if std == 0.0:
+        return 0.0
+    return (mean / std) * math.sqrt(252)
+
+
 def _max_drawdown(equity_curve: list[float]) -> float:
     """Maximum peak-to-trough drawdown (0..1, lower is worse → returned as negative)."""
     if len(equity_curve) < 2:

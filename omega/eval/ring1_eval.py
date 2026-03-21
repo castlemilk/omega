@@ -195,8 +195,10 @@ class _TrackingOrchestrator(OmegaOrchestrator):
         super().__init__(**kwargs)
         self._ring1_records: list[Ring1CycleRecord] = []
 
-    def _step_adversarial(self, ctx: Any, result: Any, proposals: Any, log: Any) -> Any:
-        clean = super()._step_adversarial(ctx, result, proposals, log)
+    def _step_adversarial(
+        self, ctx: Any, result: Any, proposals: Any, signal_data: Any, log: Any
+    ) -> Any:
+        clean = super()._step_adversarial(ctx, result, proposals, signal_data, log)
 
         # Determine if Ring 1 flagged this cycle
         flagged = result.had_adversarial_flag
