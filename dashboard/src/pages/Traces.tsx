@@ -9,12 +9,18 @@ export default function Traces() {
   const [spans, setSpans] = useState<Span[]>([]);
 
   useEffect(() => {
-    client.listTraces({ limit: 30 }).then((r) => setTraces(r.traces)).catch(console.error);
+    client
+      .listTraces({ limit: 30 })
+      .then((r) => setTraces(r.traces))
+      .catch(console.error);
   }, []);
 
   function selectTrace(id: string) {
     setSelected(id);
-    client.getTrace({ traceId: id }).then((r) => setSpans(r.spans)).catch(console.error);
+    client
+      .getTrace({ traceId: id })
+      .then((r) => setSpans(r.spans))
+      .catch(console.error);
   }
 
   return (
@@ -31,7 +37,8 @@ export default function Traces() {
           >
             <p className="text-xs font-mono text-indigo-400 truncate">{t.traceId.slice(0, 12)}…</p>
             <p className="text-xs text-gray-500 mt-0.5">
-              {String(t.spanCount)} spans · {t.totalDurationMs.toFixed(0)}ms · cycle {String(t.cycle)}
+              {String(t.spanCount)} spans · {t.totalDurationMs.toFixed(0)}ms · cycle{" "}
+              {String(t.cycle)}
               {Number(t.errorSpans) > 0 && (
                 <span className="text-red-400 ml-1">{String(t.errorSpans)} err</span>
               )}
@@ -49,7 +56,9 @@ export default function Traces() {
             <TraceWaterfall spans={spans} />
           </>
         ) : (
-          <p className="text-gray-500 text-sm text-center mt-20">Select a trace to view the waterfall</p>
+          <p className="text-gray-500 text-sm text-center mt-20">
+            Select a trace to view the waterfall
+          </p>
         )}
       </div>
     </div>

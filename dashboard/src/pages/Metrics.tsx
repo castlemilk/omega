@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { client } from "../client";
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import {
+  LineChart,
+  Line,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import type { Node } from "../gen/omega/v1/types_pb";
 
 export default function Metrics() {
@@ -8,20 +17,23 @@ export default function Metrics() {
   const [histories, setHistories] = useState<Record<string, { ms: number }[]>>({});
 
   useEffect(() => {
-    client.listNodes({}).then(async (r) => {
-      setNodes(r.nodes);
-      // Fetch latency history for each node
-      const histMap: Record<string, { ms: number }[]> = {};
-      await Promise.all(
-        r.nodes.map(async (n) => {
-          const nr = await client.getNode({ nodeId: n.nodeId }).catch(() => null);
-          if (nr) {
-            histMap[n.nodeId] = nr.latencyHistory.map((p) => ({ ms: p.durationMs }));
-          }
-        })
-      );
-      setHistories(histMap);
-    }).catch(console.error);
+    client
+      .listNodes({})
+      .then(async (r) => {
+        setNodes(r.nodes);
+        // Fetch latency history for each node
+        const histMap: Record<string, { ms: number }[]> = {};
+        await Promise.all(
+          r.nodes.map(async (n) => {
+            const nr = await client.getNode({ nodeId: n.nodeId }).catch(() => null);
+            if (nr) {
+              histMap[n.nodeId] = nr.latencyHistory.map((p) => ({ ms: p.durationMs }));
+            }
+          })
+        );
+        setHistories(histMap);
+      })
+      .catch(console.error);
   }, []);
 
   return (
@@ -44,11 +56,22 @@ export default function Metrics() {
                       <XAxis hide />
                       <YAxis width={35} tick={{ fontSize: 10, fill: "#6b7280" }} />
                       <Tooltip
-                        contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: 6 }}
+                        contentStyle={{
+                          background: "#1f2937",
+                          border: "1px solid #374151",
+                          borderRadius: 6,
+                        }}
                         formatter={(v: number) => [`${v.toFixed(0)}ms`]}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="ms" name="latency" stroke="#6366f1" dot={false} strokeWidth={1.5} />
+                      <Line
+                        type="monotone"
+                        dataKey="ms"
+                        name="latency"
+                        stroke="#6366f1"
+                        dot={false}
+                        strokeWidth={1.5}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

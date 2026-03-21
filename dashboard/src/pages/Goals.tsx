@@ -16,9 +16,7 @@ export default function Goals() {
   const { data, error, loading } = usePolling(fetchFn);
   const state = data?.state ?? null;
 
-  const constitutionalEntries = state
-    ? Object.entries(state.constitutionalChecks)
-    : [];
+  const constitutionalEntries = state ? Object.entries(state.constitutionalChecks) : [];
 
   const scorecardData = state
     ? Object.entries(state.scorecardValues).map(([key, value]) => ({
@@ -28,8 +26,7 @@ export default function Goals() {
       }))
     : [];
 
-  if (loading)
-    return <div className="text-gray-500 text-sm">Loading goal state…</div>;
+  if (loading) return <div className="text-gray-500 text-sm">Loading goal state…</div>;
   if (error) return <div className="text-red-400 text-sm">Error: {error}</div>;
 
   return (
@@ -37,11 +34,7 @@ export default function Goals() {
       <div className="flex items-center gap-2">
         <Target size={18} className="text-indigo-400" />
         <h1 className="text-lg font-semibold text-white">Goal Tracking</h1>
-        {state && (
-          <span className="text-xs text-gray-500 ml-2">
-            cycle {Number(state.cycle)}
-          </span>
-        )}
+        {state && <span className="text-xs text-gray-500 ml-2">cycle {Number(state.cycle)}</span>}
       </div>
 
       {!state ? (
@@ -56,16 +49,11 @@ export default function Goals() {
               Constitutional Constraints
             </p>
             {constitutionalEntries.length === 0 ? (
-              <p className="text-gray-600 text-sm text-center py-4">
-                None recorded
-              </p>
+              <p className="text-gray-600 text-sm text-center py-4">None recorded</p>
             ) : (
               <div className="space-y-2">
                 {constitutionalEntries.map(([constraint, passed]) => (
-                  <div
-                    key={constraint}
-                    className="flex items-center justify-between"
-                  >
+                  <div key={constraint} className="flex items-center justify-between">
                     <span className="text-sm text-gray-300 truncate max-w-[200px]">
                       {constraint}
                     </span>
@@ -82,21 +70,14 @@ export default function Goals() {
 
           {/* Balanced scorecard radar */}
           <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-            <p className="text-xs text-gray-400 uppercase font-medium mb-3">
-              Balanced Scorecard
-            </p>
+            <p className="text-xs text-gray-400 uppercase font-medium mb-3">Balanced Scorecard</p>
             {scorecardData.length < 3 ? (
-              <p className="text-gray-600 text-sm text-center py-4">
-                Insufficient scorecard data
-              </p>
+              <p className="text-gray-600 text-sm text-center py-4">Insufficient scorecard data</p>
             ) : (
               <ResponsiveContainer width="100%" height={200}>
                 <RadarChart data={scorecardData}>
                   <PolarGrid stroke="#374151" />
-                  <PolarAngleAxis
-                    dataKey="subject"
-                    tick={{ fill: "#9ca3af", fontSize: 10 }}
-                  />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#9ca3af", fontSize: 10 }} />
                   <Tooltip
                     contentStyle={{
                       background: "#1f2937",
@@ -106,12 +87,7 @@ export default function Goals() {
                     }}
                     formatter={(v: number) => [`${v.toFixed(0)}%`]}
                   />
-                  <Radar
-                    dataKey="value"
-                    stroke="#818cf8"
-                    fill="#818cf8"
-                    fillOpacity={0.25}
-                  />
+                  <Radar dataKey="value" stroke="#818cf8" fill="#818cf8" fillOpacity={0.25} />
                 </RadarChart>
               </ResponsiveContainer>
             )}
@@ -122,9 +98,7 @@ export default function Goals() {
       {/* Active HTN tasks */}
       {state && state.activeTasks.length > 0 && (
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-          <p className="text-xs text-gray-400 uppercase font-medium mb-3">
-            Active HTN Tasks
-          </p>
+          <p className="text-xs text-gray-400 uppercase font-medium mb-3">Active HTN Tasks</p>
           <ul className="space-y-1">
             {state.activeTasks.map((task, i) => (
               <li key={i} className="text-sm text-gray-300 flex items-center gap-2">

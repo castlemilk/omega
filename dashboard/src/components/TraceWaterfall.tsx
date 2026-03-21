@@ -1,6 +1,8 @@
 import type { Span } from "../gen/omega/v1/types_pb";
 
-interface TraceWaterfallProps { spans: Span[] }
+interface TraceWaterfallProps {
+  spans: Span[];
+}
 
 export default function TraceWaterfall({ spans }: TraceWaterfallProps) {
   if (!spans.length) return <p className="text-gray-500 text-sm">No spans.</p>;
@@ -10,7 +12,8 @@ export default function TraceWaterfall({ spans }: TraceWaterfallProps) {
   );
   const minTs = Number(sorted[0]?.startedAt?.seconds ?? 0);
   const maxTs = sorted.reduce(
-    (m, s) => Math.max(m, Number(s.endedAt?.seconds ?? s.startedAt?.seconds ?? 0)), 0
+    (m, s) => Math.max(m, Number(s.endedAt?.seconds ?? s.startedAt?.seconds ?? 0)),
+    0
   );
   const totalMs = Math.max(1, (maxTs - minTs) * 1000);
 
@@ -31,8 +34,13 @@ export default function TraceWaterfall({ spans }: TraceWaterfallProps) {
 
         return (
           <div key={span.spanId} className="flex items-center gap-2">
-            <div className="shrink-0 text-gray-400 truncate" style={{ width: 200, paddingLeft: depth * 12 }}>
-              <span className={isErr ? "text-red-400" : "text-green-400"}>{isErr ? "✗" : "✓"}</span>{" "}
+            <div
+              className="shrink-0 text-gray-400 truncate"
+              style={{ width: 200, paddingLeft: depth * 12 }}
+            >
+              <span className={isErr ? "text-red-400" : "text-green-400"}>
+                {isErr ? "✗" : "✓"}
+              </span>{" "}
               {span.nodeName || span.operation}
             </div>
             <div className="flex-1 relative h-5 bg-gray-700 rounded overflow-hidden">

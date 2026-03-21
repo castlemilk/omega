@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { client } from "../client";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import type { ConvergencePoint, ImprovementRecord } from "../gen/omega/v1/types_pb";
 
 export default function Convergence() {
@@ -8,11 +16,21 @@ export default function Convergence() {
   const [improvements, setImprovements] = useState<ImprovementRecord[]>([]);
 
   useEffect(() => {
-    client.getConvergence({ limit: 200 }).then((r) => setPoints(r.points)).catch(console.error);
-    client.listImprovements({ nodeId: "", limit: 50 }).then((r) => setImprovements(r.improvements)).catch(console.error);
+    client
+      .getConvergence({ limit: 200 })
+      .then((r) => setPoints(r.points))
+      .catch(console.error);
+    client
+      .listImprovements({ nodeId: "", limit: 50 })
+      .then((r) => setImprovements(r.improvements))
+      .catch(console.error);
   }, []);
 
-  const chartData = points.map((p) => ({ cycle: Number(p.cycle), score: p.score, ms: p.pipelineMs }));
+  const chartData = points.map((p) => ({
+    cycle: Number(p.cycle),
+    score: p.score,
+    ms: p.pipelineMs,
+  }));
 
   return (
     <div className="space-y-6">
@@ -30,10 +48,20 @@ export default function Convergence() {
                 />
                 <YAxis domain={[0, 1]} tick={{ fontSize: 11, fill: "#6b7280" }} />
                 <Tooltip
-                  contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: 8 }}
+                  contentStyle={{
+                    background: "#1f2937",
+                    border: "1px solid #374151",
+                    borderRadius: 8,
+                  }}
                   formatter={(v: number) => [v.toFixed(4), "Score"]}
                 />
-                <Line type="monotone" dataKey="score" stroke="#6366f1" dot={false} strokeWidth={2} />
+                <Line
+                  type="monotone"
+                  dataKey="score"
+                  stroke="#6366f1"
+                  dot={false}
+                  strokeWidth={2}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -53,7 +81,9 @@ export default function Convergence() {
             <div key={imp.improveId} className="px-4 py-3 flex items-center gap-3 text-sm">
               <span className="text-gray-500 text-xs w-12 shrink-0">cy {String(imp.cycle)}</span>
               <span className="text-white font-medium shrink-0">{imp.nodeName}</span>
-              <span className="text-gray-400 text-xs font-mono">v{imp.fromVersion} → v{imp.toVersion}</span>
+              <span className="text-gray-400 text-xs font-mono">
+                v{imp.fromVersion} → v{imp.toVersion}
+              </span>
               <span className="text-gray-600 text-xs ml-auto">{imp.triggeredBy}</span>
             </div>
           ))}

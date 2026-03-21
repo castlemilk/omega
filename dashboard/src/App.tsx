@@ -17,6 +17,11 @@ import Adversarial from "./pages/Adversarial";
 import Goals from "./pages/Goals";
 import Challenges from "./pages/Challenges";
 import Improvements from "./pages/Improvements";
+import VectoraDashboard from "./pages/VectoraDashboard";
+import VectoraPortfolio from "./pages/VectoraPortfolio";
+import VectoraSignals from "./pages/VectoraSignals";
+import VectoraTrades from "./pages/VectoraTrades";
+import VectoraBacktest from "./pages/VectoraBacktest";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
@@ -26,7 +31,7 @@ export default function App() {
   useEffect(() => {
     startStream();
     return () => abortRef.current?.abort();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function startStream() {
@@ -62,12 +67,17 @@ export default function App() {
               <Route path="/metrics" element={<Metrics />} />
               <Route path="/issues" element={<Issues />} />
               <Route path="/memory" element={<Memory />} />
-              <Route path="/convergence"  element={<Convergence />} />
-              <Route path="/alignment"    element={<Alignment />} />
-              <Route path="/adversarial"  element={<Adversarial />} />
-              <Route path="/goals"        element={<Goals />} />
-              <Route path="/challenges"   element={<Challenges />} />
+              <Route path="/convergence" element={<Convergence />} />
+              <Route path="/alignment" element={<Alignment />} />
+              <Route path="/adversarial" element={<Adversarial />} />
+              <Route path="/goals" element={<Goals />} />
+              <Route path="/challenges" element={<Challenges />} />
               <Route path="/improvements" element={<Improvements />} />
+              <Route path="/vectora" element={<VectoraDashboard />} />
+              <Route path="/vectora/portfolio" element={<VectoraPortfolio />} />
+              <Route path="/vectora/signals" element={<VectoraSignals />} />
+              <Route path="/vectora/trades" element={<VectoraTrades />} />
+              <Route path="/vectora/backtest" element={<VectoraBacktest />} />
             </Routes>
           </main>
         </div>
