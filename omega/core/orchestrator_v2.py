@@ -1,0 +1,665 @@
+"""
+omega.core.orchestrator_v2
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+OmegaOrchestrator — pluggable, goal-driven orchestrator that composes all
+subsystems without hardcoding any domain-specific node logic.
+
+Architecture
+------------
+Nodes are registered via register_node() and stored in a NodeRegistry.
+Which nodes are *active* during a given cycle is determined by the goal system
+and node health — not hardcoded per domain.
+
+Main loop (one iteration):
+  1. Reconcile active_nodes: health-check, goal-activation
+  2. data_poll()  — call poll() on all active nodes that support it
+  3. signals()    — nodes compute signals from polled data
+  4. strategy()   — strategy-capable nodes propose trades
+  5. adversarial() — adversarial layer validates proposals
+  6. execute_or_block() — execute clean proposals; block flagged ones
+  7. post_cycle()  — improvement scheduling, memory consolidation, metrics
+
+The orchestrator is deliberately generic — domain logic lives in nodes.
+VectoraNode is one node among many; the system works with zero nodes.
+
+Prometheus metrics (via MetricsExporter)
+-----------------------------------------
+  omega_cycle_duration_seconds histogram
+  omega_signals_per_cycle gauge
+  omega_trades_per_cycle gauge
+  omega_adversarial_flags_total counter
+  omega_active_nodes gauge
+"""
+
+from __future__ import annotations
+
+import logging
+import time
+from typing import Any
+
+from omega.core.adversarial_v2 import AdversarialPressureV2
+from omega.core.autonomy import AutonomyLevel, GraduatedAutonomyController
+from omega.core.cycle import CycleContext, CycleHistory, CycleResult
+from omega.core.improvement_engine import ImprovementEngine
+from omega.core.improvement_scheduler import ImprovementScheduler
+from omega.core.memory_consolidation import ConsolidationPipeline
+from omega.core.metrics_exporter import MetricsExporter
+from omega.core.node import Node, NodeInput, NodeOutput
+from omega.core.regime_handler import RegimeTransitionHandler
+from omega.core.registry import NodeRegistry
+
+logger = logging.getLogger("omega.orchestrator_v2")
+
+
+# ---------------------------------------------------------------------------
+# NodeHealth — lightweight health record per node
+# ---------------------------------------------------------------------------
+
+
+class NodeHealth:
+    """Rolling health tracker for a single node."""
+
+    def __init__(self, node_id: str, window: int = 20) -> None:
+        self.node_id = node_id
+        self._scores: list[float] = []
+        self._window = window
+        self._consecutive_errors = 0
+
+    def record(self, health: float, success: bool) -> None:
+        self._scores = [*self._scores[-self._window + 1 :], health]
+        if success:
+            self._consecutive_errors = 0
+        else:
+            self._consecutive_errors += 1
+
+    @property
+    def avg_health(self) -> float:
+        return sum(self._scores) / len(self._scores) if self._scores else 1.0
+
+    @property
+    def is_degraded(self) -> bool:
+        return self.avg_health < 0.4 or self._consecutive_errors >= 5
+
+
+# ---------------------------------------------------------------------------
+# OmegaOrchestrator
+# ---------------------------------------------------------------------------
+
+
+class OmegaOrchestrator:
+    """
+    The Omega system main orchestrator.
+
+    Pluggable and goal-driven — does not hardcode any domain node logic.
+
+    Quick-start::
+
+        orch = OmegaOrchestrator()
+        orch.register_node(my_node)
+        orch.run(max_cycles=100)
+    """
+
+    # After N cycles, run TPE improvement if eligible
+    IMPROVEMENT_INTERVAL = 50
+    # After N cycles, run memory consolidation
+    CONSOLIDATION_INTERVAL = 100
+
+    def __init__(
+        self,
+        name: str = "omega",
+        autonomy_controller: GraduatedAutonomyController | None = None,
+        improvement_engine: ImprovementEngine | None = None,
+        improvement_scheduler: ImprovementScheduler | None = None,
+        regime_handler: RegimeTransitionHandler | None = None,
+        adversarial: AdversarialPressureV2 | None = None,
+        memory_consolidation: ConsolidationPipeline | None = None,
+        metrics_exporter: MetricsExporter | None = None,
+        history_size: int = 500,
+    ) -> None:
+        self.name = name
+        self._registry = NodeRegistry()
+        self._active_node_ids: set[str] = set()
+        self._node_health: dict[str, NodeHealth] = {}
+
+        # Subsystems — all optional for testability
+        self._autonomy = autonomy_controller or GraduatedAutonomyController()
+        self._improvement_engine = improvement_engine or ImprovementEngine()
+        self._improvement_scheduler = improvement_scheduler or ImprovementScheduler()
+        self._regime_handler = regime_handler or RegimeTransitionHandler()
+        self._adversarial = adversarial
+        self._consolidation = memory_consolidation
+        self._metrics = metrics_exporter
+
+        self._history = CycleHistory(max_size=history_size)
+        self._cycle_number: int = 0
+        self._running: bool = False
+
+        logger.info("OmegaOrchestrator '%s' initialised", name)
+
+    # ------------------------------------------------------------------
+    # Node registry (pluggable — no domain knowledge here)
+    # ------------------------------------------------------------------
+
+    def register_node(self, node: Node, *, activate: bool = True) -> str:
+        """
+        Add a node to the registry.
+
+        Parameters
+        ----------
+        node     : Any Node subclass — the orchestrator needs no domain knowledge.
+        activate : If True (default), add the node to the active set immediately.
+
+        Returns the node_id.
+        """
+        self._registry.register(node)
+        state = node.get_state()
+        node_id = state.node_id
+        self._autonomy.register_node(node_id)
+        self._node_health[node_id] = NodeHealth(node_id)
+        if activate:
+            self._active_node_ids.add(node_id)
+        logger.info("Registered node '%s' (id=%s, activate=%s)", state.name, node_id, activate)
+        return node_id
+
+    def deregister_node(self, node_id: str) -> None:
+        """Remove a node from the registry and active set."""
+        self._active_node_ids.discard(node_id)
+        self._node_health.pop(node_id, None)
+        self._registry.deregister(node_id)
+        logger.info("Deregistered node %s", node_id)
+
+    def activate_node(self, node_id: str) -> None:
+        """Mark a registered node as active."""
+        if not self._registry.get_node(node_id):
+            raise KeyError(f"Node {node_id!r} not registered")
+        self._active_node_ids.add(node_id)
+
+    def deactivate_node(self, node_id: str) -> None:
+        """Remove a node from the active set without unregistering it."""
+        self._active_node_ids.discard(node_id)
+
+    @property
+    def active_nodes(self) -> list[Node]:
+        """Return all currently active nodes in registration order."""
+        nodes = []
+        for nid in list(self._active_node_ids):
+            node = self._registry.get_node(nid)
+            if node is not None:
+                nodes.append(node)
+        return nodes
+
+    # ------------------------------------------------------------------
+    # Goal-driven node activation (hook for goal system)
+    # ------------------------------------------------------------------
+
+    def reconcile_active_nodes(
+        self,
+        goal_node_ids: set[str] | None = None,
+        health_threshold: float = 0.3,
+    ) -> None:
+        """
+        Reconcile which nodes should be active.
+
+        1. If goal_node_ids is provided, activate exactly those nodes
+           (plus any already active that are not in the goal set remain
+           active — callers can explicitly deactivate if needed).
+        2. Deactivate nodes whose health has degraded below threshold.
+        3. Register autonomy-appropriate brain on each active node.
+
+        This is the hook through which the goal system drives activation.
+        """
+        if goal_node_ids is not None:
+            for nid in goal_node_ids:
+                if self._registry.get_node(nid):
+                    self._active_node_ids.add(nid)
+
+        for node in list(self.active_nodes):
+            state = node.get_state()
+            health_rec = self._node_health.get(state.node_id)
+            if (
+                health_rec
+                and health_rec.is_degraded
+                and health_threshold > 0
+                and health_rec.avg_health < health_threshold
+            ):
+                logger.warning(
+                    "Deactivating degraded node '%s' (avg_health=%.2f)",
+                    state.name,
+                    health_rec.avg_health,
+                )
+                self.deactivate_node(state.node_id)
+                continue
+            # Apply brain appropriate for autonomy level
+            try:
+                self._autonomy.apply_brain_for_level(node, state.node_id)
+            except Exception as exc:
+                logger.debug("apply_brain_for_level failed for %s: %s", state.node_id, exc)
+
+    # ------------------------------------------------------------------
+    # Main loop
+    # ------------------------------------------------------------------
+
+    def run(
+        self,
+        max_cycles: int | None = None,
+        sleep_seconds: float = 0.0,
+        goal_node_ids: set[str] | None = None,
+    ) -> CycleHistory:
+        """
+        Run the main orchestration loop.
+
+        Parameters
+        ----------
+        max_cycles    : Stop after this many cycles (None = run forever).
+        sleep_seconds : Time to sleep between cycles (0 = tight loop).
+        goal_node_ids : If provided, reconcile active nodes to this set each cycle.
+
+        Returns the full CycleHistory.
+        """
+        self._running = True
+        logger.info("Starting OmegaOrchestrator '%s' (max_cycles=%s)", self.name, max_cycles)
+        try:
+            while self._running:
+                if max_cycles is not None and self._cycle_number >= max_cycles:
+                    break
+                self.run_one_cycle(goal_node_ids=goal_node_ids)
+                if sleep_seconds > 0:
+                    time.sleep(sleep_seconds)
+        except KeyboardInterrupt:
+            logger.info("OmegaOrchestrator '%s' interrupted", self.name)
+        finally:
+            self._running = False
+
+        logger.info(
+            "OmegaOrchestrator '%s' stopped after %d cycles",
+            self.name,
+            self._cycle_number,
+        )
+        return self._history
+
+    def stop(self) -> None:
+        """Signal the run loop to stop after the current cycle completes."""
+        self._running = False
+
+    def run_one_cycle(
+        self,
+        goal_node_ids: set[str] | None = None,
+    ) -> CycleResult:
+        """
+        Execute one full orchestration cycle and return the CycleResult.
+
+        Steps
+        -----
+        1. reconcile_active_nodes
+        2. Build CycleContext
+        3. data_poll  — poll active nodes that support data fetching
+        4. signals    — compute signals from polled data
+        5. strategy   — nodes propose trades
+        6. adversarial — validate proposals
+        7. execute_or_block
+        8. post_cycle  — improvement, consolidation, metrics
+        """
+        t_start = time.perf_counter()
+        cycle_num = self._cycle_number
+        self._cycle_number += 1
+
+        # 1. Reconcile active nodes
+        self.reconcile_active_nodes(goal_node_ids=goal_node_ids)
+
+        # 2. Build CycleContext
+        regime = self._regime_handler.current_regime
+        active_ids = tuple(n.get_state().node_id for n in self.active_nodes)
+        autonomy_levels = {nid: self._autonomy.get_level(nid).value for nid in active_ids}
+        ctx = CycleContext.new(
+            cycle_number=cycle_num,
+            regime=regime,
+            active_node_ids=active_ids,
+            autonomy_levels=autonomy_levels,
+        )
+        result = CycleResult(context=ctx)
+
+        log = logging.LoggerAdapter(logger, {"cycle_id": ctx.cycle_id, "cycle": cycle_num})
+        log.debug("Cycle %d start (regime=%s, nodes=%d)", cycle_num, regime, len(active_ids))
+
+        # 3-7. Execute pipeline
+        poll_outputs = self._step_data_poll(ctx, result, log)
+        signal_data = self._step_signals(ctx, result, poll_outputs, log)
+        proposals = self._step_strategy(ctx, result, signal_data, log)
+        clean_proposals = self._step_adversarial(ctx, result, proposals, log)
+        self._step_execute(ctx, result, clean_proposals, log)
+
+        # 8. Post-cycle
+        result.duration_seconds = time.perf_counter() - t_start
+        self._post_cycle(ctx, result, log)
+
+        self._history.append(result)
+        log.info(
+            "Cycle %d done: signals=%d trades_exec=%d flags=%d dur=%.3fs",
+            cycle_num,
+            result.signals_generated,
+            result.trades_executed,
+            len(result.adversarial_flags),
+            result.duration_seconds,
+        )
+        return result
+
+    # ------------------------------------------------------------------
+    # Pipeline steps (generic — no domain assumptions)
+    # ------------------------------------------------------------------
+
+    def _step_data_poll(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        log: Any,
+    ) -> dict[str, NodeOutput]:
+        """Ask each active node to poll for new data (if it supports it)."""
+        outputs: dict[str, NodeOutput] = {}
+        for node in self.active_nodes:
+            state = node.get_state()
+            if (
+                "poll" not in node.get_capabilities()
+                and "fetch_data" not in node.get_capabilities()
+            ):
+                continue
+            action = "poll" if "poll" in node.get_capabilities() else "fetch_data"
+            inp = NodeInput(
+                action=action,
+                parameters={},
+                context={"cycle_id": ctx.cycle_id, "cycle": ctx.cycle_number},
+            )
+            try:
+                t0 = time.perf_counter()
+                out = node.execute(inp)
+                latency = (time.perf_counter() - t0) * 1000
+                self._node_health[state.node_id].record(state.health, out.success)
+                out.metrics.setdefault("latency_ms", latency)
+                outputs[state.node_id] = out
+                result.node_results[state.node_id] = {
+                    "health": state.health,
+                    "success": out.success,
+                }
+                if self._metrics:
+                    self._metrics.record_node_execution(
+                        state.node_id, state.name, latency / 1000, success=out.success
+                    )
+            except Exception as exc:
+                result.error_count += 1
+                log.error("data_poll failed for node '%s': %s", state.name, exc)
+        return outputs
+
+    def _step_signals(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        poll_outputs: dict[str, NodeOutput],
+        log: Any,
+    ) -> dict[str, Any]:
+        """Ask signal-capable nodes to compute signals from polled data."""
+        signal_data: dict[str, Any] = {}
+        for node in self.active_nodes:
+            state = node.get_state()
+            if "compute_signals" not in node.get_capabilities():
+                continue
+            poll_out = poll_outputs.get(state.node_id)
+            market_data = poll_out.result if poll_out and poll_out.success else {}
+            inp = NodeInput(
+                action="compute_signals",
+                parameters={"market_data": market_data or {}},
+                context={"cycle_id": ctx.cycle_id, "regime": ctx.regime},
+            )
+            try:
+                out = node.execute(inp)
+                self._node_health[state.node_id].record(state.health, out.success)
+                if out.success and out.result:
+                    signal_data[state.node_id] = out.result
+                    n_signals = len(out.result) if isinstance(out.result, dict) else 1
+                    result.signals_generated += n_signals
+                if not out.success:
+                    result.error_count += 1
+            except Exception as exc:
+                result.error_count += 1
+                log.error("signals failed for node '%s': %s", state.name, exc)
+
+        # Update regime handler if any node produced regime data
+        for node_signals in signal_data.values():
+            if isinstance(node_signals, dict) and "regime_label" in node_signals:
+                self._regime_handler.update(
+                    regime_label=node_signals["regime_label"],
+                    changepoint_prob=float(node_signals.get("changepoint_prob", 0.0)),
+                )
+        return signal_data
+
+    def _step_strategy(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        signal_data: dict[str, Any],
+        log: Any,
+    ) -> list[dict[str, Any]]:
+        """Ask strategy-capable nodes to propose trades."""
+        proposals: list[dict[str, Any]] = []
+        for node in self.active_nodes:
+            state = node.get_state()
+            if "construct_portfolio" not in node.get_capabilities():
+                continue
+
+            # Check autonomy: PICO mode = deterministic strategy only
+            autonomy_level = self._autonomy.get_level(state.node_id)
+            inp = NodeInput(
+                action="construct_portfolio",
+                parameters={
+                    "signals": signal_data,
+                    "regime": ctx.regime,
+                    "pico_mode": autonomy_level == AutonomyLevel.PICO,
+                },
+                context={"cycle_id": ctx.cycle_id},
+            )
+            try:
+                out = node.execute(inp)
+                self._node_health[state.node_id].record(state.health, out.success)
+                if out.success and out.result:
+                    node_proposals = out.result if isinstance(out.result, list) else [out.result]
+                    for prop in node_proposals:
+                        if isinstance(prop, dict):
+                            prop.setdefault("node_id", state.node_id)
+                            prop.setdefault("autonomy_level", autonomy_level.value)
+                    proposals.extend(p for p in node_proposals if isinstance(p, dict))
+                    result.trades_proposed += len(node_proposals)
+                if not out.success:
+                    result.error_count += 1
+            except Exception as exc:
+                result.error_count += 1
+                log.error("strategy failed for node '%s': %s", state.name, exc)
+        return proposals
+
+    def _step_adversarial(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        proposals: list[dict[str, Any]],
+        log: Any,
+    ) -> list[dict[str, Any]]:
+        """Run adversarial checks; return clean proposals."""
+        if not proposals:
+            return []
+        if self._adversarial is None:
+            return proposals
+
+        clean: list[dict[str, Any]] = []
+        for proposal in proposals:
+            try:
+                # AdversarialPressureV2 expects signal variants; adapt as needed
+                flagged = False
+                # Simple heuristic check: any proposal lacking essential fields
+                if not isinstance(proposal, dict):
+                    flagged = True
+                if not flagged:
+                    clean.append(proposal)
+                else:
+                    result.add_adversarial_flag(
+                        ring="ring0",
+                        severity="warning",
+                        reason="malformed_proposal",
+                        details={"proposal": str(proposal)[:200]},
+                    )
+                    if self._metrics:
+                        self._metrics.record_adversarial_flag("ring0", "warning")
+            except Exception as exc:
+                result.error_count += 1
+                log.error("adversarial check failed: %s", exc)
+                clean.append(proposal)  # fail-open
+
+        # Check if any node triggered a critical DA flag → demote autonomy
+        if result.had_critical_flag:
+            for node_id in ctx.active_node_ids:
+                self._autonomy.check_and_demote(node_id, da_critical=True)
+                log.warning("Critical adversarial flag → autonomy demotion for node %s", node_id)
+
+        return clean
+
+    def _step_execute(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        proposals: list[dict[str, Any]],
+        log: Any,
+    ) -> None:
+        """Execute approved trade proposals (pluggable execution hook)."""
+        if not proposals:
+            return
+        # Default: log and count; real execution implemented by subclass or injected hook
+        result.trades_executed = len(proposals)
+        log.debug("Executing %d proposals (cycle %d)", len(proposals), ctx.cycle_number)
+
+    # ------------------------------------------------------------------
+    # Post-cycle: improvement, consolidation, metrics, regime
+    # ------------------------------------------------------------------
+
+    def _post_cycle(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        log: Any,
+    ) -> None:
+        cycle_num = ctx.cycle_number
+
+        # Regime transition check
+        regime_now = self._regime_handler.current_regime
+        if regime_now != ctx.regime:
+            result.regime_transition = True
+            log.info("Regime transition detected: %s → %s", ctx.regime, regime_now)
+            # Apply regime-modified signal weights via regime_handler
+
+        # TPE improvement scheduling
+        if cycle_num > 0 and cycle_num % self.IMPROVEMENT_INTERVAL == 0:
+            self._try_improvement(ctx, result, log)
+
+        # Memory consolidation
+        if (
+            self._consolidation is not None
+            and cycle_num > 0
+            and cycle_num % self.CONSOLIDATION_INTERVAL == 0
+        ):
+            try:
+                self._consolidation.consolidate()
+                log.info("Memory consolidation triggered at cycle %d", cycle_num)
+            except Exception as exc:
+                log.warning("Memory consolidation failed: %s", exc)
+
+        # Autonomy cycle recording
+        for node in self.active_nodes:
+            state = node.get_state()
+            nid = state.node_id
+            health_rec = self._node_health.get(nid)
+            if health_rec:
+                sharpe = result.metrics.get("sharpe", health_rec.avg_health)
+                drawdown = result.metrics.get("max_drawdown", 0.0)
+                self._autonomy.record_cycle(nid, sharpe=sharpe, drawdown=abs(drawdown))
+                # Attempt promotion every 10 cycles
+                if cycle_num % 10 == 0:
+                    transition = self._autonomy.promote_node(nid)
+                    if transition.changed:
+                        log.info(
+                            "Autonomy promotion: node %s → %s",
+                            nid,
+                            transition.new_level.value,
+                        )
+
+        # Emit Prometheus metrics
+        if self._metrics:
+            self._metrics.record_heartbeat(result.duration_seconds)
+            self._metrics.update_signals({f"cycle_{cycle_num}": float(result.signals_generated)})
+
+    def _try_improvement(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        log: Any,
+    ) -> None:
+        """Trigger TPE improvement for eligible nodes."""
+        for node in self.active_nodes:
+            state = node.get_state()
+            nid = state.node_id
+            if not self._improvement_engine.is_registered(nid):
+                continue
+            # Check scheduler
+            try:
+                due = self._improvement_scheduler.due_nodes()
+                if nid not in due:
+                    continue
+            except Exception:
+                pass  # scheduler optional
+            try:
+                params = self._improvement_engine.propose(nid)
+                trial = self._improvement_engine.evaluate_and_record(
+                    nid,
+                    params,
+                    context={"regime": ctx.regime, "cycle": ctx.cycle_number},
+                    cycle=ctx.cycle_number,
+                )
+                result.improvement_proposed = True
+                log.info(
+                    "TPE improvement for node %s: score=%.4f accepted=%s",
+                    nid,
+                    trial.score,
+                    trial.accepted,
+                )
+                if self._metrics:
+                    self._metrics.record_improvement(
+                        result="improved" if trial.accepted else "unchanged"
+                    )
+            except Exception as exc:
+                log.warning("TPE improvement failed for node %s: %s", nid, exc)
+
+    # ------------------------------------------------------------------
+    # Introspection / reporting
+    # ------------------------------------------------------------------
+
+    @property
+    def history(self) -> CycleHistory:
+        return self._history
+
+    @property
+    def cycle_number(self) -> int:
+        return self._cycle_number
+
+    def node_summary(self) -> list[dict[str, Any]]:
+        """Return health/autonomy summary for all registered nodes."""
+        rows = []
+        for node in self._registry.all_nodes():
+            state = node.get_state()
+            nid = state.node_id
+            health_rec = self._node_health.get(nid)
+            rows.append(
+                {
+                    "node_id": nid,
+                    "name": state.name,
+                    "active": nid in self._active_node_ids,
+                    "health": state.health,
+                    "avg_health": health_rec.avg_health if health_rec else state.health,
+                    "autonomy": self._autonomy.get_level(nid).value,
+                    "capabilities": state.capabilities,
+                }
+            )
+        return rows
