@@ -1,0 +1,234 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// StateService is the authoritative write interface for Omega system state.
+// Python calls these RPCs instead of writing SQLite directly.
+service StateService {
+  rpc UpsertNode(UpsertNodeRequest) returns (UpsertNodeResponse);
+  rpc BeginExecution(BeginExecutionRequest) returns (BeginExecutionResponse);
+  rpc EndExecution(EndExecutionRequest) returns (EndExecutionResponse);
+  rpc BeginSpan(BeginSpanRequest) returns (BeginSpanResponse);
+  rpc EndSpan(EndSpanRequest) returns (EndSpanResponse);
+  rpc RecordCost(RecordCostRequest) returns (RecordCostResponse);
+  rpc OpenIssue(OpenIssueRequest) returns (OpenIssueResponse);
+  rpc EscalateIssue(EscalateIssueRequest) returns (EscalateIssueResponse);
+  rpc ResolveIssue(ResolveIssueRequest) returns (ResolveIssueResponse);
+  rpc LogActivity(LogActivityRequest) returns (LogActivityResponse);
+  rpc RecordImprovement(RecordImprovementRequest) returns (RecordImprovementResponse);
+  rpc SaveConfigRevision(SaveConfigRevisionRequest) returns (SaveConfigRevisionResponse);
+  rpc RecordBrainExecution(RecordBrainExecutionRequest) returns (RecordBrainExecutionResponse);
+  rpc UpdateBrainOutcome(UpdateBrainOutcomeRequest) returns (UpdateBrainOutcomeResponse);
+  rpc RecordAlignmentDecision(RecordAlignmentDecisionRequest) returns (RecordAlignmentDecisionResponse);
+  rpc RecordAdversarialResult(RecordAdversarialResultRequest) returns (RecordAdversarialResultResponse);
+  rpc RecordGoalTracking(RecordGoalTrackingRequest) returns (RecordGoalTrackingResponse);
+}
+
+// ── UpsertNode ─────────────────────────────────────────────────────────────
+
+message UpsertNodeRequest {
+  string node_id = 1;
+  string name = 2;
+  string version = 3;
+  repeated string capabilities = 4;
+  double health = 5;
+  string status = 6;
+  // brain_config values are JSON-encoded strings to avoid nested message overhead.
+  map<string, string> brain_config = 7;
+}
+message UpsertNodeResponse { bool ok = 1; }
+
+// ── BeginExecution ─────────────────────────────────────────────────────────
+
+message BeginExecutionRequest {
+  string node_id = 1;
+  string node_name = 2;
+  string action = 3;
+  string trace_id = 4;   // empty string treated as absent (NULL in DB)
+  string span_id = 5;    // empty string treated as absent (NULL in DB)
+  int64 cycle = 6;
+}
+message BeginExecutionResponse { string exec_id = 1; }
+
+// ── EndExecution ───────────────────────────────────────────────────────────
+
+message EndExecutionRequest {
+  string exec_id = 1;
+  bool success = 2;
+  string error_text = 3;
+  map<string, double> metrics = 4;
+}
+message EndExecutionResponse { bool ok = 1; }
+
+// ── BeginSpan ──────────────────────────────────────────────────────────────
+
+message BeginSpanRequest {
+  string trace_id = 1;
+  string node_id = 2;
+  string node_name = 3;
+  string operation = 4;
+  string parent_span_id = 5; // empty string treated as absent (NULL in DB)
+  int64 cycle = 6;
+}
+message BeginSpanResponse { string span_id = 1; }
+
+// ── EndSpan ────────────────────────────────────────────────────────────────
+
+message EndSpanRequest {
+  string span_id = 1;
+  string status = 2;
+  // metadata values are JSON-encoded strings.
+  map<string, string> metadata = 3;
+}
+message EndSpanResponse { bool ok = 1; }
+
+// ── RecordCost ─────────────────────────────────────────────────────────────
+
+message RecordCostRequest {
+  string node_id = 1;
+  string provider = 2;
+  string call_type = 3;
+  double duration_ms = 4;
+  string exec_id = 5;    // empty string treated as absent (NULL in DB)
+  double estimated_cost_usd = 6;
+  // metadata values are JSON-encoded strings.
+  map<string, string> metadata = 7;
+  int64 cycle = 8;
+}
+message RecordCostResponse { bool ok = 1; }
+
+// ── OpenIssue ──────────────────────────────────────────────────────────────
+
+message OpenIssueRequest {
+  string issue_id = 1;
+  string detector = 2;
+  string severity = 3;
+  string description = 4;
+  // context values are JSON-encoded strings.
+  map<string, string> context = 5;
+  int64 cycle = 6;
+}
+message OpenIssueResponse { bool created = 1; }
+
+// ── EscalateIssue ──────────────────────────────────────────────────────────
+
+message EscalateIssueRequest { string issue_id = 1; }
+message EscalateIssueResponse { int64 rows_affected = 1; }
+
+// ── ResolveIssue ───────────────────────────────────────────────────────────
+
+message ResolveIssueRequest {
+  string issue_id = 1;
+  int64 cycle = 2;
+}
+message ResolveIssueResponse { bool resolved = 1; }
+
+// ── LogActivity ────────────────────────────────────────────────────────────
+
+message LogActivityRequest {
+  string action_type = 1;
+  string entity_type = 2;
+  string entity_id = 3;
+  // data values are JSON-encoded strings.
+  map<string, string> data = 4;
+  int64 cycle = 5;
+}
+message LogActivityResponse { bool ok = 1; }
+
+// ── RecordImprovement ──────────────────────────────────────────────────────
+
+message RecordImprovementRequest {
+  string node_id = 1;
+  string node_name = 2;
+  string from_version = 3;
+  string to_version = 4;
+  map<string, double> before_metrics = 5;
+  map<string, double> after_metrics = 6;
+  string triggered_by = 7;
+  int64 cycle = 8;
+}
+message RecordImprovementResponse { bool ok = 1; }
+
+// ── SaveConfigRevision ─────────────────────────────────────────────────────
+
+message SaveConfigRevisionRequest {
+  string node_id = 1;
+  string version = 2;
+  // config values are JSON-encoded strings.
+  map<string, string> config = 3;
+}
+message SaveConfigRevisionResponse { bool ok = 1; }
+
+// ── RecordBrainExecution ───────────────────────────────────────────────────
+
+message RecordBrainExecutionRequest {
+  string node_id = 1;
+  string node_name = 2;
+  string provider = 3;
+  string model = 4;
+  string operation = 5;
+  string action_decided = 6;
+  // parameters values are JSON-encoded strings.
+  map<string, string> parameters = 7;
+  string reasoning = 8;
+  double confidence = 9;
+  string outcome = 10;
+  double latency_ms = 11;
+  string trace_id = 12;
+  int64 cycle = 13;
+}
+message RecordBrainExecutionResponse { string brain_exec_id = 1; }
+
+// ── UpdateBrainOutcome ─────────────────────────────────────────────────────
+
+message UpdateBrainOutcomeRequest {
+  string brain_exec_id = 1;
+  string outcome = 2;
+}
+message UpdateBrainOutcomeResponse { bool ok = 1; }
+
+// ── RecordAlignmentDecision ────────────────────────────────────────────────
+
+message RecordAlignmentDecisionRequest {
+  int64 cycle = 1;
+  bool approved = 2;
+  repeated string violations = 3;
+  // pareto_ranks, adjustments, vcg_payments values are JSON-encoded strings.
+  map<string, string> pareto_ranks = 4;
+  map<string, string> adjustments = 5;
+  map<string, string> vcg_payments = 6;
+  bool goodhart_warning = 7;
+}
+message RecordAlignmentDecisionResponse { string decision_id = 1; }
+
+// ── RecordAdversarialResult ────────────────────────────────────────────────
+
+message RecordAdversarialResultRequest {
+  int64 cycle = 1;
+  int32 ring = 2;
+  bool flagged = 3;
+  double max_disagreement = 4;
+  int64 scenario_count = 5;
+  repeated string failure_cases = 6;
+  // details values are JSON-encoded strings.
+  map<string, string> details = 7;
+}
+message RecordAdversarialResultResponse { string result_id = 1; }
+
+// ── RecordGoalTracking ─────────────────────────────────────────────────────
+
+message RecordGoalTrackingRequest {
+  int64 cycle = 1;
+  bool approved = 2;
+  double composite_score = 3;
+  // scorecard, nash_weights, control_action values are JSON-encoded strings.
+  map<string, string> scorecard = 4;
+  map<string, string> nash_weights = 5;
+  double tracking_error = 6;
+  map<string, string> control_action = 7;
+  repeated string subtasks = 8;
+  repeated string violations = 9;
+}
+message RecordGoalTrackingResponse { string tracking_id = 1; }

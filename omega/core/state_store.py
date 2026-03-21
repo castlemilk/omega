@@ -1225,5 +1225,179 @@ class SQLiteBackend(StateBackend):
         }
 
 
+# ── Go bridge backend ──────────────────────────────────────────────────────────
+
+
+class GoBackend(StateBackend):
+    """StateBackend that delegates all writes to the Go StateService via Connect-RPC.
+
+    This is a write-only backend. Read methods raise NotImplementedError —
+    reads must go through the existing SQLiteBackend or the Go read API.
+
+    If the Go service is unreachable, StateServiceError propagates so callers
+    can decide to retry or fall back.
+    """
+
+    def __init__(self, service_url: str) -> None:
+        from omega.bridge.state_client import StateServiceClient  # late import
+
+        self._client = StateServiceClient(service_url)
+
+    # ------------------------------------------------------------------
+    # Node registry
+    # ------------------------------------------------------------------
+
+    def upsert_node(
+        self,
+        node_id: str,
+        name: str,
+        version: str,
+        capabilities: list[str],
+        health: float,
+        status: str = "active",
+        brain_config: dict | None = None,
+    ) -> None:
+        self._client.upsert_node(
+            node_id, name, version, capabilities, health, status, brain_config
+        )
+
+    def get_node(self, node_id: str) -> dict | None:
+        raise NotImplementedError("GoBackend is write-only; use SQLiteBackend or the Go read API")
+
+    def all_nodes(self) -> list[dict]:
+        raise NotImplementedError("GoBackend is write-only; use SQLiteBackend or the Go read API")
+
+    # ------------------------------------------------------------------
+    # Executions
+    # ------------------------------------------------------------------
+
+    def begin_execution(
+        self,
+        node_id: str,
+        node_name: str,
+        action: str,
+        trace_id: str | None = None,
+        span_id: str | None = None,
+        cycle: int = 0,
+    ) -> str:
+        return self._client.begin_execution(node_id, node_name, action, trace_id, span_id, cycle)
+
+    def end_execution(
+        self,
+        exec_id: str,
+        success: bool,
+        error_text: str | None = None,
+        metrics: dict | None = None,
+    ) -> None:
+        self._client.end_execution(exec_id, success, error_text, metrics)
+
+    def get_recent_executions(
+        self,
+        node_id: str | None = None,
+        limit: int = 20,
+        since_cycle: int | None = None,
+    ) -> list[dict]:
+        raise NotImplementedError("GoBackend is write-only")
+
+    # ------------------------------------------------------------------
+    # Traces
+    # ------------------------------------------------------------------
+
+    def begin_span(
+        self,
+        trace_id: str,
+        node_id: str,
+        node_name: str,
+        operation: str,
+        parent_span_id: str | None = None,
+        cycle: int = 0,
+    ) -> str:
+        return self._client.begin_span(
+            trace_id, node_id, node_name, operation, parent_span_id, cycle
+        )
+
+    def end_span(
+        self,
+        span_id: str,
+        status: str = "ok",
+        metadata: dict | None = None,
+    ) -> None:
+        self._client.end_span(span_id, status, metadata)
+
+    # ------------------------------------------------------------------
+    # Issues
+    # ------------------------------------------------------------------
+
+    def open_issue(
+        self,
+        issue_id: str,
+        detector: str,
+        severity: str,
+        description: str,
+        context: dict | None = None,
+        cycle: int = 0,
+    ) -> bool:
+        return self._client.open_issue(issue_id, detector, severity, description, context, cycle)
+
+    def resolve_issue(self, issue_id: str, cycle: int | None = None) -> bool:
+        return self._client.resolve_issue(issue_id, cycle)
+
+    def get_open_issues(self) -> list[dict]:
+        raise NotImplementedError("GoBackend is write-only")
+
+    # ------------------------------------------------------------------
+    # Improvements
+    # ------------------------------------------------------------------
+
+    def record_improvement(
+        self,
+        node_id: str,
+        node_name: str,
+        from_version: str,
+        to_version: str,
+        before_metrics: dict | None = None,
+        after_metrics: dict | None = None,
+        triggered_by: str = "metrics",
+        cycle: int = 0,
+    ) -> None:
+        self._client.record_improvement(
+            node_id,
+            node_name,
+            from_version,
+            to_version,
+            before_metrics,
+            after_metrics,
+            triggered_by,
+            cycle,
+        )
+
+    def get_improvement_history(
+        self,
+        node_id: str | None = None,
+        limit: int = 20,
+    ) -> list[dict]:
+        raise NotImplementedError("GoBackend is write-only")
+
+
+def make_state_backend(db_path: str = ":memory:") -> StateBackend:
+    """Factory: returns GoBackend when OMEGA_STATE_SERVICE_URL is set, else SQLiteBackend.
+
+    This is the preferred entry point — callers don't need to know which
+    implementation is active.
+
+    Example:
+        store = make_state_backend("/tmp/omega_vectora_state.db")
+    """
+    import os
+
+    service_url = os.environ.get("OMEGA_STATE_SERVICE_URL", "")
+    if service_url:
+        import logging
+
+        logging.getLogger(__name__).info("state_store: using GoBackend at %s", service_url)
+        return GoBackend(service_url)
+    return SQLiteBackend(db_path)
+
+
 # Backward-compatible alias — existing code using StateStore continues to work.
 StateStore = SQLiteBackend

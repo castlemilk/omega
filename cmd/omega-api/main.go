@@ -50,6 +50,7 @@ func main() {
 
 	h := handler.New(database)
 	vh := handler.NewVectora(vdb)
+	sh := handler.NewState(database)
 	mux := http.NewServeMux()
 
 	path, svcHandler := omegav1connect.NewOrchestratorServiceHandler(h,
@@ -61,6 +62,11 @@ func main() {
 		connect.WithCompressMinBytes(1024),
 	)
 	mux.Handle(vPath, vSvcHandler)
+
+	sPath, sSvcHandler := omegav1connect.NewStateServiceHandler(sh,
+		connect.WithCompressMinBytes(1024),
+	)
+	mux.Handle(sPath, sSvcHandler)
 
 	addr := ":8080"
 	log.Printf("Omega API listening on %s", addr)
