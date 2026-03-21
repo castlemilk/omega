@@ -1,0 +1,57 @@
+# omega.example.yml
+# -----------------
+# Example configuration file for the Omega framework.
+# Copy to omega.yml and adjust as needed.
+# Set OMEGA_CONFIG=omega.yml to activate.
+#
+# Priority: YAML file > environment variables > built-in defaults.
+# API keys should always be provided via environment variables, not here.
+
+database:
+  # SQLite file paths — shared between Python nodes and Go API
+  state_db_path: /data/omega_vectora_state.db
+  memory_db_path: /data/omega_vectora_memory.db
+  orchestrator_db_path: /data/omega_vectora.db
+
+nodes:
+  # LLM brain provider: "anthropic" | "openai" | "deepseek" | "ollama" | "none"
+  # Set API keys via environment variables (ANTHROPIC_API_KEY, etc.)
+  brain_provider: none
+  brain_model: ""          # defaults to provider's recommended model
+  brain_temperature: 0.7
+  brain_max_tokens: 1024
+  ollama_host: http://localhost:11434
+
+data:
+  symbols:
+    - BTCUSDT
+    - ETHUSDT
+    - SOLUSDT
+    - BNBUSDT
+    - XRPUSDT
+    - ADAUSDT
+    - DOTUSDT
+    - AVAXUSDT
+    - LINKUSDT
+    - MATICUSDT
+  providers:
+    - binance
+    - coingecko
+  fetch_interval_days: 90
+
+monitoring:
+  log_level: INFO            # DEBUG | INFO | WARNING | ERROR
+  json_logs: true            # false = human-readable (dev mode)
+  log_file: null             # optional: /var/log/omega/omega.log
+  metrics_port: 9090
+  api_base_url: http://localhost:8080
+
+alignment:
+  health_threshold: 0.6      # trigger self-improvement below this score
+  improvement_interval: 3    # min cycles between improvement attempts
+  max_improvement_cycles: 10
+
+adversarial:
+  active_rings: []           # list of adversarial ring names to activate
+  veto_threshold: 0.8
+  challenge_timeout_sec: 5.0
