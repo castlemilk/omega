@@ -1,5 +1,5 @@
 // VECTORA SIGNALS — signal generators, conviction, Brier scores, regime view
-// TODO: replace mock data with Connect-ES useVectoraSignals() hook
+import { useEffect, useState } from "react";
 import {
   ComposedChart,
   Line,
@@ -13,14 +13,8 @@ import {
   Cell,
 } from "recharts";
 import { T, Panel, StatRow, TermTip, VectoraPage, fmt } from "../components/vectora/Terminal";
-import {
-  signals,
-  regimes,
-  currentRegimeIdx,
-  ablation,
-  fundingData,
-  backtestStats as D,
-} from "../mocks/vectora";
+import * as mock from "../mocks/vectora";
+import { fetchSignals, fetchRiskMetrics } from "../api/vectora";
 
 // Synthetic IC timeseries per signal (seeded, deterministic-ish via index)
 function buildICHistory(baseIC: number, halfLife: number, n = 60) {
@@ -32,14 +26,44 @@ function buildICHistory(baseIC: number, halfLife: number, n = 60) {
   return out;
 }
 
-// Composite signal score (weighted sum of current values)
-const compositeScore = signals.reduce((s, sig) => s + sig.conviction * sig.weight, 0);
-const compositeDirection =
-  compositeScore > 0.5 ? "LONG" : compositeScore < 0.35 ? "SHORT" : "FLAT";
-const compositeColor =
-  compositeDirection === "LONG" ? T.green : compositeDirection === "SHORT" ? T.red : T.amber;
+function calcComposite(sigs: typeof mock.signals) {
+  const score = sigs.reduce((s, sig) => s + sig.conviction * sig.weight, 0);
+  const direction = score > 0.5 ? "LONG" : score < 0.35 ? "SHORT" : "FLAT";
+  const color = direction === "LONG" ? T.green : direction === "SHORT" ? T.red : T.amber;
+  return { score, direction, color };
+}
 
 export default function VectoraSignals() {
+  const [signals, setSignals] = useState(mock.signals);
+  const [regimes, setRegimes] = useState(mock.regimes);
+  const [currentRegimeIdx, setCurrentRegimeIdx] = useState(mock.currentRegimeIdx);
+  const [ablation, setAblation] = useState(mock.ablation);
+  const [fundingData, setFundingData] = useState(mock.fundingData);
+  const [D, setD] = useState(mock.backtestStats);
+  const [fromMock, setFromMock] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchSignals(), fetchRiskMetrics()]).then(([sigResult, riskResult]) => {
+      if (!sigResult.fromMock) {
+        setSignals(sigResult.signals);
+        setD((prev) => ({ ...prev, sharpeOOS: sigResult.oosSharpe }));
+      }
+      if (!riskResult.fromMock) {
+        setRegimes(riskResult.regimes);
+        setCurrentRegimeIdx(riskResult.currentRegimeIdx);
+        setAblation(riskResult.ablation);
+        setFundingData(riskResult.fundingData);
+      }
+      setFromMock(sigResult.fromMock && riskResult.fromMock);
+    });
+  }, []);
+
+  const {
+    score: compositeScore,
+    direction: compositeDirection,
+    color: compositeColor,
+  } = calcComposite(signals);
+
   return (
     <VectoraPage>
       {/* Header */}
@@ -60,6 +84,19 @@ export default function VectoraSignals() {
           >
             VECTORA SIGNALS
           </span>
+          {fromMock && (
+            <span
+              style={{
+                fontSize: 9,
+                color: T.amber,
+                border: `1px solid ${T.amber}`,
+                padding: "1px 5px",
+                letterSpacing: "0.1em",
+              }}
+            >
+              MOCK DATA
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 24 }}>
           {[

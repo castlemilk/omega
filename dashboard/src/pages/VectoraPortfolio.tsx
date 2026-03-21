@@ -1,5 +1,5 @@
 // VECTORA PORTFOLIO — live positions, P&L, allocation, risk exposure
-// TODO: replace mock data with Connect-ES useVectoraPortfolio() hook
+import { useEffect, useState } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import {
   T,
@@ -10,14 +10,82 @@ import {
   fmt,
   fmtUSDT,
 } from "../components/vectora/Terminal";
-import { positions, allocation, backtestStats as D, trades } from "../mocks/vectora";
+import * as mock from "../mocks/vectora";
+import { fetchPortfolio, fetchPositions } from "../api/vectora";
+import type { BacktestStats } from "../mocks/vectora";
 
-const totalNotional = positions.reduce((s, p) => s + p.notional, 0);
-const totalUnrealised = positions.reduce((s, p) => s + p.upnl, 0);
-const totalRealised = trades.reduce((s, t) => s + t.pnl, 0);
-const totalPnl = totalUnrealised + totalRealised;
+function buildDefaults() {
+  const positions = mock.positions;
+  const trades = mock.trades;
+  const totalNotional = positions.reduce((s, p) => s + p.notional, 0);
+  const totalUnrealised = positions.reduce((s, p) => s + p.upnl, 0);
+  const totalRealised = trades.reduce((s, t) => s + t.pnl, 0);
+  return {
+    positions,
+    allocation: mock.allocation,
+    D: mock.backtestStats,
+    totalNotional,
+    totalUnrealised,
+    totalRealised,
+    totalPnl: totalUnrealised + totalRealised,
+    fromMock: true,
+  };
+}
+
+type PageState = ReturnType<typeof buildDefaults>;
 
 export default function VectoraPortfolio() {
+  const [state, setState] = useState<PageState>(buildDefaults);
+
+  useEffect(() => {
+    Promise.all([fetchPortfolio(), fetchPositions()]).then(([portfolio, posResult]) => {
+      if (!portfolio.fromMock || !posResult.fromMock) {
+        const positions = posResult.positions;
+        const totalNotional = positions.reduce((s, p) => s + p.notional, 0);
+        const totalUnrealised = positions.reduce((s, p) => s + p.upnl, 0);
+        const totalRealised = portfolio.realisedPnl;
+        setState({
+          positions,
+          allocation: portfolio.allocation,
+          D: {
+            sharpeAnn: portfolio.sharpe,
+            sortinoAnn: mock.backtestStats.sortinoAnn,
+            maxDDpct: mock.backtestStats.maxDDpct,
+            calmar: mock.backtestStats.calmar,
+            sharpeIS: mock.backtestStats.sharpeIS,
+            sharpeOOS: mock.backtestStats.sharpeOOS,
+            VaR: mock.backtestStats.VaR,
+            CVaR: mock.backtestStats.CVaR,
+            meanR: mock.backtestStats.meanR,
+            stdR: mock.backtestStats.stdR,
+            annReturn: portfolio.annReturn,
+            totalReturn: portfolio.totalReturn,
+            portfolioValue: portfolio.portfolioValue,
+            maxDDDuration: mock.backtestStats.maxDDDuration,
+            winRate: portfolio.winRate,
+            profitFactor: portfolio.profitFactor,
+          } as BacktestStats,
+          totalNotional,
+          totalUnrealised,
+          totalRealised,
+          totalPnl: totalUnrealised + totalRealised,
+          fromMock: portfolio.fromMock && posResult.fromMock,
+        });
+      }
+    });
+  }, []);
+
+  const {
+    positions,
+    allocation,
+    D,
+    totalNotional,
+    totalUnrealised,
+    totalRealised,
+    totalPnl,
+    fromMock,
+  } = state;
+
   return (
     <VectoraPage>
       {/* Page header */}
@@ -38,6 +106,19 @@ export default function VectoraPortfolio() {
           >
             VECTORA PORTFOLIO
           </span>
+          {fromMock && (
+            <span
+              style={{
+                fontSize: 9,
+                color: T.amber,
+                border: `1px solid ${T.amber}`,
+                padding: "1px 5px",
+                letterSpacing: "0.1em",
+              }}
+            >
+              MOCK DATA
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 24 }}>
           {[

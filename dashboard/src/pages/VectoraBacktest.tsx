@@ -1,6 +1,5 @@
 // VECTORA BACKTEST — equity curve, Sharpe + CIs, drawdown, crash replay, ablation
-// TODO: replace mock data with Connect-ES useVectoraBacktest() hook
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ComposedChart,
   AreaChart,
@@ -25,19 +24,41 @@ import {
   fmt,
   fmtPct,
 } from "../components/vectora/Terminal";
-import {
-  perfData,
-  labels,
-  TRAIN_END,
-  backtestStats as D,
-  crashes,
-  ablation,
-  tpeSeries,
-  regimes,
-} from "../mocks/vectora";
+import * as mock from "../mocks/vectora";
+import { fetchBacktestResults, fetchEquityCurve, fetchRiskMetrics } from "../api/vectora";
 
 export default function VectoraBacktest() {
   const [chartMode, setChartMode] = useState<"equity" | "dd">("equity");
+  const [perfData, setPerfData] = useState(mock.perfData);
+  const [TRAIN_END, setTrainEnd] = useState(mock.TRAIN_END);
+  const [D, setD] = useState(mock.backtestStats);
+  const [crashes, setCrashes] = useState(mock.crashes);
+  const [ablation, setAblation] = useState(mock.ablation);
+  const [tpeSeries, setTpeSeries] = useState(mock.tpeSeries);
+  const [regimes, setRegimes] = useState(mock.regimes);
+  const [fromMock, setFromMock] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchBacktestResults(), fetchEquityCurve(), fetchRiskMetrics()]).then(
+      ([btResult, curveResult, riskResult]) => {
+        if (!btResult.fromMock) {
+          setD(btResult.stats);
+          setTrainEnd(btResult.trainEnd);
+        }
+        if (!curveResult.fromMock && curveResult.points.length > 0) {
+          setPerfData(curveResult.points);
+          setTrainEnd(curveResult.trainEnd);
+        }
+        if (!riskResult.fromMock) {
+          setCrashes(riskResult.crashes);
+          setAblation(riskResult.ablation);
+          setTpeSeries(riskResult.tpeSeries);
+          setRegimes(riskResult.regimes);
+        }
+        setFromMock(btResult.fromMock && curveResult.fromMock && riskResult.fromMock);
+      }
+    );
+  }, []);
 
   const data = perfData.filter((_, i) => i % 2 === 0);
   const splitIdx = data.findIndex((d) => d.i >= TRAIN_END);
@@ -67,8 +88,21 @@ export default function VectoraBacktest() {
             VECTORA BACKTEST
           </span>
           <span style={{ color: T.dim, fontSize: 10 }}>
-            │ {labels[0]} → {labels[labels.length - 1]} │ 504 DAYS
+            │ {perfData[0]?.date} → {perfData[perfData.length - 1]?.date} │ {perfData.length} DAYS
           </span>
+          {fromMock && (
+            <span
+              style={{
+                fontSize: 9,
+                color: T.amber,
+                border: `1px solid ${T.amber}`,
+                padding: "1px 5px",
+                letterSpacing: "0.1em",
+              }}
+            >
+              MOCK DATA
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 20 }}>
           {[
@@ -119,8 +153,8 @@ export default function VectoraBacktest() {
               </button>
             ))}
             <span style={{ marginLeft: "auto", color: T.dim, fontSize: 9 }}>
-              IS [{labels[0]}→{labels[TRAIN_END - 1]}] │ OOS [{labels[TRAIN_END]}→
-              {labels[labels.length - 1]}]
+              IS [{perfData[0]?.date}→{perfData[TRAIN_END - 1]?.date}] │ OOS [
+              {perfData[TRAIN_END]?.date}→{perfData[perfData.length - 1]?.date}]
             </span>
           </div>
           <ResponsiveContainer width="100%" height={240}>
