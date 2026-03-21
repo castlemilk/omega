@@ -27,7 +27,6 @@ from omega.core.bayesian_optimizer import (
 )
 from omega.core.convergence import ConvergenceDiagnostics
 from omega.core.state_store import StateStore
-from omega.eval.sharpe import sharpe_ratio as _sharpe_ratio
 
 logger = logging.getLogger("omega.core.improvement_engine")
 
@@ -150,6 +149,8 @@ class SyntheticEvaluator(ImprovementEvaluator):
         for r in returns:
             equity.append(equity[-1] * (1 + r))
 
+        from omega.eval.sharpe import sharpe_ratio as _sharpe_ratio
+
         sharpe = _sharpe_ratio(returns)
         mdd = _max_drawdown(equity)
 
@@ -206,7 +207,40 @@ class ImprovementEngine:
 
     @staticmethod
     def _default_evaluator() -> ImprovementEvaluator:
-        """Return BacktestEvaluator when available, otherwise SyntheticEvaluator."""
+        """Return BridgeEvaluator (honest walk-forward) when data is available,
+        then BacktestEvaluator, then SyntheticEvaluator as final fallback."""
+        try:
+            from omega.core.bridge_evaluator import BridgeEvaluator
+            from omega.core.node import NodeInput
+            from omega.nodes.vectora.data_ingestion import DataIngestionNode
+
+            node = DataIngestionNode()
+            inp = NodeInput(
+                action="ingest",
+                parameters={
+                    "symbols": ["BTCUSDT"],
+                    "start_date": "2023-01-01",
+                    "end_date": "2024-12-31",
+                },
+            )
+            out = node.execute(inp)
+            rows = out.result.get("data", {}).get("BTCUSDT", [])
+            if len(rows) >= 200:
+                ohlcv = [
+                    {
+                        "timestamp": i,
+                        "open": float(r.get("open", r.get("close", 0))),
+                        "high": float(r.get("high", r.get("close", 0))),
+                        "low": float(r.get("low", r.get("close", 0))),
+                        "close": float(r.get("close", 0)),
+                        "volume": float(r.get("volume", 0)),
+                    }
+                    for i, r in enumerate(rows)
+                ]
+                return BridgeEvaluator(ohlcv=ohlcv)
+        except Exception:
+            pass
+
         try:
             from omega.core.backtest_evaluator import BacktestEvaluator
 
