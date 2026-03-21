@@ -1,0 +1,241 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+service VectoraService {
+  rpc GetPortfolio(GetPortfolioRequest) returns (GetPortfolioResponse);
+  rpc GetPositions(GetPositionsRequest) returns (GetPositionsResponse);
+  rpc GetPnL(GetPnLRequest) returns (GetPnLResponse);
+  rpc GetSignals(GetSignalsRequest) returns (GetSignalsResponse);
+  rpc GetSignalHistory(GetSignalHistoryRequest) returns (GetSignalHistoryResponse);
+  rpc GetTrades(GetTradesRequest) returns (GetTradesResponse);
+  rpc GetBacktestResults(GetBacktestResultsRequest) returns (GetBacktestResultsResponse);
+  rpc GetEquityCurve(GetEquityCurveRequest) returns (GetEquityCurveResponse);
+  rpc GetRiskMetrics(GetRiskMetricsRequest) returns (GetRiskMetricsResponse);
+}
+
+// ── Portfolio ────────────────────────────────────────────────────────────────
+
+message VectoraAllocationSlice {
+  string name = 1;
+  double value = 2;
+  string color = 3;
+}
+
+message GetPortfolioRequest {}
+message GetPortfolioResponse {
+  double portfolio_value = 1;
+  double unrealised_pnl = 2;
+  double realised_pnl = 3;
+  double total_pnl = 4;
+  double total_return = 5;
+  double ann_return = 6;
+  double win_rate = 7;
+  double profit_factor = 8;
+  double sharpe = 9;
+  double ann_vol = 10;
+  repeated VectoraAllocationSlice allocation = 11;
+}
+
+// ── Positions ────────────────────────────────────────────────────────────────
+
+message VectoraPosition {
+  string sym = 1;
+  string side = 2;
+  double size = 3;
+  double entry = 4;
+  double mark = 5;
+  double upnl = 6;
+  double pct = 7;
+  double notional = 8;
+  double leverage = 9;
+  double var95 = 10;
+}
+
+message GetPositionsRequest {}
+message GetPositionsResponse {
+  repeated VectoraPosition positions = 1;
+}
+
+// ── PnL ──────────────────────────────────────────────────────────────────────
+
+message GetPnLRequest {}
+message GetPnLResponse {
+  double unrealised_pnl = 1;
+  double realised_pnl = 2;
+  double total_pnl = 3;
+  double total_return = 4;
+  double ann_return = 5;
+  double win_rate = 6;
+  double profit_factor = 7;
+  double sharpe = 8;
+  double ann_vol = 9;
+  double max_dd = 10;
+  double var95 = 11;
+  double cvar95 = 12;
+  double sortino = 13;
+  double calmar = 14;
+}
+
+// ── Signals ──────────────────────────────────────────────────────────────────
+
+message VectoraSignal {
+  string name = 1;
+  double avg_ic = 2;
+  double weight = 3;
+  int32 half_life = 4;
+  string color = 5;
+  double conviction = 6;
+  double brier_score = 7;
+  double current_value = 8;
+  string trend = 9;
+}
+
+message GetSignalsRequest {}
+message GetSignalsResponse {
+  repeated VectoraSignal signals = 1;
+  double composite_score = 2;
+  string composite_direction = 3;
+  double oos_sharpe = 4;
+}
+
+message VectoraSignalICPoint {
+  int32 t = 1;
+  double ic = 2;
+}
+
+message GetSignalHistoryRequest {
+  string signal_name = 1;
+  int32 limit = 2;
+}
+message GetSignalHistoryResponse {
+  repeated VectoraSignalICPoint points = 1;
+}
+
+// ── Trades ───────────────────────────────────────────────────────────────────
+
+message VectoraTrade {
+  string ts = 1;
+  string sym = 2;
+  string side = 3;
+  double size = 4;
+  double entry = 5;
+  double exit_price = 6;
+  double pnl = 7;
+  double slippage = 8;
+  string duration = 9;
+}
+
+message GetTradesRequest {
+  string sym_filter = 1;
+  string side_filter = 2;
+  int32 limit = 3;
+}
+message GetTradesResponse {
+  repeated VectoraTrade trades = 1;
+}
+
+// ── Backtest ─────────────────────────────────────────────────────────────────
+
+message VectoraBacktestStats {
+  double sharpe_ann = 1;
+  double sortino_ann = 2;
+  double max_dd_pct = 3;
+  double calmar = 4;
+  double sharpe_is = 5;
+  double sharpe_oos = 6;
+  double var = 7;
+  double cvar = 8;
+  double mean_r = 9;
+  double std_r = 10;
+  double ann_return = 11;
+  double total_return = 12;
+  double portfolio_value = 13;
+  int32 max_dd_duration = 14;
+  double win_rate = 15;
+  double profit_factor = 16;
+  int32 train_end = 17;
+}
+
+message GetBacktestResultsRequest {}
+message GetBacktestResultsResponse {
+  VectoraBacktestStats stats = 1;
+}
+
+// ── Equity Curve ─────────────────────────────────────────────────────────────
+
+message VectoraEquityPoint {
+  string date = 1;
+  int32 i = 2;
+  double omega = 3;
+  double btc = 4;
+  double dd = 5;
+}
+
+message GetEquityCurveRequest {
+  int32 limit = 1;
+}
+message GetEquityCurveResponse {
+  repeated VectoraEquityPoint points = 1;
+  int32 train_end = 2;
+}
+
+// ── Risk Metrics ─────────────────────────────────────────────────────────────
+
+message VectoraAblationEntry {
+  string name = 1;
+  double d_sharpe = 2;
+  bool sig = 3;
+}
+
+message VectoraRegime {
+  string name = 1;
+  double sharpe = 2;
+  double ret = 3;
+  int32 trades = 4;
+  double pct = 5;
+}
+
+message VectoraCrashScenario {
+  string name = 1;
+  string sym = 2;
+  double dd = 3;
+  double recov = 4;
+  bool has_recov = 5;
+  int32 sl = 6;
+  double pnl = 7;
+  bool pass = 8;
+}
+
+message VectoraFundingPoint {
+  int32 t = 1;
+  double funding = 2;
+  double oi = 3;
+}
+
+message VectoraAdvPoint {
+  int32 t = 1;
+  double flag = 2;
+  double fp = 3;
+}
+
+message VectoraTpePoint {
+  int32 t = 1;
+  double score = 2;
+  double best = 3;
+}
+
+message GetRiskMetricsRequest {}
+message GetRiskMetricsResponse {
+  repeated VectoraAblationEntry ablation = 1;
+  repeated VectoraRegime regimes = 2;
+  int32 current_regime_idx = 3;
+  repeated VectoraCrashScenario crashes = 4;
+  repeated VectoraFundingPoint funding_data = 5;
+  repeated VectoraAdvPoint adv_series = 6;
+  repeated VectoraTpePoint tpe_series = 7;
+  double latest_funding = 8;
+  double latest_oi = 9;
+}

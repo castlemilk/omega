@@ -26,31 +26,43 @@ import {
   fmtPct,
   fmtUSDT,
 } from "../components/vectora/Terminal";
+import * as mock from "../mocks/vectora";
 import {
-  backtestStats as D,
-  perfData,
-  labels,
-  TRAIN_END,
-  fundingData,
-  latestFunding,
-  latestOI,
-  ablation,
-  regimes,
-  currentRegimeIdx,
-  crashes,
-  advSeries,
-  tpeSeries,
-  autonomyHistory,
-  CURRENT_LEVEL,
-  signals,
-  positions,
-  trades,
-} from "../mocks/vectora";
+  fetchBacktestResults,
+  fetchEquityCurve,
+  fetchRiskMetrics,
+  fetchSignals,
+  fetchPositions,
+  fetchTrades,
+} from "../api/vectora";
+
+// ---------------------------------------------------------------------------
+// Module-level data store — updated by VectoraDashboard on API fetch.
+// Sub-components read from here and re-render when the parent forces an update.
+// ---------------------------------------------------------------------------
+let D = mock.backtestStats;
+let perfData = mock.perfData;
+let labels = mock.labels;
+let TRAIN_END = mock.TRAIN_END;
+let fundingData = mock.fundingData;
+let latestFunding = mock.latestFunding;
+let latestOI = mock.latestOI;
+let ablation = mock.ablation;
+let regimes = mock.regimes;
+let currentRegimeIdx = mock.currentRegimeIdx;
+let crashes = mock.crashes;
+let advSeries = mock.advSeries;
+let tpeSeries = mock.tpeSeries;
+const autonomyHistory = mock.autonomyHistory;
+const CURRENT_LEVEL = mock.CURRENT_LEVEL;
+let signals = mock.signals;
+let positions = mock.positions;
+let trades = mock.trades;
 
 // ---------------------------------------------------------------------------
 // Top bar with live clock + portfolio stats
 // ---------------------------------------------------------------------------
-function TopBar() {
+function TopBar({ fromMock }: { fromMock: boolean }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -106,10 +118,27 @@ function TopBar() {
           <span style={{ color: T.dim, fontSize: 10 }}>
             │ CRYPTO QUANT RESEARCH NODE │ OMEGA SYSTEM
           </span>
+          {fromMock && (
+            <span
+              style={{
+                fontSize: 9,
+                color: T.amber,
+                border: `1px solid ${T.amber}`,
+                padding: "1px 5px",
+                letterSpacing: "0.1em",
+              }}
+            >
+              MOCK DATA
+            </span>
+          )}
         </div>
         <div style={{ color: T.dim, fontSize: 10 }}>
           {now.toISOString().slice(0, 19)} UTC
-          <span style={{ marginLeft: 12, color: T.green, textShadow: T.glow }}>⬤ LIVE</span>
+          <span
+            style={{ marginLeft: 12, color: fromMock ? T.amber : T.green, textShadow: T.glow }}
+          >
+            ⬤ {fromMock ? "MOCK" : "LIVE"}
+          </span>
         </div>
       </div>
 
@@ -854,9 +883,65 @@ function FundingChart() {
 // Root
 // ---------------------------------------------------------------------------
 export default function VectoraDashboard() {
+  const [fromMock, setFromMock] = useState(true);
+  // Trigger re-render so sub-components pick up updated module-level data
+  const [, forceUpdate] = useState(0);
+
+  useEffect(() => {
+    Promise.all([
+      fetchBacktestResults(),
+      fetchEquityCurve(),
+      fetchRiskMetrics(),
+      fetchSignals(),
+      fetchPositions(),
+      fetchTrades(),
+    ]).then(([btResult, curveResult, riskResult, sigResult, posResult, tradeResult]) => {
+      let anyLive = false;
+      if (!btResult.fromMock) {
+        D = btResult.stats;
+        TRAIN_END = btResult.trainEnd;
+        anyLive = true;
+      }
+      if (!curveResult.fromMock && curveResult.points.length > 0) {
+        perfData = curveResult.points;
+        labels = curveResult.points.map((p) => p.date);
+        TRAIN_END = curveResult.trainEnd;
+        anyLive = true;
+      }
+      if (!riskResult.fromMock) {
+        ablation = riskResult.ablation;
+        regimes = riskResult.regimes;
+        currentRegimeIdx = riskResult.currentRegimeIdx;
+        crashes = riskResult.crashes;
+        fundingData = riskResult.fundingData;
+        latestFunding = riskResult.latestFunding;
+        latestOI = riskResult.latestOI;
+        advSeries = riskResult.advSeries;
+        tpeSeries = riskResult.tpeSeries;
+        anyLive = true;
+      }
+      if (!sigResult.fromMock) {
+        signals = sigResult.signals;
+        anyLive = true;
+      }
+      if (!posResult.fromMock) {
+        positions = posResult.positions;
+        anyLive = true;
+      }
+      if (!tradeResult.fromMock) {
+        trades = tradeResult.trades;
+        anyLive = true;
+      }
+      if (anyLive) {
+        setFromMock(false);
+        forceUpdate((n) => n + 1);
+      }
+    });
+  }, []);
+
   return (
     <VectoraPage>
-      <TopBar />
+      <TopBar fromMock={fromMock} />
 
       {/* Main body: left │ center │ right */}
       <div

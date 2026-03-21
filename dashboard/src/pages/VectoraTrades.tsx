@@ -1,6 +1,5 @@
 // VECTORA TRADES — full trade history, entry/exit, slippage, P&L
-// TODO: replace mock data with Connect-ES useVectoraTrades() hook
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ComposedChart,
   Bar,
@@ -13,24 +12,38 @@ import {
   Line,
 } from "recharts";
 import { T, Panel, StatRow, TermTip, VectoraPage } from "../components/vectora/Terminal";
-import { trades } from "../mocks/vectora";
+import * as mock from "../mocks/vectora";
+import type { Trade } from "../mocks/vectora";
+import { fetchTrades } from "../api/vectora";
 
 type FilterSym = "ALL" | "BTC/USDT" | "ETH/USDT" | "SOL/USDT";
 type FilterSide = "ALL" | "LONG" | "SHORT";
 
-// Cumulative P&L series for the equity sparkline
-const cumPnl = trades
-  .slice()
-  .reverse()
-  .reduce<{ i: number; pnl: number; cum: number }[]>((acc, t, i) => {
-    const prev = acc[acc.length - 1]?.cum ?? 0;
-    acc.push({ i: i + 1, pnl: t.pnl, cum: +(prev + t.pnl).toFixed(2) });
-    return acc;
-  }, []);
+function buildCumPnl(trades: Trade[]) {
+  return trades
+    .slice()
+    .reverse()
+    .reduce<{ i: number; pnl: number; cum: number }[]>((acc, t, i) => {
+      const prev = acc[acc.length - 1]?.cum ?? 0;
+      acc.push({ i: i + 1, pnl: t.pnl, cum: +(prev + t.pnl).toFixed(2) });
+      return acc;
+    }, []);
+}
 
 export default function VectoraTrades() {
+  const [trades, setTrades] = useState<Trade[]>(mock.trades);
+  const [fromMock, setFromMock] = useState(true);
   const [symFilter, setSymFilter] = useState<FilterSym>("ALL");
   const [sideFilter, setSideFilter] = useState<FilterSide>("ALL");
+
+  useEffect(() => {
+    fetchTrades().then((result) => {
+      if (!result.fromMock) setTrades(result.trades);
+      setFromMock(result.fromMock);
+    });
+  }, []);
+
+  const cumPnl = buildCumPnl(trades);
 
   const filtered = trades.filter((t) => {
     if (symFilter !== "ALL" && t.sym !== symFilter) return false;
@@ -71,6 +84,19 @@ export default function VectoraTrades() {
           >
             VECTORA TRADE LOG
           </span>
+          {fromMock && (
+            <span
+              style={{
+                fontSize: 9,
+                color: T.amber,
+                border: `1px solid ${T.amber}`,
+                padding: "1px 5px",
+                letterSpacing: "0.1em",
+              }}
+            >
+              MOCK DATA
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", gap: 24 }}>
           {[

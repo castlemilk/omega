@@ -32,15 +32,35 @@ func main() {
 	if err != nil {
 		log.Fatalf("open DB: %v", err)
 	}
+
+	vectoraDBPath := db.VectoraDBPath()
+	if _, err := os.Stat(vectoraDBPath); os.IsNotExist(err) {
+		f, _ := os.Create(vectoraDBPath) //nolint:gosec
+		if f != nil {
+			f.Close() //nolint:errcheck,gosec
+		}
+	}
+	vdb, err := db.NewVectora(vectoraDBPath)
+	if err != nil {
+		database.Close() //nolint:errcheck,gosec
+		log.Fatalf("open Vectora DB: %v", err)
+	}
 	defer database.Close()
+	defer vdb.Close()
 
 	h := handler.New(database)
+	vh := handler.NewVectora(vdb)
 	mux := http.NewServeMux()
 
 	path, svcHandler := omegav1connect.NewOrchestratorServiceHandler(h,
 		connect.WithCompressMinBytes(1024),
 	)
 	mux.Handle(path, svcHandler)
+
+	vPath, vSvcHandler := omegav1connect.NewVectoraServiceHandler(vh,
+		connect.WithCompressMinBytes(1024),
+	)
+	mux.Handle(vPath, vSvcHandler)
 
 	addr := ":8080"
 	log.Printf("Omega API listening on %s", addr)
