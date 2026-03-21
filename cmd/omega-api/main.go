@@ -80,9 +80,28 @@ func main() {
 
 	diagCollector := observability.NewDiagnosticsCollector(nil, nil, cbRegistry, logger)
 
+	// ── Service handlers ──────────────────────────────────────────────────────
 	h := handler.New(database)
 	vh := handler.NewVectora(vdb)
 	sh := handler.NewState(database)
+
+	// ── New proto-service handlers ────────────────────────────────────────────
+	autonomyH := handler.NewAutonomy()
+	adversarialH := handler.NewAdversarial(database)
+
+	safetyH, err := handler.NewSafety(database)
+	if err != nil {
+		log.Printf("warn: safety handler init failed (%v), using unimplemented stub", err)
+	}
+
+	memoryH, err := handler.NewMemory(database)
+	if err != nil {
+		log.Printf("warn: memory handler init failed (%v), using unimplemented stub", err)
+	}
+
+	improvementH := handler.NewImprovement()
+
+	// ── Mux registration ──────────────────────────────────────────────────────
 	mux := http.NewServeMux()
 
 	// Connect-RPC service handlers.
@@ -100,6 +119,47 @@ func main() {
 		connect.WithCompressMinBytes(1024),
 	)
 	mux.Handle(sPath, sSvcHandler)
+
+	aPath, aSvcHandler := omegav1connect.NewAutonomyServiceHandler(autonomyH,
+		connect.WithCompressMinBytes(1024),
+	)
+	mux.Handle(aPath, aSvcHandler)
+
+	advPath, advSvcHandler := omegav1connect.NewAdversarialServiceHandler(adversarialH,
+		connect.WithCompressMinBytes(1024),
+	)
+	mux.Handle(advPath, advSvcHandler)
+
+	if safetyH != nil {
+		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(safetyH,
+			connect.WithCompressMinBytes(1024),
+		)
+		mux.Handle(sfPath, sfSvcHandler)
+	} else {
+		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(
+			omegav1connect.UnimplementedSafetyServiceHandler{},
+			connect.WithCompressMinBytes(1024),
+		)
+		mux.Handle(sfPath, sfSvcHandler)
+	}
+
+	if memoryH != nil {
+		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(memoryH,
+			connect.WithCompressMinBytes(1024),
+		)
+		mux.Handle(mPath, mSvcHandler)
+	} else {
+		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(
+			omegav1connect.UnimplementedMemoryServiceHandler{},
+			connect.WithCompressMinBytes(1024),
+		)
+		mux.Handle(mPath, mSvcHandler)
+	}
+
+	impPath, impSvcHandler := omegav1connect.NewImprovementServiceHandler(improvementH,
+		connect.WithCompressMinBytes(1024),
+	)
+	mux.Handle(impPath, impSvcHandler)
 
 	// Observability endpoints.
 	observability.NewHealthHandler(composite).RegisterRoutes(mux)
