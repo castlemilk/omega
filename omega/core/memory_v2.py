@@ -30,10 +30,9 @@ from __future__ import annotations
 
 import logging
 import math
-import typing
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar, cast
 
 from omega.core.memory import MemoryKernel, SemanticMemory
 
@@ -326,7 +325,6 @@ class SlidingWindowRegimeDetector:
     def current_regime(self) -> RegimeState:
         """Return the current regime state without consuming a new observation."""
         mean, var = self._rolling_stats()
-        math.sqrt(var)
         return RegimeState(
             regime_id=self._regime_id,
             changepoint_prob=0.0,
@@ -872,7 +870,7 @@ class ContradictionResolver:
     contradictory) observations.
     """
 
-    _DEFAULT_FRAME: typing.ClassVar[list[str]] = ["bull", "bear", "neutral", "volatile"]
+    _DEFAULT_FRAME: ClassVar[list[str]] = ["bull", "bear", "neutral", "volatile"]
 
     def __init__(
         self,
@@ -1064,8 +1062,7 @@ class MemoryKernelV2(MemoryKernel):
                 if numeric_params:
                     self.ewc.snapshot_params(numeric_params, task_id=prev_regime_id)
 
-        result: RegimeState = new_regime
-        return result
+        return cast(RegimeState, new_regime)
 
     def store_episode_v2(
         self,
