@@ -7,27 +7,28 @@ Each challenge targets a subsystem, has a severity, evidence, and lifecycle
 status. Unresolved CRITICAL challenges block deployments via has_blocking_challenges().
 Resolution rate is tracked as a system health metric.
 """
+
 from __future__ import annotations
 
 import sqlite3
 import time
 import uuid
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class ChallengeSeverity(str, Enum):
+class ChallengeSeverity(StrEnum):
     CRITICAL = "critical"
-    HIGH     = "high"
-    MEDIUM   = "medium"
-    LOW      = "low"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
 
 
-class ChallengeStatus(str, Enum):
-    OPEN         = "open"
+class ChallengeStatus(StrEnum):
+    OPEN = "open"
     ACKNOWLEDGED = "acknowledged"
-    RESOLVED     = "resolved"
-    WONTFIX      = "wontfix"
+    RESOLVED = "resolved"
+    WONTFIX = "wontfix"
 
 
 _SCHEMA = """
@@ -274,7 +275,7 @@ _SEED_CHALLENGES = [
         ),
         evidence=(
             "BOCPD: P(r_t | x_{1:t}) computed over all r_t ∈ {0, 1, …, t}. "
-            "At 1000 heartbeats/day × 180 days = 180,000 hypotheses untruncated. "
+            "At 1000 heartbeats/day x 180 days = 180,000 hypotheses untruncated. "
             "Hazard function truncation at window W loses detection of regimes > W."
         ),
     ),
@@ -360,8 +361,17 @@ class ChallengeRegistry:
                (challenge_id, target_subsystem, severity, description, evidence,
                 status, resolution_notes, created_at, updated_at)
                VALUES (?,?,?,?,?,?,?,?,?)""",
-            (cid, target_subsystem, severity.value, description, evidence,
-             ChallengeStatus.OPEN.value, "", now, now),
+            (
+                cid,
+                target_subsystem,
+                severity.value,
+                description,
+                evidence,
+                ChallengeStatus.OPEN.value,
+                "",
+                now,
+                now,
+            ),
         )
         self._conn.commit()
         return cid
@@ -441,8 +451,7 @@ class ChallengeRegistry:
         Returns number of challenges newly inserted.
         """
         existing_descriptions = {
-            row[0]
-            for row in self._conn.execute("SELECT description FROM challenges").fetchall()
+            row[0] for row in self._conn.execute("SELECT description FROM challenges").fetchall()
         }
         inserted = 0
         for ch in _SEED_CHALLENGES:
@@ -450,7 +459,7 @@ class ChallengeRegistry:
                 continue
             self.add(
                 target_subsystem=ch["target_subsystem"],
-                severity=ch["severity"],
+                severity=ChallengeSeverity(ch["severity"]),
                 description=ch["description"],
                 evidence=ch["evidence"],
             )

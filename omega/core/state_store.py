@@ -268,12 +268,13 @@ class StateBackend(ABC):
     @abstractmethod
     def open_issue(
         self,
+        issue_id: str,
         detector: str,
         severity: str,
         description: str,
         context: dict | None = None,
         cycle: int = 0,
-    ) -> str: ...
+    ) -> bool: ...
 
     @abstractmethod
     def resolve_issue(self, issue_id: str, cycle: int | None = None) -> bool: ...
@@ -292,8 +293,8 @@ class StateBackend(ABC):
         node_name: str,
         from_version: str,
         to_version: str,
-        before_metrics: dict | None = None,
-        after_metrics: dict | None = None,
+        before_metrics: dict,
+        after_metrics: dict,
         triggered_by: str = "metrics",
         cycle: int = 0,
     ) -> None: ...

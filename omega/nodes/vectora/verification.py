@@ -944,9 +944,13 @@ class ConvergenceMonitorNode(CleanerNode):
             # Open/resolve issues
             raised_ids = {i["issue_id"] for i in issues}
             for iss in issues:
+                ctx = iss.get("context", {})
                 self._open_issue(
-                    iss["issue_id"], iss["severity"], iss["description"], iss.get("context", {})
-                )  # type: ignore[arg-type]
+                    str(iss["issue_id"]),
+                    str(iss["severity"]),
+                    str(iss["description"]),
+                    ctx if isinstance(ctx, dict) else {},
+                )
             for issue_id in list(self._issues.keys()):
                 if issue_id not in raised_ids:
                     self._resolve_issue(issue_id)
