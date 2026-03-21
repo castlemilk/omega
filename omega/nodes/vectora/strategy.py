@@ -17,7 +17,6 @@ import uuid
 from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-from omega.eval.sharpe import sharpe_ratio as _canonical_sharpe
 
 logger = logging.getLogger("omega.nodes.vectora.strategy")
 
@@ -295,6 +294,10 @@ class StrategyNode(Node):
         if not all_returns:
             return {"sharpe": 0.0, "max_drawdown": 0.0, "hit_rate": 0.0, "trades": 0}
 
+        from omega.eval.sharpe import (
+            sharpe_ratio as _canonical_sharpe,  # lazy: avoids circular import
+        )
+
         mean_ret = sum(all_returns) / len(all_returns)
         # Annualised Sharpe (252 trading days)
         sharpe = _canonical_sharpe(all_returns)
@@ -354,6 +357,36 @@ class StrategyNode(Node):
             except (TypeError, ValueError):
                 continue
         return result
+
+    def _calculate_slippage(
+        self,
+        order_size: float,
+        daily_volume: float,
+        base_spread_bps: float = 5.0,
+        impact_bps: float = 10.0,
+    ) -> float:
+        """
+        Estimate transaction slippage in basis points using a square-root impact model.
+
+        Formula
+        -------
+          slippage_bps = base_spread_bps + impact_bps * sqrt(order_size / daily_volume)
+
+        Parameters
+        ----------
+        order_size      : Size of the order (in currency units).
+        daily_volume    : Average daily traded volume (same units as order_size).
+        base_spread_bps : Half-spread cost for major crypto pairs (default 5 bps).
+        impact_bps      : Market impact coefficient (default 10 bps).
+
+        Returns
+        -------
+        Total estimated slippage in basis points.
+        """
+        if daily_volume <= 0.0:
+            return base_spread_bps
+        participation = max(0.0, order_size) / daily_volume
+        return base_spread_bps + impact_bps * math.sqrt(participation)
 
     def _avg_latency_ms(self) -> float:
         return self._total_latency_ms / max(1, self._execution_count)

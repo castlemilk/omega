@@ -33,6 +33,7 @@ from omega.core.cycle import CycleHistory, CycleResult
 from omega.core.improvement_engine import ImprovementEngine
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.orchestrator_v2 import OmegaOrchestrator
+from omega.eval.significance import sharpe_difference_significant
 
 logger = logging.getLogger("omega.eval.ablation")
 
@@ -400,6 +401,22 @@ class AblationHarness:
                 continue
             ablation_sharpe = self._results[ablation_name].sharpe
             attribution[subsystem] = round(full_sharpe - ablation_sharpe, 6)
+
+            # Report bootstrap significance of the Sharpe difference
+            full_returns = self._results["full"].raw_returns
+            ablation_returns = self._results[ablation_name].raw_returns
+            if full_returns and ablation_returns:
+                sig, diff, (ci_lo, ci_hi) = sharpe_difference_significant(
+                    full_returns, ablation_returns, n_bootstrap=2000
+                )
+                logger.info(
+                    "  %s: ΔSharpe=%.4f [95%% CI: %.4f, %.4f] significant=%s",
+                    subsystem,
+                    diff,
+                    ci_lo,
+                    ci_hi,
+                    sig,
+                )
 
         logger.info("Sharpe attribution: %s", attribution)
         return attribution
