@@ -471,6 +471,7 @@ class OmegaOrchestrator:
             except Exception as exc:
                 result.error_count += 1
                 log.error("strategy failed for node '%s': %s", state.name, exc)
+        result.proposals = proposals
         return proposals
 
     def _step_adversarial(

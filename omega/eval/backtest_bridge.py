@@ -112,6 +112,10 @@ class OmegaBacktestBridge:
     initial_capital   : Starting portfolio value.
     commission        : Per-trade commission as fraction (e.g. 0.001 = 0.1%).
     periods_per_year  : Annualisation factor for Sharpe.
+    use_orchestrator_proposals : If True (default), use proposals from the full
+        orchestrator cycle (includes adversarial filtering).  If False, fall back
+        to calling VectoraNode._do_construct_portfolio directly (bypasses adversarial
+        but avoids any orchestrator overhead).
     """
 
     def __init__(
@@ -122,6 +126,7 @@ class OmegaBacktestBridge:
         initial_capital: float = 1.0,
         commission: float = 0.001,
         periods_per_year: int = 252,
+        use_orchestrator_proposals: bool = True,
     ) -> None:
         self.mode = mode
         self.ticker = ticker
@@ -129,6 +134,7 @@ class OmegaBacktestBridge:
         self.initial_capital = initial_capital
         self.commission = commission
         self.periods_per_year = periods_per_year
+        self.use_orchestrator_proposals = use_orchestrator_proposals
 
         # Build orchestrator with a VectoraNode (lazy import breaks circular dependency)
         from omega.core.orchestrator_v2 import OmegaOrchestrator
@@ -218,26 +224,33 @@ class OmegaBacktestBridge:
             # Run one full orchestrator cycle (signals → strategy → adversarial)
             cycle_result = self._orchestrator.run_one_cycle()
 
-            # Extract proposals from the cycle's node results.
-            # Use VectoraNode._do_construct_portfolio which correctly flattens
-            # _last_signals (including metadata keys like _regime, _weights).
-            proposals = []
-            try:
-                from omega.core.node import NodeInput
+            # Extract proposals.
+            # Orchestrator mode (default): use proposals from the full pipeline,
+            # which includes adversarial filtering.  The signal adapter in
+            # _do_construct_portfolio ensures the orchestrator-wrapped signal format
+            # is correctly normalised before reaching StrategyNode.
+            # Direct mode (fallback): call _do_construct_portfolio manually, which
+            # bypasses adversarial but is simpler to debug.
+            proposals: list[dict[str, Any]] = []
+            if self.use_orchestrator_proposals and cycle_result.proposals:
+                proposals = cycle_result.proposals
+            else:
+                try:
+                    from omega.core.node import NodeInput
 
-                port_inp = NodeInput(
-                    action="construct_portfolio",
-                    parameters={
-                        "signals": self._node._last_signals,
-                        "market_data": market_data,
-                        "pico_mode": self.mode == BacktestMode.PICO,
-                        "regime": "default",
-                    },
-                    context={"cycle_id": "backtest", "cycle": i},
-                )
-                proposals = self._node._do_construct_portfolio(port_inp)
-            except Exception as exc:
-                logger.debug("Portfolio extraction failed at bar %d: %s", i, exc)
+                    port_inp = NodeInput(
+                        action="construct_portfolio",
+                        parameters={
+                            "signals": self._node._last_signals,
+                            "market_data": market_data,
+                            "pico_mode": self.mode == BacktestMode.PICO,
+                            "regime": "default",
+                        },
+                        context={"cycle_id": "backtest", "cycle": i},
+                    )
+                    proposals = self._node._do_construct_portfolio(port_inp)
+                except Exception as exc:
+                    logger.debug("Portfolio extraction failed at bar %d: %s", i, exc)
 
             # Determine target position from proposals
             target_position = self._proposals_to_position(proposals)

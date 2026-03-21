@@ -113,6 +113,7 @@ class CycleResult:
     node_results: dict[str, Any] = field(default_factory=dict)
     error_count: int = 0
     metrics: dict[str, float] = field(default_factory=dict)
+    proposals: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def cycle_id(self) -> str:
