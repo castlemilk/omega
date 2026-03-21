@@ -25,6 +25,7 @@ from omega.core.bayesian_optimizer import (
     Param,
     TreeParzenEstimator,
 )
+from omega.core.convergence import ConvergenceDiagnostics
 from omega.core.state_store import StateStore
 
 logger = logging.getLogger("omega.core.improvement_engine")
@@ -203,9 +204,11 @@ class ImprovementEngine:
         gamma: float = 0.25,
         n_startup_trials: int = 10,
         seed: int | None = None,
+        convergence_window: int = 20,
+        convergence_epsilon: float = 0.01,
     ) -> None:
         self._store = store
-        self._evaluator = evaluator or SyntheticEvaluator()
+        self._evaluator = evaluator or self._default_evaluator()
         self._gamma = gamma
         self._n_startup = n_startup_trials
         self._seed = seed
@@ -214,6 +217,24 @@ class ImprovementEngine:
         self._histories: dict[str, NodeParamHistory] = {}
         # node_id -> TreeParzenEstimator
         self._optimizers: dict[str, TreeParzenEstimator] = {}
+        # node_id -> ConvergenceDiagnostics
+        self._convergence: dict[str, ConvergenceDiagnostics] = {}
+        self._conv_window = convergence_window
+        self._conv_epsilon = convergence_epsilon
+
+    @staticmethod
+    def _default_evaluator() -> ImprovementEvaluator:
+        """Return BacktestEvaluator when available, otherwise SyntheticEvaluator."""
+        try:
+            from omega.core.backtest_evaluator import BacktestEvaluator
+
+            return BacktestEvaluator()
+        except Exception:
+            return SyntheticEvaluator()
+
+    def set_evaluator(self, evaluator: ImprovementEvaluator) -> None:
+        """Replace the active evaluator at runtime."""
+        self._evaluator = evaluator
 
     # ------------------------------------------------------------------
     # Registration
@@ -252,6 +273,13 @@ class ImprovementEngine:
 
         self._histories[node_id] = history
         self._optimizers[node_id] = tpe
+        self._convergence[node_id] = ConvergenceDiagnostics(
+            epsilon=self._conv_epsilon, window=self._conv_window
+        )
+        # Seed convergence tracker with any prior trials
+        if prior_trials:
+            for _, s in prior_trials:
+                self._convergence[node_id].record(s)
         logger.info("Registered node %s with %d params", node_id, len(param_space))
 
     def is_registered(self, node_id: str) -> bool:
@@ -316,6 +344,7 @@ class ImprovementEngine:
 
         self._optimizers[node_id].observe(params, score)
         self._histories[node_id].trials.append(trial)
+        self._convergence[node_id].record(score)
 
         history = self._histories[node_id]
         if score > history.best_score:
@@ -349,6 +378,33 @@ class ImprovementEngine:
 
     def all_node_ids(self) -> list[str]:
         return list(self._histories.keys())
+
+    def has_converged(
+        self,
+        node_id: str,
+        epsilon: float | None = None,
+        window: int | None = None,
+    ) -> bool:
+        """
+        Return True when the improvement rate for ``node_id`` has plateaued.
+
+        Requires at least ``window`` recorded trials.
+        """
+        diag = self._convergence.get(node_id)
+        if diag is None:
+            return False
+        return diag.has_converged(epsilon=epsilon, window=window)
+
+    def improvement_rate(self, node_id: str, window: int | None = None) -> float:
+        """Mean score improvement per trial over the last ``window`` trials."""
+        diag = self._convergence.get(node_id)
+        if diag is None:
+            return 0.0
+        return diag.improvement_rate(window)
+
+    def convergence_diagnostics(self, node_id: str) -> ConvergenceDiagnostics | None:
+        """Direct access to the ConvergenceDiagnostics object for a node."""
+        return self._convergence.get(node_id)
 
     def sharpe_trend(self, node_id: str, window: int = 20) -> str:
         """Return 'improving', 'degrading', or 'stable' from recent Sharpe scores."""
