@@ -31,6 +31,13 @@ service OrchestratorService {
   rpc UpdateNodeBrain(UpdateNodeBrainRequest) returns (UpdateNodeBrainResponse);
   rpc ListAvailableProviders(ListAvailableProvidersRequest) returns (ListAvailableProvidersResponse);
   rpc GetBrainExecutionHistory(GetBrainExecutionHistoryRequest) returns (GetBrainExecutionHistoryResponse);
+  rpc GetAlignmentDecisions(GetAlignmentDecisionsRequest) returns (GetAlignmentDecisionsResponse);
+  rpc GetAdversarialResults(GetAdversarialResultsRequest) returns (GetAdversarialResultsResponse);
+  rpc GetGoalTracking(GetGoalTrackingRequest) returns (GetGoalTrackingResponse);
+  rpc GetChallenges(GetChallengesRequest) returns (GetChallengesResponse);
+  rpc GetMemoryStats(GetMemoryStatsRequest) returns (GetMemoryStatsResponse);
+  rpc GetVerificationGates(GetVerificationGatesRequest) returns (GetVerificationGatesResponse);
+  rpc GetImprovementHistory(GetImprovementHistoryRequest) returns (GetImprovementHistoryResponse);
 }
 
 // ── Health ─────────────────────────────────────────────────────────────────
@@ -159,3 +166,31 @@ message GetBrainExecutionHistoryRequest {
   int32 limit = 2;
 }
 message GetBrainExecutionHistoryResponse { repeated BrainExecutionEntry entries = 1; }
+
+// ── Alignment decisions ────────────────────────────────────────────────────
+message GetAlignmentDecisionsRequest { int32 limit = 1; }
+message GetAlignmentDecisionsResponse { repeated AlignmentDecision decisions = 1; }
+
+// ── Adversarial results ────────────────────────────────────────────────────
+message GetAdversarialResultsRequest { int32 limit = 1; }
+message GetAdversarialResultsResponse { repeated AdversarialResult results = 1; }
+
+// ── Goal tracking ──────────────────────────────────────────────────────────
+message GetGoalTrackingRequest {}
+message GetGoalTrackingResponse { GoalState state = 1; }
+
+// ── Challenges ─────────────────────────────────────────────────────────────
+message GetChallengesRequest { string status_filter = 1; }
+message GetChallengesResponse { repeated Challenge challenges = 1; }
+
+// ── Memory stats ───────────────────────────────────────────────────────────
+message GetMemoryStatsRequest {}
+message GetMemoryStatsResponse { MemoryStats stats = 1; }
+
+// ── Verification gates ─────────────────────────────────────────────────────
+message GetVerificationGatesRequest { int32 limit = 1; }
+message GetVerificationGatesResponse { repeated GateResult gates = 1; }
+
+// ── Improvement history ────────────────────────────────────────────────────
+message GetImprovementHistoryRequest { int32 limit = 1; }
+message GetImprovementHistoryResponse { repeated ImprovementDetail records = 1; }

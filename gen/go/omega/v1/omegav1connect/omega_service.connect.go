@@ -102,6 +102,27 @@ const (
 	// OrchestratorServiceGetBrainExecutionHistoryProcedure is the fully-qualified name of the
 	// OrchestratorService's GetBrainExecutionHistory RPC.
 	OrchestratorServiceGetBrainExecutionHistoryProcedure = "/omega.v1.OrchestratorService/GetBrainExecutionHistory"
+	// OrchestratorServiceGetAlignmentDecisionsProcedure is the fully-qualified name of the
+	// OrchestratorService's GetAlignmentDecisions RPC.
+	OrchestratorServiceGetAlignmentDecisionsProcedure = "/omega.v1.OrchestratorService/GetAlignmentDecisions"
+	// OrchestratorServiceGetAdversarialResultsProcedure is the fully-qualified name of the
+	// OrchestratorService's GetAdversarialResults RPC.
+	OrchestratorServiceGetAdversarialResultsProcedure = "/omega.v1.OrchestratorService/GetAdversarialResults"
+	// OrchestratorServiceGetGoalTrackingProcedure is the fully-qualified name of the
+	// OrchestratorService's GetGoalTracking RPC.
+	OrchestratorServiceGetGoalTrackingProcedure = "/omega.v1.OrchestratorService/GetGoalTracking"
+	// OrchestratorServiceGetChallengesProcedure is the fully-qualified name of the
+	// OrchestratorService's GetChallenges RPC.
+	OrchestratorServiceGetChallengesProcedure = "/omega.v1.OrchestratorService/GetChallenges"
+	// OrchestratorServiceGetMemoryStatsProcedure is the fully-qualified name of the
+	// OrchestratorService's GetMemoryStats RPC.
+	OrchestratorServiceGetMemoryStatsProcedure = "/omega.v1.OrchestratorService/GetMemoryStats"
+	// OrchestratorServiceGetVerificationGatesProcedure is the fully-qualified name of the
+	// OrchestratorService's GetVerificationGates RPC.
+	OrchestratorServiceGetVerificationGatesProcedure = "/omega.v1.OrchestratorService/GetVerificationGates"
+	// OrchestratorServiceGetImprovementHistoryProcedure is the fully-qualified name of the
+	// OrchestratorService's GetImprovementHistory RPC.
+	OrchestratorServiceGetImprovementHistoryProcedure = "/omega.v1.OrchestratorService/GetImprovementHistory"
 )
 
 // OrchestratorServiceClient is a client for the omega.v1.OrchestratorService service.
@@ -129,6 +150,13 @@ type OrchestratorServiceClient interface {
 	UpdateNodeBrain(context.Context, *connect.Request[v1.UpdateNodeBrainRequest]) (*connect.Response[v1.UpdateNodeBrainResponse], error)
 	ListAvailableProviders(context.Context, *connect.Request[v1.ListAvailableProvidersRequest]) (*connect.Response[v1.ListAvailableProvidersResponse], error)
 	GetBrainExecutionHistory(context.Context, *connect.Request[v1.GetBrainExecutionHistoryRequest]) (*connect.Response[v1.GetBrainExecutionHistoryResponse], error)
+	GetAlignmentDecisions(context.Context, *connect.Request[v1.GetAlignmentDecisionsRequest]) (*connect.Response[v1.GetAlignmentDecisionsResponse], error)
+	GetAdversarialResults(context.Context, *connect.Request[v1.GetAdversarialResultsRequest]) (*connect.Response[v1.GetAdversarialResultsResponse], error)
+	GetGoalTracking(context.Context, *connect.Request[v1.GetGoalTrackingRequest]) (*connect.Response[v1.GetGoalTrackingResponse], error)
+	GetChallenges(context.Context, *connect.Request[v1.GetChallengesRequest]) (*connect.Response[v1.GetChallengesResponse], error)
+	GetMemoryStats(context.Context, *connect.Request[v1.GetMemoryStatsRequest]) (*connect.Response[v1.GetMemoryStatsResponse], error)
+	GetVerificationGates(context.Context, *connect.Request[v1.GetVerificationGatesRequest]) (*connect.Response[v1.GetVerificationGatesResponse], error)
+	GetImprovementHistory(context.Context, *connect.Request[v1.GetImprovementHistoryRequest]) (*connect.Response[v1.GetImprovementHistoryResponse], error)
 }
 
 // NewOrchestratorServiceClient constructs a client for the omega.v1.OrchestratorService service. By
@@ -280,6 +308,48 @@ func NewOrchestratorServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(orchestratorServiceMethods.ByName("GetBrainExecutionHistory")),
 			connect.WithClientOptions(opts...),
 		),
+		getAlignmentDecisions: connect.NewClient[v1.GetAlignmentDecisionsRequest, v1.GetAlignmentDecisionsResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetAlignmentDecisionsProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetAlignmentDecisions")),
+			connect.WithClientOptions(opts...),
+		),
+		getAdversarialResults: connect.NewClient[v1.GetAdversarialResultsRequest, v1.GetAdversarialResultsResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetAdversarialResultsProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetAdversarialResults")),
+			connect.WithClientOptions(opts...),
+		),
+		getGoalTracking: connect.NewClient[v1.GetGoalTrackingRequest, v1.GetGoalTrackingResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetGoalTrackingProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetGoalTracking")),
+			connect.WithClientOptions(opts...),
+		),
+		getChallenges: connect.NewClient[v1.GetChallengesRequest, v1.GetChallengesResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetChallengesProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetChallenges")),
+			connect.WithClientOptions(opts...),
+		),
+		getMemoryStats: connect.NewClient[v1.GetMemoryStatsRequest, v1.GetMemoryStatsResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetMemoryStatsProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetMemoryStats")),
+			connect.WithClientOptions(opts...),
+		),
+		getVerificationGates: connect.NewClient[v1.GetVerificationGatesRequest, v1.GetVerificationGatesResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetVerificationGatesProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetVerificationGates")),
+			connect.WithClientOptions(opts...),
+		),
+		getImprovementHistory: connect.NewClient[v1.GetImprovementHistoryRequest, v1.GetImprovementHistoryResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetImprovementHistoryProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetImprovementHistory")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -308,6 +378,13 @@ type orchestratorServiceClient struct {
 	updateNodeBrain          *connect.Client[v1.UpdateNodeBrainRequest, v1.UpdateNodeBrainResponse]
 	listAvailableProviders   *connect.Client[v1.ListAvailableProvidersRequest, v1.ListAvailableProvidersResponse]
 	getBrainExecutionHistory *connect.Client[v1.GetBrainExecutionHistoryRequest, v1.GetBrainExecutionHistoryResponse]
+	getAlignmentDecisions    *connect.Client[v1.GetAlignmentDecisionsRequest, v1.GetAlignmentDecisionsResponse]
+	getAdversarialResults    *connect.Client[v1.GetAdversarialResultsRequest, v1.GetAdversarialResultsResponse]
+	getGoalTracking          *connect.Client[v1.GetGoalTrackingRequest, v1.GetGoalTrackingResponse]
+	getChallenges            *connect.Client[v1.GetChallengesRequest, v1.GetChallengesResponse]
+	getMemoryStats           *connect.Client[v1.GetMemoryStatsRequest, v1.GetMemoryStatsResponse]
+	getVerificationGates     *connect.Client[v1.GetVerificationGatesRequest, v1.GetVerificationGatesResponse]
+	getImprovementHistory    *connect.Client[v1.GetImprovementHistoryRequest, v1.GetImprovementHistoryResponse]
 }
 
 // GetHealth calls omega.v1.OrchestratorService.GetHealth.
@@ -425,6 +502,41 @@ func (c *orchestratorServiceClient) GetBrainExecutionHistory(ctx context.Context
 	return c.getBrainExecutionHistory.CallUnary(ctx, req)
 }
 
+// GetAlignmentDecisions calls omega.v1.OrchestratorService.GetAlignmentDecisions.
+func (c *orchestratorServiceClient) GetAlignmentDecisions(ctx context.Context, req *connect.Request[v1.GetAlignmentDecisionsRequest]) (*connect.Response[v1.GetAlignmentDecisionsResponse], error) {
+	return c.getAlignmentDecisions.CallUnary(ctx, req)
+}
+
+// GetAdversarialResults calls omega.v1.OrchestratorService.GetAdversarialResults.
+func (c *orchestratorServiceClient) GetAdversarialResults(ctx context.Context, req *connect.Request[v1.GetAdversarialResultsRequest]) (*connect.Response[v1.GetAdversarialResultsResponse], error) {
+	return c.getAdversarialResults.CallUnary(ctx, req)
+}
+
+// GetGoalTracking calls omega.v1.OrchestratorService.GetGoalTracking.
+func (c *orchestratorServiceClient) GetGoalTracking(ctx context.Context, req *connect.Request[v1.GetGoalTrackingRequest]) (*connect.Response[v1.GetGoalTrackingResponse], error) {
+	return c.getGoalTracking.CallUnary(ctx, req)
+}
+
+// GetChallenges calls omega.v1.OrchestratorService.GetChallenges.
+func (c *orchestratorServiceClient) GetChallenges(ctx context.Context, req *connect.Request[v1.GetChallengesRequest]) (*connect.Response[v1.GetChallengesResponse], error) {
+	return c.getChallenges.CallUnary(ctx, req)
+}
+
+// GetMemoryStats calls omega.v1.OrchestratorService.GetMemoryStats.
+func (c *orchestratorServiceClient) GetMemoryStats(ctx context.Context, req *connect.Request[v1.GetMemoryStatsRequest]) (*connect.Response[v1.GetMemoryStatsResponse], error) {
+	return c.getMemoryStats.CallUnary(ctx, req)
+}
+
+// GetVerificationGates calls omega.v1.OrchestratorService.GetVerificationGates.
+func (c *orchestratorServiceClient) GetVerificationGates(ctx context.Context, req *connect.Request[v1.GetVerificationGatesRequest]) (*connect.Response[v1.GetVerificationGatesResponse], error) {
+	return c.getVerificationGates.CallUnary(ctx, req)
+}
+
+// GetImprovementHistory calls omega.v1.OrchestratorService.GetImprovementHistory.
+func (c *orchestratorServiceClient) GetImprovementHistory(ctx context.Context, req *connect.Request[v1.GetImprovementHistoryRequest]) (*connect.Response[v1.GetImprovementHistoryResponse], error) {
+	return c.getImprovementHistory.CallUnary(ctx, req)
+}
+
 // OrchestratorServiceHandler is an implementation of the omega.v1.OrchestratorService service.
 type OrchestratorServiceHandler interface {
 	GetHealth(context.Context, *connect.Request[v1.GetHealthRequest]) (*connect.Response[v1.GetHealthResponse], error)
@@ -450,6 +562,13 @@ type OrchestratorServiceHandler interface {
 	UpdateNodeBrain(context.Context, *connect.Request[v1.UpdateNodeBrainRequest]) (*connect.Response[v1.UpdateNodeBrainResponse], error)
 	ListAvailableProviders(context.Context, *connect.Request[v1.ListAvailableProvidersRequest]) (*connect.Response[v1.ListAvailableProvidersResponse], error)
 	GetBrainExecutionHistory(context.Context, *connect.Request[v1.GetBrainExecutionHistoryRequest]) (*connect.Response[v1.GetBrainExecutionHistoryResponse], error)
+	GetAlignmentDecisions(context.Context, *connect.Request[v1.GetAlignmentDecisionsRequest]) (*connect.Response[v1.GetAlignmentDecisionsResponse], error)
+	GetAdversarialResults(context.Context, *connect.Request[v1.GetAdversarialResultsRequest]) (*connect.Response[v1.GetAdversarialResultsResponse], error)
+	GetGoalTracking(context.Context, *connect.Request[v1.GetGoalTrackingRequest]) (*connect.Response[v1.GetGoalTrackingResponse], error)
+	GetChallenges(context.Context, *connect.Request[v1.GetChallengesRequest]) (*connect.Response[v1.GetChallengesResponse], error)
+	GetMemoryStats(context.Context, *connect.Request[v1.GetMemoryStatsRequest]) (*connect.Response[v1.GetMemoryStatsResponse], error)
+	GetVerificationGates(context.Context, *connect.Request[v1.GetVerificationGatesRequest]) (*connect.Response[v1.GetVerificationGatesResponse], error)
+	GetImprovementHistory(context.Context, *connect.Request[v1.GetImprovementHistoryRequest]) (*connect.Response[v1.GetImprovementHistoryResponse], error)
 }
 
 // NewOrchestratorServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -597,6 +716,48 @@ func NewOrchestratorServiceHandler(svc OrchestratorServiceHandler, opts ...conne
 		connect.WithSchema(orchestratorServiceMethods.ByName("GetBrainExecutionHistory")),
 		connect.WithHandlerOptions(opts...),
 	)
+	orchestratorServiceGetAlignmentDecisionsHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetAlignmentDecisionsProcedure,
+		svc.GetAlignmentDecisions,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetAlignmentDecisions")),
+		connect.WithHandlerOptions(opts...),
+	)
+	orchestratorServiceGetAdversarialResultsHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetAdversarialResultsProcedure,
+		svc.GetAdversarialResults,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetAdversarialResults")),
+		connect.WithHandlerOptions(opts...),
+	)
+	orchestratorServiceGetGoalTrackingHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetGoalTrackingProcedure,
+		svc.GetGoalTracking,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetGoalTracking")),
+		connect.WithHandlerOptions(opts...),
+	)
+	orchestratorServiceGetChallengesHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetChallengesProcedure,
+		svc.GetChallenges,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetChallenges")),
+		connect.WithHandlerOptions(opts...),
+	)
+	orchestratorServiceGetMemoryStatsHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetMemoryStatsProcedure,
+		svc.GetMemoryStats,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetMemoryStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	orchestratorServiceGetVerificationGatesHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetVerificationGatesProcedure,
+		svc.GetVerificationGates,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetVerificationGates")),
+		connect.WithHandlerOptions(opts...),
+	)
+	orchestratorServiceGetImprovementHistoryHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetImprovementHistoryProcedure,
+		svc.GetImprovementHistory,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetImprovementHistory")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/omega.v1.OrchestratorService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case OrchestratorServiceGetHealthProcedure:
@@ -645,6 +806,20 @@ func NewOrchestratorServiceHandler(svc OrchestratorServiceHandler, opts ...conne
 			orchestratorServiceListAvailableProvidersHandler.ServeHTTP(w, r)
 		case OrchestratorServiceGetBrainExecutionHistoryProcedure:
 			orchestratorServiceGetBrainExecutionHistoryHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetAlignmentDecisionsProcedure:
+			orchestratorServiceGetAlignmentDecisionsHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetAdversarialResultsProcedure:
+			orchestratorServiceGetAdversarialResultsHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetGoalTrackingProcedure:
+			orchestratorServiceGetGoalTrackingHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetChallengesProcedure:
+			orchestratorServiceGetChallengesHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetMemoryStatsProcedure:
+			orchestratorServiceGetMemoryStatsHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetVerificationGatesProcedure:
+			orchestratorServiceGetVerificationGatesHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetImprovementHistoryProcedure:
+			orchestratorServiceGetImprovementHistoryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -744,4 +919,32 @@ func (UnimplementedOrchestratorServiceHandler) ListAvailableProviders(context.Co
 
 func (UnimplementedOrchestratorServiceHandler) GetBrainExecutionHistory(context.Context, *connect.Request[v1.GetBrainExecutionHistoryRequest]) (*connect.Response[v1.GetBrainExecutionHistoryResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetBrainExecutionHistory is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetAlignmentDecisions(context.Context, *connect.Request[v1.GetAlignmentDecisionsRequest]) (*connect.Response[v1.GetAlignmentDecisionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetAlignmentDecisions is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetAdversarialResults(context.Context, *connect.Request[v1.GetAdversarialResultsRequest]) (*connect.Response[v1.GetAdversarialResultsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetAdversarialResults is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetGoalTracking(context.Context, *connect.Request[v1.GetGoalTrackingRequest]) (*connect.Response[v1.GetGoalTrackingResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetGoalTracking is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetChallenges(context.Context, *connect.Request[v1.GetChallengesRequest]) (*connect.Response[v1.GetChallengesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetChallenges is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetMemoryStats(context.Context, *connect.Request[v1.GetMemoryStatsRequest]) (*connect.Response[v1.GetMemoryStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetMemoryStats is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetVerificationGates(context.Context, *connect.Request[v1.GetVerificationGatesRequest]) (*connect.Response[v1.GetVerificationGatesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetVerificationGates is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetImprovementHistory(context.Context, *connect.Request[v1.GetImprovementHistoryRequest]) (*connect.Response[v1.GetImprovementHistoryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetImprovementHistory is not implemented"))
 }

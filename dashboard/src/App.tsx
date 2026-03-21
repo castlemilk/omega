@@ -12,6 +12,11 @@ import Metrics from "./pages/Metrics";
 import Issues from "./pages/Issues";
 import Memory from "./pages/Memory";
 import Convergence from "./pages/Convergence";
+import Alignment from "./pages/Alignment";
+import Adversarial from "./pages/Adversarial";
+import Goals from "./pages/Goals";
+import Challenges from "./pages/Challenges";
+import Improvements from "./pages/Improvements";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
@@ -57,7 +62,12 @@ export default function App() {
               <Route path="/metrics" element={<Metrics />} />
               <Route path="/issues" element={<Issues />} />
               <Route path="/memory" element={<Memory />} />
-              <Route path="/convergence" element={<Convergence />} />
+              <Route path="/convergence"  element={<Convergence />} />
+              <Route path="/alignment"    element={<Alignment />} />
+              <Route path="/adversarial"  element={<Adversarial />} />
+              <Route path="/goals"        element={<Goals />} />
+              <Route path="/challenges"   element={<Challenges />} />
+              <Route path="/improvements" element={<Improvements />} />
             </Routes>
           </main>
         </div>

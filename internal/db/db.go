@@ -12,14 +12,16 @@ import (
 )
 
 const (
-	StateDBPath  = "/tmp/omega_vectora_state.db"
-	MemoryDBPath = "/tmp/omega_vectora_memory.db"
+	StateDBPath     = "/tmp/omega_vectora_state.db"
+	MemoryDBPath    = "/tmp/omega_vectora_memory.db"
+	ChallengeDBPath = "/tmp/omega_challenge_registry.db"
 )
 
-// DB holds connections to both Omega SQLite databases.
+// DB holds connections to the Omega SQLite databases.
 type DB struct {
-	state  *sql.DB
-	memory *sql.DB
+	state     *sql.DB
+	memory    *sql.DB
+	challenge *sql.DB // may be nil if challenge_registry.db doesn't exist yet
 }
 
 // New opens both databases in WAL mode for concurrent reads.
@@ -33,10 +35,14 @@ func New(stateDBPath, memoryDBPath string) (*DB, error) {
 		state.Close() //nolint:errcheck
 		return nil, fmt.Errorf("open memory db: %w", err)
 	}
-	d := &DB{state: state, memory: memory}
+	challengeDB, _ := openDB(ChallengeDBPath) // nil if file not yet created by Python
+	d := &DB{state: state, memory: memory, challenge: challengeDB}
 	if err := d.ensureBrainTables(); err != nil {
 		state.Close()  //nolint:errcheck
 		memory.Close() //nolint:errcheck
+		if challengeDB != nil {
+			challengeDB.Close() //nolint:errcheck
+		}
 		return nil, fmt.Errorf("ensure brain tables: %w", err)
 	}
 	return d, nil
@@ -55,6 +61,9 @@ func openDB(path string) (*sql.DB, error) {
 func (d *DB) Close() {
 	d.state.Close()  //nolint:errcheck
 	d.memory.Close() //nolint:errcheck
+	if d.challenge != nil {
+		d.challenge.Close() //nolint:errcheck
+	}
 }
 
 // ── Node types ──────────────────────────────────────────────────────────────

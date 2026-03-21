@@ -212,3 +212,85 @@ message ProviderInfo {
   bool requires_api_key = 4;
   bool available = 5;
 }
+
+// ── Alignment ─────────────────────────────────────────────────────────────────
+
+message AlignmentDecision {
+  string decision_id = 1;
+  int64 cycle = 2;
+  bool approved = 3;
+  repeated string reasons = 4;
+  string target_subsystem = 5;
+  google.protobuf.Timestamp recorded_at = 6;
+}
+
+// ── Adversarial ───────────────────────────────────────────────────────────────
+
+message AdversarialResult {
+  string result_id = 1;
+  int64 cycle = 2;
+  int32 ring = 3;
+  repeated string flags = 4;
+  string severity = 5;
+  google.protobuf.Timestamp recorded_at = 6;
+}
+
+// ── Goal tracking ─────────────────────────────────────────────────────────────
+
+message GoalState {
+  int64 cycle = 1;
+  map<string, bool> constitutional_checks = 2;
+  map<string, double> scorecard_values = 3;
+  repeated string active_tasks = 4;
+  google.protobuf.Timestamp recorded_at = 5;
+}
+
+// ── Challenges ────────────────────────────────────────────────────────────────
+
+message Challenge {
+  string challenge_id = 1;
+  string status = 2;
+  string severity = 3;
+  string target_subsystem = 4;
+  string description = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// ── Memory stats ──────────────────────────────────────────────────────────────
+
+message MemoryStats {
+  int64 episodic_count = 1;
+  int64 semantic_count = 2;
+  repeated string regime_history = 3;
+  int64 contradiction_count = 4;
+}
+
+// ── Verification gates ────────────────────────────────────────────────────────
+
+message GateResult {
+  string gate_id = 1;
+  int64 cycle = 2;
+  string gate_name = 3;
+  string result = 4;
+  string details = 5;
+  google.protobuf.Timestamp checked_at = 6;
+}
+
+// ── Improvement detail (with alignment context) ───────────────────────────────
+
+message ImprovementDetail {
+  string improve_id = 1;
+  string node_id = 2;
+  string node_name = 3;
+  string from_version = 4;
+  string to_version = 5;
+  string triggered_by = 6;
+  google.protobuf.Timestamp recorded_at = 7;
+  int64 cycle = 8;
+  map<string, double> before_metrics = 9;
+  map<string, double> after_metrics = 10;
+  bool alignment_approved = 11;
+  bool has_alignment_decision = 12;
+  repeated string alignment_reasons = 13;
+}
