@@ -31,7 +31,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput
 from omega.core.state_store import StateStore
@@ -48,7 +48,7 @@ class TraceContext:
     """
     trace_id: str
     span_id: str
-    parent_span_id: Optional[str] = None
+    parent_span_id: str | None = None
     cycle: int = 0
 
     def child(self, new_span_id: str) -> "TraceContext":
@@ -66,22 +66,22 @@ class SpanData:
     """Mutable span data (not the context)."""
     span_id: str
     trace_id: str
-    parent_span_id: Optional[str]
-    node_id: Optional[str]
-    node_name: Optional[str]
+    parent_span_id: str | None
+    node_id: str | None
+    node_name: str | None
     operation: str
     started_at: float
-    ended_at: Optional[float] = None
-    duration_ms: Optional[float] = None
+    ended_at: float | None = None
+    duration_ms: float | None = None
     status: str = "ok"
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     cycle: int = 0
 
     @property
     def is_complete(self) -> bool:
         return self.ended_at is not None
 
-    def end(self, status: str = "ok", metadata: Optional[Dict] = None) -> None:
+    def end(self, status: str = "ok", metadata: dict | None = None) -> None:
         self.ended_at = time.time()
         self.duration_ms = (self.ended_at - self.started_at) * 1000
         self.status = status
@@ -98,9 +98,9 @@ class Tracer:
 
     def __init__(self, store: StateStore) -> None:
         self._store = store
-        self._active_spans: Dict[str, SpanData] = {}  # span_id → SpanData
+        self._active_spans: dict[str, SpanData] = {}  # span_id → SpanData
 
-    def start_trace(self, operation: str = "heartbeat", cycle: int = 0, node_id: Optional[str] = None, node_name: Optional[str] = None) -> TraceContext:
+    def start_trace(self, operation: str = "heartbeat", cycle: int = 0, node_id: str | None = None, node_name: str | None = None) -> TraceContext:
         """Start a new root trace. Returns the root TraceContext."""
         trace_id = str(uuid.uuid4())
         span_id = self._store.begin_span(
@@ -124,7 +124,7 @@ class Tracer:
         logger.debug("Started trace %s (span=%s, op=%s)", trace_id[:8], span_id[:8], operation)
         return TraceContext(trace_id=trace_id, span_id=span_id, cycle=cycle)
 
-    def start_span(self, parent_ctx: TraceContext, operation: str, node_id: Optional[str] = None, node_name: Optional[str] = None) -> TraceContext:
+    def start_span(self, parent_ctx: TraceContext, operation: str, node_id: str | None = None, node_name: str | None = None) -> TraceContext:
         """Start a child span under parent_ctx. Returns child TraceContext."""
         span_id = self._store.begin_span(
             trace_id=parent_ctx.trace_id,
@@ -146,7 +146,7 @@ class Tracer:
         )
         return parent_ctx.child(span_id)
 
-    def end_span(self, span_id: str, status: str = "ok", metadata: Optional[Dict] = None) -> Optional[float]:
+    def end_span(self, span_id: str, status: str = "ok", metadata: dict | None = None) -> float | None:
         """End a span. Returns duration_ms or None if span not found."""
         span = self._active_spans.pop(span_id, None)
         if span:
@@ -164,9 +164,9 @@ class Tracer:
         node: Node,
         node_input: NodeInput,
         parent_ctx: TraceContext,
-        node_id: Optional[str] = None,
-        node_name: Optional[str] = None,
-    ) -> Tuple[NodeOutput, TraceContext]:
+        node_id: str | None = None,
+        node_name: str | None = None,
+    ) -> tuple[NodeOutput, TraceContext]:
         """
         Execute node.execute(input) wrapped in a trace span.
 
@@ -201,7 +201,7 @@ class Tracer:
             self.end_span(child_ctx.span_id, status="error", metadata={"exception": str(exc)})
             raise
 
-    def get_waterfall(self, trace_id: str) -> List[Dict]:
+    def get_waterfall(self, trace_id: str) -> list[dict]:
         """Return spans for a trace ordered by start time, formatted for display."""
         spans = self._store.get_trace(trace_id)
         spans.sort(key=lambda s: s.get("started_at", 0))
@@ -209,7 +209,6 @@ class Tracer:
         result = []
         for s in spans:
             dur = s.get("duration_ms") or 0
-            started = s.get("started_at", 0)
             result.append({
                 "span_id": s.get("span_id", "")[:8],
                 "parent_span_id": (s.get("parent_span_id") or "")[:8] or None,
@@ -228,7 +227,7 @@ class Tracer:
             return f"(no spans for trace {trace_id[:8]})"
 
         lines = [f"Trace {trace_id[:8]} — {len(spans)} spans"]
-        for i, s in enumerate(spans):
+        for _i, s in enumerate(spans):
             prefix = "  └─ " if s["parent_span_id"] else "  ├─ "
             status_icon = "✓" if s["status"] == "ok" else "✗"
             lines.append(

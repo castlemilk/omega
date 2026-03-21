@@ -14,7 +14,7 @@ import logging
 import re
 import time
 import uuid
-from typing import Any, Dict, List
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
@@ -78,7 +78,7 @@ class TextAnalyzerNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return self.get_state().capabilities
 
     def describe(self) -> str:
@@ -137,14 +137,14 @@ class TextAnalyzerNode(Node):
             metrics={"latency_ms": elapsed, "accuracy": 1.0},
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_count / max(1, self._execution_count),
             "capability_count": float(len(self.get_capabilities())),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
 
         if not self._has_extended_metrics:
@@ -179,7 +179,7 @@ class TextAnalyzerNode(Node):
             return self._sentiment_score(words)
 
         # "analyze" (or any other registered capability) → full report
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "word_count": word_count,
             "char_count": len(text),
             "char_count_no_spaces": len(text.replace(" ", "")),
@@ -203,7 +203,7 @@ class TextAnalyzerNode(Node):
 
         return result
 
-    def _sentiment_score(self, words: List[str]) -> float:
+    def _sentiment_score(self, words: list[str]) -> float:
         """Returns a score in [-1.0, 1.0]; 0 = neutral."""
         if not words:
             return 0.0

@@ -1,4 +1,10 @@
-.PHONY: build test lint typecheck proto all clean
+.PHONY: build test lint typecheck format coverage quality clean proto \
+        fe-install fe-build fe-lint fe-typecheck \
+        test-db test-handler all
+
+# ---------------------------------------------------------------------------
+# Go build / test
+# ---------------------------------------------------------------------------
 
 build:
 	go build ./...
@@ -6,18 +12,22 @@ build:
 test:
 	go test ./... -v -timeout 30s
 
-lint:
-	go vet ./...
-	@which golangci-lint > /dev/null 2>&1 && golangci-lint run ./... || echo "golangci-lint not installed, skipping"
-
 test-db:
 	go test ./internal/db/... -v -timeout 30s
 
 test-handler:
 	go test ./internal/handler/... -v -timeout 30s
 
+# ---------------------------------------------------------------------------
+# Proto generation
+# ---------------------------------------------------------------------------
+
 proto:
 	buf generate
+
+# ---------------------------------------------------------------------------
+# Frontend
+# ---------------------------------------------------------------------------
 
 fe-install:
 	cd dashboard && npm install
@@ -31,8 +41,64 @@ fe-lint:
 fe-typecheck:
 	cd dashboard && npm run typecheck
 
+fe-format:
+	cd dashboard && npx prettier --write 'src/**/*.{ts,tsx,css}'
+
+# ---------------------------------------------------------------------------
+# Quality targets (all three layers)
+# ---------------------------------------------------------------------------
+
+## lint: run all linters (Python + Go + React)
+lint:
+	@echo "── Python: ruff ──────────────────────────────"
+	python3 -m ruff check omega/ tests/
+	@echo "── Go: vet + golangci-lint ───────────────────"
+	go vet ./...
+	@which golangci-lint > /dev/null 2>&1 && golangci-lint run ./... || echo "golangci-lint not installed, skipping"
+	@echo "── React: eslint ─────────────────────────────"
+	cd dashboard && npm run lint
+
+## format: auto-format all code (Python + Go + React)
+format:
+	@echo "── Python: ruff format ───────────────────────"
+	python3 -m ruff format omega/ tests/
+	python3 -m ruff check --fix omega/ tests/
+	@echo "── Go: gofumpt ───────────────────────────────"
+	@which gofumpt > /dev/null 2>&1 && gofumpt -l -w . || go fmt ./...
+	@echo "── React: prettier ───────────────────────────"
+	cd dashboard && npx prettier --write 'src/**/*.{ts,tsx,css}'
+
+## typecheck: mypy (Python) + tsc (React)
+typecheck:
+	@echo "── Python: mypy ──────────────────────────────"
+	python3 -m mypy omega/ tests/
+	@echo "── React: tsc ────────────────────────────────"
+	cd dashboard && npm run typecheck
+
+## coverage: run tests with coverage reports
+coverage:
+	@echo "── Python coverage ───────────────────────────"
+	python3 -m pytest \
+		--cov=omega \
+		--cov-report=xml:coverage-python.xml \
+		--cov-report=term-missing \
+		tests/
+	@echo "── Go coverage ───────────────────────────────"
+	go test -coverprofile=coverage-go.out -covermode=atomic ./...
+	go tool cover -func=coverage-go.out | tail -1
+
+## quality: full CI pipeline (lint + typecheck + test)
+quality:
+	@echo "Running full quality pipeline..."
+	bash scripts/ci.sh
+
+# ---------------------------------------------------------------------------
+# Build all
+# ---------------------------------------------------------------------------
+
 all: build fe-build
 
 clean:
 	rm -f omega-api
+	rm -f coverage-go.out coverage-python.xml junit-python.xml
 	rm -rf dashboard/dist

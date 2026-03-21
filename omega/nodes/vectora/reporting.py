@@ -14,7 +14,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
@@ -66,7 +66,7 @@ class ReportingNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["generate_report", "summarize_market", "format_signals"]
 
     def describe(self) -> str:
@@ -135,7 +135,7 @@ class ReportingNode(Node):
                 metrics={"latency_ms": elapsed},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_rate(),
@@ -144,7 +144,7 @@ class ReportingNode(Node):
             "last_report_sections": float(self._last_report_sections),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
         iteration = feedback.get("iteration", 0)
 
@@ -173,14 +173,14 @@ class ReportingNode(Node):
 
     # ------------------------------------------------------------------ report generation
 
-    def _generate_full_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_full_report(self, params: dict[str, Any]) -> dict[str, Any]:
         market_data = params.get("market_data", {})
         signals = params.get("signals", {})
         portfolio = params.get("portfolio", {})
         risk = params.get("risk", {})
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        lines: List[str] = []
+        lines: list[str] = []
         sections = 0
 
         # ── Header ─────────────────────────────────────────────────────────────
@@ -311,7 +311,7 @@ class ReportingNode(Node):
 
         # ── Footer ─────────────────────────────────────────────────────────────
         lines.append("=" * 68)
-        lines.append(f"  Nodes: DataIngestion | Signals | Strategy | Risk | Reporting")
+        lines.append("  Nodes: DataIngestion | Signals | Strategy | Risk | Reporting")
         lines.append("=" * 68)
 
         report_text = "\n".join(lines)
@@ -321,7 +321,7 @@ class ReportingNode(Node):
             "timestamp": timestamp,
         }
 
-    def _summarize_market(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _summarize_market(self, market_data: dict[str, Any]) -> dict[str, Any]:
         """Generate a brief market overview from raw OHLCV data."""
         if not market_data:
             return {"text": "No market data available."}
@@ -329,7 +329,8 @@ class ReportingNode(Node):
         valid = {k: v for k, v in market_data.items() if v}
         lines = [f"  Tickers tracked : {len(market_data)} ({len(valid)} with data)"]
 
-        gainers, losers = [], []
+        gainers: list[tuple[str, float, float]] = []
+        losers: list[tuple[str, float, float]] = []
         for ticker, data in valid.items():
             prices = [
                 float(p) for p in (data.get("adjclose") or data.get("close", []))
@@ -362,7 +363,7 @@ class ReportingNode(Node):
 
         return {"text": "\n".join(lines)}
 
-    def _format_signals(self, signals: Dict[str, Any]) -> Dict[str, Any]:
+    def _format_signals(self, signals: dict[str, Any]) -> dict[str, Any]:
         """Format signals into a readable table."""
         if not signals:
             return {"text": "  No signals generated."}
@@ -388,7 +389,7 @@ class ReportingNode(Node):
             f"  {'-'*12} {'-'*8}  {'-'*10}  {'-'*6}  {'-'*8}",
         ]
 
-        def fmt_row(ticker: str, sig: Dict[str, Any], label: str = "") -> str:
+        def fmt_row(ticker: str, sig: dict[str, Any], label: str = "") -> str:
             composite = sig.get("composite", 0.0)
             price = sig.get("price")
             rsi = sig.get("rsi")

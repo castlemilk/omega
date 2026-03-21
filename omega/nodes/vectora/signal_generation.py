@@ -20,14 +20,14 @@ import logging
 import math
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.vectora.signal_generation")
 
 
-def _safe_mean(values: List[Optional[float]], n: int) -> Optional[float]:
+def _safe_mean(values: list[float | None], n: int) -> float | None:
     clean = [v for v in values[-n:] if v is not None]
     return sum(clean) / len(clean) if clean else None
 
@@ -88,7 +88,7 @@ class SignalGenerationNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["compute_signals", "compute_momentum", "compute_mean_reversion"]
 
     def describe(self) -> str:
@@ -158,7 +158,7 @@ class SignalGenerationNode(Node):
                 metrics={"latency_ms": elapsed},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_rate(),
@@ -167,7 +167,7 @@ class SignalGenerationNode(Node):
             "indicator_count": float(self._indicator_count()),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
         iteration = feedback.get("iteration", 0)
 
@@ -212,8 +212,8 @@ class SignalGenerationNode(Node):
 
     # ------------------------------------------------------------------ signal computation
 
-    def _compute_all_signals(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
-        signals: Dict[str, Any] = {}
+    def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
+        signals: dict[str, Any] = {}
 
         for ticker, data in market_data.items():
             if not data:
@@ -224,11 +224,11 @@ class SignalGenerationNode(Node):
             if len(prices) < self._sma_long + 1:
                 continue
 
-            ts: Dict[str, Any] = {}
+            ts: dict[str, Any] = {}
 
             # SMA crossover (always active)
-            sma_short = _safe_mean(prices, self._sma_short)
-            sma_long = _safe_mean(prices, self._sma_long)
+            sma_short = _safe_mean(prices, self._sma_short)  # type: ignore[arg-type]
+            sma_long = _safe_mean(prices, self._sma_long)  # type: ignore[arg-type]
             if sma_short is not None and sma_long is not None:
                 ts["sma_crossover"] = 1.0 if sma_short > sma_long else -1.0
                 ts["sma_short"] = sma_short
@@ -341,8 +341,8 @@ class SignalGenerationNode(Node):
 
         return signals
 
-    def _compute_momentum_signals(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
-        signals: Dict[str, Any] = {}
+    def _compute_momentum_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
+        signals: dict[str, Any] = {}
         for ticker, data in market_data.items():
             if not data:
                 continue
@@ -359,8 +359,8 @@ class SignalGenerationNode(Node):
             }
         return signals
 
-    def _compute_mean_reversion_signals(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
-        signals: Dict[str, Any] = {}
+    def _compute_mean_reversion_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
+        signals: dict[str, Any] = {}
         for ticker, data in market_data.items():
             if not data:
                 continue
@@ -380,7 +380,7 @@ class SignalGenerationNode(Node):
 
     # ------------------------------------------------------------------ indicators
 
-    def _compute_rsi(self, prices: List[float], period: int = 14) -> Optional[float]:
+    def _compute_rsi(self, prices: list[float], period: int = 14) -> float | None:
         if len(prices) < period + 1:
             return None
         deltas = [prices[i] - prices[i - 1] for i in range(1, len(prices))]
@@ -393,7 +393,7 @@ class SignalGenerationNode(Node):
         rs = avg_gain / avg_loss
         return 100.0 - (100.0 / (1.0 + rs))
 
-    def _compute_ema(self, prices: List[float], period: int) -> List[float]:
+    def _compute_ema(self, prices: list[float], period: int) -> list[float]:
         if not prices:
             return []
         k = 2.0 / (period + 1)
@@ -403,8 +403,8 @@ class SignalGenerationNode(Node):
         return ema
 
     def _compute_macd(
-        self, prices: List[float]
-    ) -> Tuple[Optional[float], Optional[float]]:
+        self, prices: list[float]
+    ) -> tuple[float | None, float | None]:
         if len(prices) < self._macd_slow + self._macd_signal_period:
             return None, None
         ema_fast = self._compute_ema(prices, self._macd_fast)
@@ -412,7 +412,7 @@ class SignalGenerationNode(Node):
         # align by taking the slow EMA's starting index
         offset = self._macd_slow - 1
         macd_series = [
-            f - s for f, s in zip(ema_fast[offset:], ema_slow[offset:])
+            f - s for f, s in zip(ema_fast[offset:], ema_slow[offset:], strict=False)
         ]
         if len(macd_series) < self._macd_signal_period:
             return None, None
@@ -420,8 +420,8 @@ class SignalGenerationNode(Node):
         return macd_series[-1], signal_series[-1]
 
     def _compute_bollinger_bands(
-        self, prices: List[float], period: int = 20, num_std: float = 2.0
-    ) -> Optional[Dict[str, float]]:
+        self, prices: list[float], period: int = 20, num_std: float = 2.0
+    ) -> dict[str, float] | None:
         if len(prices) < period:
             return None
         recent = prices[-period:]
@@ -435,8 +435,8 @@ class SignalGenerationNode(Node):
         }
 
     def _compute_zscore_returns(
-        self, prices: List[float], period: int = 20
-    ) -> Optional[float]:
+        self, prices: list[float], period: int = 20
+    ) -> float | None:
         if len(prices) < period + 1:
             return None
         returns = [
@@ -452,7 +452,7 @@ class SignalGenerationNode(Node):
         std = math.sqrt(variance) if variance > 0 else 1.0
         return (returns[-1] - mean) / std
 
-    def _compute_zscore_series(self, values: List[float], period: int) -> Optional[float]:
+    def _compute_zscore_series(self, values: list[float], period: int) -> float | None:
         """Z-score of the last value relative to the recent period."""
         if len(values) < period + 1:
             return None
@@ -464,7 +464,7 @@ class SignalGenerationNode(Node):
         std = math.sqrt(variance) if variance > 0 else 1.0
         return (recent[-1] - mean) / std
 
-    def _compute_returns(self, prices: List[float], period: int = 20) -> List[float]:
+    def _compute_returns(self, prices: list[float], period: int = 20) -> list[float]:
         """Compute recent daily returns."""
         if len(prices) < 2:
             return []
@@ -475,7 +475,7 @@ class SignalGenerationNode(Node):
         ]
         return rets
 
-    def _compute_beta(self, asset_rets: List[float], btc_rets: List[float]) -> float:
+    def _compute_beta(self, asset_rets: list[float], btc_rets: list[float]) -> float:
         """OLS beta of asset returns against BTC returns."""
         n = min(len(asset_rets), len(btc_rets))
         if n < 5:
@@ -489,8 +489,8 @@ class SignalGenerationNode(Node):
         return cov / var_x if var_x > 0 else 1.0
 
     def _compute_vol_regime(
-        self, prices: List[float], short_window: int = 10, long_window: int = 60
-    ):
+        self, prices: list[float], short_window: int = 10, long_window: int = 60
+    ) -> tuple[str, float, float]:
         """Detect volatility regime: 'high', 'normal', or 'low'."""
         if len(prices) < long_window + 1:
             return "normal", 0.0, 0.0
@@ -501,7 +501,7 @@ class SignalGenerationNode(Node):
             if prices[i - 1] != 0
         ]
 
-        def annualised_vol(ret_window):
+        def annualised_vol(ret_window: list[float]) -> float:
             if len(ret_window) < 2:
                 return 0.0
             mean = sum(ret_window) / len(ret_window)
@@ -521,7 +521,7 @@ class SignalGenerationNode(Node):
             return "low", recent_vol, long_vol
         return "normal", recent_vol, long_vol
 
-    def _clean_prices(self, prices: List) -> List[float]:
+    def _clean_prices(self, prices: list) -> list[float]:
         result = []
         for p in prices:
             if p is None:
@@ -536,7 +536,7 @@ class SignalGenerationNode(Node):
 
     # ------------------------------------------------------------------ helpers
 
-    def _active_indicators(self) -> List[str]:
+    def _active_indicators(self) -> list[str]:
         indicators = ["sma_crossover"]
         if self._use_rsi:
             indicators.append("rsi")

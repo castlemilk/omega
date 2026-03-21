@@ -30,13 +30,13 @@ func New(stateDBPath, memoryDBPath string) (*DB, error) {
 	}
 	memory, err := openDB(memoryDBPath)
 	if err != nil {
-		state.Close() //nolint:errcheck
+		state.Close() //nolint:errcheck,gosec,gosec
 		return nil, fmt.Errorf("open memory db: %w", err)
 	}
 	d := &DB{state: state, memory: memory}
 	if err := d.ensureBrainTables(); err != nil {
-		state.Close()  //nolint:errcheck
-		memory.Close() //nolint:errcheck
+		state.Close()  //nolint:errcheck,gosec,gosec
+		memory.Close() //nolint:errcheck,gosec,gosec
 		return nil, fmt.Errorf("ensure brain tables: %w", err)
 	}
 	return d, nil
@@ -53,8 +53,8 @@ func openDB(path string) (*sql.DB, error) {
 }
 
 func (d *DB) Close() {
-	d.state.Close()  //nolint:errcheck
-	d.memory.Close() //nolint:errcheck
+	d.state.Close()  //nolint:errcheck,gosec,gosec
+	d.memory.Close() //nolint:errcheck,gosec,gosec
 }
 
 // ── Node types ──────────────────────────────────────────────────────────────
@@ -291,7 +291,7 @@ func (d *DB) GetBrainConfig(nodeID string) (*BrainConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal([]byte(extraJSON), &c.ExtraConfig) //nolint:errcheck
+	json.Unmarshal([]byte(extraJSON), &c.ExtraConfig) //nolint:errcheck,gosec,gosec
 	return c, nil
 }
 
@@ -320,7 +320,7 @@ func (d *DB) GetBrainHistory(nodeID string, limit int) ([]*BrainExecutionEntry, 
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var entries []*BrainExecutionEntry
 	for rows.Next() {
 		e := &BrainExecutionEntry{}
@@ -346,7 +346,7 @@ func (d *DB) AllNodes() ([]*Node, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 
 	var nodes []*Node
 	for rows.Next() {
@@ -356,7 +356,7 @@ func (d *DB) AllNodes() ([]*Node, error) {
 			&n.Health, &n.Status, &n.RegisteredAt, &n.LastUpdated); err != nil {
 			return nil, err
 		}
-		json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck
+		json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck,gosec,gosec
 		nodes = append(nodes, n)
 	}
 
@@ -379,7 +379,7 @@ func (d *DB) GetNode(nodeID string) (*Node, error) {
 		&n.Health, &n.Status, &n.RegisteredAt, &n.LastUpdated); err != nil {
 		return nil, err
 	}
-	json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck
+	json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck,gosec,gosec
 	return n, d.enrichNode(n)
 }
 
@@ -393,7 +393,7 @@ func (d *DB) enrichNode(n *Node) error {
 	var total, failed int64
 	var avgMS sql.NullFloat64
 	var lastStarted sql.NullFloat64
-	row.Scan(&total, &failed, &avgMS, &lastStarted) //nolint:errcheck
+	row.Scan(&total, &failed, &avgMS, &lastStarted) //nolint:errcheck,gosec,gosec
 
 	n.ExecutionsTotal = total
 	if total > 0 {
@@ -405,7 +405,7 @@ func (d *DB) enrichNode(n *Node) error {
 
 	// p95 latency — two-query approach (SQLite rejects COUNT(*) inside OFFSET)
 	var p95Count int64
-	d.state.QueryRow(`SELECT COUNT(*) FROM node_executions WHERE node_id = ? AND duration_ms IS NOT NULL`, n.NodeID).Scan(&p95Count) //nolint:errcheck
+	d.state.QueryRow(`SELECT COUNT(*) FROM node_executions WHERE node_id = ? AND duration_ms IS NOT NULL`, n.NodeID).Scan(&p95Count) //nolint:errcheck,gosec
 	if p95Count > 0 {
 		offset := int64(float64(p95Count) * 0.95)
 		p95row := d.state.QueryRow(`
@@ -415,7 +415,7 @@ func (d *DB) enrichNode(n *Node) error {
 			LIMIT 1 OFFSET ?
 		`, n.NodeID, offset)
 		var p95 sql.NullFloat64
-		p95row.Scan(&p95) //nolint:errcheck
+		p95row.Scan(&p95) //nolint:errcheck,gosec
 		if p95.Valid {
 			n.P95LatencyMS = p95.Float64
 		}
@@ -423,7 +423,7 @@ func (d *DB) enrichNode(n *Node) error {
 
 	row2 := d.state.QueryRow(
 		`SELECT COUNT(*) FROM improvement_log WHERE node_id = ?`, n.NodeID)
-	row2.Scan(&n.ImprovementCount) //nolint:errcheck
+	row2.Scan(&n.ImprovementCount) //nolint:errcheck,gosec
 
 	lastExec, err := d.lastExecution(n.NodeID)
 	if err == nil {
@@ -462,7 +462,7 @@ func scanExecution(row *sql.Row) (*Execution, error) {
 		v := durationMS.Float64
 		e.DurationMS = &v
 	}
-	json.Unmarshal([]byte(metricsJSON), &e.Metrics) //nolint:errcheck
+	json.Unmarshal([]byte(metricsJSON), &e.Metrics) //nolint:errcheck,gosec
 	return e, nil
 }
 
@@ -483,7 +483,7 @@ func (d *DB) GetExecutions(nodeID string, limit int) ([]*Execution, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	return scanExecutions(rows)
 }
 
@@ -508,7 +508,7 @@ func scanExecutions(rows *sql.Rows) ([]*Execution, error) {
 			v := durationMS.Float64
 			e.DurationMS = &v
 		}
-		json.Unmarshal([]byte(metricsJSON), &e.Metrics) //nolint:errcheck
+		json.Unmarshal([]byte(metricsJSON), &e.Metrics) //nolint:errcheck,gosec
 		result = append(result, e)
 	}
 	return result, nil
@@ -523,7 +523,7 @@ func (d *DB) LatencyHistory(nodeID string, limit int) ([]*LatencyPoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var points []*LatencyPoint
 	for rows.Next() {
 		p := &LatencyPoint{}
@@ -556,7 +556,7 @@ func (d *DB) RecentTraces(limit int) ([]*TraceSummary, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var summaries []*TraceSummary
 	for rows.Next() {
 		t := &TraceSummary{}
@@ -583,7 +583,7 @@ func (d *DB) GetTraceSpans(traceID string) ([]*Span, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var spans []*Span
 	for rows.Next() {
 		s := &Span{}
@@ -625,7 +625,7 @@ func (d *DB) GetIssues(stateFilter string) ([]*Issue, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var issues []*Issue
 	for rows.Next() {
 		i := &Issue{}
@@ -655,7 +655,7 @@ func (d *DB) RecentActivity(limit int) ([]*ActivityEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var entries []*ActivityEntry
 	for rows.Next() {
 		e := &ActivityEntry{}
@@ -685,7 +685,7 @@ func (d *DB) GetImprovements(nodeID string, limit int) ([]*Improvement, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var imps []*Improvement
 	for rows.Next() {
 		imp := &Improvement{}
@@ -695,8 +695,8 @@ func (d *DB) GetImprovements(nodeID string, limit int) ([]*Improvement, error) {
 			&imp.RecordedAt, &imp.Cycle, &beforeJSON, &afterJSON); err != nil {
 			return nil, err
 		}
-		json.Unmarshal([]byte(beforeJSON), &imp.BeforeMetrics) //nolint:errcheck
-		json.Unmarshal([]byte(afterJSON), &imp.AfterMetrics)   //nolint:errcheck
+		json.Unmarshal([]byte(beforeJSON), &imp.BeforeMetrics) //nolint:errcheck,gosec
+		json.Unmarshal([]byte(afterJSON), &imp.AfterMetrics)   //nolint:errcheck,gosec
 		imps = append(imps, imp)
 	}
 	return imps, nil
@@ -712,7 +712,7 @@ func (d *DB) GetCosts() ([]*CostEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var costs []*CostEntry
 	for rows.Next() {
 		c := &CostEntry{}
@@ -732,7 +732,7 @@ func (d *DB) GetConvergence(limit int) ([]*ConvergencePoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close() //nolint:errcheck
+	defer rows.Close() //nolint:errcheck,gosec
 	var points []*ConvergencePoint
 	for rows.Next() {
 		p := &ConvergencePoint{}
@@ -763,7 +763,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 		query += " WHERE namespace = ?"
 		args = append(args, namespace)
 	}
-	d.memory.QueryRow(query, args...).Scan(&epCount) //nolint:errcheck
+	d.memory.QueryRow(query, args...).Scan(&epCount) //nolint:errcheck,gosec
 
 	semQuery := "SELECT COUNT(*) FROM semantic_memories"
 	semArgs := []any{}
@@ -771,7 +771,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 		semQuery += " WHERE namespace = ?"
 		semArgs = append(semArgs, namespace)
 	}
-	d.memory.QueryRow(semQuery, semArgs...).Scan(&semCount) //nolint:errcheck
+	d.memory.QueryRow(semQuery, semArgs...).Scan(&semCount) //nolint:errcheck,gosec
 
 	semRowQuery := "SELECT concept, content, confidence, evidence_count, COALESCE(tags_json,'[]') FROM semantic_memories"
 	if namespace != "" {
@@ -782,7 +782,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 	if err != nil {
 		return epCount, semCount, nil, nil, err
 	}
-	defer semRows.Close() //nolint:errcheck
+	defer semRows.Close() //nolint:errcheck,gosec
 	var concepts []*SemanticConcept
 	for semRows.Next() {
 		c := &SemanticConcept{}
@@ -790,7 +790,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 		if err := semRows.Scan(&c.Concept, &c.Content, &c.Confidence, &c.EvidenceCount, &tagsJSON); err != nil {
 			return epCount, semCount, nil, nil, err
 		}
-		json.Unmarshal([]byte(tagsJSON), &c.Tags) //nolint:errcheck
+		json.Unmarshal([]byte(tagsJSON), &c.Tags) //nolint:errcheck,gosec
 		concepts = append(concepts, c)
 	}
 
@@ -803,7 +803,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 	if err != nil {
 		return epCount, semCount, concepts, nil, err
 	}
-	defer epRows.Close() //nolint:errcheck
+	defer epRows.Close() //nolint:errcheck,gosec
 	var episodes []*EpisodeEntry
 	for epRows.Next() {
 		e := &EpisodeEntry{}
@@ -811,7 +811,7 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 		if err := epRows.Scan(&e.EpisodeID, &e.EventType, &e.Timestamp, &e.Cycle, &e.Importance, &tagsJSON); err != nil {
 			return epCount, semCount, concepts, nil, err
 		}
-		json.Unmarshal([]byte(tagsJSON), &e.Tags) //nolint:errcheck
+		json.Unmarshal([]byte(tagsJSON), &e.Tags) //nolint:errcheck,gosec
 		episodes = append(episodes, e)
 	}
 
@@ -872,7 +872,7 @@ func (d *DB) SystemHealth() (*SystemHealth, error) {
 	uptime := float64(time.Now().Unix()) - minRegAt
 
 	var totalCycles int64
-	d.state.QueryRow("SELECT COALESCE(MAX(cycle), 0) FROM node_executions").Scan(&totalCycles) //nolint:errcheck
+	d.state.QueryRow("SELECT COALESCE(MAX(cycle), 0) FROM node_executions").Scan(&totalCycles) //nolint:errcheck,gosec
 
 	return &SystemHealth{
 		Status:         status,

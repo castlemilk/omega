@@ -15,14 +15,14 @@ Design intent
 - Node       : abstract base class — implement this to join the network
 """
 
+import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from datetime import datetime
-import uuid
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
-    from omega.core.brain import BrainAdapter, BrainConfig, BrainRequest, BrainResponse
+    from omega.core.brain import BrainAdapter, BrainConfig, BrainResponse
 
 
 # ---------------------------------------------------------------------------
@@ -37,10 +37,10 @@ class NodeState:
     name: str
     version: str
     health: float                          # 0.0 (broken) → 1.0 (perfect)
-    capabilities: List[str]                # verbs the node can execute
-    metrics: Dict[str, float]              # performance metrics (latency, accuracy, …)
+    capabilities: list[str]                # verbs the node can execute
+    metrics: dict[str, float]              # performance metrics (latency, accuracy, …)
     last_updated: datetime = field(default_factory=datetime.now)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def is_healthy(self, threshold: float = 0.5) -> bool:
         return self.health >= threshold
@@ -52,8 +52,8 @@ class NodeInput:
 
     request_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     action: str = ""                       # verb the node should execute
-    parameters: Dict[str, Any] = field(default_factory=dict)
-    context: Dict[str, Any] = field(default_factory=dict)   # orchestrator metadata
+    parameters: dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)   # orchestrator metadata
 
 
 @dataclass
@@ -63,9 +63,9 @@ class NodeOutput:
     request_id: str = ""
     success: bool = True
     result: Any = None
-    metrics: Dict[str, float] = field(default_factory=dict)  # this execution's perf
-    errors: List[str] = field(default_factory=list)
-    suggestions: List[str] = field(default_factory=list)     # node-initiated hints
+    metrics: dict[str, float] = field(default_factory=dict)  # this execution's perf
+    errors: list[str] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)     # node-initiated hints
 
 
 # ---------------------------------------------------------------------------
@@ -96,8 +96,9 @@ class Node(ABC):
     """
 
     def __init__(self, brain_config: Optional["BrainConfig"] = None) -> None:
-        from omega.core.brain import create_brain, BrainConfig as _BC
-        self.brain: "BrainAdapter" = create_brain(brain_config or _BC())
+        from omega.core.brain import BrainConfig as BrainConfigCls
+        from omega.core.brain import create_brain
+        self.brain: BrainAdapter = create_brain(brain_config or BrainConfigCls())
 
     def __getattr__(self, name: str) -> Any:
         # Lazily initialise self.brain for subclasses that don't call super().__init__()
@@ -130,8 +131,8 @@ class Node(ABC):
     def consult_brain(
         self,
         operation: str,
-        metrics: Optional[Dict[str, float]] = None,
-        memories: Optional[List[Dict]] = None,
+        metrics: dict[str, float] | None = None,
+        memories: list[dict] | None = None,
         trace_id: str = "",
     ) -> "BrainResponse":
         """
@@ -190,7 +191,7 @@ class Node(ABC):
         """
 
     @abstractmethod
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         """
         Return the list of action verbs this node can execute.
 
@@ -230,7 +231,7 @@ class Node(ABC):
     # ------------------------------------------------------------------
 
     @abstractmethod
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         """
         Self-evaluate and return a dict of performance metrics.
 
@@ -240,7 +241,7 @@ class Node(ABC):
         """
 
     @abstractmethod
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """
         Accept improvement feedback and modify internal behaviour.
 
@@ -284,7 +285,7 @@ class RoleNode(Node):
         output = role.execute(NodeInput(action="research", parameters={}))
     """
 
-    def __init__(self, role_name: str, capability_nodes: List["Node"]) -> None:
+    def __init__(self, role_name: str, capability_nodes: list["Node"]) -> None:
         import uuid
         self._node_id = str(uuid.uuid4())
         self._role_name = role_name
@@ -296,7 +297,6 @@ class RoleNode(Node):
     # -- Node interface
 
     def get_state(self) -> NodeState:
-        import time
         avg_health = (
             sum(n.get_state().health for n in self._capability_nodes) /
             max(1, len(self._capability_nodes))
@@ -321,7 +321,7 @@ class RoleNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         caps = []
         for n in self._capability_nodes:
             caps.extend(n.get_capabilities())
@@ -362,7 +362,7 @@ class RoleNode(Node):
             metrics={"role_latency_ms": (time.perf_counter() - t0) * 1000},
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         metrics = {"error_rate": self._error_count / max(1, self._execution_count)}
         for node in self._capability_nodes:
             try:
@@ -373,7 +373,7 @@ class RoleNode(Node):
                 pass
         return metrics
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """Delegate improvement to all composed nodes. Returns True if any improved."""
         any_improved = False
         for node in self._capability_nodes:

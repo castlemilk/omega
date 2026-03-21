@@ -14,7 +14,7 @@ import logging
 import math
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
@@ -75,7 +75,7 @@ class RiskManagementNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["compute_var", "check_risk_limits", "compute_correlation"]
 
     def describe(self) -> str:
@@ -145,7 +145,7 @@ class RiskManagementNode(Node):
                 metrics={"latency_ms": elapsed},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_rate(),
@@ -154,7 +154,7 @@ class RiskManagementNode(Node):
             "max_pairwise_correlation": self._last_max_correlation,
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
         iteration = feedback.get("iteration", 0)
 
@@ -197,8 +197,8 @@ class RiskManagementNode(Node):
     # ------------------------------------------------------------------ risk computation
 
     def _compute_portfolio_var(
-        self, portfolio: Dict[str, Any], market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, portfolio: dict[str, Any], market_data: dict[str, Any]
+    ) -> dict[str, Any]:
         weights = portfolio.get("weights", {})
         if not weights:
             return {"var_95": 0.0, "cvar_95": 0.0, "method": "historical"}
@@ -210,7 +210,7 @@ class RiskManagementNode(Node):
             return {"var_95": 0.0, "cvar_95": 0.0, "method": "historical"}
 
         var_95 = self._historical_var(portfolio_returns, self._var_confidence)
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "var_95": var_95,
             "method": "historical",
             "confidence": self._var_confidence,
@@ -235,11 +235,11 @@ class RiskManagementNode(Node):
         return result
 
     def _check_risk_limits(
-        self, portfolio: Dict[str, Any], market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, portfolio: dict[str, Any], market_data: dict[str, Any]
+    ) -> dict[str, Any]:
         weights = portfolio.get("weights", {})
-        violations: List[str] = []
-        adjusted_weights: Dict[str, float] = dict(weights)
+        violations: list[str] = []
+        adjusted_weights: dict[str, float] = dict(weights)
 
         # Position size limit
         for ticker, w in weights.items():
@@ -285,10 +285,10 @@ class RiskManagementNode(Node):
         }
 
     def _compute_correlation_matrix(
-        self, market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, market_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Compute pairwise return correlations between assets."""
-        returns_by_ticker: Dict[str, List[float]] = {}
+        returns_by_ticker: dict[str, list[float]] = {}
 
         for ticker, data in market_data.items():
             if not data:
@@ -308,7 +308,7 @@ class RiskManagementNode(Node):
         if len(tickers) < 2:
             return {"correlations": {}, "max_correlation": 0.0}
 
-        correlations: Dict[str, float] = {}
+        correlations: dict[str, float] = {}
         max_corr = 0.0
 
         for i in range(len(tickers)):
@@ -330,12 +330,12 @@ class RiskManagementNode(Node):
     # ------------------------------------------------------------------ statistics
 
     def _compute_portfolio_returns(
-        self, weights: Dict[str, float], market_data: Dict[str, Any]
-    ) -> List[float]:
+        self, weights: dict[str, float], market_data: dict[str, Any]
+    ) -> list[float]:
         """Compute weighted portfolio daily returns."""
-        all_returns: Dict[str, List[float]] = {}
+        all_returns: dict[str, list[float]] = {}
 
-        for ticker, weight in weights.items():
+        for ticker, _weight in weights.items():
             data = market_data.get(ticker)
             if not data:
                 continue
@@ -369,7 +369,7 @@ class RiskManagementNode(Node):
 
         return portfolio_returns
 
-    def _historical_var(self, returns: List[float], confidence: float) -> float:
+    def _historical_var(self, returns: list[float], confidence: float) -> float:
         """Historical VaR: the (1-confidence) percentile of returns (as loss)."""
         if not returns:
             return 0.0
@@ -378,7 +378,7 @@ class RiskManagementNode(Node):
         idx = max(0, min(idx, len(sorted_rets) - 1))
         return max(0.0, -sorted_rets[idx])
 
-    def _historical_cvar(self, returns: List[float], confidence: float) -> float:
+    def _historical_cvar(self, returns: list[float], confidence: float) -> float:
         """CVaR: mean of returns below VaR threshold (Expected Shortfall)."""
         if not returns:
             return 0.0
@@ -387,14 +387,14 @@ class RiskManagementNode(Node):
         tail = sorted_rets[:n_tail]
         return max(0.0, -sum(tail) / len(tail))
 
-    def _compute_vol(self, returns: List[float]) -> float:
+    def _compute_vol(self, returns: list[float]) -> float:
         if len(returns) < 2:
             return 0.0
         mean = sum(returns) / len(returns)
         variance = sum((r - mean) ** 2 for r in returns) / (len(returns) - 1)
         return math.sqrt(variance)
 
-    def _pearson_correlation(self, x: List[float], y: List[float]) -> float:
+    def _pearson_correlation(self, x: list[float], y: list[float]) -> float:
         n = len(x)
         if n < 2:
             return 0.0
@@ -406,7 +406,7 @@ class RiskManagementNode(Node):
         denom = math.sqrt(var_x * var_y)
         return cov / denom if denom > 0 else 0.0
 
-    def _clean_prices(self, prices: List) -> List[float]:
+    def _clean_prices(self, prices: list) -> list[float]:
         result = []
         for p in prices:
             if p is None:

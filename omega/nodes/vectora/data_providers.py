@@ -23,7 +23,7 @@ import time
 import urllib.error
 import urllib.request
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger("omega.nodes.vectora.data_providers")
 
@@ -66,7 +66,7 @@ class DataProvider(ABC):
         """Human-readable description of what this provider fetches."""
 
     @abstractmethod
-    def fetch(self, pairs: List[str], **kwargs) -> Dict[str, Any]:
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
         """
         Fetch data for the given list of pairs.
         Returns dict mapping pair → data (or None for failed pairs).
@@ -77,7 +77,7 @@ class DataProvider(ABC):
     def is_available(self) -> bool:
         """Quick connectivity check. Returns True if provider is reachable."""
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Return provider status for monitoring."""
         return {"name": self.name, "available": self.is_available()}
 
@@ -88,7 +88,7 @@ class BinanceProvider(DataProvider):
     """Fetches OHLCV klines from Binance public API (no auth required)."""
 
     def __init__(self) -> None:
-        self._cache: Dict[str, Tuple[float, Any]] = {}
+        self._cache: dict[str, tuple[float, Any]] = {}
         self._total_fetched = 0
         self._total_failed = 0
 
@@ -102,7 +102,7 @@ class BinanceProvider(DataProvider):
 
     def fetch_klines(
         self, pair: str, interval: str = "1d", limit: int = 90
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Fetch OHLCV klines from Binance for a single pair."""
         cache_key = f"{pair}:{interval}:{limit}"
         if cache_key in self._cache:
@@ -180,11 +180,11 @@ class BinanceProvider(DataProvider):
 
         return None
 
-    def fetch(self, pairs: List[str], **kwargs) -> Dict[str, Any]:
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
         """Fetch OHLCV for all given pairs."""
         interval = kwargs.get("interval", "1d")
         limit = int(kwargs.get("limit", 90))
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for pair in pairs:
             data = self.fetch_klines(pair, interval=interval, limit=limit)
             result[pair] = data
@@ -209,7 +209,7 @@ class CoinGeckoProvider(DataProvider):
     """Fetches market data enrichment from CoinGecko public API."""
 
     def __init__(self) -> None:
-        self._cache: Dict[str, Tuple[float, Any]] = {}
+        self._cache: dict[str, tuple[float, Any]] = {}
 
     @property
     def name(self) -> str:
@@ -219,7 +219,7 @@ class CoinGeckoProvider(DataProvider):
     def description(self) -> str:
         return "CoinGecko — market caps, rankings, 24h price change"
 
-    def fetch(self, pairs: List[str], **kwargs) -> Dict[str, Any]:
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
         """Fetch CoinGecko market data for given pairs."""
         cache_key = "bulk_markets"
         if cache_key in self._cache:
@@ -244,7 +244,7 @@ class CoinGeckoProvider(DataProvider):
                 raw = json.loads(resp.read().decode("utf-8"))
 
             id_to_pair = {v: k for k, v in _COINGECKO_IDS.items()}
-            result: Dict[str, Any] = {}
+            result: dict[str, Any] = {}
             for coin in raw:
                 cg_id = coin.get("id", "")
                 pair = id_to_pair.get(cg_id)
@@ -277,7 +277,7 @@ class BybitProvider(DataProvider):
     """Fetches OHLCV klines from Bybit public API (fallback to Binance)."""
 
     def __init__(self) -> None:
-        self._cache: Dict[str, Tuple[float, Any]] = {}
+        self._cache: dict[str, tuple[float, Any]] = {}
         self._total_fetched = 0
         self._total_failed = 0
 
@@ -291,7 +291,7 @@ class BybitProvider(DataProvider):
 
     def fetch_klines(
         self, pair: str, interval: str = "1d", limit: int = 90
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Fetch OHLCV klines from Bybit for a single pair."""
         cache_key = f"bybit:{pair}:{interval}:{limit}"
         if cache_key in self._cache:
@@ -363,11 +363,11 @@ class BybitProvider(DataProvider):
             self._total_failed += 1
             return None
 
-    def fetch(self, pairs: List[str], **kwargs) -> Dict[str, Any]:
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
         """Fetch OHLCV for all given pairs from Bybit."""
         interval = kwargs.get("interval", "1d")
         limit = int(kwargs.get("limit", 90))
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         for pair in pairs:
             data = self.fetch_klines(pair, interval=interval, limit=limit)
             result[pair] = data
@@ -392,7 +392,7 @@ class FearGreedProvider(DataProvider):
     """Fetches the Alternative.me Crypto Fear & Greed Index."""
 
     def __init__(self) -> None:
-        self._cache: Dict[str, Tuple[float, Any]] = {}
+        self._cache: dict[str, tuple[float, Any]] = {}
 
     @property
     def name(self) -> str:
@@ -402,7 +402,7 @@ class FearGreedProvider(DataProvider):
     def description(self) -> str:
         return "Alternative.me Fear & Greed Index — crypto market sentiment (0-100)"
 
-    def fetch(self, pairs: List[str], **kwargs) -> Dict[str, Any]:
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
         """Fetch the Fear & Greed Index (pairs is ignored — market-wide index)."""
         cache_key = "fear_greed_30d"
         if cache_key in self._cache:
@@ -467,7 +467,7 @@ class DefiLlamaProvider(DataProvider):
     """Fetches DeFi protocol TVL rankings from DefiLlama."""
 
     def __init__(self) -> None:
-        self._cache: Dict[str, Tuple[float, Any]] = {}
+        self._cache: dict[str, tuple[float, Any]] = {}
 
     @property
     def name(self) -> str:
@@ -477,7 +477,7 @@ class DefiLlamaProvider(DataProvider):
     def description(self) -> str:
         return "DefiLlama — DeFi protocol TVL rankings (top 20 by TVL)"
 
-    def fetch(self, pairs: List[str], **kwargs) -> Dict[str, Any]:
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
         """Fetch top 20 DeFi protocols by TVL (pairs is ignored)."""
         cache_key = "defi_protocols"
         if cache_key in self._cache:
@@ -549,17 +549,17 @@ class ProviderRegistry:
     """Registry of all available data providers."""
 
     def __init__(self) -> None:
-        self._providers: Dict[str, DataProvider] = {}
-        self._enabled: Dict[str, bool] = {}
+        self._providers: dict[str, DataProvider] = {}
+        self._enabled: dict[str, bool] = {}
 
     def register(self, provider: DataProvider, enabled: bool = True) -> None:
         self._providers[provider.name] = provider
         self._enabled[provider.name] = enabled
 
-    def get(self, name: str) -> Optional[DataProvider]:
+    def get(self, name: str) -> DataProvider | None:
         return self._providers.get(name)
 
-    def enabled_providers(self) -> List[DataProvider]:
+    def enabled_providers(self) -> list[DataProvider]:
         return [p for n, p in self._providers.items() if self._enabled.get(n, True)]
 
     def disable(self, name: str) -> None:
@@ -568,7 +568,7 @@ class ProviderRegistry:
     def enable(self, name: str) -> None:
         self._enabled[name] = True
 
-    def status(self) -> Dict[str, Any]:
+    def status(self) -> dict[str, Any]:
         return {
             name: {"enabled": self._enabled.get(name, True)}
             for name in self._providers

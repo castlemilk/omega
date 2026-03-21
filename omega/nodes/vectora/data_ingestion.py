@@ -23,13 +23,12 @@ Improvement arc:
 
 import logging
 import time
-import urllib.error
-import urllib.request
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+
 from .data_providers import (
     BinanceProvider,
     BybitProvider,
@@ -68,7 +67,7 @@ class DataIngestionNode(Node):
     def __init__(self) -> None:
         self._node_id = str(uuid.uuid4())
         self._version = "1.0"
-        self._pairs: List[str] = list(_BASE_PAIRS)
+        self._pairs: list[str] = list(_BASE_PAIRS)
         self._use_retry = False
         self._use_cache = False
         self._use_coingecko = False
@@ -78,7 +77,7 @@ class DataIngestionNode(Node):
         self._total_latency_ms = 0.0
         self._total_pairs_fetched = 0
         self._total_pairs_failed = 0
-        self._last_fetch_time: Optional[datetime] = None
+        self._last_fetch_time: datetime | None = None
 
         # ── Provider registry ─────────────────────────────────────────────────
         self._registry = ProviderRegistry()
@@ -120,7 +119,7 @@ class DataIngestionNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["fetch_market_data", "fetch_ohlcv", "fetch_ticker_info"]
 
     def describe(self) -> str:
@@ -201,7 +200,7 @@ class DataIngestionNode(Node):
                 metrics={"latency_ms": elapsed},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_rate(),
@@ -210,7 +209,7 @@ class DataIngestionNode(Node):
             "data_freshness_minutes": self._data_freshness_minutes(),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
         iteration = feedback.get("iteration", 0)
         error_rate = self._error_rate()
@@ -269,17 +268,17 @@ class DataIngestionNode(Node):
 
     # ------------------------------------------------------------------ Fetching
 
-    def _fetch_all_pairs(self, interval: str = "1d", limit: int = 90) -> Dict[str, Any]:
+    def _fetch_all_pairs(self, interval: str = "1d", limit: int = 90) -> dict[str, Any]:
         """Fetch OHLCV for all tracked pairs with provider fallback + supplementary data."""
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
 
         # ── CoinGecko enrichment data ─────────────────────────────────────────
-        cg_data: Dict[str, Any] = {}
+        cg_data: dict[str, Any] = {}
         if self._use_coingecko:
             cg_data = self._coingecko.fetch(self._pairs)
 
         # ── Primary: Binance ──────────────────────────────────────────────────
-        failed_pairs: List[str] = []
+        failed_pairs: list[str] = []
         for pair in self._pairs:
             data = self._binance.fetch_klines(pair, interval=interval, limit=limit)
             if data:
@@ -298,7 +297,7 @@ class DataIngestionNode(Node):
 
         # ── Fallback: Bybit for failed pairs ──────────────────────────────────
         bybit_enabled = self._registry.status().get("bybit", {}).get("enabled", True)
-        if failed_pairs and (self._use_bybit_fallback or True) and bybit_enabled:
+        if failed_pairs and bybit_enabled:
             for pair in failed_pairs:
                 data = self._bybit.fetch_klines(pair, interval=interval, limit=limit)
                 if data:
@@ -342,20 +341,20 @@ class DataIngestionNode(Node):
 
         return result
 
-    def _fetch_24h_tickers(self) -> Dict[str, Any]:
+    def _fetch_24h_tickers(self) -> dict[str, Any]:
         """Fetch 24h ticker stats from Binance for all pairs."""
         import json
         import urllib.request as _req
 
-        _BINANCE_API = "https://api.binance.com/api/v3"
-        _HEADERS = {
+        binance_api = "https://api.binance.com/api/v3"
+        headers = {
             "User-Agent": "OmegaVectora/1.0 (quantitative research bot)",
             "Accept": "application/json",
         }
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
         try:
-            url = f"{_BINANCE_API}/ticker/24hr"
-            req = _req.Request(url, headers=_HEADERS)
+            url = f"{binance_api}/ticker/24hr"
+            req = _req.Request(url, headers=headers)
             with _req.urlopen(req, timeout=10) as resp:
                 raw = json.loads(resp.read().decode("utf-8"))
 

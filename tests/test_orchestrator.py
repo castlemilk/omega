@@ -1,13 +1,14 @@
 """Tests for the Orchestrator coordination layer."""
 
-import pytest
-from omega.core.evaluator import GoalSpec
-from omega.core.orchestrator import Orchestrator
-from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-from omega.nodes.calculator import CalculatorNode
-from omega.nodes.text_analyzer import TextAnalyzerNode
 import uuid
 
+import pytest
+
+from omega.core.evaluator import GoalSpec
+from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.orchestrator import Orchestrator
+from omega.nodes.calculator import CalculatorNode
+from omega.nodes.text_analyzer import TextAnalyzerNode
 
 # ---------------------------------------------------------------------------
 # Minimal stub node for isolation tests

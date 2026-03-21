@@ -26,11 +26,11 @@ Self-improvement actions:
 """
 
 import logging
-import time
 import sqlite3
-import urllib.request
+import time
 import urllib.error
-from typing import Any, Dict, List, Optional
+import urllib.request
+from typing import Any, ClassVar
 
 logger = logging.getLogger("omega.nodes.dashboard")
 
@@ -39,7 +39,7 @@ class DashboardNode:
     """Observability dashboard as a self-improving Omega node."""
 
     node_name = "DashboardNode"
-    capabilities = [
+    capabilities: ClassVar[list[str]] = [
         "api_health_check",
         "metric_coverage_analysis",
         "data_freshness_monitoring",
@@ -55,7 +55,7 @@ class DashboardNode:
 
     def __init__(
         self,
-        state_store,
+        state_store: Any,
         api_url: str = "http://localhost:8080",
         state_db_path: str = "/tmp/omega_vectora_state.db",
     ) -> None:
@@ -64,17 +64,17 @@ class DashboardNode:
         self._state_db_path = state_db_path
 
         # Metrics tracking
-        self._api_latencies_ms: List[float] = []
+        self._api_latencies_ms: list[float] = []
         self._api_errors: int = 0
         self._api_checks: int = 0
-        self._last_coverage_report: Optional[Dict] = None
+        self._last_coverage_report: dict | None = None
         self._version: str = "1.0"
         self._health: float = 1.0
         self._improvement_count: int = 0
 
     # ── Node interface ──────────────────────────────────────────────────────
 
-    def execute(self, context: Optional[Dict] = None, input_data: Optional[Any] = None) -> Dict:
+    def execute(self, context: dict | None = None, input_data: Any | None = None) -> dict:
         """
         Run one dashboard health check cycle.
 
@@ -127,7 +127,7 @@ class DashboardNode:
 
         return {"success": True, "result": report, "metrics": report}
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         """Return current performance metrics for the orchestrator's improvement loop."""
         error_rate = self._api_errors / max(1, self._api_checks)
         p95 = self._percentile(self._api_latencies_ms, 95)
@@ -141,7 +141,7 @@ class DashboardNode:
             "health": round(self._health, 3),
         }
 
-    def improve(self, feedback: Optional[Dict] = None) -> Dict:
+    def improve(self, feedback: dict | None = None) -> dict:
         """
         Apply self-improvement based on current metrics.
 
@@ -172,8 +172,8 @@ class DashboardNode:
             improvements.append({
                 "type": "latency_optimization",
                 "action": "recommend_query_caching",
-                "p95_ms": metrics["api_latency_p95"],
-                "message": f"API p95 latency {metrics['api_latency_p95']:.0f}ms exceeds {self.API_LATENCY_HIGH_MS}ms — consider caching AllNodes() result",
+                "p95_ms": metrics["api_latency_p95"],  # type: ignore[dict-item]
+                "message": f"API p95 latency {metrics['api_latency_p95']:.0f}ms exceeds {self.API_LATENCY_HIGH_MS}ms - consider caching AllNodes() result",
             })
             logger.warning(
                 "DashboardNode improvement: high API latency p95=%.0fms",
@@ -185,8 +185,8 @@ class DashboardNode:
             improvements.append({
                 "type": "data_freshness",
                 "action": "flag_stalled_orchestrator",
-                "freshness": metrics["data_freshness_score"],
-                "message": "Data is stale — orchestrator heartbeat may be stalled",
+                "freshness": metrics["data_freshness_score"],  # type: ignore[dict-item]
+                "message": "Data is stale - orchestrator heartbeat may be stalled",
             })
             logger.warning("DashboardNode improvement: data is stale (freshness=%.2f)", metrics["data_freshness_score"])
 
@@ -206,7 +206,7 @@ class DashboardNode:
             "improvements": improvements,
         }
 
-    def get_state(self) -> Dict:
+    def get_state(self) -> dict:
         """Return current node state for registration/heartbeat."""
         return {
             "name": self.node_name,
@@ -216,7 +216,7 @@ class DashboardNode:
             "capabilities": self.capabilities,
         }
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return self.capabilities
 
     # ── Internal helpers ────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ class DashboardNode:
                     "SELECT COUNT(DISTINCT node_id) FROM node_executions"
                 )
                 covered = cur.fetchone()[0]
-                return covered / total_nodes
+                return float(covered) / float(total_nodes)
             finally:
                 conn.close()
         except Exception as e:
@@ -312,7 +312,7 @@ class DashboardNode:
         # 100ms = 1.0, 1000ms = 0.0
         return max(0.0, 1.0 - (p95 - 100) / 900)
 
-    def _build_coverage_gap_report(self) -> List[str]:
+    def _build_coverage_gap_report(self) -> list[str]:
         """Return names of nodes with zero execution records."""
         try:
             conn = sqlite3.connect(self._state_db_path, timeout=3)
@@ -332,7 +332,7 @@ class DashboardNode:
             return []
 
     @staticmethod
-    def _percentile(values: List[float], pct: float) -> float:
+    def _percentile(values: list[float], pct: float) -> float:
         if not values:
             return 0.0
         sv = sorted(values)

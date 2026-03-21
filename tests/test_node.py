@@ -1,11 +1,11 @@
 """Tests for the Node interface and data contracts."""
 
 import pytest
+
 from omega.core.node import NodeInput, NodeOutput, NodeState
 from omega.nodes.calculator import CalculatorNode
 from omega.nodes.text_analyzer import TextAnalyzerNode
 from omega.nodes.web_fetcher import WebFetcherNode
-
 
 # ---------------------------------------------------------------------------
 # NodeInput / NodeOutput / NodeState — data contract sanity checks

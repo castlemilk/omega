@@ -16,11 +16,11 @@ Responsibilities
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-from omega.core.registry import NodeRegistry
 from omega.core.evaluator import Evaluator, GoalSpec
+from omega.core.node import Node, NodeInput, NodeOutput
+from omega.core.registry import NodeRegistry
 
 logger = logging.getLogger("omega.orchestrator")
 
@@ -41,10 +41,10 @@ class RoutingDecision:
 class IterationSummary:
     iteration: int
     goal: str
-    routing_decisions: List[RoutingDecision] = field(default_factory=list)
-    outputs: List[NodeOutput] = field(default_factory=list)
-    system_metrics: Dict[str, float] = field(default_factory=dict)
-    improvements_triggered: List[str] = field(default_factory=list)
+    routing_decisions: list[RoutingDecision] = field(default_factory=list)
+    outputs: list[NodeOutput] = field(default_factory=list)
+    system_metrics: dict[str, float] = field(default_factory=dict)
+    improvements_triggered: list[str] = field(default_factory=list)
     score: float = 0.0
 
 
@@ -68,7 +68,7 @@ class Orchestrator:
         self.name = name
         self.registry = NodeRegistry()
         self.evaluator = Evaluator(db_path=db_path)
-        self._iteration_history: List[IterationSummary] = []
+        self._iteration_history: list[IterationSummary] = []
         logger.info("Orchestrator '%s' initialised", name)
 
     # ------------------------------------------------------------------
@@ -88,9 +88,9 @@ class Orchestrator:
     def execute_goal(
         self,
         goal: str,
-        parameters: Optional[Dict[str, Any]] = None,
+        parameters: dict[str, Any] | None = None,
         iteration: int = 0,
-    ) -> List[NodeOutput]:
+    ) -> list[NodeOutput]:
         """
         Decompose *goal* into sub-tasks and route each to the best node.
 
@@ -114,8 +114,8 @@ class Orchestrator:
             action = self._infer_action(goal)
             tasks = [{"action": action, "parameters": parameters}]
 
-        outputs: List[NodeOutput] = []
-        routing_decisions: List[RoutingDecision] = []
+        outputs: list[NodeOutput] = []
+        routing_decisions: list[RoutingDecision] = []
 
         for task_spec in tasks:
             action = task_spec.get("action", "")
@@ -189,8 +189,8 @@ class Orchestrator:
     # ------------------------------------------------------------------
 
     def evaluate_performance(
-        self, goal: str, outputs: List[NodeOutput], iteration: int
-    ) -> Dict[str, float]:
+        self, goal: str, outputs: list[NodeOutput], iteration: int
+    ) -> dict[str, float]:
         """
         Aggregate node-level metrics from *outputs* into system-level metrics,
         record them in the evaluator, and return the dict.
@@ -206,7 +206,7 @@ class Orchestrator:
             o.metrics.get("accuracy", 1.0) for o in successes
         ]
 
-        system_metrics: Dict[str, float] = {
+        system_metrics: dict[str, float] = {
             "total_tasks": float(len(outputs)),
             "success_rate": len(successes) / len(outputs) if outputs else 0.0,
             "avg_latency_ms": sum(latencies) / len(latencies) if latencies else 0.0,
@@ -236,14 +236,14 @@ class Orchestrator:
     # ------------------------------------------------------------------
 
     def improve_system(
-        self, goal: str, system_metrics: Dict[str, float], iteration: int
-    ) -> List[str]:
+        self, goal: str, system_metrics: dict[str, float], iteration: int
+    ) -> list[str]:
         """
         Identify underperforming nodes and send them improvement feedback.
 
         Returns list of node names that received improvement calls.
         """
-        improved: List[str] = []
+        improved: list[str] = []
         spec = self.evaluator._goal_specs.get(goal)
 
         for node in self.registry.all_nodes():
@@ -251,7 +251,7 @@ class Orchestrator:
             node_metrics = state.metrics
 
             # Build feedback: which metrics are lagging and by how much
-            feedback: Dict[str, Any] = {
+            feedback: dict[str, Any] = {
                 "iteration": iteration,
                 "goal": goal,
                 "system_metrics": system_metrics,
@@ -300,11 +300,11 @@ class Orchestrator:
     def run_convergence_loop(
         self,
         goal: str,
-        parameters: Optional[Dict[str, Any]] = None,
+        parameters: dict[str, Any] | None = None,
         max_iterations: int = 10,
-        convergence_metric: Optional[str] = None,
+        convergence_metric: str | None = None,
         convergence_threshold_pct: float = 1.0,
-    ) -> List[IterationSummary]:
+    ) -> list[IterationSummary]:
         """
         The main self-improvement loop.
 
@@ -403,7 +403,7 @@ class Orchestrator:
                 return cap
         return capabilities[0] if capabilities else ""
 
-    def _select_node(self, action: str) -> Optional[Node]:
+    def _select_node(self, action: str) -> Node | None:
         """Return the healthiest node for *action*, or None."""
         candidates = self.registry.nodes_for_capability(action, healthy_only=True)
         if not candidates:

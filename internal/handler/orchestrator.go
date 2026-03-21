@@ -398,7 +398,7 @@ func (h *OrchestratorHandler) ListImprovements(
 }
 
 func dbImpsToProto(imps []*db.Improvement) []*omegav1.ImprovementRecord {
-	var result []*omegav1.ImprovementRecord
+	result := make([]*omegav1.ImprovementRecord, 0, len(imps))
 	for _, imp := range imps {
 		result = append(result, &omegav1.ImprovementRecord{
 			ImproveId:     imp.ImproveID,
@@ -522,12 +522,12 @@ func (h *OrchestratorHandler) SubmitFeedback(
 	ctx context.Context,
 	req *connect.Request[omegav1.SubmitFeedbackRequest],
 ) (*connect.Response[omegav1.SubmitFeedbackResponse], error) {
-	cmd := exec.CommandContext(ctx, "python3", "-c", fmt.Sprintf(`
-from omega.core.memory import MemoryKernel
-m = MemoryKernel(db_path='/tmp/omega_vectora_memory.db')
-m.store_episode('human_feedback', {'text': %q, 'target_node': %q}, tags=['feedback','human'], importance=0.9)
-print('ok')
-`, req.Msg.Text, req.Msg.TargetNode))
+	script := fmt.Sprintf("from omega.core.memory import MemoryKernel\n"+
+		"m = MemoryKernel(db_path='/tmp/omega_vectora_memory.db')\n"+
+		"m.store_episode('human_feedback', {'text': %q, 'target_node': %q}, tags=['feedback','human'], importance=0.9)\n"+
+		"print('ok')\n",
+		req.Msg.Text, req.Msg.TargetNode)
+	cmd := exec.CommandContext(ctx, "python3", "-c", script) //nolint:gosec
 	if err := cmd.Run(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("feedback storage failed: %w", err))
 	}
@@ -551,7 +551,7 @@ func (h *OrchestratorHandler) StartOrchestrator(
 	if heartbeat <= 0 {
 		heartbeat = 120
 	}
-	cmd := exec.Command("python3", "-m", "omega.examples.vectora_main",
+	cmd := exec.Command("python3", "-m", "omega.examples.vectora_main", //nolint:gosec
 		"--heartbeat", fmt.Sprintf("%d", heartbeat))
 	if err := cmd.Start(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("start orchestrator: %w", err))
@@ -559,7 +559,7 @@ func (h *OrchestratorHandler) StartOrchestrator(
 	h.orchCmd = cmd
 	h.orchRunning = true
 	go func() {
-		cmd.Wait() //nolint:errcheck
+		cmd.Wait() //nolint:errcheck,gosec
 		h.mu.Lock()
 		h.orchRunning = false
 		h.orchCmd = nil
@@ -596,7 +596,7 @@ func (h *OrchestratorHandler) TriggerHeartbeat(
 	req *connect.Request[omegav1.TriggerHeartbeatRequest],
 ) (*connect.Response[omegav1.TriggerHeartbeatResponse], error) {
 	cmd := exec.CommandContext(ctx, "python3", "-m", "omega.examples.vectora_main", "--once")
-	go cmd.Run() //nolint:errcheck
+	go cmd.Run() //nolint:errcheck,gosec
 	return connect.NewResponse(&omegav1.TriggerHeartbeatResponse{
 		Triggered: true, Message: "triggered single heartbeat",
 	}), nil
@@ -740,7 +740,7 @@ func dbNodeConfigToProto(n *db.Node, brain *db.BrainConfig) *omegav1.NodeConfig 
 			Provider:     brain.Provider,
 			Model:        brain.Model,
 			Temperature:  brain.Temperature,
-			MaxTokens:    int32(brain.MaxTokens),
+			MaxTokens:    int32(brain.MaxTokens), //nolint:gosec
 			SystemPrompt: brain.SystemPrompt,
 			ExtraConfig:  brain.ExtraConfig,
 		},

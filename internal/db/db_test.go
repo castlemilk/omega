@@ -24,11 +24,11 @@ func setupTestDB(t *testing.T) (*db.DB, func()) {
 		t.Fatalf("bootstrap state schema: %v", err)
 	}
 	// Touch the memory DB file.
-	f, err := os.Create(memDBPath)
+	f, err := os.Create(memDBPath) //nolint:gosec
 	if err != nil {
 		t.Fatalf("create memory db: %v", err)
 	}
-	f.Close() //nolint:errcheck
+	f.Close() //nolint:errcheck,gosec
 
 	d, err := db.New(stateDBPath, memDBPath)
 	if err != nil {

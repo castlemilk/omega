@@ -10,8 +10,6 @@ import json
 import sqlite3
 import time
 import uuid
-from typing import Dict, List, Optional
-
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS nodes (
@@ -183,10 +181,10 @@ class StateStore:
         node_id: str,
         name: str,
         version: str,
-        capabilities: List[str],
+        capabilities: list[str],
         health: float,
         status: str = "active",
-        brain_config: Optional[Dict] = None,
+        brain_config: dict | None = None,
     ) -> None:
         now = time.time()
         brain_json = json.dumps(brain_config or {"provider": "none"})
@@ -211,7 +209,7 @@ class StateStore:
             )
         self._conn.commit()
 
-    def get_node(self, node_id: str) -> Optional[Dict]:
+    def get_node(self, node_id: str) -> dict | None:
         row = self._conn.execute(
             "SELECT * FROM nodes WHERE node_id = ?", (node_id,)
         ).fetchone()
@@ -222,7 +220,7 @@ class StateStore:
         d["brain_config"] = json.loads(d.pop("brain_config_json", '{"provider":"none"}'))
         return d
 
-    def all_nodes(self) -> List[Dict]:
+    def all_nodes(self) -> list[dict]:
         rows = self._conn.execute("SELECT * FROM nodes ORDER BY registered_at").fetchall()
         result = []
         for row in rows:
@@ -241,8 +239,8 @@ class StateStore:
         node_id: str,
         node_name: str,
         action: str,
-        trace_id: Optional[str] = None,
-        span_id: Optional[str] = None,
+        trace_id: str | None = None,
+        span_id: str | None = None,
         cycle: int = 0,
     ) -> str:
         exec_id = str(uuid.uuid4())
@@ -260,8 +258,8 @@ class StateStore:
         self,
         exec_id: str,
         success: bool,
-        error_text: Optional[str] = None,
-        metrics: Optional[Dict] = None,
+        error_text: str | None = None,
+        metrics: dict | None = None,
     ) -> None:
         now = time.time()
         row = self._conn.execute(
@@ -278,12 +276,12 @@ class StateStore:
 
     def get_recent_executions(
         self,
-        node_id: Optional[str] = None,
+        node_id: str | None = None,
         limit: int = 20,
-        since_cycle: Optional[int] = None,
-    ) -> List[Dict]:
+        since_cycle: int | None = None,
+    ) -> list[dict]:
         query = "SELECT * FROM node_executions WHERE 1=1"
-        params: List = []
+        params: list = []
         if node_id is not None:
             query += " AND node_id = ?"
             params.append(node_id)
@@ -310,7 +308,7 @@ class StateStore:
         node_id: str,
         node_name: str,
         operation: str,
-        parent_span_id: Optional[str] = None,
+        parent_span_id: str | None = None,
         cycle: int = 0,
     ) -> str:
         span_id = str(uuid.uuid4())
@@ -328,7 +326,7 @@ class StateStore:
         self,
         span_id: str,
         status: str = "ok",
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> None:
         now = time.time()
         row = self._conn.execute(
@@ -343,7 +341,7 @@ class StateStore:
         )
         self._conn.commit()
 
-    def get_trace(self, trace_id: str) -> List[Dict]:
+    def get_trace(self, trace_id: str) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM traces WHERE trace_id = ? ORDER BY started_at",
             (trace_id,),
@@ -355,7 +353,7 @@ class StateStore:
             result.append(d)
         return result
 
-    def get_recent_traces(self, limit: int = 10) -> List[Dict]:
+    def get_recent_traces(self, limit: int = 10) -> list[dict]:
         rows = self._conn.execute(
             """SELECT trace_id,
                       MIN(started_at) as trace_started,
@@ -382,9 +380,9 @@ class StateStore:
         provider: str,
         call_type: str,
         duration_ms: float,
-        exec_id: Optional[str] = None,
+        exec_id: str | None = None,
         estimated_cost_usd: float = 0.0,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         cycle: int = 0,
     ) -> None:
         cost_id = str(uuid.uuid4())
@@ -408,9 +406,9 @@ class StateStore:
         )
         self._conn.commit()
 
-    def get_cost_summary(self, since_cycle: Optional[int] = None) -> Dict:
+    def get_cost_summary(self, since_cycle: int | None = None) -> dict:
         query = "SELECT provider, COUNT(*) as calls, SUM(duration_ms) as total_ms, SUM(estimated_cost_usd) as total_cost FROM cost_events WHERE 1=1"
-        params: List = []
+        params: list = []
         if since_cycle is not None:
             query += " AND cycle >= ?"
             params.append(since_cycle)
@@ -435,7 +433,7 @@ class StateStore:
         detector: str,
         severity: str,
         description: str,
-        context: Optional[Dict] = None,
+        context: dict | None = None,
         cycle: int = 0,
     ) -> bool:
         existing = self._conn.execute(
@@ -473,7 +471,7 @@ class StateStore:
         self._conn.commit()
         return result.rowcount > 0
 
-    def resolve_issue(self, issue_id: str, cycle: Optional[int] = None) -> bool:
+    def resolve_issue(self, issue_id: str, cycle: int | None = None) -> bool:
         now = time.time()
         result = self._conn.execute(
             """UPDATE issues
@@ -487,7 +485,7 @@ class StateStore:
             return True
         return False
 
-    def get_open_issues(self) -> List[Dict]:
+    def get_open_issues(self) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM issues WHERE state != 'resolved' ORDER BY opened_at DESC"
         ).fetchall()
@@ -498,7 +496,7 @@ class StateStore:
             result.append(d)
         return result
 
-    def get_all_issues(self, limit: int = 50) -> List[Dict]:
+    def get_all_issues(self, limit: int = 50) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM issues ORDER BY opened_at DESC LIMIT ?", (limit,)
         ).fetchall()
@@ -518,7 +516,7 @@ class StateStore:
         action_type: str,
         entity_type: str,
         entity_id: str,
-        data: Optional[Dict] = None,
+        data: dict | None = None,
         cycle: int = 0,
     ) -> None:
         log_id = str(uuid.uuid4())
@@ -540,8 +538,8 @@ class StateStore:
         node_name: str,
         from_version: str,
         to_version: str,
-        before_metrics: Dict,
-        after_metrics: Dict,
+        before_metrics: dict,
+        after_metrics: dict,
         triggered_by: str = "metrics",
         cycle: int = 0,
     ) -> None:
@@ -574,10 +572,10 @@ class StateStore:
         )
 
     def get_improvement_history(
-        self, node_id: Optional[str] = None, limit: int = 20
-    ) -> List[Dict]:
+        self, node_id: str | None = None, limit: int = 20
+    ) -> list[dict]:
         query = "SELECT * FROM improvement_log WHERE 1=1"
-        params: List = []
+        params: list = []
         if node_id is not None:
             query += " AND node_id = ?"
             params.append(node_id)
@@ -596,7 +594,7 @@ class StateStore:
     # Config revisions
     # ------------------------------------------------------------------
 
-    def save_config_revision(self, node_id: str, version: str, config: Dict) -> None:
+    def save_config_revision(self, node_id: str, version: str, config: dict) -> None:
         revision_id = str(uuid.uuid4())
         self._conn.execute(
             """INSERT INTO config_revisions
@@ -606,7 +604,7 @@ class StateStore:
         )
         self._conn.commit()
 
-    def get_config_history(self, node_id: str) -> List[Dict]:
+    def get_config_history(self, node_id: str) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM config_revisions WHERE node_id = ? ORDER BY recorded_at DESC",
             (node_id,),
@@ -622,7 +620,7 @@ class StateStore:
     # DashboardNode helpers
     # ------------------------------------------------------------------
 
-    def get_nodes_with_recent_metrics(self, minutes: int = 10) -> List[Dict]:
+    def get_nodes_with_recent_metrics(self, minutes: int = 10) -> list[dict]:
         """
         Return node records that have at least one execution in the last N minutes.
 
@@ -638,7 +636,7 @@ class StateStore:
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def get_latest_execution_time(self) -> Optional[float]:
+    def get_latest_execution_time(self) -> float | None:
         """
         Return the Unix timestamp of the most recent node execution.
 
@@ -661,7 +659,7 @@ class StateStore:
         model: str,
         operation: str,
         action_decided: str,
-        parameters: Optional[Dict] = None,
+        parameters: dict | None = None,
         reasoning: str = "",
         confidence: float = 0.0,
         outcome: str = "pending",
@@ -729,15 +727,15 @@ class StateStore:
 
     def get_brain_executions(
         self,
-        node_id: Optional[str] = None,
-        provider: Optional[str] = None,
-        operation: Optional[str] = None,
-        since_cycle: Optional[int] = None,
+        node_id: str | None = None,
+        provider: str | None = None,
+        operation: str | None = None,
+        since_cycle: int | None = None,
         limit: int = 50,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Query brain execution history — useful for A/B testing model decisions."""
         query = "SELECT * FROM brain_executions WHERE 1=1"
-        params: List = []
+        params: list = []
         if node_id:
             query += " AND node_id = ?"
             params.append(node_id)
@@ -760,10 +758,10 @@ class StateStore:
             result.append(d)
         return result
 
-    def get_brain_summary(self, since_cycle: Optional[int] = None) -> Dict:
+    def get_brain_summary(self, since_cycle: int | None = None) -> dict:
         """Aggregate brain execution stats — provider breakdown, action distribution."""
         query = "SELECT provider, model, outcome, COUNT(*) as count, AVG(confidence) as avg_confidence FROM brain_executions WHERE 1=1"
-        params: List = []
+        params: list = []
         if since_cycle is not None:
             query += " AND cycle >= ?"
             params.append(since_cycle)
@@ -771,7 +769,7 @@ class StateStore:
         rows = self._conn.execute(query, params).fetchall()
         return {"by_provider_outcome": [dict(r) for r in rows]}
 
-    def set_node_brain_config(self, node_id: str, brain_config: Dict) -> None:
+    def set_node_brain_config(self, node_id: str, brain_config: dict) -> None:
         """
         Persist an updated brain config to the nodes table.
 
@@ -793,7 +791,7 @@ class StateStore:
     # Dashboard data
     # ------------------------------------------------------------------
 
-    def get_dashboard_data(self, since_cycle: int = 0) -> Dict:
+    def get_dashboard_data(self, since_cycle: int = 0) -> dict:
         """Returns structured dict suitable for feeding a monitoring dashboard."""
         nodes = self.all_nodes()
         node_data = []

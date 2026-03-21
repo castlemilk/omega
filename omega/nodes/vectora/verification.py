@@ -12,12 +12,10 @@ Classes:
 
 import time
 import uuid
-from abc import abstractmethod
-from typing import Any, Dict, List
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.nodes.vectora.cleaners import CleanerNode
-
 
 # ---------------------------------------------------------------------------
 # VerificationNode
@@ -33,19 +31,19 @@ class VerificationNode(CleanerNode):
     """
 
     REGRESSION_THRESHOLD = 0.3  # 30% degradation triggers rollback
-    MAXIMIZE_METRICS = {"coverage_rate", "signal_coverage", "sharpe_ratio", "completeness_score"}
-    MINIMIZE_METRICS = {"error_rate", "avg_latency_ms"}
+    MAXIMIZE_METRICS: frozenset[str] = frozenset({"coverage_rate", "signal_coverage", "sharpe_ratio", "completeness_score"})
+    MINIMIZE_METRICS: frozenset[str] = frozenset({"error_rate", "avg_latency_ms"})
 
     def __init__(self) -> None:
         super().__init__()
-        self._verification_history: List[Dict] = []  # last 20 verification results
+        self._verification_history: list[dict] = []  # last 20 verification results
         self._rollback_count = 0
         self._pass_count = 0
         self._fail_count = 0
 
     # -- CleanerNode interface
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["verify_improvement"]
 
     def describe(self) -> str:
@@ -121,13 +119,13 @@ class VerificationNode(CleanerNode):
                 metrics={"latency_ms": latency_ms},
             )
 
-    def _fast_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _fast_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         return []
 
-    def _deep_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _deep_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         return []
 
-    def _build_result(self, data: Dict[str, Any], issues: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _build_result(self, data: dict[str, Any], issues: list[dict[str, Any]]) -> dict[str, Any]:
         recent = self._verification_history[-20:]
         passed = sum(1 for r in recent if r.get("passed"))
         return {
@@ -138,7 +136,7 @@ class VerificationNode(CleanerNode):
             "pass_rate": passed / max(1, len(recent)),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """v1.0 -> v1.1: tighten regression threshold after sufficient iterations."""
         if self._version == "1.0":
             iteration = feedback.get("iteration", 0)
@@ -150,7 +148,7 @@ class VerificationNode(CleanerNode):
 
     # -- Verification helpers
 
-    def snapshot_node(self, node: Node) -> Dict[str, Any]:
+    def snapshot_node(self, node: Node) -> dict[str, Any]:
         """Capture rollback-able state snapshot of a node before improvement."""
         state_dict = {}
         for attr in vars(node):
@@ -159,7 +157,7 @@ class VerificationNode(CleanerNode):
                 state_dict[attr] = val if not isinstance(val, list) else list(val)
         return state_dict
 
-    def restore_node(self, node: Node, snapshot: Dict[str, Any]) -> None:
+    def restore_node(self, node: Node, snapshot: dict[str, Any]) -> None:
         """Restore a node to its pre-improvement state."""
         for attr, value in snapshot.items():
             if hasattr(node, attr):
@@ -169,11 +167,11 @@ class VerificationNode(CleanerNode):
         self,
         node: Any,
         node_name: str,
-        before_metrics: Dict[str, float],
-        after_metrics: Dict[str, float],
-        snapshot: Dict[str, Any],
+        before_metrics: dict[str, float],
+        after_metrics: dict[str, float],
+        snapshot: dict[str, Any],
         cycle: int = 0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Compare before/after metrics. If regression detected, rollback.
         Returns result dict with: passed, regression_detected, rolled_back, details.
@@ -193,14 +191,13 @@ class VerificationNode(CleanerNode):
                         "after": after_val,
                         "type": "maximize_regression",
                     })
-            elif metric in self.MINIMIZE_METRICS:
-                if after_val > before_val * (1 + self.REGRESSION_THRESHOLD):
-                    regressions.append({
-                        "metric": metric,
-                        "before": before_val,
-                        "after": after_val,
-                        "type": "minimize_regression",
-                    })
+            elif metric in self.MINIMIZE_METRICS and after_val > before_val * (1 + self.REGRESSION_THRESHOLD):
+                regressions.append({
+                    "metric": metric,
+                    "before": before_val,
+                    "after": after_val,
+                    "type": "minimize_regression",
+                })
 
         regression_detected = len(regressions) > 0
         rolled_back = False
@@ -256,13 +253,13 @@ class PropertyTestNode(CleanerNode):
 
     def __init__(self) -> None:
         super().__init__()
-        self._last_signals: Dict = {}
+        self._last_signals: dict = {}
         self._properties_discovered: int = 0
         self._deep_stability_enabled: bool = False
 
     # -- CleanerNode interface
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["run_property_tests"]
 
     def describe(self) -> str:
@@ -285,7 +282,7 @@ class PropertyTestNode(CleanerNode):
             metadata={"active_issues": len(active)},
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         active = self._active_issues()
         return {
             "property_violations": float(len(active)),
@@ -363,8 +360,8 @@ class PropertyTestNode(CleanerNode):
                 metrics={"latency_ms": latency_ms},
             )
 
-    def _fast_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        issues: List[Dict[str, Any]] = []
+    def _fast_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
+        issues: list[dict[str, Any]] = []
         signals = data.get("signals", {})
         portfolio = data.get("portfolio", {})
         risk = data.get("risk", {})
@@ -428,16 +425,16 @@ class PropertyTestNode(CleanerNode):
             })
 
         # 4. No null composite signals (catch signals dict where composite is None)
-        for ticker, sig_data in signals.items():
+        for _ticker, sig_data in signals.items():
             if isinstance(sig_data, dict) and sig_data.get("composite") is None:
                 # Already handled above in signal bounds loop
                 pass
 
         return issues
 
-    def _deep_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _deep_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Signal stability check (v1.1+): detect large single-cycle direction flips."""
-        issues: List[Dict[str, Any]] = []
+        issues: list[dict[str, Any]] = []
 
         if not self._deep_stability_enabled:
             # Save current signals for next deep check
@@ -477,7 +474,7 @@ class PropertyTestNode(CleanerNode):
 
         return issues
 
-    def _build_result(self, data: Dict[str, Any], issues: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _build_result(self, data: dict[str, Any], issues: list[dict[str, Any]]) -> dict[str, Any]:
         signals = data.get("signals", {})
         properties_tested = len(signals) + 2  # bounds per ticker + weight sum + risk checks
         violations = len(issues)
@@ -490,7 +487,7 @@ class PropertyTestNode(CleanerNode):
             "coverage": coverage,
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """v1.0 -> v1.1: enable deep signal consistency checking when iteration >= 2."""
         if self._version == "1.0":
             iteration = feedback.get("iteration", 0)
@@ -518,9 +515,9 @@ class InvariantDiscoveryNode(Node):
     def __init__(self) -> None:
         self._node_id = str(uuid.uuid4())
         self._version = "1.0"
-        self._observations: List[Dict[str, float]] = []
-        self._proposed_invariants: List[Dict[str, Any]] = []
-        self._confirmed_invariants: List[Dict[str, Any]] = []
+        self._observations: list[dict[str, float]] = []
+        self._proposed_invariants: list[dict[str, Any]] = []
+        self._confirmed_invariants: list[dict[str, Any]] = []
         self._violation_count: int = 0
         self._execution_count: int = 0
         self._error_count: int = 0
@@ -528,7 +525,7 @@ class InvariantDiscoveryNode(Node):
 
     # -- Node interface
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["observe", "discover_invariants"]
 
     def describe(self) -> str:
@@ -622,8 +619,15 @@ class InvariantDiscoveryNode(Node):
                 errors=[str(exc)],
                 metrics={"latency_ms": latency_ms},
             )
+        latency_ms = (time.perf_counter() - t0) * 1000
+        return NodeOutput(
+            request_id=input.request_id,
+            success=False,
+            errors=[f"Unhandled action: {input.action}"],
+            metrics={"latency_ms": latency_ms},
+        )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         total_obs = len(self._observations)
         violation_rate = self._violation_count / max(1, total_obs)
         return {
@@ -634,13 +638,13 @@ class InvariantDiscoveryNode(Node):
             "avg_latency_ms": self._total_latency_ms / max(1, self._execution_count),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """Improves naturally as observations accumulate. No explicit improvement arc."""
         return False
 
     # -- Internal helpers
 
-    def _record_observation(self, metrics: Dict[str, float]) -> None:
+    def _record_observation(self, metrics: dict[str, float]) -> None:
         """Record a new observation and check confirmed invariants for violations."""
         clean_metrics = {k: float(v) for k, v in metrics.items() if isinstance(v, (int, float))}
         self._observations.append(clean_metrics)
@@ -655,17 +659,15 @@ class InvariantDiscoveryNode(Node):
                 continue
             val = clean_metrics[metric]
             inv_type = inv["type"]
-            if inv_type == "lower_bound" and val < inv["bound"]:
-                self._violation_count += 1
-            elif inv_type == "upper_bound" and val > inv["bound"]:
+            if (inv_type == "lower_bound" and val < inv["bound"]) or (inv_type == "upper_bound" and val > inv["bound"]):
                 self._violation_count += 1
 
-    def _discover_from_observations(self) -> List[Dict]:
+    def _discover_from_observations(self) -> list[dict]:
         if len(self._observations) < self.OBSERVATION_WINDOW:
             return []
 
         # Collect per-metric values
-        metric_values: Dict[str, List[float]] = {}
+        metric_values: dict[str, list[float]] = {}
         for obs in self._observations:
             for k, v in obs.items():
                 metric_values.setdefault(k, []).append(v)
@@ -733,14 +735,14 @@ class ConvergenceMonitorNode(CleanerNode):
 
     def __init__(self) -> None:
         super().__init__()
-        self._scores: List[float] = []
-        self._score_emas: List[float] = []
-        self._metric_history: Dict[str, List[float]] = {}
+        self._scores: list[float] = []
+        self._score_emas: list[float] = []
+        self._metric_history: dict[str, list[float]] = {}
         self._oscillation_count: int = 0
 
     # -- CleanerNode interface
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["monitor_convergence"]
 
     def describe(self) -> str:
@@ -752,7 +754,6 @@ class ConvergenceMonitorNode(CleanerNode):
 
     def get_state(self) -> NodeState:
         slope = self._linear_regression_slope(self._scores[-10:]) if len(self._scores) >= 2 else 0.0
-        last_ema = self._score_emas[-1] if self._score_emas else 0.0
         plateau = abs(slope) < self.PLATEAU_SLOPE_THRESHOLD and len(self._scores) >= 5
 
         # Determine trend for health
@@ -790,7 +791,7 @@ class ConvergenceMonitorNode(CleanerNode):
             },
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         slope = self._linear_regression_slope(self._scores[-10:]) if len(self._scores) >= 2 else 0.0
         last_ema = self._score_emas[-1] if self._score_emas else 0.0
         return {
@@ -885,7 +886,7 @@ class ConvergenceMonitorNode(CleanerNode):
             # Open/resolve issues
             raised_ids = {i["issue_id"] for i in issues}
             for iss in issues:
-                self._open_issue(iss["issue_id"], iss["severity"], iss["description"], iss.get("context", {}))
+                self._open_issue(iss["issue_id"], iss["severity"], iss["description"], iss.get("context", {}))  # type: ignore[arg-type]
             for issue_id in list(self._issues.keys()):
                 if issue_id not in raised_ids:
                     self._resolve_issue(issue_id)
@@ -939,25 +940,25 @@ class ConvergenceMonitorNode(CleanerNode):
                 metrics={"latency_ms": latency_ms},
             )
 
-    def _fast_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _fast_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         return []
 
-    def _deep_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _deep_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         return []
 
-    def _build_result(self, data: Dict[str, Any], issues: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _build_result(self, data: dict[str, Any], issues: list[dict[str, Any]]) -> dict[str, Any]:
         return {
             "cycles_tracked": len(self._scores),
             "active_issues": self._active_issues(),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """Convergence monitor doesn't self-improve its algorithms."""
         return False
 
     # -- Computation helpers
 
-    def _compute_ema(self, values: List[float]) -> float:
+    def _compute_ema(self, values: list[float]) -> float:
         """Compute EMA of values."""
         if not values:
             return 0.0
@@ -966,7 +967,7 @@ class ConvergenceMonitorNode(CleanerNode):
             ema = self.EMA_ALPHA * v + (1 - self.EMA_ALPHA) * ema
         return ema
 
-    def _linear_regression_slope(self, values: List[float]) -> float:
+    def _linear_regression_slope(self, values: list[float]) -> float:
         """Compute slope of least-squares line through values."""
         n = len(values)
         if n < 2:
@@ -977,7 +978,7 @@ class ConvergenceMonitorNode(CleanerNode):
         denominator = sum((i - x_mean) ** 2 for i in range(n))
         return numerator / denominator if denominator != 0 else 0.0
 
-    def _ascii_sparkline(self, values: List[float], width: int = 20) -> str:
+    def _ascii_sparkline(self, values: list[float], width: int = 20) -> str:
         """Render values as ASCII sparkline using block characters."""
         if not values:
             return "─" * width

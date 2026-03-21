@@ -23,16 +23,15 @@ Usage::
 """
 
 import logging
-import math
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from omega.core.state_store import StateStore
 
 logger = logging.getLogger("omega.core.metrics")
 
 
-def _percentile(values: List[float], pct: float) -> float:
+def _percentile(values: list[float], pct: float) -> float:
     """Compute percentile (0-100) of a sorted list."""
     if not values:
         return 0.0
@@ -44,7 +43,7 @@ def _percentile(values: List[float], pct: float) -> float:
     return sorted_vals[lo] + (sorted_vals[hi] - sorted_vals[lo]) * (k - lo)
 
 
-def _trend(values: List[float]) -> str:
+def _trend(values: list[float]) -> str:
     """Return 'improving', 'degrading', or 'stable' from a series of values."""
     if len(values) < 2:
         return "stable"
@@ -66,7 +65,7 @@ class MetricsCollector:
     def __init__(self, store: StateStore) -> None:
         self._store = store
         self._system_start = time.time()
-        self._cycle_scores: List[float] = []    # convergence tracking
+        self._cycle_scores: list[float] = []    # convergence tracking
         self._cycle_count: int = 0
 
     def record_cycle_score(self, score: float) -> None:
@@ -76,7 +75,7 @@ class MetricsCollector:
 
     # ------------------------------------------------------------------ per-node
 
-    def node_summary(self, node_name: str, since_cycle: int = 0) -> Dict[str, Any]:
+    def node_summary(self, node_name: str, since_cycle: int = 0) -> dict[str, Any]:
         """Return aggregated metrics for a single node."""
         # Get all executions for this node
         all_nodes = self._store.all_nodes()
@@ -119,14 +118,14 @@ class MetricsCollector:
             ],
         }
 
-    def all_node_summaries(self, since_cycle: int = 0) -> List[Dict[str, Any]]:
+    def all_node_summaries(self, since_cycle: int = 0) -> list[dict[str, Any]]:
         """Return summaries for all registered nodes."""
         all_nodes = self._store.all_nodes()
         return [self.node_summary(n["name"], since_cycle=since_cycle) for n in all_nodes]
 
     # ------------------------------------------------------------------ system
 
-    def system_health(self) -> Dict[str, Any]:
+    def system_health(self) -> dict[str, Any]:
         """Compute overall system health from node health scores."""
         nodes = self._store.all_nodes()
         if not nodes:
@@ -172,7 +171,7 @@ class MetricsCollector:
 
     # ------------------------------------------------------------------ cost
 
-    def cost_summary(self, since_cycle: int = 0) -> Dict[str, Any]:
+    def cost_summary(self, since_cycle: int = 0) -> dict[str, Any]:
         """Return aggregated cost data by provider."""
         raw = self._store.get_cost_summary(since_cycle=since_cycle)
 
@@ -189,7 +188,7 @@ class MetricsCollector:
 
     # ------------------------------------------------------------------ dashboard
 
-    def dashboard(self, since_cycle: int = 0) -> Dict[str, Any]:
+    def dashboard(self, since_cycle: int = 0) -> dict[str, Any]:
         """
         Return structured dashboard data combining all metric sources.
 
@@ -227,7 +226,7 @@ class MetricsCollector:
 
         lines = [
             "┌─────────────────────────────────────────────────────────────┐",
-            f"│  OMEGA SYSTEM DASHBOARD                                      │",
+            "│  OMEGA SYSTEM DASHBOARD                                      │",
             f"│  Status: {sys['status']:<10} Health: {sys['composite_score']:.2f}  Cycles: {sys['total_cycles']:<6} │",
             f"│  Convergence: {sys['convergence_score']:.4f} ({sys['convergence_trend']:<10})  Issues: {sys['open_issues']:<4}     │",
             "├───────────────────────┬──────────┬───────────┬────────────────┤",

@@ -26,8 +26,7 @@ import urllib.error
 import urllib.request
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Data contracts
@@ -42,9 +41,9 @@ class BrainConfig:
     temperature: float = 0.7
     max_tokens: int = 1024
     system_prompt: str = ""
-    extra_config: Dict[str, str] = field(default_factory=dict)
+    extra_config: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "provider": self.provider,
             "model": self.model,
@@ -55,7 +54,7 @@ class BrainConfig:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "BrainConfig":
+    def from_dict(cls, d: dict[str, Any]) -> BrainConfig:
         return cls(
             provider=d.get("provider", "none"),
             model=d.get("model", ""),
@@ -72,10 +71,10 @@ class BrainRequest:
 
     node_id: str
     operation: str                       # "execute" | "evaluate" | "improve" | "analyze"
-    current_state: Dict[str, Any]        # node state snapshot
-    recent_metrics: Dict[str, float]     # recent evaluation metrics
-    relevant_memories: List[Dict]        # from MemoryKernel
-    available_actions: List[str]         # verbs the node can take
+    current_state: dict[str, Any]        # node state snapshot
+    recent_metrics: dict[str, float]     # recent evaluation metrics
+    relevant_memories: list[dict]        # from MemoryKernel
+    available_actions: list[str]         # verbs the node can take
     domain_context: str                  # node.describe() output
     trace_id: str = ""
 
@@ -85,9 +84,9 @@ class BrainResponse:
     """Structured decision returned by the LLM."""
 
     action: str                                           # which action to take
-    parameters: Dict[str, Any] = field(default_factory=dict)
+    parameters: dict[str, Any] = field(default_factory=dict)
     reasoning: str = ""                                   # stored in activity log
-    confidence: float = 0.0                               # 0.0 – 1.0
+    confidence: float = 0.0                               # 0.0 - 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +122,7 @@ class NoBrain(BrainAdapter):
     no brain is configured.
     """
 
-    def __init__(self, config: Optional[BrainConfig] = None) -> None:
+    def __init__(self, config: BrainConfig | None = None) -> None:
         pass  # config ignored; NoBrain is always a no-op
 
     def think(self, request: BrainRequest) -> BrainResponse:
@@ -154,7 +153,7 @@ Always respond with valid JSON only — no markdown, no prose, no code fences:
   "action": "<one of the available_actions>",
   "parameters": {},
   "reasoning": "<concise explanation, 1-2 sentences>",
-  "confidence": <float 0.0–1.0>
+  "confidence": <float 0.0-1.0>
 }
 
 If you are unsure or the context is insufficient, respond with action="pass" and
@@ -527,7 +526,7 @@ class GoogleBrain(BrainAdapter):
 # Registry
 # ---------------------------------------------------------------------------
 
-BRAIN_REGISTRY: Dict[str, type] = {
+BRAIN_REGISTRY: dict[str, type] = {
     "none":       NoBrain,
     "anthropic":  AnthropicBrain,
     "openai":     OpenAIBrain,
@@ -537,7 +536,7 @@ BRAIN_REGISTRY: Dict[str, type] = {
 }
 
 
-def create_brain(config: Optional[BrainConfig] = None) -> BrainAdapter:
+def create_brain(config: BrainConfig | None = None) -> BrainAdapter:
     """
     Factory: create the appropriate BrainAdapter from a BrainConfig.
 
@@ -545,4 +544,4 @@ def create_brain(config: Optional[BrainConfig] = None) -> BrainAdapter:
     """
     cfg = config or BrainConfig()
     cls = BRAIN_REGISTRY.get(cfg.provider, NoBrain)
-    return cls(cfg)
+    return cls(cfg)  # type: ignore[no-any-return]

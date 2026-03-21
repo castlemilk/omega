@@ -14,7 +14,7 @@ import logging
 import math
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
@@ -65,7 +65,7 @@ class StrategyNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["construct_portfolio", "backtest_strategy", "rank_signals"]
 
     def describe(self) -> str:
@@ -92,7 +92,7 @@ class StrategyNode(Node):
                 result = self._backtest(signals, market_data)
             elif action == "rank_signals":
                 signals = params.get("signals", {})
-                result = self._rank_signals(signals)
+                result = self._rank_signals(signals)  # type: ignore[assignment]
             else:
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._execution_count += 1
@@ -134,7 +134,7 @@ class StrategyNode(Node):
                 metrics={"latency_ms": elapsed},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_rate(),
@@ -143,7 +143,7 @@ class StrategyNode(Node):
             "hit_rate": self._last_hit_rate,
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
         iteration = feedback.get("iteration", 0)
 
@@ -180,8 +180,8 @@ class StrategyNode(Node):
     # ------------------------------------------------------------------ portfolio construction
 
     def _construct_portfolio(
-        self, signals: Dict[str, Any], market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, signals: dict[str, Any], market_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Build portfolio weights from signals."""
         # Filter to buy-signal stocks
         candidates = {
@@ -200,7 +200,7 @@ class StrategyNode(Node):
         if not candidates:
             return {"weights": {}, "positions": 0, "method": self._weighting}
 
-        weights: Dict[str, float] = {}
+        weights: dict[str, float] = {}
 
         if self._weighting == "equal":
             weight = 1.0 / len(candidates)
@@ -217,8 +217,8 @@ class StrategyNode(Node):
 
         elif self._weighting == "risk_parity":
             # Weight ∝ 1/volatility using recent price history
-            vols: Dict[str, float] = {}
-            for ticker, sig in candidates.items():
+            vols: dict[str, float] = {}
+            for ticker, _sig in candidates.items():
                 data = market_data.get(ticker)
                 if data:
                     prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
@@ -243,7 +243,7 @@ class StrategyNode(Node):
             "backtest": bt,
         }
 
-    def _rank_signals(self, signals: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _rank_signals(self, signals: dict[str, Any]) -> list[dict[str, Any]]:
         """Rank tickers by composite signal strength."""
         ranked = []
         for ticker, sig in signals.items():
@@ -260,8 +260,8 @@ class StrategyNode(Node):
         return ranked
 
     def _backtest(
-        self, signals: Dict[str, Any], market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, signals: dict[str, Any], market_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Simple backtest: compute signal-implied returns over available history.
 
@@ -271,11 +271,11 @@ class StrategyNode(Node):
         self._backtest_count += 1
 
         # Collect per-ticker (signal, return) pairs using all available history
-        all_returns: List[float] = []
+        all_returns: list[float] = []
         hit_count = 0
         total_trades = 0
 
-        for ticker, data in market_data.items():
+        for _ticker, data in market_data.items():
             if not data:
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
@@ -335,7 +335,7 @@ class StrategyNode(Node):
 
     # ------------------------------------------------------------------ helpers
 
-    def _compute_volatility(self, prices: List[float], window: int = 20) -> float:
+    def _compute_volatility(self, prices: list[float], window: int = 20) -> float:
         if len(prices) < window + 1:
             return 0.3
         returns = [
@@ -350,7 +350,7 @@ class StrategyNode(Node):
         daily_vol = math.sqrt(variance)
         return daily_vol * math.sqrt(252)  # annualised
 
-    def _clean_prices(self, prices: List) -> List[float]:
+    def _clean_prices(self, prices: list) -> list[float]:
         result = []
         for p in prices:
             if p is None:

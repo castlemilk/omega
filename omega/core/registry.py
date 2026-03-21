@@ -7,7 +7,6 @@ Nodes register themselves here; the orchestrator queries by capability.
 """
 
 import logging
-from typing import Dict, List, Optional
 
 from omega.core.node import Node, NodeState
 
@@ -26,9 +25,9 @@ class NodeRegistry:
 
     def __init__(self) -> None:
         # node_id → Node instance
-        self._nodes: Dict[str, Node] = {}
+        self._nodes: dict[str, Node] = {}
         # capability verb → set of node_ids
-        self._capability_index: Dict[str, set] = {}
+        self._capability_index: dict[str, set] = {}
 
     # ------------------------------------------------------------------
     # Registration
@@ -69,10 +68,10 @@ class NodeRegistry:
     # Queries
     # ------------------------------------------------------------------
 
-    def get_node(self, node_id: str) -> Optional[Node]:
+    def get_node(self, node_id: str) -> Node | None:
         return self._nodes.get(node_id)
 
-    def all_nodes(self) -> List[Node]:
+    def all_nodes(self) -> list[Node]:
         return list(self._nodes.values())
 
     def nodes_for_capability(
@@ -80,7 +79,7 @@ class NodeRegistry:
         capability: str,
         healthy_only: bool = True,
         health_threshold: float = 0.5,
-    ) -> List[Node]:
+    ) -> list[Node]:
         """
         Return nodes that advertise *capability*.
 
@@ -107,10 +106,10 @@ class NodeRegistry:
                 )
         return healthy
 
-    def all_capabilities(self) -> List[str]:
+    def all_capabilities(self) -> list[str]:
         return [cap for cap, ids in self._capability_index.items() if ids]
 
-    def all_states(self) -> List[NodeState]:
+    def all_states(self) -> list[NodeState]:
         states = []
         for node in self._nodes.values():
             try:

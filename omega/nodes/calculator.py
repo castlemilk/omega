@@ -20,7 +20,7 @@ import logging
 import math
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
@@ -28,7 +28,7 @@ logger = logging.getLogger("omega.nodes.calculator")
 
 
 # Supported operations and their callables
-_OPS: Dict[str, Any] = {
+_OPS: dict[str, Any] = {
     "add":      lambda a, b: a + b,
     "subtract": lambda a, b: a - b,
     "multiply": lambda a, b: a * b,
@@ -52,13 +52,13 @@ class CalculatorNode(Node):
         self._node_id = str(uuid.uuid4())
         self._version = "1.0"
         self._use_cache = False
-        self._cache: Dict[str, float] = {}
+        self._cache: dict[str, float] = {}
         self._cache_hits = 0
         self._cache_misses = 0
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
-        self._results: List[float] = []       # for accuracy tracking
+        self._results: list[float] = []       # for accuracy tracking
 
     # ------------------------------------------------------------------
     # Node interface
@@ -89,7 +89,7 @@ class CalculatorNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return list(_OPS.keys())
 
     def describe(self) -> str:
@@ -198,7 +198,7 @@ class CalculatorNode(Node):
             ),
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "cache_hit_rate": self._cache_hit_rate(),
@@ -207,7 +207,7 @@ class CalculatorNode(Node):
             "execution_count": float(self._execution_count),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """
         Improvement rules:
         - Enable caching when orchestrator says latency is high.
@@ -229,15 +229,15 @@ class CalculatorNode(Node):
             self._use_cache
             and self._version == "1.1"
             and feedback.get("iteration", 0) >= 2
+            and self._cache_hits > 0
         ):
             # Bump version to signal readiness; nothing else needed for MVP
-            if self._version == "1.1" and self._cache_hits > 0:
-                self._version = "1.2"
-                logger.info(
-                    "CalculatorNode improved to v1.2: cache confirmed effective "
-                    "(hit_rate=%.2f)", self._cache_hit_rate()
-                )
-                changed = True
+            self._version = "1.2"
+            logger.info(
+                "CalculatorNode improved to v1.2: cache confirmed effective "
+                "(hit_rate=%.2f)", self._cache_hit_rate()
+            )
+            changed = True
 
         return changed
 

@@ -22,7 +22,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, ClassVar
 
 from omega.core.brain import BrainConfig
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
@@ -44,7 +44,7 @@ class DashboardNode(Node):
     """
 
     # Endpoints expected on the backend API server
-    _ENDPOINTS = [
+    _ENDPOINTS: ClassVar[list[str]] = [
         "/api/health",
         "/api/nodes",
         "/api/metrics",
@@ -57,9 +57,9 @@ class DashboardNode(Node):
 
     def __init__(
         self,
-        state_store=None,
+        state_store: Any = None,
         api_base_url: str = "http://localhost:8080",
-        brain_config: Optional[BrainConfig] = None,
+        brain_config: BrainConfig | None = None,
     ) -> None:
         super().__init__(brain_config=brain_config)
         self._node_id = str(uuid.uuid4())
@@ -68,17 +68,17 @@ class DashboardNode(Node):
         self._version = "1.0"
 
         # Capability set grows with improvement arcs
-        self._capabilities: List[str] = ["api_health_check", "metric_coverage_audit"]
+        self._capabilities: list[str] = ["api_health_check", "metric_coverage_audit"]
 
         # Rolling latency samples (most recent 50)
-        self._api_latencies: List[float] = []
+        self._api_latencies: list[float] = []
 
-        # Coverage and freshness scores (0.0–1.0)
+        # Coverage and freshness scores (0.0-1.0)
         self._coverage_score: float = 0.0
         self._freshness_score: float = 0.0
 
         # Issue tracking
-        self._issues: Dict[str, Dict[str, Any]] = {}
+        self._issues: dict[str, dict[str, Any]] = {}
 
         # Execution counters
         self._execution_count: int = 0
@@ -111,7 +111,7 @@ class DashboardNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return list(self._capabilities)
 
     def describe(self) -> str:
@@ -122,7 +122,7 @@ class DashboardNode(Node):
             f"Currently v{self._version} with {len(self._capabilities)} capabilities."
         )
 
-    def execute(self, input: NodeInput) -> NodeOutput:  # noqa: A002
+    def execute(self, input: NodeInput) -> NodeOutput:
         t0 = time.perf_counter()
         self._execution_count += 1
         action = input.action
@@ -135,7 +135,7 @@ class DashboardNode(Node):
                 metrics={"latency_ms": 0.0},
             )
 
-        results: Dict[str, Any] = {"checks": [], "issues": [], "coverage": {}, "freshness": {}}
+        results: dict[str, Any] = {"checks": [], "issues": [], "coverage": {}, "freshness": {}}
 
         # ── 1. API health check ───────────────────────────────────────────────
         if "api_health_check" in self._capabilities:
@@ -261,7 +261,7 @@ class DashboardNode(Node):
             },
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         recent = self._api_latencies[-50:] if self._api_latencies else [0.0]
         error_rate = self._error_count / max(self._total_checks, 1)
 
@@ -279,7 +279,7 @@ class DashboardNode(Node):
             "avg_latency_ms": round(avg_latency, 1),  # standard key for MetricsCollector
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """Self-improve observability capabilities based on observed issues."""
         metrics = self.evaluate()
         changed = False
@@ -321,7 +321,7 @@ class DashboardNode(Node):
     # ------------------------------------------------------------------
 
     def _calculate_health(self) -> float:
-        scores: List[float] = []
+        scores: list[float] = []
 
         # Latency score — target p95 < 200ms, 0 at 500ms+
         if self._api_latencies:
@@ -342,7 +342,7 @@ class DashboardNode(Node):
 
         return sum(scores) / max(len(scores), 1)
 
-    def _open_issue(self, issue_id: str, severity: str, description: str, context: Dict) -> None:
+    def _open_issue(self, issue_id: str, severity: str, description: str, context: dict) -> None:
         if issue_id not in self._issues:
             self._issues[issue_id] = {
                 "issue_id": issue_id,
@@ -361,5 +361,5 @@ class DashboardNode(Node):
             self._issues[issue_id]["state"] = "resolved"
             self._issues[issue_id]["resolved_at"] = time.time()
 
-    def _active_issues(self) -> List[Dict[str, Any]]:
+    def _active_issues(self) -> list[dict[str, Any]]:
         return [i for i in self._issues.values() if i["state"] in ("pending", "active")]

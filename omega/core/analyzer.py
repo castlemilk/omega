@@ -20,12 +20,11 @@ Usage::
 """
 
 import logging
-import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from omega.core.state_store import StateStore
 from omega.core.metrics import MetricsCollector
+from omega.core.state_store import StateStore
 
 logger = logging.getLogger("omega.core.analyzer")
 
@@ -48,10 +47,10 @@ class Recommendation:
     rec_type: str
     priority: str
     message: str
-    context: Dict[str, Any] = field(default_factory=dict)
+    context: dict[str, Any] = field(default_factory=dict)
     cycle: int = 0
 
-    def as_feedback_dict(self) -> Dict[str, Any]:
+    def as_feedback_dict(self) -> dict[str, Any]:
         """Convert to feedback dict for Node.improve()."""
         return {
             "recommendation": self.rec_type,
@@ -85,16 +84,16 @@ class SystemAnalyzer:
         self._store = store
         self._collector = collector
         self._last_analysis_cycle: int = -1
-        self._recommendation_history: List[Recommendation] = []
+        self._recommendation_history: list[Recommendation] = []
 
     # ------------------------------------------------------------------ main entry
 
-    def analyze(self, cycle: int) -> List[Recommendation]:
+    def analyze(self, cycle: int) -> list[Recommendation]:
         """
         Run all analysis passes and return a merged, de-duplicated list of
         Recommendations ordered by priority.
         """
-        recs: List[Recommendation] = []
+        recs: list[Recommendation] = []
 
         recs.extend(self._analyze_traces(cycle))
         recs.extend(self._analyze_metrics(cycle))
@@ -130,11 +129,11 @@ class SystemAnalyzer:
 
     # ------------------------------------------------------------------ trace analysis
 
-    def _analyze_traces(self, cycle: int) -> List[Recommendation]:
+    def _analyze_traces(self, cycle: int) -> list[Recommendation]:
         """
         Detect: bottleneck nodes, error-heavy spans, redundant calls.
         """
-        recs: List[Recommendation] = []
+        recs: list[Recommendation] = []
         recent_traces = self._store.get_recent_traces(limit=10)
 
         if not recent_traces:
@@ -210,11 +209,11 @@ class SystemAnalyzer:
 
     # ------------------------------------------------------------------ metrics analysis
 
-    def _analyze_metrics(self, cycle: int) -> List[Recommendation]:
+    def _analyze_metrics(self, cycle: int) -> list[Recommendation]:
         """
         Detect: rising error rates, high latency, degraded health scores.
         """
-        recs: List[Recommendation] = []
+        recs: list[Recommendation] = []
         node_summaries = self._collector.all_node_summaries(since_cycle=0)
 
         for ns in node_summaries:
@@ -300,19 +299,19 @@ class SystemAnalyzer:
 
     # ------------------------------------------------------------------ improvement history analysis
 
-    def _analyze_improvement_history(self, cycle: int) -> List[Recommendation]:
+    def _analyze_improvement_history(self, cycle: int) -> list[Recommendation]:
         """
         Detect: regressions (improvement made things worse), stale nodes,
         diminishing returns.
         """
-        recs: List[Recommendation] = []
+        recs: list[Recommendation] = []
         improvements = self._store.get_improvement_history(limit=50)
 
         if len(improvements) < self.REGRESSION_MIN_CYCLES:
             return recs
 
         # Group improvements by node
-        by_node: Dict[str, List[Dict]] = {}
+        by_node: dict[str, list[dict]] = {}
         for imp in improvements:
             name = imp.get("node_name", "?")
             by_node.setdefault(name, []).append(imp)
@@ -370,7 +369,7 @@ class SystemAnalyzer:
 
     # ------------------------------------------------------------------ reporting
 
-    def get_recommendations_for_node(self, node_name: str) -> List[Recommendation]:
+    def get_recommendations_for_node(self, node_name: str) -> list[Recommendation]:
         """Return all pending recommendations for a specific node."""
         return [r for r in self._recommendation_history if r.target_node == node_name]
 

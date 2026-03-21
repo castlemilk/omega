@@ -17,31 +17,31 @@ Nodes:
   - ConvergenceMonitorNode  : tracks long-term convergence of the self-improvement loop
 """
 
+from omega.nodes.vectora.cleaners import DataIntegrityNode, LintNode
+from omega.nodes.vectora.dashboard import DashboardNode
 from omega.nodes.vectora.data_ingestion import DataIngestionNode
+from omega.nodes.vectora.reporting import ReportingNode
+from omega.nodes.vectora.risk_management import RiskManagementNode
 from omega.nodes.vectora.signal_generation import SignalGenerationNode
 from omega.nodes.vectora.strategy import StrategyNode
-from omega.nodes.vectora.risk_management import RiskManagementNode
-from omega.nodes.vectora.reporting import ReportingNode
-from omega.nodes.vectora.cleaners import LintNode, DataIntegrityNode
 from omega.nodes.vectora.verification import (
-    VerificationNode,
-    PropertyTestNode,
-    InvariantDiscoveryNode,
     ConvergenceMonitorNode,
+    InvariantDiscoveryNode,
+    PropertyTestNode,
+    VerificationNode,
 )
-from omega.nodes.vectora.dashboard import DashboardNode
 
 __all__ = [
-    "DataIngestionNode",
-    "SignalGenerationNode",
-    "StrategyNode",
-    "RiskManagementNode",
-    "ReportingNode",
-    "LintNode",
-    "DataIntegrityNode",
-    "VerificationNode",
-    "PropertyTestNode",
-    "InvariantDiscoveryNode",
     "ConvergenceMonitorNode",
     "DashboardNode",
+    "DataIngestionNode",
+    "DataIntegrityNode",
+    "InvariantDiscoveryNode",
+    "LintNode",
+    "PropertyTestNode",
+    "ReportingNode",
+    "RiskManagementNode",
+    "SignalGenerationNode",
+    "StrategyNode",
+    "VerificationNode",
 ]

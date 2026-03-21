@@ -1,9 +1,10 @@
 """Tests for the Evaluator harness."""
 
+
 import pytest
-from omega.core.evaluator import Evaluator, GoalSpec, MetricSpec, _mean, _stddev, _pct_change
+
+from omega.core.evaluator import Evaluator, GoalSpec, MetricSpec, _mean, _pct_change, _stddev
 from omega.core.node import NodeState
-from datetime import datetime
 
 
 def _make_state(node_id="n1", metrics=None):

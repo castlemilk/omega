@@ -1,25 +1,64 @@
 #!/bin/sh
+# .githooks/pre-commit — quality gates for all three layers
+# Skip with: SKIP_HOOKS=1 git commit
 set -e
+
+if [ "${SKIP_HOOKS:-0}" = "1" ]; then
+    echo "SKIP_HOOKS=1 — skipping pre-commit quality gates"
+    exit 0
+fi
 
 echo "Running pre-commit quality gates..."
 
-# Go checks
-echo "→ go vet"
-go vet ./...
+# Detect changed files (staged)
+CHANGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$' || true)
+CHANGED_GO=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+CHANGED_TS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true)
 
-echo "→ go test (fast)"
-go test ./... -timeout 30s -count=1
+# ---------------------------------------------------------------------------
+# Python checks (only if .py files are staged)
+# ---------------------------------------------------------------------------
+if [ -n "$CHANGED_PY" ]; then
+    echo "→ ruff lint"
+    python3 -m ruff check $CHANGED_PY
 
-# golangci-lint (optional — skip if not installed)
-if which golangci-lint > /dev/null 2>&1; then
-  echo "→ golangci-lint"
-  golangci-lint run ./...
+    echo "→ ruff format check"
+    python3 -m ruff format --check $CHANGED_PY
+
+    echo "→ mypy type check"
+    python3 -m mypy $CHANGED_PY
 fi
 
-# Frontend checks
-if [ -d dashboard ] && [ -f dashboard/package.json ]; then
-  echo "→ frontend typecheck"
-  cd dashboard && npm run typecheck && cd ..
+# ---------------------------------------------------------------------------
+# Go checks (always run if any .go files staged — go vet is fast)
+# ---------------------------------------------------------------------------
+if [ -n "$CHANGED_GO" ]; then
+    echo "→ go vet"
+    go vet ./...
+
+    if which golangci-lint > /dev/null 2>&1; then
+        echo "→ golangci-lint"
+        golangci-lint run ./...
+    fi
+
+    echo "→ go test (fast)"
+    go test ./... -timeout 30s -count=1
+fi
+
+# ---------------------------------------------------------------------------
+# React / TypeScript checks (only if .ts/.tsx files staged)
+# ---------------------------------------------------------------------------
+if [ -n "$CHANGED_TS" ] && [ -d dashboard ] && [ -f dashboard/package.json ]; then
+    echo "→ tsc type check"
+    cd dashboard && npm run typecheck
+
+    echo "→ eslint"
+    npm run lint
+
+    echo "→ prettier check"
+    npx prettier --check 'src/**/*.{ts,tsx,css}'
+
+    cd ..
 fi
 
 echo "✓ All quality gates passed"
