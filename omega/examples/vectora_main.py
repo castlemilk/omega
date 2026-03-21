@@ -51,6 +51,8 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from omega.core.config import OmegaConfig
+from omega.core.logging import configure_logging, get_logger
 from omega.core.evaluator import GoalSpec
 from omega.core.feedback import FeedbackEngine
 from omega.core.memory import MemoryKernel
@@ -91,22 +93,23 @@ from omega.core.verification_gates import (
 )
 from omega.nodes.devils_advocate import DevilsAdvocateNode
 
-# ─── Logging ───────────────────────────────────────────────────────────────────
+# ─── Config + Logging ──────────────────────────────────────────────────────────
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%H:%M:%S",
+_cfg = OmegaConfig.load()
+configure_logging(
+    level=_cfg.monitoring.log_level,
+    json_output=_cfg.monitoring.json_logs,
+    log_file=_cfg.monitoring.log_file,
 )
-logger = logging.getLogger("omega.vectora")
+logger = get_logger("omega.vectora")
 
 # ─── Constants ─────────────────────────────────────────────────────────────────
 
 GOAL = "vectora_crypto_research"
-DB_PATH = "/tmp/omega_vectora.db"
-MEMORY_DB_PATH = "/tmp/omega_vectora_memory.db"
-STATE_DB_PATH = "/tmp/omega_vectora_state.db"
-HEALTH_THRESHOLD = 0.6
+DB_PATH = _cfg.database.orchestrator_db_path
+MEMORY_DB_PATH = _cfg.database.memory_db_path
+STATE_DB_PATH = _cfg.database.state_db_path
+HEALTH_THRESHOLD = _cfg.alignment.health_threshold
 
 # ─── Shutdown flag ─────────────────────────────────────────────────────────────
 
@@ -115,7 +118,7 @@ _shutdown = False
 
 def _handle_sigint(sig, frame):
     global _shutdown
-    print("\n\n[Vectora] Shutting down gracefully…")
+    logger.info("Shutting down gracefully (SIGINT)")
     _shutdown = True
 
 
@@ -1055,121 +1058,102 @@ class VectoraSystem:
         mem_summary: Dict[str, Any],
     ) -> None:
         improved_str = ", ".join(improved) if improved else "—"
-        regime = mem_summary.get("regime", "unknown")
-        print(
-            f"\n{'─'*68}\n"
-            f"  Heartbeat #{iteration:>3} │ Score: {score:.4f} │ {elapsed_ms/1000:.1f}s\n"
-            f"  Coverage: {metrics.get('coverage_rate',0):.0%}"
-            f"  Signals: {metrics.get('signal_coverage',0):.0%}"
-            f"  Sharpe: {metrics.get('sharpe_ratio',0):+.3f}"
-            f"  Indicators: {int(metrics.get('indicator_count',1))}"
-            f"  Errors: {metrics.get('error_rate',0):.0%}\n"
-            f"  Memory: {mem_summary.get('episodic_count',0)} episodes │ "
-            f"{mem_summary.get('semantic_count',0)} patterns learned │ Regime: {regime}\n"
-            f"  Improved: {improved_str}\n"
-            f"{'─'*68}\n"
+        logger.info(
+            "Heartbeat #%d complete",
+            iteration,
+            extra={
+                "cycle_id": iteration,
+                "score": round(score, 4),
+                "elapsed_s": round(elapsed_ms / 1000, 1),
+                "coverage_rate": metrics.get("coverage_rate", 0),
+                "signal_coverage": metrics.get("signal_coverage", 0),
+                "sharpe_ratio": metrics.get("sharpe_ratio", 0),
+                "indicator_count": int(metrics.get("indicator_count", 1)),
+                "error_rate": metrics.get("error_rate", 0),
+                "episodic_memories": mem_summary.get("episodic_count", 0),
+                "semantic_patterns": mem_summary.get("semantic_count", 0),
+                "regime": mem_summary.get("regime", "unknown"),
+                "improved_nodes": improved_str,
+            },
         )
 
     def print_node_health(self) -> None:
-        print("\nNode Health Status:")
-        print(f"  {'Node':<28} {'Ver':>5}  {'Health':>7}  Key Metrics")
-        print("  " + "─" * 70)
         for node in [self.ingestion, self.signals, self.strategy,
                      self.risk, self.reporting, self.lint, self.integrity,
                      self.verification, self.property_tests, self.invariants, self.convergence]:
             state = node.get_state()
-            m = state.metrics
-            parts = []
-            for k, label in [
-                ("coverage_rate", "cov"),
-                ("signal_coverage", "sig"),
-                ("sharpe_ratio", "sharpe"),
-                ("completeness_score", "complete"),
-                ("error_rate", "err"),
-                ("indicator_count", "indicators"),
-            ]:
-                if k in m:
-                    v = m[k]
-                    if k in ("coverage_rate", "signal_coverage",
-                             "completeness_score", "error_rate"):
-                        parts.append(f"{label}={v:.0%}")
-                    elif k == "indicator_count":
-                        parts.append(f"{label}={int(v)}")
-                    else:
-                        parts.append(f"{label}={v:+.2f}")
-            metrics_str = "  ".join(parts) if parts else "(no metrics)"
-            print(
-                f"  {state.name:<28} {state.version:>5}  {state.health:>5.0%}  {metrics_str}"
+            logger.info(
+                "Node health: %s v%s health=%.0f%%",
+                state.name, state.version, state.health * 100,
+                extra={"node_id": state.node_id, "health": state.health,
+                       "version": state.version, **state.metrics},
             )
-        print()
 
     def print_verification_summary(self) -> None:
-        """Print verification + convergence + invariant summary."""
-        print("\nVerification & Convergence Summary:")
-
-        # Verification stats
+        """Log verification + convergence + invariant summary."""
         v = self.verification
         total = v._pass_count + v._fail_count
         pass_rate = v._pass_count / max(1, total)
-        print(f"  VerificationNode: {v._pass_count} pass / {v._fail_count} fail / {v._rollback_count} rollbacks (pass_rate={pass_rate:.0%})")
+        logger.info(
+            "VerificationNode: %d pass / %d fail / %d rollbacks (pass_rate=%.0f%%)",
+            v._pass_count, v._fail_count, v._rollback_count, pass_rate * 100,
+        )
 
-        # Convergence stats
         c = self.convergence
         if c._scores:
-            print(f"  ConvergenceMonitor: {len(c._scores)} cycles | EMA={c._score_emas[-1]:.4f} | trend={c._ascii_sparkline(c._scores)[:20]}")
+            logger.info(
+                "ConvergenceMonitor: %d cycles | EMA=%.4f | oscillations=%d",
+                len(c._scores), c._score_emas[-1], c._oscillation_count,
+            )
             if c._oscillation_count > 0:
-                print(f"    ⚠ Oscillations detected: {c._oscillation_count}")
+                logger.warning("Oscillations detected: %d", c._oscillation_count)
 
-        # Invariants
         inv = self.invariants
-        print(f"  InvariantDiscovery: {len(inv._confirmed_invariants)} confirmed | {len(inv._proposed_invariants)} proposed | {inv._violation_count} violations")
-        if inv._confirmed_invariants:
-            for inv_item in inv._confirmed_invariants[:3]:
-                print(f"    ✓ {inv_item.get('description', '?')[:70]}")
+        logger.info(
+            "InvariantDiscovery: %d confirmed | %d proposed | %d violations",
+            len(inv._confirmed_invariants), len(inv._proposed_invariants), inv._violation_count,
+        )
 
-        # Property tests
         p = self.property_tests
         active = p._active_issues()
-        print(f"  PropertyTestNode: v{p._version} | {len(active)} active violations")
-        print()
+        logger.info("PropertyTestNode: v%s | %d active violations", p._version, len(active))
 
     def print_memory_status(self) -> None:
         summary = self.memory.summary()
-        print("\nMemory Kernel Status:")
-        print(f"  Cycle           : {summary['current_cycle']}")
-        print(f"  Episodic memories: {summary['episodic_count']}")
-        print(f"  Semantic patterns: {summary['semantic_count']}")
-        print(f"  Working memory   : {', '.join(summary['working_memory_keys']) or '(empty)'}")
-        if summary.get("top_semantic_concepts"):
-            print("  Top learned patterns:")
-            for c in summary["top_semantic_concepts"]:
-                print(f"    [{c['confidence']:.2f}] {c['concept']}")
-        print()
+        logger.info(
+            "Memory: cycle=%d episodic=%d semantic=%d working_keys=%s",
+            summary["current_cycle"],
+            summary["episodic_count"],
+            summary["semantic_count"],
+            ", ".join(summary["working_memory_keys"]) or "(empty)",
+        )
+        for concept in summary.get("top_semantic_concepts", []):
+            logger.debug(
+                "Learned pattern [%.2f]: %s",
+                concept["confidence"], concept["concept"],
+            )
 
     def print_observability_summary(self) -> None:
-        """Print concise observability dashboard after each heartbeat."""
-        print(self.metrics.format_dashboard())
+        """Log concise observability dashboard after each heartbeat."""
+        logger.info("Metrics dashboard:\n%s", self.metrics.format_dashboard())
 
-        # Show recent trace waterfall for last heartbeat
         recent = self.state_store.get_recent_traces(limit=1)
         if recent:
             last_trace_id = recent[0]["trace_id"]
-            print("\n  Last heartbeat trace:")
-            print(self.tracer.format_waterfall(last_trace_id))
-        print()
+            logger.info("Last heartbeat trace:\n%s", self.tracer.format_waterfall(last_trace_id))
 
     def accept_feedback(self, cycle: int) -> None:
         """Prompt the user for optional feedback (non-blocking, 3s window)."""
-        print(
-            "\n  Feedback (optional — type and press Enter within 3s, "
-            "or wait to continue):"
+        logger.info(
+            "Feedback window open — type and press Enter within 3s, or wait to continue",
+            extra={"cycle_id": cycle},
         )
         fb = self.feedback.try_read_cli_feedback(timeout_sec=3.0, cycle=cycle)
         if fb:
-            print(f"  Feedback recorded: {fb[:60]}")
+            logger.info("Feedback recorded: %s", fb[:60], extra={"cycle_id": cycle})
 
     def print_evaluation_report(self) -> None:
-        print(self.orchestrator.evaluator.report(GOAL))
+        logger.info("Evaluation report:\n%s", self.orchestrator.evaluator.report(GOAL))
 
 
 # ─── Main ──────────────────────────────────────────────────────────────────────
@@ -1204,17 +1188,19 @@ def main():
     )
     args = parser.parse_args()
 
-    print("\n" + "═" * 68)
-    print("  VECTORA — Omega Crypto Quantitative Research System")
-    print("  Data: Binance (OHLCV) + CoinGecko (market caps) — no API key")
-    print("  Memory: episodic + semantic + working (SQLite)")
-    print("  Feedback: self-supervised + human CLI")
-    print("  Observability: StateStore + Tracer + MetricsCollector + SystemAnalyzer")
-    print(f"  Heartbeat: {args.heartbeat}s | Pairs: BTC,ETH,SOL,BNB,XRP,ADA,DOT,AVAX,LINK,MATIC")
-    print("  Ctrl+C to stop")
-    print("═" * 68 + "\n")
-    print("  [Future: SentimentNode via Bittensor SN13 / Macrocosmos `dv` CLI]")
-    print("  [Architecture is pluggable — add SentimentIngestionNode for social signals]\n")
+    logger.info(
+        "VECTORA starting",
+        extra={
+            "system": "Vectora — Omega Crypto Quantitative Research System",
+            "data_sources": "Binance (OHLCV) + CoinGecko (market caps)",
+            "memory": "episodic + semantic + working (SQLite)",
+            "feedback": "self-supervised + human CLI",
+            "heartbeat_s": args.heartbeat,
+            "pairs": "BTC,ETH,SOL,BNB,XRP,ADA,DOT,AVAX,LINK,MATIC",
+            "future": "SentimentNode via Bittensor SN13 / Macrocosmos dv CLI",
+        },
+    )
+    _cfg.dump_to_log()
 
     system = VectoraSystem()
 
@@ -1259,17 +1245,14 @@ def main():
         pass
 
     # Final report
-    print("\n" + "═" * 68)
-    print("  FINAL EVALUATION REPORT")
-    print("═" * 68)
+    logger.info("=== FINAL EVALUATION REPORT ===")
     system.print_node_health()
     system.print_memory_status()
     system.print_evaluation_report()
 
-    # Feedback summary
     fb_summary = system.feedback.get_feedback_history_summary()
-    print("\nFeedback History:\n" + fb_summary)
-    print(f"\nCompleted {iteration_count} heartbeat(s). Goodbye.\n")
+    logger.info("Feedback history:\n%s", fb_summary)
+    logger.info("Completed %d heartbeat(s). Goodbye.", iteration_count)
 
 
 if __name__ == "__main__":

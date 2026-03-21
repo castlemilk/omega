@@ -1,0 +1,21 @@
+# Dockerfile.api — omega-api (Go Connect-RPC server)
+FROM golang:1.25-bookworm AS builder
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 go build -o /omega-api ./cmd/omega-api
+
+# ── Runtime ────────────────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN mkdir -p /data
+
+COPY --from=builder /omega-api /omega-api
+
+EXPOSE 8080
+
+ENTRYPOINT ["/omega-api"]

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"connectrpc.com/connect"
 	"golang.org/x/net/http2"
@@ -16,8 +17,10 @@ import (
 
 func main() {
 	// Ensure DB files exist (Python orchestrator creates them on first run)
-	_ = os.MkdirAll("/tmp", 0755) //nolint:errcheck
-	for _, p := range []string{db.StateDBPath, db.MemoryDBPath} {
+	stateDBPath := db.StateDBPath()
+	memoryDBPath := db.MemoryDBPath()
+	for _, p := range []string{stateDBPath, memoryDBPath} {
+		_ = os.MkdirAll(filepath.Dir(p), 0755) //nolint:errcheck
 		if _, err := os.Stat(p); os.IsNotExist(err) {
 			f, _ := os.Create(p)
 			if f != nil {
@@ -26,7 +29,7 @@ func main() {
 		}
 	}
 
-	database, err := db.New(db.StateDBPath, db.MemoryDBPath)
+	database, err := db.New(stateDBPath, memoryDBPath)
 	if err != nil {
 		log.Fatalf("open DB: %v", err)
 	}

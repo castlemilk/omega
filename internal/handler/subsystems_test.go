@@ -75,7 +75,7 @@ func setupSubsystemTestServer(t *testing.T) (omegav1connect.OrchestratorServiceC
 
 	// Seed memory DB with required tables
 	memSQLDB, _ := sql.Open("sqlite", memDB)
-	memSQLDB.Exec(`
+	_, _ = memSQLDB.Exec(`
 		CREATE TABLE IF NOT EXISTS episodes (
 			episode_id TEXT PRIMARY KEY,
 			event_type TEXT NOT NULL DEFAULT '',

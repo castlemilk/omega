@@ -1,4 +1,9 @@
-.PHONY: build test lint typecheck proto all clean
+.PHONY: build test lint typecheck proto all clean \
+        up down logs run api dashboard \
+        fe-install fe-build fe-lint fe-typecheck \
+        py-test py-lint
+
+# ── Go ────────────────────────────────────────────────────────────────────────
 
 build:
 	go build ./...
@@ -19,6 +24,8 @@ test-handler:
 proto:
 	buf generate
 
+# ── React dashboard ────────────────────────────────────────────────────────────
+
 fe-install:
 	cd dashboard && npm install
 
@@ -31,7 +38,39 @@ fe-lint:
 fe-typecheck:
 	cd dashboard && npm run typecheck
 
-all: build fe-build
+# ── Python ────────────────────────────────────────────────────────────────────
+
+py-test:
+	python -m pytest tests/ -v
+
+py-lint:
+	@which ruff > /dev/null 2>&1 && ruff check omega/ || echo "ruff not installed, skipping"
+
+# ── Local dev (no Docker) ──────────────────────────────────────────────────────
+
+run:
+	python -m omega.examples.vectora_main
+
+api:
+	go run ./cmd/omega-api
+
+dashboard:
+	cd dashboard && npm run dev
+
+# ── Docker Compose ────────────────────────────────────────────────────────────
+
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f
+
+# ── Aggregate targets ─────────────────────────────────────────────────────────
+
+all: build fe-build py-test
 
 monitoring-up:
 	docker compose -f monitoring/docker-compose.yml up -d

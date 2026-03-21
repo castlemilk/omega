@@ -6,18 +6,35 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
 
 const (
-	StateDBPath     = "/tmp/omega_vectora_state.db"
-	MemoryDBPath    = "/tmp/omega_vectora_memory.db"
-	ChallengeDBPath = "/tmp/omega_challenge_registry.db"
+	defaultStateDBPath  = "/tmp/omega_vectora_state.db"
+	defaultMemoryDBPath = "/tmp/omega_vectora_memory.db"
+	ChallengeDBPath     = "/tmp/omega_challenge_registry.db"
 )
 
-// DB holds connections to the Omega SQLite databases.
+// StateDBPath returns the SQLite state DB path, honouring OMEGA_STATE_DB_PATH.
+func StateDBPath() string {
+	if p := os.Getenv("OMEGA_STATE_DB_PATH"); p != "" {
+		return p
+	}
+	return defaultStateDBPath
+}
+
+// MemoryDBPath returns the SQLite memory DB path, honouring OMEGA_MEMORY_DB_PATH.
+func MemoryDBPath() string {
+	if p := os.Getenv("OMEGA_MEMORY_DB_PATH"); p != "" {
+		return p
+	}
+	return defaultMemoryDBPath
+}
+
+// DB holds connections to both Omega SQLite databases.
 type DB struct {
 	state     *sql.DB
 	memory    *sql.DB
