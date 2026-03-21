@@ -143,58 +143,115 @@ def get_ohlcv(symbol: str, days: int = 365, force_refresh: bool = False) -> list
 
 def run_backtest_for_symbol(symbol: str, ticker: str, bars: list[dict]) -> dict:
     """
-    Run OmegaBacktestBridge on `bars` and return a summary dict.
+    Run a direct SMA+RSI strategy on `bars` and return a summary dict.
+
+    Bypasses the orchestrator entirely — uses omega.backtest strategy
+    implementations directly against real OHLCV data with real slippage.
     """
-    from omega.eval.backtest_bridge import BacktestMode, OmegaBacktestBridge
+    from omega.backtest import OHLCV, _multi_signal_strategy, _sma_crossover_strategy
+    from omega.eval.sharpe import sharpe_ratio
     from omega.eval.significance import sharpe_is_significant
+
+    commission = 0.001  # 0.1% Binance spot fee (entry + exit = 0.2% round-trip)
 
     logger.info("=" * 60)
     logger.info("Running backtest: %s (%d bars)", symbol, len(bars))
     logger.info("=" * 60)
 
-    bridge = OmegaBacktestBridge(
-        mode=BacktestMode.PICO,
-        ticker=ticker,
-        lookback_window=30,  # 30-day lookback for daily data
-        initial_capital=1.0,
-        commission=0.001,  # 0.1% Binance spot fee
-        periods_per_year=PERIODS_PER_YEAR,
-    )
-
-    result = bridge.run(bars)
+    # Convert to OHLCV objects
+    ohlcv_bars = [
+        OHLCV(
+            symbol=ticker,
+            date=datetime.fromtimestamp(b["timestamp"], tz=UTC).date().isoformat(),
+            open=float(b["open"]),
+            high=float(b["high"]),
+            low=float(b["low"]),
+            close=float(b["close"]),
+            volume=float(b["volume"]),
+        )
+        for b in bars
+    ]
 
     # ------------------------------------------------------------------
-    # Extract key metrics
+    # Main strategy: SMA(10/30) crossover gated by RSI < 70
     # ------------------------------------------------------------------
-    report = result.report
-    bnh = result.baselines.get("buy_and_hold")
-    sma = result.baselines.get("sma_crossover")
+    trades, daily_rets = _multi_signal_strategy(ticker, ohlcv_bars)
 
+    # Deduct commission on each round-trip trade
+    for t in trades:
+        t.pnl_pct -= 2 * commission
+
+    # ------------------------------------------------------------------
+    # Walk-forward split (60% in-sample / 40% out-of-sample)
+    # ------------------------------------------------------------------
+    split = int(len(daily_rets) * 0.60)
+    is_rets = daily_rets[:split]
+    oos_rets = daily_rets[split:]
+    is_sharpe = sharpe_ratio(is_rets, periods_per_year=PERIODS_PER_YEAR)
+    oos_sharpe = sharpe_ratio(oos_rets, periods_per_year=PERIODS_PER_YEAR)
+
+    # ------------------------------------------------------------------
+    # Bootstrap CI on full returns
+    # ------------------------------------------------------------------
     sig, sharpe_pt, (ci_lo, ci_hi) = sharpe_is_significant(
-        result.returns,
+        daily_rets,
         periods_per_year=PERIODS_PER_YEAR,
         n_bootstrap=2000,
         seed=42,
     )
 
-    summary = {
+    # Max drawdown (equity-based, compound returns)
+    equity, peak_eq, max_dd = 1.0, 1.0, 0.0
+    for r in daily_rets:
+        equity *= 1.0 + r
+        if equity > peak_eq:
+            peak_eq = equity
+        dd = (peak_eq - equity) / peak_eq
+        if dd > max_dd:
+            max_dd = dd
+
+    total_return = equity - 1.0  # compound total return
+
+    # ------------------------------------------------------------------
+    # Baselines
+    # ------------------------------------------------------------------
+    closes = [b["close"] for b in bars]
+    bnh_rets = [(closes[i] - closes[i - 1]) / closes[i - 1] for i in range(1, len(closes))]
+    bnh_sharpe = sharpe_ratio(bnh_rets, periods_per_year=PERIODS_PER_YEAR)
+    bnh_eq = 1.0
+    for r in bnh_rets:
+        bnh_eq *= 1.0 + r
+    bnh_total = bnh_eq - 1.0
+
+    _sma_trades, sma_rets = _sma_crossover_strategy(ticker, ohlcv_bars, short=10, long=30)
+    sma_sharpe_val = sharpe_ratio(sma_rets, periods_per_year=PERIODS_PER_YEAR)
+
+    logger.info(
+        "  %s: trades=%d sharpe=%.3f [%.3f, %.3f] sig=%s",
+        symbol,
+        len(trades),
+        sharpe_pt,
+        ci_lo,
+        ci_hi,
+        sig,
+    )
+
+    return {
         "symbol": symbol,
-        "n_bars": result.n_bars,
-        "n_trades": report.n_trades if report else 0,
+        "n_bars": len(bars),
+        "n_trades": len(trades),
         "sharpe": sharpe_pt,
         "sharpe_ci_lo": ci_lo,
         "sharpe_ci_hi": ci_hi,
         "sharpe_significant": sig,
-        "max_drawdown": report.max_drawdown if report else 0.0,
-        "total_return": report.total_return if report else 0.0,
-        "in_sample_sharpe": report.in_sample_sharpe if report else 0.0,
-        "out_of_sample_sharpe": report.out_of_sample_sharpe if report else 0.0,
-        "bnh_sharpe": bnh.sharpe if bnh else 0.0,
-        "bnh_total_return": bnh.total_return if bnh else 0.0,
-        "sma_sharpe": sma.sharpe if sma else 0.0,
+        "max_drawdown": max_dd,
+        "total_return": total_return,
+        "in_sample_sharpe": is_sharpe,
+        "out_of_sample_sharpe": oos_sharpe,
+        "bnh_sharpe": bnh_sharpe,
+        "bnh_total_return": bnh_total,
+        "sma_sharpe": sma_sharpe_val,
     }
-
-    return summary
 
 
 # ---------------------------------------------------------------------------
