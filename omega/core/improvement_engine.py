@@ -174,6 +174,28 @@ class SyntheticEvaluator(ImprovementEvaluator):
         return score, metrics
 
 
+class NullEvaluator(ImprovementEvaluator):
+    """
+    Placeholder evaluator used when no domain evaluator has been injected.
+
+    Raises NotImplementedError on any evaluate() call with a clear message
+    directing the implementer to provide a domain-specific evaluator.
+    """
+
+    def evaluate(
+        self,
+        node_id: str,
+        params: dict[str, Any],
+        context: dict[str, Any] | None = None,
+    ) -> tuple[float, dict[str, Any]]:
+        raise NotImplementedError(
+            f"ImprovementEngine has no evaluator configured for node '{node_id}'. "
+            "Inject a domain-specific evaluator via ImprovementEngine(evaluator=...) "
+            "or engine.set_evaluator(...). "
+            "For testing, use SyntheticEvaluator()."
+        )
+
+
 # ---------------------------------------------------------------------------
 # ImprovementEngine
 # ---------------------------------------------------------------------------
@@ -219,46 +241,20 @@ class ImprovementEngine:
 
     @staticmethod
     def _default_evaluator() -> ImprovementEvaluator:
-        """Return BridgeEvaluator (honest walk-forward) when data is available,
-        then BacktestEvaluator, then SyntheticEvaluator as final fallback."""
-        try:
-            from omega.core.bridge_evaluator import BridgeEvaluator
-            from omega.core.node import NodeInput
-            from omega.nodes.vectora.data_ingestion import DataIngestionNode
+        """
+        Returns NullEvaluator — domain nodes must inject their own evaluator.
 
-            node = DataIngestionNode()
-            inp = NodeInput(
-                action="ingest",
-                parameters={
-                    "symbols": ["BTCUSDT"],
-                    "start_date": "2023-01-01",
-                    "end_date": "2024-12-31",
-                },
-            )
-            out = node.execute(inp)
-            rows = out.result.get("data", {}).get("BTCUSDT", [])
-            if len(rows) >= 200:
-                ohlcv = [
-                    {
-                        "timestamp": i,
-                        "open": float(r.get("open", r.get("close", 0))),
-                        "high": float(r.get("high", r.get("close", 0))),
-                        "low": float(r.get("low", r.get("close", 0))),
-                        "close": float(r.get("close", 0)),
-                        "volume": float(r.get("volume", 0)),
-                    }
-                    for i, r in enumerate(rows)
-                ]
-                return BridgeEvaluator(ohlcv=ohlcv)
-        except Exception:
-            pass
+        Previously this method imported DataIngestionNode and fetched BTCUSDT,
+        coupling the framework to the trading domain.  That logic now lives in
+        omega/nodes/vectora/domain_config.py (VectoraDomainConfig.evaluator).
 
-        try:
-            from omega.core.backtest_evaluator import BacktestEvaluator
+        To use the improvement engine, pass an explicit evaluator::
 
-            return BacktestEvaluator()
-        except Exception:
-            return SyntheticEvaluator()
+            ImprovementEngine(evaluator=SyntheticEvaluator())        # tests
+            ImprovementEngine(evaluator=BacktestEvaluator())         # Vectora
+            ImprovementEngine(evaluator=MyDomainEvaluator())         # custom
+        """
+        return NullEvaluator()
 
     def set_evaluator(self, evaluator: ImprovementEvaluator) -> None:
         """Replace the active evaluator at runtime."""
