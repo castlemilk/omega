@@ -320,23 +320,30 @@ class VectoraNode(Node):
         regime: str = inp.parameters.get("regime", "default")
         pico_mode: bool = inp.parameters.get("pico_mode", False)
 
-        # Flatten signal values for StrategyNode
-        flat_signals: dict[str, float] = {}
+        # Flatten signal values for StrategyNode.
+        # StrategyNode._construct_portfolio expects {ticker: {"composite": float, ...}}.
+        # signal_generation uses "composite"; ablation/ring1_eval use "composite_signal".
+        flat_signals: dict[str, Any] = {}
 
         for node_signals in signals.values() if isinstance(signals, dict) else []:
             if isinstance(node_signals, dict) and "value" in node_signals:
-                continue  # single signal dict — handled below
+                continue  # single scalar signal dict — handled below
             if isinstance(node_signals, dict):
                 for pair, sig in node_signals.items():
-                    if isinstance(sig, dict) and "composite_signal" in sig:
-                        flat_signals[pair] = sig["composite_signal"]
+                    if not isinstance(sig, dict):
+                        continue
+                    # Normalise to "composite" key so StrategyNode can read it
+                    if "composite" in sig:
+                        flat_signals[pair] = sig
+                    elif "composite_signal" in sig:
+                        flat_signals[pair] = {**sig, "composite": sig["composite_signal"]}
 
-        # Also grab advanced signal values
+        # Also expose advanced scalar signals under "adv_*" keys
         for name, sig in signals.items() if isinstance(signals, dict) else []:
             if name.startswith("_"):
                 continue
             if isinstance(sig, dict) and "value" in sig:
-                flat_signals[f"adv_{name}"] = sig["value"]
+                flat_signals[f"adv_{name}"] = {"composite": float(sig["value"])}
 
         strategy_inp = NodeInput(
             action="construct_portfolio",

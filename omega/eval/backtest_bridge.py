@@ -218,10 +218,10 @@ class OmegaBacktestBridge:
             # Run one full orchestrator cycle (signals → strategy → adversarial)
             cycle_result = self._orchestrator.run_one_cycle()
 
-            # Extract proposals from the cycle's node results
+            # Extract proposals from the cycle's node results.
+            # Use VectoraNode._do_construct_portfolio which correctly flattens
+            # _last_signals (including metadata keys like _regime, _weights).
             proposals = []
-            # The orchestrator records trades_executed; we need the proposals
-            # We re-read them from VectoraNode's last portfolio construction
             try:
                 from omega.core.node import NodeInput
 
@@ -235,10 +235,7 @@ class OmegaBacktestBridge:
                     },
                     context={"cycle_id": "backtest", "cycle": i},
                 )
-                port_out = self._node._strategy.execute(port_inp)
-                if port_out.success and port_out.result:
-                    raw = port_out.result
-                    proposals = raw if isinstance(raw, list) else [raw]
+                proposals = self._node._do_construct_portfolio(port_inp)
             except Exception as exc:
                 logger.debug("Portfolio extraction failed at bar %d: %s", i, exc)
 
@@ -384,7 +381,8 @@ class OmegaBacktestBridge:
 
         -1.0 = full short, 0.0 = flat, 1.0 = full long.
 
-        Looks for 'action', 'direction', or 'weight' keys in proposals.
+        Handles both legacy proposal formats (action/direction/weight keys) and
+        StrategyNode's portfolio format (weights dict with ticker keys).
         Falls back to flat if no clear signal.
         """
         if not proposals:
@@ -407,6 +405,12 @@ class OmegaBacktestBridge:
                 signals.append(float(prop["composite"]))
             elif isinstance(weight, (int, float)) and weight != 0:
                 signals.append(float(weight))
+            elif "weights" in prop and isinstance(prop["weights"], dict):
+                # StrategyNode portfolio format: {"weights": {ticker: float}, ...}
+                # Any non-zero allocation = long; sum of weights as position size
+                total_weight = sum(prop["weights"].values())
+                if total_weight > 0:
+                    signals.append(min(1.0, total_weight))
 
         if not signals:
             return 0.0
