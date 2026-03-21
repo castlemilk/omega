@@ -678,12 +678,19 @@ class AdversarialPressure:
     """
     Orchestrates the Three-Rings adversarial pressure architecture.
 
-    Ring 1 (EnsembleDisagreementDetector) runs every cycle.
-    Ring 2 (ScenarioGenerator) runs every RING2_INTERVAL cycles.
-    Ring 3 (EvolutionaryTournament) runs every RING3_INTERVAL cycles when
-        a fitness_fn is supplied.
+    Ring 1 (EnsembleDisagreementDetector) runs every cycle — active by default.
+    Ring 2 (ScenarioGenerator) runs every RING2_INTERVAL cycles — dormant until
+        activated via ``active_rings`` config.
+    Ring 3 (EvolutionaryTournament) runs every RING3_INTERVAL cycles — dormant
+        until activated via ``active_rings`` config.
 
-    Failure cases from all rings are accumulated and can be retrieved for
+    The recommended activation path:
+      1. Run with ``active_rings=[1]`` (default) until Ring 1 is validated.
+      2. Call ``validate_ring1()`` to check if Ring 1 has produced useful signals.
+      3. Once validated, set ``active_rings=[1, 2]`` to enable scenario testing.
+      4. After Ring 2 is stable, set ``active_rings=[1, 2, 3]`` for full evolution.
+
+    Failure cases from all active rings are accumulated and can be retrieved for
     injection into the improvement loop.
 
     Usage::
@@ -699,6 +706,10 @@ class AdversarialPressure:
             fitness_fn=my_fitness_fn,
         )
         failures = ap.collect_failure_cases()
+
+        # Activate Ring 2 once Ring 1 is validated
+        if ap.validate_ring1(min_cycles=20):
+            ap.active_rings = [1, 2]
     """
 
     RING2_INTERVAL: int = 10   # cycles between scenario generation runs
@@ -708,6 +719,7 @@ class AdversarialPressure:
         self,
         ring1_threshold: float = 0.2,
         population_size: int = 10,
+        active_rings: Optional[List[int]] = None,
     ) -> None:
         self.ring1 = EnsembleDisagreementDetector(
             disagreement_threshold=ring1_threshold
@@ -715,6 +727,14 @@ class AdversarialPressure:
         self.ring2 = ScenarioGenerator()
         self.ring3 = EvolutionaryTournament(population_size=population_size)
         self._failure_cases: List[Dict] = []
+
+        # Only Ring 1 is active by default.  Set active_rings=[1,2] or [1,2,3]
+        # once the earlier ring(s) have been validated.
+        self.active_rings: List[int] = list(active_rings) if active_rings is not None else [1]
+
+        # Ring 1 validation tracking
+        self._ring1_cycles_run: int = 0
+        self._ring1_flagged_count: int = 0
 
     # ------------------------------------------------------------------
     # Main entry point
@@ -738,24 +758,24 @@ class AdversarialPressure:
         Returns an AdversarialReport containing results from each active ring
         and any new failure cases collected this cycle.
         """
-        # ---- Ring 1 ------------------------------------------------
+        # ---- Ring 1 (always active) --------------------------------
         ring1_result = self._run_ring1(
             cycle=cycle,
             variant_outputs=variant_outputs,
         )
 
-        # ---- Ring 2 ------------------------------------------------
+        # ---- Ring 2 (dormant unless in active_rings) ---------------
         ring2_scenarios: List[Scenario] = []
-        if cycle % self.RING2_INTERVAL == 0:
+        if 2 in self.active_rings and cycle % self.RING2_INTERVAL == 0:
             ring2_scenarios = self._run_ring2(
                 cycle=cycle,
                 current_signals=current_signals,
                 strategy_params=strategy_params,
             )
 
-        # ---- Ring 3 ------------------------------------------------
+        # ---- Ring 3 (dormant unless in active_rings) ---------------
         ring3_result: Optional[TournamentResult] = None
-        if cycle % self.RING3_INTERVAL == 0 and fitness_fn is not None:
+        if 3 in self.active_rings and cycle % self.RING3_INTERVAL == 0 and fitness_fn is not None:
             ring3_result = self._run_ring3(
                 cycle=cycle,
                 fitness_fn=fitness_fn,
@@ -796,6 +816,9 @@ class AdversarialPressure:
             self.ring1.submit_output(variant_id, output)
 
         result = self.ring1.detect()
+        self._ring1_cycles_run += 1
+        if result.flagged:
+            self._ring1_flagged_count += 1
         logger.debug(
             "Ring 1 [cycle=%d]: flagged=%s max_disagreement=%.4f",
             cycle,
@@ -955,6 +978,48 @@ class AdversarialPressure:
             )
 
         return failures
+
+    # ------------------------------------------------------------------
+    # Ring 1 validation
+    # ------------------------------------------------------------------
+
+    def validate_ring1(
+        self,
+        min_cycles: int = 10,
+        min_flag_rate: float = 0.05,
+    ) -> bool:
+        """Check whether Ring 1 has produced useful signals for at least *min_cycles*.
+
+        "Useful" means Ring 1 has flagged disagreement in at least *min_flag_rate*
+        fraction of cycles (i.e., it's actively detecting real uncertainty, not
+        always quiet).
+
+        Args:
+            min_cycles: Minimum number of Ring 1 cycles required before validation.
+            min_flag_rate: Minimum fraction of cycles that must have been flagged.
+
+        Returns:
+            True if Ring 1 is validated and Ring 2 activation is recommended.
+        """
+        if self._ring1_cycles_run < min_cycles:
+            logger.info(
+                "Ring 1 validation: only %d/%d cycles run, not yet ready",
+                self._ring1_cycles_run,
+                min_cycles,
+            )
+            return False
+
+        flag_rate = self._ring1_flagged_count / self._ring1_cycles_run
+        validated = flag_rate >= min_flag_rate
+        logger.info(
+            "Ring 1 validation: cycles=%d flagged=%d rate=%.3f (min=%.3f) validated=%s",
+            self._ring1_cycles_run,
+            self._ring1_flagged_count,
+            flag_rate,
+            min_flag_rate,
+            validated,
+        )
+        return validated
 
     # ------------------------------------------------------------------
     # Failure case management

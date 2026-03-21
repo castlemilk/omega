@@ -10,6 +10,7 @@ import json
 import sqlite3
 import time
 import uuid
+from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
 
 
@@ -172,8 +173,144 @@ CREATE TABLE IF NOT EXISTS goal_tracking (
 """
 
 
-class StateStore:
+class StateBackend(ABC):
+    """Abstract base class / protocol for Omega state backends.
+
+    Defines the minimum interface that all state storage implementations must
+    satisfy.  The current default implementation is ``SQLiteBackend`` (formerly
+    ``StateStore``).  Future implementations (e.g. PostgresBackend) should
+    subclass this and implement all abstract methods.
+
+    Node code should type-hint against ``StateBackend``, not the concrete class,
+    so backends can be swapped without touching calling code.
     """
+
+    # ------------------------------------------------------------------
+    # Node registry
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def upsert_node(
+        self,
+        node_id: str,
+        name: str,
+        version: str,
+        capabilities: List[str],
+        health: float,
+        status: str = "active",
+        brain_config: Optional[Dict] = None,
+    ) -> None: ...
+
+    @abstractmethod
+    def get_node(self, node_id: str) -> Optional[Dict]: ...
+
+    @abstractmethod
+    def all_nodes(self) -> List[Dict]: ...
+
+    # ------------------------------------------------------------------
+    # Executions
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def begin_execution(
+        self,
+        node_id: str,
+        node_name: str,
+        action: str,
+        trace_id: Optional[str] = None,
+        span_id: Optional[str] = None,
+        cycle: int = 0,
+    ) -> str: ...
+
+    @abstractmethod
+    def end_execution(
+        self,
+        exec_id: str,
+        success: bool,
+        error_text: Optional[str] = None,
+        metrics: Optional[Dict] = None,
+    ) -> None: ...
+
+    @abstractmethod
+    def get_recent_executions(
+        self,
+        node_id: Optional[str] = None,
+        limit: int = 20,
+        since_cycle: Optional[int] = None,
+    ) -> List[Dict]: ...
+
+    # ------------------------------------------------------------------
+    # Traces
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def begin_span(
+        self,
+        trace_id: str,
+        node_id: str,
+        node_name: str,
+        operation: str,
+        parent_span_id: Optional[str] = None,
+        cycle: int = 0,
+    ) -> str: ...
+
+    @abstractmethod
+    def end_span(
+        self,
+        span_id: str,
+        status: str = "ok",
+        metadata: Optional[Dict] = None,
+    ) -> None: ...
+
+    # ------------------------------------------------------------------
+    # Issues
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def open_issue(
+        self,
+        detector: str,
+        severity: str,
+        description: str,
+        context: Optional[Dict] = None,
+        cycle: int = 0,
+    ) -> str: ...
+
+    @abstractmethod
+    def resolve_issue(self, issue_id: str, cycle: Optional[int] = None) -> bool: ...
+
+    @abstractmethod
+    def get_open_issues(self) -> List[Dict]: ...
+
+    # ------------------------------------------------------------------
+    # Improvements
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def record_improvement(
+        self,
+        node_id: str,
+        node_name: str,
+        from_version: str,
+        to_version: str,
+        before_metrics: Optional[Dict] = None,
+        after_metrics: Optional[Dict] = None,
+        triggered_by: str = "metrics",
+        cycle: int = 0,
+    ) -> None: ...
+
+    @abstractmethod
+    def get_improvement_history(
+        self,
+        node_id: Optional[str] = None,
+        limit: int = 20,
+    ) -> List[Dict]: ...
+
+
+class SQLiteBackend(StateBackend):
+    """
+    SQLite-backed implementation of StateBackend.
+
     Central infrastructure state store for the Omega system.
 
     Single source of truth for:
@@ -1044,3 +1181,7 @@ class StateStore:
             "issues": open_issues[:10],
             "recent_traces": recent_traces,
         }
+
+
+# Backward-compatible alias — existing code using StateStore continues to work.
+StateStore = SQLiteBackend

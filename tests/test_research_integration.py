@@ -101,13 +101,13 @@ class TestFullResearchLoop:
 
         # Step 6: Improvement pass (only if alignment approves)
         if alignment_decision.approved:
-            ok, kl = self.alignment.record_improvement_attempt(
+            ok, reason = self.alignment.record_improvement_attempt(
                 "SignalNode",
                 old_params={"lr": 0.01, "window": 20.0},
                 new_params={"lr": 0.011, "window": 21.0},
             )
             assert isinstance(ok, bool)
-            assert kl >= 0.0
+            assert isinstance(reason, str)
 
         # Step 7: Memory consolidation
         self.memory.end_cycle(cycle, {"score": 0.7, "system_metrics": system_metrics})
@@ -151,12 +151,13 @@ class TestFullResearchLoop:
             assert isinstance(result["alignment"], AlignmentDecision)
 
     def test_adversarial_ring2_fires_at_interval(self):
-        # Ring 2 fires at cycle % 10 == 0
+        # Ring 2 fires at cycle % 10 == 0 only when activated
+        self.adversarial.active_rings = [1, 2]
         results = []
         for i in range(11):
             r = self._run_cycle(i)
             results.append(r)
-        # Cycle 10 should have ring 2 scenarios
+        # Cycle 10 should have ring 2 scenarios (Ring 2 activated)
         assert len(results[10]["adversarial"].ring2_scenarios) > 0
 
     def test_alignment_blocks_on_bad_portfolio(self):

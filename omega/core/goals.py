@@ -1,20 +1,26 @@
 """
-omega.core.goals — 5-layer goal architecture for the Omega autonomous AI framework.
+omega.core.goals — 3-layer goal architecture for the Omega autonomous AI framework.
 
 Layers:
-  1. ConstitutionalConstraints — hard/soft safety rules
+  1. ConstitutionalConstraints — hard/soft safety rules (blocking gate)
   2. BalancedScorecard        — multi-dimensional goal tracking
-  3. NashWelfareAggregator    — Nash bargaining for competing objectives
-  4. MPCReferenceTracker      — Model Predictive Control trajectory tracking
-  5. HTNDecomposer            — Hierarchical Task Network decomposition
+  3. HTNDecomposer            — Hierarchical Task Network decomposition
 
-Orchestrated by GoalArchitecture.step() which returns a GoalDecision each cycle.
+AdaptiveReferenceTracker replaces the former MPCReferenceTracker.  Unlike MPC,
+it does not assume fixed reference dynamics — instead it maintains a rolling EMA
+target that adapts each cycle.  This avoids the fundamental tension between MPC's
+fixed-trajectory assumption and self-improvement (system dynamics change every
+improvement cycle).
+
+NashWelfareAggregator and MPCReferenceTracker are retained in the module for
+advanced/experimental use but are NOT wired into GoalArchitecture by default.
+
+GoalArchitecture.step() returns a GoalDecision each cycle.
 """
 
 from __future__ import annotations
 
 import copy
-import json
 import logging
 import math
 import time
@@ -55,7 +61,6 @@ class GoalDecision:
     constraint_violations: List[ConstraintViolation]
     scorecard: Dict[str, float]
     composite_score: float
-    nash_weights: Dict[str, float]
     subtasks: List[Task]
     tracking_error: float
     control_action: Dict[str, float]
@@ -208,9 +213,7 @@ class BalancedScorecard:
             self._weights = {d: dimension_weights.get(d, 0.0) for d in self.DIMENSIONS}
             self._normalise_weights()
 
-        # Current dimension scores
         self._scores: Dict[str, float] = {d: 0.0 for d in self.DIMENSIONS}
-        # History of score snapshots for trend()
         self._history: List[Dict[str, float]] = []
 
     def _normalise_weights(self) -> None:
@@ -220,19 +223,16 @@ class BalancedScorecard:
                 self._weights[k] /= total
 
     def _map_returns(self, metrics: Dict[str, float]) -> float:
-        """Combine sharpe_ratio (sigmoid-normalised) with pnl direction."""
         parts: List[float] = []
         if "sharpe_ratio" in metrics:
             parts.append(_sigmoid(metrics["sharpe_ratio"]))
         if "pnl" in metrics:
-            # Normalise pnl: use sigmoid centred at 0 — positive pnl > 0.5
             parts.append(_sigmoid(metrics["pnl"]))
         if not parts:
             return 0.5
         return sum(parts) / len(parts)
 
     def _map_risk(self, metrics: Dict[str, float]) -> float:
-        """Lower drawdown and lower error rate → higher score."""
         parts: List[float] = []
         if "max_drawdown_pct" in metrics:
             parts.append(max(0.0, 1.0 - metrics["max_drawdown_pct"] / 100.0))
@@ -286,182 +286,117 @@ class BalancedScorecard:
 
 
 # ---------------------------------------------------------------------------
-# Layer 3: NashWelfareAggregator
+# AdaptiveReferenceTracker  (replaces MPCReferenceTracker)
 # ---------------------------------------------------------------------------
 
 
-class NashWelfareAggregator:
-    """Nash bargaining solution for balancing competing objectives."""
+class AdaptiveReferenceTracker:
+    """Rolling EMA reference tracker with uncertainty-aware horizon.
+
+    Unlike MPC, this tracker does not assume fixed reference dynamics.  The
+    reference adapts each cycle via an exponential moving average, making it
+    compatible with self-improving systems where the underlying dynamics change
+    every improvement cycle.
+
+    Uncertainty grows proportionally to the rolling variance of each objective,
+    widening the acceptable tracking band when the system is in a high-volatility
+    regime.
+    """
 
     def __init__(
         self,
         objectives: List[str],
-        disagreement_points: Optional[Dict[str, float]] = None,
+        ema_alpha: float = 0.2,
+        uncertainty_factor: float = 1.5,
     ) -> None:
         self._objectives = list(objectives)
-        self._disagreement: Dict[str, float] = {o: 0.0 for o in objectives}
-        if disagreement_points:
-            self._disagreement.update(disagreement_points)
-        self._weights: Dict[str, float] = {o: 1.0 / len(objectives) for o in objectives}
-        self._outcomes_history: List[Dict[str, float]] = []
+        self._alpha = ema_alpha          # EMA smoothing factor (higher = faster adaptation)
+        self._uncertainty_factor = uncertainty_factor
 
-    def nash_welfare(self, outcomes: Dict[str, float]) -> float:
-        """Compute Nash welfare = Π (u_i - d_i) using log-sum for stability."""
-        log_sum = 0.0
-        for obj in self._objectives:
-            u = outcomes.get(obj, 0.0)
-            d = self._disagreement.get(obj, 0.0)
-            surplus = u - d
-            if surplus <= 0:
-                return 0.0
-            log_sum += math.log(surplus)
-        return math.exp(log_sum)
-
-    def _random_simplex_point(self, n: int) -> List[float]:
-        """Sample a random point on the probability simplex using exponential trick."""
-        # Draw exponentials and normalise
-        vals = [-math.log(max(1e-12, (i + 0.5) / n)) for i in range(n)]
-        # Use a deterministic quasi-random approach for reproducibility across calls
-        # Simple: generate via hash-based pseudo-random without random module
-        # We use a linear congruential generator seeded by current time
-        seed = int(time.monotonic_ns()) % (2**32)
-        result: List[float] = []
-        for i in range(n):
-            seed = (seed * 1664525 + 1013904223) % (2**32)
-            result.append(seed / (2**32))
-        # Convert to simplex: -log(uniform) normalised
-        exps = [-math.log(max(1e-15, v)) for v in result]
-        total = sum(exps)
-        return [e / total for e in exps]
-
-    def optimal_weights(
-        self,
-        outcomes_history: List[Dict[str, float]],
-        n_trials: int = 50,
-    ) -> Dict[str, float]:
-        """Find objective weights maximising Nash welfare over outcomes_history."""
-        if not outcomes_history or not self._objectives:
-            return copy.copy(self._weights)
-
-        n = len(self._objectives)
-        best_welfare = -1.0
-        best_weights = self._random_simplex_point(n)
-
-        for _ in range(n_trials):
-            candidate = self._random_simplex_point(n)
-            w = {obj: candidate[i] for i, obj in enumerate(self._objectives)}
-            # Weighted aggregate welfare over history
-            total_welfare = 0.0
-            for outcomes in outcomes_history:
-                weighted_outcomes = {
-                    obj: outcomes.get(obj, 0.0) * w[obj] for obj in self._objectives
-                }
-                total_welfare += self.nash_welfare(weighted_outcomes)
-            avg_welfare = total_welfare / len(outcomes_history)
-            if avg_welfare > best_welfare:
-                best_welfare = avg_welfare
-                best_weights = candidate
-
-        self._weights = {obj: best_weights[i] for i, obj in enumerate(self._objectives)}
-        logger.debug("Nash optimal weights: %s (welfare=%.4f)", self._weights, best_welfare)
-        return copy.copy(self._weights)
-
-    def aggregate(self, metrics: Dict[str, float]) -> float:
-        """Return Nash welfare for current metrics using current weights."""
-        self._outcomes_history.append(copy.copy(metrics))
-        # Keep history bounded
-        if len(self._outcomes_history) > 200:
-            self._outcomes_history = self._outcomes_history[-200:]
-        weighted = {obj: metrics.get(obj, 0.0) * self._weights.get(obj, 0.0) for obj in self._objectives}
-        return self.nash_welfare(weighted)
-
-
-# ---------------------------------------------------------------------------
-# Layer 4: MPCReferenceTracker
-# ---------------------------------------------------------------------------
-
-
-class MPCReferenceTracker:
-    """Model Predictive Control for tracking reference trajectories."""
-
-    K_P = 0.1  # Conservative proportional gain
-
-    def __init__(self, objectives: List[str], horizon: int = 5) -> None:
-        self._objectives = list(objectives)
-        self._horizon = horizon
-        self._reference: Dict[str, List[float]] = {}
-        self._history: List[Dict[str, float]] = []
+        # EMA reference values per objective
+        self._ema: Dict[str, float] = {}
+        # Running variance (Welford online) per objective
+        self._mean: Dict[str, float] = {}
+        self._m2: Dict[str, float] = {}
+        self._n: Dict[str, int] = {}
+        # Last observed values
+        self._last: Dict[str, float] = {}
+        # Optional manual reference override
+        self._manual_reference: Dict[str, float] = {}
 
     def set_reference(self, trajectory: Dict[str, List[float]]) -> None:
-        """Set target trajectories {objective: [values over horizon]}."""
-        self._reference = {obj: list(vals) for obj, vals in trajectory.items()}
-        logger.debug("MPC reference trajectory set for objectives: %s", list(self._reference.keys()))
+        """Override with a manual reference (first value of each trajectory used)."""
+        self._manual_reference = {
+            obj: vals[0] for obj, vals in trajectory.items() if vals
+        }
+        logger.debug("AdaptiveReferenceTracker: manual reference set %s", self._manual_reference)
 
     def update(self, current: Dict[str, float]) -> None:
-        """Record current observations."""
-        self._history.append(copy.copy(current))
-        if len(self._history) > 200:
-            self._history = self._history[-200:]
-
-    def predict_horizon(self) -> Dict[str, List[float]]:
-        """Linear extrapolation from recent history for each objective."""
-        predictions: Dict[str, List[float]] = {}
+        """Update EMA reference and running variance with new observations."""
         for obj in self._objectives:
-            # Collect recent values
-            values = [h[obj] for h in self._history if obj in h]
-            if len(values) == 0:
-                predictions[obj] = [0.0] * self._horizon
-            elif len(values) == 1:
-                predictions[obj] = [values[-1]] * self._horizon
+            val = current.get(obj)
+            if val is None:
+                continue
+            self._last[obj] = val
+
+            # EMA update
+            if obj not in self._ema:
+                self._ema[obj] = val
             else:
-                # Linear regression over last min(10, len) points
-                recent = values[-min(10, len(values)):]
-                n = len(recent)
-                x_mean = (n - 1) / 2.0
-                y_mean = sum(recent) / n
-                num = sum((i - x_mean) * (recent[i] - y_mean) for i in range(n))
-                den = sum((i - x_mean) ** 2 for i in range(n))
-                slope = num / den if den != 0 else 0.0
-                last = recent[-1]
-                predictions[obj] = [last + slope * (t + 1) for t in range(self._horizon)]
-        return predictions
+                self._ema[obj] = self._alpha * val + (1.0 - self._alpha) * self._ema[obj]
+
+            # Welford online variance
+            n = self._n.get(obj, 0) + 1
+            self._n[obj] = n
+            delta = val - self._mean.get(obj, val)
+            self._mean[obj] = self._mean.get(obj, val) + delta / n
+            delta2 = val - self._mean[obj]
+            self._m2[obj] = self._m2.get(obj, 0.0) + delta * delta2
+
+    def _variance(self, obj: str) -> float:
+        n = self._n.get(obj, 0)
+        if n < 2:
+            return 0.0
+        return self._m2.get(obj, 0.0) / n
 
     def tracking_error(self) -> float:
-        """MSE between predicted horizon and reference trajectory."""
-        if not self._reference:
+        """MSE between current observations and adaptive reference, uncertainty-scaled."""
+        if not self._last:
             return 0.0
-        predicted = self.predict_horizon()
-        total_mse = 0.0
+        total = 0.0
         count = 0
         for obj in self._objectives:
-            ref = self._reference.get(obj)
-            pred = predicted.get(obj)
-            if ref is None or pred is None:
+            if obj not in self._last:
                 continue
-            steps = min(len(ref), len(pred), self._horizon)
-            for t in range(steps):
-                diff = pred[t] - ref[t]
-                total_mse += diff * diff
-                count += 1
-        return total_mse / count if count > 0 else 0.0
+            ref = self._manual_reference.get(obj, self._ema.get(obj))
+            if ref is None:
+                continue
+            # Uncertainty band: widen tolerance proportional to volatility
+            uncertainty = self._uncertainty_factor * math.sqrt(self._variance(obj))
+            diff = abs(self._last[obj] - ref) - uncertainty
+            diff = max(0.0, diff)  # only penalise outside the uncertainty band
+            total += diff * diff
+            count += 1
+        return total / count if count > 0 else 0.0
 
     def control_action(self) -> Dict[str, float]:
-        """Proportional control: suggest adjustment = K_p * (reference - current)."""
-        if not self._history:
-            return {obj: 0.0 for obj in self._objectives}
-        current = self._history[-1]
+        """Proportional correction: K_p * (reference - current), scaled by uncertainty."""
+        K_P = 0.1
         actions: Dict[str, float] = {}
         for obj in self._objectives:
-            ref_traj = self._reference.get(obj)
-            # Use first step of reference as immediate target
-            ref_val = ref_traj[0] if ref_traj else 0.0
-            cur_val = current.get(obj, 0.0)
-            actions[obj] = self.K_P * (ref_val - cur_val)
+            ref = self._manual_reference.get(obj, self._ema.get(obj))
+            cur = self._last.get(obj)
+            if ref is None or cur is None:
+                actions[obj] = 0.0
+                continue
+            # Scale down correction when uncertainty is high
+            uncertainty = 1.0 + self._uncertainty_factor * math.sqrt(self._variance(obj))
+            actions[obj] = K_P * (ref - cur) / uncertainty
         return actions
 
 
 # ---------------------------------------------------------------------------
-# Layer 5: HTNDecomposer
+# Layer 3: HTNDecomposer
 # ---------------------------------------------------------------------------
 
 
@@ -469,9 +404,6 @@ class HTNDecomposer:
     """Hierarchical Task Network that decomposes high-level goals into subtasks."""
 
     def __init__(self) -> None:
-        # goal → list of methods
-        # method: {name, preconditions: Dict, subtasks: List[Dict]}
-        # subtask dict: {name, parameters, assigned_to, priority}
         self._methods: Dict[str, List[Dict[str, Any]]] = {}
 
     def register_method(
@@ -495,7 +427,6 @@ class HTNDecomposer:
 
     def register_vectora_methods(self) -> None:
         """Register default Vectora pipeline decompositions."""
-        # research_cycle: normal pipeline
         self.register_method(
             goal="research_cycle",
             method_name="standard_pipeline",
@@ -508,7 +439,6 @@ class HTNDecomposer:
                 {"name": "generate_report", "parameters": {}, "assigned_to": "reporting_node", "priority": 0.6},
             ],
         )
-        # risk_breach: risk management priority
         self.register_method(
             goal="risk_breach",
             method_name="risk_response",
@@ -519,7 +449,6 @@ class HTNDecomposer:
                 {"name": "generate_report", "parameters": {"type": "risk_breach"}, "assigned_to": "reporting_node", "priority": 0.7},
             ],
         )
-        # data_stale: refresh data
         self.register_method(
             goal="data_stale",
             method_name="data_refresh",
@@ -529,7 +458,6 @@ class HTNDecomposer:
                 {"name": "generate_signals", "parameters": {}, "assigned_to": "signal_generation_node", "priority": 0.9},
             ],
         )
-        # system_improve: self-improvement cycle
         self.register_method(
             goal="system_improve",
             method_name="self_improvement",
@@ -544,20 +472,9 @@ class HTNDecomposer:
     def _check_preconditions(
         self, preconditions: Dict[str, Any], state: Dict[str, Any]
     ) -> bool:
-        """Check all preconditions against state.
-
-        Supports: {"metric": {">": val}}, {"metric": {"<": val}},
-                  {"metric": {">=": val}}, {"metric": {"<=": val}},
-                  {"metric": {"==": val}}, simple equality {"metric": val}
-        """
         for key, condition in preconditions.items():
             state_val = state.get(key)
             if state_val is None:
-                # If key not in state, precondition cannot be satisfied
-                # Allow it if condition is an equality check with None
-                if isinstance(condition, dict):
-                    return False
-                # Simple value: treat missing as not-equal
                 return False
             if isinstance(condition, dict):
                 for op, limit in condition.items():
@@ -580,7 +497,6 @@ class HTNDecomposer:
                         logger.warning("Unknown precondition operator: %s", op)
                         return False
             else:
-                # Simple equality
                 if state_val != condition:
                     return False
         return True
@@ -627,7 +543,6 @@ class HTNDecomposer:
                 )
                 return self._build_tasks(method["subtasks"])
 
-        # No applicable method: return a default single task
         logger.warning(
             "HTN: no applicable method for goal '%s'; returning default task",
             goal,
@@ -645,22 +560,184 @@ class HTNDecomposer:
 
 
 # ---------------------------------------------------------------------------
-# GoalArchitecture — orchestrates all 5 layers
+# Advanced / experimental (not wired into GoalArchitecture by default)
+# ---------------------------------------------------------------------------
+
+
+class NashWelfareAggregator:
+    """Nash bargaining solution for balancing competing objectives.
+
+    Advanced component — not activated in the default GoalArchitecture pipeline.
+    Enable explicitly when convex utility assumptions hold and objectives are
+    well-calibrated.
+    """
+
+    def __init__(
+        self,
+        objectives: List[str],
+        disagreement_points: Optional[Dict[str, float]] = None,
+    ) -> None:
+        self._objectives = list(objectives)
+        self._disagreement: Dict[str, float] = {o: 0.0 for o in objectives}
+        if disagreement_points:
+            self._disagreement.update(disagreement_points)
+        self._weights: Dict[str, float] = {o: 1.0 / len(objectives) for o in objectives}
+        self._outcomes_history: List[Dict[str, float]] = []
+
+    def nash_welfare(self, outcomes: Dict[str, float]) -> float:
+        """Compute Nash welfare = Π (u_i - d_i) using log-sum for stability."""
+        log_sum = 0.0
+        for obj in self._objectives:
+            u = outcomes.get(obj, 0.0)
+            d = self._disagreement.get(obj, 0.0)
+            surplus = u - d
+            if surplus <= 0:
+                return 0.0
+            log_sum += math.log(surplus)
+        return math.exp(log_sum)
+
+    def _random_simplex_point(self, n: int) -> List[float]:
+        seed = int(time.monotonic_ns()) % (2**32)
+        result: List[float] = []
+        for i in range(n):
+            seed = (seed * 1664525 + 1013904223) % (2**32)
+            result.append(seed / (2**32))
+        exps = [-math.log(max(1e-15, v)) for v in result]
+        total = sum(exps)
+        return [e / total for e in exps]
+
+    def optimal_weights(
+        self,
+        outcomes_history: List[Dict[str, float]],
+        n_trials: int = 50,
+    ) -> Dict[str, float]:
+        """Find objective weights maximising Nash welfare over outcomes_history."""
+        if not outcomes_history or not self._objectives:
+            return copy.copy(self._weights)
+
+        n = len(self._objectives)
+        best_welfare = -1.0
+        best_weights = self._random_simplex_point(n)
+
+        for _ in range(n_trials):
+            candidate = self._random_simplex_point(n)
+            w = {obj: candidate[i] for i, obj in enumerate(self._objectives)}
+            total_welfare = 0.0
+            for outcomes in outcomes_history:
+                weighted_outcomes = {
+                    obj: outcomes.get(obj, 0.0) * w[obj] for obj in self._objectives
+                }
+                total_welfare += self.nash_welfare(weighted_outcomes)
+            avg_welfare = total_welfare / len(outcomes_history)
+            if avg_welfare > best_welfare:
+                best_welfare = avg_welfare
+                best_weights = candidate
+
+        self._weights = {obj: best_weights[i] for i, obj in enumerate(self._objectives)}
+        return copy.copy(self._weights)
+
+    def aggregate(self, metrics: Dict[str, float]) -> float:
+        """Return Nash welfare for current metrics using current weights."""
+        self._outcomes_history.append(copy.copy(metrics))
+        if len(self._outcomes_history) > 200:
+            self._outcomes_history = self._outcomes_history[-200:]
+        weighted = {obj: metrics.get(obj, 0.0) * self._weights.get(obj, 0.0) for obj in self._objectives}
+        return self.nash_welfare(weighted)
+
+
+class MPCReferenceTracker:
+    """Model Predictive Control for tracking reference trajectories.
+
+    Advanced component — retained for experimental use.  For production, prefer
+    AdaptiveReferenceTracker which handles dynamic systems correctly.
+    """
+
+    K_P = 0.1
+
+    def __init__(self, objectives: List[str], horizon: int = 5) -> None:
+        self._objectives = list(objectives)
+        self._horizon = horizon
+        self._reference: Dict[str, List[float]] = {}
+        self._history: List[Dict[str, float]] = []
+
+    def set_reference(self, trajectory: Dict[str, List[float]]) -> None:
+        self._reference = {obj: list(vals) for obj, vals in trajectory.items()}
+
+    def update(self, current: Dict[str, float]) -> None:
+        self._history.append(copy.copy(current))
+        if len(self._history) > 200:
+            self._history = self._history[-200:]
+
+    def predict_horizon(self) -> Dict[str, List[float]]:
+        predictions: Dict[str, List[float]] = {}
+        for obj in self._objectives:
+            values = [h[obj] for h in self._history if obj in h]
+            if len(values) == 0:
+                predictions[obj] = [0.0] * self._horizon
+            elif len(values) == 1:
+                predictions[obj] = [values[-1]] * self._horizon
+            else:
+                recent = values[-min(10, len(values)):]
+                n = len(recent)
+                x_mean = (n - 1) / 2.0
+                y_mean = sum(recent) / n
+                num = sum((i - x_mean) * (recent[i] - y_mean) for i in range(n))
+                den = sum((i - x_mean) ** 2 for i in range(n))
+                slope = num / den if den != 0 else 0.0
+                last = recent[-1]
+                predictions[obj] = [last + slope * (t + 1) for t in range(self._horizon)]
+        return predictions
+
+    def tracking_error(self) -> float:
+        if not self._reference:
+            return 0.0
+        predicted = self.predict_horizon()
+        total_mse = 0.0
+        count = 0
+        for obj in self._objectives:
+            ref = self._reference.get(obj)
+            pred = predicted.get(obj)
+            if ref is None or pred is None:
+                continue
+            steps = min(len(ref), len(pred), self._horizon)
+            for t in range(steps):
+                diff = pred[t] - ref[t]
+                total_mse += diff * diff
+                count += 1
+        return total_mse / count if count > 0 else 0.0
+
+    def control_action(self) -> Dict[str, float]:
+        if not self._history:
+            return {obj: 0.0 for obj in self._objectives}
+        current = self._history[-1]
+        actions: Dict[str, float] = {}
+        for obj in self._objectives:
+            ref_traj = self._reference.get(obj)
+            ref_val = ref_traj[0] if ref_traj else 0.0
+            cur_val = current.get(obj, 0.0)
+            actions[obj] = self.K_P * (ref_val - cur_val)
+        return actions
+
+
+# ---------------------------------------------------------------------------
+# GoalArchitecture — orchestrates 3 layers
 # ---------------------------------------------------------------------------
 
 
 class GoalArchitecture:
-    """Orchestrates all 5 goal layers and produces a GoalDecision each cycle."""
+    """Orchestrates 3 goal layers and produces a GoalDecision each cycle.
+
+    Pipeline: ConstitutionalConstraints → BalancedScorecard → HTNDecomposer
+    Tracking: AdaptiveReferenceTracker (rolling EMA, uncertainty-aware)
+    """
 
     _DEFAULT_OBJECTIVES = ["sharpe_ratio", "coverage_rate", "error_rate"]
 
     def __init__(
         self,
         objectives: Optional[List[str]] = None,
-        horizon: int = 5,
     ) -> None:
         self._objectives = list(objectives) if objectives else list(self._DEFAULT_OBJECTIVES)
-        self._horizon = horizon
 
         # Layer 1
         self._constraints = ConstitutionalConstraints()
@@ -670,32 +747,23 @@ class GoalArchitecture:
         self._scorecard = BalancedScorecard()
 
         # Layer 3
-        self._nash = NashWelfareAggregator(objectives=self._objectives)
-
-        # Layer 4
-        self._mpc = MPCReferenceTracker(objectives=self._objectives, horizon=horizon)
-
-        # Layer 5
         self._htn = HTNDecomposer()
         self._htn.register_vectora_methods()
 
-        # History for Nash optimal weights computation
-        self._metrics_history: List[Dict[str, float]] = []
+        # Adaptive reference tracker (replaces MPC)
+        self._tracker = AdaptiveReferenceTracker(objectives=self._objectives)
 
-        # Current goal to decompose (default: research_cycle)
         self._current_goal: str = "research_cycle"
 
         logger.info(
-            "GoalArchitecture initialised | objectives=%s | horizon=%d",
+            "GoalArchitecture initialised | objectives=%s",
             self._objectives,
-            self._horizon,
         )
 
     def _infer_goal(
         self, metrics: Dict[str, float], system_state: Dict[str, Any]
     ) -> str:
         """Heuristically select the current goal from metrics/state."""
-        # Priority order: risk_breach > data_stale > system_improve > research_cycle
         drawdown = metrics.get("max_drawdown_pct", 0.0)
         if drawdown > 10.0:
             return "risk_breach"
@@ -717,47 +785,24 @@ class GoalArchitecture:
 
         logger.debug("GoalArchitecture.step() | cycle=%d | metrics=%s", cycle, metrics)
 
-        # ------------------------------------------------------------------ #
         # Layer 1: Constitutional constraints
-        # ------------------------------------------------------------------ #
         passed, violations = self._constraints.check(metrics)
 
-        # ------------------------------------------------------------------ #
         # Layer 2: Balanced scorecard
-        # ------------------------------------------------------------------ #
         self._scorecard.update(metrics)
         scorecard = self._scorecard.score()
         composite = self._scorecard.composite_score()
 
-        # ------------------------------------------------------------------ #
-        # Layer 3: Nash welfare + optimal weights
-        # ------------------------------------------------------------------ #
-        self._metrics_history.append(copy.copy(metrics))
-        if len(self._metrics_history) > 500:
-            self._metrics_history = self._metrics_history[-500:]
+        # Adaptive reference tracker
+        self._tracker.update(metrics)
+        tracking_err = self._tracker.tracking_error()
+        ctrl = self._tracker.control_action()
 
-        nash_weights = self._nash.optimal_weights(
-            self._metrics_history, n_trials=50
-        )
-        self._nash.aggregate(metrics)  # update internal history
-
-        # ------------------------------------------------------------------ #
-        # Layer 4: MPC tracker
-        # ------------------------------------------------------------------ #
-        self._mpc.update(metrics)
-        tracking_err = self._mpc.tracking_error()
-        ctrl = self._mpc.control_action()
-
-        # ------------------------------------------------------------------ #
-        # Layer 5: HTN decomposition
-        # ------------------------------------------------------------------ #
+        # Layer 3: HTN decomposition
         goal = self._infer_goal(metrics, system_state)
         self._current_goal = goal
-
-        # Enrich system_state with relevant metrics for precondition checks
         merged_state = copy.copy(system_state)
         merged_state.update(metrics)
-
         subtasks = self._htn.decompose(goal, merged_state)
 
         decision = GoalDecision(
@@ -765,7 +810,6 @@ class GoalArchitecture:
             constraint_violations=violations,
             scorecard=scorecard,
             composite_score=composite,
-            nash_weights=nash_weights,
             subtasks=subtasks,
             tracking_error=tracking_err,
             control_action=ctrl,
@@ -787,28 +831,5 @@ class GoalArchitecture:
     def set_reference_trajectory(
         self, trajectory: Dict[str, List[float]]
     ) -> None:
-        """Set the MPC reference trajectory."""
-        self._mpc.set_reference(trajectory)
-
-    def register_objective(
-        self, name: str, disagreement_point: float = 0.0
-    ) -> None:
-        """Add a new objective to the Nash aggregator and MPC tracker."""
-        if name not in self._objectives:
-            self._objectives.append(name)
-        # Rebuild Nash aggregator preserving existing disagreement points
-        existing_d = copy.copy(self._nash._disagreement)
-        existing_d[name] = disagreement_point
-        self._nash = NashWelfareAggregator(
-            objectives=self._objectives,
-            disagreement_points=existing_d,
-        )
-        # MPC tracker: rebuild with new objective list
-        ref = copy.copy(self._mpc._reference)
-        history = copy.copy(self._mpc._history)
-        self._mpc = MPCReferenceTracker(
-            objectives=self._objectives, horizon=self._horizon
-        )
-        self._mpc._reference = ref
-        self._mpc._history = history
-        logger.info("Registered new objective '%s' (d=%.4f)", name, disagreement_point)
+        """Set a manual reference trajectory on the adaptive tracker."""
+        self._tracker.set_reference(trajectory)

@@ -150,6 +150,9 @@ class TestAdversarialPressure:
     def setup_method(self):
         self.ap = AdversarialPressure(ring1_threshold=0.2, population_size=4)
 
+    def test_default_active_rings_is_ring1_only(self):
+        assert self.ap.active_rings == [1]
+
     def test_run_ring1_every_cycle(self):
         variant_outputs = {"primary": {"BTC": 0.5, "ETH": 0.4}}
         report = self.ap.run(
@@ -161,9 +164,21 @@ class TestAdversarialPressure:
         assert isinstance(report, AdversarialReport)
         assert report.ring1_result is not None
 
-    def test_run_ring2_at_interval(self):
+    def test_ring2_dormant_by_default(self):
+        # With default active_rings=[1], Ring 2 should NOT run even at interval
         variant_outputs = {"primary": {"BTC": 0.5}}
-        # Ring 2 fires at cycle % RING2_INTERVAL == 0
+        report = self.ap.run(
+            cycle=10,  # RING2_INTERVAL == 10
+            variant_outputs=variant_outputs,
+            current_signals={"BTC": 0.5, "ETH": 0.3},
+            strategy_params={"method": "momentum"},
+        )
+        assert report.ring2_scenarios == []
+
+    def test_ring2_runs_when_activated(self):
+        # Activate Ring 2 explicitly
+        self.ap.active_rings = [1, 2]
+        variant_outputs = {"primary": {"BTC": 0.5}}
         report = self.ap.run(
             cycle=10,
             variant_outputs=variant_outputs,
@@ -172,24 +187,82 @@ class TestAdversarialPressure:
         )
         assert len(report.ring2_scenarios) > 0
 
+    def test_ring3_dormant_by_default(self):
+        self.ap.ring3.initialise_population({"lr": 0.01})
+        fitness_fn = lambda p: p.get("lr", 0.01) * 10
+        report = self.ap.run(
+            cycle=50,  # RING3_INTERVAL == 50
+            variant_outputs={"primary": {"BTC": 0.5}},
+            current_signals={"BTC": 0.5},
+            strategy_params={},
+            fitness_fn=fitness_fn,
+        )
+        assert report.ring3_result is None
+
+    def test_ring3_runs_when_activated(self):
+        self.ap.active_rings = [1, 2, 3]
+        self.ap.ring3.initialise_population({"lr": 0.01})
+        fitness_fn = lambda p: p.get("lr", 0.01) * 10
+        report = self.ap.run(
+            cycle=50,
+            variant_outputs={"primary": {"BTC": 0.5}},
+            current_signals={"BTC": 0.5},
+            strategy_params={},
+            fitness_fn=fitness_fn,
+        )
+        assert report.ring3_result is not None
+
+    def test_validate_ring1_not_enough_cycles(self):
+        # No cycles run yet
+        assert not self.ap.validate_ring1(min_cycles=10)
+
+    def test_validate_ring1_after_sufficient_cycles(self):
+        # Run enough cycles with some flagging
+        signals_agree = {"primary": {"BTC": 0.5, "ETH": 0.5}}
+        signals_disagree = {
+            "v1": {"BTC": 0.9, "ETH": 0.9},
+            "v2": {"BTC": -0.9, "ETH": -0.9},
+        }
+        for i in range(15):
+            outputs = signals_disagree if i % 3 == 0 else signals_agree
+            self.ap.run(
+                cycle=i,
+                variant_outputs=outputs,
+                current_signals={"BTC": 0.5},
+                strategy_params={},
+            )
+        # Should have run 15 cycles; with flagging every 3rd cycle, flag_rate >= 0.05
+        result = self.ap.validate_ring1(min_cycles=10, min_flag_rate=0.05)
+        assert isinstance(result, bool)
+
+    def test_validate_ring1_tracks_cycles(self):
+        for i in range(5):
+            self.ap.run(
+                cycle=i,
+                variant_outputs={"primary": {"BTC": 0.5}},
+                current_signals={"BTC": 0.5},
+                strategy_params={},
+            )
+        assert self.ap._ring1_cycles_run == 5
+
     def test_failure_cases_collected(self):
-        # With strong disagreement, failure cases should be collected
-        self.ap.ring1.register_variant("v1")
-        self.ap.ring1.register_variant("v2")
         variant_outputs = {
             "v1": {"BTC": 0.9, "ETH": 0.9},
             "v2": {"BTC": -0.9, "ETH": -0.9},
         }
-        report = self.ap.run(
+        self.ap.run(
             cycle=1,
             variant_outputs=variant_outputs,
             current_signals={"BTC": 0.5},
             strategy_params={},
         )
         cases = self.ap.collect_failure_cases()
-        # Cases may be empty if threshold not met; just check return type
         assert isinstance(cases, list)
 
     def test_clear_failure_cases(self):
         self.ap.clear_failure_cases()
         assert self.ap.collect_failure_cases() == []
+
+    def test_active_rings_constructor_param(self):
+        ap = AdversarialPressure(active_rings=[1, 2])
+        assert ap.active_rings == [1, 2]

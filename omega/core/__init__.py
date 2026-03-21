@@ -21,8 +21,7 @@ from omega.core.metrics import MetricsCollector
 from omega.core.analyzer import SystemAnalyzer, Recommendation
 from omega.core.alignment import (
     AlignmentLayer, AlignmentDecision,
-    HierarchicalRewardDecomposer, RegularizationGuard,
-    ParetoEvaluator, IncentiveDesigner, SafetyEnvelope,
+    ParetoEvaluator, OutcomeBasedScorer, SafetyEnvelope,
 )
 from omega.core.adversarial import (
     AdversarialPressure, AdversarialReport,
@@ -57,8 +56,7 @@ __all__ = [
     "SystemAnalyzer", "Recommendation",
     # Alignment layer
     "AlignmentLayer", "AlignmentDecision",
-    "HierarchicalRewardDecomposer", "RegularizationGuard",
-    "ParetoEvaluator", "IncentiveDesigner", "SafetyEnvelope",
+    "ParetoEvaluator", "OutcomeBasedScorer", "SafetyEnvelope",
     # Adversarial pressure
     "AdversarialPressure", "AdversarialReport",
     "EnsembleDisagreementDetector", "ScenarioGenerator", "EvolutionaryTournament",

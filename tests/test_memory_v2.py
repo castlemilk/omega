@@ -1,8 +1,9 @@
-"""Tests for omega.core.memory_v2 — BOCPD, EWC, D-S fusion, MemoryKernelV2."""
+"""Tests for omega.core.memory_v2 — sliding-window regime, BOCPD, EWC, D-S fusion, MemoryKernelV2."""
 
 import pytest
 from omega.core.memory_v2 import (
     BOCPDRegimeDetector,
+    SlidingWindowRegimeDetector,
     RegimeTaggedSemanticStore,
     EWCProtection,
     DempsterShaferFusion,
@@ -15,7 +16,55 @@ from omega.core.memory import MemoryKernel
 
 
 # ---------------------------------------------------------------------------
-# BOCPDRegimeDetector
+# SlidingWindowRegimeDetector  (default)
+# ---------------------------------------------------------------------------
+
+class TestSlidingWindowRegimeDetector:
+    def setup_method(self):
+        self.d = SlidingWindowRegimeDetector(window=10)
+
+    def test_returns_regime_state(self):
+        state = self.d.update(0.01)
+        assert isinstance(state, RegimeState)
+        assert state.regime_id
+        assert 0.0 <= state.changepoint_prob <= 1.0
+
+    def test_crash_label(self):
+        for _ in range(5):
+            state = self.d.update(-0.10)
+        assert state.label == "crash"
+
+    def test_volatile_label(self):
+        # High variance → volatile
+        for i in range(10):
+            self.d.update(0.2 if i % 2 == 0 else -0.2)
+        state = self.d.current_regime()
+        assert state.label in ("volatile", "crash", "trending")
+
+    def test_normal_label_stable(self):
+        for _ in range(15):
+            state = self.d.update(0.001)
+        assert state.label == "normal"
+
+    def test_regime_change_updates_id(self):
+        for _ in range(5):
+            self.d.update(0.001)
+        id_before = self.d.current_regime().regime_id
+        # Force crash
+        for _ in range(5):
+            self.d.update(-0.15)
+        id_after = self.d.current_regime().regime_id
+        assert id_before != id_after
+
+    def test_current_regime_consistent(self):
+        self.d.update(0.02)
+        state = self.d.update(0.03)
+        current = self.d.current_regime()
+        assert current.regime_id == state.regime_id
+
+
+# ---------------------------------------------------------------------------
+# BOCPDRegimeDetector (advanced, retained for compatibility)
 # ---------------------------------------------------------------------------
 
 class TestBOCPDRegimeDetector:
@@ -149,11 +198,29 @@ class TestDempsterShaferFusion:
         k = self.ds.conflict_level()
         assert k > 0.5
 
+    def test_high_conflict_uses_fallback(self):
+        # Two strongly contradictory sources should trigger confidence-weighted fallback
+        self.ds.add_evidence("src1", {"bull": 0.95})
+        self.ds.add_evidence("src2", {"bear": 0.95})
+        combined = self.ds.combine()
+        # Should still return a valid dict (not raise)
+        assert isinstance(combined, dict)
+        # All values non-negative
+        assert all(v >= 0 for v in combined.values())
+
+    def test_low_conflict_uses_dempster(self):
+        # Two consistent sources should combine normally
+        self.ds.add_evidence("src1", {"bull": 0.7})
+        self.ds.add_evidence("src2", {"bull": 0.6})
+        combined = self.ds.combine()
+        # Bull should have the highest mass
+        bull_mass = combined.get("bull", 0.0)
+        assert bull_mass > 0.0
+
     def test_reset(self):
         self.ds.add_evidence("src1", {"bull": 0.7})
         self.ds.reset()
         combined = self.ds.combine()
-        # After reset, should be uniform uncertainty
         assert isinstance(combined, dict)
 
 
@@ -197,6 +264,22 @@ class TestContradictionResolver:
 class TestMemoryKernelV2:
     def setup_method(self):
         self.mem = MemoryKernelV2(db_path=":memory:")
+
+    def test_uses_sliding_window_by_default(self):
+        assert isinstance(self.mem.regime_detector, SlidingWindowRegimeDetector)
+
+    def test_bocpd_when_advanced_flag(self):
+        mem = MemoryKernelV2(db_path=":memory:", advanced_bocpd=True)
+        assert isinstance(mem.regime_detector, BOCPDRegimeDetector)
+
+    def test_ewc_disabled_by_default(self):
+        assert not self.mem.ewc_enabled
+        assert self.mem.ewc is None
+
+    def test_ewc_enabled_when_requested(self):
+        mem = MemoryKernelV2(db_path=":memory:", ewc_enabled=True)
+        assert mem.ewc_enabled
+        assert isinstance(mem.ewc, EWCProtection)
 
     def test_inherits_memory_kernel(self):
         assert isinstance(self.mem, MemoryKernel)

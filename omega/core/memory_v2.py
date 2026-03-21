@@ -250,6 +250,111 @@ class BOCPDRegimeDetector:
 
 
 # ---------------------------------------------------------------------------
+# SlidingWindowRegimeDetector  (default; simpler than BOCPD)
+# ---------------------------------------------------------------------------
+
+class SlidingWindowRegimeDetector:
+    """
+    Regime detector based on realized volatility quantiles over a sliding window.
+
+    Simpler than BOCPD: no i.i.d. assumption, directly interpretable, and
+    computationally O(window) per update.
+
+    Labels:
+      - "crash"    : mean below crash_threshold (default -0.05)
+      - "volatile" : realized volatility above vol_threshold (default 0.05)
+      - "trending" : |mean| above trend_threshold (default 0.02)
+      - "normal"   : everything else
+
+    Set ``advanced_bocpd=True`` on MemoryKernelV2 to use BOCPDRegimeDetector instead.
+    """
+
+    def __init__(
+        self,
+        window: int = 30,
+        crash_threshold: float = -0.05,
+        vol_threshold: float = 0.05,
+        trend_threshold: float = 0.02,
+    ) -> None:
+        self._window = window
+        self._crash_threshold = crash_threshold
+        self._vol_threshold = vol_threshold
+        self._trend_threshold = trend_threshold
+        self._observations: List[float] = []
+        self._cycle = 0
+        self._regime_id = str(uuid.uuid4())
+        self._regime_start_cycle = 0
+        self._last_label: str = "normal"
+
+    def update(self, observation: float) -> RegimeState:
+        """Process one observation and return the updated RegimeState."""
+        self._cycle += 1
+        self._observations.append(observation)
+        if len(self._observations) > self._window:
+            self._observations = self._observations[-self._window:]
+
+        mean, var = self._rolling_stats()
+        vol = math.sqrt(var)
+        label = self._label(mean, vol)
+
+        # Detect regime change (label changed)
+        changepoint_prob = 0.0
+        if label != self._last_label:
+            self._regime_id = str(uuid.uuid4())
+            self._regime_start_cycle = self._cycle
+            changepoint_prob = 0.8
+            logger.info(
+                "SlidingWindow: regime change %s → %s at cycle %d",
+                self._last_label, label, self._cycle,
+            )
+        self._last_label = label
+
+        return RegimeState(
+            regime_id=self._regime_id,
+            changepoint_prob=changepoint_prob,
+            regime_start_cycle=self._regime_start_cycle,
+            mean_estimate=mean,
+            variance_estimate=var,
+            observations_in_regime=self._cycle - self._regime_start_cycle,
+            label=label,
+        )
+
+    def current_regime(self) -> RegimeState:
+        """Return the current regime state without consuming a new observation."""
+        mean, var = self._rolling_stats()
+        vol = math.sqrt(var)
+        return RegimeState(
+            regime_id=self._regime_id,
+            changepoint_prob=0.0,
+            regime_start_cycle=self._regime_start_cycle,
+            mean_estimate=mean,
+            variance_estimate=var,
+            observations_in_regime=self._cycle - self._regime_start_cycle,
+            label=self._last_label,
+        )
+
+    def _rolling_stats(self) -> Tuple[float, float]:
+        """Return (mean, variance) of current window using Welford's algorithm."""
+        n = len(self._observations)
+        if n == 0:
+            return 0.0, 0.0
+        mean = sum(self._observations) / n
+        if n == 1:
+            return mean, 0.0
+        var = sum((x - mean) ** 2 for x in self._observations) / n
+        return mean, var
+
+    def _label(self, mean: float, vol: float) -> str:
+        if mean < self._crash_threshold:
+            return "crash"
+        if vol > self._vol_threshold:
+            return "volatile"
+        if abs(mean) > self._trend_threshold:
+            return "trending"
+        return "normal"
+
+
+# ---------------------------------------------------------------------------
 # RegimeTaggedSemanticStore
 # ---------------------------------------------------------------------------
 
@@ -517,9 +622,15 @@ class DempsterShaferFusion:
         self._evidence[source] = normalised
         logger.debug("DS: added evidence from source '%s' (%d focal elements)", source, len(normalised))
 
+    _CONFLICT_FALLBACK_THRESHOLD: float = 0.3
+
     def combine(self) -> Dict[str, float]:
         """
         Combine all registered evidence sources using Dempster's rule.
+
+        Before combining, computes pairwise conflict.  If conflict > 0.3,
+        falls back to confidence-weighted averaging (more robust under high
+        contradiction) and logs a warning.
 
         Returns a dict {hypothesis_string_or_frozenset: combined_mass}.
         Single-element frozensets are returned as plain strings for readability.
@@ -528,7 +639,18 @@ class DempsterShaferFusion:
         if not sources:
             return {h: 1.0 / len(self._frame) for h in self._frame}
 
-        # Iteratively combine pair-wise
+        # Check conflict before full combination
+        conflict = self._compute_conflict()
+        if conflict > self._CONFLICT_FALLBACK_THRESHOLD and len(sources) > 1:
+            logger.warning(
+                "DS: high conflict (K=%.3f > %.1f), falling back to "
+                "confidence-weighted averaging",
+                conflict,
+                self._CONFLICT_FALLBACK_THRESHOLD,
+            )
+            return self._confidence_weighted_average()
+
+        # Low-conflict path: standard Dempster combination
         combined = sources[0]
         for source in sources[1:]:
             combined = self._dempster_combine(combined, source)
@@ -594,6 +716,44 @@ class DempsterShaferFusion:
         self._evidence.clear()
 
     # ------------------------------------------------------------------ private
+
+    def _confidence_weighted_average(self) -> Dict[str, float]:
+        """
+        Fallback combiner for high-conflict situations.
+
+        For each hypothesis in the frame, compute the weighted average of
+        single-hypothesis masses across all sources.  Source weight = total
+        non-uncertainty mass (a proxy for confidence/commitment).
+        """
+        # Compute per-source confidence weight (total committed mass)
+        source_confidence: Dict[str, float] = {}
+        uncertainty_key = frozenset(self._frame)
+        for src, masses in self._evidence.items():
+            committed = sum(
+                mass for fkey, mass in masses.items()
+                if fkey != uncertainty_key
+            )
+            source_confidence[src] = max(committed, 1e-10)
+
+        total_confidence = sum(source_confidence.values()) or 1.0
+
+        # Weighted average of single-hypothesis masses per hypothesis
+        result: Dict[str, float] = {h: 0.0 for h in self._frame}
+        for src, masses in self._evidence.items():
+            w = source_confidence[src] / total_confidence
+            for fkey, mass in masses.items():
+                if len(fkey) == 1:
+                    h = next(iter(fkey))
+                    if h in result:
+                        result[h] += w * mass
+
+        # Assign remaining mass to uncertainty
+        total_assigned = sum(result.values())
+        remainder = max(0.0, 1.0 - total_assigned)
+        if remainder > 1e-9:
+            result[self._UNCERTAINTY_KEY] = remainder
+
+        return result
 
     @staticmethod
     def _build_power_set(elements: List[str]) -> List[FrozenSet[str]]:
@@ -835,22 +995,42 @@ class MemoryKernelV2(MemoryKernel):
     Extended MemoryKernel with regime-awareness, catastrophic forgetting
     prevention, and contradictory evidence handling.
 
+    By default uses SlidingWindowRegimeDetector (simpler, no i.i.d. assumption).
+    Set ``advanced_bocpd=True`` to switch to BOCPDRegimeDetector.
+
+    EWC is opt-in (``ewc_enabled=False`` by default) because Fisher information
+    estimation is questionable for LLM-backed nodes.  Default memory management
+    uses the base MemoryKernel's exponential decay / consolidation path.
+
     Adds:
-      - ``update_regime(observation)``         — feed BOCPD detector; snapshot EWC on changepoint
-      - ``store_episode_v2(...)``              — regime-tagged episode storage
-      - ``get_regime_context()``               — current regime as plain dict
+      - ``update_regime(observation)``           — feed regime detector
+      - ``store_episode_v2(...)``                — regime-tagged episode storage
+      - ``get_regime_context()``                 — current regime as plain dict
       - ``resolve_contradictions(observations)`` — delegate to ContradictionResolver
       - ``consolidate_regime_memory(namespace)`` — regime-aware consolidation
     """
 
-    def __init__(self, db_path: str = ":memory:") -> None:
+    def __init__(
+        self,
+        db_path: str = ":memory:",
+        ewc_enabled: bool = False,
+        advanced_bocpd: bool = False,
+    ) -> None:
         super().__init__(db_path=db_path)
-        self.regime_detector = BOCPDRegimeDetector()
+        self.ewc_enabled = ewc_enabled
+        # Regime detector: sliding window by default, BOCPD if advanced_bocpd=True
+        if advanced_bocpd:
+            self.regime_detector: Any = BOCPDRegimeDetector()
+        else:
+            self.regime_detector = SlidingWindowRegimeDetector()
         self.regime_store = RegimeTaggedSemanticStore(self)
-        self.ewc = EWCProtection()
+        self.ewc = EWCProtection() if ewc_enabled else None
         self.resolver = ContradictionResolver(self.regime_detector)
         self._current_regime: Optional[RegimeState] = None
-        logger.info("MemoryKernelV2 initialised (db=%s)", db_path)
+        logger.info(
+            "MemoryKernelV2 initialised (db=%s, ewc=%s, bocpd=%s)",
+            db_path, ewc_enabled, advanced_bocpd,
+        )
 
     # ------------------------------------------------------------------ regime
 
@@ -875,8 +1055,8 @@ class MemoryKernelV2(MemoryKernel):
                 new_regime.regime_start_cycle,
                 new_regime.changepoint_prob,
             )
-            # Snapshot working memory values as EWC params for the old regime
-            if prev_regime_id:
+            # Snapshot working memory as EWC params only when EWC is enabled
+            if self.ewc_enabled and self.ewc is not None and prev_regime_id:
                 working = self.working_snapshot()
                 numeric_params = {
                     k: float(v)

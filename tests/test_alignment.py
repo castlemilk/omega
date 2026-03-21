@@ -1,102 +1,80 @@
-"""Tests for omega.core.alignment — 5-layer alignment system."""
+"""Tests for omega.core.alignment — 3-layer alignment system."""
 
 import pytest
 from omega.core.alignment import (
-    HierarchicalRewardDecomposer,
-    RegularizationGuard,
     ParetoEvaluator,
-    IncentiveDesigner,
     SafetyEnvelope,
+    OutcomeBasedScorer,
     AlignmentLayer,
     AlignmentDecision,
 )
 
 
 # ---------------------------------------------------------------------------
-# Layer 1: HierarchicalRewardDecomposer
+# Layer 1: SafetyEnvelope
 # ---------------------------------------------------------------------------
 
-class TestHierarchicalRewardDecomposer:
+class TestSafetyEnvelope:
     def setup_method(self):
-        self.d = HierarchicalRewardDecomposer()
+        self.s = SafetyEnvelope(max_position_pct=0.25, max_drawdown_pct=0.15, max_correlation=0.85)
 
-    def test_potential_is_normalised(self):
-        m = {"accuracy": 0.8, "health": 1.0, "signal_coverage": 0.9}
-        p = self.d.potential(m)
-        assert 0.0 <= p <= 1.0
-
-    def test_potential_empty_metrics(self):
-        p = self.d.potential({})
-        assert 0.0 <= p <= 1.0
-
-    def test_shaped_reward_positive_pnl(self):
-        metrics = {"accuracy": 0.9, "health": 1.0, "signal_coverage": 0.8}
-        r = self.d.shaped_reward("n1", metrics, system_pnl=1000.0, prev_metrics=metrics)
-        assert isinstance(r, float)
-
-    def test_decompose_pnl_sums_to_system(self):
-        node_metrics = {
-            "nodeA": {"accuracy": 0.9, "health": 1.0},
-            "nodeB": {"accuracy": 0.5, "health": 0.6},
-            "nodeC": {"accuracy": 0.7, "health": 0.8},
-        }
-        rewards = self.d.decompose_pnl(system_pnl=1000.0, node_metrics_map=node_metrics)
-        assert set(rewards.keys()) == {"nodeA", "nodeB", "nodeC"}
-        # Total should approximately equal system_pnl
-        assert abs(sum(rewards.values()) - 1000.0) < 1.0
-
-    def test_decompose_pnl_negative(self):
-        node_metrics = {"n1": {"accuracy": 0.5}, "n2": {"accuracy": 0.5}}
-        rewards = self.d.decompose_pnl(system_pnl=-500.0, node_metrics_map=node_metrics)
-        assert sum(rewards.values()) < 0.0
-
-
-# ---------------------------------------------------------------------------
-# Layer 2: RegularizationGuard
-# ---------------------------------------------------------------------------
-
-class TestRegularizationGuard:
-    def setup_method(self):
-        self.g = RegularizationGuard()
-
-    def test_kl_divergence_identical(self):
-        p = {"a": 0.5, "b": 0.5}
-        assert self.g.kl_divergence(p, p) < 1e-6
-
-    def test_kl_divergence_different(self):
-        p = {"a": 0.9, "b": 0.1}
-        q = {"a": 0.1, "b": 0.9}
-        assert self.g.kl_divergence(p, q) > 0.5
-
-    def test_check_update_no_change(self):
-        params = {"lr": 0.01, "dropout": 0.1}
-        ok, kl = self.g.check_update(params, params, epsilon=0.1)
+    def test_check_ok(self):
+        portfolio = {"BTC": 0.20, "ETH": 0.20, "SOL": 0.20, "BNB": 0.20, "XRP": 0.20}
+        ok, violations = self.s.check(portfolio, drawdown=0.05)
         assert ok
-        assert kl < 1e-6
+        assert violations == []
 
-    def test_check_update_large_change(self):
-        old = {"a": 0.9, "b": 0.1}
-        new = {"a": 0.1, "b": 0.9}
-        ok, kl = self.g.check_update(old, new, epsilon=0.1)
+    def test_check_position_violation(self):
+        portfolio = {"BTC": 0.50, "ETH": 0.50}
+        ok, violations = self.s.check(portfolio, drawdown=0.05)
         assert not ok
-        assert kl > 0.1
+        assert any("position" in v.lower() or "concentration" in v.lower() for v in violations)
 
-    def test_goodhart_score_no_violation(self):
-        # proxy and optimised metric grow together → score ≈ 1
-        score = self.g.goodhart_score(optimized_metric=0.9, proxy_metric=0.8)
-        assert score > 0
+    def test_check_drawdown_violation(self):
+        portfolio = {"BTC": 0.20, "ETH": 0.20, "SOL": 0.60}
+        ok, violations = self.s.check(portfolio, drawdown=0.20)
+        assert not ok
+        assert any("drawdown" in v.lower() for v in violations)
 
-    def test_should_stop_early_triggered(self):
-        history = [2.0, 2.5, 3.0, 2.8, 3.2]  # all above threshold=1.5
-        assert self.g.should_stop_early(history, window=5, threshold=1.5)
+    def test_clamp_reduces_oversized(self):
+        portfolio = {"BTC": 0.70, "ETH": 0.30}
+        clamped = self.s.clamp(portfolio)
+        assert all(v <= 0.25 + 1e-9 for v in clamped.values())
 
-    def test_should_stop_early_not_triggered(self):
-        history = [0.5, 0.6, 0.7, 0.8, 0.9]  # all below threshold
-        assert not self.g.should_stop_early(history, window=5, threshold=1.5)
+    def test_check_improvement_magnitude_ok(self):
+        s = SafetyEnvelope(max_improvement_magnitude=0.5)
+        ok, reason = s.check_improvement_magnitude(0.3)
+        assert ok
+        assert reason == ""
+
+    def test_check_improvement_magnitude_exceeded(self):
+        s = SafetyEnvelope(max_improvement_magnitude=0.5)
+        ok, reason = s.check_improvement_magnitude(0.6)
+        assert not ok
+        assert "improvement_magnitude" in reason
+
+    def test_check_improvement_magnitude_negative_delta(self):
+        s = SafetyEnvelope(max_improvement_magnitude=0.5)
+        ok, reason = s.check_improvement_magnitude(-0.7)
+        assert not ok
+        assert "improvement_magnitude" in reason
+
+    def test_check_improvement_magnitude_boundary(self):
+        s = SafetyEnvelope(max_improvement_magnitude=0.5)
+        # Exactly at the limit — abs(0.5) is NOT > 0.5, so ok
+        ok, reason = s.check_improvement_magnitude(0.5)
+        assert ok
+
+    def test_custom_max_improvement_magnitude(self):
+        s = SafetyEnvelope(max_improvement_magnitude=0.1)
+        ok, _ = s.check_improvement_magnitude(0.05)
+        assert ok
+        ok2, _ = s.check_improvement_magnitude(0.15)
+        assert not ok2
 
 
 # ---------------------------------------------------------------------------
-# Layer 3: ParetoEvaluator (NSGA-II)
+# Layer 2: ParetoEvaluator (NSGA-II)
 # ---------------------------------------------------------------------------
 
 class TestParetoEvaluator:
@@ -151,69 +129,76 @@ class TestParetoEvaluator:
 
 
 # ---------------------------------------------------------------------------
-# Layer 4: IncentiveDesigner (VCG)
+# Layer 3: OutcomeBasedScorer
 # ---------------------------------------------------------------------------
 
-class TestIncentiveDesigner:
+class TestOutcomeBasedScorer:
     def setup_method(self):
-        self.d = IncentiveDesigner()
+        self.scorer = OutcomeBasedScorer()
 
-    def test_social_optimum(self):
-        # Outcome A: total welfare = 0.9+0.8 = 1.7; B: 0.3+0.4 = 0.7
-        agent_values = {
-            "n1": {"A": 0.9, "B": 0.3},
-            "n2": {"A": 0.8, "B": 0.4},
-        }
-        opt = self.d.social_optimum(agent_values, ["A", "B"])
-        assert opt == "A"
+    def test_get_scores_empty(self):
+        scores = self.scorer.get_scores()
+        assert scores == {}
 
-    def test_vcg_payment_non_negative_for_honest(self):
-        agent_values = {
-            "n1": {"A": 0.9, "B": 0.3},
-            "n2": {"A": 0.8, "B": 0.4},
-        }
-        pay = self.d.vcg_payment("n1", agent_values, ["A", "B"])
-        assert isinstance(pay, float)
+    def test_record_outcome_single(self):
+        self.scorer.record_outcome("n1", predicted=1.0, actual=1.0, return_contribution=0.1)
+        scores = self.scorer.get_scores()
+        assert "n1" in scores
+        assert 0.0 <= scores["n1"] <= 1.0
 
-    def test_compute_all_payments_keys(self):
-        agent_values = {
-            "n1": {"A": 0.9, "B": 0.3},
-            "n2": {"A": 0.8, "B": 0.4},
-        }
-        payments = self.d.compute_all_payments(agent_values, ["A", "B"])
-        assert set(payments.keys()) == {"n1", "n2"}
+    def test_accuracy_perfect_prediction(self):
+        # Perfect predictions → accuracy = 1.0
+        for _ in range(5):
+            self.scorer.record_outcome("n1", predicted=2.0, actual=2.0, return_contribution=0.1)
+        # accuracy = 1 - 0 = 1.0; score = 0.6 * 1.0 + 0.4 * sharpe
+        score = self.scorer.score("n1")
+        assert score > 0.5
 
+    def test_accuracy_poor_prediction(self):
+        # Predictions far off → accuracy near 0
+        for _ in range(10):
+            self.scorer.record_outcome("n1", predicted=100.0, actual=1.0, return_contribution=0.0)
+        score = self.scorer.score("n1")
+        # accuracy ≈ 1 - 99 = very negative, clamped to 0; sharpe = 0/tiny ≈ 0
+        assert score == 0.0
 
-# ---------------------------------------------------------------------------
-# Layer 5: SafetyEnvelope
-# ---------------------------------------------------------------------------
+    def test_sharpe_contribution_positive_returns(self):
+        # Consistent positive returns → positive sharpe → higher score
+        for i in range(10):
+            self.scorer.record_outcome("n1", predicted=1.0, actual=1.0, return_contribution=0.05)
+        score = self.scorer.score("n1")
+        assert score > 0.5
 
-class TestSafetyEnvelope:
-    def setup_method(self):
-        self.s = SafetyEnvelope(max_position_pct=0.25, max_drawdown_pct=0.15, max_correlation=0.85)
+    def test_sharpe_contribution_negative_returns(self):
+        # Consistent negative returns → negative sharpe → pulls score down
+        for _ in range(10):
+            self.scorer.record_outcome("n1", predicted=1.0, actual=1.0, return_contribution=-0.1)
+        score = self.scorer.score("n1")
+        # accuracy=1.0 (perfect pred), sharpe negative → score < 0.6
+        assert score < 0.6
 
-    def test_check_ok(self):
-        portfolio = {"BTC": 0.20, "ETH": 0.20, "SOL": 0.20, "BNB": 0.20, "XRP": 0.20}
-        ok, violations = self.s.check(portfolio, drawdown=0.05)
-        assert ok
-        assert violations == []
+    def test_rolling_history_capped_at_50(self):
+        for i in range(60):
+            self.scorer.record_outcome("n1", predicted=float(i), actual=float(i), return_contribution=0.01)
+        # Should only keep last 50
+        assert len(self.scorer._history["n1"]) == 50
 
-    def test_check_position_violation(self):
-        portfolio = {"BTC": 0.50, "ETH": 0.50}
-        ok, violations = self.s.check(portfolio, drawdown=0.05)
-        assert not ok
-        assert any("position" in v.lower() or "concentration" in v.lower() for v in violations)
+    def test_get_scores_multiple_nodes(self):
+        self.scorer.record_outcome("n1", 1.0, 1.0, 0.1)
+        self.scorer.record_outcome("n2", 2.0, 2.0, 0.2)
+        scores = self.scorer.get_scores()
+        assert set(scores.keys()) == {"n1", "n2"}
 
-    def test_check_drawdown_violation(self):
-        portfolio = {"BTC": 0.20, "ETH": 0.20, "SOL": 0.60}
-        ok, violations = self.s.check(portfolio, drawdown=0.20)
-        assert not ok
-        assert any("drawdown" in v.lower() for v in violations)
+    def test_score_unknown_node_returns_zero(self):
+        score = self.scorer.score("unknown")
+        assert score == 0.0
 
-    def test_clamp_reduces_oversized(self):
-        portfolio = {"BTC": 0.70, "ETH": 0.30}
-        clamped = self.s.clamp(portfolio)
-        assert all(v <= 0.25 + 1e-9 for v in clamped.values())
+    def test_score_clamped_to_zero(self):
+        # Extreme scenario: accuracy very negative → still clamped to 0
+        for _ in range(5):
+            self.scorer.record_outcome("n1", predicted=1000.0, actual=0.001, return_contribution=-1.0)
+        score = self.scorer.score("n1")
+        assert score >= 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +226,9 @@ class TestAlignmentLayer:
         assert isinstance(decision, AlignmentDecision)
         assert isinstance(decision.approved, bool)
         assert isinstance(decision.pareto_ranks, dict)
-        assert isinstance(decision.vcg_payments, dict)
+        assert isinstance(decision.outcome_scores, dict)
+        assert isinstance(decision.improvement_magnitude_ok, bool)
+        assert isinstance(decision.magnitude_warning, bool)
 
     def test_safety_violation_blocks(self):
         node_metrics_map = {"N": {"accuracy": 0.5}}
@@ -257,9 +244,59 @@ class TestAlignmentLayer:
         assert not decision.approved
         assert len(decision.violations) > 0
 
-    def test_record_improvement_attempt_ok(self):
+    def test_record_improvement_attempt_small_delta(self):
         old = {"lr": 0.5, "dropout": 0.5}
         new = {"lr": 0.51, "dropout": 0.51}
-        ok, kl = self.layer.record_improvement_attempt("node1", old, new)
+        ok, reason = self.layer.record_improvement_attempt("node1", old, new)
         assert ok
-        assert kl >= 0
+        assert reason == ""
+
+    def test_record_improvement_attempt_large_delta(self):
+        old = {"lr": 0.1, "dropout": 0.1}
+        new = {"lr": 0.9, "dropout": 0.9}
+        ok, reason = self.layer.record_improvement_attempt("node1", old, new)
+        assert not ok
+        assert "improvement_magnitude" in reason
+
+    def test_magnitude_warning_propagates_to_decision(self):
+        # Trigger a magnitude warning first
+        old = {"lr": 0.0}
+        new = {"lr": 1.0}
+        self.layer.record_improvement_attempt("n1", old, new)
+
+        node_metrics_map = {"n1": {"accuracy": 0.8}}
+        system_metrics = {}
+        portfolio = {"BTC": 0.2, "ETH": 0.2}
+
+        decision = self.layer.check_improvement_cycle(
+            node_metrics_map=node_metrics_map,
+            system_metrics=system_metrics,
+            portfolio=portfolio,
+        )
+        assert decision.magnitude_warning is True
+        assert decision.improvement_magnitude_ok is False
+
+    def test_record_outcome_delegates_to_scorer(self):
+        self.layer.record_outcome("n1", predicted=1.0, actual=1.0, return_contribution=0.1)
+        scores = self.layer._scorer.get_scores()
+        assert "n1" in scores
+
+    def test_outcome_scores_in_decision(self):
+        self.layer.record_outcome("n1", predicted=1.0, actual=1.0, return_contribution=0.05)
+        node_metrics_map = {"n1": {"accuracy": 0.9}}
+        decision = self.layer.check_improvement_cycle(
+            node_metrics_map=node_metrics_map,
+            system_metrics={},
+            portfolio={"BTC": 0.2},
+        )
+        assert "n1" in decision.outcome_scores
+
+    def test_no_magnitude_warning_by_default(self):
+        node_metrics_map = {"n1": {"accuracy": 0.9}}
+        decision = self.layer.check_improvement_cycle(
+            node_metrics_map=node_metrics_map,
+            system_metrics={},
+            portfolio={"BTC": 0.2},
+        )
+        assert decision.magnitude_warning is False
+        assert decision.improvement_magnitude_ok is True

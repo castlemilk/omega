@@ -700,17 +700,17 @@ class VectoraSystem:
             approved=alignment_decision.approved,
             violations=alignment_decision.violations,
             pareto_ranks={k: int(v) for k, v in alignment_decision.pareto_ranks.items()},
-            adjustments=alignment_decision.adjustments,
-            vcg_payments=alignment_decision.vcg_payments,
-            goodhart_warning=alignment_decision.goodhart_warning,
+            adjustments=alignment_decision.outcome_scores,
+            vcg_payments={},
+            goodhart_warning=alignment_decision.magnitude_warning,
         )
         if not alignment_decision.approved:
             logger.warning(
                 "[alignment] BLOCKED improvement: violations=%s",
                 alignment_decision.violations,
             )
-        elif alignment_decision.goodhart_warning:
-            logger.warning("[alignment] Goodhart divergence detected — improvement proceeding with caution")
+        elif alignment_decision.magnitude_warning:
+            logger.warning("[alignment] Improvement magnitude exceeded — proceeding with caution")
         else:
             logger.info("[alignment] Approved. Pareto ranks: %s", dict(list(alignment_decision.pareto_ranks.items())[:3]))
 
@@ -729,7 +729,7 @@ class VectoraSystem:
             approved=goal_decision_final.approved,
             composite_score=goal_decision_final.composite_score,
             scorecard=goal_decision_final.scorecard,
-            nash_weights=goal_decision_final.nash_weights,
+            nash_weights={},
             tracking_error=goal_decision_final.tracking_error,
             control_action=goal_decision_final.control_action,
             subtasks=[{"name": t.name, "assigned_to": t.assigned_to} for t in goal_decision_final.subtasks],
