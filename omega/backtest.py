@@ -375,20 +375,26 @@ def _sma_crossover_strategy(
             continue
 
         # Golden cross → go long
+        # Enter on next bar's open to prevent look-ahead bias
         if prev_s <= prev_l and cur_s > cur_l and position == 0.0:
+            if i + 1 >= len(bars):  # can't enter on last bar
+                daily_rets.append(0.0)
+                continue
             position = 1.0
-            entry_price = bars[i].close
+            entry_price = bars[i + 1].open  # Enter on next bar's open to prevent look-ahead bias
 
         # Death cross → close long
+        # Exit on next bar's open to prevent look-ahead bias
         elif prev_s >= prev_l and cur_s < cur_l and position == 1.0:
-            pnl = (bars[i].close - entry_price) / entry_price
+            exit_price = bars[i + 1].open if i + 1 < len(bars) else bars[i].close
+            pnl = (exit_price - entry_price) / entry_price
             trades.append(
                 Trade(
                     symbol=sym,
                     date=bars[i].date,
                     direction="long",
                     entry_price=entry_price,
-                    exit_price=bars[i].close,
+                    exit_price=exit_price,
                     pnl_pct=pnl,
                 )
             )
@@ -429,18 +435,24 @@ def _multi_signal_strategy(sym: str, bars: list[OHLCV]) -> tuple[list[Trade], li
         cur_sma_l: float = sma_l[i]  # type: ignore[assignment]
         rsi_ok = float(rsi_vals[i]) < 70.0  # type: ignore[arg-type]
 
+        # Enter on next bar's open to prevent look-ahead bias
         if prev_s <= prev_l and cur_sma_s > cur_sma_l and position == 0.0 and rsi_ok:
+            if i + 1 >= len(bars):  # can't enter on last bar
+                daily_rets.append(0.0)
+                continue
             position = 1.0
-            entry_price = bars[i].close
+            entry_price = bars[i + 1].open  # Enter on next bar's open to prevent look-ahead bias
+        # Exit on next bar's open to prevent look-ahead bias
         elif prev_s >= prev_l and cur_sma_s < cur_sma_l and position == 1.0:
-            pnl = (bars[i].close - entry_price) / entry_price
+            exit_price = bars[i + 1].open if i + 1 < len(bars) else bars[i].close
+            pnl = (exit_price - entry_price) / entry_price
             trades.append(
                 Trade(
                     symbol=sym,
                     date=bars[i].date,
                     direction="long",
                     entry_price=entry_price,
-                    exit_price=bars[i].close,
+                    exit_price=exit_price,
                     pnl_pct=pnl,
                 )
             )
