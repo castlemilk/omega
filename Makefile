@@ -33,6 +33,17 @@ fe-typecheck:
 
 all: build fe-build
 
+monitoring-up:
+	docker compose -f monitoring/docker-compose.yml up -d
+	@echo "Prometheus : http://localhost:9091"
+	@echo "Grafana    : http://localhost:3000  (admin / omega)"
+
+monitoring-down:
+	docker compose -f monitoring/docker-compose.yml down
+
+monitoring-status:
+	docker compose -f monitoring/docker-compose.yml ps
+
 clean:
 	rm -f omega-api
 	rm -rf dashboard/dist
