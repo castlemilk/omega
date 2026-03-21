@@ -214,11 +214,12 @@ class TestBacktestEvaluator:
 
 
 class TestImprovementEngineWithBacktestEvaluator:
-    def test_engine_uses_backtest_evaluator_by_default(self):
-        from omega.core.backtest_evaluator import BacktestEvaluator
+    def test_engine_uses_null_evaluator_by_default(self):
+        """Default evaluator is NullEvaluator — domain must inject its own."""
+        from omega.core.improvement_engine import NullEvaluator
 
         engine = ImprovementEngine()
-        assert isinstance(engine._evaluator, BacktestEvaluator)
+        assert isinstance(engine._evaluator, NullEvaluator)
 
     def test_set_evaluator_replaces(self):
         from omega.core.improvement_engine import SyntheticEvaluator

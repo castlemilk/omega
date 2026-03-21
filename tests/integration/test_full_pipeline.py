@@ -262,8 +262,8 @@ def test_cycle_results_have_all_fields() -> None:
             "regime",
             "duration_s",
             "signals",
-            "trades_proposed",
-            "trades_executed",
+            "actions_proposed",
+            "actions_executed",
             "adversarial_flags",
             "critical_flags",
             "improvement_proposed",
@@ -277,8 +277,8 @@ def test_cycle_results_have_all_fields() -> None:
 
         assert isinstance(summary["cycle_id"], str) and summary["cycle_id"]
         assert isinstance(summary["signals"], int) and summary["signals"] >= 0
-        assert isinstance(summary["trades_proposed"], int)
-        assert isinstance(summary["trades_executed"], int)
+        assert isinstance(summary["actions_proposed"], int)
+        assert isinstance(summary["actions_executed"], int)
         assert isinstance(summary["active_nodes"], list)
 
 
