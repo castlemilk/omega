@@ -460,11 +460,14 @@ class AblationHarness:
         if force_pico:
             # Override promotion thresholds so nodes stay PICO throughout
             from omega.core.autonomy import AutonomyThresholds
+            from omega.core.domain import PerformanceMetric
 
             autonomy._thresholds = AutonomyThresholds(
                 min_cycles=999_999,
-                min_sharpe=999.0,
-                max_drawdown=0.0,
+                metrics=[
+                    PerformanceMetric("sharpe", "higher_is_better", 999.0, -999.0),
+                    PerformanceMetric("max_drawdown", "lower_is_better", 0.0, 1.0),
+                ],
             )
 
         # Build improvement engine (disabled = no-op evaluator with empty space)

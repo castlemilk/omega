@@ -9,6 +9,7 @@ from omega.core.autonomy import (
     AutonomyThresholds,
     GraduatedAutonomyController,
     NodeAutonomyState,
+    PerformanceMetric,
 )
 
 # ---------------------------------------------------------------------------
@@ -20,10 +21,10 @@ from omega.core.autonomy import (
 def thresholds() -> AutonomyThresholds:
     return AutonomyThresholds(
         min_cycles=3,
-        min_sharpe=0.5,
-        max_drawdown=0.15,
-        demotion_sharpe=0.0,
-        demotion_drawdown=0.20,
+        metrics=[
+            PerformanceMetric("sharpe", "higher_is_better", 0.5, 0.0),
+            PerformanceMetric("max_drawdown", "lower_is_better", 0.15, 0.20),
+        ],
     )
 
 
@@ -296,8 +297,7 @@ def test_node_autonomy_state_roundtrip() -> None:
         level=AutonomyLevel.SUPERVISED,
         cycles_at_level=5,
         total_cycles=15,
-        rolling_sharpe=0.8,
-        max_drawdown_observed=0.07,
+        metric_values={"sharpe": 0.8, "max_drawdown": 0.07},
         promotion_history=[{"from": "pico", "to": "supervised"}],
     )
     recovered = NodeAutonomyState.from_dict(state.to_dict())

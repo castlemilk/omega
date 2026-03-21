@@ -15,15 +15,13 @@ AUTONOMOUS  — brain operates freely, no human gate
 
 Promotion criteria (all must be met)
 --------------------------------------
-- min_cycles:       minimum number of completed cycles at current level
-- min_sharpe:       rolling Sharpe ratio >= threshold
-- max_drawdown:     max drawdown magnitude <= threshold (e.g. 0.10 = 10%)
+- min_cycles:   minimum number of completed cycles at current level
+- metrics:      all configured PerformanceMetric thresholds must be satisfied
 
 Demotion triggers (any one is sufficient)
 ------------------------------------------
-- sharpe_below_threshold:  Sharpe drops below demotion_sharpe
-- da_critical_challenge:   Devil's Advocate node raised a CRITICAL challenge
-- drawdown_exceeded:       drawdown breached demotion_drawdown limit
+- Any configured PerformanceMetric breaches its threshold_demote value
+- da_critical_challenge: Devil's Advocate node raised a CRITICAL challenge
 """
 
 from __future__ import annotations
@@ -32,6 +30,11 @@ import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
+
+# PerformanceMetric lives in domain.py — import it here for re-export so
+# existing callers that do `from omega.core.autonomy import PerformanceMetric`
+# continue to work.
+from omega.core.domain import PerformanceMetric
 
 if TYPE_CHECKING:
     from omega.core.state_store import StateBackend as StateStore
@@ -60,44 +63,83 @@ class AutonomyThresholds:
     """
     Configurable promotion / demotion thresholds.
 
-    Promotion (PICO→SUPERVISED, SUPERVISED→AUTONOMOUS)
-    ---------------------------------------------------
-    min_cycles        int   minimum cycles before promotion is considered
-    min_sharpe        float rolling Sharpe ratio that must be met
-    max_drawdown      float maximum allowable drawdown (0.10 = 10%)
+    metrics
+        List of PerformanceMetric descriptors.  Each metric is evaluated
+        independently; ALL must be satisfied for promotion; ANY breach of a
+        threshold_demote value triggers demotion.
 
-    Demotion (any level → one step lower)
-    --------------------------------------
-    demotion_sharpe     float  Sharpe below which demotion is triggered
-    demotion_drawdown   float  drawdown above which demotion is triggered
+    min_cycles
+        Minimum number of completed cycles at the current level before
+        promotion is considered.
+
+    Defaults to the Sharpe + max_drawdown pair so existing code that
+    constructs ``AutonomyThresholds()`` without arguments continues to work.
     """
 
-    # Promotion
     min_cycles: int = 10
-    min_sharpe: float = 0.5
-    max_drawdown: float = 0.15
-
-    # Demotion
-    demotion_sharpe: float = 0.0
-    demotion_drawdown: float = 0.20
+    metrics: list[PerformanceMetric] = field(
+        default_factory=lambda: [
+            PerformanceMetric(
+                name="sharpe",
+                direction="higher_is_better",
+                threshold_promote=0.5,
+                threshold_demote=0.0,
+            ),
+            PerformanceMetric(
+                name="max_drawdown",
+                direction="lower_is_better",
+                threshold_promote=0.15,
+                threshold_demote=0.20,
+            ),
+        ]
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "min_cycles": self.min_cycles,
-            "min_sharpe": self.min_sharpe,
-            "max_drawdown": self.max_drawdown,
-            "demotion_sharpe": self.demotion_sharpe,
-            "demotion_drawdown": self.demotion_drawdown,
+            "metrics": [
+                {
+                    "name": m.name,
+                    "direction": m.direction,
+                    "threshold_promote": m.threshold_promote,
+                    "threshold_demote": m.threshold_demote,
+                }
+                for m in self.metrics
+            ],
         }
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> AutonomyThresholds:
+        raw_metrics = d.get("metrics")
+        if raw_metrics:
+            metrics = [
+                PerformanceMetric(
+                    name=m["name"],
+                    direction=m["direction"],
+                    threshold_promote=float(m["threshold_promote"]),
+                    threshold_demote=float(m["threshold_demote"]),
+                )
+                for m in raw_metrics
+            ]
+        else:
+            # Legacy dict format: min_sharpe / max_drawdown scalar keys
+            metrics = [
+                PerformanceMetric(
+                    "sharpe",
+                    "higher_is_better",
+                    float(d.get("min_sharpe", 0.5)),
+                    float(d.get("demotion_sharpe", 0.0)),
+                ),
+                PerformanceMetric(
+                    "max_drawdown",
+                    "lower_is_better",
+                    float(d.get("max_drawdown", 0.15)),
+                    float(d.get("demotion_drawdown", 0.20)),
+                ),
+            ]
         return cls(
             min_cycles=int(d.get("min_cycles", 10)),
-            min_sharpe=float(d.get("min_sharpe", 0.5)),
-            max_drawdown=float(d.get("max_drawdown", 0.15)),
-            demotion_sharpe=float(d.get("demotion_sharpe", 0.0)),
-            demotion_drawdown=float(d.get("demotion_drawdown", 0.20)),
+            metrics=metrics,
         )
 
 
@@ -114,11 +156,34 @@ class NodeAutonomyState:
     level: AutonomyLevel = AutonomyLevel.PICO
     cycles_at_level: int = 0
     total_cycles: int = 0
-    rolling_sharpe: float = 0.0
-    max_drawdown_observed: float = 0.0
+    # Generic metric tracking:
+    #   "higher_is_better" → EMA of per-cycle readings
+    #   "lower_is_better"  → running maximum (worst observed)
+    metric_values: dict[str, float] = field(default_factory=dict)
     promotion_history: list[dict[str, Any]] = field(default_factory=list)
     demotion_history: list[dict[str, Any]] = field(default_factory=list)
     last_updated: float = field(default_factory=time.time)
+
+    # ------------------------------------------------------------------
+    # Backward-compat properties for callers that used rolling_sharpe /
+    # max_drawdown_observed directly.
+    # ------------------------------------------------------------------
+
+    @property
+    def rolling_sharpe(self) -> float:
+        return self.metric_values.get("sharpe", 0.0)
+
+    @rolling_sharpe.setter
+    def rolling_sharpe(self, v: float) -> None:
+        self.metric_values["sharpe"] = v
+
+    @property
+    def max_drawdown_observed(self) -> float:
+        return self.metric_values.get("max_drawdown", 0.0)
+
+    @max_drawdown_observed.setter
+    def max_drawdown_observed(self, v: float) -> None:
+        self.metric_values["max_drawdown"] = v
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -126,8 +191,10 @@ class NodeAutonomyState:
             "level": self.level.value,
             "cycles_at_level": self.cycles_at_level,
             "total_cycles": self.total_cycles,
-            "rolling_sharpe": self.rolling_sharpe,
-            "max_drawdown_observed": self.max_drawdown_observed,
+            "metric_values": self.metric_values,
+            # Legacy scalar keys for StateStore round-trip reads
+            "rolling_sharpe": self.metric_values.get("sharpe", 0.0),
+            "max_drawdown_observed": self.metric_values.get("max_drawdown", 0.0),
             "promotion_history": self.promotion_history,
             "demotion_history": self.demotion_history,
             "last_updated": self.last_updated,
@@ -135,13 +202,18 @@ class NodeAutonomyState:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> NodeAutonomyState:
+        # Support both new metric_values dict and legacy scalar fields
+        metric_values: dict[str, float] = dict(d.get("metric_values") or {})
+        if "rolling_sharpe" in d and "sharpe" not in metric_values:
+            metric_values["sharpe"] = float(d["rolling_sharpe"])
+        if "max_drawdown_observed" in d and "max_drawdown" not in metric_values:
+            metric_values["max_drawdown"] = float(d["max_drawdown_observed"])
         return cls(
             node_id=d["node_id"],
             level=AutonomyLevel(d.get("level", "pico")),
             cycles_at_level=int(d.get("cycles_at_level", 0)),
             total_cycles=int(d.get("total_cycles", 0)),
-            rolling_sharpe=float(d.get("rolling_sharpe", 0.0)),
-            max_drawdown_observed=float(d.get("max_drawdown_observed", 0.0)),
+            metric_values=metric_values,
             promotion_history=d.get("promotion_history", []),
             demotion_history=d.get("demotion_history", []),
             last_updated=float(d.get("last_updated", time.time())),
@@ -183,7 +255,10 @@ class GraduatedAutonomyController:
     controller = GraduatedAutonomyController(store=state_store)
     controller.register_node("node-abc")
 
-    # After each cycle, record metrics:
+    # After each cycle, record metrics generically:
+    controller.record_cycle("node-abc", metrics={"sharpe": 1.2, "max_drawdown": 0.05})
+
+    # Legacy API still works:
     controller.record_cycle("node-abc", sharpe=1.2, drawdown=0.05)
 
     # Attempt promotion (controller checks thresholds internally):
@@ -233,31 +308,52 @@ class GraduatedAutonomyController:
     def record_cycle(
         self,
         node_id: str,
-        sharpe: float,
-        drawdown: float,
+        metrics: dict[str, float] | None = None,
         *,
+        # Legacy kwargs kept for backward compatibility
+        sharpe: float | None = None,
+        drawdown: float | None = None,
         alpha: float = 0.1,
     ) -> NodeAutonomyState:
         """
         Update rolling metrics after a completed cycle.
 
-        Uses exponential moving average for Sharpe (alpha controls smoothing).
-        Tracks the maximum observed drawdown magnitude across all cycles.
+        Preferred API::
 
-        Args:
-            node_id:   the node whose metrics to update
-            sharpe:    this cycle's Sharpe ratio
-            drawdown:  this cycle's drawdown (positive magnitude, e.g. 0.05 = 5%)
-            alpha:     EMA smoothing factor (default 0.1)
+            controller.record_cycle("node-abc",
+                                    metrics={"sharpe": 1.2, "max_drawdown": 0.05})
+
+        Legacy API (still supported)::
+
+            controller.record_cycle("node-abc", sharpe=1.2, drawdown=0.05)
+
+        For "higher_is_better" metrics: applies EMA with given alpha.
+        For "lower_is_better" metrics: tracks running maximum (worst seen).
+        Unknown metrics (not in thresholds) are stored as EMA by default.
         """
+        # Normalise inputs into a single dict
+        cycle_metrics: dict[str, float] = dict(metrics or {})
+        if sharpe is not None:
+            cycle_metrics.setdefault("sharpe", sharpe)
+        if drawdown is not None:
+            cycle_metrics.setdefault("max_drawdown", abs(drawdown))
+
         state = self._require_state(node_id)
         state.total_cycles += 1
         state.cycles_at_level += 1
-        # Exponential moving average for Sharpe
-        state.rolling_sharpe = (1 - alpha) * state.rolling_sharpe + alpha * sharpe
-        # Track worst drawdown seen
-        if drawdown > state.max_drawdown_observed:
-            state.max_drawdown_observed = drawdown
+
+        metric_map = {m.name: m for m in self._thresholds.metrics}
+        for name, value in cycle_metrics.items():
+            m = metric_map.get(name)
+            if m is None or m.direction == "higher_is_better":
+                # EMA update
+                prev = state.metric_values.get(name, 0.0)
+                state.metric_values[name] = (1 - alpha) * prev + alpha * value
+            else:
+                # lower_is_better → track running maximum (worst observed)
+                current_worst = state.metric_values.get(name, 0.0)
+                state.metric_values[name] = max(current_worst, abs(value))
+
         state.last_updated = time.time()
         self._save_state(state)
         return state
@@ -272,13 +368,9 @@ class GraduatedAutonomyController:
 
         Promotion succeeds only if all threshold criteria are met:
         - cycles_at_level >= min_cycles
-        - rolling_sharpe  >= min_sharpe
-        - max_drawdown_observed <= max_drawdown
+        - all PerformanceMetric thresholds satisfied
 
         Nodes already at AUTONOMOUS cannot be promoted further.
-
-        Returns an AutonomyTransition describing the outcome; check
-        `transition.changed` to see whether the level actually changed.
         """
         state = self._require_state(node_id)
         prev_level = state.level
@@ -313,8 +405,7 @@ class GraduatedAutonomyController:
             "to": next_level.value,
             "reason": "criteria_met",
             "cycles_at_level": state.cycles_at_level,
-            "rolling_sharpe": state.rolling_sharpe,
-            "max_drawdown_observed": state.max_drawdown_observed,
+            "metric_values": dict(state.metric_values),
             "timestamp": time.time(),
         }
         state.level = next_level
@@ -335,13 +426,17 @@ class GraduatedAutonomyController:
         t = self._thresholds
         if state.cycles_at_level < t.min_cycles:
             return False, f"insufficient_cycles:{state.cycles_at_level}<{t.min_cycles}"
-        if state.rolling_sharpe < t.min_sharpe:
-            return False, f"sharpe_too_low:{state.rolling_sharpe:.3f}<{t.min_sharpe}"
-        if state.max_drawdown_observed > t.max_drawdown:
-            return (
-                False,
-                f"drawdown_too_high:{state.max_drawdown_observed:.3f}>{t.max_drawdown}",
-            )
+        for m in t.metrics:
+            observed = state.metric_values.get(m.name, 0.0)
+            if m.direction == "higher_is_better":
+                if observed < m.threshold_promote:
+                    return False, f"{m.name}_too_low:{observed:.3f}<{m.threshold_promote}"
+            else:  # lower_is_better
+                if observed > m.threshold_promote:
+                    return (
+                        False,
+                        f"{m.name}_too_high:{observed:.3f}>{m.threshold_promote}",
+                    )
         return True, "criteria_met"
 
     # ------------------------------------------------------------------
@@ -354,9 +449,6 @@ class GraduatedAutonomyController:
 
         Demotion is immediate and unconditional — the caller is responsible
         for supplying a meaningful reason string that gets recorded in history.
-
-        Common reasons:
-          "sharpe_below_threshold", "da_critical_challenge", "drawdown_exceeded"
 
         Nodes already at PICO cannot be demoted further.
         """
@@ -381,8 +473,7 @@ class GraduatedAutonomyController:
             "from": state.level.value,
             "to": next_level.value,
             "reason": reason,
-            "rolling_sharpe": state.rolling_sharpe,
-            "max_drawdown_observed": state.max_drawdown_observed,
+            "metric_values": dict(state.metric_values),
             "timestamp": time.time(),
         }
         state.level = next_level
@@ -403,6 +494,8 @@ class GraduatedAutonomyController:
         self,
         node_id: str,
         *,
+        metrics: dict[str, float] | None = None,
+        # Legacy kwargs kept for backward compatibility
         current_sharpe: float | None = None,
         current_drawdown: float | None = None,
         da_critical: bool = False,
@@ -410,17 +503,38 @@ class GraduatedAutonomyController:
         """
         Evaluate demotion triggers and demote if any fire.
 
+        Preferred API::
+
+            controller.check_and_demote("node-abc",
+                                        metrics={"sharpe": -0.1, "max_drawdown": 0.25})
+
+        Legacy API (still supported)::
+
+            controller.check_and_demote("node-abc",
+                                        current_sharpe=-0.1, current_drawdown=0.25)
+
         Returns the transition if demotion occurred, None otherwise.
         """
         self._require_state(node_id)
-        t = self._thresholds
 
         if da_critical:
             return self.demote_node(node_id, reason="da_critical_challenge")
-        if current_sharpe is not None and current_sharpe < t.demotion_sharpe:
-            return self.demote_node(node_id, reason="sharpe_below_threshold")
-        if current_drawdown is not None and current_drawdown > t.demotion_drawdown:
-            return self.demote_node(node_id, reason="drawdown_exceeded")
+
+        # Normalise inputs into a single dict
+        cycle_metrics: dict[str, float] = dict(metrics or {})
+        if current_sharpe is not None:
+            cycle_metrics.setdefault("sharpe", current_sharpe)
+        if current_drawdown is not None:
+            cycle_metrics.setdefault("max_drawdown", abs(current_drawdown))
+
+        for m in self._thresholds.metrics:
+            value = cycle_metrics.get(m.name)
+            if value is None:
+                continue
+            if m.direction == "higher_is_better" and value < m.threshold_demote:
+                return self.demote_node(node_id, reason=f"{m.name}_below_threshold")
+            elif m.direction == "lower_is_better" and abs(value) > m.threshold_demote:
+                return self.demote_node(node_id, reason=f"{m.name}_exceeded")
         return None
 
     # ------------------------------------------------------------------
@@ -435,19 +549,14 @@ class GraduatedAutonomyController:
         SUPERVISED  → NoBrain with a flag in metadata; caller must implement
                       the approval gate before acting on brain proposals.
         AUTONOMOUS  → existing brain (whatever is configured on the node).
-
-        The node must implement set_brain_config() (as per Node base class).
         """
         from omega.core.brain import NoBrain
 
         state = self._require_state(node_id)
 
         if state.level == AutonomyLevel.PICO:
-            # Force NoBrain — fully deterministic
             node.brain = NoBrain()
         elif state.level == AutonomyLevel.SUPERVISED:
-            # Keep existing brain but mark supervised in node metadata
-            # Callers are responsible for gating execution on human approval
             pass
         # AUTONOMOUS: leave brain as-is
 
@@ -481,13 +590,11 @@ class GraduatedAutonomyController:
         return f"{self._KEY_PREFIX}{node_id}"
 
     def _load_state(self, node_id: str) -> NodeAutonomyState | None:
-        # Check in-memory cache first
         if node_id in self._cache:
             return self._cache[node_id]
         if self._store is None:
             return None
         try:
-            # Use config revision history — newest first (ORDER BY recorded_at DESC)
             history = self._store.get_config_history(node_id)  # type: ignore[attr-defined]
             for entry in history:
                 if entry.get("version", "").startswith("autonomy_state:"):
@@ -505,7 +612,6 @@ class GraduatedAutonomyController:
         if self._store is None:
             return
         try:
-            # Persist via config revision with a namespaced version string
             version_key = f"autonomy_state:{int(state.last_updated * 1000)}"
             self._store.save_config_revision(state.node_id, version_key, state.to_dict())  # type: ignore[attr-defined]
         except Exception:
