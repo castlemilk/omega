@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
  */
 export function usePolling<T>(
   fetcher: () => Promise<T>,
-  intervalMs = 5000,
+  intervalMs = 5000
 ): { data: T | null; error: string | null; loading: boolean } {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);

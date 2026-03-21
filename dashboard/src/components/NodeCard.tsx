@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import type { Node } from "../gen/omega/v1/types_pb";
 
@@ -13,11 +14,14 @@ function healthText(h: number) {
   return "text-red-400";
 }
 
-interface NodeCardProps { node: Node }
+interface NodeCardProps {
+  node: Node;
+}
 
 export default function NodeCard({ node }: NodeCardProps) {
+  const [mountedAt] = useState(Date.now);
   const lastExecAgo = node.lastExecution?.startedAt
-    ? Math.round((Date.now() / 1000 - Number(node.lastExecution.startedAt.seconds)) / 60)
+    ? Math.round((mountedAt / 1000 - Number(node.lastExecution.startedAt.seconds)) / 60)
     : null;
 
   return (

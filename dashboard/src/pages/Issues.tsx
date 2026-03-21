@@ -13,7 +13,10 @@ export default function Issues() {
   const [filter, setFilter] = useState("open");
 
   useEffect(() => {
-    client.listIssues({ stateFilter: filter }).then((r) => setIssues(r.issues)).catch(console.error);
+    client
+      .listIssues({ stateFilter: filter })
+      .then((r) => setIssues(r.issues))
+      .catch(console.error);
   }, [filter]);
 
   return (
@@ -34,7 +37,9 @@ export default function Issues() {
           <thead className="text-xs text-gray-400 uppercase bg-gray-900">
             <tr>
               {["Severity", "Detector", "Description", "State", "Opened"].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
+                <th key={h} className="px-4 py-3 text-left font-medium">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -42,7 +47,9 @@ export default function Issues() {
             {issues.map((issue) => (
               <tr key={issue.issueId} className="hover:bg-gray-750">
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${severityColor[issue.severity] ?? "bg-gray-700 text-gray-400"}`}>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${severityColor[issue.severity] ?? "bg-gray-700 text-gray-400"}`}
+                  >
                     {issue.severity}
                   </span>
                 </td>
@@ -50,7 +57,9 @@ export default function Issues() {
                 <td className="px-4 py-3 text-gray-200 max-w-xs truncate">{issue.description}</td>
                 <td className="px-4 py-3 text-gray-400">{issue.state}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs">
-                  {issue.openedAt ? new Date(Number(issue.openedAt.seconds) * 1000).toLocaleString() : "—"}
+                  {issue.openedAt
+                    ? new Date(Number(issue.openedAt.seconds) * 1000).toLocaleString()
+                    : "—"}
                 </td>
               </tr>
             ))}

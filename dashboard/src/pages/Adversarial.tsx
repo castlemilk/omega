@@ -1,7 +1,14 @@
 import { useCallback } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, CartesianGrid,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  CartesianGrid,
 } from "recharts";
 import { Swords } from "lucide-react";
 import { client } from "../client";
@@ -15,10 +22,7 @@ const severityColor: Record<string, string> = {
 };
 
 export default function Adversarial() {
-  const fetchFn = useCallback(
-    () => client.getAdversarialResults({ limit: 100 }),
-    [],
-  );
+  const fetchFn = useCallback(() => client.getAdversarialResults({ limit: 100 }), []);
   const { data, error, loading } = usePolling(fetchFn);
   const results = data?.results ?? [];
 
@@ -47,8 +51,7 @@ export default function Adversarial() {
     .sort((a, b) => Number(a[0] - b[0]))
     .map(([cycle, flags]) => ({ cycle: Number(cycle), flags }));
 
-  if (loading)
-    return <div className="text-gray-500 text-sm">Loading adversarial data…</div>;
+  if (loading) return <div className="text-gray-500 text-sm">Loading adversarial data…</div>;
   if (error) return <div className="text-red-400 text-sm">Error: {error}</div>;
 
   return (
@@ -62,9 +65,7 @@ export default function Adversarial() {
       <div className="grid grid-cols-2 gap-4">
         {/* Flags by ring */}
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-          <p className="text-xs text-gray-400 uppercase font-medium mb-3">
-            Flags by Ring
-          </p>
+          <p className="text-xs text-gray-400 uppercase font-medium mb-3">Flags by Ring</p>
           {ringData.length === 0 ? (
             <p className="text-gray-600 text-sm text-center py-4">No data</p>
           ) : (
@@ -88,9 +89,7 @@ export default function Adversarial() {
 
         {/* Severity distribution */}
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-          <p className="text-xs text-gray-400 uppercase font-medium mb-3">
-            Severity Distribution
-          </p>
+          <p className="text-xs text-gray-400 uppercase font-medium mb-3">Severity Distribution</p>
           <div className="space-y-2 mt-2">
             {severityData.length === 0 ? (
               <p className="text-gray-600 text-sm text-center py-4">No data</p>
@@ -114,9 +113,7 @@ export default function Adversarial() {
 
       {timelineData.length > 1 && (
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-          <p className="text-xs text-gray-400 uppercase font-medium mb-3">
-            Flags Over Cycles
-          </p>
+          <p className="text-xs text-gray-400 uppercase font-medium mb-3">Flags Over Cycles</p>
           <ResponsiveContainer width="100%" height={140}>
             <LineChart data={timelineData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
@@ -130,13 +127,7 @@ export default function Adversarial() {
                   fontSize: 12,
                 }}
               />
-              <Line
-                type="monotone"
-                dataKey="flags"
-                stroke="#f97316"
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="flags" stroke="#f97316" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -165,9 +156,7 @@ export default function Adversarial() {
             <tbody className="divide-y divide-gray-700">
               {results.slice(0, 50).map((r) => (
                 <tr key={r.resultId}>
-                  <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                    {Number(r.cycle)}
-                  </td>
+                  <td className="px-4 py-3 font-mono text-xs text-gray-400">{Number(r.cycle)}</td>
                   <td className="px-4 py-3 text-gray-300">{r.ring}</td>
                   <td className="px-4 py-3">
                     <span

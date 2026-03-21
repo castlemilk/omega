@@ -1,25 +1,17 @@
 import { useCallback } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { ShieldCheck, ShieldX } from "lucide-react";
 import { client } from "../client";
 import { usePolling } from "../hooks/usePolling";
 
 export default function Alignment() {
-  const fetchFn = useCallback(
-    () => client.getAlignmentDecisions({ limit: 100 }),
-    [],
-  );
+  const fetchFn = useCallback(() => client.getAlignmentDecisions({ limit: 100 }), []);
   const { data, error, loading } = usePolling(fetchFn);
 
   const decisions = data?.decisions ?? [];
   const approved = decisions.filter((d) => d.approved).length;
   const rejected = decisions.length - approved;
-  const rate =
-    decisions.length > 0
-      ? Math.round((approved / decisions.length) * 100)
-      : null;
+  const rate = decisions.length > 0 ? Math.round((approved / decisions.length) * 100) : null;
 
   const chartData = [
     { name: "Approved", value: approved, color: "#22c55e" },
@@ -47,9 +39,7 @@ export default function Alignment() {
 
       {decisions.length > 0 && (
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-          <p className="text-xs text-gray-400 uppercase font-medium mb-3">
-            Decision Breakdown
-          </p>
+          <p className="text-xs text-gray-400 uppercase font-medium mb-3">Decision Breakdown</p>
           <ResponsiveContainer width="100%" height={120}>
             <BarChart data={chartData} layout="vertical" margin={{ left: 16 }}>
               <XAxis type="number" hide />
@@ -80,9 +70,7 @@ export default function Alignment() {
 
       <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
         <div className="px-4 py-3 border-b border-gray-700">
-          <p className="text-xs text-gray-400 uppercase font-medium">
-            Recent Decisions
-          </p>
+          <p className="text-xs text-gray-400 uppercase font-medium">Recent Decisions</p>
         </div>
         {decisions.length === 0 ? (
           <p className="text-center text-gray-600 py-8 text-sm">
@@ -91,10 +79,7 @@ export default function Alignment() {
         ) : (
           <div className="divide-y divide-gray-700">
             {decisions.map((d) => (
-              <div
-                key={d.decisionId}
-                className="px-4 py-3 flex items-start gap-3"
-              >
+              <div key={d.decisionId} className="px-4 py-3 flex items-start gap-3">
                 {d.approved ? (
                   <ShieldCheck size={16} className="text-green-400 mt-0.5 shrink-0" />
                 ) : (
@@ -109,11 +94,9 @@ export default function Alignment() {
                     >
                       {d.approved ? "Approved" : "Rejected"}
                     </span>
-                    <span className="text-xs text-gray-500">cycle {d.cycle}</span>
+                    <span className="text-xs text-gray-500">cycle {String(d.cycle)}</span>
                     {d.targetSubsystem && (
-                      <span className="text-xs text-indigo-400">
-                        {d.targetSubsystem}
-                      </span>
+                      <span className="text-xs text-indigo-400">{d.targetSubsystem}</span>
                     )}
                   </div>
                   {d.reasons.length > 0 && (
@@ -124,9 +107,7 @@ export default function Alignment() {
                 </div>
                 <span className="text-xs text-gray-600 shrink-0">
                   {d.recordedAt
-                    ? new Date(
-                        Number(d.recordedAt.seconds) * 1000,
-                      ).toLocaleTimeString()
+                    ? new Date(Number(d.recordedAt.seconds) * 1000).toLocaleTimeString()
                     : "—"}
                 </span>
               </div>

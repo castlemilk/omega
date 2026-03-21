@@ -12,7 +12,10 @@ export default function Nodes() {
   const [history, setHistory] = useState<LatencyPoint[]>([]);
 
   useEffect(() => {
-    client.listNodes({}).then((r) => setNodes(r.nodes)).catch(console.error);
+    client
+      .listNodes({})
+      .then((r) => setNodes(r.nodes))
+      .catch(console.error);
   }, []);
 
   async function selectNode(nodeId: string) {
@@ -37,7 +40,9 @@ export default function Nodes() {
           <thead className="text-xs text-gray-400 uppercase bg-gray-900">
             <tr>
               {["Node", "Version", "Health", "p95 ms", "Err Rate", "Cycles", "Status"].map((h) => (
-                <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
+                <th key={h} className="px-4 py-3 text-left font-medium">
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
@@ -51,7 +56,15 @@ export default function Nodes() {
                 <td className="px-4 py-3 font-medium text-white">{n.name}</td>
                 <td className="px-4 py-3 text-gray-400 font-mono text-xs">v{n.version}</td>
                 <td className="px-4 py-3">
-                  <span className={n.health >= 0.8 ? "text-green-400" : n.health >= 0.6 ? "text-yellow-400" : "text-red-400"}>
+                  <span
+                    className={
+                      n.health >= 0.8
+                        ? "text-green-400"
+                        : n.health >= 0.6
+                          ? "text-yellow-400"
+                          : "text-red-400"
+                    }
+                  >
                     {(n.health * 100).toFixed(0)}%
                   </span>
                 </td>
@@ -59,7 +72,9 @@ export default function Nodes() {
                 <td className="px-4 py-3 text-gray-300">{(n.errorRate * 100).toFixed(1)}%</td>
                 <td className="px-4 py-3 text-gray-300">{String(n.executionsTotal)}</td>
                 <td className="px-4 py-3">
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${n.status === "active" ? "bg-green-900 text-green-400" : "bg-gray-700 text-gray-400"}`}>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${n.status === "active" ? "bg-green-900 text-green-400" : "bg-gray-700 text-gray-400"}`}
+                  >
                     {n.status}
                   </span>
                 </td>
@@ -76,7 +91,9 @@ export default function Nodes() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="space-y-4">
             <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
-              <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase">Latency History</h3>
+              <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase">
+                Latency History
+              </h3>
               {sparkData.length > 0 ? (
                 <div className="h-40">
                   <ResponsiveContainer width="100%" height="100%">
@@ -84,11 +101,21 @@ export default function Nodes() {
                       <XAxis dataKey="ts" hide />
                       <YAxis width={40} tick={{ fontSize: 11, fill: "#9ca3af" }} />
                       <Tooltip
-                        contentStyle={{ background: "#1f2937", border: "1px solid #374151", borderRadius: 8 }}
+                        contentStyle={{
+                          background: "#1f2937",
+                          border: "1px solid #374151",
+                          borderRadius: 8,
+                        }}
                         labelStyle={{ color: "#9ca3af" }}
                         formatter={(v: number) => [`${v.toFixed(0)}ms`, "Latency"]}
                       />
-                      <Line type="monotone" dataKey="ms" stroke="#6366f1" dot={false} strokeWidth={2} />
+                      <Line
+                        type="monotone"
+                        dataKey="ms"
+                        stroke="#6366f1"
+                        dot={false}
+                        strokeWidth={2}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>

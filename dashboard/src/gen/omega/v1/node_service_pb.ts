@@ -9,8 +9,11 @@ import type { Message } from "@bufbuild/protobuf";
 /**
  * Describes the file omega/v1/node_service.proto.
  */
-export const file_omega_v1_node_service: GenFile = /*@__PURE__*/
-  fileDesc("ChtvbWVnYS92MS9ub2RlX3NlcnZpY2UucHJvdG8SCG9tZWdhLnYxIvkBCg5FeGVjdXRlUmVxdWVzdBIOCgZhY3Rpb24YASABKAkSPAoKcGFyYW1ldGVycxgCIAMoCzIoLm9tZWdhLnYxLkV4ZWN1dGVSZXF1ZXN0LlBhcmFtZXRlcnNFbnRyeRI2Cgdjb250ZXh0GAMgAygLMiUub21lZ2EudjEuRXhlY3V0ZVJlcXVlc3QuQ29udGV4dEVudHJ5GjEKD1BhcmFtZXRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGi4KDENvbnRleHRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrABCg9FeGVjdXRlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBITCgtyZXN1bHRfanNvbhgCIAEoDBIOCgZlcnJvcnMYAyADKAkSNwoHbWV0cmljcxgEIAMoCzImLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZS5NZXRyaWNzRW50cnkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiEQoPRXZhbHVhdGVSZXF1ZXN0InwKEEV2YWx1YXRlUmVzcG9uc2USOAoHbWV0cmljcxgBIAMoCzInLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2UuTWV0cmljc0VudHJ5Gi4KDE1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBInsKDkltcHJvdmVSZXF1ZXN0EjgKCGZlZWRiYWNrGAEgAygLMiYub21lZ2EudjEuSW1wcm92ZVJlcXVlc3QuRmVlZGJhY2tFbnRyeRovCg1GZWVkYmFja0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNwoPSW1wcm92ZVJlc3BvbnNlEg8KB2NoYW5nZWQYASABKAgSEwoLbmV3X3ZlcnNpb24YAiABKAkiEQoPR2V0U3RhdGVSZXF1ZXN0IngKEEdldFN0YXRlUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg8KB3ZlcnNpb24YAyABKAkSDgoGaGVhbHRoGAQgASgBEg4KBnN0YXR1cxgFIAEoCRIUCgxjYXBhYmlsaXRpZXMYBiADKAkiGAoWR2V0Q2FwYWJpbGl0aWVzUmVxdWVzdCIvChdHZXRDYXBhYmlsaXRpZXNSZXNwb25zZRIUCgxjYXBhYmlsaXRpZXMYASADKAky6wIKC05vZGVTZXJ2aWNlEj4KB0V4ZWN1dGUSGC5vbWVnYS52MS5FeGVjdXRlUmVxdWVzdBoZLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZRJBCghFdmFsdWF0ZRIZLm9tZWdhLnYxLkV2YWx1YXRlUmVxdWVzdBoaLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2USPgoHSW1wcm92ZRIYLm9tZWdhLnYxLkltcHJvdmVSZXF1ZXN0Ghkub21lZ2EudjEuSW1wcm92ZVJlc3BvbnNlEkEKCEdldFN0YXRlEhkub21lZ2EudjEuR2V0U3RhdGVSZXF1ZXN0Ghoub21lZ2EudjEuR2V0U3RhdGVSZXNwb25zZRJWCg9HZXRDYXBhYmlsaXRpZXMSIC5vbWVnYS52MS5HZXRDYXBhYmlsaXRpZXNSZXF1ZXN0GiEub21lZ2EudjEuR2V0Q2FwYWJpbGl0aWVzUmVzcG9uc2VClwEKDGNvbS5vbWVnYS52MUIQTm9kZVNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM");
+export const file_omega_v1_node_service: GenFile =
+  /*@__PURE__*/
+  fileDesc(
+    "ChtvbWVnYS92MS9ub2RlX3NlcnZpY2UucHJvdG8SCG9tZWdhLnYxIvkBCg5FeGVjdXRlUmVxdWVzdBIOCgZhY3Rpb24YASABKAkSPAoKcGFyYW1ldGVycxgCIAMoCzIoLm9tZWdhLnYxLkV4ZWN1dGVSZXF1ZXN0LlBhcmFtZXRlcnNFbnRyeRI2Cgdjb250ZXh0GAMgAygLMiUub21lZ2EudjEuRXhlY3V0ZVJlcXVlc3QuQ29udGV4dEVudHJ5GjEKD1BhcmFtZXRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGi4KDENvbnRleHRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrABCg9FeGVjdXRlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBITCgtyZXN1bHRfanNvbhgCIAEoDBIOCgZlcnJvcnMYAyADKAkSNwoHbWV0cmljcxgEIAMoCzImLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZS5NZXRyaWNzRW50cnkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiEQoPRXZhbHVhdGVSZXF1ZXN0InwKEEV2YWx1YXRlUmVzcG9uc2USOAoHbWV0cmljcxgBIAMoCzInLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2UuTWV0cmljc0VudHJ5Gi4KDE1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBInsKDkltcHJvdmVSZXF1ZXN0EjgKCGZlZWRiYWNrGAEgAygLMiYub21lZ2EudjEuSW1wcm92ZVJlcXVlc3QuRmVlZGJhY2tFbnRyeRovCg1GZWVkYmFja0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNwoPSW1wcm92ZVJlc3BvbnNlEg8KB2NoYW5nZWQYASABKAgSEwoLbmV3X3ZlcnNpb24YAiABKAkiEQoPR2V0U3RhdGVSZXF1ZXN0IngKEEdldFN0YXRlUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg8KB3ZlcnNpb24YAyABKAkSDgoGaGVhbHRoGAQgASgBEg4KBnN0YXR1cxgFIAEoCRIUCgxjYXBhYmlsaXRpZXMYBiADKAkiGAoWR2V0Q2FwYWJpbGl0aWVzUmVxdWVzdCIvChdHZXRDYXBhYmlsaXRpZXNSZXNwb25zZRIUCgxjYXBhYmlsaXRpZXMYASADKAky6wIKC05vZGVTZXJ2aWNlEj4KB0V4ZWN1dGUSGC5vbWVnYS52MS5FeGVjdXRlUmVxdWVzdBoZLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZRJBCghFdmFsdWF0ZRIZLm9tZWdhLnYxLkV2YWx1YXRlUmVxdWVzdBoaLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2USPgoHSW1wcm92ZRIYLm9tZWdhLnYxLkltcHJvdmVSZXF1ZXN0Ghkub21lZ2EudjEuSW1wcm92ZVJlc3BvbnNlEkEKCEdldFN0YXRlEhkub21lZ2EudjEuR2V0U3RhdGVSZXF1ZXN0Ghoub21lZ2EudjEuR2V0U3RhdGVSZXNwb25zZRJWCg9HZXRDYXBhYmlsaXRpZXMSIC5vbWVnYS52MS5HZXRDYXBhYmlsaXRpZXNSZXF1ZXN0GiEub21lZ2EudjEuR2V0Q2FwYWJpbGl0aWVzUmVzcG9uc2VClwEKDGNvbS5vbWVnYS52MUIQTm9kZVNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM"
+  );
 
 /**
  * @generated from message omega.v1.ExecuteRequest
@@ -36,7 +39,8 @@ export type ExecuteRequest = Message<"omega.v1.ExecuteRequest"> & {
  * Describes the message omega.v1.ExecuteRequest.
  * Use `create(ExecuteRequestSchema)` to create a new message.
  */
-export const ExecuteRequestSchema: GenMessage<ExecuteRequest> = /*@__PURE__*/
+export const ExecuteRequestSchema: GenMessage<ExecuteRequest> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 0);
 
 /**
@@ -68,20 +72,21 @@ export type ExecuteResponse = Message<"omega.v1.ExecuteResponse"> & {
  * Describes the message omega.v1.ExecuteResponse.
  * Use `create(ExecuteResponseSchema)` to create a new message.
  */
-export const ExecuteResponseSchema: GenMessage<ExecuteResponse> = /*@__PURE__*/
+export const ExecuteResponseSchema: GenMessage<ExecuteResponse> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 1);
 
 /**
  * @generated from message omega.v1.EvaluateRequest
  */
-export type EvaluateRequest = Message<"omega.v1.EvaluateRequest"> & {
-};
+export type EvaluateRequest = Message<"omega.v1.EvaluateRequest"> & {};
 
 /**
  * Describes the message omega.v1.EvaluateRequest.
  * Use `create(EvaluateRequestSchema)` to create a new message.
  */
-export const EvaluateRequestSchema: GenMessage<EvaluateRequest> = /*@__PURE__*/
+export const EvaluateRequestSchema: GenMessage<EvaluateRequest> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 2);
 
 /**
@@ -98,7 +103,8 @@ export type EvaluateResponse = Message<"omega.v1.EvaluateResponse"> & {
  * Describes the message omega.v1.EvaluateResponse.
  * Use `create(EvaluateResponseSchema)` to create a new message.
  */
-export const EvaluateResponseSchema: GenMessage<EvaluateResponse> = /*@__PURE__*/
+export const EvaluateResponseSchema: GenMessage<EvaluateResponse> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 3);
 
 /**
@@ -115,7 +121,8 @@ export type ImproveRequest = Message<"omega.v1.ImproveRequest"> & {
  * Describes the message omega.v1.ImproveRequest.
  * Use `create(ImproveRequestSchema)` to create a new message.
  */
-export const ImproveRequestSchema: GenMessage<ImproveRequest> = /*@__PURE__*/
+export const ImproveRequestSchema: GenMessage<ImproveRequest> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 4);
 
 /**
@@ -137,20 +144,21 @@ export type ImproveResponse = Message<"omega.v1.ImproveResponse"> & {
  * Describes the message omega.v1.ImproveResponse.
  * Use `create(ImproveResponseSchema)` to create a new message.
  */
-export const ImproveResponseSchema: GenMessage<ImproveResponse> = /*@__PURE__*/
+export const ImproveResponseSchema: GenMessage<ImproveResponse> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 5);
 
 /**
  * @generated from message omega.v1.GetStateRequest
  */
-export type GetStateRequest = Message<"omega.v1.GetStateRequest"> & {
-};
+export type GetStateRequest = Message<"omega.v1.GetStateRequest"> & {};
 
 /**
  * Describes the message omega.v1.GetStateRequest.
  * Use `create(GetStateRequestSchema)` to create a new message.
  */
-export const GetStateRequestSchema: GenMessage<GetStateRequest> = /*@__PURE__*/
+export const GetStateRequestSchema: GenMessage<GetStateRequest> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 6);
 
 /**
@@ -192,20 +200,21 @@ export type GetStateResponse = Message<"omega.v1.GetStateResponse"> & {
  * Describes the message omega.v1.GetStateResponse.
  * Use `create(GetStateResponseSchema)` to create a new message.
  */
-export const GetStateResponseSchema: GenMessage<GetStateResponse> = /*@__PURE__*/
+export const GetStateResponseSchema: GenMessage<GetStateResponse> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 7);
 
 /**
  * @generated from message omega.v1.GetCapabilitiesRequest
  */
-export type GetCapabilitiesRequest = Message<"omega.v1.GetCapabilitiesRequest"> & {
-};
+export type GetCapabilitiesRequest = Message<"omega.v1.GetCapabilitiesRequest"> & {};
 
 /**
  * Describes the message omega.v1.GetCapabilitiesRequest.
  * Use `create(GetCapabilitiesRequestSchema)` to create a new message.
  */
-export const GetCapabilitiesRequestSchema: GenMessage<GetCapabilitiesRequest> = /*@__PURE__*/
+export const GetCapabilitiesRequestSchema: GenMessage<GetCapabilitiesRequest> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 8);
 
 /**
@@ -222,7 +231,8 @@ export type GetCapabilitiesResponse = Message<"omega.v1.GetCapabilitiesResponse"
  * Describes the message omega.v1.GetCapabilitiesResponse.
  * Use `create(GetCapabilitiesResponseSchema)` to create a new message.
  */
-export const GetCapabilitiesResponseSchema: GenMessage<GetCapabilitiesResponse> = /*@__PURE__*/
+export const GetCapabilitiesResponseSchema: GenMessage<GetCapabilitiesResponse> =
+  /*@__PURE__*/
   messageDesc(file_omega_v1_node_service, 9);
 
 /**
@@ -236,7 +246,7 @@ export const NodeService: GenService<{
     methodKind: "unary";
     input: typeof ExecuteRequestSchema;
     output: typeof ExecuteResponseSchema;
-  },
+  };
   /**
    * @generated from rpc omega.v1.NodeService.Evaluate
    */
@@ -244,7 +254,7 @@ export const NodeService: GenService<{
     methodKind: "unary";
     input: typeof EvaluateRequestSchema;
     output: typeof EvaluateResponseSchema;
-  },
+  };
   /**
    * @generated from rpc omega.v1.NodeService.Improve
    */
@@ -252,7 +262,7 @@ export const NodeService: GenService<{
     methodKind: "unary";
     input: typeof ImproveRequestSchema;
     output: typeof ImproveResponseSchema;
-  },
+  };
   /**
    * @generated from rpc omega.v1.NodeService.GetState
    */
@@ -260,7 +270,7 @@ export const NodeService: GenService<{
     methodKind: "unary";
     input: typeof GetStateRequestSchema;
     output: typeof GetStateResponseSchema;
-  },
+  };
   /**
    * @generated from rpc omega.v1.NodeService.GetCapabilities
    */
@@ -268,7 +278,5 @@ export const NodeService: GenService<{
     methodKind: "unary";
     input: typeof GetCapabilitiesRequestSchema;
     output: typeof GetCapabilitiesResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_omega_v1_node_service, 0);
-
+  };
+}> = /*@__PURE__*/ serviceDesc(file_omega_v1_node_service, 0);

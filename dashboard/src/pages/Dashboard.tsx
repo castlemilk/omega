@@ -3,15 +3,23 @@ import { client } from "../client";
 import NodeCard from "../components/NodeCard";
 import type { SystemHealth, Node, ActivityEntry } from "../gen/omega/v1/types_pb";
 
-interface DashboardProps { health: SystemHealth | null }
+interface DashboardProps {
+  health: SystemHealth | null;
+}
 
 export default function Dashboard({ health }: DashboardProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
 
   useEffect(() => {
-    client.listNodes({}).then((r) => setNodes(r.nodes)).catch(console.error);
-    client.listActivity({ limit: 20 }).then((r) => setActivity(r.entries)).catch(console.error);
+    client
+      .listNodes({})
+      .then((r) => setNodes(r.nodes))
+      .catch(console.error);
+    client
+      .listActivity({ limit: 20 })
+      .then((r) => setActivity(r.entries))
+      .catch(console.error);
   }, []);
 
   const statusColor: Record<string, string> = {
@@ -25,10 +33,22 @@ export default function Dashboard({ health }: DashboardProps) {
       {/* System stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Status", value: health?.status ?? "—", cls: statusColor[health?.status ?? ""] ?? "text-white" },
-          { label: "Health Score", value: health ? `${(health.compositeScore * 100).toFixed(1)}%` : "—", cls: "text-white" },
+          {
+            label: "Status",
+            value: health?.status ?? "—",
+            cls: statusColor[health?.status ?? ""] ?? "text-white",
+          },
+          {
+            label: "Health Score",
+            value: health ? `${(health.compositeScore * 100).toFixed(1)}%` : "—",
+            cls: "text-white",
+          },
           { label: "Total Cycles", value: String(health?.totalCycles ?? "—"), cls: "text-white" },
-          { label: "Open Issues", value: String(health?.openIssues ?? "—"), cls: Number(health?.openIssues ?? 0) > 0 ? "text-red-400" : "text-white" },
+          {
+            label: "Open Issues",
+            value: String(health?.openIssues ?? "—"),
+            cls: Number(health?.openIssues ?? 0) > 0 ? "text-red-400" : "text-white",
+          },
         ].map(({ label, value, cls }) => (
           <div key={label} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
             <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
@@ -43,7 +63,9 @@ export default function Dashboard({ health }: DashboardProps) {
           Nodes ({nodes.length})
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {nodes.map((n) => <NodeCard key={n.nodeId} node={n} />)}
+          {nodes.map((n) => (
+            <NodeCard key={n.nodeId} node={n} />
+          ))}
         </div>
         {nodes.length === 0 && (
           <p className="text-gray-600 text-sm py-8 text-center">

@@ -4,17 +4,11 @@ import { client } from "../client";
 import { usePolling } from "../hooks/usePolling";
 
 export default function Improvements() {
-  const fetchFn = useCallback(
-    () => client.getImprovementHistory({ limit: 50 }),
-    [],
-  );
+  const fetchFn = useCallback(() => client.getImprovementHistory({ limit: 50 }), []);
   const { data, error, loading } = usePolling(fetchFn);
   const records = data?.records ?? [];
 
-  if (loading)
-    return (
-      <div className="text-gray-500 text-sm">Loading improvement history…</div>
-    );
+  if (loading) return <div className="text-gray-500 text-sm">Loading improvement history…</div>;
   if (error) return <div className="text-red-400 text-sm">Error: {error}</div>;
 
   return (
@@ -27,19 +21,14 @@ export default function Improvements() {
 
       {records.length === 0 ? (
         <div className="bg-gray-800 rounded-xl border border-gray-700 p-8 text-center">
-          <p className="text-gray-600 text-sm">
-            No improvement cycles recorded yet
-          </p>
+          <p className="text-gray-600 text-sm">No improvement cycles recorded yet</p>
         </div>
       ) : (
         <div className="space-y-3">
           {records.map((rec) => {
             const beforeKeys = Object.keys(rec.beforeMetrics);
             const afterKeys = Object.keys(rec.afterMetrics);
-            const metricKeys = [...new Set([...beforeKeys, ...afterKeys])].slice(
-              0,
-              4,
-            );
+            const metricKeys = [...new Set([...beforeKeys, ...afterKeys])].slice(0, 4);
 
             return (
               <div
@@ -55,13 +44,9 @@ export default function Improvements() {
                       <span className="text-xs text-gray-500 font-mono">
                         {rec.fromVersion} → {rec.toVersion}
                       </span>
-                      <span className="text-xs text-gray-600">
-                        cycle {Number(rec.cycle)}
-                      </span>
+                      <span className="text-xs text-gray-600">cycle {Number(rec.cycle)}</span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      triggered by {rec.triggeredBy}
-                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">triggered by {rec.triggeredBy}</p>
                   </div>
 
                   {/* Alignment gate indicator */}
@@ -77,8 +62,8 @@ export default function Improvements() {
                       {!rec.hasAlignmentDecision
                         ? "no gate"
                         : rec.alignmentApproved
-                        ? "approved"
-                        : "rejected"}
+                          ? "approved"
+                          : "rejected"}
                     </span>
                   </div>
                 </div>
@@ -89,16 +74,10 @@ export default function Improvements() {
                     {metricKeys.map((k) => {
                       const before = rec.beforeMetrics[k];
                       const after = rec.afterMetrics[k];
-                      const delta =
-                        before != null && after != null ? after - before : null;
+                      const delta = before != null && after != null ? after - before : null;
                       return (
-                        <div
-                          key={k}
-                          className="flex items-center justify-between text-xs"
-                        >
-                          <span className="text-gray-500 truncate max-w-[120px]">
-                            {k}
-                          </span>
+                        <div key={k} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500 truncate max-w-[120px]">{k}</span>
                           <span className="font-mono text-gray-300">
                             {after?.toFixed(2) ?? "—"}
                             {delta != null && (
