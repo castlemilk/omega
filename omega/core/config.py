@@ -44,7 +44,8 @@ logger = logging.getLogger("omega.core.config")
 # Optional YAML support — fail gracefully if PyYAML is not installed
 _YAML_AVAILABLE = False
 try:
-    import yaml  # type: ignore[import]
+    import yaml  # type: ignore[import-untyped]
+
     _YAML_AVAILABLE = True
 except ImportError:
     pass
@@ -53,6 +54,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Section dataclasses
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class DatabaseConfig:
@@ -93,10 +95,20 @@ class NodesConfig:
 class DataConfig:
     """External data provider configuration."""
 
-    symbols: list[str] = field(default_factory=lambda: [
-        "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
-        "ADAUSDT", "DOTUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT",
-    ])
+    symbols: list[str] = field(
+        default_factory=lambda: [
+            "BTCUSDT",
+            "ETHUSDT",
+            "SOLUSDT",
+            "BNBUSDT",
+            "XRPUSDT",
+            "ADAUSDT",
+            "DOTUSDT",
+            "AVAXUSDT",
+            "LINKUSDT",
+            "MATICUSDT",
+        ]
+    )
 
     providers: list[str] = field(default_factory=lambda: ["binance", "coingecko"])
 
@@ -157,6 +169,7 @@ class AdversarialConfig:
 # Root config
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class OmegaConfig:
     """Root configuration object for the Omega framework.
@@ -203,7 +216,9 @@ class OmegaConfig:
         symbols = [s.strip() for s in raw_symbols.split(",") if s.strip()] or DataConfig().symbols
 
         raw_providers = _e("OMEGA_PROVIDERS", "")
-        providers = [p.strip() for p in raw_providers.split(",") if p.strip()] or DataConfig().providers
+        providers = [
+            p.strip() for p in raw_providers.split(",") if p.strip()
+        ] or DataConfig().providers
 
         data = DataConfig(
             symbols=symbols,
@@ -259,8 +274,7 @@ class OmegaConfig:
         """
         if not _YAML_AVAILABLE:
             logger.warning(
-                "PyYAML not installed; ignoring config file %s — "
-                "install with: pip install pyyaml",
+                "PyYAML not installed; ignoring config file %s — install with: pip install pyyaml",
                 path,
             )
             return cls.from_env()
@@ -310,20 +324,18 @@ class OmegaConfig:
 
         if not (0.0 <= self.alignment.health_threshold <= 1.0):
             errors.append(
-                f"alignment.health_threshold must be 0.0–1.0, "
+                f"alignment.health_threshold must be 0.0-1.0, "
                 f"got {self.alignment.health_threshold}"
             )
 
         if not (1 <= self.monitoring.metrics_port <= 65535):
             errors.append(
-                f"monitoring.metrics_port must be 1–65535, "
-                f"got {self.monitoring.metrics_port}"
+                f"monitoring.metrics_port must be 1-65535, got {self.monitoring.metrics_port}"
             )
 
         if self.nodes.brain_temperature < 0.0 or self.nodes.brain_temperature > 2.0:
             errors.append(
-                f"nodes.brain_temperature must be 0.0–2.0, "
-                f"got {self.nodes.brain_temperature}"
+                f"nodes.brain_temperature must be 0.0-2.0, got {self.nodes.brain_temperature}"
             )
 
         if errors:
@@ -373,6 +385,7 @@ class OmegaConfig:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _merge_section(section: Any, overrides: dict[str, Any]) -> None:
     """Apply *overrides* dict onto a config dataclass in-place.
