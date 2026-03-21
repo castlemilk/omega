@@ -1043,7 +1043,7 @@ class MemoryKernelV2(MemoryKernel):
           - snapshots EWC params (working memory snapshot as surrogate params)
         """
         prev_regime_id = self._current_regime.regime_id if self._current_regime else None
-        new_regime = self.regime_detector.update(observation)
+        new_regime: RegimeState = self.regime_detector.update(observation)
         self._current_regime = new_regime
 
         if new_regime.changepoint_prob > 0.5 and new_regime.regime_id != prev_regime_id:
