@@ -118,11 +118,11 @@ module = ["omega.nodes.vectora.data_providers"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-# state_store: pre-existing signature mismatches in SQLiteBackend vs StateBackend
+# Pre-existing signature incompatibility issues — suppressed pending refactor
 module = ["omega.core.state_store"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-# memory_v2: pre-existing Any return type issues in numerical helpers
+# Pre-existing no-any-return issues in math helpers — suppressed pending refactor
 module = ["omega.core.memory_v2"]
 ignore_errors = true
