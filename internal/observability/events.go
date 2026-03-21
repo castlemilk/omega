@@ -11,7 +11,9 @@ import (
 type EventType int
 
 const (
-	EventCycleCompleted       EventType = iota // A full orchestration cycle finished.
+	EventCycleStarted         EventType = iota // An orchestration cycle is about to begin.
+	EventCycleCompleted                        // A full orchestration cycle finished.
+	EventNodeRegistered                        // A new node was registered with the orchestrator.
 	EventNodePromoted                          // A node's autonomy level was promoted.
 	EventNodeDemoted                           // A node's autonomy level was demoted.
 	EventAdversarialVeto                       // An adversarial ring vetoed an action.
@@ -25,8 +27,12 @@ const (
 // String returns a human-readable event type name.
 func (t EventType) String() string {
 	switch t {
+	case EventCycleStarted:
+		return "CycleStarted"
 	case EventCycleCompleted:
 		return "CycleCompleted"
+	case EventNodeRegistered:
+		return "NodeRegistered"
 	case EventNodePromoted:
 		return "NodePromoted"
 	case EventNodeDemoted:
@@ -63,6 +69,21 @@ type Event struct {
 type EventPayload interface {
 	eventPayload() // private marker — prevents external implementations
 }
+
+// CycleStartedPayload is emitted when an orchestration cycle begins.
+type CycleStartedPayload struct {
+	Cycle       int64
+	ActiveNodes []string // node IDs participating in this cycle
+}
+
+func (CycleStartedPayload) eventPayload() {}
+
+// NodeRegisteredPayload is emitted when a node joins the orchestrator.
+type NodeRegisteredPayload struct {
+	NodeID string
+}
+
+func (NodeRegisteredPayload) eventPayload() {}
 
 // CycleCompletedPayload is emitted when an orchestration cycle finishes.
 type CycleCompletedPayload struct {
@@ -249,6 +270,16 @@ func (b *EventBus) Publish(e Event) {
 			)
 		}
 	}
+}
+
+// PublishCycleStarted is a convenience wrapper.
+func (b *EventBus) PublishCycleStarted(p CycleStartedPayload) {
+	b.Publish(Event{Type: EventCycleStarted, Payload: p})
+}
+
+// PublishNodeRegistered is a convenience wrapper.
+func (b *EventBus) PublishNodeRegistered(p NodeRegisteredPayload) {
+	b.Publish(Event{Type: EventNodeRegistered, Payload: p})
 }
 
 // PublishCycleCompleted is a convenience wrapper.
