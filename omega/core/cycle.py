@@ -92,8 +92,8 @@ class CycleResult:
     context               : The CycleContext this result corresponds to.
     duration_seconds      : Wall-clock time the cycle took.
     signals_generated     : Number of signals computed (across all nodes).
-    trades_proposed       : Trades the strategy layer wanted to execute.
-    trades_executed       : Trades that actually went through.
+    actions_proposed      : Actions the strategy layer wanted to execute.
+    actions_executed      : Actions that actually went through.
     adversarial_flags     : List of flag dicts from the adversarial layer.
     improvement_proposed  : Whether TPE improvement was proposed this cycle.
     regime_transition     : Whether a regime change was confirmed this cycle.
@@ -105,8 +105,8 @@ class CycleResult:
     context: CycleContext
     duration_seconds: float = 0.0
     signals_generated: int = 0
-    trades_proposed: int = 0
-    trades_executed: int = 0
+    actions_proposed: int = 0
+    actions_executed: int = 0
     adversarial_flags: list[dict[str, Any]] = field(default_factory=list)
     improvement_proposed: bool = False
     regime_transition: bool = False
@@ -114,6 +114,28 @@ class CycleResult:
     error_count: int = 0
     metrics: dict[str, float] = field(default_factory=dict)
     proposals: list[dict[str, Any]] = field(default_factory=list)
+
+    # ------------------------------------------------------------------
+    # Backward-compat aliases (trades_* → actions_*)
+    # ------------------------------------------------------------------
+
+    @property
+    def trades_proposed(self) -> int:
+        return self.actions_proposed
+
+    @trades_proposed.setter
+    def trades_proposed(self, v: int) -> None:
+        self.actions_proposed = v
+
+    @property
+    def trades_executed(self) -> int:
+        return self.actions_executed
+
+    @trades_executed.setter
+    def trades_executed(self, v: int) -> None:
+        self.actions_executed = v
+
+    # ------------------------------------------------------------------
 
     @property
     def cycle_id(self) -> str:
@@ -155,8 +177,8 @@ class CycleResult:
             "regime": self.context.regime,
             "duration_s": round(self.duration_seconds, 4),
             "signals": self.signals_generated,
-            "trades_proposed": self.trades_proposed,
-            "trades_executed": self.trades_executed,
+            "actions_proposed": self.actions_proposed,
+            "actions_executed": self.actions_executed,
             "adversarial_flags": len(self.adversarial_flags),
             "critical_flags": self.had_critical_flag,
             "improvement_proposed": self.improvement_proposed,

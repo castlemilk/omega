@@ -88,14 +88,24 @@ class TestCycleResult:
     def test_to_summary_keys(self):
         r = self._make_result()
         r.signals_generated = 5
-        r.trades_proposed = 2
-        r.trades_executed = 1
+        r.actions_proposed = 2
+        r.actions_executed = 1
         summary = r.to_summary()
         assert summary["signals"] == 5
-        assert summary["trades_proposed"] == 2
-        assert summary["trades_executed"] == 1
+        assert summary["actions_proposed"] == 2
+        assert summary["actions_executed"] == 1
         assert "cycle_id" in summary
         assert "regime" in summary
+
+    def test_trades_compat_aliases(self):
+        """Old trades_* names delegate to actions_* fields."""
+        r = self._make_result()
+        r.trades_proposed = 3
+        r.trades_executed = 2
+        assert r.actions_proposed == 3
+        assert r.actions_executed == 2
+        assert r.trades_proposed == 3
+        assert r.trades_executed == 2
 
 
 # ---------------------------------------------------------------------------

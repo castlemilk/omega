@@ -334,10 +334,10 @@ class OmegaOrchestrator:
 
         self._history.append(result)
         log.info(
-            "Cycle %d done: signals=%d trades_exec=%d flags=%d dur=%.3fs",
+            "Cycle %d done: signals=%d actions_exec=%d flags=%d dur=%.3fs",
             cycle_num,
             result.signals_generated,
-            result.trades_executed,
+            result.actions_executed,
             len(result.adversarial_flags),
             result.duration_seconds,
         )
@@ -465,7 +465,7 @@ class OmegaOrchestrator:
                             prop.setdefault("node_id", state.node_id)
                             prop.setdefault("autonomy_level", autonomy_level.value)
                     proposals.extend(p for p in node_proposals if isinstance(p, dict))
-                    result.trades_proposed += len(node_proposals)
+                    result.actions_proposed += len(node_proposals)
                 if not out.success:
                     result.error_count += 1
             except Exception as exc:
@@ -649,7 +649,7 @@ class OmegaOrchestrator:
         if not proposals:
             return
         # Default: log and count; real execution implemented by subclass or injected hook
-        result.trades_executed = len(proposals)
+        result.actions_executed = len(proposals)
         log.debug("Executing %d proposals (cycle %d)", len(proposals), ctx.cycle_number)
 
     # ------------------------------------------------------------------
