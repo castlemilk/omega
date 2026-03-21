@@ -1,0 +1,216 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// AdversarialService runs the three-ring adversarial pressure system, the
+// bull/bear debate gate, and the three-persona risk positioning debate.
+// The orchestrator calls this service each cycle before approving execution.
+service AdversarialService {
+  // RunPressure executes all three adversarial rings for a cycle and returns
+  // a consolidated report. This is the main entry point per cycle.
+  rpc RunPressure(RunPressureRequest) returns (RunPressureResponse);
+
+  // RunDebate runs the Bull/Bear debate gate on a signal context.
+  rpc RunDebate(RunDebateRequest) returns (RunDebateResponse);
+
+  // ResolveRisk runs the three-persona risk debate for position sizing.
+  rpc ResolveRisk(ResolveRiskRequest) returns (ResolveRiskResponse);
+
+  // RecordGateResult persists the result of a simulation gate evaluation.
+  rpc RecordGateResult(RecordGateResultRequest) returns (RecordGateResultResponse);
+
+  // GetAdversarialReport retrieves the stored adversarial report for a cycle.
+  rpc GetAdversarialReport(GetAdversarialReportRequest) returns (GetAdversarialReportResponse);
+
+  // StreamPressureEvents streams adversarial pressure events as they occur.
+  rpc StreamPressureEvents(StreamPressureEventsRequest) returns (stream AdversarialPressureEvent);
+}
+
+// ── Ring 1: Ensemble Disagreement ─────────────────────────────────────────
+
+message Ring1DisagreementResult {
+  bool flagged = 1;
+  double disagreement_score = 2;
+  double threshold_used = 3;
+  repeated string outlier_variants = 4;  // Variants identified as outliers via z-score
+  map<string, double> variant_scores = 5; // Per-variant composite scores
+  bool threshold_adjusted = 6;           // Whether adaptive threshold fired
+  double new_threshold = 7;
+}
+
+// ── Ring 2: Scenario Simulation ────────────────────────────────────────────
+
+enum SyntheticMode {
+  SYNTHETIC_MODE_UNSPECIFIED = 0;
+  SYNTHETIC_MODE_VOLATILITY_SPIKE = 1;
+  SYNTHETIC_MODE_CORRELATION_BREAKDOWN = 2;
+  SYNTHETIC_MODE_MEAN_REVERSION = 3;
+  SYNTHETIC_MODE_MOMENTUM_CRASH = 4;
+  SYNTHETIC_MODE_LIQUIDITY_CRISIS = 5;
+}
+
+message ScenarioRunResult {
+  string scenario_id = 1;
+  string scenario_name = 2;
+  double resilience_score = 3;  // [0, 1]
+  bool passed = 4;
+  map<string, double> output_signals = 5;
+  repeated string tags = 6;
+}
+
+message Ring2SimulationReport {
+  bool gate_passed = 1;
+  double overall_resilience = 2;
+  double worst_case_resilience = 3;
+  double pass_rate = 4;
+  int32 scenarios_run = 5;
+  repeated ScenarioRunResult results = 6;
+  string gate_fail_reason = 7;
+}
+
+// ── Ring 3: Evolutionary Tournament ────────────────────────────────────────
+
+message TournamentVariant {
+  string variant_id = 1;
+  map<string, double> params = 2;
+  double fitness_score = 3;
+  int32 rank = 4;
+}
+
+message Ring3TournamentResult {
+  string best_variant_id = 1;
+  map<string, double> best_params = 2;
+  double best_fitness = 3;
+  repeated TournamentVariant all_variants = 4;
+  int32 generations_run = 5;
+}
+
+// ── Debate Gate ────────────────────────────────────────────────────────────
+
+// SignalContext is the input to the Bull/Bear debate gate.
+message SignalContext {
+  double composite_signal = 1;
+  double ic_short = 2;
+  double ic_long = 3;
+  double vol_regime = 4;           // Current volatility regime score
+  double regime_ic = 5;            // IC within current regime
+  double recent_sharpe = 6;
+  double node_error_rate = 7;
+  double atl_distance = 8;         // Distance from all-time-low
+  double rsi = 9;
+}
+
+enum TradeDirection {
+  TRADE_DIRECTION_UNSPECIFIED = 0;
+  TRADE_DIRECTION_BUY = 1;
+  TRADE_DIRECTION_SELL = 2;
+  TRADE_DIRECTION_HOLD = 3;
+}
+
+message DebateVerdict {
+  TradeDirection direction = 1;
+  double confidence = 2;           // [0, 1]
+  double position_scale = 3;       // [0, 1] fraction of max position
+  repeated string bull_evidence = 4;
+  repeated string bear_evidence = 5;
+  string winning_side = 6;         // "bull" | "bear" | "neutral"
+}
+
+// ── Risk Debate ────────────────────────────────────────────────────────────
+
+// RiskContext is the input to the three-persona risk debate.
+message RiskContext {
+  double base_position_scale = 1;  // Suggested scale from DebateVerdict
+  double portfolio_drawdown = 2;
+  double current_volatility = 3;
+  double recent_win_rate = 4;
+  double kelly_fraction = 5;
+  map<string, double> correlation_matrix_flat = 6; // Flattened n×n correlation matrix
+  int32 correlation_matrix_size = 7;
+}
+
+message PersonaVerdict {
+  string persona = 1;              // "aggressive" | "conservative" | "neutral"
+  double recommended_scale = 2;
+  double credibility = 3;          // [0, 1] credibility weight
+  string rationale = 4;
+}
+
+message RiskDebateResult {
+  double final_position_scale = 1; // Credibility-weighted consensus
+  repeated PersonaVerdict verdicts = 2;
+  string dominant_persona = 3;
+}
+
+// ── RunPressure ────────────────────────────────────────────────────────────
+
+message RunPressureRequest {
+  int64 cycle = 1;
+  // Variant outputs: variant_name → {metric_name → value}
+  map<string, VariantOutputs> variant_outputs = 2;
+  map<string, double> current_signals = 3;
+  map<string, double> strategy_params = 4;
+  bool run_ring2 = 5;   // Whether to activate Ring 2 simulation gate
+  bool run_ring3 = 6;   // Whether to activate Ring 3 tournament
+  bool run_debate = 7;  // Whether to run DebateGate on Ring 1 flagging
+}
+
+// VariantOutputs is a nested map value (proto3 doesn't support map<string, map<...>>).
+message VariantOutputs { map<string, double> metrics = 1; }
+
+message AdversarialReportV2 {
+  int64 cycle = 1;
+  Ring1DisagreementResult ring1 = 2;
+  Ring2SimulationReport ring2 = 3;
+  Ring3TournamentResult ring3 = 4;
+  DebateVerdict debate_verdict = 5;
+  RiskDebateResult risk_debate = 6;
+  bool overall_flagged = 7;        // True if any ring raises concern
+  google.protobuf.Timestamp completed_at = 8;
+}
+
+message RunPressureResponse { AdversarialReportV2 report = 1; }
+
+// ── RunDebate ──────────────────────────────────────────────────────────────
+
+message RunDebateRequest { SignalContext context = 1; }
+message RunDebateResponse { DebateVerdict verdict = 1; }
+
+// ── ResolveRisk ────────────────────────────────────────────────────────────
+
+message ResolveRiskRequest { RiskContext context = 1; }
+message ResolveRiskResponse { RiskDebateResult result = 1; }
+
+// ── RecordGateResult ───────────────────────────────────────────────────────
+
+message RecordGateResultRequest {
+  int64 cycle = 1;
+  string gate_name = 2;
+  string result = 3;    // "pass" | "fail" | "skip"
+  string details = 4;
+  google.protobuf.Timestamp checked_at = 5;
+}
+message RecordGateResultResponse { bool ok = 1; }
+
+// ── GetAdversarialReport ───────────────────────────────────────────────────
+
+message GetAdversarialReportRequest { int64 cycle = 1; }
+message GetAdversarialReportResponse {
+  AdversarialReportV2 report = 1;
+  bool found = 2;
+}
+
+// ── StreamPressureEvents ───────────────────────────────────────────────────
+
+message StreamPressureEventsRequest { int32 poll_interval_ms = 1; }
+message AdversarialPressureEvent {
+  int64 cycle = 1;
+  bool flagged = 2;
+  string ring = 3;         // "ring1" | "ring2" | "ring3" | "debate"
+  string summary = 4;
+  google.protobuf.Timestamp emitted_at = 5;
+}

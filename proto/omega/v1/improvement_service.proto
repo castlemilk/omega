@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+// ImprovementService manages the improvement scheduling pipeline, the TPE
+// Bayesian optimizer bridge to Python, and deterministic strategy compilation.
+// The orchestrator uses this service to coordinate all improvement trials.
+service ImprovementService {
+  // DueNodes returns the list of node IDs whose improvement trials are due
+  // in the current cycle, sorted by descending priority.
+  rpc DueNodes(DueNodesRequest) returns (DueNodesResponse);
+
+  // ScheduleImprovement sets or updates the improvement schedule for a node.
+  rpc ScheduleImprovement(ScheduleImprovementRequest) returns (ScheduleImprovementResponse);
+
+  // RecordOutcome stores the result of an improvement trial and reschedules
+  // the node (with exponential backoff on failure).
+  rpc RecordOutcome(RecordOutcomeRequest) returns (RecordOutcomeResponse);
+
+  // ProposeTrialParams asks the TPE optimizer (Python bridge) to propose the
+  // next set of hyperparameter values to trial for a node.
+  rpc ProposeTrialParams(ProposeTrialParamsRequest) returns (ProposeTrialParamsResponse);
+
+  // CompileStrategy freezes a node's current state into a versioned,
+  // checksum-verified deterministic strategy (PICO mode).
+  rpc CompileStrategy(CompileStrategyRequest) returns (CompileStrategyResponse);
+
+  // RollbackStrategy reverts a node to a previously compiled strategy version.
+  rpc RollbackStrategy(RollbackStrategyRequest) returns (RollbackStrategyResponse);
+
+  // GetImprovementSchedule returns the current schedule entry for a node.
+  rpc GetImprovementSchedule(GetImprovementScheduleRequest) returns (GetImprovementScheduleResponse);
+
+  // ListImprovedNodes returns all nodes currently in the improvement queue.
+  rpc ListImprovedNodes(ListImprovedNodesRequest) returns (ListImprovedNodesResponse);
+
+  // StreamImprovementEvents streams improvement trial events as they occur.
+  rpc StreamImprovementEvents(StreamImprovementEventsRequest) returns (stream ImprovementEvent);
+}
+
+// ── Schedule types ─────────────────────────────────────────────────────────
+
+enum TrialStatus {
+  TRIAL_STATUS_UNSPECIFIED = 0;
+  TRIAL_STATUS_PENDING = 1;    // Waiting for next scheduled run
+  TRIAL_STATUS_RUNNING = 2;    // Trial currently executing
+  TRIAL_STATUS_SUCCEEDED = 3;  // Trial completed successfully
+  TRIAL_STATUS_FAILED = 4;     // Trial failed; backoff applied
+  TRIAL_STATUS_SKIPPED = 5;    // Skipped due to safety gate failure
+}
+
+message ScheduleEntry {
+  string node_id = 1;
+  double priority = 2;                      // Higher = run sooner
+  google.protobuf.Timestamp next_run_at = 3;
+  google.protobuf.Duration base_interval = 4;
+  int32 consecutive_failures = 5;
+  TrialStatus last_status = 6;
+  double last_score = 7;
+  google.protobuf.Timestamp last_run_at = 8;
+}
+
+// ── DueNodes ───────────────────────────────────────────────────────────────
+
+message DueNodesRequest {
+  int64 cycle = 1;
+  google.protobuf.Timestamp as_of = 2;  // Defaults to now if zero
+}
+message DueNodesResponse {
+  repeated string node_ids = 1;   // Ordered by descending priority
+}
+
+// ── ScheduleImprovement ────────────────────────────────────────────────────
+
+message ScheduleImprovementRequest {
+  string node_id = 1;
+  double priority = 2;
+  google.protobuf.Duration interval = 3;   // Base retry interval
+  google.protobuf.Timestamp first_run_at = 4;
+}
+message ScheduleImprovementResponse { ScheduleEntry entry = 1; }
+
+// ── RecordOutcome ──────────────────────────────────────────────────────────
+
+message RecordOutcomeRequest {
+  string node_id = 1;
+  bool success = 2;
+  double score = 3;       // e.g. Sharpe improvement, or composite metric delta
+  int64 cycle = 4;
+  map<string, double> before_metrics = 5;
+  map<string, double> after_metrics = 6;
+}
+message RecordOutcomeResponse {
+  google.protobuf.Timestamp next_run_at = 1;
+  ScheduleEntry updated_entry = 2;
+}
+
+// ── ProposeTrialParams ─────────────────────────────────────────────────────
+
+// TrialHistoryEntry captures a past trial for the TPE optimizer.
+message TrialHistoryEntry {
+  map<string, double> params = 1;
+  double score = 2;
+  bool success = 3;
+  int64 cycle = 4;
+}
+
+message ProposeTrialParamsRequest {
+  string node_id = 1;
+  repeated TrialHistoryEntry history = 2;
+  map<string, string> param_space = 3;  // JSON-encoded param space definition
+}
+message ProposeTrialParamsResponse {
+  map<string, double> params = 1;  // Proposed hyperparameter values
+  double expected_improvement = 2; // TPE acquisition function value
+  string strategy = 3;             // "tpe" | "random" | "grid"
+}
+
+// ── CompileStrategy ────────────────────────────────────────────────────────
+
+// StrategyRule is a single decision rule in a frozen strategy.
+message StrategyRule {
+  string name = 1;
+  repeated RuleCondition conditions = 2;
+  double confidence = 3;
+}
+
+message RuleCondition {
+  string field_path = 1;   // Dot-notation path into market data map
+  string operator = 2;     // "gt" | "lt" | "eq" | "gte" | "lte"
+  double threshold = 3;
+}
+
+message CompileStrategyRequest {
+  string node_id = 1;
+  string node_version = 2;
+  map<string, double> parameters = 3;
+  repeated StrategyRule rules = 4;
+}
+message CompileStrategyResponse {
+  string strategy_id = 1;
+  string checksum = 2;       // SHA-256 of canonical JSON representation
+  string node_version = 3;
+  google.protobuf.Timestamp compiled_at = 4;
+}
+
+// ── RollbackStrategy ───────────────────────────────────────────────────────
+
+message RollbackStrategyRequest {
+  string node_id = 1;
+  int32 target_version = 2;  // Strategy registry version number to restore
+}
+message RollbackStrategyResponse {
+  string strategy_id = 1;
+  string node_version = 2;
+  bool ok = 3;
+}
+
+// ── GetImprovementSchedule ─────────────────────────────────────────────────
+
+message GetImprovementScheduleRequest { string node_id = 1; }
+message GetImprovementScheduleResponse {
+  ScheduleEntry entry = 1;
+  bool found = 2;
+}
+
+// ── ListImprovedNodes ──────────────────────────────────────────────────────
+
+message ListImprovedNodesRequest {}
+message ListImprovedNodesResponse { repeated ScheduleEntry entries = 1; }
+
+// ── StreamImprovementEvents ────────────────────────────────────────────────
+
+enum ImprovementEventType {
+  IMPROVEMENT_EVENT_TYPE_UNSPECIFIED = 0;
+  IMPROVEMENT_EVENT_TYPE_TRIAL_STARTED = 1;
+  IMPROVEMENT_EVENT_TYPE_TRIAL_SUCCEEDED = 2;
+  IMPROVEMENT_EVENT_TYPE_TRIAL_FAILED = 3;
+  IMPROVEMENT_EVENT_TYPE_STRATEGY_COMPILED = 4;
+  IMPROVEMENT_EVENT_TYPE_STRATEGY_ROLLED_BACK = 5;
+  IMPROVEMENT_EVENT_TYPE_SCHEDULED = 6;
+}
+
+message StreamImprovementEventsRequest { int32 poll_interval_ms = 1; }
+message ImprovementEvent {
+  ImprovementEventType type = 1;
+  string node_id = 2;
+  int64 cycle = 3;
+  double score = 4;
+  string detail = 5;
+  google.protobuf.Timestamp emitted_at = 6;
+}

@@ -1,0 +1,215 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+// MemoryService manages the triple-tier memory system:
+//   - Working memory: in-process TTL-aware key/value store
+//   - Episodic memory: timestamped SQLite-backed event log
+//   - Semantic memory: generalized pattern store consolidated from episodes
+//
+// All writes go through this service so Go owns the SQLite layer.
+// Python domain nodes call these RPCs instead of writing memory directly.
+service MemoryService {
+  // StoreEpisode writes a new episodic memory entry.
+  rpc StoreEpisode(StoreEpisodeRequest) returns (StoreEpisodeResponse);
+
+  // QueryEpisodes retrieves episodic memories matching the given filters.
+  rpc QueryEpisodes(QueryEpisodesRequest) returns (QueryEpisodesResponse);
+
+  // StoreWorking writes a key/value entry to in-process working memory.
+  rpc StoreWorking(StoreWorkingRequest) returns (StoreWorkingResponse);
+
+  // GetWorking reads a working memory entry by key (returns empty if expired/absent).
+  rpc GetWorking(GetWorkingRequest) returns (GetWorkingResponse);
+
+  // DeleteWorking removes an entry from working memory.
+  rpc DeleteWorking(DeleteWorkingRequest) returns (DeleteWorkingResponse);
+
+  // TriggerConsolidation runs the consolidation pipeline for a namespace,
+  // promoting high-importance episodes to semantic memories.
+  rpc TriggerConsolidation(TriggerConsolidationRequest) returns (TriggerConsolidationResponse);
+
+  // QuerySemantic retrieves semantic memory concepts by tag and/or text search.
+  rpc QuerySemantic(QuerySemanticRequest) returns (QuerySemanticResponse);
+
+  // BeginCycle clears working memory and applies episodic decay for a new cycle.
+  rpc BeginCycle(BeginCycleRequest) returns (BeginCycleResponse);
+
+  // EndCycle stores the cycle summary episode and optionally triggers consolidation.
+  rpc EndCycle(EndCycleRequest) returns (EndCycleResponse);
+
+  // GetMemoryStats returns aggregate counts for a namespace.
+  rpc GetMemoryStats(MemoryNamespaceStatsRequest) returns (MemoryNamespaceStatsResponse);
+
+  // StreamMemoryEvents streams memory lifecycle events (store, consolidate, decay).
+  rpc StreamMemoryEvents(StreamMemoryEventsRequest) returns (stream MemoryLifecycleEvent);
+}
+
+// ── Episode types ──────────────────────────────────────────────────────────
+
+message Episode {
+  string episode_id = 1;
+  string namespace = 2;          // Node ID / subsystem namespace
+  string event_type = 3;         // e.g. "cycle_result", "improvement", "alignment_decision"
+  map<string, string> content = 4; // JSON-encoded content fields
+  repeated string tags = 5;
+  double importance = 6;         // [0, 1] higher = more likely to survive decay/consolidation
+  int64 cycle = 7;
+  google.protobuf.Timestamp timestamp = 8;
+}
+
+message ScoredEpisode {
+  Episode episode = 1;
+  double score = 2;              // Composite score from ImportanceScorer
+}
+
+// ── StoreEpisode ───────────────────────────────────────────────────────────
+
+message StoreEpisodeRequest {
+  string namespace = 1;
+  string event_type = 2;
+  map<string, string> content = 3;
+  repeated string tags = 4;
+  double importance = 5;
+  int64 cycle = 6;
+}
+message StoreEpisodeResponse { string episode_id = 1; }
+
+// ── QueryEpisodes ──────────────────────────────────────────────────────────
+
+message QueryEpisodesRequest {
+  string namespace = 1;
+  string regime_tag = 2;         // Optional regime filter
+  string signal_type = 3;        // Optional signal type filter
+  google.protobuf.Timestamp start = 4;
+  google.protobuf.Timestamp end = 5;
+  string current_regime = 6;     // Used by ImportanceScorer for recency weighting
+  int32 top_k = 7;
+}
+message QueryEpisodesResponse { repeated ScoredEpisode results = 1; }
+
+// ── Working memory ─────────────────────────────────────────────────────────
+
+message StoreWorkingRequest {
+  string namespace = 1;
+  string key = 2;
+  string value_json = 3;          // JSON-encoded value
+  google.protobuf.Duration ttl = 4; // 0 = no expiry
+}
+message StoreWorkingResponse { bool ok = 1; }
+
+message GetWorkingRequest {
+  string namespace = 1;
+  string key = 2;
+}
+message GetWorkingResponse {
+  string value_json = 1;
+  bool found = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message DeleteWorkingRequest {
+  string namespace = 1;
+  string key = 2;
+}
+message DeleteWorkingResponse { bool ok = 1; }
+
+// ── Consolidation ──────────────────────────────────────────────────────────
+
+message ConsolidationResult {
+  int32 episodes_examined = 1;
+  int32 promoted_to_semantic = 2;
+  int32 pruned = 3;
+  repeated string new_concept_ids = 4;
+}
+
+message TriggerConsolidationRequest { string namespace = 1; }
+message TriggerConsolidationResponse { ConsolidationResult result = 1; }
+
+// ── Semantic memory ────────────────────────────────────────────────────────
+
+// MemoryConcept is a richer semantic concept record with identity and timestamp fields.
+// (types.proto has a lighter SemanticConcept used by the UI layer.)
+message MemoryConcept {
+  string concept_id = 1;
+  string namespace = 2;
+  string concept = 3;            // Concept label / key phrase
+  string content = 4;            // Generalized description
+  double confidence = 5;         // [0, 1]
+  int64 evidence_count = 6;
+  repeated string tags = 7;
+  google.protobuf.Timestamp last_updated = 8;
+}
+
+message QuerySemanticRequest {
+  string namespace = 1;
+  string tag_filter = 2;         // Optional: filter by tag
+  string text_query = 3;         // Optional: substring/keyword match on concept or content
+  int32 top_k = 4;
+}
+message QuerySemanticResponse { repeated MemoryConcept concepts = 1; }
+
+// ── Cycle lifecycle ────────────────────────────────────────────────────────
+
+message BeginCycleRequest {
+  string namespace = 1;
+  int64 cycle = 2;
+}
+message BeginCycleResponse {
+  bool ok = 1;
+  int32 working_entries_cleared = 2;
+  int32 episodes_decayed = 3;
+}
+
+message EndCycleRequest {
+  string namespace = 1;
+  int64 cycle = 2;
+  map<string, string> cycle_summary = 3; // JSON-encoded summary fields stored as episode
+  double summary_importance = 4;
+  bool trigger_consolidation = 5;
+}
+message EndCycleResponse {
+  string episode_id = 1;
+  ConsolidationResult consolidation = 2; // Only populated if trigger_consolidation = true
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────
+
+message MemoryNamespaceStatsRequest { string namespace = 1; }
+message MemoryNamespaceStatsResponse {
+  string namespace = 1;
+  int64 episodic_count = 2;
+  int64 semantic_count = 3;
+  int64 working_count = 4;
+  int64 contradiction_count = 5;
+  repeated string regime_history = 6;
+}
+
+// ── Streaming ──────────────────────────────────────────────────────────────
+
+enum MemoryEventType {
+  MEMORY_EVENT_TYPE_UNSPECIFIED = 0;
+  MEMORY_EVENT_TYPE_EPISODE_STORED = 1;
+  MEMORY_EVENT_TYPE_CONSOLIDATED = 2;
+  MEMORY_EVENT_TYPE_DECAYED = 3;
+  MEMORY_EVENT_TYPE_CYCLE_BEGIN = 4;
+  MEMORY_EVENT_TYPE_CYCLE_END = 5;
+}
+
+message StreamMemoryEventsRequest {
+  string namespace = 1;   // empty = all namespaces
+  int32 poll_interval_ms = 2;
+}
+
+message MemoryLifecycleEvent {
+  MemoryEventType type = 1;
+  string namespace = 2;
+  int64 cycle = 3;
+  string detail = 4;       // Human-readable summary
+  google.protobuf.Timestamp emitted_at = 5;
+}

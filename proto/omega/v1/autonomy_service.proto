@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// AutonomyService tracks node autonomy levels and manages promotion/demotion
+// decisions. The orchestrator calls these RPCs to record per-node metrics and
+// drive autonomous vs. supervised execution modes.
+service AutonomyService {
+  // RecordCycleMetrics stores per-node performance metrics after each cycle.
+  rpc RecordCycleMetrics(RecordCycleMetricsRequest) returns (RecordCycleMetricsResponse);
+
+  // GetAutonomyLevel returns the current autonomy level for a node.
+  rpc GetAutonomyLevel(GetAutonomyLevelRequest) returns (GetAutonomyLevelResponse);
+
+  // RequestPromotion asks the autonomy system to evaluate whether a node
+  // should be promoted to a higher autonomy tier.
+  rpc RequestPromotion(RequestPromotionRequest) returns (RequestPromotionResponse);
+
+  // RecordPromotion persists a confirmed promotion or demotion event.
+  rpc RecordPromotion(RecordPromotionRequest) returns (RecordPromotionResponse);
+
+  // GetAutonomyHistory returns the promotion/demotion history for a node.
+  rpc GetAutonomyHistory(GetAutonomyHistoryRequest) returns (GetAutonomyHistoryResponse);
+
+  // StreamNodeMetrics streams live per-node metrics as they are recorded.
+  rpc StreamNodeMetrics(StreamNodeMetricsRequest) returns (stream NodeMetricsEvent);
+}
+
+// AutonomyLevel defines how much human oversight a node requires.
+enum AutonomyLevel {
+  AUTONOMY_LEVEL_UNSPECIFIED = 0;
+  AUTONOMY_LEVEL_MANUAL = 1;       // All decisions require human approval
+  AUTONOMY_LEVEL_SUPERVISED = 2;   // Runs autonomously; results reviewed post-hoc
+  AUTONOMY_LEVEL_SEMI = 3;         // Runs autonomously; only anomalies reviewed
+  AUTONOMY_LEVEL_FULL = 4;         // Fully autonomous; self-correcting
+}
+
+// ── RecordCycleMetrics ─────────────────────────────────────────────────────
+
+message RecordCycleMetricsRequest {
+  string node_id = 1;
+  int64 cycle = 2;
+  map<string, double> metrics = 3;  // e.g. sharpe, win_rate, error_rate, latency_ms
+  bool success = 4;
+  google.protobuf.Timestamp recorded_at = 5;
+}
+message RecordCycleMetricsResponse { bool ok = 1; }
+
+// ── GetAutonomyLevel ───────────────────────────────────────────────────────
+
+message GetAutonomyLevelRequest { string node_id = 1; }
+message GetAutonomyLevelResponse {
+  string node_id = 1;
+  AutonomyLevel level = 2;
+  double confidence = 3;          // Scheduler confidence in current level [0,1]
+  int64 cycles_at_level = 4;      // How long the node has been at this level
+  google.protobuf.Timestamp since = 5;
+}
+
+// ── RequestPromotion ───────────────────────────────────────────────────────
+
+message RequestPromotionRequest {
+  string node_id = 1;
+  AutonomyLevel requested_level = 2;
+  string reason = 3;
+  map<string, double> supporting_metrics = 4;
+  int64 cycle = 5;
+}
+message RequestPromotionResponse {
+  bool approved = 1;
+  AutonomyLevel granted_level = 2;
+  repeated string reasons = 3;    // Why approved or denied
+}
+
+// ── RecordPromotion ────────────────────────────────────────────────────────
+
+message RecordPromotionRequest {
+  string node_id = 1;
+  AutonomyLevel from_level = 2;
+  AutonomyLevel to_level = 3;
+  string trigger = 4;             // "promotion" | "demotion" | "reset"
+  int64 cycle = 5;
+  google.protobuf.Timestamp recorded_at = 6;
+}
+message RecordPromotionResponse { bool ok = 1; }
+
+// ── GetAutonomyHistory ────────────────────────────────────────────────────
+
+message AutonomyEvent {
+  string node_id = 1;
+  AutonomyLevel from_level = 2;
+  AutonomyLevel to_level = 3;
+  string trigger = 4;
+  int64 cycle = 5;
+  google.protobuf.Timestamp recorded_at = 6;
+}
+
+message GetAutonomyHistoryRequest {
+  string node_id = 1;
+  int32 limit = 2;
+}
+message GetAutonomyHistoryResponse { repeated AutonomyEvent events = 1; }
+
+// ── StreamNodeMetrics ──────────────────────────────────────────────────────
+
+message StreamNodeMetricsRequest {
+  string node_id = 1;             // empty = all nodes
+  int32 poll_interval_ms = 2;
+}
+message NodeMetricsEvent {
+  string node_id = 1;
+  int64 cycle = 2;
+  map<string, double> metrics = 3;
+  AutonomyLevel current_level = 4;
+  google.protobuf.Timestamp emitted_at = 5;
+}

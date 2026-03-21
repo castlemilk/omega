@@ -1,0 +1,215 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// SafetyService provides the three-layer alignment and goal enforcement system.
+// The orchestrator calls these RPCs before committing any improvement or action.
+// Layer 1: Hard constitutional constraints (SafetyEnvelope)
+// Layer 2: Multi-objective Pareto ranking (ParetoEvaluator)
+// Layer 3: Outcome-based scoring (OutcomeBasedScorer)
+service SafetyService {
+  // CheckAlignment runs all three alignment layers and returns a decision.
+  // Called before any improvement is applied in a cycle.
+  rpc CheckAlignment(CheckAlignmentRequest) returns (CheckAlignmentResponse);
+
+  // VerifyGates runs the full verification gate system (pre- or post-cycle).
+  rpc VerifyGates(VerifyGatesRequest) returns (VerifyGatesResponse);
+
+  // EvaluateGoals runs the HTN goal architecture for one cycle step.
+  rpc EvaluateGoals(EvaluateGoalsRequest) returns (EvaluateGoalsResponse);
+
+  // RecordOutcomeScore stores a post-hoc accuracy observation for a node.
+  rpc RecordOutcomeScore(RecordOutcomeScoreRequest) returns (RecordOutcomeScoreResponse);
+
+  // GetGoalDecision retrieves the stored goal decision for a cycle.
+  rpc GetGoalDecision(GetGoalDecisionRequest) returns (GetGoalDecisionResponse);
+
+  // HasBlockingChallenges checks whether any open CRITICAL challenges block execution.
+  rpc HasBlockingChallenges(HasBlockingChallengesRequest) returns (HasBlockingChallengesResponse);
+
+  // OpenChallenge records a new Devil's Advocate challenge for a subsystem.
+  rpc OpenChallenge(OpenChallengeRequest) returns (OpenChallengeResponse);
+
+  // ResolveChallenge marks an existing challenge as resolved or won't-fix.
+  rpc ResolveChallenge(ResolveChallengeRequest) returns (ResolveChallengeResponse);
+}
+
+// ── Constraint types ───────────────────────────────────────────────────────
+
+enum ConstraintSeverity {
+  CONSTRAINT_SEVERITY_UNSPECIFIED = 0;
+  CONSTRAINT_SEVERITY_HARD = 1;   // Blocks execution; must not be violated
+  CONSTRAINT_SEVERITY_SOFT = 2;   // Warning only; does not block
+}
+
+message ConstraintViolation {
+  string constraint_name = 1;
+  ConstraintSeverity severity = 2;
+  string description = 3;
+  double observed_value = 4;
+  double limit = 5;
+}
+
+// ── CheckAlignment ─────────────────────────────────────────────────────────
+
+message NodeMetrics {
+  string node_id = 1;
+  map<string, double> metrics = 2;
+}
+
+message CheckAlignmentRequest {
+  repeated NodeMetrics node_metrics = 1;
+  map<string, double> system_metrics = 2;
+  // Portfolio metrics for SafetyEnvelope: position_pct, drawdown_pct, max_correlation
+  map<string, double> portfolio = 3;
+  int64 cycle = 4;
+}
+
+message ParetoRank {
+  string node_id = 1;
+  int32 rank = 2;             // NSGA-II Pareto rank (1 = dominant front)
+  double crowding_distance = 3;
+}
+
+message OutcomeScore {
+  string node_id = 1;
+  double accuracy = 2;        // Prediction accuracy [0, 1]
+  double sharpe_contribution = 3;
+}
+
+message CheckAlignmentResponse {
+  bool approved = 1;
+  repeated ConstraintViolation violations = 2;
+  repeated ParetoRank pareto_ranks = 3;
+  repeated OutcomeScore outcome_scores = 4;
+  bool goodhart_warning = 5;   // True if metric gaming is suspected
+  repeated string reasons = 6;
+  google.protobuf.Timestamp checked_at = 7;
+}
+
+// ── VerifyGates ─────────────────────────────────────────────────────────────
+
+enum GatePhase {
+  GATE_PHASE_UNSPECIFIED = 0;
+  GATE_PHASE_PRE_CYCLE = 1;    // Gates checked before cycle execution
+  GATE_PHASE_POST_CYCLE = 2;   // Gates checked after cycle execution
+  GATE_PHASE_PRE_IMPROVEMENT = 3; // Gates checked before applying an improvement
+}
+
+message GateCheckResult {
+  string gate_id = 1;
+  string gate_name = 2;
+  string gate_type = 3;        // "property" | "invariant" | "consistency" | "regression" | "convergence"
+  bool passed = 4;
+  string details = 5;
+  google.protobuf.Timestamp checked_at = 6;
+}
+
+message VerifyGatesRequest {
+  GatePhase phase = 1;
+  map<string, string> context = 2; // JSON-encoded context values
+  int64 cycle = 3;
+}
+
+message VerifyGatesResponse {
+  bool all_passed = 1;
+  repeated GateCheckResult results = 2;
+  int32 passed_count = 3;
+  int32 failed_count = 4;
+}
+
+// ── EvaluateGoals ──────────────────────────────────────────────────────────
+
+message AssignedTask {
+  string task_name = 1;
+  string assigned_to_node = 2;  // Node ID responsible for this task
+  int32 priority = 3;
+  map<string, string> parameters = 4;
+}
+
+message EvaluateGoalsRequest {
+  map<string, double> metrics = 1;
+  map<string, string> system_state = 2; // JSON-encoded state values
+  int64 cycle = 3;
+}
+
+message EvaluateGoalsResponse {
+  bool approved = 1;
+  repeated ConstraintViolation violations = 2;
+  map<string, double> scorecard = 3;        // Per-dimension scores
+  double composite_score = 4;
+  repeated AssignedTask subtasks = 5;        // HTN-decomposed tasks for orchestrator dispatch
+  double tracking_error = 6;                // Distance from reference trajectory
+  map<string, double> control_action = 7;   // MPC/EMA corrections to apply
+  google.protobuf.Timestamp evaluated_at = 8;
+}
+
+// ── RecordOutcomeScore ─────────────────────────────────────────────────────
+
+message RecordOutcomeScoreRequest {
+  string node_id = 1;
+  double predicted = 2;
+  double actual = 3;
+  double return_contribution = 4;
+  int64 cycle = 5;
+}
+message RecordOutcomeScoreResponse { bool ok = 1; }
+
+// ── GetGoalDecision ────────────────────────────────────────────────────────
+
+message GetGoalDecisionRequest { int64 cycle = 1; }
+message GetGoalDecisionResponse {
+  EvaluateGoalsResponse decision = 1;
+  bool found = 2;
+}
+
+// ── HasBlockingChallenges ──────────────────────────────────────────────────
+
+message HasBlockingChallengesRequest {}
+message HasBlockingChallengesResponse {
+  bool has_blocking = 1;
+  int32 critical_count = 2;
+  int32 high_count = 3;
+}
+
+// ── OpenChallenge ──────────────────────────────────────────────────────────
+
+enum ChallengeSeverity {
+  CHALLENGE_SEVERITY_UNSPECIFIED = 0;
+  CHALLENGE_SEVERITY_CRITICAL = 1;
+  CHALLENGE_SEVERITY_HIGH = 2;
+  CHALLENGE_SEVERITY_MEDIUM = 3;
+  CHALLENGE_SEVERITY_LOW = 4;
+}
+
+message OpenChallengeRequest {
+  string target_subsystem = 1;
+  ChallengeSeverity severity = 2;
+  string description = 3;
+  string evidence = 4;
+  string challenge_id = 5;   // Optional; generated if empty
+}
+message OpenChallengeResponse {
+  string challenge_id = 1;
+  bool created = 2;
+}
+
+// ── ResolveChallenge ───────────────────────────────────────────────────────
+
+enum ChallengeResolution {
+  CHALLENGE_RESOLUTION_UNSPECIFIED = 0;
+  CHALLENGE_RESOLUTION_RESOLVED = 1;
+  CHALLENGE_RESOLUTION_WONTFIX = 2;
+  CHALLENGE_RESOLUTION_ACKNOWLEDGED = 3;
+}
+
+message ResolveChallengeRequest {
+  string challenge_id = 1;
+  ChallengeResolution resolution = 2;
+  string notes = 3;
+}
+message ResolveChallengeResponse { bool ok = 1; }
