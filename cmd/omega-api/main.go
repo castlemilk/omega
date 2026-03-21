@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"connectrpc.com/connect"
 	"golang.org/x/net/http2"
@@ -12,6 +15,7 @@ import (
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
+	"github.com/benebsworth/omega/internal/observability"
 )
 
 func main() {
@@ -48,11 +52,40 @@ func main() {
 	defer database.Close()
 	defer vdb.Close()
 
+	// ---------------------------------------------------------------------------
+	// Observability layer
+	// ---------------------------------------------------------------------------
+	logger := slog.Default()
+
+	metrics := observability.NewMetrics()
+
+	composite := observability.NewCompositeHealth(logger)
+	composite.Register(observability.NewDBHealthChecker("state-db", func(ctx context.Context) error {
+		return database.StateDB().PingContext(ctx)
+	}, 2*time.Second))
+	composite.Register(observability.NewDBHealthChecker("memory-db", func(ctx context.Context) error {
+		return database.MemoryDB().PingContext(ctx)
+	}, 2*time.Second))
+
+	cbRegistry := observability.NewCircuitBreakerRegistry(
+		observability.DefaultCircuitBreakerConfig(), logger, metrics,
+	)
+
+	bus := observability.NewEventBus(logger)
+
+	degradationMonitor := observability.NewDegradationMonitor(
+		observability.DefaultDegradationConfig(), bus, metrics, logger,
+	)
+	_ = degradationMonitor // available for orchestrator integration
+
+	diagCollector := observability.NewDiagnosticsCollector(nil, nil, cbRegistry, logger)
+
 	h := handler.New(database)
 	vh := handler.NewVectora(vdb)
 	sh := handler.NewState(database)
 	mux := http.NewServeMux()
 
+	// Connect-RPC service handlers.
 	path, svcHandler := omegav1connect.NewOrchestratorServiceHandler(h,
 		connect.WithCompressMinBytes(1024),
 	)
@@ -68,8 +101,16 @@ func main() {
 	)
 	mux.Handle(sPath, sSvcHandler)
 
+	// Observability endpoints.
+	observability.NewHealthHandler(composite).RegisterRoutes(mux)
+	observability.NewDiagnosticsHandler(diagCollector).RegisterRoutes(mux)
+	mux.Handle("/metrics", metrics.Handler())
+
+	_ = bus // available for event streaming integration
+
 	addr := ":8080"
 	log.Printf("Omega API listening on %s", addr)
+	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics")
 	log.Fatal(http.ListenAndServe(addr, h2c.NewHandler(withCORS(mux), &http2.Server{}))) //nolint:gosec,gocritic
 }
 

@@ -87,6 +87,9 @@ func openDB(path string) (*sql.DB, error) {
 // Production code should use the typed methods on DB instead.
 func (d *DB) StateDB() *sql.DB { return d.state }
 
+// MemoryDB exposes the underlying memory sql.DB for health checking.
+func (d *DB) MemoryDB() *sql.DB { return d.memory }
+
 func (d *DB) Close() {
 	d.state.Close()  //nolint:errcheck,gosec
 	d.memory.Close() //nolint:errcheck,gosec
