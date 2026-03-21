@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VECTORA TERMINAL v0.1 // OMEGA</title>
+  <style>
+    /* CRT scanline overlay */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: #00ff00;
+      font-family: 'IBM Plex Mono', 'Courier New', Courier, monospace;
+      overflow-x: hidden;
+    }
+
+    /* Subtle CRT scanlines */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* Phosphor text glow on selection */
+    ::selection {
+      background: #00ff0044;
+      color: #00ff00;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: #006600; }
+    ::-webkit-scrollbar-thumb:hover { background: #00ff00; }
+
+    /* Boot screen */
+    #boot {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      font-family: 'IBM Plex Mono', monospace;
+      color: #00ff00;
+      text-shadow: 0 0 8px #00ff00;
+    }
+    #boot.hidden { display: none; }
+    #boot-logo { font-size: 72px; margin-bottom: 16px; }
+    #boot-text { font-size: 13px; letter-spacing: 0.2em; margin-bottom: 24px; }
+    #boot-bar {
+      width: 320px;
+      height: 4px;
+      border: 1px solid #00ff00;
+      overflow: hidden;
+    }
+    #boot-fill {
+      height: 100%;
+      background: #00ff00;
+      box-shadow: 0 0 8px #00ff00;
+      width: 0%;
+      transition: width 0.05s linear;
+    }
+    #boot-status {
+      margin-top: 12px;
+      font-size: 10px;
+      color: #006600;
+      letter-spacing: 0.15em;
+      min-height: 14px;
+    }
+
+    #root { min-height: 100vh; }
+
+    /* Loading spinner if React hasn't mounted yet */
+    #root:empty::before {
+      content: 'INITIALISING VECTORA...';
+      display: block;
+      text-align: center;
+      padding: 40px;
+      color: #006600;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+    }
+  </style>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet" />
+</head>
+<body>
+
+  <!-- Boot screen -->
+  <div id="boot">
+    <div id="boot-logo">Ω</div>
+    <div id="boot-text">VECTORA TERMINAL v0.1</div>
+    <div id="boot-bar"><div id="boot-fill"></div></div>
+    <div id="boot-status">LOADING MODULES...</div>
+  </div>
+
+  <div id="root"></div>
+
+  <!-- React + ReactDOM (production, UMD) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Recharts (bundles its own d3) -->
+  <script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+
+  <!-- Babel standalone — transpile JSX in-browser -->
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+  <!-- Boot animation -->
+  <script>
+    const messages = [
+      'LOADING MODULES...',
+      'CONNECTING TO BINANCE...',
+      'LOADING OHLCV DATA (504 BARS)...',
+      'INITIALISING RING 1...',
+      'LOADING TPE OPTIMIZER...',
+      'CALIBRATING SIGNALS...',
+      'AUTONOMY CONTROLLER: AUTONOMOUS',
+      'ALL SYSTEMS NOMINAL',
+    ];
+    const fill = document.getElementById('boot-fill');
+    const status = document.getElementById('boot-status');
+    let pct = 0, msgIdx = 0;
+    const interval = setInterval(() => {
+      pct += Math.random() * 12 + 3;
+      if (pct > 100) pct = 100;
+      fill.style.width = pct + '%';
+      if (msgIdx < messages.length) {
+        status.textContent = messages[msgIdx++];
+      }
+      if (pct >= 100) {
+        clearInterval(interval);
+        setTimeout(() => {
+          document.getElementById('boot').classList.add('hidden');
+        }, 400);
+      }
+    }, 80);
+  </script>
+
+  <!-- Dashboard component (loaded via Babel) -->
+  <script type="text/babel" data-presets="react" src="eval_dashboard.jsx"></script>
+
+  <!-- Mount -->
+  <script type="text/babel" data-presets="react">
+    // Wait for Recharts to be available
+    function mountApp() {
+      if (typeof Recharts === 'undefined' || typeof App === 'undefined') {
+        setTimeout(mountApp, 100);
+        return;
+      }
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    }
+    // Give scripts a moment to finish
+    setTimeout(mountApp, 200);
+  </script>
+
+</body>
+</html>
