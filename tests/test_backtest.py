@@ -234,7 +234,8 @@ class TestBacktestEngineSyntheticData:
         from omega.backtest import BacktestEngine
 
         cfg = _make_cfg(symbols=symbols or ["BTCUSDT"])
-        return BacktestEngine(config=cfg, symbols=cfg.data.symbols)
+        # allow_synthetic=True: these tests intentionally run against fake data
+        return BacktestEngine(config=cfg, symbols=cfg.data.symbols, allow_synthetic=True)
 
     def test_run_pico_only(self):
         engine = self._engine()
@@ -269,7 +270,8 @@ class TestBacktestEngineSyntheticData:
         from omega.backtest import BacktestEngine
 
         cfg = _make_cfg()
-        engine = BacktestEngine(config=cfg, symbols=["BTCUSDT"])
+        # allow_synthetic=True: explicitly testing the synthetic fallback path
+        engine = BacktestEngine(config=cfg, symbols=["BTCUSDT"], allow_synthetic=True)
 
         with patch.object(engine, "_load_real_data", side_effect=RuntimeError("no network")):
             data = engine._load_data("2024-01-01", "2024-06-30")
@@ -277,12 +279,25 @@ class TestBacktestEngineSyntheticData:
         assert "BTCUSDT" in data
         assert len(data["BTCUSDT"]) > 0
 
+    def test_raises_without_real_data_when_synthetic_not_allowed(self):
+        from omega.backtest import BacktestEngine
+
+        cfg = _make_cfg()
+        engine = BacktestEngine(config=cfg, symbols=["BTCUSDT"], allow_synthetic=False)
+
+        with (
+            patch.object(engine, "_load_real_data", side_effect=RuntimeError("no network")),
+            pytest.raises(ValueError, match="No real market data available"),
+        ):
+            engine._load_data("2024-01-01", "2024-06-30")
+
     def test_synthetic_data_is_deterministic(self):
         from omega.backtest import BacktestEngine
 
         cfg = _make_cfg()
-        e1 = BacktestEngine(config=cfg, symbols=["BTCUSDT"])
-        e2 = BacktestEngine(config=cfg, symbols=["BTCUSDT"])
+        # allow_synthetic=True: explicitly testing the synthetic generator
+        e1 = BacktestEngine(config=cfg, symbols=["BTCUSDT"], allow_synthetic=True)
+        e2 = BacktestEngine(config=cfg, symbols=["BTCUSDT"], allow_synthetic=True)
 
         d1 = e1._generate_synthetic_data("2024-01-01", "2024-03-31")
         d2 = e2._generate_synthetic_data("2024-01-01", "2024-03-31")

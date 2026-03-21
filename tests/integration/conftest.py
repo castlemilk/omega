@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from omega.core.adversarial_v2 import AdversarialPressureV2
+from omega.core.backtest_evaluator import BacktestEvaluator
 from omega.core.bayesian_optimizer import ContinuousParam, Param
 from omega.core.improvement_engine import ImprovementEngine
 from omega.core.improvement_scheduler import ImprovementScheduler
@@ -292,7 +293,8 @@ def configured_orchestrator(market_bars: list[dict]) -> OmegaOrchestrator:
     node = SyntheticMarketNode(market_bars)
 
     # Improvement engine — register node so TPE can propose
-    engine = ImprovementEngine(store=None)
+    # allow_synthetic=True: integration fixture uses synthetic market data
+    engine = ImprovementEngine(store=None, evaluator=BacktestEvaluator(allow_synthetic=True))
     param_space: list[Param] = [
         ContinuousParam(name="momentum_threshold", low=0.1, high=2.0),
         ContinuousParam(name="position_size", low=0.001, high=0.1),

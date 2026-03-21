@@ -92,7 +92,10 @@ class TestRunParameterisedStrategy:
 
 class TestBacktestEvaluator:
     def make_evaluator(self, **kwargs):
-        defaults = dict(symbols=["BTCUSDT"], oos_start="2024-01-01", oos_end="2024-06-01")
+        # allow_synthetic=True: unit tests intentionally run against fake data
+        defaults = dict(
+            symbols=["BTCUSDT"], oos_start="2024-01-01", oos_end="2024-06-01", allow_synthetic=True
+        )
         defaults.update(kwargs)
         return BacktestEvaluator(**defaults)
 
@@ -193,10 +196,12 @@ class TestBacktestEvaluator:
         assert metrics["oos_end"] == "2024-09-01"
 
     def test_multiple_symbols(self):
+        # allow_synthetic=True: unit test intentionally runs against fake data
         ev = BacktestEvaluator(
             symbols=["BTCUSDT", "ETHUSDT"],
             oos_start="2024-01-01",
             oos_end="2024-06-01",
+            allow_synthetic=True,
         )
         score, metrics = ev.evaluate("node-1", {})
         assert isinstance(score, float)
@@ -224,10 +229,12 @@ class TestImprovementEngineWithBacktestEvaluator:
         assert engine._evaluator is ev
 
     def test_full_tpe_cycle_with_backtest_evaluator(self):
+        # allow_synthetic=True: integration test intentionally runs against fake data
         ev = BacktestEvaluator(
             symbols=["BTCUSDT"],
             oos_start="2024-01-01",
             oos_end="2024-06-01",
+            allow_synthetic=True,
         )
         engine = ImprovementEngine(evaluator=ev, n_startup_trials=3)
         engine.register_node(

@@ -202,6 +202,7 @@ class BacktestEvaluator(ImprovementEvaluator):
         sharpe_weight: float = 0.7,
         dd_weight: float = 0.3,
         max_cache: int = 512,
+        allow_synthetic: bool = False,
     ) -> None:
         self._symbols = symbols or ["BTCUSDT"]
         self._oos_start = oos_start
@@ -210,6 +211,7 @@ class BacktestEvaluator(ImprovementEvaluator):
         self._sharpe_weight = sharpe_weight
         self._dd_weight = dd_weight
         self._max_cache = max_cache
+        self._allow_synthetic = allow_synthetic
 
         self._cache: dict[str, tuple[float, dict[str, Any]]] = {}
         self._lock = threading.Lock()
@@ -331,11 +333,28 @@ class BacktestEvaluator(ImprovementEvaluator):
         return comp, metrics
 
     def _load_prices(self, symbol: str, start: str, end: str) -> list[float]:
-        """Try to load closing prices from DataIngestionNode; fall back to synthetic."""
+        """
+        Load closing prices from DataIngestionNode.
+
+        When ``allow_synthetic=False`` (the default), raises ``ValueError`` if
+        real data is unavailable — no silent fallback to noise.
+        When ``allow_synthetic=True``, falls back to synthetic prices and logs a
+        loud WARNING so callers know results are not meaningful.
+        """
         try:
             return self._load_real_prices(symbol, start, end)
         except Exception as exc:
-            logger.debug("Real data unavailable (%s), using synthetic prices.", exc)
+            if not self._allow_synthetic:
+                raise ValueError(
+                    "No real market data available. "
+                    "Pass allow_synthetic=True to use synthetic data for testing only."
+                ) from exc
+            logger.warning(
+                "USING SYNTHETIC DATA — results are not meaningful. "
+                "Real data unavailable for %s: %s",
+                symbol,
+                exc,
+            )
             return _generate_synthetic_prices(symbol, start, end)
 
     def _load_real_prices(self, symbol: str, start: str, end: str) -> list[float]:

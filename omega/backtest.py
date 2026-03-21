@@ -96,9 +96,10 @@ class BacktestEngine:
         List of trading symbols to backtest.
     """
 
-    def __init__(self, config: Any, symbols: list[str]) -> None:
+    def __init__(self, config: Any, symbols: list[str], allow_synthetic: bool = False) -> None:
         self._cfg = config
         self.symbols = symbols
+        self._allow_synthetic = allow_synthetic
 
     # ------------------------------------------------------------------
     # Public
@@ -158,13 +159,25 @@ class BacktestEngine:
 
     def _load_data(self, start_date: str, end_date: str) -> dict[str, list[OHLCV]]:
         """
-        Attempt to load real data via the DataIngestionNode; fall back to
-        synthetic OHLCV when the provider is unavailable.
+        Attempt to load real data via the DataIngestionNode.
+
+        When ``allow_synthetic=False`` (the default), raises ``ValueError`` if
+        real data is unavailable — no silent fallback to noise.
+        When ``allow_synthetic=True``, falls back to synthetic data and logs a
+        loud WARNING so callers know results are not meaningful.
         """
         try:
             return self._load_real_data(start_date, end_date)
         except Exception as exc:
-            logger.warning("Real data unavailable (%s), using synthetic data.", exc)
+            if not self._allow_synthetic:
+                raise ValueError(
+                    "No real market data available. "
+                    "Pass allow_synthetic=True to use synthetic data for testing only."
+                ) from exc
+            logger.warning(
+                "USING SYNTHETIC DATA — results are not meaningful. Real data unavailable: %s",
+                exc,
+            )
             return self._generate_synthetic_data(start_date, end_date)
 
     def _load_real_data(self, start_date: str, end_date: str) -> dict[str, list[OHLCV]]:

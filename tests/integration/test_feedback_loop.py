@@ -11,6 +11,7 @@ actually adapts its behaviour in response to degrading signal quality.
 from __future__ import annotations
 
 from omega.core.adversarial_v2 import AdversarialPressureV2
+from omega.core.backtest_evaluator import BacktestEvaluator
 from omega.core.bayesian_optimizer import ContinuousParam, Param
 from omega.core.improvement_engine import ImprovementEngine
 from omega.core.orchestrator_v2 import OmegaOrchestrator
@@ -42,8 +43,8 @@ def test_bad_signal_causes_flag_causes_improvement() -> None:
 
     node = SyntheticMarketNode(bars, bad_signal_after=bad_after)
 
-    # Improvement engine
-    engine = ImprovementEngine(store=None)
+    # Improvement engine — allow_synthetic=True: integration test uses synthetic market data
+    engine = ImprovementEngine(store=None, evaluator=BacktestEvaluator(allow_synthetic=True))
     param_space: list[Param] = [
         ContinuousParam(name="momentum_threshold", low=0.1, high=2.0),
         ContinuousParam(name="position_size", low=0.001, high=0.1),
@@ -112,7 +113,10 @@ def test_feedback_loop_params_change_over_time() -> None:
     bars = synthetic_market_data(n_bars=150)
     node = SyntheticMarketNode(bars, bad_signal_after=10)
 
-    engine = ImprovementEngine(store=None, seed=99)
+    # allow_synthetic=True: integration test uses synthetic market data
+    engine = ImprovementEngine(
+        store=None, seed=99, evaluator=BacktestEvaluator(allow_synthetic=True)
+    )
     param_space: list[Param] = [
         ContinuousParam(name="alpha", low=0.01, high=1.0),
         ContinuousParam(name="beta", low=0.01, high=1.0),
