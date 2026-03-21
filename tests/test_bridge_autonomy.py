@@ -73,9 +73,8 @@ class TestRecordCycleMetrics:
 
     def test_raises_on_http_error(self):
         client = AutonomyServiceClient()
-        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "bad"}, 500)):
-            with pytest.raises(AutonomyServiceError, match="RecordCycleMetrics failed"):
-                client.record_cycle_metrics("node-1", cycle=1, metrics={})
+        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "bad"}, 500)), pytest.raises(AutonomyServiceError, match="RecordCycleMetrics failed"):
+            client.record_cycle_metrics("node-1", cycle=1, metrics={})
 
 
 # ── get_autonomy_level ─────────────────────────────────────────────────────
@@ -194,11 +193,10 @@ class TestStreamNodeMetrics:
             call_count += 1
             return _mock_response(event)
 
-        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
-            with patch("time.sleep"):  # don't actually sleep
-                results = list(
-                    client.stream_node_metrics(node_id="n1", max_events=3, poll_interval_ms=100)
-                )
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen), patch("time.sleep"):  # don't actually sleep
+            results = list(
+                client.stream_node_metrics(node_id="n1", max_events=3, poll_interval_ms=100)
+            )
 
         assert len(results) == 3
         assert results[0]["nodeId"] == "n1"
@@ -213,10 +211,9 @@ class TestStreamNodeMetrics:
         def fake_urlopen(req, timeout):
             return _mock_response({"events": events})
 
-        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
-            with patch("time.sleep"):
-                results = list(
-                    client.stream_node_metrics(max_events=2, poll_interval_ms=50)
-                )
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen), patch("time.sleep"):
+            results = list(
+                client.stream_node_metrics(max_events=2, poll_interval_ms=50)
+            )
 
         assert len(results) == 2

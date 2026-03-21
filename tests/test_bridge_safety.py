@@ -75,9 +75,8 @@ class TestCheckAlignment:
 
     def test_raises_on_server_error(self):
         client = SafetyServiceClient()
-        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "nope"})):
-            with pytest.raises(SafetyServiceError):
-                client.check_alignment(node_metrics=[])
+        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "nope"})), pytest.raises(SafetyServiceError):
+            client.check_alignment(node_metrics=[])
 
 
 # ── verify_gates ───────────────────────────────────────────────────────────

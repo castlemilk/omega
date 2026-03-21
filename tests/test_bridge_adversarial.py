@@ -79,9 +79,8 @@ class TestRunPressure:
 
     def test_raises_on_server_error(self):
         client = AdversarialServiceClient()
-        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "oops"})):
-            with pytest.raises(AdversarialServiceError):
-                client.run_pressure(cycle=1)
+        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "oops"})), pytest.raises(AdversarialServiceError):
+            client.run_pressure(cycle=1)
 
     def test_returns_raw_response_if_no_report_key(self):
         client = AdversarialServiceClient()
