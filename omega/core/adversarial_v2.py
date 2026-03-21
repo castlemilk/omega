@@ -36,6 +36,8 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Any
 
+from omega.adversarial.debate_gate import DebateGate, DebateVerdict, SignalContext
+from omega.adversarial.risk_personas import RiskContext, RiskDebate, RiskDebateResult
 from omega.core.adversarial import (
     AdversarialPressure,
     AdversarialReport,
@@ -494,7 +496,7 @@ class Ring2ActivationController:
 
 @dataclass
 class AdversarialReportV2:
-    """Enhanced report including attribution, threshold adjustments, and Ring 2 gate."""
+    """Enhanced report including attribution, threshold adjustments, Ring 2 gate, and DebateGate."""
 
     base_report: AdversarialReport
     attribution: AttributionResult | None
@@ -503,6 +505,11 @@ class AdversarialReportV2:
     ring2_sim_report: SimulationReport | None
     ring2_activated: bool
     current_threshold: float
+    # DebateGate outputs (set when Ring 1 flags disagreement)
+    debate_verdict: DebateVerdict | None = None
+    risk_debate_result: RiskDebateResult | None = None
+    debate_action: str | None = None  # "proceed" | "reduce" | "veto"
+    debate_position_scale: float | None = None
 
 
 class AdversarialPressureV2:
@@ -583,6 +590,10 @@ class AdversarialPressureV2:
             gate=self._sim_gate,
         )
 
+        # DebateGate + RiskDebate for disagreement resolution
+        self.debate_gate = DebateGate()
+        self.risk_debate = RiskDebate()
+
         # Expose inner rings for external access
         self.ring1 = self._base.ring1
         self.ring2 = self._base.ring2
@@ -650,6 +661,40 @@ class AdversarialPressureV2:
             flag_rate=flag_rate,
         )
 
+        # DebateGate — called when Ring 1 flags disagreement, BEFORE veto decision
+        debate_verdict: DebateVerdict | None = None
+        risk_debate_result: RiskDebateResult | None = None
+        debate_action: str | None = None
+        debate_position_scale: float | None = None
+
+        if base_report.ring1_result and base_report.ring1_result.flagged:
+            # Build SignalContext from available signal data
+            sig_ctx = self._build_signal_context(current_signals, strategy_params)
+            debate_verdict = self.debate_gate.evaluate(sig_ctx)
+            debate_action, debate_position_scale = DebateGate.action_from_verdict(debate_verdict)
+
+            # Run risk debate using debate confidence as anchor
+            risk_ctx = RiskContext(
+                composite_signal=sig_ctx.composite_signal,
+                ic_short=sig_ctx.ic_short,
+                vol_regime=sig_ctx.vol_regime,
+                recent_sharpe=sig_ctx.recent_sharpe,
+                node_error_rate=sig_ctx.node_error_rate,
+                atl_distance=sig_ctx.atl_distance,
+                debate_confidence=debate_verdict.confidence,
+            )
+            risk_debate_result = self.risk_debate.resolve(risk_ctx)
+
+            logger.info(
+                "AdversarialV2 DebateGate [cycle=%d]: action=%s "
+                "position_scale=%.3f confidence=%.3f risk_scale=%.3f",
+                cycle,
+                debate_action,
+                debate_position_scale,
+                debate_verdict.confidence,
+                risk_debate_result.position_scale,
+            )
+
         # Ring 2 simulation gate (if activated and on interval)
         ring2_sim_report: SimulationReport | None = None
         ring2_activated = self._ring2_ctrl.should_activate(
@@ -681,6 +726,10 @@ class AdversarialPressureV2:
             ring2_sim_report=ring2_sim_report,
             ring2_activated=ring2_activated,
             current_threshold=self.threshold_mgr.current_threshold,
+            debate_verdict=debate_verdict,
+            risk_debate_result=risk_debate_result,
+            debate_action=debate_action,
+            debate_position_scale=debate_position_scale,
         )
 
     def register_outcome(self, cycle: int, was_false_positive: bool) -> None:
@@ -713,6 +762,35 @@ class AdversarialPressureV2:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _build_signal_context(
+        self,
+        current_signals: dict[str, float],
+        strategy_params: dict[str, Any],
+    ) -> SignalContext:
+        """
+        Build a SignalContext from the current signals dict and strategy params.
+
+        Extracts known keys from strategy_params; computes composite_signal as
+        the mean of current_signals values if not explicitly provided.
+        """
+        composite = strategy_params.get(
+            "composite_signal",
+            float(sum(current_signals.values()) / len(current_signals))
+            if current_signals
+            else 0.0,
+        )
+        return SignalContext(
+            composite_signal=float(composite),
+            ic_short=float(strategy_params.get("ic_short", 0.0)),
+            ic_long=float(strategy_params.get("ic_long", 0.0)),
+            vol_regime=str(strategy_params.get("vol_regime", "normal_vol")),
+            regime_ic=strategy_params.get("regime_ic", {}),
+            recent_sharpe=float(strategy_params.get("recent_sharpe", 0.0)),
+            node_error_rate=float(strategy_params.get("node_error_rate", 0.0)),
+            atl_distance=float(strategy_params.get("atl_distance", 0.5)),
+            rsi=float(strategy_params.get("rsi", 50.0)),
+        )
 
     def _run_ring2_gate(
         self,
