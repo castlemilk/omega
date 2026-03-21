@@ -55,6 +55,10 @@ def compute_sharpe(
     return mean_ex / std * math.sqrt(periods_per_year)
 
 
+# Backward-compatible alias
+sharpe_ratio = compute_sharpe
+
+
 def compute_sharpe_confidence_interval(
     returns: Sequence[float],
     confidence: float = 0.95,
