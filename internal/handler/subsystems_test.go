@@ -95,10 +95,10 @@ func setupSubsystemTestServer(t *testing.T) (omegav1connect.OrchestratorServiceC
 			tags_json      TEXT NOT NULL DEFAULT '[]'
 		);
 	`) //nolint:errcheck
-	memSQLDB.Close() //nolint:errcheck
+	memSQLDB.Close() //nolint:errcheck,gosec
 
-	f, _ := os.Create(memDB) // ensure file exists (already created above)
-	f.Close()                //nolint:errcheck
+	f, _ := os.Create(memDB) //nolint:gosec // ensure file exists (already created above)
+	f.Close()                //nolint:errcheck,gosec
 
 	database, err := db.New(stateDB, memDB)
 	if err != nil {

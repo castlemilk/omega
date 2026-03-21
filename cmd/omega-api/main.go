@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 
 	"connectrpc.com/connect"
 	"golang.org/x/net/http2"

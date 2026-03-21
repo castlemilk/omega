@@ -41,7 +41,7 @@ func (d *DB) RecentAlignmentDecisions(limit int) ([]*AlignmentDecision, error) {
 			return nil, err
 		}
 		a.Approved = approved == 1
-		json.Unmarshal([]byte(reasonsJSON), &a.Reasons) //nolint:errcheck
+		json.Unmarshal([]byte(reasonsJSON), &a.Reasons) //nolint:errcheck,gosec
 		if a.Reasons == nil {
 			a.Reasons = []string{}
 		}
@@ -86,7 +86,7 @@ func (d *DB) RecentAdversarialResults(limit int) ([]*AdversarialResult, error) {
 			&flagsJSON, &r.Severity, &r.RecordedAt); err != nil {
 			return nil, err
 		}
-		json.Unmarshal([]byte(flagsJSON), &r.Flags) //nolint:errcheck
+		json.Unmarshal([]byte(flagsJSON), &r.Flags) //nolint:errcheck,gosec
 		if r.Flags == nil {
 			r.Flags = []string{}
 		}
@@ -129,9 +129,9 @@ func (d *DB) CurrentGoalState() (*GoalState, error) {
 		// Table may not exist yet
 		return nil, nil //nolint
 	}
-	json.Unmarshal([]byte(checksJSON), &gs.ConstitutionalChecks)  //nolint:errcheck
-	json.Unmarshal([]byte(scorecardJSON), &gs.ScorecardValues)    //nolint:errcheck
-	json.Unmarshal([]byte(tasksJSON), &gs.ActiveTasks)            //nolint:errcheck
+	json.Unmarshal([]byte(checksJSON), &gs.ConstitutionalChecks)  //nolint:errcheck,gosec
+	json.Unmarshal([]byte(scorecardJSON), &gs.ScorecardValues)    //nolint:errcheck,gosec
+	json.Unmarshal([]byte(tasksJSON), &gs.ActiveTasks)            //nolint:errcheck,gosec
 	if gs.ConstitutionalChecks == nil {
 		gs.ConstitutionalChecks = map[string]bool{}
 	}
@@ -207,11 +207,11 @@ type MemoryStats struct {
 // GetMemoryStatsSummary returns aggregate counts and regime history from the memory DB.
 func (d *DB) GetMemoryStatsSummary() (*MemoryStats, error) {
 	ms := &MemoryStats{RegimeHistory: []string{}}
-	d.memory.QueryRow(`SELECT COUNT(*) FROM episodes`).Scan(&ms.EpisodicCount)          //nolint:errcheck
-	d.memory.QueryRow(`SELECT COUNT(*) FROM semantic_memories`).Scan(&ms.SemanticCount) //nolint:errcheck
-	d.memory.QueryRow(
+	d.memory.QueryRow(`SELECT COUNT(*) FROM episodes`).Scan(&ms.EpisodicCount)          //nolint:errcheck,gosec
+	d.memory.QueryRow(`SELECT COUNT(*) FROM semantic_memories`).Scan(&ms.SemanticCount) //nolint:errcheck,gosec
+	_ = d.memory.QueryRow( //nolint:gosec
 		`SELECT COUNT(*) FROM episodes WHERE tags LIKE '%contradiction%'`,
-	).Scan(&ms.ContradictionCount) //nolint:errcheck
+	).Scan(&ms.ContradictionCount)
 
 	rows, err := d.memory.Query(`
 		SELECT DISTINCT event_type FROM episodes
@@ -220,7 +220,7 @@ func (d *DB) GetMemoryStatsSummary() (*MemoryStats, error) {
 		defer rows.Close() //nolint:errcheck
 		for rows.Next() {
 			var t string
-			rows.Scan(&t) //nolint:errcheck
+			rows.Scan(&t) //nolint:errcheck,gosec
 			ms.RegimeHistory = append(ms.RegimeHistory, t)
 		}
 	}
@@ -314,8 +314,8 @@ func (d *DB) ImprovementHistory(limit int) ([]*ImprovementDetail, error) {
 		); err != nil {
 			return nil, err
 		}
-		json.Unmarshal([]byte(beforeJSON), &imp.BeforeMetrics) //nolint:errcheck
-		json.Unmarshal([]byte(afterJSON), &imp.AfterMetrics)   //nolint:errcheck
+		json.Unmarshal([]byte(beforeJSON), &imp.BeforeMetrics) //nolint:errcheck,gosec
+		json.Unmarshal([]byte(afterJSON), &imp.AfterMetrics)   //nolint:errcheck,gosec
 		if imp.BeforeMetrics == nil {
 			imp.BeforeMetrics = map[string]float64{}
 		}
@@ -325,7 +325,7 @@ func (d *DB) ImprovementHistory(limit int) ([]*ImprovementDetail, error) {
 		if approved.Valid {
 			v := approved.Int64 == 1
 			imp.AlignmentApproved = &v
-			json.Unmarshal([]byte(reasonsJSON), &imp.AlignmentReasons) //nolint:errcheck
+			json.Unmarshal([]byte(reasonsJSON), &imp.AlignmentReasons) //nolint:errcheck,gosec
 		}
 		if imp.AlignmentReasons == nil {
 			imp.AlignmentReasons = []string{}
