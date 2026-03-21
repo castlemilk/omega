@@ -17,6 +17,7 @@ import uuid
 from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.eval.sharpe import sharpe_ratio as _canonical_sharpe
 
 logger = logging.getLogger("omega.nodes.vectora.strategy")
 
@@ -295,11 +296,8 @@ class StrategyNode(Node):
             return {"sharpe": 0.0, "max_drawdown": 0.0, "hit_rate": 0.0, "trades": 0}
 
         mean_ret = sum(all_returns) / len(all_returns)
-        variance = sum((r - mean_ret) ** 2 for r in all_returns) / max(1, len(all_returns) - 1)
-        std_ret = math.sqrt(variance) if variance > 0 else 1e-6
-
         # Annualised Sharpe (252 trading days)
-        sharpe = (mean_ret / std_ret) * math.sqrt(252) if std_ret > 0 else 0.0
+        sharpe = _canonical_sharpe(all_returns)
 
         # Max drawdown on cumulative P&L
         cum = 0.0

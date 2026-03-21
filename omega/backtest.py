@@ -15,10 +15,11 @@ Usage::
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
+
+from omega.eval.sharpe import sharpe_ratio as _canonical_sharpe
 
 logger = logging.getLogger("omega.backtest")
 
@@ -452,16 +453,12 @@ def _compute_metrics(
     trades: list[Trade],
     daily_returns: list[float],
 ) -> BacktestResult:
-    n = len(daily_returns) or 1
     total_ret = sum(daily_returns)
 
     days = (date.fromisoformat(end_date) - date.fromisoformat(start_date)).days or 1
     annualised = total_ret * (365.0 / days)
 
-    mean_ret = total_ret / n
-    variance = sum((r - mean_ret) ** 2 for r in daily_returns) / n
-    std_dev = math.sqrt(variance) if variance > 0 else 1e-9
-    sharpe = (mean_ret / std_dev) * math.sqrt(252.0)
+    sharpe = _canonical_sharpe(daily_returns)
 
     # Max drawdown
     cumulative = 0.0

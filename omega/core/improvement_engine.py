@@ -26,27 +26,9 @@ from omega.core.bayesian_optimizer import (
     TreeParzenEstimator,
 )
 from omega.core.state_store import StateStore
+from omega.eval.sharpe import sharpe_ratio as _sharpe_ratio
 
 logger = logging.getLogger("omega.core.improvement_engine")
-
-
-# ---------------------------------------------------------------------------
-# Metric helpers
-# ---------------------------------------------------------------------------
-
-
-def _sharpe_ratio(returns: list[float], risk_free: float = 0.0) -> float:
-    """Annualised Sharpe from a list of period returns."""
-    if len(returns) < 2:
-        return 0.0
-    daily_rf = risk_free / 252
-    excess = [r - daily_rf for r in returns]
-    mean_e = sum(excess) / len(excess)
-    var = sum((x - mean_e) ** 2 for x in excess) / (len(excess) - 1)
-    std = math.sqrt(var) if var > 0 else 0.0
-    if std == 0.0:
-        return 0.0
-    return mean_e / std * math.sqrt(252)
 
 
 def _max_drawdown(equity_curve: list[float]) -> float:

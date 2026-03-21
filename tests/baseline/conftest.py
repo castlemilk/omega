@@ -2,9 +2,10 @@
 
 import math
 import random
-import statistics
 
 import pytest
+
+from omega.eval.sharpe import sharpe_ratio as _canonical_sharpe
 
 # ---------------------------------------------------------------------------
 # Seeded RNG wrapper (stdlib random)
@@ -161,14 +162,8 @@ def ensemble_predictions(rng):
 
 
 def sharpe_ratio(returns: list[float], periods_per_year: int = 525600) -> float:
-    """Annualised Sharpe ratio."""
-    if len(returns) < 2:
-        return 0.0
-    mean = statistics.mean(returns)
-    std = statistics.stdev(returns)
-    if std == 0:
-        return 0.0
-    return mean / std * math.sqrt(periods_per_year)
+    """Annualised Sharpe ratio (delegates to omega.eval.sharpe canonical impl)."""
+    return _canonical_sharpe(returns, periods_per_year=periods_per_year)
 
 
 def max_drawdown(equity_curve: list[float]) -> float:
