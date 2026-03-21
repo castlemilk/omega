@@ -17,8 +17,14 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
-      "@typescript-eslint/no-explicit-any": "off",
+      // Tightened: no-any is now an error
+      "@typescript-eslint/no-explicit-any": "error",
+      // Unused vars — keep argsIgnorePattern for callback-style APIs
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      // Hooks exhaustive-deps must be correct
+      "react-hooks/exhaustive-deps": "error",
+      // Consistent type imports
+      "@typescript-eslint/consistent-type-imports": ["warn", { prefer: "type-imports" }],
     },
   },
 );

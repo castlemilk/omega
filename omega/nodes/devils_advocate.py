@@ -25,13 +25,16 @@ from __future__ import annotations
 import time
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.challenge_registry import (
-    ChallengeRegistry, Challenge, ChallengeSeverity, ChallengeStatus,
+    Challenge,
+    ChallengeRegistry,
+    ChallengeSeverity,
+    ChallengeStatus,
 )
-from omega.core.verification_gates import VerificationGateSystem, GateStatus
+from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.verification_gates import VerificationGateSystem
 
 
 class ReviewMode(str, Enum):
@@ -59,8 +62,8 @@ class DevilsAdvocateNode(Node):
 
     def __init__(
         self,
-        registry: Optional[ChallengeRegistry] = None,
-        gate_system: Optional[VerificationGateSystem] = None,
+        registry: ChallengeRegistry | None = None,
+        gate_system: VerificationGateSystem | None = None,
         db_path: str = ":memory:",
     ) -> None:
         # Skip super().__init__() — no Brain for the devil's advocate
@@ -91,7 +94,7 @@ class DevilsAdvocateNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return _CAPABILITIES
 
     def describe(self) -> str:
@@ -102,7 +105,7 @@ class DevilsAdvocateNode(Node):
             "It never self-improves — it challenges others."
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         open_chs = self._registry.open_challenges()
         critical_open = sum(1 for c in open_chs if c.severity == ChallengeSeverity.CRITICAL)
         return {
@@ -113,7 +116,7 @@ class DevilsAdvocateNode(Node):
             "veto_count": float(self._veto_count),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """Devil's advocate does not self-improve. It challenges others."""
         return False
 
@@ -160,7 +163,7 @@ class DevilsAdvocateNode(Node):
     # Operating modes
     # ------------------------------------------------------------------
 
-    def _architectural_review(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _architectural_review(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         Challenge high-level design decisions for a given subsystem.
         Returns open challenges + gate results + veto decision.
@@ -190,7 +193,7 @@ class DevilsAdvocateNode(Node):
             "verdict": "VETOED" if veto else "APPROVED",
         }
 
-    def _implementation_audit(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _implementation_audit(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         Review code for gaps between spec and implementation.
         Queries challenges tagged to the subsystem.
@@ -211,7 +214,7 @@ class DevilsAdvocateNode(Node):
             "gate_results": gate_summary,
         }
 
-    def _assumption_stress_test(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _assumption_stress_test(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         Enumerate implicit assumptions across the system and flag those
         with open critical/high challenges.
@@ -239,7 +242,7 @@ class DevilsAdvocateNode(Node):
             "verdict": "BROKEN" if assumptions_broken > 0 else "HOLDING",
         }
 
-    def _regression_hunt(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _regression_hunt(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         Run all registered RegressionGates against before/after snapshots.
         Auto-raises new challenges for any regressions found.
@@ -247,7 +250,7 @@ class DevilsAdvocateNode(Node):
         gate_results = self._gates.run_all(params)
         gate_summary = self._gates.summary(gate_results)
 
-        new_challenge_ids: List[str] = []
+        new_challenge_ids: list[str] = []
         for gr in gate_results:
             if gr.failed:
                 cid = self._registry.add(
@@ -266,7 +269,7 @@ class DevilsAdvocateNode(Node):
             "verdict": "REGRESSION_DETECTED" if new_challenge_ids else "CLEAN",
         }
 
-    def _complexity_audit(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _complexity_audit(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         Flag over-engineering by surfacing challenges that reference
         complexity, overhead, or layering keywords.
@@ -297,7 +300,7 @@ class DevilsAdvocateNode(Node):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _ch_dict(c: Challenge) -> Dict[str, Any]:
+def _ch_dict(c: Challenge) -> dict[str, Any]:
     return {
         "id": c.challenge_id,
         "subsystem": c.target_subsystem,

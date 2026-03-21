@@ -1,20 +1,17 @@
 """Tests for omega.core.goals — 3-layer goal architecture."""
 
-import pytest
 from omega.core.goals import (
-    ConstitutionalConstraints,
-    BalancedScorecard,
-    HTNDecomposer,
     AdaptiveReferenceTracker,
+    BalancedScorecard,
+    ConstitutionalConstraints,
     GoalArchitecture,
     GoalDecision,
-    ConstraintViolation,
-    Task,
+    HTNDecomposer,
+    MPCReferenceTracker,
     # Advanced components (still importable)
     NashWelfareAggregator,
-    MPCReferenceTracker,
+    Task,
 )
-
 
 # ---------------------------------------------------------------------------
 # Layer 1: ConstitutionalConstraints

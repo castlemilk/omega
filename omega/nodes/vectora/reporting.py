@@ -14,7 +14,7 @@ import logging
 import time
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
@@ -66,7 +66,7 @@ class ReportingNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["generate_report", "summarize_market", "format_signals"]
 
     def describe(self) -> str:
@@ -108,7 +108,9 @@ class ReportingNode(Node):
 
             report_text = result.get("report", "") if isinstance(result, dict) else str(result)
             self._last_report_length = len(report_text)
-            self._last_report_sections = result.get("sections", 0) if isinstance(result, dict) else 1
+            self._last_report_sections = (
+                result.get("sections", 0) if isinstance(result, dict) else 1
+            )
 
             return NodeOutput(
                 request_id=input.request_id,
@@ -135,7 +137,7 @@ class ReportingNode(Node):
                 metrics={"latency_ms": elapsed},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_rate(),
@@ -144,7 +146,7 @@ class ReportingNode(Node):
             "last_report_sections": float(self._last_report_sections),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
         iteration = feedback.get("iteration", 0)
 
@@ -173,14 +175,14 @@ class ReportingNode(Node):
 
     # ------------------------------------------------------------------ report generation
 
-    def _generate_full_report(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _generate_full_report(self, params: dict[str, Any]) -> dict[str, Any]:
         market_data = params.get("market_data", {})
         signals = params.get("signals", {})
         portfolio = params.get("portfolio", {})
         risk = params.get("risk", {})
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        lines: List[str] = []
+        lines: list[str] = []
         sections = 0
 
         # ── Header ─────────────────────────────────────────────────────────────
@@ -225,7 +227,7 @@ class ReportingNode(Node):
             lines.append(f"  Positions    : {len(weights)}")
             lines.append("")
             lines.append(f"  {'Ticker':<12} {'Weight':>8}  {'Signal':>8}")
-            lines.append(f"  {'-'*12} {'-'*8}  {'-'*8}")
+            lines.append(f"  {'-' * 12} {'-' * 8}  {'-' * 8}")
             for ticker in sorted(weights, key=lambda t: -weights[t]):
                 w = weights[ticker]
                 sig = signals.get(ticker, {}).get("composite", 0.0)
@@ -276,10 +278,13 @@ class ReportingNode(Node):
                 lines.append(f"  Trades Analysed  : {trades}")
                 lines.append(f"  Mean Daily Return: {mean_ret:+.4%}")
                 quality = (
-                    "Excellent" if sharpe > 1.5 else
-                    "Good" if sharpe > 0.8 else
-                    "Fair" if sharpe > 0.3 else
-                    "Poor"
+                    "Excellent"
+                    if sharpe > 1.5
+                    else "Good"
+                    if sharpe > 0.8
+                    else "Fair"
+                    if sharpe > 0.3
+                    else "Poor"
                 )
                 lines.append(f"  Strategy Quality : {quality}")
             else:
@@ -311,7 +316,7 @@ class ReportingNode(Node):
 
         # ── Footer ─────────────────────────────────────────────────────────────
         lines.append("=" * 68)
-        lines.append(f"  Nodes: DataIngestion | Signals | Strategy | Risk | Reporting")
+        lines.append("  Nodes: DataIngestion | Signals | Strategy | Risk | Reporting")
         lines.append("=" * 68)
 
         report_text = "\n".join(lines)
@@ -321,7 +326,7 @@ class ReportingNode(Node):
             "timestamp": timestamp,
         }
 
-    def _summarize_market(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _summarize_market(self, market_data: dict[str, Any]) -> dict[str, Any]:
         """Generate a brief market overview from raw OHLCV data."""
         if not market_data:
             return {"text": "No market data available."}
@@ -329,11 +334,11 @@ class ReportingNode(Node):
         valid = {k: v for k, v in market_data.items() if v}
         lines = [f"  Tickers tracked : {len(market_data)} ({len(valid)} with data)"]
 
-        gainers, losers = [], []
+        gainers: list[tuple[str, float, float]] = []
+        losers: list[tuple[str, float, float]] = []
         for ticker, data in valid.items():
             prices = [
-                float(p) for p in (data.get("adjclose") or data.get("close", []))
-                if p is not None
+                float(p) for p in (data.get("adjclose") or data.get("close", [])) if p is not None
             ]
             if len(prices) >= 2 and prices[-2] != 0:
                 ret = (prices[-1] - prices[-2]) / prices[-2]
@@ -344,16 +349,10 @@ class ReportingNode(Node):
 
         if gainers:
             top3 = gainers[:3]
-            lines.append(
-                "  Top gainers     : "
-                + ", ".join(f"{t} ({r:+.2%})" for t, r, _ in top3)
-            )
+            lines.append("  Top gainers     : " + ", ".join(f"{t} ({r:+.2%})" for t, r, _ in top3))
         if losers:
             bot3 = losers[:3]
-            lines.append(
-                "  Top losers      : "
-                + ", ".join(f"{t} ({r:+.2%})" for t, r, _ in bot3)
-            )
+            lines.append("  Top losers      : " + ", ".join(f"{t} ({r:+.2%})" for t, r, _ in bot3))
 
         if gainers or losers:
             all_rets = [r for _, r, _ in gainers + losers]
@@ -362,33 +361,24 @@ class ReportingNode(Node):
 
         return {"text": "\n".join(lines)}
 
-    def _format_signals(self, signals: Dict[str, Any]) -> Dict[str, Any]:
+    def _format_signals(self, signals: dict[str, Any]) -> dict[str, Any]:
         """Format signals into a readable table."""
         if not signals:
             return {"text": "  No signals generated."}
 
-        buys = [
-            (t, s) for t, s in signals.items()
-            if s.get("composite", 0.0) > 0.1
-        ]
-        sells = [
-            (t, s) for t, s in signals.items()
-            if s.get("composite", 0.0) < -0.1
-        ]
-        neutrals = [
-            (t, s) for t, s in signals.items()
-            if -0.1 <= s.get("composite", 0.0) <= 0.1
-        ]
+        buys = [(t, s) for t, s in signals.items() if s.get("composite", 0.0) > 0.1]
+        sells = [(t, s) for t, s in signals.items() if s.get("composite", 0.0) < -0.1]
+        neutrals = [(t, s) for t, s in signals.items() if -0.1 <= s.get("composite", 0.0) <= 0.1]
 
         buys.sort(key=lambda x: -x[1].get("composite", 0.0))
         sells.sort(key=lambda x: x[1].get("composite", 0.0))
 
         lines = [
             f"  {'Ticker':<12} {'Signal':>8}  {'Price':>10}  {'RSI':>6}  {'1d Ret':>8}",
-            f"  {'-'*12} {'-'*8}  {'-'*10}  {'-'*6}  {'-'*8}",
+            f"  {'-' * 12} {'-' * 8}  {'-' * 10}  {'-' * 6}  {'-' * 8}",
         ]
 
-        def fmt_row(ticker: str, sig: Dict[str, Any], label: str = "") -> str:
+        def fmt_row(ticker: str, sig: dict[str, Any], label: str = "") -> str:
             composite = sig.get("composite", 0.0)
             price = sig.get("price")
             rsi = sig.get("rsi")
@@ -396,7 +386,9 @@ class ReportingNode(Node):
             p_str = f"${price:.2f}" if price else "N/A"
             r_str = f"{rsi:.1f}" if rsi is not None else "N/A"
             d_str = f"{ret_1d:+.2%}" if ret_1d is not None else "N/A"
-            direction = "▲ BUY " if composite > 0.1 else ("▼ SELL" if composite < -0.1 else "  ---  ")
+            direction = (
+                "▲ BUY " if composite > 0.1 else ("▼ SELL" if composite < -0.1 else "  ---  ")
+            )
             return f"  {ticker:<12} {direction}  {p_str:>10}  {r_str:>6}  {d_str:>8}"
 
         if buys:

@@ -2,9 +2,10 @@
 
 import os
 import tempfile
-import pytest
-from omega.core.skill_loader import SkillLoader, SkillMetadata
 
+import pytest
+
+from omega.core.skill_loader import SkillLoader
 
 # ---------------------------------------------------------------------------
 # Fixtures

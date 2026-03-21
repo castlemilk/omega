@@ -1,7 +1,10 @@
 """Unit tests for ChallengeRegistry."""
 import pytest
+
 from omega.core.challenge_registry import (
-    ChallengeRegistry, Challenge, ChallengeSeverity, ChallengeStatus,
+    ChallengeRegistry,
+    ChallengeSeverity,
+    ChallengeStatus,
 )
 
 

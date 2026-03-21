@@ -16,7 +16,6 @@ import pytest
 from omega.core.metrics_exporter import MetricsExporter, _Histogram, _labels, _sanitize
 from omega.core.state_store import StateStore
 
-
 # ---------------------------------------------------------------------------
 # _Histogram unit tests
 # ---------------------------------------------------------------------------

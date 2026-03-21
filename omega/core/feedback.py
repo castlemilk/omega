@@ -16,7 +16,7 @@ import logging
 import select
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from omega.core.memory import MemoryKernel
 
@@ -33,18 +33,18 @@ class FeedbackEngine:
 
     def __init__(self, memory: MemoryKernel) -> None:
         self.memory = memory
-        self._pending_human: List[Dict[str, Any]] = []
-        self._pending_self: List[Dict[str, Any]] = []
-        self._cycle_predictions: Dict[str, Any] = {}   # store signals for self-eval next cycle
-        self._feedback_history: List[Dict[str, Any]] = []
+        self._pending_human: list[dict[str, Any]] = []
+        self._pending_self: list[dict[str, Any]] = []
+        self._cycle_predictions: dict[str, Any] = {}  # store signals for self-eval next cycle
+        self._feedback_history: list[dict[str, Any]] = []
 
     # ------------------------------------------------------------------ Human feedback
 
     def add_human_feedback(
         self,
         text: str,
-        target_node: Optional[str] = None,
-        sentiment: Optional[float] = None,
+        target_node: str | None = None,
+        sentiment: float | None = None,
         cycle: int = 0,
     ) -> None:
         """
@@ -88,10 +88,12 @@ class FeedbackEngine:
         )
         logger.info(
             "Human feedback received [sentiment=%.2f, target=%s]: %s",
-            sentiment, target_node or "system", text[:80],
+            sentiment,
+            target_node or "system",
+            text[:80],
         )
 
-    def try_read_cli_feedback(self, timeout_sec: float = 2.0, cycle: int = 0) -> Optional[str]:
+    def try_read_cli_feedback(self, timeout_sec: float = 2.0, cycle: int = 0) -> str | None:
         """
         Non-blocking read from stdin. If user types within timeout_sec, process it.
         Returns the feedback text if provided, else None.
@@ -112,7 +114,7 @@ class FeedbackEngine:
 
     # ------------------------------------------------------------------ Self-supervised feedback
 
-    def record_cycle_signals(self, signals: Dict[str, Any], cycle: int) -> None:
+    def record_cycle_signals(self, signals: dict[str, Any], cycle: int) -> None:
         """
         Store current cycle's signals for comparison in the next cycle.
         This enables self-supervised learning: compare prediction to outcome.
@@ -132,12 +134,12 @@ class FeedbackEngine:
         }
         self.memory.set_working("last_predictions", self._cycle_predictions)
 
-    def evaluate_predictions(self, current_signals: Dict[str, Any], cycle: int) -> List[Dict]:
+    def evaluate_predictions(self, current_signals: dict[str, Any], cycle: int) -> list[dict]:
         """
         Compare last cycle's predictions against current prices.
         Store outcomes as episodic memories and generate self-feedback.
         """
-        outcomes = []
+        outcomes: list[dict[str, Any]] = []
         last = self.memory.get_working("last_predictions") or self._cycle_predictions
 
         if not last or "signals" not in last:
@@ -194,22 +196,25 @@ class FeedbackEngine:
 
         if outcomes:
             hit_rate = sum(1 for o in outcomes if o["was_correct"]) / len(outcomes)
-            self._pending_self.append({
-                "cycle": cycle,
-                "hit_rate": hit_rate,
-                "n_predictions": len(outcomes),
-                "outcomes": outcomes,
-            })
+            self._pending_self.append(
+                {
+                    "cycle": cycle,
+                    "hit_rate": hit_rate,
+                    "n_predictions": len(outcomes),
+                    "outcomes": outcomes,
+                }
+            )
             logger.info(
                 "Self-supervised eval: %d predictions, hit_rate=%.0f%%",
-                len(outcomes), hit_rate * 100,
+                len(outcomes),
+                hit_rate * 100,
             )
 
         return outcomes
 
     # ------------------------------------------------------------------ Node improvement feedback
 
-    def get_improvement_feedback(self) -> Dict[str, Any]:
+    def get_improvement_feedback(self) -> dict[str, Any]:
         """
         Aggregate pending feedback into a dict that the improvement pass can use.
         Clears pending queues after returning.
@@ -217,20 +222,17 @@ class FeedbackEngine:
         # Summarize human feedback
         human_sentiments = [f["sentiment"] for f in self._pending_human]
         avg_human_sentiment = (
-            sum(human_sentiments) / len(human_sentiments)
-            if human_sentiments else 0.0
+            sum(human_sentiments) / len(human_sentiments) if human_sentiments else 0.0
         )
         negative_nodes = [
-            f["target_node"] for f in self._pending_human
+            f["target_node"]
+            for f in self._pending_human
             if f["sentiment"] < -0.3 and f["target_node"]
         ]
 
         # Summarize self-supervised feedback
         self_hit_rates = [f["hit_rate"] for f in self._pending_self]
-        avg_hit_rate = (
-            sum(self_hit_rates) / len(self_hit_rates)
-            if self_hit_rates else None
-        )
+        avg_hit_rate = sum(self_hit_rates) / len(self_hit_rates) if self_hit_rates else None
 
         feedback = {
             "human_feedback_count": len(self._pending_human),
@@ -253,9 +255,8 @@ class FeedbackEngine:
             return "  No feedback recorded yet."
         lines = [f"  Total feedback entries: {len(self._feedback_history)}"]
         for fb in self._feedback_history[-5:]:
-            sentiment_str = f"{fb['sentiment']:+.2f}" if fb.get('sentiment') is not None else "N/A"
+            sentiment_str = f"{fb['sentiment']:+.2f}" if fb.get("sentiment") is not None else "N/A"
             lines.append(
-                f"  [cycle {fb.get('cycle', '?')}] [{sentiment_str}] "
-                f"{fb.get('text', '')[:60]}"
+                f"  [cycle {fb.get('cycle', '?')}] [{sentiment_str}] {fb.get('text', '')[:60]}"
             )
         return "\n".join(lines)

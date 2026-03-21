@@ -1,17 +1,15 @@
 """Tests for omega.core.adversarial — 3-ring adversarial pressure."""
 
-import pytest
 from omega.core.adversarial import (
-    EnsembleDisagreementDetector,
-    ScenarioGenerator,
-    EvolutionaryTournament,
     AdversarialPressure,
     AdversarialReport,
     DisagreementResult,
+    EnsembleDisagreementDetector,
+    EvolutionaryTournament,
     Scenario,
+    ScenarioGenerator,
     TournamentResult,
 )
-
 
 # ---------------------------------------------------------------------------
 # Ring 1: EnsembleDisagreementDetector

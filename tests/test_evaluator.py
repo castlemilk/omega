@@ -1,9 +1,9 @@
 """Tests for the Evaluator harness."""
 
 import pytest
-from omega.core.evaluator import Evaluator, GoalSpec, MetricSpec, _mean, _stddev, _pct_change
+
+from omega.core.evaluator import Evaluator, GoalSpec, MetricSpec, _mean, _pct_change, _stddev
 from omega.core.node import NodeState
-from datetime import datetime
 
 
 def _make_state(node_id="n1", metrics=None):
@@ -20,6 +20,7 @@ def _make_state(node_id="n1", metrics=None):
 # ---------------------------------------------------------------------------
 # Statistics helpers
 # ---------------------------------------------------------------------------
+
 
 class TestStats:
     def test_mean_empty(self):
@@ -49,6 +50,7 @@ class TestStats:
 # MetricSpec
 # ---------------------------------------------------------------------------
 
+
 class TestMetricSpec:
     def test_minimize_better(self):
         ms = MetricSpec("latency", direction="minimize")
@@ -73,6 +75,7 @@ class TestMetricSpec:
 # GoalSpec builder
 # ---------------------------------------------------------------------------
 
+
 class TestGoalSpec:
     def test_builder_chain(self):
         spec = (
@@ -88,6 +91,7 @@ class TestGoalSpec:
 # ---------------------------------------------------------------------------
 # Evaluator — record & retrieve
 # ---------------------------------------------------------------------------
+
 
 class TestEvaluatorRecord:
     def setup_method(self):
@@ -143,6 +147,7 @@ class TestEvaluatorRecord:
 # Evaluator — reporting
 # ---------------------------------------------------------------------------
 
+
 class TestEvaluatorReport:
     def test_report_contains_goal(self):
         ev = Evaluator(":memory:")
@@ -171,6 +176,7 @@ class TestEvaluatorReport:
 # ---------------------------------------------------------------------------
 # Node metric history
 # ---------------------------------------------------------------------------
+
 
 class TestNodeMetricHistory:
     def test_node_metric_stored_and_retrieved(self):

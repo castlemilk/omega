@@ -4,6 +4,7 @@ Handles execution tracking, distributed traces, cost events, issue management,
 and improvement history. Complements MemoryKernel (domain memory) and
 Evaluator (goal scoring) without replacing them.
 """
+
 from __future__ import annotations
 
 import json
@@ -11,8 +12,6 @@ import sqlite3
 import time
 import uuid
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
-
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS nodes (
@@ -195,17 +194,17 @@ class StateBackend(ABC):
         node_id: str,
         name: str,
         version: str,
-        capabilities: List[str],
+        capabilities: list[str],
         health: float,
         status: str = "active",
-        brain_config: Optional[Dict] = None,
+        brain_config: dict | None = None,
     ) -> None: ...
 
     @abstractmethod
-    def get_node(self, node_id: str) -> Optional[Dict]: ...
+    def get_node(self, node_id: str) -> dict | None: ...
 
     @abstractmethod
-    def all_nodes(self) -> List[Dict]: ...
+    def all_nodes(self) -> list[dict]: ...
 
     # ------------------------------------------------------------------
     # Executions
@@ -217,8 +216,8 @@ class StateBackend(ABC):
         node_id: str,
         node_name: str,
         action: str,
-        trace_id: Optional[str] = None,
-        span_id: Optional[str] = None,
+        trace_id: str | None = None,
+        span_id: str | None = None,
         cycle: int = 0,
     ) -> str: ...
 
@@ -227,17 +226,17 @@ class StateBackend(ABC):
         self,
         exec_id: str,
         success: bool,
-        error_text: Optional[str] = None,
-        metrics: Optional[Dict] = None,
+        error_text: str | None = None,
+        metrics: dict | None = None,
     ) -> None: ...
 
     @abstractmethod
     def get_recent_executions(
         self,
-        node_id: Optional[str] = None,
+        node_id: str | None = None,
         limit: int = 20,
-        since_cycle: Optional[int] = None,
-    ) -> List[Dict]: ...
+        since_cycle: int | None = None,
+    ) -> list[dict]: ...
 
     # ------------------------------------------------------------------
     # Traces
@@ -250,7 +249,7 @@ class StateBackend(ABC):
         node_id: str,
         node_name: str,
         operation: str,
-        parent_span_id: Optional[str] = None,
+        parent_span_id: str | None = None,
         cycle: int = 0,
     ) -> str: ...
 
@@ -259,7 +258,7 @@ class StateBackend(ABC):
         self,
         span_id: str,
         status: str = "ok",
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> None: ...
 
     # ------------------------------------------------------------------
@@ -272,15 +271,15 @@ class StateBackend(ABC):
         detector: str,
         severity: str,
         description: str,
-        context: Optional[Dict] = None,
+        context: dict | None = None,
         cycle: int = 0,
     ) -> str: ...
 
     @abstractmethod
-    def resolve_issue(self, issue_id: str, cycle: Optional[int] = None) -> bool: ...
+    def resolve_issue(self, issue_id: str, cycle: int | None = None) -> bool: ...
 
     @abstractmethod
-    def get_open_issues(self) -> List[Dict]: ...
+    def get_open_issues(self) -> list[dict]: ...
 
     # ------------------------------------------------------------------
     # Improvements
@@ -293,8 +292,8 @@ class StateBackend(ABC):
         node_name: str,
         from_version: str,
         to_version: str,
-        before_metrics: Optional[Dict] = None,
-        after_metrics: Optional[Dict] = None,
+        before_metrics: dict | None = None,
+        after_metrics: dict | None = None,
         triggered_by: str = "metrics",
         cycle: int = 0,
     ) -> None: ...
@@ -302,9 +301,9 @@ class StateBackend(ABC):
     @abstractmethod
     def get_improvement_history(
         self,
-        node_id: Optional[str] = None,
+        node_id: str | None = None,
         limit: int = 20,
-    ) -> List[Dict]: ...
+    ) -> list[dict]: ...
 
 
 class SQLiteBackend(StateBackend):
@@ -340,12 +339,11 @@ class SQLiteBackend(StateBackend):
     def _migrate(self) -> None:
         """Add columns that may be missing in existing databases."""
         existing_cols = {
-            row[1]
-            for row in self._conn.execute("PRAGMA table_info(nodes)").fetchall()
+            row[1] for row in self._conn.execute("PRAGMA table_info(nodes)").fetchall()
         }
         if "brain_config_json" not in existing_cols:
             self._conn.execute(
-                "ALTER TABLE nodes ADD COLUMN brain_config_json TEXT NOT NULL DEFAULT '{\"provider\":\"none\"}'"
+                'ALTER TABLE nodes ADD COLUMN brain_config_json TEXT NOT NULL DEFAULT \'{"provider":"none"}\''
             )
             self._conn.commit()
 
@@ -358,10 +356,10 @@ class SQLiteBackend(StateBackend):
         node_id: str,
         name: str,
         version: str,
-        capabilities: List[str],
+        capabilities: list[str],
         health: float,
         status: str = "active",
-        brain_config: Optional[Dict] = None,
+        brain_config: dict | None = None,
     ) -> None:
         now = time.time()
         brain_json = json.dumps(brain_config or {"provider": "none"})
@@ -374,7 +372,16 @@ class SQLiteBackend(StateBackend):
                    SET name=?, version=?, capabilities_json=?, health=?, status=?,
                        brain_config_json=?, last_updated=?
                    WHERE node_id=?""",
-                (name, version, json.dumps(capabilities), health, status, brain_json, now, node_id),
+                (
+                    name,
+                    version,
+                    json.dumps(capabilities),
+                    health,
+                    status,
+                    brain_json,
+                    now,
+                    node_id,
+                ),
             )
         else:
             self._conn.execute(
@@ -382,14 +389,22 @@ class SQLiteBackend(StateBackend):
                    (node_id, name, version, capabilities_json, health, status,
                     brain_config_json, registered_at, last_updated)
                    VALUES (?,?,?,?,?,?,?,?,?)""",
-                (node_id, name, version, json.dumps(capabilities), health, status, brain_json, now, now),
+                (
+                    node_id,
+                    name,
+                    version,
+                    json.dumps(capabilities),
+                    health,
+                    status,
+                    brain_json,
+                    now,
+                    now,
+                ),
             )
         self._conn.commit()
 
-    def get_node(self, node_id: str) -> Optional[Dict]:
-        row = self._conn.execute(
-            "SELECT * FROM nodes WHERE node_id = ?", (node_id,)
-        ).fetchone()
+    def get_node(self, node_id: str) -> dict | None:
+        row = self._conn.execute("SELECT * FROM nodes WHERE node_id = ?", (node_id,)).fetchone()
         if row is None:
             return None
         d = dict(row)
@@ -397,7 +412,7 @@ class SQLiteBackend(StateBackend):
         d["brain_config"] = json.loads(d.pop("brain_config_json", '{"provider":"none"}'))
         return d
 
-    def all_nodes(self) -> List[Dict]:
+    def all_nodes(self) -> list[dict]:
         rows = self._conn.execute("SELECT * FROM nodes ORDER BY registered_at").fetchall()
         result = []
         for row in rows:
@@ -416,8 +431,8 @@ class SQLiteBackend(StateBackend):
         node_id: str,
         node_name: str,
         action: str,
-        trace_id: Optional[str] = None,
-        span_id: Optional[str] = None,
+        trace_id: str | None = None,
+        span_id: str | None = None,
         cycle: int = 0,
     ) -> str:
         exec_id = str(uuid.uuid4())
@@ -435,8 +450,8 @@ class SQLiteBackend(StateBackend):
         self,
         exec_id: str,
         success: bool,
-        error_text: Optional[str] = None,
-        metrics: Optional[Dict] = None,
+        error_text: str | None = None,
+        metrics: dict | None = None,
     ) -> None:
         now = time.time()
         row = self._conn.execute(
@@ -447,18 +462,25 @@ class SQLiteBackend(StateBackend):
             """UPDATE node_executions
                SET ended_at=?, duration_ms=?, success=?, error_text=?, metrics_json=?
                WHERE exec_id=?""",
-            (now, duration_ms, 1 if success else 0, error_text, json.dumps(metrics or {}), exec_id),
+            (
+                now,
+                duration_ms,
+                1 if success else 0,
+                error_text,
+                json.dumps(metrics or {}),
+                exec_id,
+            ),
         )
         self._conn.commit()
 
     def get_recent_executions(
         self,
-        node_id: Optional[str] = None,
+        node_id: str | None = None,
         limit: int = 20,
-        since_cycle: Optional[int] = None,
-    ) -> List[Dict]:
+        since_cycle: int | None = None,
+    ) -> list[dict]:
         query = "SELECT * FROM node_executions WHERE 1=1"
-        params: List = []
+        params: list = []
         if node_id is not None:
             query += " AND node_id = ?"
             params.append(node_id)
@@ -485,7 +507,7 @@ class SQLiteBackend(StateBackend):
         node_id: str,
         node_name: str,
         operation: str,
-        parent_span_id: Optional[str] = None,
+        parent_span_id: str | None = None,
         cycle: int = 0,
     ) -> str:
         span_id = str(uuid.uuid4())
@@ -503,7 +525,7 @@ class SQLiteBackend(StateBackend):
         self,
         span_id: str,
         status: str = "ok",
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> None:
         now = time.time()
         row = self._conn.execute(
@@ -518,7 +540,7 @@ class SQLiteBackend(StateBackend):
         )
         self._conn.commit()
 
-    def get_trace(self, trace_id: str) -> List[Dict]:
+    def get_trace(self, trace_id: str) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM traces WHERE trace_id = ? ORDER BY started_at",
             (trace_id,),
@@ -530,7 +552,7 @@ class SQLiteBackend(StateBackend):
             result.append(d)
         return result
 
-    def get_recent_traces(self, limit: int = 10) -> List[Dict]:
+    def get_recent_traces(self, limit: int = 10) -> list[dict]:
         rows = self._conn.execute(
             """SELECT trace_id,
                       MIN(started_at) as trace_started,
@@ -557,9 +579,9 @@ class SQLiteBackend(StateBackend):
         provider: str,
         call_type: str,
         duration_ms: float,
-        exec_id: Optional[str] = None,
+        exec_id: str | None = None,
         estimated_cost_usd: float = 0.0,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         cycle: int = 0,
     ) -> None:
         cost_id = str(uuid.uuid4())
@@ -583,9 +605,9 @@ class SQLiteBackend(StateBackend):
         )
         self._conn.commit()
 
-    def get_cost_summary(self, since_cycle: Optional[int] = None) -> Dict:
+    def get_cost_summary(self, since_cycle: int | None = None) -> dict:
         query = "SELECT provider, COUNT(*) as calls, SUM(duration_ms) as total_ms, SUM(estimated_cost_usd) as total_cost FROM cost_events WHERE 1=1"
-        params: List = []
+        params: list = []
         if since_cycle is not None:
             query += " AND cycle >= ?"
             params.append(since_cycle)
@@ -610,7 +632,7 @@ class SQLiteBackend(StateBackend):
         detector: str,
         severity: str,
         description: str,
-        context: Optional[Dict] = None,
+        context: dict | None = None,
         cycle: int = 0,
     ) -> bool:
         existing = self._conn.execute(
@@ -648,7 +670,7 @@ class SQLiteBackend(StateBackend):
         self._conn.commit()
         return result.rowcount > 0
 
-    def resolve_issue(self, issue_id: str, cycle: Optional[int] = None) -> bool:
+    def resolve_issue(self, issue_id: str, cycle: int | None = None) -> bool:
         now = time.time()
         result = self._conn.execute(
             """UPDATE issues
@@ -662,7 +684,7 @@ class SQLiteBackend(StateBackend):
             return True
         return False
 
-    def get_open_issues(self) -> List[Dict]:
+    def get_open_issues(self) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM issues WHERE state != 'resolved' ORDER BY opened_at DESC"
         ).fetchall()
@@ -673,7 +695,7 @@ class SQLiteBackend(StateBackend):
             result.append(d)
         return result
 
-    def get_all_issues(self, limit: int = 50) -> List[Dict]:
+    def get_all_issues(self, limit: int = 50) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM issues ORDER BY opened_at DESC LIMIT ?", (limit,)
         ).fetchall()
@@ -693,7 +715,7 @@ class SQLiteBackend(StateBackend):
         action_type: str,
         entity_type: str,
         entity_id: str,
-        data: Optional[Dict] = None,
+        data: dict | None = None,
         cycle: int = 0,
     ) -> None:
         log_id = str(uuid.uuid4())
@@ -701,7 +723,15 @@ class SQLiteBackend(StateBackend):
             """INSERT INTO activity_log
                (log_id, action_type, entity_type, entity_id, data_json, recorded_at, cycle)
                VALUES (?,?,?,?,?,?,?)""",
-            (log_id, action_type, entity_type, entity_id, json.dumps(data or {}), time.time(), cycle),
+            (
+                log_id,
+                action_type,
+                entity_type,
+                entity_id,
+                json.dumps(data or {}),
+                time.time(),
+                cycle,
+            ),
         )
         self._conn.commit()
 
@@ -715,8 +745,8 @@ class SQLiteBackend(StateBackend):
         node_name: str,
         from_version: str,
         to_version: str,
-        before_metrics: Dict,
-        after_metrics: Dict,
+        before_metrics: dict,
+        after_metrics: dict,
         triggered_by: str = "metrics",
         cycle: int = 0,
     ) -> None:
@@ -748,11 +778,9 @@ class SQLiteBackend(StateBackend):
             cycle,
         )
 
-    def get_improvement_history(
-        self, node_id: Optional[str] = None, limit: int = 20
-    ) -> List[Dict]:
+    def get_improvement_history(self, node_id: str | None = None, limit: int = 20) -> list[dict]:
         query = "SELECT * FROM improvement_log WHERE 1=1"
-        params: List = []
+        params: list = []
         if node_id is not None:
             query += " AND node_id = ?"
             params.append(node_id)
@@ -771,7 +799,7 @@ class SQLiteBackend(StateBackend):
     # Config revisions
     # ------------------------------------------------------------------
 
-    def save_config_revision(self, node_id: str, version: str, config: Dict) -> None:
+    def save_config_revision(self, node_id: str, version: str, config: dict) -> None:
         revision_id = str(uuid.uuid4())
         self._conn.execute(
             """INSERT INTO config_revisions
@@ -781,7 +809,7 @@ class SQLiteBackend(StateBackend):
         )
         self._conn.commit()
 
-    def get_config_history(self, node_id: str) -> List[Dict]:
+    def get_config_history(self, node_id: str) -> list[dict]:
         rows = self._conn.execute(
             "SELECT * FROM config_revisions WHERE node_id = ? ORDER BY recorded_at DESC",
             (node_id,),
@@ -797,7 +825,7 @@ class SQLiteBackend(StateBackend):
     # DashboardNode helpers
     # ------------------------------------------------------------------
 
-    def get_nodes_with_recent_metrics(self, minutes: int = 10) -> List[Dict]:
+    def get_nodes_with_recent_metrics(self, minutes: int = 10) -> list[dict]:
         """
         Return node records that have at least one execution in the last N minutes.
 
@@ -813,7 +841,7 @@ class SQLiteBackend(StateBackend):
         ).fetchall()
         return [dict(r) for r in rows]
 
-    def get_latest_execution_time(self) -> Optional[float]:
+    def get_latest_execution_time(self) -> float | None:
         """
         Return the Unix timestamp of the most recent node execution.
 
@@ -836,7 +864,7 @@ class SQLiteBackend(StateBackend):
         model: str,
         operation: str,
         action_decided: str,
-        parameters: Optional[Dict] = None,
+        parameters: dict | None = None,
         reasoning: str = "",
         confidence: float = 0.0,
         outcome: str = "pending",
@@ -904,15 +932,15 @@ class SQLiteBackend(StateBackend):
 
     def get_brain_executions(
         self,
-        node_id: Optional[str] = None,
-        provider: Optional[str] = None,
-        operation: Optional[str] = None,
-        since_cycle: Optional[int] = None,
+        node_id: str | None = None,
+        provider: str | None = None,
+        operation: str | None = None,
+        since_cycle: int | None = None,
         limit: int = 50,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Query brain execution history — useful for A/B testing model decisions."""
         query = "SELECT * FROM brain_executions WHERE 1=1"
-        params: List = []
+        params: list = []
         if node_id:
             query += " AND node_id = ?"
             params.append(node_id)
@@ -935,10 +963,10 @@ class SQLiteBackend(StateBackend):
             result.append(d)
         return result
 
-    def get_brain_summary(self, since_cycle: Optional[int] = None) -> Dict:
+    def get_brain_summary(self, since_cycle: int | None = None) -> dict:
         """Aggregate brain execution stats — provider breakdown, action distribution."""
         query = "SELECT provider, model, outcome, COUNT(*) as count, AVG(confidence) as avg_confidence FROM brain_executions WHERE 1=1"
-        params: List = []
+        params: list = []
         if since_cycle is not None:
             query += " AND cycle >= ?"
             params.append(since_cycle)
@@ -954,10 +982,10 @@ class SQLiteBackend(StateBackend):
         self,
         cycle: int,
         approved: bool,
-        violations: Optional[List] = None,
-        pareto_ranks: Optional[Dict] = None,
-        adjustments: Optional[Dict] = None,
-        vcg_payments: Optional[Dict] = None,
+        violations: list | None = None,
+        pareto_ranks: dict | None = None,
+        adjustments: dict | None = None,
+        vcg_payments: dict | None = None,
         goodhart_warning: bool = False,
     ) -> str:
         decision_id = str(uuid.uuid4())
@@ -967,7 +995,9 @@ class SQLiteBackend(StateBackend):
                 adjustments_json, vcg_payments_json, goodhart_warning, recorded_at)
                VALUES (?,?,?,?,?,?,?,?,?)""",
             (
-                decision_id, cycle, 1 if approved else 0,
+                decision_id,
+                cycle,
+                1 if approved else 0,
                 json.dumps(violations or []),
                 json.dumps(pareto_ranks or {}),
                 json.dumps(adjustments or {}),
@@ -980,10 +1010,10 @@ class SQLiteBackend(StateBackend):
         return decision_id
 
     def get_alignment_decisions(
-        self, since_cycle: Optional[int] = None, limit: int = 20
-    ) -> List[Dict]:
+        self, since_cycle: int | None = None, limit: int = 20
+    ) -> list[dict]:
         query = "SELECT * FROM alignment_decisions WHERE 1=1"
-        params: List = []
+        params: list = []
         if since_cycle is not None:
             query += " AND cycle >= ?"
             params.append(since_cycle)
@@ -1011,8 +1041,8 @@ class SQLiteBackend(StateBackend):
         flagged: bool,
         max_disagreement: float = 0.0,
         scenario_count: int = 0,
-        failure_cases: Optional[List] = None,
-        details: Optional[Dict] = None,
+        failure_cases: list | None = None,
+        details: dict | None = None,
     ) -> str:
         result_id = str(uuid.uuid4())
         self._conn.execute(
@@ -1021,8 +1051,12 @@ class SQLiteBackend(StateBackend):
                 scenario_count, failure_cases_json, details_json, recorded_at)
                VALUES (?,?,?,?,?,?,?,?,?)""",
             (
-                result_id, cycle, ring, 1 if flagged else 0,
-                max_disagreement, scenario_count,
+                result_id,
+                cycle,
+                ring,
+                1 if flagged else 0,
+                max_disagreement,
+                scenario_count,
                 json.dumps(failure_cases or []),
                 json.dumps(details or {}),
                 time.time(),
@@ -1032,10 +1066,10 @@ class SQLiteBackend(StateBackend):
         return result_id
 
     def get_adversarial_results(
-        self, since_cycle: Optional[int] = None, ring: Optional[int] = None, limit: int = 20
-    ) -> List[Dict]:
+        self, since_cycle: int | None = None, ring: int | None = None, limit: int = 20
+    ) -> list[dict]:
         query = "SELECT * FROM adversarial_results WHERE 1=1"
-        params: List = []
+        params: list = []
         if since_cycle is not None:
             query += " AND cycle >= ?"
             params.append(since_cycle)
@@ -1062,12 +1096,12 @@ class SQLiteBackend(StateBackend):
         cycle: int,
         approved: bool,
         composite_score: float,
-        scorecard: Optional[Dict] = None,
-        nash_weights: Optional[Dict] = None,
+        scorecard: dict | None = None,
+        nash_weights: dict | None = None,
         tracking_error: float = 0.0,
-        control_action: Optional[Dict] = None,
-        subtasks: Optional[List] = None,
-        violations: Optional[List] = None,
+        control_action: dict | None = None,
+        subtasks: list | None = None,
+        violations: list | None = None,
     ) -> str:
         tracking_id = str(uuid.uuid4())
         self._conn.execute(
@@ -1077,7 +1111,10 @@ class SQLiteBackend(StateBackend):
                 subtasks_json, violations_json, recorded_at)
                VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
             (
-                tracking_id, cycle, 1 if approved else 0, composite_score,
+                tracking_id,
+                cycle,
+                1 if approved else 0,
+                composite_score,
                 json.dumps(scorecard or {}),
                 json.dumps(nash_weights or {}),
                 tracking_error,
@@ -1090,11 +1127,9 @@ class SQLiteBackend(StateBackend):
         self._conn.commit()
         return tracking_id
 
-    def get_goal_tracking(
-        self, since_cycle: Optional[int] = None, limit: int = 20
-    ) -> List[Dict]:
+    def get_goal_tracking(self, since_cycle: int | None = None, limit: int = 20) -> list[dict]:
         query = "SELECT * FROM goal_tracking WHERE 1=1"
-        params: List = []
+        params: list = []
         if since_cycle is not None:
             query += " AND cycle >= ?"
             params.append(since_cycle)
@@ -1112,7 +1147,7 @@ class SQLiteBackend(StateBackend):
             result.append(d)
         return result
 
-    def set_node_brain_config(self, node_id: str, brain_config: Dict) -> None:
+    def set_node_brain_config(self, node_id: str, brain_config: dict) -> None:
         """
         Persist an updated brain config to the nodes table.
 
@@ -1134,35 +1169,41 @@ class SQLiteBackend(StateBackend):
     # Dashboard data
     # ------------------------------------------------------------------
 
-    def get_dashboard_data(self, since_cycle: int = 0) -> Dict:
+    def get_dashboard_data(self, since_cycle: int = 0) -> dict:
         """Returns structured dict suitable for feeding a monitoring dashboard."""
         nodes = self.all_nodes()
         node_data = []
         for n in nodes:
-            execs = self.get_recent_executions(node_id=n["node_id"], limit=100, since_cycle=since_cycle)
+            execs = self.get_recent_executions(
+                node_id=n["node_id"], limit=100, since_cycle=since_cycle
+            )
             total_execs = len(execs)
             failed_execs = sum(1 for e in execs if not e["success"])
             latencies = [e["duration_ms"] for e in execs if e["duration_ms"] is not None]
 
             improvements = self.get_improvement_history(node_id=n["node_id"], limit=10)
 
-            node_data.append({
-                "id": n["node_id"],
-                "name": n["name"],
-                "version": n["version"],
-                "health": n["health"],
-                "status": n["status"],
-                "executions_total": total_execs,
-                "error_rate": failed_execs / max(1, total_execs),
-                "avg_latency_ms": sum(latencies) / len(latencies) if latencies else 0,
-                "p95_latency_ms": (
-                    sorted(latencies)[int(len(latencies) * 0.95)]
-                    if len(latencies) > 1
-                    else (latencies[0] if latencies else 0)
-                ),
-                "improvement_count": len(improvements),
-                "last_improved_to": improvements[0]["to_version"] if improvements else n["version"],
-            })
+            node_data.append(
+                {
+                    "id": n["node_id"],
+                    "name": n["name"],
+                    "version": n["version"],
+                    "health": n["health"],
+                    "status": n["status"],
+                    "executions_total": total_execs,
+                    "error_rate": failed_execs / max(1, total_execs),
+                    "avg_latency_ms": sum(latencies) / len(latencies) if latencies else 0,
+                    "p95_latency_ms": (
+                        sorted(latencies)[int(len(latencies) * 0.95)]
+                        if len(latencies) > 1
+                        else (latencies[0] if latencies else 0)
+                    ),
+                    "improvement_count": len(improvements),
+                    "last_improved_to": improvements[0]["to_version"]
+                    if improvements
+                    else n["version"],
+                }
+            )
 
         cost_summary = self.get_cost_summary(since_cycle=since_cycle)
         open_issues = self.get_open_issues()

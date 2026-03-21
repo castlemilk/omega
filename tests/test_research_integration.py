@@ -7,13 +7,11 @@ work end-to-end as the spec describes:
   → improvement (if alignment-approved)
 """
 
-import pytest
-from omega.core.alignment import AlignmentLayer, AlignmentDecision
 from omega.core.adversarial import AdversarialPressure, AdversarialReport
-from omega.core.memory_v2 import MemoryKernelV2, RegimeState
+from omega.core.alignment import AlignmentDecision, AlignmentLayer
 from omega.core.goals import GoalArchitecture, GoalDecision
+from omega.core.memory_v2 import MemoryKernelV2, RegimeState
 from omega.core.state_store import StateStore
-
 
 # ---------------------------------------------------------------------------
 # Helpers

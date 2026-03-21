@@ -21,14 +21,13 @@ cases for consumption by the improvement loop.
 
 from __future__ import annotations
 
-import json
 import logging
 import math
 import random
-import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger("omega.core.adversarial")
 
@@ -44,8 +43,8 @@ class DisagreementResult:
 
     flagged: bool
     max_disagreement: float
-    disagreeing_variants: List[str]
-    outputs: Dict[str, Any]  # variant_id → output
+    disagreeing_variants: list[str]
+    outputs: dict[str, Any]  # variant_id → output
 
 
 @dataclass
@@ -55,7 +54,7 @@ class Scenario:
     scenario_id: str
     name: str
     description: str
-    market_shocks: Dict[str, float]  # ticker → shock multiplier
+    market_shocks: dict[str, float]  # ticker → shock multiplier
     vol_multiplier: float
     correlation_breakdown: bool
     severity: float  # 0 → 1
@@ -66,9 +65,9 @@ class TournamentResult:
     """Output of Ring 3 evolutionary tournament."""
 
     champion_id: str
-    champion_params: Dict[str, Any]
-    eliminated: List[str]
-    fitness_scores: Dict[str, float]
+    champion_params: dict[str, Any]
+    eliminated: list[str]
+    fitness_scores: dict[str, float]
     generation: int
 
 
@@ -77,10 +76,10 @@ class AdversarialReport:
     """Consolidated output from one full adversarial pressure cycle."""
 
     cycle: int
-    ring1_result: Optional[DisagreementResult]
-    ring2_scenarios: List[Scenario]
-    ring3_result: Optional[TournamentResult]
-    failure_cases: List[Dict]  # for feeding back into improvement loop
+    ring1_result: DisagreementResult | None
+    ring2_scenarios: list[Scenario]
+    ring3_result: TournamentResult | None
+    failure_cases: list[dict]  # for feeding back into improvement loop
 
 
 # ---------------------------------------------------------------------------
@@ -106,15 +105,15 @@ class EnsembleDisagreementDetector:
 
     def __init__(self, disagreement_threshold: float = 0.2) -> None:
         self.disagreement_threshold = disagreement_threshold
-        self._variants: Dict[str, str] = {}          # variant_id → description
-        self._outputs: Dict[str, Dict[str, float]] = {}  # variant_id → output
+        self._variants: dict[str, str] = {}          # variant_id → description
+        self._outputs: dict[str, dict[str, float]] = {}  # variant_id → output
 
     def register_variant(self, variant_id: str, description: str = "") -> None:
         """Register a variant slot; outputs are submitted later."""
         self._variants[variant_id] = description
         logger.debug("Registered variant '%s': %s", variant_id, description)
 
-    def submit_output(self, variant_id: str, output: Dict[str, float]) -> None:
+    def submit_output(self, variant_id: str, output: dict[str, float]) -> None:
         """Submit a variant's output (numeric dict of signal values)."""
         if variant_id not in self._variants:
             logger.warning(
@@ -125,7 +124,7 @@ class EnsembleDisagreementDetector:
         self._outputs[variant_id] = output
 
     def _normalised_distance(
-        self, a: Dict[str, float], b: Dict[str, float]
+        self, a: dict[str, float], b: dict[str, float]
     ) -> float:
         """
         Pairwise Euclidean distance between two signal dicts, normalised by
@@ -146,7 +145,7 @@ class EnsembleDisagreementDetector:
         """
         variant_ids = list(self._outputs.keys())
         max_disagreement = 0.0
-        disagreeing_variants: List[str] = []
+        disagreeing_variants: list[str] = []
 
         for i in range(len(variant_ids)):
             for j in range(i + 1, len(variant_ids)):
@@ -217,10 +216,10 @@ class ScenarioGenerator:
     # Common tickers used in base scenarios
     _DEFAULT_TICKERS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "ADAUSDT"]
 
-    def __init__(self, seed: Optional[int] = None) -> None:
+    def __init__(self, seed: int | None = None) -> None:
         self._rng = random.Random(seed)
 
-    def _base_stress_scenarios(self) -> List[Scenario]:
+    def _base_stress_scenarios(self) -> list[Scenario]:
         """Return ~6 canonical market stress scenarios."""
         tickers = self._DEFAULT_TICKERS
 
@@ -312,10 +311,10 @@ class ScenarioGenerator:
 
     def generate_adversarial(
         self,
-        current_signals: Dict[str, float],
-        strategy_params: Dict[str, Any],
+        current_signals: dict[str, float],
+        strategy_params: dict[str, Any],
         n_scenarios: int = 5,
-    ) -> List[Scenario]:
+    ) -> list[Scenario]:
         """
         Generate N adversarial scenarios calibrated to stress the current strategy.
 
@@ -324,7 +323,7 @@ class ScenarioGenerator:
         - Merges with base scenarios and returns the top N by severity.
         """
         base = self._base_stress_scenarios()
-        targeted: List[Scenario] = []
+        targeted: list[Scenario] = []
 
         if current_signals:
             # Sort tickers by signal strength descending (overweight assets)
@@ -339,7 +338,7 @@ class ScenarioGenerator:
                 shock_magnitude = -(
                     0.25 + self._rng.uniform(0.05, 0.20)
                 )
-                shocks: Dict[str, float] = {}
+                shocks: dict[str, float] = {}
                 for ticker in current_signals:
                     shocks[ticker] = (
                         shock_magnitude if ticker == asset
@@ -386,9 +385,9 @@ class ScenarioGenerator:
 
     def stress_test(
         self,
-        signals: Dict[str, float],
+        signals: dict[str, float],
         scenario: Scenario,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """
         Apply scenario shocks to signals and return stressed signals.
 
@@ -397,7 +396,7 @@ class ScenarioGenerator:
           - If correlation_breakdown: add small random noise to each signal
           - Result is clamped to [-1.0, 1.0]
         """
-        stressed: Dict[str, float] = {}
+        stressed: dict[str, float] = {}
         for ticker, signal_val in signals.items():
             shock = scenario.market_shocks.get(ticker, 0.0)
             new_val = signal_val * (1.0 + shock)
@@ -446,14 +445,14 @@ class EvolutionaryTournament:
     ) -> None:
         self.population_size = population_size
         self.mutation_rate = mutation_rate
-        self._population: Dict[str, Dict[str, Any]] = {}  # variant_id → params
-        self._fitness_history: Dict[str, List[float]] = {}
+        self._population: dict[str, dict[str, Any]] = {}  # variant_id → params
+        self._fitness_history: dict[str, list[float]] = {}
         self._generation = 0
 
     def _new_variant_id(self) -> str:
         return f"v_{uuid.uuid4().hex[:8]}"
 
-    def _mutate_params(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _mutate_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """
         Return a mutated copy of params.
 
@@ -462,7 +461,7 @@ class EvolutionaryTournament:
         Int values are mutated as floats then rounded.
         Other types are passed through unchanged.
         """
-        mutated: Dict[str, Any] = {}
+        mutated: dict[str, Any] = {}
         for key, val in params.items():
             if isinstance(val, bool):
                 # Flip with low probability
@@ -485,7 +484,7 @@ class EvolutionaryTournament:
                 mutated[key] = val
         return mutated
 
-    def initialise_population(self, base_params: Dict[str, Any]) -> None:
+    def initialise_population(self, base_params: dict[str, Any]) -> None:
         """
         Create population_size variants by randomly mutating base_params.
         The base_params themselves are included as the first variant.
@@ -506,17 +505,17 @@ class EvolutionaryTournament:
         )
 
     def evaluate(
-        self, fitness_fn: Callable[[Dict], float]
-    ) -> Dict[str, float]:
+        self, fitness_fn: Callable[[dict], float]
+    ) -> dict[str, float]:
         """
         Call fitness_fn for each variant in the population.
         Returns {variant_id: fitness_score}.
         """
-        scores: Dict[str, float] = {}
+        scores: dict[str, float] = {}
         for vid, params in self._population.items():
             try:
                 score = fitness_fn(params)
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 logger.warning(
                     "Ring 3: fitness_fn raised for variant '%s': %s", vid, exc
                 )
@@ -533,7 +532,7 @@ class EvolutionaryTournament:
         return scores
 
     def tournament_select(
-        self, fitness_scores: Dict[str, float], k: int = 3
+        self, fitness_scores: dict[str, float], k: int = 3
     ) -> str:
         """
         k-tournament selection: randomly pick k variants, return the best.
@@ -545,7 +544,7 @@ class EvolutionaryTournament:
         return max(selected, key=lambda vid: fitness_scores[vid])
 
     def eliminate_losers(
-        self, fitness_scores: Dict[str, float], survival_rate: float = 0.5
+        self, fitness_scores: dict[str, float], survival_rate: float = 0.5
     ) -> None:
         """
         Keep the top survival_rate fraction of variants; eliminate the rest.
@@ -571,7 +570,7 @@ class EvolutionaryTournament:
             len(self._population),
         )
 
-    def spawn_variants(self, parent_id: str) -> List[str]:
+    def spawn_variants(self, parent_id: str) -> list[str]:
         """
         Mutate the winner to create 2 new child variants.
         Returns the list of new variant IDs.
@@ -583,7 +582,7 @@ class EvolutionaryTournament:
             return []
 
         parent_params = self._population[parent_id]
-        new_ids: List[str] = []
+        new_ids: list[str] = []
 
         for _ in range(2):
             child_id = self._new_variant_id()
@@ -596,7 +595,7 @@ class EvolutionaryTournament:
         return new_ids
 
     def run_tournament(
-        self, fitness_fn: Callable[[Dict], float]
+        self, fitness_fn: Callable[[dict], float]
     ) -> TournamentResult:
         """
         Run a full tournament cycle:
@@ -644,7 +643,7 @@ class EvolutionaryTournament:
             generation=self._generation,
         )
 
-    def get_champion_params(self) -> Optional[Dict[str, Any]]:
+    def get_champion_params(self) -> dict[str, Any] | None:
         """
         Return the params of the highest-fitness variant based on cumulative
         fitness history.  Returns None if no variants are registered.
@@ -652,7 +651,7 @@ class EvolutionaryTournament:
         if not self._population:
             return None
 
-        best_id: Optional[str] = None
+        best_id: str | None = None
         best_score = float("-inf")
 
         for vid in self._population:
@@ -719,18 +718,18 @@ class AdversarialPressure:
         self,
         ring1_threshold: float = 0.2,
         population_size: int = 10,
-        active_rings: Optional[List[int]] = None,
+        active_rings: list[int] | None = None,
     ) -> None:
         self.ring1 = EnsembleDisagreementDetector(
             disagreement_threshold=ring1_threshold
         )
         self.ring2 = ScenarioGenerator()
         self.ring3 = EvolutionaryTournament(population_size=population_size)
-        self._failure_cases: List[Dict] = []
+        self._failure_cases: list[dict] = []
 
         # Only Ring 1 is active by default.  Set active_rings=[1,2] or [1,2,3]
         # once the earlier ring(s) have been validated.
-        self.active_rings: List[int] = list(active_rings) if active_rings is not None else [1]
+        self.active_rings: list[int] = list(active_rings) if active_rings is not None else [1]
 
         # Ring 1 validation tracking
         self._ring1_cycles_run: int = 0
@@ -743,10 +742,10 @@ class AdversarialPressure:
     def run(
         self,
         cycle: int,
-        variant_outputs: Dict[str, Dict[str, float]],
-        current_signals: Dict[str, float],
-        strategy_params: Dict[str, Any],
-        fitness_fn: Optional[Callable] = None,
+        variant_outputs: dict[str, dict[str, float]],
+        current_signals: dict[str, float],
+        strategy_params: dict[str, Any],
+        fitness_fn: Callable | None = None,
     ) -> AdversarialReport:
         """
         Execute all three rings as appropriate for the given cycle.
@@ -765,7 +764,7 @@ class AdversarialPressure:
         )
 
         # ---- Ring 2 (dormant unless in active_rings) ---------------
-        ring2_scenarios: List[Scenario] = []
+        ring2_scenarios: list[Scenario] = []
         if 2 in self.active_rings and cycle % self.RING2_INTERVAL == 0:
             ring2_scenarios = self._run_ring2(
                 cycle=cycle,
@@ -774,7 +773,7 @@ class AdversarialPressure:
             )
 
         # ---- Ring 3 (dormant unless in active_rings) ---------------
-        ring3_result: Optional[TournamentResult] = None
+        ring3_result: TournamentResult | None = None
         if 3 in self.active_rings and cycle % self.RING3_INTERVAL == 0 and fitness_fn is not None:
             ring3_result = self._run_ring3(
                 cycle=cycle,
@@ -806,7 +805,7 @@ class AdversarialPressure:
     def _run_ring1(
         self,
         cycle: int,
-        variant_outputs: Dict[str, Dict[str, float]],
+        variant_outputs: dict[str, dict[str, float]],
     ) -> DisagreementResult:
         """Submit all variant outputs to Ring 1 and detect disagreement."""
         self.ring1.clear()
@@ -830,9 +829,9 @@ class AdversarialPressure:
     def _run_ring2(
         self,
         cycle: int,
-        current_signals: Dict[str, float],
-        strategy_params: Dict[str, Any],
-    ) -> List[Scenario]:
+        current_signals: dict[str, float],
+        strategy_params: dict[str, Any],
+    ) -> list[Scenario]:
         """Generate adversarial scenarios and stress-test current signals."""
         logger.info("Ring 2 [cycle=%d]: generating adversarial scenarios", cycle)
         scenarios = self.ring2.generate_adversarial(
@@ -852,7 +851,7 @@ class AdversarialPressure:
         self,
         cycle: int,
         fitness_fn: Callable,
-    ) -> Optional[TournamentResult]:
+    ) -> TournamentResult | None:
         """Run evolutionary tournament if population is initialised."""
         if not self.ring3._population:
             logger.warning(
@@ -882,11 +881,11 @@ class AdversarialPressure:
     def _collect_cycle_failures(
         self,
         cycle: int,
-        ring1_result: Optional[DisagreementResult],
-        ring2_scenarios: List[Scenario],
-        current_signals: Dict[str, float],
-        ring3_result: Optional[TournamentResult],
-    ) -> List[Dict]:
+        ring1_result: DisagreementResult | None,
+        ring2_scenarios: list[Scenario],
+        current_signals: dict[str, float],
+        ring3_result: TournamentResult | None,
+    ) -> list[dict]:
         """
         Derive failure cases from this cycle's ring outputs.
 
@@ -895,7 +894,7 @@ class AdversarialPressure:
             stressed signal mean below -0.3.
         Ring 3 failure: champion fitness below a minimum threshold.
         """
-        failures: List[Dict] = []
+        failures: list[dict] = []
 
         # Ring 1 failure cases
         if ring1_result is not None and ring1_result.flagged:
@@ -1025,7 +1024,7 @@ class AdversarialPressure:
     # Failure case management
     # ------------------------------------------------------------------
 
-    def collect_failure_cases(self) -> List[Dict]:
+    def collect_failure_cases(self) -> list[dict]:
         """
         Return all accumulated failure cases for consumption by the
         improvement loop.  Does NOT clear the buffer; call

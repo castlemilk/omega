@@ -25,7 +25,7 @@ Usage::
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class OmegaError(Exception):
@@ -36,11 +36,11 @@ class OmegaError(Exception):
     dict without knowing the concrete error type.
     """
 
-    def __init__(self, message: str, context: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(self, message: str, context: dict[str, Any] | None = None) -> None:
         super().__init__(message)
-        self.context: Dict[str, Any] = context or {}
+        self.context: dict[str, Any] = context or {}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialise the error to a plain dict for structured logging."""
         return {
             "error_type": type(self).__name__,
@@ -174,7 +174,7 @@ class VerificationGateError(OmegaError):
         self,
         message: str,
         gate_type: str,
-        evidence: Dict[str, Any],
+        evidence: dict[str, Any],
         **extra: Any,
     ) -> None:
         super().__init__(

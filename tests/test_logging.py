@@ -4,8 +4,6 @@ import json
 import logging
 from io import StringIO
 
-import pytest
-
 from omega.core.logging import _JsonFormatter, bound_logger, configure_logging, get_logger
 
 

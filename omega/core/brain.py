@@ -26,25 +26,25 @@ import urllib.error
 import urllib.request
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
-
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Data contracts
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BrainConfig:
     """All configuration needed to initialise a BrainAdapter."""
 
-    provider: str = "none"       # "anthropic" | "openai" | "google" | "deepseek" | "ollama" | "none"
-    model: str = ""              # e.g. "claude-sonnet-4-6", "gpt-4o", "llama3"
+    provider: str = "none"  # "anthropic" | "openai" | "google" | "deepseek" | "ollama" | "none"
+    model: str = ""  # e.g. "claude-sonnet-4-6", "gpt-4o", "llama3"
     temperature: float = 0.7
     max_tokens: int = 1024
     system_prompt: str = ""
-    extra_config: Dict[str, str] = field(default_factory=dict)
+    extra_config: dict[str, str] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "provider": self.provider,
             "model": self.model,
@@ -55,7 +55,7 @@ class BrainConfig:
         }
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "BrainConfig":
+    def from_dict(cls, d: dict[str, Any]) -> BrainConfig:
         return cls(
             provider=d.get("provider", "none"),
             model=d.get("model", ""),
@@ -71,29 +71,30 @@ class BrainRequest:
     """Everything we give the LLM so it can make a decision."""
 
     node_id: str
-    operation: str                       # "execute" | "evaluate" | "improve" | "analyze"
-    current_state: Dict[str, Any]        # node state snapshot
-    recent_metrics: Dict[str, float]     # recent evaluation metrics
-    relevant_memories: List[Dict]        # from MemoryKernel
-    available_actions: List[str]         # verbs the node can take
-    domain_context: str                  # node.describe() + injected skill content
+    operation: str  # "execute" | "evaluate" | "improve" | "analyze"
+    current_state: dict[str, Any]  # node state snapshot
+    recent_metrics: dict[str, float]  # recent evaluation metrics
+    relevant_memories: list[dict]  # from MemoryKernel
+    available_actions: list[str]  # verbs the node can take
+    domain_context: str  # node.describe() + injected skill content
     trace_id: str = ""
-    skill_hints: List[str] = field(default_factory=list)  # tags used to load skills
+    skill_hints: list[str] = field(default_factory=list)  # tags used to load skills
 
 
 @dataclass
 class BrainResponse:
     """Structured decision returned by the LLM."""
 
-    action: str                                           # which action to take
-    parameters: Dict[str, Any] = field(default_factory=dict)
-    reasoning: str = ""                                   # stored in activity log
-    confidence: float = 0.0                               # 0.0 – 1.0
+    action: str  # which action to take
+    parameters: dict[str, Any] = field(default_factory=dict)
+    reasoning: str = ""  # stored in activity log
+    confidence: float = 0.0  # 0.0 - 1.0
 
 
 # ---------------------------------------------------------------------------
 # Abstract adapter
 # ---------------------------------------------------------------------------
+
 
 class BrainAdapter(ABC):
     """Contract for any LLM provider brain adapter."""
@@ -115,6 +116,7 @@ class BrainAdapter(ABC):
 # NoBrain — default, pure rule-based, zero latency, no cost
 # ---------------------------------------------------------------------------
 
+
 class NoBrain(BrainAdapter):
     """
     Default brain adapter — no LLM, no cost.
@@ -124,7 +126,7 @@ class NoBrain(BrainAdapter):
     no brain is configured.
     """
 
-    def __init__(self, config: Optional[BrainConfig] = None) -> None:
+    def __init__(self, config: BrainConfig | None = None) -> None:
         pass  # config ignored; NoBrain is always a no-op
 
     def think(self, request: BrainRequest) -> BrainResponse:
@@ -155,7 +157,7 @@ Always respond with valid JSON only — no markdown, no prose, no code fences:
   "action": "<one of the available_actions>",
   "parameters": {},
   "reasoning": "<concise explanation, 1-2 sentences>",
-  "confidence": <float 0.0–1.0>
+  "confidence": <float 0.0-1.0>
 }
 
 If you are unsure or the context is insufficient, respond with action="pass" and
@@ -179,9 +181,8 @@ class AnthropicBrain(BrainAdapter):
 
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
-        self._api_key = (
-            config.extra_config.get("api_key")
-            or os.environ.get("ANTHROPIC_API_KEY", "")
+        self._api_key = config.extra_config.get("api_key") or os.environ.get(
+            "ANTHROPIC_API_KEY", ""
         )
         self._model = config.model or "claude-sonnet-4-6"
         self._system = config.system_prompt or _ANTHROPIC_SYSTEM
@@ -299,10 +300,7 @@ class OpenAIBrain(BrainAdapter):
 
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
-        self._api_key = (
-            config.extra_config.get("api_key")
-            or os.environ.get("OPENAI_API_KEY", "")
-        )
+        self._api_key = config.extra_config.get("api_key") or os.environ.get("OPENAI_API_KEY", "")
         self._model = config.model or "gpt-4o"
         self._api_url = config.extra_config.get("base_url", self.DEFAULT_API_URL)
         self._system = config.system_prompt or _OPENAI_SYSTEM
@@ -374,6 +372,7 @@ class OpenAIBrain(BrainAdapter):
 # DeepSeekBrain — DeepSeek adapter (OpenAI-compatible)
 # ---------------------------------------------------------------------------
 
+
 class DeepSeekBrain(OpenAIBrain):
     """
     DeepSeek adapter — reuses OpenAI-compatible protocol.
@@ -406,6 +405,7 @@ class DeepSeekBrain(OpenAIBrain):
 # OllamaBrain — local model adapter (hits localhost:11434)
 # ---------------------------------------------------------------------------
 
+
 class OllamaBrain(BrainAdapter):
     """
     Ollama local model adapter.
@@ -419,9 +419,8 @@ class OllamaBrain(BrainAdapter):
 
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
-        host = (
-            config.extra_config.get("host")
-            or os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+        host = config.extra_config.get("host") or os.environ.get(
+            "OLLAMA_HOST", "http://localhost:11434"
         )
         self._api_url = f"{host.rstrip('/')}/api/chat"
         self._model = config.model or "llama3"
@@ -491,6 +490,7 @@ class OllamaBrain(BrainAdapter):
 # GoogleBrain — Gemini adapter stub
 # ---------------------------------------------------------------------------
 
+
 class GoogleBrain(BrainAdapter):
     """
     Google Gemini adapter stub.
@@ -502,10 +502,7 @@ class GoogleBrain(BrainAdapter):
 
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
-        self._api_key = (
-            config.extra_config.get("api_key")
-            or os.environ.get("GOOGLE_API_KEY", "")
-        )
+        self._api_key = config.extra_config.get("api_key") or os.environ.get("GOOGLE_API_KEY", "")
         self._model = config.model or "gemini-1.5-pro"
 
     def is_available(self) -> bool:
@@ -528,17 +525,17 @@ class GoogleBrain(BrainAdapter):
 # Registry
 # ---------------------------------------------------------------------------
 
-BRAIN_REGISTRY: Dict[str, type] = {
-    "none":       NoBrain,
-    "anthropic":  AnthropicBrain,
-    "openai":     OpenAIBrain,
-    "deepseek":   DeepSeekBrain,
-    "ollama":     OllamaBrain,
-    "google":     GoogleBrain,
+BRAIN_REGISTRY: dict[str, type] = {
+    "none": NoBrain,
+    "anthropic": AnthropicBrain,
+    "openai": OpenAIBrain,
+    "deepseek": DeepSeekBrain,
+    "ollama": OllamaBrain,
+    "google": GoogleBrain,
 }
 
 
-def create_brain(config: Optional[BrainConfig] = None) -> BrainAdapter:
+def create_brain(config: BrainConfig | None = None) -> BrainAdapter:
     """
     Factory: create the appropriate BrainAdapter from a BrainConfig.
 
@@ -546,4 +543,4 @@ def create_brain(config: Optional[BrainConfig] = None) -> BrainAdapter:
     """
     cfg = config or BrainConfig()
     cls = BRAIN_REGISTRY.get(cfg.provider, NoBrain)
-    return cls(cfg)
+    return cls(cfg)  # type: ignore[no-any-return]

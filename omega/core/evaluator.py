@@ -12,14 +12,12 @@ Responsibilities
 - Generate human-readable evaluation reports.
 """
 
-import json
 import logging
 import math
 import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger("omega.evaluator")
 
@@ -28,14 +26,15 @@ logger = logging.getLogger("omega.evaluator")
 # Metric spec: what counts as good for a given goal
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class MetricSpec:
     """Describes a single metric and its improvement direction."""
 
     name: str
-    direction: str = "minimize"   # "minimize" or "maximize"
+    direction: str = "minimize"  # "minimize" or "maximize"
     weight: float = 1.0
-    threshold: Optional[float] = None   # target value; None = no hard target
+    threshold: float | None = None  # target value; None = no hard target
 
     def is_better(self, new_val: float, old_val: float) -> bool:
         if self.direction == "minimize":
@@ -54,11 +53,16 @@ class GoalSpec:
     """Binds a goal string to a set of MetricSpecs."""
 
     goal: str
-    metrics: List[MetricSpec] = field(default_factory=list)
+    metrics: list[MetricSpec] = field(default_factory=list)
     description: str = ""
 
-    def add_metric(self, name: str, direction: str = "minimize",
-                   weight: float = 1.0, threshold: Optional[float] = None):
+    def add_metric(
+        self,
+        name: str,
+        direction: str = "minimize",
+        weight: float = 1.0,
+        threshold: float | None = None,
+    ) -> "GoalSpec":
         self.metrics.append(MetricSpec(name, direction, weight, threshold))
         return self
 
@@ -66,6 +70,7 @@ class GoalSpec:
 # ---------------------------------------------------------------------------
 # Storage
 # ---------------------------------------------------------------------------
+
 
 class _Store:
     """Thin SQLite wrapper.  Schema created on first use."""
@@ -108,8 +113,8 @@ class _Store:
         self,
         goal: str,
         iteration: int,
-        node_snapshots: List[Dict[str, Any]],
-        system_metrics: Dict[str, float],
+        node_snapshots: list[dict[str, Any]],
+        system_metrics: dict[str, float],
         notes: str = "",
     ) -> int:
         ts = datetime.now().isoformat()
@@ -134,11 +139,9 @@ class _Store:
             )
 
         self._conn.commit()
-        return iter_id
+        return iter_id  # type: ignore[return-value]
 
-    def get_system_metric_history(
-        self, goal: str, metric_name: str
-    ) -> List[Tuple[int, float]]:
+    def get_system_metric_history(self, goal: str, metric_name: str) -> list[tuple[int, float]]:
         """Return [(iteration, value), …] ordered by iteration."""
         rows = self._conn.execute(
             """
@@ -154,7 +157,7 @@ class _Store:
 
     def get_node_metric_history(
         self, goal: str, node_id: str, metric_name: str
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         rows = self._conn.execute(
             """
             SELECT i.iteration, nm.metric_value
@@ -167,9 +170,7 @@ class _Store:
         ).fetchall()
         return [(r["iteration"], r["metric_value"]) for r in rows]
 
-    def last_n_system_metrics(
-        self, goal: str, metric_name: str, n: int = 2
-    ) -> List[float]:
+    def last_n_system_metrics(self, goal: str, metric_name: str, n: int = 2) -> list[float]:
         history = self.get_system_metric_history(goal, metric_name)
         return [v for _, v in history[-n:]]
 
@@ -178,11 +179,12 @@ class _Store:
 # Statistics helpers
 # ---------------------------------------------------------------------------
 
-def _mean(values: List[float]) -> float:
+
+def _mean(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
-def _stddev(values: List[float]) -> float:
+def _stddev(values: list[float]) -> float:
     if len(values) < 2:
         return 0.0
     m = _mean(values)
@@ -199,6 +201,7 @@ def _pct_change(old: float, new: float) -> float:
 # ---------------------------------------------------------------------------
 # Evaluator
 # ---------------------------------------------------------------------------
+
 
 class Evaluator:
     """
@@ -220,7 +223,7 @@ class Evaluator:
 
     def __init__(self, db_path: str = ":memory:") -> None:
         self._store = _Store(db_path)
-        self._goal_specs: Dict[str, GoalSpec] = {}
+        self._goal_specs: dict[str, GoalSpec] = {}
 
     def register_goal(self, spec: GoalSpec) -> None:
         self._goal_specs[spec.goal] = spec
@@ -230,8 +233,8 @@ class Evaluator:
         self,
         goal: str,
         iteration: int,
-        node_states: List[Any],   # List[NodeState]
-        system_metrics: Dict[str, float],
+        node_states: list[Any],  # List[NodeState]
+        system_metrics: dict[str, float],
         notes: str = "",
     ) -> int:
         snapshots = [
@@ -242,17 +245,11 @@ class Evaluator:
             }
             for s in node_states
         ]
-        iter_id = self._store.record_iteration(
-            goal, iteration, snapshots, system_metrics, notes
-        )
-        logger.debug(
-            "Recorded iteration %d for goal '%s' (iter_id=%d)", iteration, goal, iter_id
-        )
+        iter_id = self._store.record_iteration(goal, iteration, snapshots, system_metrics, notes)
+        logger.debug("Recorded iteration %d for goal '%s' (iter_id=%d)", iteration, goal, iter_id)
         return iter_id
 
-    def has_improved(
-        self, goal: str, metric_name: str, min_delta_pct: float = 1.0
-    ) -> bool:
+    def has_improved(self, goal: str, metric_name: str, min_delta_pct: float = 1.0) -> bool:
         """
         Return True if the last iteration improved *metric_name* by at least
         *min_delta_pct* percent compared to the previous iteration.
@@ -273,13 +270,13 @@ class Evaluator:
         direction = metric_spec.direction if metric_spec else "minimize"
 
         if direction == "minimize":
-            delta_pct = _pct_change(old, new) * -1   # improvement = negative change
+            delta_pct = _pct_change(old, new) * -1  # improvement = negative change
         else:
             delta_pct = _pct_change(old, new)
 
         return delta_pct >= min_delta_pct
 
-    def score(self, goal: str, system_metrics: Dict[str, float]) -> float:
+    def score(self, goal: str, system_metrics: dict[str, float]) -> float:
         """
         Compute a weighted composite score for *system_metrics* against the
         registered GoalSpec.  Higher is always better.
@@ -335,8 +332,7 @@ class Evaluator:
                     summary = f"  {vals[-1]:.4f}"
                 lines.append(f"  {ms.name:<28} {summary}")
                 lines.append(
-                    f"  {'  history:':<28} "
-                    + "  ".join(f"{v:.3f}@{i}" for i, v in history)
+                    f"  {'  history:':<28} " + "  ".join(f"{v:.3f}@{i}" for i, v in history)
                 )
         else:
             lines.append("(No GoalSpec registered — raw metric history below)")

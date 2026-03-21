@@ -32,13 +32,11 @@ Human-mind analogues:
 
 import json
 import logging
-import math
 import sqlite3
 import time
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger("omega.core.memory")
 
@@ -47,33 +45,37 @@ logger = logging.getLogger("omega.core.memory")
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Episode:
     """A timestamped record of something that happened."""
+
     episode_id: str
     timestamp: float
-    event_type: str          # e.g. "signal_generated", "portfolio_built", "feedback"
-    content: Dict[str, Any]  # structured data about the event
-    tags: List[str]          # searchable labels
-    importance: float        # 0.0–1.0; decays over time
-    cycle: int               # heartbeat cycle number
+    event_type: str  # e.g. "signal_generated", "portfolio_built", "feedback"
+    content: dict[str, Any]  # structured data about the event
+    tags: list[str]  # searchable labels
+    importance: float  # 0.0-1.0; decays over time
+    cycle: int  # heartbeat cycle number
 
 
 @dataclass
 class SemanticMemory:
     """A learned generalisation extracted from episodes."""
+
     memory_id: str
-    concept: str             # e.g. "btc_momentum_signal", "high_vol_regime"
-    content: str             # human-readable description of the pattern
-    confidence: float        # 0.0–1.0; reinforced by new matching episodes
-    evidence_count: int      # how many episodes support this
-    last_reinforced: float   # unix timestamp of last reinforcement
-    tags: List[str]
+    concept: str  # e.g. "btc_momentum_signal", "high_vol_regime"
+    content: str  # human-readable description of the pattern
+    confidence: float  # 0.0-1.0; reinforced by new matching episodes
+    evidence_count: int  # how many episodes support this
+    last_reinforced: float  # unix timestamp of last reinforcement
+    tags: list[str]
 
 
 # ---------------------------------------------------------------------------
 # Memory Kernel
 # ---------------------------------------------------------------------------
+
 
 class MemoryKernel:
     """
@@ -102,18 +104,18 @@ class MemoryKernel:
         knowledge = mem.retrieve_semantic(concept="btc_momentum")
     """
 
-    DECAY_RATE = 0.05          # per cycle; episodic importance decays by this factor
-    SEMANTIC_DECAY_RATE = 0.02 # per cycle for unreinforced semantics
-    MIN_IMPORTANCE = 0.05      # prune below this
-    MAX_EPISODES = 500         # cap on total episodes
-    MAX_SEMANTIC = 200         # cap on semantic memories
-    CONSOLIDATION_INTERVAL = 5 # consolidate every N cycles
+    DECAY_RATE = 0.05  # per cycle; episodic importance decays by this factor
+    SEMANTIC_DECAY_RATE = 0.02  # per cycle for unreinforced semantics
+    MIN_IMPORTANCE = 0.05  # prune below this
+    MAX_EPISODES = 500  # cap on total episodes
+    MAX_SEMANTIC = 200  # cap on semantic memories
+    CONSOLIDATION_INTERVAL = 5  # consolidate every N cycles
 
     def __init__(self, db_path: str = ":memory:") -> None:
         self._db_path = db_path
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
-        self._working: Dict[str, Any] = {}
+        self._working: dict[str, Any] = {}
         self._current_cycle = 0
         self._create_schema()
         logger.info("MemoryKernel initialised (db=%s)", db_path)
@@ -189,7 +191,7 @@ class MemoryKernel:
         """Clear all working memory at the start of a new cycle."""
         self._working.clear()
 
-    def working_snapshot(self) -> Dict[str, Any]:
+    def working_snapshot(self) -> dict[str, Any]:
         """Return a copy of all working memory."""
         return dict(self._working)
 
@@ -198,10 +200,10 @@ class MemoryKernel:
     def store_episode(
         self,
         event_type: str,
-        content: Dict[str, Any],
-        tags: Optional[List[str]] = None,
+        content: dict[str, Any],
+        tags: list[str] | None = None,
         importance: float = 1.0,
-        cycle: Optional[int] = None,
+        cycle: int | None = None,
         namespace: str = "global",
     ) -> str:
         """Store a new episode. Returns the episode_id."""
@@ -217,7 +219,10 @@ class MemoryKernel:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
-                episode_id, ts, cyc, event_type,
+                episode_id,
+                ts,
+                cyc,
+                event_type,
                 json.dumps(content, default=str),
                 json.dumps(tags),
                 min(1.0, max(0.0, importance)),
@@ -229,16 +234,16 @@ class MemoryKernel:
 
     def retrieve_episodes(
         self,
-        event_type: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        event_type: str | None = None,
+        tags: list[str] | None = None,
         limit: int = 10,
         min_importance: float = 0.0,
-        since_cycle: Optional[int] = None,
-        namespace: Optional[str] = None,
-    ) -> List[Episode]:
+        since_cycle: int | None = None,
+        namespace: str | None = None,
+    ) -> list[Episode]:
         """Retrieve episodes matching filters, ordered by importance desc."""
         query = "SELECT * FROM episodes WHERE importance >= ?"
-        params: List[Any] = [min_importance]
+        params: list[Any] = [min_importance]
 
         if event_type:
             query += " AND event_type = ?"
@@ -261,19 +266,20 @@ class MemoryKernel:
             row_tags = json.loads(row["tags_json"])
 
             # Tag filtering
-            if tags:
-                if not any(t in row_tags for t in tags):
-                    continue
+            if tags and not any(t in row_tags for t in tags):
+                continue
 
-            episodes.append(Episode(
-                episode_id=row["episode_id"],
-                timestamp=row["timestamp"],
-                event_type=row["event_type"],
-                content=content,
-                tags=row_tags,
-                importance=row["importance"],
-                cycle=row["cycle"],
-            ))
+            episodes.append(
+                Episode(
+                    episode_id=row["episode_id"],
+                    timestamp=row["timestamp"],
+                    event_type=row["event_type"],
+                    content=content,
+                    tags=row_tags,
+                    importance=row["importance"],
+                    cycle=row["cycle"],
+                )
+            )
             if len(episodes) >= limit:
                 break
 
@@ -290,7 +296,7 @@ class MemoryKernel:
         concept: str,
         content: str,
         confidence: float = 1.0,
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
         namespace: str = "global",
     ) -> str:
         """Store or update a semantic memory. Returns memory_id."""
@@ -312,10 +318,18 @@ class MemoryKernel:
                 SET content = ?, confidence = ?, evidence_count = ?, last_reinforced = ?, tags_json = ?
                 WHERE concept = ? AND namespace = ?
                 """,
-                (content, new_confidence, new_count, time.time(), json.dumps(tags), concept, namespace),
+                (
+                    content,
+                    new_confidence,
+                    new_count,
+                    time.time(),
+                    json.dumps(tags),
+                    concept,
+                    namespace,
+                ),
             )
             self._conn.commit()
-            return existing["memory_id"]
+            return existing["memory_id"]  # type: ignore[no-any-return]
         else:
             memory_id = str(uuid.uuid4())
             self._conn.execute(
@@ -324,23 +338,31 @@ class MemoryKernel:
                 (memory_id, concept, content, confidence, evidence_count, last_reinforced, tags_json, namespace)
                 VALUES (?, ?, ?, ?, 1, ?, ?, ?)
                 """,
-                (memory_id, concept, content, confidence, time.time(), json.dumps(tags), namespace),
+                (
+                    memory_id,
+                    concept,
+                    content,
+                    confidence,
+                    time.time(),
+                    json.dumps(tags),
+                    namespace,
+                ),
             )
             self._conn.commit()
             return memory_id
 
     def retrieve_semantic(
         self,
-        concept: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        query_text: Optional[str] = None,
+        concept: str | None = None,
+        tags: list[str] | None = None,
+        query_text: str | None = None,
         limit: int = 5,
         min_confidence: float = 0.1,
-        namespace: Optional[str] = None,
-    ) -> List[SemanticMemory]:
+        namespace: str | None = None,
+    ) -> list[SemanticMemory]:
         """Retrieve semantic memories by concept, tags, or keyword search."""
         sql = "SELECT * FROM semantic_memories WHERE confidence >= ?"
-        params: List[Any] = [min_confidence]
+        params: list[Any] = [min_confidence]
 
         if namespace is not None:
             sql += " AND namespace = ?"
@@ -361,21 +383,24 @@ class MemoryKernel:
                 continue
             if query_text:
                 text_lower = query_text.lower()
-                if (text_lower not in row["concept"].lower() and
-                        text_lower not in row["content"].lower()):
-                    # Check tags
-                    if not any(text_lower in t.lower() for t in row_tags):
-                        continue
+                if (
+                    text_lower not in row["concept"].lower()
+                    and text_lower not in row["content"].lower()
+                    and not any(text_lower in t.lower() for t in row_tags)
+                ):
+                    continue
 
-            results.append(SemanticMemory(
-                memory_id=row["memory_id"],
-                concept=row["concept"],
-                content=row["content"],
-                confidence=row["confidence"],
-                evidence_count=row["evidence_count"],
-                last_reinforced=row["last_reinforced"],
-                tags=row_tags,
-            ))
+            results.append(
+                SemanticMemory(
+                    memory_id=row["memory_id"],
+                    concept=row["concept"],
+                    content=row["content"],
+                    confidence=row["confidence"],
+                    evidence_count=row["evidence_count"],
+                    last_reinforced=row["last_reinforced"],
+                    tags=row_tags,
+                )
+            )
             if len(results) >= limit:
                 break
 
@@ -414,7 +439,7 @@ class MemoryKernel:
 
     # ------------------------------------------------------------------ Consolidation
 
-    def consolidate(self, namespace: Optional[str] = None) -> List[str]:
+    def consolidate(self, namespace: str | None = None) -> list[str]:
         """
         Extract patterns from recent episodes and store as semantic memories.
         Returns list of new/updated concepts.
@@ -424,7 +449,7 @@ class MemoryKernel:
           - If a ticker appears frequently in top signals → store "X is trending"
           - If high volatility correlates with poor signals → store "vol regime warning"
         """
-        concepts_updated: List[str] = []
+        concepts_updated: list[str] = []
         recent = self.retrieve_episodes(
             event_type="signal_outcome",
             limit=50,
@@ -437,8 +462,8 @@ class MemoryKernel:
             return concepts_updated
 
         # Pattern: signal type success rate
-        signal_outcomes: Dict[str, List[float]] = {}
-        ticker_appearances: Dict[str, int] = {}
+        signal_outcomes: dict[str, list[float]] = {}
+        ticker_appearances: dict[str, int] = {}
 
         for ep in recent:
             content = ep.content
@@ -475,22 +500,30 @@ class MemoryKernel:
                     f"{key} signal has {hit_rate:.0%} hit rate over {len(outcomes)} samples "
                     f"(avg return {avg_outcome:+.3%}). Momentum persists."
                 )
-                self.store_semantic(concept, content_str, confidence=hit_rate, tags=tags, namespace=store_ns)
+                self.store_semantic(
+                    concept, content_str, confidence=hit_rate, tags=tags, namespace=store_ns
+                )
                 concepts_updated.append(concept)
             elif hit_rate < 0.4:
                 content_str = (
                     f"{key} signal has poor hit rate {hit_rate:.0%} over {len(outcomes)} samples. "
                     f"Consider reducing weight."
                 )
-                self.store_semantic(concept, content_str, confidence=0.3, tags=tags, namespace=store_ns)
+                self.store_semantic(
+                    concept, content_str, confidence=0.3, tags=tags, namespace=store_ns
+                )
                 concepts_updated.append(concept)
 
         # Top appearing tickers
         for ticker, count in sorted(ticker_appearances.items(), key=lambda x: -x[1])[:3]:
             if count >= 3:
                 concept = f"{ticker.lower()}_trending"
-                content_str = f"{ticker} appeared in {count} recent signal episodes — strong interest."
-                self.store_semantic(concept, content_str, confidence=0.6, tags=[ticker.lower()], namespace=store_ns)
+                content_str = (
+                    f"{ticker} appeared in {count} recent signal episodes — strong interest."
+                )
+                self.store_semantic(
+                    concept, content_str, confidence=0.6, tags=[ticker.lower()], namespace=store_ns
+                )
                 concepts_updated.append(concept)
 
         if concepts_updated:
@@ -502,7 +535,7 @@ class MemoryKernel:
 
     # ------------------------------------------------------------------ Pruning & Decay
 
-    def decay_and_prune(self):
+    def decay_and_prune(self) -> tuple[int, int]:
         """
         Apply importance decay to all episodes and remove those below threshold.
         Returns (episodes_decayed, episodes_pruned, semantics_pruned).
@@ -546,9 +579,9 @@ class MemoryKernel:
         self._conn.commit()
 
         # Prune weak semantic memories (keep at least 10)
-        sem_count = self._conn.execute(
-            "SELECT COUNT(*) as n FROM semantic_memories"
-        ).fetchone()["n"]
+        sem_count = self._conn.execute("SELECT COUNT(*) as n FROM semantic_memories").fetchone()[
+            "n"
+        ]
         sem_pruned = 0
         if sem_count > 10:
             sem_pruned = self._conn.execute(
@@ -558,9 +591,7 @@ class MemoryKernel:
             self._conn.commit()
 
         if pruned > 0 or sem_pruned > 0:
-            logger.debug(
-                "Memory pruned: %d episodes, %d semantic memories", pruned, sem_pruned
-            )
+            logger.debug("Memory pruned: %d episodes, %d semantic memories", pruned, sem_pruned)
 
         return (pruned, sem_pruned)
 
@@ -580,7 +611,7 @@ class MemoryKernel:
             if concepts:
                 logger.info("Cycle %d consolidation: %d patterns learned", cycle, len(concepts))
 
-    def end_cycle(self, cycle: int, summary: Dict[str, Any]) -> str:
+    def end_cycle(self, cycle: int, summary: dict[str, Any]) -> str:
         """Store a cycle summary episode at the end of each heartbeat."""
         return self.store_episode(
             event_type="cycle_summary",
@@ -593,7 +624,7 @@ class MemoryKernel:
 
     # ------------------------------------------------------------------ Query interface
 
-    def query(self, question: str, limit: int = 5, namespace: Optional[str] = None) -> Dict[str, Any]:
+    def query(self, question: str, limit: int = 5, namespace: str | None = None) -> dict[str, Any]:
         """
         Natural-language-ish query against all memory stores.
         Returns matching episodes and semantic memories.
@@ -616,7 +647,9 @@ class MemoryKernel:
 
         # Search episodic memories using tags derived from the question
         tag_candidates = [w for w in words if len(w) > 3]
-        episodes = self.retrieve_episodes(tags=tag_candidates[:3], limit=limit, namespace=namespace)
+        episodes = self.retrieve_episodes(
+            tags=tag_candidates[:3], limit=limit, namespace=namespace
+        )
 
         return {
             "question": question,
@@ -635,12 +668,12 @@ class MemoryKernel:
             ],
         }
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         """Return a status summary of the memory kernel."""
         episode_count = self.get_episode_count()
-        sem_count = self._conn.execute(
-            "SELECT COUNT(*) as n FROM semantic_memories"
-        ).fetchone()["n"]
+        sem_count = self._conn.execute("SELECT COUNT(*) as n FROM semantic_memories").fetchone()[
+            "n"
+        ]
         working_keys = list(self._working.keys())
 
         top_semantic = self._conn.execute(
@@ -653,8 +686,7 @@ class MemoryKernel:
             "episodic_count": episode_count,
             "semantic_count": sem_count,
             "top_semantic_concepts": [
-                {"concept": r["concept"], "confidence": r["confidence"]}
-                for r in top_semantic
+                {"concept": r["concept"], "confidence": r["confidence"]} for r in top_semantic
             ],
         }
 
@@ -662,6 +694,7 @@ class MemoryKernel:
 # ---------------------------------------------------------------------------
 # NodeMemory — per-node namespaced memory facade
 # ---------------------------------------------------------------------------
+
 
 class NodeMemory:
     """
@@ -698,7 +731,7 @@ class NodeMemory:
         self._kernel = kernel
         self._namespace = namespace
         # working: key → (value, set_at_unix, ttl_seconds)
-        self._working: Dict[str, Tuple[Any, float, float]] = {}
+        self._working: dict[str, tuple[Any, float, float]] = {}
 
     @property
     def namespace(self) -> str:
@@ -733,7 +766,7 @@ class NodeMemory:
             del self._working[k]
         return len(expired)
 
-    def working_keys(self) -> List[str]:
+    def working_keys(self) -> list[str]:
         self.flush_expired()
         return list(self._working.keys())
 
@@ -742,10 +775,10 @@ class NodeMemory:
     def store_episode(
         self,
         event_type: str,
-        content: Dict[str, Any],
-        tags: Optional[List[str]] = None,
+        content: dict[str, Any],
+        tags: list[str] | None = None,
         importance: float = 1.0,
-        cycle: Optional[int] = None,
+        cycle: int | None = None,
     ) -> str:
         """Store a namespaced episode. Returns episode_id."""
         return self._kernel.store_episode(
@@ -759,12 +792,12 @@ class NodeMemory:
 
     def retrieve_episodes(
         self,
-        event_type: Optional[str] = None,
-        tags: Optional[List[str]] = None,
+        event_type: str | None = None,
+        tags: list[str] | None = None,
         limit: int = 10,
         min_importance: float = 0.0,
-        since_cycle: Optional[int] = None,
-    ) -> List[Episode]:
+        since_cycle: int | None = None,
+    ) -> list[Episode]:
         return self._kernel.retrieve_episodes(
             event_type=event_type,
             tags=tags,
@@ -781,7 +814,7 @@ class NodeMemory:
         concept: str,
         content: str,
         confidence: float = 1.0,
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
     ) -> str:
         """Store or reinforce a namespaced semantic memory. Returns memory_id."""
         return self._kernel.store_semantic(
@@ -794,12 +827,12 @@ class NodeMemory:
 
     def retrieve_semantic(
         self,
-        concept: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        query_text: Optional[str] = None,
+        concept: str | None = None,
+        tags: list[str] | None = None,
+        query_text: str | None = None,
         limit: int = 5,
         min_confidence: float = 0.1,
-    ) -> List[SemanticMemory]:
+    ) -> list[SemanticMemory]:
         return self._kernel.retrieve_semantic(
             concept=concept,
             tags=tags,
@@ -817,13 +850,13 @@ class NodeMemory:
 
     # ------------------------------------------------------------------ search
 
-    def search(self, query: str, limit: int = 5) -> Dict[str, Any]:
+    def search(self, query: str, limit: int = 5) -> dict[str, Any]:
         """Keyword search across episodic + semantic tiers (namespaced)."""
         return self._kernel.query(query, limit, namespace=self._namespace)
 
     # ------------------------------------------------------------------ summary
 
-    def summary(self) -> Dict[str, Any]:
+    def summary(self) -> dict[str, Any]:
         episode_count = len(self.retrieve_episodes(limit=9999, min_importance=0.0))
         semantic_list = self.retrieve_semantic(limit=9999, min_confidence=0.0)
         working_keys = self.working_keys()

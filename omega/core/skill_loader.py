@@ -28,8 +28,7 @@ from __future__ import annotations
 
 import os
 import re
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from dataclasses import dataclass
 
 
 @dataclass
@@ -38,7 +37,7 @@ class SkillMetadata:
 
     name: str
     description: str
-    tags: List[str]
+    tags: list[str]
     path: str  # absolute path to the SKILL.md file
 
 
@@ -55,8 +54,8 @@ class SkillLoader:
 
     def __init__(self, skills_root: str) -> None:
         self._root = skills_root
-        self._index: Dict[str, SkillMetadata] = {}       # name -> metadata
-        self._tag_index: Dict[str, List[str]] = {}        # tag -> [skill names]
+        self._index: dict[str, SkillMetadata] = {}       # name -> metadata
+        self._tag_index: dict[str, list[str]] = {}        # tag -> [skill names]
         self._discover()
 
     # ------------------------------------------------------------------
@@ -80,7 +79,7 @@ class SkillLoader:
             for tag in meta.tags:
                 self._tag_index.setdefault(tag, []).append(meta.name)
 
-    def _parse_frontmatter(self, path: str) -> Optional[SkillMetadata]:
+    def _parse_frontmatter(self, path: str) -> SkillMetadata | None:
         """Parse YAML frontmatter from a SKILL.md file. Returns None if invalid."""
         try:
             with open(path, encoding="utf-8") as f:
@@ -100,13 +99,13 @@ class SkillLoader:
         return SkillMetadata(name=name, description=description, tags=tags, path=path)
 
     @staticmethod
-    def _fm_scalar(fm: str, key: str) -> Optional[str]:
+    def _fm_scalar(fm: str, key: str) -> str | None:
         """Extract a scalar value: ``key: value`` → ``value``."""
         m = re.search(rf"^{re.escape(key)}:\s*(.+)$", fm, re.MULTILINE)
         return m.group(1).strip() if m else None
 
     @staticmethod
-    def _fm_list(fm: str, key: str) -> List[str]:
+    def _fm_list(fm: str, key: str) -> list[str]:
         """
         Extract a YAML block list::
 
@@ -137,11 +136,11 @@ class SkillLoader:
     # Public API
     # ------------------------------------------------------------------
 
-    def list_all(self) -> List[SkillMetadata]:
+    def list_all(self) -> list[SkillMetadata]:
         """Return metadata for all discovered skills, sorted by name."""
         return list(self._index.values())
 
-    def get_skill(self, name: str) -> Optional[str]:
+    def get_skill(self, name: str) -> str | None:
         """
         Return the body content of a named skill (frontmatter stripped).
 
@@ -157,7 +156,7 @@ class SkillLoader:
             return None
         return re.sub(r"^---\n.*?\n---\n", "", raw, count=1, flags=re.DOTALL).strip()
 
-    def load_for_tags(self, tags: List[str]) -> str:
+    def load_for_tags(self, tags: list[str]) -> str:
         """
         Return concatenated skill content for all skills matching any of the given tags.
 
@@ -170,7 +169,7 @@ class SkillLoader:
         if not tags:
             return ""
 
-        matched_names: List[str] = []
+        matched_names: list[str] = []
         seen: set[str] = set()
         for tag in tags:
             for name in self._tag_index.get(tag, []):
@@ -178,7 +177,7 @@ class SkillLoader:
                     matched_names.append(name)
                     seen.add(name)
 
-        parts: List[str] = []
+        parts: list[str] = []
         for name in matched_names:
             content = self.get_skill(name)
             if content:

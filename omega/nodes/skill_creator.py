@@ -20,7 +20,7 @@ import os
 import re
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.skill_loader import SkillLoader
@@ -54,11 +54,11 @@ class SkillCreatorNode(Node):
         print(out.result["path"])         # "/path/to/omega/skills/kubernetes/SKILL.md"
     """
 
-    skill_tags: List[str] = ["research"]
+    skill_tags: list[str] = ["research"]
 
     def __init__(
         self,
-        skills_root: Optional[str] = None,
+        skills_root: str | None = None,
         brain_config=None,
     ) -> None:
         super().__init__(brain_config)
@@ -95,7 +95,7 @@ class SkillCreatorNode(Node):
             metadata={"skills_root": self._skills_root},
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["create_skill", "list_skills", "describe_skill"]
 
     def describe(self) -> str:
@@ -139,14 +139,14 @@ class SkillCreatorNode(Node):
                 metrics={"latency_ms": (time.perf_counter() - t0) * 1000},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "execution_count": float(self._execution_count),
             "error_rate": self._error_count / max(1, self._execution_count),
             "skill_count": float(len(self._loader.list_all())),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """Reload the skill index from disk. Returns True if the count changed."""
         old_count = len(self._loader.list_all())
         self._loader = SkillLoader(self._skills_root)
@@ -156,10 +156,10 @@ class SkillCreatorNode(Node):
     # Action implementations
     # ------------------------------------------------------------------
 
-    def _create_skill(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_skill(self, params: dict[str, Any]) -> dict[str, Any]:
         """Write a new SKILL.md file to the skills directory."""
         name = str(params.get("name", "")).strip()
-        tags: List[str] = list(params.get("tags", []))
+        tags: list[str] = list(params.get("tags", []))
         description = str(params.get("description", "")).strip()
         content = str(params.get("content", "")).strip()
 
@@ -199,7 +199,7 @@ class SkillCreatorNode(Node):
 
         return {"skill_name": safe_name, "path": skill_path, "tags": tags}
 
-    def _list_skills(self) -> List[Dict[str, Any]]:
+    def _list_skills(self) -> list[dict[str, Any]]:
         """Return metadata for all known skills."""
         return [
             {"name": m.name, "description": m.description, "tags": m.tags}

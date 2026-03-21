@@ -39,8 +39,7 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
 
 logger = logging.getLogger("omega.core.alignment")
 
@@ -73,10 +72,10 @@ class SafetyEnvelope:
 
     def check(
         self,
-        portfolio: Dict[str, float],
+        portfolio: dict[str, float],
         drawdown: float = 0.0,
-        correlation_matrix: Optional[Dict[str, Dict[str, float]]] = None,
-    ) -> Tuple[bool, List[str]]:
+        correlation_matrix: dict[str, dict[str, float]] | None = None,
+    ) -> tuple[bool, list[str]]:
         """Validate portfolio against all hard constraints.
 
         Args:
@@ -87,7 +86,7 @@ class SafetyEnvelope:
         Returns:
             (ok, violations) where ok=True iff no constraints are breached.
         """
-        violations: List[str] = []
+        violations: list[str] = []
         total_weight = sum(abs(w) for w in portfolio.values()) or 1.0
 
         # 1. Position concentration check.
@@ -131,7 +130,7 @@ class SafetyEnvelope:
     def check_improvement_magnitude(
         self,
         improvement_delta: float,
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """Gate an improvement step on absolute magnitude.
 
         Returns (ok, reason) where ok=False if the magnitude of the delta
@@ -153,7 +152,7 @@ class SafetyEnvelope:
             return False, reason
         return True, ""
 
-    def clamp(self, portfolio: Dict[str, float]) -> Dict[str, float]:
+    def clamp(self, portfolio: dict[str, float]) -> dict[str, float]:
         """Return a copy of portfolio with position concentrations clamped.
 
         Weights exceeding max_position_pct are clipped and the remainder is
@@ -178,8 +177,8 @@ class SafetyEnvelope:
         # Iterative clamping: clip violators and redistribute surplus.
         max_iter = len(fractions) + 1
         for _ in range(max_iter):
-            clipped: Dict[str, float] = {}
-            free: Dict[str, float] = {}
+            clipped: dict[str, float] = {}
+            free: dict[str, float] = {}
             surplus = 0.0
             for asset, frac in fractions.items():
                 sign = 1.0 if frac >= 0 else -1.0
@@ -245,10 +244,10 @@ class ParetoEvaluator:
 
     def dominates(
         self,
-        a: Dict[str, float],
-        b: Dict[str, float],
-        objectives: List[str],
-        directions: Dict[str, str],
+        a: dict[str, float],
+        b: dict[str, float],
+        objectives: list[str],
+        directions: dict[str, str],
     ) -> bool:
         """True if solution a Pareto-dominates solution b.
 
@@ -281,10 +280,10 @@ class ParetoEvaluator:
 
     def assign_ranks(
         self,
-        population: List[Dict[str, float]],
-        objectives: List[str],
-        directions: Dict[str, str],
-    ) -> List[int]:
+        population: list[dict[str, float]],
+        objectives: list[str],
+        directions: dict[str, str],
+    ) -> list[int]:
         """Non-dominated sorting — returns Pareto front rank per individual.
 
         Rank 0 = Pareto-optimal (front 0). Rank 1 = optimal after removing
@@ -305,7 +304,7 @@ class ParetoEvaluator:
         # domination_count[i] = number of solutions that dominate i
         # dominated_by[i] = set of solutions that i dominates
         domination_count = [0] * n
-        dominated_by: List[List[int]] = [[] for _ in range(n)]
+        dominated_by: list[list[int]] = [[] for _ in range(n)]
 
         for i in range(n):
             for j in range(n):
@@ -323,7 +322,7 @@ class ParetoEvaluator:
         while current_front:
             for i in current_front:
                 ranks[i] = rank
-            next_front: List[int] = []
+            next_front: list[int] = []
             for i in current_front:
                 for j in dominated_by[i]:
                     domination_count[j] -= 1
@@ -336,9 +335,9 @@ class ParetoEvaluator:
 
     def crowding_distance(
         self,
-        front: List[Dict[str, float]],
-        objectives: List[str],
-    ) -> List[float]:
+        front: list[dict[str, float]],
+        objectives: list[str],
+    ) -> list[float]:
         """NSGA-II crowding distance for a single Pareto front.
 
         Measures the perimeter of the cuboid formed by nearest neighbours in
@@ -382,10 +381,10 @@ class ParetoEvaluator:
 
     def nsga2_sort(
         self,
-        population: List[Dict[str, float]],
-        objectives: List[str],
-        directions: Optional[Dict[str, str]] = None,
-    ) -> List[int]:
+        population: list[dict[str, float]],
+        objectives: list[str],
+        directions: dict[str, str] | None = None,
+    ) -> list[int]:
         """Sort population indices by NSGA-II rank then crowding distance.
 
         Args:
@@ -405,11 +404,11 @@ class ParetoEvaluator:
         ranks = self.assign_ranks(population, objectives, directions)
 
         # Group indices by rank.
-        rank_groups: Dict[int, List[int]] = {}
+        rank_groups: dict[int, list[int]] = {}
         for idx, rank in enumerate(ranks):
             rank_groups.setdefault(rank, []).append(idx)
 
-        sorted_indices: List[int] = []
+        sorted_indices: list[int] = []
         for rank in sorted(rank_groups.keys()):
             group = rank_groups[rank]
             front_items = [population[i] for i in group]
@@ -444,7 +443,7 @@ class OutcomeBasedScorer:
 
     def __init__(self) -> None:
         # node_id → list of (predicted, actual, return_contribution)
-        self._history: Dict[str, List[Tuple[float, float, float]]] = {}
+        self._history: dict[str, list[tuple[float, float, float]]] = {}
 
     def record_outcome(
         self,
@@ -508,7 +507,7 @@ class OutcomeBasedScorer:
         raw = 0.6 * acc + 0.4 * sharpe
         return max(0.0, min(1.0, raw))
 
-    def get_scores(self) -> Dict[str, float]:
+    def get_scores(self) -> dict[str, float]:
         """Return scores for all tracked nodes.
 
         Returns:
@@ -535,9 +534,9 @@ class AlignmentDecision:
         cycle: Monotonic improvement cycle index.
     """
     approved: bool
-    violations: List[str]
-    pareto_ranks: Dict[str, int]
-    outcome_scores: Dict[str, float]
+    violations: list[str]
+    pareto_ranks: dict[str, int]
+    outcome_scores: dict[str, float]
     improvement_magnitude_ok: bool
     magnitude_warning: bool
     cycle: int
@@ -561,7 +560,7 @@ class AlignmentLayer:
             ``max_correlation``, ``max_improvement_magnitude``).
     """
 
-    def __init__(self, safety_config: Optional[Dict] = None) -> None:
+    def __init__(self, safety_config: dict | None = None) -> None:
         cfg = safety_config or {}
         self._safety_envelope = SafetyEnvelope(
             max_position_pct=cfg.get("max_position_pct", 0.25),
@@ -572,14 +571,14 @@ class AlignmentLayer:
         self._pareto_evaluator = ParetoEvaluator()
         self._scorer = OutcomeBasedScorer()
         # Track magnitude warnings per node: node_id → bool
-        self._magnitude_warnings: Dict[str, bool] = {}
+        self._magnitude_warnings: dict[str, bool] = {}
         logger.info("AlignmentLayer initialised with safety_config=%s", cfg)
 
     def check_improvement_cycle(
         self,
-        node_metrics_map: Dict[str, Dict[str, float]],
-        system_metrics: Dict[str, float],
-        portfolio: Dict[str, float],
+        node_metrics_map: dict[str, dict[str, float]],
+        system_metrics: dict[str, float],
+        portfolio: dict[str, float],
         cycle: int = 0,
     ) -> AlignmentDecision:
         """Run all 3 alignment layers for one improvement cycle.
@@ -613,7 +612,7 @@ class AlignmentLayer:
         node_ids = list(node_metrics_map.keys())
         population = [node_metrics_map[nid] for nid in node_ids]
         objectives = [k for k in (population[0].keys() if population else []) if k not in ("node_id",)]
-        directions: Dict[str, str] = {}
+        directions: dict[str, str] = {}
         for obj in objectives:
             # Convention: metrics ending in "_latency" or "_error" are minimised.
             if obj.endswith("_latency") or obj.endswith("_error") or obj == "drawdown":
@@ -621,7 +620,7 @@ class AlignmentLayer:
             else:
                 directions[obj] = "maximize"
 
-        pareto_ranks: Dict[str, int] = {}
+        pareto_ranks: dict[str, int] = {}
         if population and objectives:
             ranks_list = self._pareto_evaluator.assign_ranks(population, objectives, directions)
             for nid, rank in zip(node_ids, ranks_list):
@@ -653,9 +652,9 @@ class AlignmentLayer:
     def record_improvement_attempt(
         self,
         node_id: str,
-        old_params: Dict[str, float],
-        new_params: Dict[str, float],
-    ) -> Tuple[bool, str]:
+        old_params: dict[str, float],
+        new_params: dict[str, float],
+    ) -> tuple[bool, str]:
         """Gate a node parameter update via improvement magnitude check.
 
         Computes improvement_delta as the change in mean absolute parameter

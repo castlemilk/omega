@@ -1,7 +1,5 @@
 """Tests for omega.core.config — centralized configuration loading."""
 
-import os
-import tempfile
 
 import pytest
 

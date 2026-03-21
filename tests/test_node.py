@@ -1,15 +1,16 @@
 """Tests for the Node interface and data contracts."""
 
 import pytest
+
 from omega.core.node import NodeInput, NodeOutput, NodeState
 from omega.nodes.calculator import CalculatorNode
 from omega.nodes.text_analyzer import TextAnalyzerNode
 from omega.nodes.web_fetcher import WebFetcherNode
 
-
 # ---------------------------------------------------------------------------
 # NodeInput / NodeOutput / NodeState — data contract sanity checks
 # ---------------------------------------------------------------------------
+
 
 class TestDataContracts:
     def test_node_input_defaults(self):
@@ -46,6 +47,7 @@ class TestDataContracts:
 # ---------------------------------------------------------------------------
 # CalculatorNode
 # ---------------------------------------------------------------------------
+
 
 class TestCalculatorNode:
     def setup_method(self):
@@ -147,6 +149,7 @@ class TestCalculatorNode:
 # TextAnalyzerNode
 # ---------------------------------------------------------------------------
 
+
 class TestTextAnalyzerNode:
     def setup_method(self):
         self.node = TextAnalyzerNode()
@@ -171,12 +174,12 @@ class TestTextAnalyzerNode:
         assert "lexical_diversity" in out.result
 
     def test_sentiment_unlocked_after_second_improve(self):
-        self.node.improve({})   # v1.1
-        self.node.improve({})   # v1.2
+        self.node.improve({})  # v1.1
+        self.node.improve({})  # v1.2
         inp = NodeInput(action="sentiment", parameters={"text": "great wonderful happy"})
         out = self.node.execute(inp)
         assert out.success
-        assert out.result > 0.0   # positive sentiment
+        assert out.result > 0.0  # positive sentiment
 
     def test_negative_sentiment(self):
         self.node.improve({})
@@ -207,6 +210,7 @@ class TestTextAnalyzerNode:
 # ---------------------------------------------------------------------------
 # WebFetcherNode (dry_run mode — no real network)
 # ---------------------------------------------------------------------------
+
 
 class TestWebFetcherNode:
     def setup_method(self):

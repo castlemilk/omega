@@ -28,17 +28,13 @@ Design notes
 
 from __future__ import annotations
 
-import json
 import logging
 import math
-import sqlite3
-import statistics
-import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Dict, FrozenSet, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
-from omega.core.memory import Episode, MemoryKernel, SemanticMemory
+from omega.core.memory import MemoryKernel, SemanticMemory
 
 logger = logging.getLogger("omega.core.memory_v2")
 
@@ -97,10 +93,10 @@ class BOCPDRegimeDetector:
         self._prior_var = prior_var
 
         # run-length distribution: {run_length: probability}
-        self._run_probs: Dict[int, float] = {0: 1.0}
+        self._run_probs: dict[int, float] = {0: 1.0}
 
         # sufficient statistics per run length: {run_length: (n, mean, M2)}
-        self._stats: Dict[int, Tuple[int, float, float]] = {}
+        self._stats: dict[int, tuple[int, float, float]] = {}
 
         # current regime book-keeping
         self._regime_id = str(uuid.uuid4())
@@ -115,8 +111,8 @@ class BOCPDRegimeDetector:
     def update(self, observation: float) -> RegimeState:
         """Process one observation and return the updated RegimeState."""
         self._cycle += 1
-        new_probs: Dict[int, float] = {}
-        new_stats: Dict[int, Tuple[int, float, float]] = {}
+        new_probs: dict[int, float] = {}
+        new_stats: dict[int, tuple[int, float, float]] = {}
 
         total_mass = 0.0
 
@@ -280,7 +276,7 @@ class SlidingWindowRegimeDetector:
         self._crash_threshold = crash_threshold
         self._vol_threshold = vol_threshold
         self._trend_threshold = trend_threshold
-        self._observations: List[float] = []
+        self._observations: list[float] = []
         self._cycle = 0
         self._regime_id = str(uuid.uuid4())
         self._regime_start_cycle = 0
@@ -333,7 +329,7 @@ class SlidingWindowRegimeDetector:
             label=self._last_label,
         )
 
-    def _rolling_stats(self) -> Tuple[float, float]:
+    def _rolling_stats(self) -> tuple[float, float]:
         """Return (mean, variance) of current window using Welford's algorithm."""
         n = len(self._observations)
         if n == 0:
@@ -375,7 +371,7 @@ class RegimeTaggedSemanticStore:
         confidence: float,
         regime_id: str,
         regime_label: str,
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
         namespace: str = "global",
     ) -> str:
         """Store a semantic memory annotated with regime context."""
@@ -395,10 +391,10 @@ class RegimeTaggedSemanticStore:
     def retrieve_for_regime(
         self,
         regime_label: str,
-        concept: Optional[str] = None,
+        concept: str | None = None,
         limit: int = 5,
-        namespace: Optional[str] = None,
-    ) -> List[SemanticMemory]:
+        namespace: str | None = None,
+    ) -> list[SemanticMemory]:
         """
         Retrieve semantic memories that were stored under a particular regime label.
         Uses tag filtering: ``regime_type:{regime_label}``.
@@ -431,23 +427,23 @@ class EWCProtection:
     def __init__(self, lambda_ewc: float = 0.4) -> None:
         self._lambda = lambda_ewc
         # task_id → anchor parameter dict (θ*)
-        self._anchors: Dict[str, Dict[str, float]] = {}
+        self._anchors: dict[str, dict[str, float]] = {}
         # task_id → Fisher diagonal estimate {param_name: F_i}
-        self._fisher: Dict[str, Dict[str, float]] = {}
+        self._fisher: dict[str, dict[str, float]] = {}
         # consolidated snapshot (multi-task average)
-        self._consolidated_anchor: Dict[str, float] = {}
-        self._consolidated_fisher: Dict[str, float] = {}
+        self._consolidated_anchor: dict[str, float] = {}
+        self._consolidated_fisher: dict[str, float] = {}
 
-    def snapshot_params(self, params: Dict[str, float], task_id: str) -> None:
+    def snapshot_params(self, params: dict[str, float], task_id: str) -> None:
         """Record current params as the anchor for *task_id*."""
         self._anchors[task_id] = dict(params)
         logger.debug("EWC: snapshotted %d params for task '%s'", len(params), task_id)
 
     def estimate_fisher(
         self,
-        param_gradients_samples: List[Dict[str, float]],
-        task_id: Optional[str] = None,
-    ) -> Dict[str, float]:
+        param_gradients_samples: list[dict[str, float]],
+        task_id: str | None = None,
+    ) -> dict[str, float]:
         """
         Approximate the diagonal Fisher information matrix.
 
@@ -460,8 +456,8 @@ class EWCProtection:
             return {}
 
         # Accumulate sum of squared gradients
-        accum: Dict[str, float] = {}
-        counts: Dict[str, int] = {}
+        accum: dict[str, float] = {}
+        counts: dict[str, int] = {}
         for sample in param_gradients_samples:
             for pname, grad in sample.items():
                 accum[pname] = accum.get(pname, 0.0) + grad * grad
@@ -477,7 +473,7 @@ class EWCProtection:
 
     def ewc_penalty(
         self,
-        current_params: Dict[str, float],
+        current_params: dict[str, float],
         task_id: str,
     ) -> float:
         """
@@ -520,8 +516,8 @@ class EWCProtection:
             if tid in self._fisher:
                 param_names.update(self._fisher[tid].keys())
 
-        consolidated_anchor: Dict[str, float] = {}
-        consolidated_fisher: Dict[str, float] = {}
+        consolidated_anchor: dict[str, float] = {}
+        consolidated_fisher: dict[str, float] = {}
 
         for pname in param_names:
             anchor_vals = [
@@ -557,7 +553,7 @@ class EWCProtection:
         """
         return task_id in self._anchors
 
-    def store_fisher(self, task_id: str, fisher: Dict[str, float]) -> None:
+    def store_fisher(self, task_id: str, fisher: dict[str, float]) -> None:
         """Associate a pre-computed Fisher diagonal with *task_id*."""
         self._fisher[task_id] = dict(fisher)
 
@@ -582,16 +578,16 @@ class DempsterShaferFusion:
 
     _UNCERTAINTY_KEY = "__uncertainty__"
 
-    def __init__(self, frame: List[str]) -> None:
+    def __init__(self, frame: list[str]) -> None:
         self._frame = list(frame)
         # Pre-compute power set (as frozensets) for intersection logic
-        self._power_set: List[FrozenSet[str]] = self._build_power_set(self._frame)
+        self._power_set: list[frozenset[str]] = self._build_power_set(self._frame)
         # source_id → {subset: mass}
-        self._evidence: Dict[str, Dict[FrozenSet[str], float]] = {}
+        self._evidence: dict[str, dict[frozenset[str], float]] = {}
 
     # ------------------------------------------------------------------ public
 
-    def add_evidence(self, source: str, masses: Dict[str, float]) -> None:
+    def add_evidence(self, source: str, masses: dict[str, float]) -> None:
         """
         Register a BPA from *source*.
 
@@ -603,7 +599,7 @@ class DempsterShaferFusion:
         Remaining probability mass (1 - sum(masses)) is automatically assigned
         to ``__uncertainty__`` (the vacuous BPA).
         """
-        normalised: Dict[FrozenSet[str], float] = {}
+        normalised: dict[frozenset[str], float] = {}
         total = 0.0
 
         for key, mass in masses.items():
@@ -624,7 +620,7 @@ class DempsterShaferFusion:
 
     _CONFLICT_FALLBACK_THRESHOLD: float = 0.3
 
-    def combine(self) -> Dict[str, float]:
+    def combine(self) -> dict[str, float]:
         """
         Combine all registered evidence sources using Dempster's rule.
 
@@ -656,7 +652,7 @@ class DempsterShaferFusion:
             combined = self._dempster_combine(combined, source)
 
         # Convert frozensets to readable keys
-        result: Dict[str, float] = {}
+        result: dict[str, float] = {}
         for fkey, mass in combined.items():
             if mass < 1e-12:
                 continue
@@ -717,7 +713,7 @@ class DempsterShaferFusion:
 
     # ------------------------------------------------------------------ private
 
-    def _confidence_weighted_average(self) -> Dict[str, float]:
+    def _confidence_weighted_average(self) -> dict[str, float]:
         """
         Fallback combiner for high-conflict situations.
 
@@ -726,7 +722,7 @@ class DempsterShaferFusion:
         non-uncertainty mass (a proxy for confidence/commitment).
         """
         # Compute per-source confidence weight (total committed mass)
-        source_confidence: Dict[str, float] = {}
+        source_confidence: dict[str, float] = {}
         uncertainty_key = frozenset(self._frame)
         for src, masses in self._evidence.items():
             committed = sum(
@@ -738,7 +734,7 @@ class DempsterShaferFusion:
         total_confidence = sum(source_confidence.values()) or 1.0
 
         # Weighted average of single-hypothesis masses per hypothesis
-        result: Dict[str, float] = {h: 0.0 for h in self._frame}
+        result: dict[str, float] = {h: 0.0 for h in self._frame}
         for src, masses in self._evidence.items():
             w = source_confidence[src] / total_confidence
             for fkey, mass in masses.items():
@@ -756,14 +752,14 @@ class DempsterShaferFusion:
         return result
 
     @staticmethod
-    def _build_power_set(elements: List[str]) -> List[FrozenSet[str]]:
+    def _build_power_set(elements: list[str]) -> list[frozenset[str]]:
         """Generate the power set of *elements* as a list of frozensets."""
-        result: List[FrozenSet[str]] = [frozenset()]
+        result: list[frozenset[str]] = [frozenset()]
         for elem in elements:
             result = result + [s | frozenset([elem]) for s in result]
         return result
 
-    def _normalise_key(self, key: Any) -> FrozenSet[str]:
+    def _normalise_key(self, key: Any) -> frozenset[str]:
         """Convert a user-supplied mass key to a canonical frozenset."""
         if isinstance(key, frozenset):
             return key
@@ -776,14 +772,14 @@ class DempsterShaferFusion:
 
     def _dempster_combine(
         self,
-        m1: Dict[FrozenSet[str], float],
-        m2: Dict[FrozenSet[str], float],
-    ) -> Dict[FrozenSet[str], float]:
+        m1: dict[frozenset[str], float],
+        m2: dict[frozenset[str], float],
+    ) -> dict[frozenset[str], float]:
         """
         Core Dempster combination: m12(A) = Σ_{B∩C=A} m1(B)*m2(C) / (1 - K).
         Returns the normalised combined BPA.
         """
-        raw: Dict[FrozenSet[str], float] = {}
+        raw: dict[frozenset[str], float] = {}
         conflict_mass = 0.0
 
         for b, mb in m1.items():
@@ -806,7 +802,7 @@ class DempsterShaferFusion:
 
         return {fkey: mass / norm_factor for fkey, mass in raw.items()}
 
-    def _combine_raw(self) -> Dict[FrozenSet[str], float]:
+    def _combine_raw(self) -> dict[frozenset[str], float]:
         """Internal: combine all sources and return frozenset-keyed result."""
         sources = list(self._evidence.values())
         if not sources:
@@ -835,7 +831,7 @@ class DempsterShaferFusion:
             total_conflict = k + total_conflict * (1.0 - k)  # accumulated conflict
             norm_factor = 1.0 - k
             if norm_factor > 1e-10:
-                new_combined: Dict[FrozenSet[str], float] = {}
+                new_combined: dict[frozenset[str], float] = {}
                 for b, mb in combined.items():
                     for c, mc in source.items():
                         intersection = b & c
@@ -859,7 +855,7 @@ class Resolution:
     confidence: float                 # 0→1
     conflict_level: float             # DS conflict K
     regime_context: str               # current regime label
-    evidence_summary: Dict[str, float]  # source → evidence strength
+    evidence_summary: dict[str, float]  # source → evidence strength
     used_entrenchment: bool           # whether AGM belief revision fired
 
 
@@ -875,7 +871,7 @@ class ContradictionResolver:
     def __init__(
         self,
         regime_detector: BOCPDRegimeDetector,
-        ds_frame: Optional[List[str]] = None,
+        ds_frame: list[str] | None = None,
     ) -> None:
         self._detector = regime_detector
         self._frame = ds_frame or self._DEFAULT_FRAME
@@ -883,7 +879,7 @@ class ContradictionResolver:
 
     # ------------------------------------------------------------------ public
 
-    def resolve(self, observations: List[Dict]) -> Resolution:
+    def resolve(self, observations: list[dict]) -> Resolution:
         """
         Produce a Resolution from a list of observations.
 
@@ -915,12 +911,12 @@ class ContradictionResolver:
         regime = self._detector.current_regime()
 
         # --- Step 1: evidence strengths --------------------------------------
-        strengths: Dict[str, float] = {
+        strengths: dict[str, float] = {
             obs["source"]: abs(obs.get("value", 0.0))
             for obs in observations
         }
         total_strength = sum(strengths.values()) or 1.0
-        normalised: Dict[str, float] = {
+        normalised: dict[str, float] = {
             src: s / total_strength for src, s in strengths.items()
         }
 
@@ -1026,7 +1022,7 @@ class MemoryKernelV2(MemoryKernel):
         self.regime_store = RegimeTaggedSemanticStore(self)
         self.ewc = EWCProtection() if ewc_enabled else None
         self.resolver = ContradictionResolver(self.regime_detector)
-        self._current_regime: Optional[RegimeState] = None
+        self._current_regime: RegimeState | None = None
         logger.info(
             "MemoryKernelV2 initialised (db=%s, ewc=%s, bocpd=%s)",
             db_path, ewc_enabled, advanced_bocpd,
@@ -1071,10 +1067,10 @@ class MemoryKernelV2(MemoryKernel):
     def store_episode_v2(
         self,
         event_type: str,
-        content: Dict[str, Any],
-        tags: Optional[List[str]] = None,
+        content: dict[str, Any],
+        tags: list[str] | None = None,
         importance: float = 1.0,
-        cycle: Optional[int] = None,
+        cycle: int | None = None,
         namespace: str = "global",
     ) -> str:
         """
@@ -1096,7 +1092,7 @@ class MemoryKernelV2(MemoryKernel):
             namespace=namespace,
         )
 
-    def get_regime_context(self) -> Dict[str, Any]:
+    def get_regime_context(self) -> dict[str, Any]:
         """Return the current regime state as a plain dictionary."""
         regime = self._current_regime or self.regime_detector.current_regime()
         return {
@@ -1111,13 +1107,13 @@ class MemoryKernelV2(MemoryKernel):
 
     # ------------------------------------------------------------------ contradiction resolution
 
-    def resolve_contradictions(self, observations: List[Dict]) -> Resolution:
+    def resolve_contradictions(self, observations: list[dict]) -> Resolution:
         """Delegate contradiction resolution to :class:`ContradictionResolver`."""
         return self.resolver.resolve(observations)
 
     # ------------------------------------------------------------------ consolidation
 
-    def consolidate_regime_memory(self, namespace: Optional[str] = None) -> List[str]:
+    def consolidate_regime_memory(self, namespace: str | None = None) -> list[str]:
         """
         Regime-aware consolidation.
 

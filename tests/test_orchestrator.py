@@ -1,17 +1,19 @@
 """Tests for the Orchestrator coordination layer."""
 
-import pytest
-from omega.core.evaluator import GoalSpec
-from omega.core.orchestrator import Orchestrator
-from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-from omega.nodes.calculator import CalculatorNode
-from omega.nodes.text_analyzer import TextAnalyzerNode
 import uuid
 
+import pytest
+
+from omega.core.evaluator import GoalSpec
+from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.orchestrator import Orchestrator
+from omega.nodes.calculator import CalculatorNode
+from omega.nodes.text_analyzer import TextAnalyzerNode
 
 # ---------------------------------------------------------------------------
 # Minimal stub node for isolation tests
 # ---------------------------------------------------------------------------
+
 
 class EchoNode(Node):
     """Returns its input parameters as result.  Always healthy."""
@@ -58,6 +60,7 @@ class EchoNode(Node):
 # Orchestrator construction
 # ---------------------------------------------------------------------------
 
+
 class TestOrchestratorInit:
     def test_empty_registry(self):
         orch = Orchestrator()
@@ -79,6 +82,7 @@ class TestOrchestratorInit:
 # Goal execution
 # ---------------------------------------------------------------------------
 
+
 class TestExecuteGoal:
     def setup_method(self):
         self.orch = Orchestrator()
@@ -94,10 +98,7 @@ class TestExecuteGoal:
         assert outputs[0].result["x"] == 42
 
     def test_execute_multiple_tasks(self):
-        tasks = [
-            {"action": "echo", "parameters": {"n": i}}
-            for i in range(5)
-        ]
+        tasks = [{"action": "echo", "parameters": {"n": i}} for i in range(5)]
         outputs = self.orch.execute_goal("echo", parameters={"tasks": tasks})
         assert len(outputs) == 5
         assert all(o.success for o in outputs)
@@ -125,6 +126,7 @@ class TestExecuteGoal:
 # Performance evaluation
 # ---------------------------------------------------------------------------
 
+
 class TestEvaluatePerformance:
     def setup_method(self):
         self.orch = Orchestrator()
@@ -134,6 +136,7 @@ class TestEvaluatePerformance:
 
     def test_returns_dict_with_expected_keys(self):
         from omega.core.node import NodeOutput
+
         outputs = [
             NodeOutput(success=True, metrics={"latency_ms": 1.0, "accuracy": 1.0}),
             NodeOutput(success=True, metrics={"latency_ms": 2.0, "accuracy": 0.9}),
@@ -145,6 +148,7 @@ class TestEvaluatePerformance:
 
     def test_success_rate_calculation(self):
         from omega.core.node import NodeOutput
+
         outputs = [
             NodeOutput(success=True, metrics={"latency_ms": 1.0}),
             NodeOutput(success=False, errors=["oops"], metrics={}),
@@ -160,6 +164,7 @@ class TestEvaluatePerformance:
 # ---------------------------------------------------------------------------
 # Improvement cycle
 # ---------------------------------------------------------------------------
+
 
 class TestImproveSystem:
     def test_improve_called_on_nodes(self):
@@ -184,6 +189,7 @@ class TestImproveSystem:
 # Convergence loop — integration with CalculatorNode
 # ---------------------------------------------------------------------------
 
+
 class TestConvergenceLoop:
     def test_runs_and_returns_history(self):
         orch = Orchestrator()
@@ -198,9 +204,8 @@ class TestConvergenceLoop:
         orch.register_goal(spec)
 
         problems = [
-            {"action": "add", "parameters": {"a": i, "b": i + 1}}
-            for i in range(20)
-        ] * 3   # repeat to make cache useful
+            {"action": "add", "parameters": {"a": i, "b": i + 1}} for i in range(20)
+        ] * 3  # repeat to make cache useful
 
         history = orch.run_convergence_loop(
             "math",
@@ -219,8 +224,7 @@ class TestConvergenceLoop:
         orch.register_goal(spec)
 
         problems = [
-            {"action": "multiply", "parameters": {"a": i % 10, "b": i % 5}}
-            for i in range(40)
+            {"action": "multiply", "parameters": {"a": i % 10, "b": i % 5}} for i in range(40)
         ]
 
         orch.run_convergence_loop(
@@ -241,13 +245,13 @@ class TestConvergenceLoop:
         orch.register_goal(spec)
 
         tasks = [
-            {"action": "add",        "parameters": {"a": 1, "b": 2}},
+            {"action": "add", "parameters": {"a": 1, "b": 2}},
             {"action": "word_count", "parameters": {"text": "hello world"}},
-            {"action": "multiply",   "parameters": {"a": 3, "b": 4}},
-            {"action": "analyze",    "parameters": {"text": "one two three"}},
+            {"action": "multiply", "parameters": {"a": 3, "b": 4}},
+            {"action": "analyze", "parameters": {"text": "one two three"}},
         ]
 
         outputs = orch.execute_goal("mixed", parameters={"tasks": tasks})
         assert len(outputs) == 4
         successes = [o for o in outputs if o.success]
-        assert len(successes) >= 3   # most should succeed
+        assert len(successes) >= 3  # most should succeed

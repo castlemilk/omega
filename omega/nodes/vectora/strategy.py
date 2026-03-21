@@ -14,7 +14,7 @@ import logging
 import math
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
@@ -32,8 +32,8 @@ class StrategyNode(Node):
     def __init__(self) -> None:
         self._node_id = str(uuid.uuid4())
         self._version = "1.0"
-        self._weighting = "equal"      # "equal", "momentum", "risk_parity"
-        self._signal_threshold = 0.0   # composite signal must exceed this to be included
+        self._weighting = "equal"  # "equal", "momentum", "risk_parity"
+        self._signal_threshold = 0.0  # composite signal must exceed this to be included
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
@@ -65,7 +65,7 @@ class StrategyNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["construct_portfolio", "backtest_strategy", "rank_signals"]
 
     def describe(self) -> str:
@@ -92,7 +92,7 @@ class StrategyNode(Node):
                 result = self._backtest(signals, market_data)
             elif action == "rank_signals":
                 signals = params.get("signals", {})
-                result = self._rank_signals(signals)
+                result = self._rank_signals(signals)  # type: ignore[assignment]
             else:
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._execution_count += 1
@@ -134,7 +134,7 @@ class StrategyNode(Node):
                 metrics={"latency_ms": elapsed},
             )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "error_rate": self._error_rate(),
@@ -143,7 +143,7 @@ class StrategyNode(Node):
             "hit_rate": self._last_hit_rate,
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
         iteration = feedback.get("iteration", 0)
 
@@ -162,16 +162,13 @@ class StrategyNode(Node):
             changed = True
 
         # v1.3: Tighten signal threshold if Sharpe is poor
-        if (
-            self._version == "1.2"
-            and self._last_sharpe < 0.5
-            and self._backtest_count >= 2
-        ):
+        if self._version == "1.2" and self._last_sharpe < 0.5 and self._backtest_count >= 2:
             self._signal_threshold = min(0.3, self._signal_threshold + 0.1)
             self._version = "1.3"
             logger.info(
-                "StrategyNode → v1.3: signal threshold tightened to %.2f "
-                "(sharpe=%.2f)", self._signal_threshold, self._last_sharpe
+                "StrategyNode → v1.3: signal threshold tightened to %.2f (sharpe=%.2f)",
+                self._signal_threshold,
+                self._last_sharpe,
             )
             changed = True
 
@@ -180,8 +177,8 @@ class StrategyNode(Node):
     # ------------------------------------------------------------------ portfolio construction
 
     def _construct_portfolio(
-        self, signals: Dict[str, Any], market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, signals: dict[str, Any], market_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Build portfolio weights from signals."""
         # Filter to buy-signal stocks
         candidates = {
@@ -193,14 +190,13 @@ class StrategyNode(Node):
         if not candidates:
             # Fall back to all available if no clear buys
             candidates = {
-                ticker: sig for ticker, sig in signals.items()
-                if sig.get("composite") is not None
+                ticker: sig for ticker, sig in signals.items() if sig.get("composite") is not None
             }
 
         if not candidates:
             return {"weights": {}, "positions": 0, "method": self._weighting}
 
-        weights: Dict[str, float] = {}
+        weights: dict[str, float] = {}
 
         if self._weighting == "equal":
             weight = 1.0 / len(candidates)
@@ -217,8 +213,8 @@ class StrategyNode(Node):
 
         elif self._weighting == "risk_parity":
             # Weight ∝ 1/volatility using recent price history
-            vols: Dict[str, float] = {}
-            for ticker, sig in candidates.items():
+            vols: dict[str, float] = {}
+            for ticker, _sig in candidates.items():
                 data = market_data.get(ticker)
                 if data:
                     prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
@@ -243,25 +239,25 @@ class StrategyNode(Node):
             "backtest": bt,
         }
 
-    def _rank_signals(self, signals: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _rank_signals(self, signals: dict[str, Any]) -> list[dict[str, Any]]:
         """Rank tickers by composite signal strength."""
         ranked = []
         for ticker, sig in signals.items():
             composite = sig.get("composite")
             if composite is not None:
-                ranked.append({
-                    "ticker": ticker,
-                    "composite": composite,
-                    "price": sig.get("price"),
-                    "rsi": sig.get("rsi"),
-                    "return_1d": sig.get("return_1d"),
-                })
+                ranked.append(
+                    {
+                        "ticker": ticker,
+                        "composite": composite,
+                        "price": sig.get("price"),
+                        "rsi": sig.get("rsi"),
+                        "return_1d": sig.get("return_1d"),
+                    }
+                )
         ranked.sort(key=lambda x: x["composite"], reverse=True)
         return ranked
 
-    def _backtest(
-        self, signals: Dict[str, Any], market_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _backtest(self, signals: dict[str, Any], market_data: dict[str, Any]) -> dict[str, Any]:
         """
         Simple backtest: compute signal-implied returns over available history.
 
@@ -271,11 +267,11 @@ class StrategyNode(Node):
         self._backtest_count += 1
 
         # Collect per-ticker (signal, return) pairs using all available history
-        all_returns: List[float] = []
+        all_returns: list[float] = []
         hit_count = 0
         total_trades = 0
 
-        for ticker, data in market_data.items():
+        for _ticker, data in market_data.items():
             if not data:
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
@@ -284,7 +280,7 @@ class StrategyNode(Node):
 
             # compute rolling SMA-crossover signal for each bar and 1-day forward return
             for i in range(20, len(prices) - 1):
-                window = prices[:i + 1]
+                window = prices[: i + 1]
                 sma5 = sum(window[-5:]) / 5
                 sma20 = sum(window[-20:]) / 20
                 signal = 1.0 if sma5 > sma20 else -1.0
@@ -299,9 +295,7 @@ class StrategyNode(Node):
             return {"sharpe": 0.0, "max_drawdown": 0.0, "hit_rate": 0.0, "trades": 0}
 
         mean_ret = sum(all_returns) / len(all_returns)
-        variance = (
-            sum((r - mean_ret) ** 2 for r in all_returns) / max(1, len(all_returns) - 1)
-        )
+        variance = sum((r - mean_ret) ** 2 for r in all_returns) / max(1, len(all_returns) - 1)
         std_ret = math.sqrt(variance) if variance > 0 else 1e-6
 
         # Annualised Sharpe (252 trading days)
@@ -335,7 +329,7 @@ class StrategyNode(Node):
 
     # ------------------------------------------------------------------ helpers
 
-    def _compute_volatility(self, prices: List[float], window: int = 20) -> float:
+    def _compute_volatility(self, prices: list[float], window: int = 20) -> float:
         if len(prices) < window + 1:
             return 0.3
         returns = [
@@ -350,7 +344,7 @@ class StrategyNode(Node):
         daily_vol = math.sqrt(variance)
         return daily_vol * math.sqrt(252)  # annualised
 
-    def _clean_prices(self, prices: List) -> List[float]:
+    def _clean_prices(self, prices: list) -> list[float]:
         result = []
         for p in prices:
             if p is None:

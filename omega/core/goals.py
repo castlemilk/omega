@@ -25,8 +25,8 @@ import logging
 import math
 import time
 import uuid
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger("omega.core.goals")
 
@@ -49,21 +49,21 @@ class ConstraintViolation:
 class Task:
     task_id: str
     name: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     assigned_to: str
     priority: float
-    preconditions: Dict[str, Any]
+    preconditions: dict[str, Any]
 
 
 @dataclass
 class GoalDecision:
     approved: bool
-    constraint_violations: List[ConstraintViolation]
-    scorecard: Dict[str, float]
+    constraint_violations: list[ConstraintViolation]
+    scorecard: dict[str, float]
     composite_score: float
-    subtasks: List[Task]
+    subtasks: list[Task]
     tracking_error: float
-    control_action: Dict[str, float]
+    control_action: dict[str, float]
     cycle: int
 
 
@@ -76,7 +76,7 @@ class ConstitutionalConstraints:
     """Hard safety rules that override everything else."""
 
     def __init__(self) -> None:
-        self._constraints: List[Dict[str, Any]] = []
+        self._constraints: list[dict[str, Any]] = []
 
     def register(
         self,
@@ -114,14 +114,14 @@ class ConstitutionalConstraints:
         )
 
     def check(
-        self, metrics: Dict[str, float]
-    ) -> Tuple[bool, List[ConstraintViolation]]:
+        self, metrics: dict[str, float]
+    ) -> tuple[bool, list[ConstraintViolation]]:
         """Evaluate all constraints against current metrics.
 
         Returns:
             (passed, violations) where passed=False if any hard constraint is violated.
         """
-        violations: List[ConstraintViolation] = []
+        violations: list[ConstraintViolation] = []
         for c in self._constraints:
             key = c["metric_key"]
             if key not in metrics:
@@ -130,9 +130,7 @@ class ConstitutionalConstraints:
             limit = c["limit"]
             direction = c["direction"]
             violated = False
-            if direction == "max" and value > limit:
-                violated = True
-            elif direction == "min" and value < limit:
+            if (direction == "max" and value > limit) or (direction == "min" and value < limit):
                 violated = True
             if violated:
                 v = ConstraintViolation(
@@ -205,16 +203,16 @@ class BalancedScorecard:
 
     DIMENSIONS = ["returns", "risk", "diversification", "information_ratio"]
 
-    def __init__(self, dimension_weights: Optional[Dict[str, float]] = None) -> None:
+    def __init__(self, dimension_weights: dict[str, float] | None = None) -> None:
         if dimension_weights is None:
             equal = 1.0 / len(self.DIMENSIONS)
-            self._weights: Dict[str, float] = {d: equal for d in self.DIMENSIONS}
+            self._weights: dict[str, float] = {d: equal for d in self.DIMENSIONS}
         else:
             self._weights = {d: dimension_weights.get(d, 0.0) for d in self.DIMENSIONS}
             self._normalise_weights()
 
-        self._scores: Dict[str, float] = {d: 0.0 for d in self.DIMENSIONS}
-        self._history: List[Dict[str, float]] = []
+        self._scores: dict[str, float] = {d: 0.0 for d in self.DIMENSIONS}
+        self._history: list[dict[str, float]] = []
 
     def _normalise_weights(self) -> None:
         total = sum(self._weights.values())
@@ -222,8 +220,8 @@ class BalancedScorecard:
             for k in self._weights:
                 self._weights[k] /= total
 
-    def _map_returns(self, metrics: Dict[str, float]) -> float:
-        parts: List[float] = []
+    def _map_returns(self, metrics: dict[str, float]) -> float:
+        parts: list[float] = []
         if "sharpe_ratio" in metrics:
             parts.append(_sigmoid(metrics["sharpe_ratio"]))
         if "pnl" in metrics:
@@ -232,8 +230,8 @@ class BalancedScorecard:
             return 0.5
         return sum(parts) / len(parts)
 
-    def _map_risk(self, metrics: Dict[str, float]) -> float:
-        parts: List[float] = []
+    def _map_risk(self, metrics: dict[str, float]) -> float:
+        parts: list[float] = []
         if "max_drawdown_pct" in metrics:
             parts.append(max(0.0, 1.0 - metrics["max_drawdown_pct"] / 100.0))
         if "error_rate" in metrics:
@@ -242,21 +240,21 @@ class BalancedScorecard:
             return 0.5
         return sum(parts) / len(parts)
 
-    def _map_diversification(self, metrics: Dict[str, float]) -> float:
+    def _map_diversification(self, metrics: dict[str, float]) -> float:
         if "max_correlation" in metrics:
             return max(0.0, 1.0 - abs(metrics["max_correlation"]))
         if "coverage_rate" in metrics:
             return max(0.0, min(1.0, metrics["coverage_rate"]))
         return 0.5
 
-    def _map_information_ratio(self, metrics: Dict[str, float]) -> float:
+    def _map_information_ratio(self, metrics: dict[str, float]) -> float:
         if "information_ratio" in metrics:
             return _sigmoid(metrics["information_ratio"])
         if "accuracy" in metrics:
             return max(0.0, min(1.0, metrics["accuracy"]))
         return 0.5
 
-    def update(self, metrics: Dict[str, float]) -> None:
+    def update(self, metrics: dict[str, float]) -> None:
         """Map incoming metrics to scorecard dimensions and record history."""
         self._scores["returns"] = self._map_returns(metrics)
         self._scores["risk"] = self._map_risk(metrics)
@@ -265,7 +263,7 @@ class BalancedScorecard:
         self._history.append(copy.copy(self._scores))
         logger.debug("Scorecard updated: %s", self._scores)
 
-    def score(self) -> Dict[str, float]:
+    def score(self) -> dict[str, float]:
         """Return current dimension scores."""
         return copy.copy(self._scores)
 
@@ -273,7 +271,7 @@ class BalancedScorecard:
         """Weighted average of dimension scores."""
         return sum(self._scores[d] * self._weights[d] for d in self.DIMENSIONS)
 
-    def trend(self, window: int = 5) -> Dict[str, float]:
+    def trend(self, window: int = 5) -> dict[str, float]:
         """Return {dimension: delta} over the last `window` updates."""
         if len(self._history) < 2:
             return {d: 0.0 for d in self.DIMENSIONS}
@@ -305,7 +303,7 @@ class AdaptiveReferenceTracker:
 
     def __init__(
         self,
-        objectives: List[str],
+        objectives: list[str],
         ema_alpha: float = 0.2,
         uncertainty_factor: float = 1.5,
     ) -> None:
@@ -314,24 +312,24 @@ class AdaptiveReferenceTracker:
         self._uncertainty_factor = uncertainty_factor
 
         # EMA reference values per objective
-        self._ema: Dict[str, float] = {}
+        self._ema: dict[str, float] = {}
         # Running variance (Welford online) per objective
-        self._mean: Dict[str, float] = {}
-        self._m2: Dict[str, float] = {}
-        self._n: Dict[str, int] = {}
+        self._mean: dict[str, float] = {}
+        self._m2: dict[str, float] = {}
+        self._n: dict[str, int] = {}
         # Last observed values
-        self._last: Dict[str, float] = {}
+        self._last: dict[str, float] = {}
         # Optional manual reference override
-        self._manual_reference: Dict[str, float] = {}
+        self._manual_reference: dict[str, float] = {}
 
-    def set_reference(self, trajectory: Dict[str, List[float]]) -> None:
+    def set_reference(self, trajectory: dict[str, list[float]]) -> None:
         """Override with a manual reference (first value of each trajectory used)."""
         self._manual_reference = {
             obj: vals[0] for obj, vals in trajectory.items() if vals
         }
         logger.debug("AdaptiveReferenceTracker: manual reference set %s", self._manual_reference)
 
-    def update(self, current: Dict[str, float]) -> None:
+    def update(self, current: dict[str, float]) -> None:
         """Update EMA reference and running variance with new observations."""
         for obj in self._objectives:
             val = current.get(obj)
@@ -379,10 +377,10 @@ class AdaptiveReferenceTracker:
             count += 1
         return total / count if count > 0 else 0.0
 
-    def control_action(self) -> Dict[str, float]:
+    def control_action(self) -> dict[str, float]:
         """Proportional correction: K_p * (reference - current), scaled by uncertainty."""
         K_P = 0.1
-        actions: Dict[str, float] = {}
+        actions: dict[str, float] = {}
         for obj in self._objectives:
             ref = self._manual_reference.get(obj, self._ema.get(obj))
             cur = self._last.get(obj)
@@ -404,14 +402,14 @@ class HTNDecomposer:
     """Hierarchical Task Network that decomposes high-level goals into subtasks."""
 
     def __init__(self) -> None:
-        self._methods: Dict[str, List[Dict[str, Any]]] = {}
+        self._methods: dict[str, list[dict[str, Any]]] = {}
 
     def register_method(
         self,
         goal: str,
         method_name: str,
-        preconditions: Dict[str, Any],
-        subtasks: List[Dict[str, Any]],
+        preconditions: dict[str, Any],
+        subtasks: list[dict[str, Any]],
     ) -> None:
         """Register a decomposition method for a goal."""
         if goal not in self._methods:
@@ -470,7 +468,7 @@ class HTNDecomposer:
         )
 
     def _check_preconditions(
-        self, preconditions: Dict[str, Any], state: Dict[str, Any]
+        self, preconditions: dict[str, Any], state: dict[str, Any]
     ) -> bool:
         for key, condition in preconditions.items():
             state_val = state.get(key)
@@ -502,8 +500,8 @@ class HTNDecomposer:
         return True
 
     def applicable_methods(
-        self, goal: str, state: Dict[str, Any]
-    ) -> List[str]:
+        self, goal: str, state: dict[str, Any]
+    ) -> list[str]:
         """Return method names where all preconditions are satisfied by state."""
         methods = self._methods.get(goal, [])
         return [
@@ -512,8 +510,8 @@ class HTNDecomposer:
             if self._check_preconditions(m["preconditions"], state)
         ]
 
-    def _build_tasks(self, subtask_dicts: List[Dict[str, Any]]) -> List[Task]:
-        tasks: List[Task] = []
+    def _build_tasks(self, subtask_dicts: list[dict[str, Any]]) -> list[Task]:
+        tasks: list[Task] = []
         for st in subtask_dicts:
             tasks.append(
                 Task(
@@ -530,8 +528,8 @@ class HTNDecomposer:
     def decompose(
         self,
         goal: str,
-        state: Dict[str, Any],
-    ) -> List[Task]:
+        state: dict[str, Any],
+    ) -> list[Task]:
         """Find applicable methods, pick the first, return Tasks."""
         methods = self._methods.get(goal, [])
         for method in methods:
@@ -574,17 +572,17 @@ class NashWelfareAggregator:
 
     def __init__(
         self,
-        objectives: List[str],
-        disagreement_points: Optional[Dict[str, float]] = None,
+        objectives: list[str],
+        disagreement_points: dict[str, float] | None = None,
     ) -> None:
         self._objectives = list(objectives)
-        self._disagreement: Dict[str, float] = {o: 0.0 for o in objectives}
+        self._disagreement: dict[str, float] = {o: 0.0 for o in objectives}
         if disagreement_points:
             self._disagreement.update(disagreement_points)
-        self._weights: Dict[str, float] = {o: 1.0 / len(objectives) for o in objectives}
-        self._outcomes_history: List[Dict[str, float]] = []
+        self._weights: dict[str, float] = {o: 1.0 / len(objectives) for o in objectives}
+        self._outcomes_history: list[dict[str, float]] = []
 
-    def nash_welfare(self, outcomes: Dict[str, float]) -> float:
+    def nash_welfare(self, outcomes: dict[str, float]) -> float:
         """Compute Nash welfare = Π (u_i - d_i) using log-sum for stability."""
         log_sum = 0.0
         for obj in self._objectives:
@@ -596,9 +594,9 @@ class NashWelfareAggregator:
             log_sum += math.log(surplus)
         return math.exp(log_sum)
 
-    def _random_simplex_point(self, n: int) -> List[float]:
+    def _random_simplex_point(self, n: int) -> list[float]:
         seed = int(time.monotonic_ns()) % (2**32)
-        result: List[float] = []
+        result: list[float] = []
         for i in range(n):
             seed = (seed * 1664525 + 1013904223) % (2**32)
             result.append(seed / (2**32))
@@ -608,9 +606,9 @@ class NashWelfareAggregator:
 
     def optimal_weights(
         self,
-        outcomes_history: List[Dict[str, float]],
+        outcomes_history: list[dict[str, float]],
         n_trials: int = 50,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Find objective weights maximising Nash welfare over outcomes_history."""
         if not outcomes_history or not self._objectives:
             return copy.copy(self._weights)
@@ -636,7 +634,7 @@ class NashWelfareAggregator:
         self._weights = {obj: best_weights[i] for i, obj in enumerate(self._objectives)}
         return copy.copy(self._weights)
 
-    def aggregate(self, metrics: Dict[str, float]) -> float:
+    def aggregate(self, metrics: dict[str, float]) -> float:
         """Return Nash welfare for current metrics using current weights."""
         self._outcomes_history.append(copy.copy(metrics))
         if len(self._outcomes_history) > 200:
@@ -654,22 +652,22 @@ class MPCReferenceTracker:
 
     K_P = 0.1
 
-    def __init__(self, objectives: List[str], horizon: int = 5) -> None:
+    def __init__(self, objectives: list[str], horizon: int = 5) -> None:
         self._objectives = list(objectives)
         self._horizon = horizon
-        self._reference: Dict[str, List[float]] = {}
-        self._history: List[Dict[str, float]] = []
+        self._reference: dict[str, list[float]] = {}
+        self._history: list[dict[str, float]] = []
 
-    def set_reference(self, trajectory: Dict[str, List[float]]) -> None:
+    def set_reference(self, trajectory: dict[str, list[float]]) -> None:
         self._reference = {obj: list(vals) for obj, vals in trajectory.items()}
 
-    def update(self, current: Dict[str, float]) -> None:
+    def update(self, current: dict[str, float]) -> None:
         self._history.append(copy.copy(current))
         if len(self._history) > 200:
             self._history = self._history[-200:]
 
-    def predict_horizon(self) -> Dict[str, List[float]]:
-        predictions: Dict[str, List[float]] = {}
+    def predict_horizon(self) -> dict[str, list[float]]:
+        predictions: dict[str, list[float]] = {}
         for obj in self._objectives:
             values = [h[obj] for h in self._history if obj in h]
             if len(values) == 0:
@@ -706,11 +704,11 @@ class MPCReferenceTracker:
                 count += 1
         return total_mse / count if count > 0 else 0.0
 
-    def control_action(self) -> Dict[str, float]:
+    def control_action(self) -> dict[str, float]:
         if not self._history:
             return {obj: 0.0 for obj in self._objectives}
         current = self._history[-1]
-        actions: Dict[str, float] = {}
+        actions: dict[str, float] = {}
         for obj in self._objectives:
             ref_traj = self._reference.get(obj)
             ref_val = ref_traj[0] if ref_traj else 0.0
@@ -735,7 +733,7 @@ class GoalArchitecture:
 
     def __init__(
         self,
-        objectives: Optional[List[str]] = None,
+        objectives: list[str] | None = None,
     ) -> None:
         self._objectives = list(objectives) if objectives else list(self._DEFAULT_OBJECTIVES)
 
@@ -761,7 +759,7 @@ class GoalArchitecture:
         )
 
     def _infer_goal(
-        self, metrics: Dict[str, float], system_state: Dict[str, Any]
+        self, metrics: dict[str, float], system_state: dict[str, Any]
     ) -> str:
         """Heuristically select the current goal from metrics/state."""
         drawdown = metrics.get("max_drawdown_pct", 0.0)
@@ -775,8 +773,8 @@ class GoalArchitecture:
 
     def step(
         self,
-        metrics: Dict[str, float],
-        system_state: Optional[Dict[str, Any]] = None,
+        metrics: dict[str, float],
+        system_state: dict[str, Any] | None = None,
         cycle: int = 0,
     ) -> GoalDecision:
         """Execute one goal-architecture cycle and return a GoalDecision."""
@@ -829,7 +827,7 @@ class GoalArchitecture:
         return decision
 
     def set_reference_trajectory(
-        self, trajectory: Dict[str, List[float]]
+        self, trajectory: dict[str, list[float]]
     ) -> None:
         """Set a manual reference trajectory on the adaptive tracker."""
         self._tracker.set_reference(trajectory)

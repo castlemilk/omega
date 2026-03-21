@@ -11,14 +11,14 @@ DataIntegrityNode — freshness + completeness + volume sanity checker
 import time
 import uuid
 from abc import abstractmethod
-from typing import Any, Dict, List
+from typing import Any, ClassVar
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-
 
 # ---------------------------------------------------------------------------
 # Abstract base
 # ---------------------------------------------------------------------------
+
 
 class CleanerNode(Node):
     """
@@ -41,7 +41,7 @@ class CleanerNode(Node):
         self._node_id = str(uuid.uuid4())
         self._version = "1.0"
         self._cycle_count = 0
-        self._issues: Dict[str, Dict[str, Any]] = {}  # issue_id -> issue dict
+        self._issues: dict[str, dict[str, Any]] = {}  # issue_id -> issue dict
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
@@ -50,7 +50,7 @@ class CleanerNode(Node):
 
     # -- Node interface
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         active = sum(1 for i in self._issues.values() if i["state"] == "active")
         resolved_rate = self._issues_resolved_total / max(1, self._issues_found_total)
         return {
@@ -60,7 +60,7 @@ class CleanerNode(Node):
             "avg_latency_ms": self._total_latency_ms / max(1, self._execution_count),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         return False  # Cleaners improve their rules, not their architecture
 
     def execute(self, input: NodeInput) -> NodeOutput:
@@ -134,14 +134,14 @@ class CleanerNode(Node):
 
     # -- Triage helpers
 
-    def _open_issue(self, issue_id: str, severity: str, description: str, context: Dict) -> None:
+    def _open_issue(self, issue_id: str, severity: str, description: str, context: dict) -> None:
         if issue_id not in self._issues:
             self._issues[issue_id] = {
                 "issue_id": issue_id,
-                "severity": severity,    # "error", "warning", "info"
+                "severity": severity,  # "error", "warning", "info"
                 "description": description,
                 "context": context,
-                "state": "pending",      # pending -> active -> resolved
+                "state": "pending",  # pending -> active -> resolved
                 "opened_at": time.time(),
                 "resolved_at": None,
             }
@@ -157,27 +157,28 @@ class CleanerNode(Node):
             self._issues[issue_id]["resolved_at"] = time.time()
             self._issues_resolved_total += 1
 
-    def _active_issues(self) -> List[Dict[str, Any]]:
+    def _active_issues(self) -> list[dict[str, Any]]:
         return [i for i in self._issues.values() if i["state"] in ("pending", "active")]
 
     # -- Abstract methods (subclasses must implement)
 
     @abstractmethod
-    def _fast_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _fast_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Run cheap checks every cycle. Returns list of issue dicts."""
 
     @abstractmethod
-    def _deep_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _deep_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Run expensive analysis every DEEP_INTERVAL cycles."""
 
     @abstractmethod
-    def _build_result(self, data: Dict[str, Any], issues: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _build_result(self, data: dict[str, Any], issues: list[dict[str, Any]]) -> dict[str, Any]:
         """Build the action-specific result dict from check findings."""
 
 
 # ---------------------------------------------------------------------------
 # LintNode
 # ---------------------------------------------------------------------------
+
 
 class LintNode(CleanerNode):
     """
@@ -197,10 +198,10 @@ class LintNode(CleanerNode):
       v1.1: add price outlier detection (if active issues > 3 or iteration >= 2)
     """
 
-    REQUIRED_FIELDS = ["timestamps", "open", "high", "low", "close", "volume"]
+    REQUIRED_FIELDS: ClassVar[list[str]] = ["timestamps", "open", "high", "low", "close", "volume"]
     ERROR_RATE_THRESHOLD = 0.1
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["lint_market_data"]
 
     def describe(self) -> str:
@@ -223,7 +224,7 @@ class LintNode(CleanerNode):
             metadata={"active_issues": len(active)},
         )
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """
         v1.0 -> v1.1: enable deep price-outlier detection when issues accumulate
         or after sufficient iterations.
@@ -236,8 +237,8 @@ class LintNode(CleanerNode):
                 return True
         return False
 
-    def _fast_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        issues: List[Dict[str, Any]] = []
+    def _fast_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
+        issues: list[dict[str, Any]] = []
 
         for pair, ohlcv in data.items():
             if ohlcv is None:
@@ -247,33 +248,44 @@ class LintNode(CleanerNode):
             # Check required fields
             for field in self.REQUIRED_FIELDS:
                 if field not in ohlcv or ohlcv[field] is None:
-                    issues.append({
-                        "issue_id": f"missing_field_{pair}_{field}",
-                        "severity": "error",
-                        "description": f"{pair}: missing required field '{field}'",
-                        "context": {"pair": pair, "field": field},
-                    })
+                    issues.append(
+                        {
+                            "issue_id": f"missing_field_{pair}_{field}",
+                            "severity": "error",
+                            "description": f"{pair}: missing required field '{field}'",
+                            "context": {"pair": pair, "field": field},
+                        }
+                    )
 
             # Count NaN/None in close/open/high/low/volume
             for field in ["close", "open", "high", "low", "volume"]:
                 values = ohlcv.get(field)
                 if not isinstance(values, (list, tuple)):
                     continue
-                nan_count = sum(1 for v in values if v is None or (isinstance(v, float) and v != v))
+                nan_count = sum(
+                    1 for v in values if v is None or (isinstance(v, float) and v != v)
+                )
                 if nan_count > 0:
                     rate = nan_count / len(values) if values else 0.0
-                    issues.append({
-                        "issue_id": f"nan_values_{pair}_{field}",
-                        "severity": "warning" if rate < 0.05 else "error",
-                        "description": f"{pair}.{field}: {nan_count} NaN/None values ({rate:.1%})",
-                        "context": {"pair": pair, "field": field, "nan_count": nan_count, "rate": rate},
-                    })
+                    issues.append(
+                        {
+                            "issue_id": f"nan_values_{pair}_{field}",
+                            "severity": "warning" if rate < 0.05 else "error",
+                            "description": f"{pair}.{field}: {nan_count} NaN/None values ({rate:.1%})",
+                            "context": {
+                                "pair": pair,
+                                "field": field,
+                                "nan_count": nan_count,
+                                "rate": rate,
+                            },
+                        }
+                    )
 
         return issues
 
-    def _deep_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _deep_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Price outlier and flat-price detection (expensive, every 5 cycles)."""
-        issues: List[Dict[str, Any]] = []
+        issues: list[dict[str, Any]] = []
 
         for pair, ohlcv in data.items():
             if ohlcv is None:
@@ -288,36 +300,36 @@ class LintNode(CleanerNode):
             for i in range(1, len(closes)):
                 prev = closes[i - 1]
                 curr = closes[i]
-                if (
-                    prev is not None and curr is not None
-                    and prev > 0
-                    and curr > 5 * prev
-                ):
+                if prev is not None and curr is not None and prev > 0 and curr > 5 * prev:
                     outliers.append(i)
 
             if outliers:
-                issues.append({
-                    "issue_id": f"price_outlier_{pair}",
-                    "severity": "error",
-                    "description": (
-                        f"{pair}: {len(outliers)} bar(s) with close > 5x previous close"
-                    ),
-                    "context": {"pair": pair, "bar_indices": outliers},
-                })
+                issues.append(
+                    {
+                        "issue_id": f"price_outlier_{pair}",
+                        "severity": "error",
+                        "description": (
+                            f"{pair}: {len(outliers)} bar(s) with close > 5x previous close"
+                        ),
+                        "context": {"pair": pair, "bar_indices": outliers},
+                    }
+                )
 
             # Detect suspiciously flat prices: all closes identical
             non_none = [c for c in closes if c is not None]
             if len(non_none) > 1 and len(set(non_none)) == 1:
-                issues.append({
-                    "issue_id": f"flat_prices_{pair}",
-                    "severity": "warning",
-                    "description": f"{pair}: all {len(non_none)} close prices are identical",
-                    "context": {"pair": pair, "value": non_none[0]},
-                })
+                issues.append(
+                    {
+                        "issue_id": f"flat_prices_{pair}",
+                        "severity": "warning",
+                        "description": f"{pair}: all {len(non_none)} close prices are identical",
+                        "context": {"pair": pair, "value": non_none[0]},
+                    }
+                )
 
         return issues
 
-    def _build_result(self, data: Dict[str, Any], issues: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _build_result(self, data: dict[str, Any], issues: list[dict[str, Any]]) -> dict[str, Any]:
         pairs_checked = sum(1 for v in data.values() if v is not None)
         active = self._active_issues()
         issues_found = len(active)
@@ -334,6 +346,7 @@ class LintNode(CleanerNode):
 # ---------------------------------------------------------------------------
 # DataIntegrityNode
 # ---------------------------------------------------------------------------
+
 
 class DataIntegrityNode(CleanerNode):
     """
@@ -355,25 +368,25 @@ class DataIntegrityNode(CleanerNode):
       v1.2: volume + gap detection (if iteration >= 2)
     """
 
-    FRESHNESS_THRESHOLD_SECONDS = 600   # 10 minutes
+    FRESHNESS_THRESHOLD_SECONDS = 600  # 10 minutes
     MIN_PAIRS = 8
     MIN_BARS = 30
     MAX_ZERO_VOLUME_RATE = 0.20
-    EXPECTED_INTERVAL_SECONDS = 86400   # daily bars
+    EXPECTED_INTERVAL_SECONDS = 86400  # daily bars
 
     def __init__(self) -> None:
         super().__init__()
         self._bar_check_enabled = False
         self._deep_checks_enabled = False
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["check_data_integrity"]
 
     def describe(self) -> str:
         return (
             "Validates market data freshness, pair coverage, bar counts, "
             "volume consistency, and timestamp continuity. Produces a "
-            "composite data-quality score (0.0–1.0) each cycle."
+            "composite data-quality score (0.0-1.0) each cycle."
         )
 
     def get_state(self) -> NodeState:
@@ -389,7 +402,7 @@ class DataIntegrityNode(CleanerNode):
             metadata={"active_issues": len(active)},
         )
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         """
         v1.0 -> v1.1: enable bar-count checks
         v1.1 -> v1.2: enable volume + gap detection
@@ -398,11 +411,10 @@ class DataIntegrityNode(CleanerNode):
         active_count = len(self._active_issues())
         changed = False
 
-        if self._version == "1.0":
-            if iteration >= 1 or active_count > 2:
-                self._version = "1.1"
-                self._bar_check_enabled = True
-                changed = True
+        if self._version == "1.0" and (iteration >= 1 or active_count > 2):
+            self._version = "1.1"
+            self._bar_check_enabled = True
+            changed = True
 
         if self._version == "1.1" and iteration >= 2:
             self._version = "1.2"
@@ -411,32 +423,36 @@ class DataIntegrityNode(CleanerNode):
 
         return changed
 
-    def _fast_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
-        issues: List[Dict[str, Any]] = []
+    def _fast_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
+        issues: list[dict[str, Any]] = []
 
         # Freshness check: look for a top-level fetched_at key
         fetched_at = data.get("fetched_at")
         if fetched_at is not None:
             age = time.time() - fetched_at
             if age > self.FRESHNESS_THRESHOLD_SECONDS:
-                issues.append({
-                    "issue_id": "data_stale",
-                    "severity": "warning",
-                    "description": f"Market data is {age:.0f}s old (threshold {self.FRESHNESS_THRESHOLD_SECONDS}s)",
-                    "context": {"age_seconds": age},
-                })
+                issues.append(
+                    {
+                        "issue_id": "data_stale",
+                        "severity": "warning",
+                        "description": f"Market data is {age:.0f}s old (threshold {self.FRESHNESS_THRESHOLD_SECONDS}s)",
+                        "context": {"age_seconds": age},
+                    }
+                )
 
         # Coverage check
         valid_pairs = [k for k, v in data.items() if k != "fetched_at" and v is not None]
         if len(valid_pairs) < self.MIN_PAIRS:
-            issues.append({
-                "issue_id": "low_coverage",
-                "severity": "warning",
-                "description": (
-                    f"Only {len(valid_pairs)} pairs have data (minimum {self.MIN_PAIRS})"
-                ),
-                "context": {"valid_pairs": len(valid_pairs), "min_pairs": self.MIN_PAIRS},
-            })
+            issues.append(
+                {
+                    "issue_id": "low_coverage",
+                    "severity": "warning",
+                    "description": (
+                        f"Only {len(valid_pairs)} pairs have data (minimum {self.MIN_PAIRS})"
+                    ),
+                    "context": {"valid_pairs": len(valid_pairs), "min_pairs": self.MIN_PAIRS},
+                }
+            )
 
         # Bar count check (enabled after v1.1 improvement)
         if self._bar_check_enabled:
@@ -445,20 +461,22 @@ class DataIntegrityNode(CleanerNode):
                     continue
                 closes = ohlcv.get("close", [])
                 if isinstance(closes, (list, tuple)) and len(closes) < self.MIN_BARS:
-                    issues.append({
-                        "issue_id": f"low_bar_count_{pair}",
-                        "severity": "warning",
-                        "description": (
-                            f"{pair}: only {len(closes)} bars (minimum {self.MIN_BARS})"
-                        ),
-                        "context": {"pair": pair, "bar_count": len(closes)},
-                    })
+                    issues.append(
+                        {
+                            "issue_id": f"low_bar_count_{pair}",
+                            "severity": "warning",
+                            "description": (
+                                f"{pair}: only {len(closes)} bars (minimum {self.MIN_BARS})"
+                            ),
+                            "context": {"pair": pair, "bar_count": len(closes)},
+                        }
+                    )
 
         return issues
 
-    def _deep_check(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _deep_check(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Volume consistency + gap detection (expensive, every 5 cycles)."""
-        issues: List[Dict[str, Any]] = []
+        issues: list[dict[str, Any]] = []
 
         if not self._deep_checks_enabled:
             return issues
@@ -473,19 +491,21 @@ class DataIntegrityNode(CleanerNode):
                 zero_count = sum(1 for v in volumes if v is not None and v == 0)
                 zero_rate = zero_count / len(volumes)
                 if zero_rate > self.MAX_ZERO_VOLUME_RATE:
-                    issues.append({
-                        "issue_id": f"zero_volume_{pair}",
-                        "severity": "warning",
-                        "description": (
-                            f"{pair}: {zero_rate:.0%} of bars have zero volume "
-                            f"(threshold {self.MAX_ZERO_VOLUME_RATE:.0%})"
-                        ),
-                        "context": {
-                            "pair": pair,
-                            "zero_rate": zero_rate,
-                            "zero_count": zero_count,
-                        },
-                    })
+                    issues.append(
+                        {
+                            "issue_id": f"zero_volume_{pair}",
+                            "severity": "warning",
+                            "description": (
+                                f"{pair}: {zero_rate:.0%} of bars have zero volume "
+                                f"(threshold {self.MAX_ZERO_VOLUME_RATE:.0%})"
+                            ),
+                            "context": {
+                                "pair": pair,
+                                "zero_rate": zero_rate,
+                                "zero_count": zero_count,
+                            },
+                        }
+                    )
 
             # Gap detection
             timestamps = ohlcv.get("timestamps")
@@ -499,22 +519,24 @@ class DataIntegrityNode(CleanerNode):
                         gaps.append((i, gap))
 
                 if gaps:
-                    issues.append({
-                        "issue_id": f"timestamp_gaps_{pair}",
-                        "severity": "warning",
-                        "description": (
-                            f"{pair}: {len(gaps)} timestamp gap(s) > 2x expected interval"
-                        ),
-                        "context": {
-                            "pair": pair,
-                            "gap_count": len(gaps),
-                            "expected_interval": self.EXPECTED_INTERVAL_SECONDS,
-                        },
-                    })
+                    issues.append(
+                        {
+                            "issue_id": f"timestamp_gaps_{pair}",
+                            "severity": "warning",
+                            "description": (
+                                f"{pair}: {len(gaps)} timestamp gap(s) > 2x expected interval"
+                            ),
+                            "context": {
+                                "pair": pair,
+                                "gap_count": len(gaps),
+                                "expected_interval": self.EXPECTED_INTERVAL_SECONDS,
+                            },
+                        }
+                    )
 
         return issues
 
-    def _build_result(self, data: Dict[str, Any], issues: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _build_result(self, data: dict[str, Any], issues: list[dict[str, Any]]) -> dict[str, Any]:
         valid_pairs = [k for k, v in data.items() if k != "fetched_at" and v is not None]
         pairs_checked = len(valid_pairs)
         active = self._active_issues()
@@ -531,10 +553,7 @@ class DataIntegrityNode(CleanerNode):
         penalty_per_issue = 0.1
         dq_score = max(0.0, 1.0 - len(active) * penalty_per_issue)
 
-        active_issue_dicts = [
-            {k: v for k, v in i.items() if k != "context"}
-            for i in active
-        ]
+        active_issue_dicts = [{k: v for k, v in i.items() if k != "context"} for i in active]
 
         if not active:
             summary = "Data integrity OK"

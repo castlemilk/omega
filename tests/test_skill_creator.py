@@ -2,10 +2,11 @@
 
 import os
 import tempfile
+
 import pytest
+
 from omega.core.node import NodeInput
 from omega.nodes.skill_creator import SkillCreatorNode
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -288,8 +289,9 @@ class TestConsultBrainIntegration:
 
     def test_consult_brain_skill_hints_populated(self, node_and_dir):
         """skill_hints in BrainRequest should reflect node.skill_tags."""
-        from omega.core.brain import BrainRequest
         from unittest.mock import MagicMock
+
+        from omega.core.brain import BrainRequest
 
         node, _ = node_and_dir
         captured: list[BrainRequest] = []

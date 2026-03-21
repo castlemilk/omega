@@ -44,9 +44,8 @@ from __future__ import annotations
 import json
 import logging
 import sys
-from datetime import datetime, timezone
-from typing import Any, Dict, Optional
-
+from datetime import UTC, datetime
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Internal formatter
@@ -73,8 +72,8 @@ class _JsonFormatter(logging.Formatter):
         # Ensure getMessage() has been called so record.message is set
         record.message = record.getMessage()
 
-        out: Dict[str, Any] = {
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+        out: dict[str, Any] = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.message,
@@ -105,7 +104,7 @@ class _JsonFormatter(logging.Formatter):
 def configure_logging(
     level: str = "INFO",
     json_output: bool = True,
-    log_file: Optional[str] = None,
+    log_file: str | None = None,
 ) -> None:
     """Configure the root ``omega`` logger.
 
@@ -184,13 +183,13 @@ class bound_logger:  # noqa: N801 — intentionally lowercase for ergonomics
         self,
         logger: logging.Logger,
         *,
-        node_id: Optional[str] = None,
-        trace_id: Optional[str] = None,
-        span_id: Optional[str] = None,
-        cycle_id: Optional[int] = None,
+        node_id: str | None = None,
+        trace_id: str | None = None,
+        span_id: str | None = None,
+        cycle_id: int | None = None,
     ) -> None:
         self._logger = logger
-        self._base_extra: Dict[str, Any] = {}
+        self._base_extra: dict[str, Any] = {}
         if node_id is not None:
             self._base_extra["node_id"] = node_id
         if trace_id is not None:
@@ -200,23 +199,23 @@ class bound_logger:  # noqa: N801 — intentionally lowercase for ergonomics
         if cycle_id is not None:
             self._base_extra["cycle_id"] = cycle_id
 
-    def _extra(self, extra: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def _extra(self, extra: dict[str, Any] | None) -> dict[str, Any]:
         merged = dict(self._base_extra)
         if extra:
             merged.update(extra)
         return merged
 
-    def debug(self, msg: str, *args: Any, extra: Optional[Dict[str, Any]] = None, **kw: Any) -> None:
+    def debug(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
         self._logger.debug(msg, *args, extra=self._extra(extra), **kw)
 
-    def info(self, msg: str, *args: Any, extra: Optional[Dict[str, Any]] = None, **kw: Any) -> None:
+    def info(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
         self._logger.info(msg, *args, extra=self._extra(extra), **kw)
 
-    def warning(self, msg: str, *args: Any, extra: Optional[Dict[str, Any]] = None, **kw: Any) -> None:
+    def warning(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
         self._logger.warning(msg, *args, extra=self._extra(extra), **kw)
 
-    def error(self, msg: str, *args: Any, extra: Optional[Dict[str, Any]] = None, **kw: Any) -> None:
+    def error(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
         self._logger.error(msg, *args, extra=self._extra(extra), **kw)
 
-    def exception(self, msg: str, *args: Any, extra: Optional[Dict[str, Any]] = None, **kw: Any) -> None:
+    def exception(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
         self._logger.exception(msg, *args, extra=self._extra(extra), **kw)

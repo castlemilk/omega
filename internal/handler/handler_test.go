@@ -118,8 +118,8 @@ func setupTestServer(t *testing.T) (omegav1connect.OrchestratorServiceClient, fu
 	bootstrapStateSchema(t, stateDB)
 
 	// Touch the memory DB file.
-	f, _ := os.Create(memDB)
-	f.Close() //nolint:errcheck
+	f, _ := os.Create(memDB) //nolint:gosec
+	f.Close()                //nolint:errcheck,gosec
 
 	database, err := db.New(stateDB, memDB)
 	if err != nil {

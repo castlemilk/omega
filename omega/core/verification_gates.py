@@ -20,9 +20,10 @@ Gates can be registered with VerificationGateSystem and run collectively.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, List
+from typing import Any
 
 
 class GateStatus(str, Enum):
@@ -36,7 +37,7 @@ class GateResult:
     status: GateStatus
     gate_name: str
     evidence: str = ""
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
     @property
     def passed(self) -> bool:
@@ -56,7 +57,7 @@ class Gate(ABC):
         self.name = name
 
     @abstractmethod
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         """Run the gate check and return a GateResult."""
 
 
@@ -67,12 +68,12 @@ class Gate(ABC):
 class PropertyGate(Gate):
     """Passes when predicate(context) is True."""
 
-    def __init__(self, name: str, predicate: Callable[[Dict], bool], description: str) -> None:
+    def __init__(self, name: str, predicate: Callable[[dict], bool], description: str) -> None:
         super().__init__(name)
         self._predicate = predicate
         self._description = description
 
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         try:
             ok = bool(self._predicate(context))
         except Exception as exc:
@@ -91,12 +92,12 @@ class PropertyGate(Gate):
 class InvariantGate(Gate):
     """System invariant — must hold at all times."""
 
-    def __init__(self, name: str, invariant: Callable[[Dict], bool], description: str) -> None:
+    def __init__(self, name: str, invariant: Callable[[dict], bool], description: str) -> None:
         super().__init__(name)
         self._invariant = invariant
         self._description = description
 
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         try:
             ok = bool(self._invariant(context))
         except Exception as exc:
@@ -115,12 +116,12 @@ class InvariantGate(Gate):
 class ConsistencyGate(Gate):
     """Cross-subsystem consistency check."""
 
-    def __init__(self, name: str, check_fn: Callable[[Dict], bool], description: str) -> None:
+    def __init__(self, name: str, check_fn: Callable[[dict], bool], description: str) -> None:
         super().__init__(name)
         self._check_fn = check_fn
         self._description = description
 
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         try:
             ok = bool(self._check_fn(context))
         except Exception as exc:
@@ -157,7 +158,7 @@ class RegressionGate(Gate):
         self._direction = direction
         self._threshold_pct = threshold_pct
 
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         before = context.get("before", {})
         after = context.get("after", {})
         bval = before.get(self._metric)
@@ -217,7 +218,7 @@ class ConvergenceGate(Gate):
         self._window = window
         self._direction = direction
 
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         history = context.get("history", [])
         if len(history) < self._window:
             return GateResult(
@@ -271,11 +272,11 @@ class ConvergenceGate(Gate):
 class AndGate(Gate):
     """All children must pass (warnings propagate if no failures)."""
 
-    def __init__(self, name: str, children: List[Gate]) -> None:
+    def __init__(self, name: str, children: list[Gate]) -> None:
         super().__init__(name)
         self._children = children
 
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         results = [g.check(context) for g in self._children]
         failures = [r for r in results if r.failed]
         if failures:
@@ -297,11 +298,11 @@ class AndGate(Gate):
 class OrGate(Gate):
     """At least one child must pass."""
 
-    def __init__(self, name: str, children: List[Gate]) -> None:
+    def __init__(self, name: str, children: list[Gate]) -> None:
         super().__init__(name)
         self._children = children
 
-    def check(self, context: Dict[str, Any]) -> GateResult:
+    def check(self, context: dict[str, Any]) -> GateResult:
         results = [g.check(context) for g in self._children]
         if any(r.passed for r in results):
             return GateResult(status=GateStatus.PASS, gate_name=self.name, evidence="At least one child passed")
@@ -333,19 +334,19 @@ class VerificationGateSystem:
     """
 
     def __init__(self) -> None:
-        self._gates: List[Gate] = []
+        self._gates: list[Gate] = []
 
     def register(self, gate: Gate) -> None:
         self._gates.append(gate)
 
-    def run_all(self, context: Dict[str, Any]) -> List[GateResult]:
+    def run_all(self, context: dict[str, Any]) -> list[GateResult]:
         return [g.check(context) for g in self._gates]
 
-    def all_passed(self, results: List[GateResult]) -> bool:
+    def all_passed(self, results: list[GateResult]) -> bool:
         """Returns True if no gate failed (warnings are acceptable)."""
         return all(not r.failed for r in results)
 
-    def summary(self, results: List[GateResult]) -> Dict[str, Any]:
+    def summary(self, results: list[GateResult]) -> dict[str, Any]:
         return {
             "total": len(results),
             "passed": sum(1 for r in results if r.passed),

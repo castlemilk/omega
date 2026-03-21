@@ -19,14 +19,14 @@ import time
 import urllib.error
 import urllib.request
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.web_fetcher")
 
 _DEFAULT_TIMEOUT_S = 10
-_CACHE_TTL_S = 300          # 5-minute cache TTL
+_CACHE_TTL_S = 300  # 5-minute cache TTL
 _MAX_RETRIES = 3
 _RETRY_BASE_DELAY_S = 0.5
 
@@ -47,7 +47,7 @@ class WebFetcherNode(Node):
 
         self._use_cache = False
         self._use_retry = False
-        self._cache: Dict[str, Tuple[str, float]] = {}   # url_hash → (content, expiry)
+        self._cache: dict[str, tuple[str, float]] = {}  # url_hash → (content, expiry)
 
         self._execution_count = 0
         self._error_count = 0
@@ -64,9 +64,9 @@ class WebFetcherNode(Node):
             node_id=self._node_id,
             name="WebFetcherNode",
             version=self._version,
-            health=1.0 if self._error_count == 0 else max(
-                0.0, 1.0 - self._error_count / max(1, self._execution_count)
-            ),
+            health=1.0
+            if self._error_count == 0
+            else max(0.0, 1.0 - self._error_count / max(1, self._execution_count)),
             capabilities=["fetch", "fetch_text", "fetch_status"],
             metrics={
                 "avg_latency_ms": self._avg_latency_ms(),
@@ -81,7 +81,7 @@ class WebFetcherNode(Node):
             },
         )
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         return ["fetch", "fetch_text", "fetch_status"]
 
     def describe(self) -> str:
@@ -161,7 +161,7 @@ class WebFetcherNode(Node):
             self._cache[url_hash] = (content, now + _CACHE_TTL_S)
         self._cache_misses += 1
 
-        result = status if action == "fetch_status" else content
+        result = status if action == "fetch_status" else content  # type: ignore[assignment]
         return NodeOutput(
             request_id=input.request_id,
             success=True,
@@ -169,14 +169,14 @@ class WebFetcherNode(Node):
             metrics={"latency_ms": elapsed, "cache_hit": 0.0, "status_code": float(status)},
         )
 
-    def evaluate(self) -> Dict[str, float]:
+    def evaluate(self) -> dict[str, float]:
         return {
             "avg_latency_ms": self._avg_latency_ms(),
             "cache_hit_rate": self._cache_hit_rate(),
             "error_rate": self._error_count / max(1, self._execution_count),
         }
 
-    def improve(self, feedback: Dict[str, Any]) -> bool:
+    def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
 
         if feedback.get("improve_latency") and not self._use_cache:
@@ -201,17 +201,17 @@ class WebFetcherNode(Node):
     # Internal fetch
     # ------------------------------------------------------------------
 
-    def _do_fetch(self, url: str) -> Tuple[Optional[str], int, Optional[str]]:
+    def _do_fetch(self, url: str) -> tuple[str | None, int, str | None]:
         """
         Returns (content, status_code, error_message).
         On success error_message is None.
         """
         if self._dry_run:
-            time.sleep(0.002)   # simulate tiny network delay
+            time.sleep(0.002)  # simulate tiny network delay
             return f"<stub response for {url}>", 200, None
 
         attempts = _MAX_RETRIES if self._use_retry else 1
-        last_error: Optional[str] = None
+        last_error: str | None = None
 
         for attempt in range(attempts):
             try:
@@ -225,14 +225,14 @@ class WebFetcherNode(Node):
 
             except urllib.error.HTTPError as exc:
                 last_error = f"HTTP {exc.code}: {exc.reason}"
-                break   # HTTP errors don't benefit from retry
+                break  # HTTP errors don't benefit from retry
             except urllib.error.URLError as exc:
                 last_error = f"URL error: {exc.reason}"
             except Exception as exc:
                 last_error = str(exc)
 
             if attempt < attempts - 1:
-                delay = _RETRY_BASE_DELAY_S * (2 ** attempt)
+                delay = _RETRY_BASE_DELAY_S * (2**attempt)
                 logger.debug("Retry %d/%d in %.1fs for %s", attempt + 1, attempts, delay, url)
                 time.sleep(delay)
 

@@ -1,13 +1,21 @@
 version: "2"
 linters:
   enable:
+    # existing
     - errcheck
     - govet
     - staticcheck
     - unused
     - ineffassign
+    # added
+    - gosec
+    - gocritic
+    - nilerr
+    - prealloc
+
   disable:
     - depguard
+
 linters-settings:
   errcheck:
     exclude-functions:
@@ -15,18 +23,74 @@ linters-settings:
       - (*database/sql.Rows).Close
       - (io.Closer).Close
       - os.MkdirAll
+
+  gocritic:
+    enabled-checks:
+      - appendAssign
+      - codegenComment
+      - commentedOutCode
+      - deferInLoop
+      - dupImport
+      - exitAfterDefer
+      - hugeParam
+      - ifElseChain
+      - nestingReduce
+      - paramTypeCombine
+      - rangeValCopy
+      - ruleguard
+      - sloppyLen
+      - stringConcatSimplify
+      - typeAssert
+      - unnecessaryBlock
+      - unnecessaryDefer
+      - weakCond
+
+  gosec:
+    severity: medium
+    confidence: medium
+
 issues:
   exclude-rules:
     - text: "nolint:errcheck"
       linters:
         - errcheck
+
     - linters:
         - errcheck
       path: "internal/db/db\\.go"
+
     - linters:
         - errcheck
       path: "cmd/omega-api/main\\.go"
+
     - linters:
         - staticcheck
       text: "ST1023"
       path: "internal/db/db\\.go"
+
+    # Generated proto/connect code — skip all linters
+    - path: "gen/"
+      linters:
+        - errcheck
+        - govet
+        - staticcheck
+        - unused
+        - ineffassign
+        - gosec
+        - gocritic
+        - nilerr
+        - prealloc
+
+    # Test files — relax some rules
+    - path: "_test\\.go"
+      linters:
+        - gocritic
+        - gosec
+
+    # db.go: extensive //nolint:errcheck patterns already silence errcheck; gosec G104 is redundant
+    - path: "internal/db/db\\.go"
+      linters: [gosec]
+
+    # orchestrator.go: exec calls use controlled args, int32 cast is safe
+    - path: "internal/handler/orchestrator\\.go"
+      linters: [gosec]

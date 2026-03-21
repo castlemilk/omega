@@ -1,19 +1,18 @@
 """Tests for omega.core.memory_v2 — sliding-window regime, BOCPD, EWC, D-S fusion, MemoryKernelV2."""
 
 import pytest
+
+from omega.core.memory import MemoryKernel
 from omega.core.memory_v2 import (
     BOCPDRegimeDetector,
-    SlidingWindowRegimeDetector,
-    RegimeTaggedSemanticStore,
-    EWCProtection,
-    DempsterShaferFusion,
     ContradictionResolver,
+    DempsterShaferFusion,
+    EWCProtection,
     MemoryKernelV2,
     RegimeState,
     Resolution,
+    SlidingWindowRegimeDetector,
 )
-from omega.core.memory import MemoryKernel
-
 
 # ---------------------------------------------------------------------------
 # SlidingWindowRegimeDetector  (default)

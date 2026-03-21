@@ -37,7 +37,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger("omega.core.config")
 
@@ -93,12 +93,12 @@ class NodesConfig:
 class DataConfig:
     """External data provider configuration."""
 
-    symbols: List[str] = field(default_factory=lambda: [
+    symbols: list[str] = field(default_factory=lambda: [
         "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
         "ADAUSDT", "DOTUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT",
     ])
 
-    providers: List[str] = field(default_factory=lambda: ["binance", "coingecko"])
+    providers: list[str] = field(default_factory=lambda: ["binance", "coingecko"])
 
     binance_base_url: str = "https://api.binance.com"
     coingecko_base_url: str = "https://api.coingecko.com/api/v3"
@@ -115,7 +115,7 @@ class MonitoringConfig:
     json_logs: bool = True
     """Emit JSON lines to stdout (12-factor style)."""
 
-    log_file: Optional[str] = None
+    log_file: str | None = None
     """Optional secondary log file path."""
 
     metrics_port: int = 9090
@@ -143,7 +143,7 @@ class AlignmentConfig:
 class AdversarialConfig:
     """Adversarial ring configuration."""
 
-    active_rings: List[str] = field(default_factory=list)
+    active_rings: list[str] = field(default_factory=list)
     """List of active adversarial ring names."""
 
     veto_threshold: float = 0.8
@@ -177,7 +177,7 @@ class OmegaConfig:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_env(cls) -> "OmegaConfig":
+    def from_env(cls) -> OmegaConfig:
         """Build config entirely from environment variables."""
         _e = os.environ.get
 
@@ -244,7 +244,7 @@ class OmegaConfig:
         )
 
     @classmethod
-    def from_yaml(cls, path: str) -> "OmegaConfig":
+    def from_yaml(cls, path: str) -> OmegaConfig:
         """Load config from a YAML file, merged over env-var defaults.
 
         YAML values take precedence over environment variables. API keys
@@ -268,7 +268,7 @@ class OmegaConfig:
         cfg = cls.from_env()
 
         with open(path) as fh:
-            raw: Dict[str, Any] = yaml.safe_load(fh) or {}
+            raw: dict[str, Any] = yaml.safe_load(fh) or {}
 
         # Merge each section — only known fields, no silent typo acceptance
         _merge_section(cfg.database, raw.get("database", {}))
@@ -281,7 +281,7 @@ class OmegaConfig:
         return cfg
 
     @classmethod
-    def load(cls, yaml_path: Optional[str] = None) -> "OmegaConfig":
+    def load(cls, yaml_path: str | None = None) -> OmegaConfig:
         """Preferred entry point. Load from env vars + optional YAML override.
 
         If *yaml_path* is ``None``, checks the ``OMEGA_CONFIG`` env var for
@@ -306,7 +306,7 @@ class OmegaConfig:
         Raises:
             ValueError: If any field fails validation.
         """
-        errors: List[str] = []
+        errors: list[str] = []
 
         if not (0.0 <= self.alignment.health_threshold <= 1.0):
             errors.append(
@@ -334,7 +334,7 @@ class OmegaConfig:
 
         API keys are masked — only their presence is indicated.
         """
-        safe: Dict[str, Any] = {
+        safe: dict[str, Any] = {
             "database": {
                 "state_db_path": self.database.state_db_path,
                 "memory_db_path": self.database.memory_db_path,
@@ -374,7 +374,7 @@ class OmegaConfig:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
-def _merge_section(section: Any, overrides: Dict[str, Any]) -> None:
+def _merge_section(section: Any, overrides: dict[str, Any]) -> None:
     """Apply *overrides* dict onto a config dataclass in-place.
 
     Unknown keys are silently skipped (avoids crashing on future-compat

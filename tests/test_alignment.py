@@ -1,14 +1,12 @@
 """Tests for omega.core.alignment — 3-layer alignment system."""
 
-import pytest
 from omega.core.alignment import (
+    AlignmentDecision,
+    AlignmentLayer,
+    OutcomeBasedScorer,
     ParetoEvaluator,
     SafetyEnvelope,
-    OutcomeBasedScorer,
-    AlignmentLayer,
-    AlignmentDecision,
 )
-
 
 # ---------------------------------------------------------------------------
 # Layer 1: SafetyEnvelope

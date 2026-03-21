@@ -1,10 +1,14 @@
 """Unit tests for VerificationGateSystem and all gate types."""
-import pytest
 from omega.core.verification_gates import (
-    GateResult, GateStatus,
-    PropertyGate, InvariantGate, ConsistencyGate,
-    RegressionGate, ConvergenceGate,
-    AndGate, OrGate,
+    AndGate,
+    ConsistencyGate,
+    ConvergenceGate,
+    GateResult,
+    GateStatus,
+    InvariantGate,
+    OrGate,
+    PropertyGate,
+    RegressionGate,
     VerificationGateSystem,
 )
 

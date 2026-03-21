@@ -14,7 +14,6 @@ import time
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional
 
 
 class ChallengeSeverity(str, Enum):
@@ -352,7 +351,7 @@ class ChallengeRegistry:
         severity: ChallengeSeverity,
         description: str,
         evidence: str = "",
-        challenge_id: Optional[str] = None,
+        challenge_id: str | None = None,
     ) -> str:
         cid = challenge_id or str(uuid.uuid4())
         now = time.time()
@@ -367,7 +366,7 @@ class ChallengeRegistry:
         self._conn.commit()
         return cid
 
-    def get(self, challenge_id: str) -> Optional[Challenge]:
+    def get(self, challenge_id: str) -> Challenge | None:
         row = self._conn.execute(
             "SELECT * FROM challenges WHERE challenge_id = ?", (challenge_id,)
         ).fetchone()
@@ -388,7 +387,7 @@ class ChallengeRegistry:
         self._conn.commit()
         return result.rowcount > 0
 
-    def all_challenges(self, subsystem: Optional[str] = None) -> List[Challenge]:
+    def all_challenges(self, subsystem: str | None = None) -> list[Challenge]:
         query = "SELECT * FROM challenges"
         params: list = []
         if subsystem:
@@ -398,7 +397,7 @@ class ChallengeRegistry:
         rows = self._conn.execute(query, params).fetchall()
         return [self._row_to_challenge(r) for r in rows]
 
-    def open_challenges(self, severity: Optional[ChallengeSeverity] = None) -> List[Challenge]:
+    def open_challenges(self, severity: ChallengeSeverity | None = None) -> list[Challenge]:
         query = "SELECT * FROM challenges WHERE status = 'open'"
         params: list = []
         if severity:

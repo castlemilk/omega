@@ -1,12 +1,12 @@
 """Unit + integration tests for DevilsAdvocateNode."""
-import pytest
-from omega.core.node import NodeInput, NodeOutput
 from omega.core.challenge_registry import ChallengeRegistry, ChallengeSeverity, ChallengeStatus
+from omega.core.node import NodeInput
 from omega.core.verification_gates import (
-    VerificationGateSystem, PropertyGate, RegressionGate, GateStatus,
+    PropertyGate,
+    RegressionGate,
+    VerificationGateSystem,
 )
 from omega.nodes.devils_advocate import DevilsAdvocateNode, ReviewMode
-
 
 # ---------------------------------------------------------------------------
 # Helpers
