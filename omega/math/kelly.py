@@ -161,7 +161,7 @@ def kelly_multi_asset(
             f"Covariance matrix is rank-deficient (rank={rank}, n={n}). "
             "Cannot compute Kelly allocation."
         )
-    return result
+    return np.asarray(result)
 
 
 def rolling_kurtosis(
