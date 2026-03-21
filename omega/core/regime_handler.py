@@ -30,7 +30,7 @@ import time
 import uuid
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Any, ClassVar
+from typing import Any
 
 logger = logging.getLogger("omega.core.regime_handler")
 
@@ -267,54 +267,37 @@ class RegimeSignalModifier:
     """
     Adjusts signal weights based on the current regime label.
 
-    Default weight tables encode known market behaviour:
-      - volatile / crash : de-weight trend-following signals, up-weight
-                           mean-reversion and defensive signals.
-      - trending         : up-weight momentum signals.
-      - normal           : neutral weights (all 1.0).
+    The multiplier table is domain-specific and must be injected at
+    construction.  The framework provides no defaults — a trading domain
+    injects its own table (see omega/nodes/vectora/domain_config.py).
+
+    multiplier_table : dict[str, dict[str, float]]
+        Mapping of {regime_label: {signal_name: multiplier}}.
+        Signals not present in the table for a given regime pass through at 1.0.
+        Regimes not present in the table leave all signals unchanged.
+
+    Example::
+
+        mod = RegimeSignalModifier(multiplier_table={
+            "volatile": {"momentum": 0.5, "trend_follow": 0.4},
+            "crash":    {"momentum": 0.2, "risk_off": 2.0},
+        })
+        adjusted = mod.modify({"momentum": 1.0, "mean_reversion": 1.0}, "volatile")
+        # => {"momentum": 0.5, "mean_reversion": 1.0}
 
     Callers supply a dict of {signal_name: raw_weight} and receive a dict
     of {signal_name: adjusted_weight}.  Unknown signals pass through unchanged.
     """
 
-    # regime → {signal_type → multiplier}
-    _DEFAULT_MULTIPLIERS: ClassVar[dict[str, dict[str, float]]] = {
-        "normal": {},  # empty = all signals pass through at 1.0
-        "trending": {
-            "momentum": 1.5,
-            "trend_follow": 1.4,
-            "mean_reversion": 0.6,
-            "volatility_spike": 0.8,
-        },
-        "volatile": {
-            "momentum": 0.5,
-            "trend_follow": 0.4,
-            "mean_reversion": 1.3,
-            "volatility_spike": 1.6,
-            "defensive": 1.5,
-        },
-        "crash": {
-            "momentum": 0.2,
-            "trend_follow": 0.2,
-            "mean_reversion": 0.8,
-            "volatility_spike": 2.0,
-            "defensive": 2.0,
-            "risk_off": 2.0,
-        },
-    }
-
     def __init__(
         self,
+        multiplier_table: dict[str, dict[str, float]] | None = None,
+        # Legacy parameter name — accepted for backward compatibility
         multiplier_overrides: dict[str, dict[str, float]] | None = None,
     ) -> None:
-        import copy
-
-        self._multipliers: dict[str, dict[str, float]] = copy.deepcopy(self._DEFAULT_MULTIPLIERS)
-        if multiplier_overrides:
-            for regime, overrides in multiplier_overrides.items():
-                if regime not in self._multipliers:
-                    self._multipliers[regime] = {}
-                self._multipliers[regime].update(overrides)
+        # multiplier_table wins; fall back to multiplier_overrides for compat
+        source = multiplier_table if multiplier_table is not None else multiplier_overrides
+        self._multipliers: dict[str, dict[str, float]] = dict(source) if source else {}
 
     def modify(
         self,

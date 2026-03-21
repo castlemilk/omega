@@ -154,39 +154,72 @@ class TestTransitionBuffer:
 # ---------------------------------------------------------------------------
 
 
+_TRADING_MULTIPLIERS = {
+    "normal": {},
+    "trending": {
+        "momentum": 1.5,
+        "trend_follow": 1.4,
+        "mean_reversion": 0.6,
+        "volatility_spike": 0.8,
+    },
+    "volatile": {
+        "momentum": 0.5,
+        "trend_follow": 0.4,
+        "mean_reversion": 1.3,
+        "volatility_spike": 1.6,
+        "defensive": 1.5,
+    },
+    "crash": {
+        "momentum": 0.2,
+        "trend_follow": 0.2,
+        "mean_reversion": 0.8,
+        "volatility_spike": 2.0,
+        "defensive": 2.0,
+        "risk_off": 2.0,
+    },
+}
+
+
 class TestRegimeSignalModifier:
-    def test_normal_regime_passthrough(self):
+    def test_empty_by_default(self):
+        """Without injection, all signals pass through unchanged."""
         mod = RegimeSignalModifier()
+        signals = {"momentum": 1.0, "trend_follow": 0.5}
+        result = mod.modify(signals, "volatile")
+        assert result == signals  # no multipliers applied
+
+    def test_normal_regime_passthrough(self):
+        mod = RegimeSignalModifier(multiplier_table=_TRADING_MULTIPLIERS)
         signals = {"momentum": 1.0, "trend_follow": 0.5}
         result = mod.modify(signals, "normal")
         assert result == signals
 
     def test_volatile_regime_reduces_momentum(self):
-        mod = RegimeSignalModifier()
+        mod = RegimeSignalModifier(multiplier_table=_TRADING_MULTIPLIERS)
         signals = {"momentum": 1.0}
         result = mod.modify(signals, "volatile")
         assert result["momentum"] < 1.0
 
     def test_crash_regime_amplifies_defensive(self):
-        mod = RegimeSignalModifier()
+        mod = RegimeSignalModifier(multiplier_table=_TRADING_MULTIPLIERS)
         signals = {"defensive": 1.0}
         result = mod.modify(signals, "crash")
         assert result["defensive"] > 1.0
 
     def test_trending_regime_boosts_momentum(self):
-        mod = RegimeSignalModifier()
+        mod = RegimeSignalModifier(multiplier_table=_TRADING_MULTIPLIERS)
         signals = {"momentum": 1.0}
         result = mod.modify(signals, "trending")
         assert result["momentum"] > 1.0
 
     def test_unknown_signal_passes_through(self):
-        mod = RegimeSignalModifier()
+        mod = RegimeSignalModifier(multiplier_table=_TRADING_MULTIPLIERS)
         signals = {"custom_signal_xyz": 0.8}
         result = mod.modify(signals, "crash")
         assert result["custom_signal_xyz"] == 0.8
 
     def test_original_not_mutated(self):
-        mod = RegimeSignalModifier()
+        mod = RegimeSignalModifier(multiplier_table=_TRADING_MULTIPLIERS)
         signals = {"momentum": 1.0}
         original = dict(signals)
         mod.modify(signals, "volatile")
@@ -197,7 +230,13 @@ class TestRegimeSignalModifier:
         mod.set_multiplier("normal", "my_signal", 2.0)
         assert mod.get_multiplier("my_signal", "normal") == 2.0
 
-    def test_custom_overrides_applied(self):
+    def test_custom_table_applied(self):
+        mod = RegimeSignalModifier(multiplier_table={"normal": {"momentum": 1.5}})
+        result = mod.modify({"momentum": 1.0}, "normal")
+        assert result["momentum"] == 1.5
+
+    def test_legacy_multiplier_overrides_still_works(self):
+        """multiplier_overrides kwarg preserved for backward compat."""
         mod = RegimeSignalModifier(multiplier_overrides={"normal": {"momentum": 1.5}})
         result = mod.modify({"momentum": 1.0}, "normal")
         assert result["momentum"] == 1.5
