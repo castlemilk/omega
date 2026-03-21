@@ -5,11 +5,19 @@ Download 1 year of real daily OHLCV from Binance (no API key required)
 and run the OmegaBacktestBridge to produce honest Sharpe numbers.
 
 Usage:
-    python -m omega.eval.run_honest_backtest
+    # Full orchestrator pipeline (default — includes adversarial filtering)
+    python -m omega.eval.run_honest_backtest --mode orchestrator
+
+    # Direct mode (bypasses orchestrator strategy/adversarial steps)
+    python -m omega.eval.run_honest_backtest --mode direct
+
+    # Force re-download even if cached CSV exists
+    python -m omega.eval.run_honest_backtest --refresh
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
 import logging
 import sys
@@ -141,15 +149,31 @@ def get_ohlcv(symbol: str, days: int = 365, force_refresh: bool = False) -> list
 # ---------------------------------------------------------------------------
 
 
-def run_backtest_for_symbol(symbol: str, ticker: str, bars: list[dict]) -> dict:
+def run_backtest_for_symbol(
+    symbol: str,
+    ticker: str,
+    bars: list[dict],
+    use_orchestrator: bool = True,
+) -> dict:
     """
     Run OmegaBacktestBridge on `bars` and return a summary dict.
+
+    Parameters
+    ----------
+    use_orchestrator : If True, proposals come from the full orchestrator cycle
+        (includes adversarial filtering).  If False, use direct portfolio
+        construction (faster, no adversarial).
     """
     from omega.eval.backtest_bridge import BacktestMode, OmegaBacktestBridge
     from omega.eval.significance import sharpe_is_significant
 
     logger.info("=" * 60)
-    logger.info("Running backtest: %s (%d bars)", symbol, len(bars))
+    logger.info(
+        "Running backtest: %s (%d bars) [mode=%s]",
+        symbol,
+        len(bars),
+        "orchestrator" if use_orchestrator else "direct",
+    )
     logger.info("=" * 60)
 
     bridge = OmegaBacktestBridge(
@@ -159,6 +183,7 @@ def run_backtest_for_symbol(symbol: str, ticker: str, bars: list[dict]) -> dict:
         initial_capital=1.0,
         commission=0.001,  # 0.1% Binance spot fee
         periods_per_year=PERIODS_PER_YEAR,
+        use_orchestrator_proposals=use_orchestrator,
     )
 
     result = bridge.run(bars)
@@ -265,8 +290,8 @@ def print_report(summaries: list[dict]) -> None:
         print("           Cannot distinguish from luck with this sample size.")
 
     print()
-    print("  NOTE: PICO mode used (deterministic signal extraction only).")
-    print("        Supervised/Autonomous mode may differ.")
+    print("  NOTE: PICO autonomy mode used (deterministic signal extraction only).")
+    print("        Use --mode direct to bypass adversarial filtering.")
     print(sep)
     print()
 
@@ -277,6 +302,26 @@ def print_report(summaries: list[dict]) -> None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description="Omega honest backtest — real Binance OHLCV data")
+    parser.add_argument(
+        "--mode",
+        choices=["orchestrator", "direct"],
+        default="orchestrator",
+        help=(
+            "orchestrator: use full pipeline (signals → strategy → adversarial); "
+            "direct: call VectoraNode._do_construct_portfolio directly (no adversarial)"
+        ),
+    )
+    parser.add_argument(
+        "--refresh",
+        action="store_true",
+        help="Force re-download even if a cached CSV exists",
+    )
+    args = parser.parse_args()
+
+    use_orchestrator = args.mode == "orchestrator"
+    force_refresh = args.refresh
+
     symbols = [
         ("BTC/USDT", "BTCUSDT"),
         ("ETH/USDT", "ETHUSDT"),
@@ -287,8 +332,10 @@ def main() -> int:
 
     for symbol, ticker in symbols:
         try:
-            bars = get_ohlcv(symbol, days=365)
-            summary = run_backtest_for_symbol(symbol, ticker, bars)
+            bars = get_ohlcv(symbol, days=365, force_refresh=force_refresh)
+            summary = run_backtest_for_symbol(
+                symbol, ticker, bars, use_orchestrator=use_orchestrator
+            )
             summaries.append(summary)
         except Exception as exc:
             logger.error("FAILED for %s: %s", symbol, exc, exc_info=True)
