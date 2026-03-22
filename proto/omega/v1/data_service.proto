@@ -1,0 +1,162 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// DataService exposes OHLCV market data, order books, tickers, and live price
+// streaming backed by the registered connector fleet (Binance, CoinGecko,
+// AlphaVantage, FRED, etc.).
+service DataService {
+  rpc GetOHLCV(GetOHLCVRequest) returns (GetOHLCVResponse);
+  rpc GetTicker(GetTickerRequest) returns (GetTickerResponse);
+  rpc GetOrderBook(GetOrderBookRequest) returns (GetOrderBookResponse);
+  rpc ListDataSources(ListDataSourcesRequest) returns (ListDataSourcesResponse);
+  rpc GetMarketOverview(GetMarketOverviewRequest) returns (GetMarketOverviewResponse);
+  rpc StreamPrices(StreamPricesRequest) returns (stream PriceUpdate);
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum OHLCVInterval {
+  OHLCV_INTERVAL_UNSPECIFIED = 0;
+  OHLCV_INTERVAL_1M = 1;
+  OHLCV_INTERVAL_5M = 2;
+  OHLCV_INTERVAL_15M = 3;
+  OHLCV_INTERVAL_30M = 4;
+  OHLCV_INTERVAL_1H = 5;
+  OHLCV_INTERVAL_4H = 6;
+  OHLCV_INTERVAL_1D = 7;
+  OHLCV_INTERVAL_1W = 8;
+}
+
+enum DataSourceStatus {
+  DATA_SOURCE_STATUS_UNSPECIFIED = 0;
+  DATA_SOURCE_STATUS_HEALTHY = 1;
+  DATA_SOURCE_STATUS_DEGRADED = 2;
+  DATA_SOURCE_STATUS_UNAVAILABLE = 3;
+}
+
+// ── Shared messages ───────────────────────────────────────────────────────────
+
+// Kline is a single OHLCV candlestick bar.
+message Kline {
+  int64 open_time = 1;   // Unix ms
+  double open = 2;
+  double high = 3;
+  double low = 4;
+  double close = 5;
+  double volume = 6;
+  int64 close_time = 7;  // Unix ms
+}
+
+// OrderBookLevel is a single price level in the order book.
+message OrderBookLevel {
+  double price = 1;
+  double quantity = 2;
+}
+
+// DataSource describes a registered connector and its current health.
+message DataSource {
+  string name = 1;
+  string category = 2;
+  DataSourceStatus status = 3;
+  string error = 4; // populated when status != HEALTHY
+}
+
+// ── GetOHLCV ──────────────────────────────────────────────────────────────────
+
+message GetOHLCVRequest {
+  string symbol = 1;                 // e.g. "BTCUSDT"
+  OHLCVInterval interval = 2;
+  int32 limit = 3;                   // number of bars; 0 = connector default
+  string exchange = 4;               // connector name override; empty = auto-select
+  google.protobuf.Timestamp start = 5; // optional range start
+  google.protobuf.Timestamp end = 6;   // optional range end
+}
+
+message GetOHLCVResponse {
+  string symbol = 1;
+  string exchange = 2;
+  OHLCVInterval interval = 3;
+  repeated Kline klines = 4;
+}
+
+// ── GetTicker ─────────────────────────────────────────────────────────────────
+
+message GetTickerRequest {
+  string symbol = 1;    // e.g. "BTCUSDT" (Binance) or "bitcoin" (CoinGecko)
+  string exchange = 2;  // connector name; empty = auto-select
+}
+
+message GetTickerResponse {
+  string symbol = 1;
+  double price = 2;
+  string exchange = 3;
+}
+
+// ── GetOrderBook ──────────────────────────────────────────────────────────────
+
+message GetOrderBookRequest {
+  string symbol = 1;
+  int32 depth = 2;       // number of price levels; 0 = connector default
+  string exchange = 3;   // defaults to "binance"
+}
+
+message GetOrderBookResponse {
+  string symbol = 1;
+  string exchange = 2;
+  int64 last_update_id = 3;
+  repeated OrderBookLevel bids = 4;
+  repeated OrderBookLevel asks = 5;
+}
+
+// ── ListDataSources ───────────────────────────────────────────────────────────
+
+message ListDataSourcesRequest {}
+
+message ListDataSourcesResponse {
+  repeated DataSource sources = 1;
+}
+
+// ── GetMarketOverview ─────────────────────────────────────────────────────────
+
+// CoinOverview holds summary market data for a single asset.
+message CoinOverview {
+  string id = 1;
+  string symbol = 2;
+  string name = 3;
+  double current_price = 4;
+  double market_cap = 5;
+  int32 market_cap_rank = 6;
+  double total_volume = 7;
+  double price_change_percentage_24h = 8;
+}
+
+message GetMarketOverviewRequest {
+  string vs_currency = 1; // e.g. "usd"; empty = "usd"
+  int32 limit = 2;        // number of coins; 0 = 20
+}
+
+message GetMarketOverviewResponse {
+  repeated CoinOverview coins = 1;
+  string vs_currency = 2;
+}
+
+// ── StreamPrices ──────────────────────────────────────────────────────────────
+
+message StreamPricesRequest {
+  repeated string symbols = 1; // e.g. ["BTCUSDT", "ETHUSDT"]
+  string exchange = 2;         // defaults to "binance"
+  int32 interval_ms = 3;       // poll interval in milliseconds; 0 = 1000
+}
+
+// PriceUpdate carries a single symbol→price tick.
+message PriceUpdate {
+  string symbol = 1;
+  double price = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  string exchange = 4;
+}

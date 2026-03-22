@@ -18,6 +18,8 @@ import (
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
+	"github.com/benebsworth/omega/internal/integrations"
+	"github.com/benebsworth/omega/internal/integrations/connectors"
 	mw "github.com/benebsworth/omega/internal/middleware"
 	"github.com/benebsworth/omega/internal/observability"
 	"github.com/benebsworth/omega/internal/telemetry"
@@ -153,6 +155,35 @@ func main() {
 	terminalMgr := terminal.NewManager(terminal.WithDB(database))
 	terminalH := handler.NewTerminal(terminalMgr, database)
 
+	// ── Data service: connector registry + DataHandler ────────────────────────
+	httpClient := integrations.NewSharedHTTPClient(integrations.DefaultHTTPClientConfig())
+	connectorRegistry := integrations.NewConnectorRegistry()
+
+	binanceConnector := connectors.NewBinance(httpClient)
+	cgConnector := connectors.NewCoinGecko(httpClient)
+
+	for _, c := range []integrations.Connector{binanceConnector, cgConnector} {
+		if err := connectorRegistry.Register(c); err != nil {
+			log.Printf("warn: connector register %q: %v", c.Name(), err)
+		}
+	}
+
+	// AlphaVantage and FRED require API keys; register only when configured.
+	if avKey := os.Getenv("ALPHAVANTAGE_API_KEY"); avKey != "" {
+		av := connectors.NewAlphaVantage(httpClient, avKey)
+		if err := connectorRegistry.Register(av); err != nil {
+			log.Printf("warn: connector register %q: %v", av.Name(), err) //nolint:gosec
+		}
+	}
+	if fredKey := os.Getenv("FRED_API_KEY"); fredKey != "" {
+		fred := connectors.NewFRED(httpClient, fredKey)
+		if err := connectorRegistry.Register(fred); err != nil {
+			log.Printf("warn: connector register %q: %v", fred.Name(), err) //nolint:gosec
+		}
+	}
+
+	dataH := handler.NewData(connectorRegistry, binanceConnector, cgConnector)
+
 	// ── Mux registration ──────────────────────────────────────────────────────
 	mux := http.NewServeMux()
 
@@ -197,6 +228,9 @@ func main() {
 
 	termPath, termSvcHandler := omegav1connect.NewTerminalServiceHandler(terminalH, withMetrics()...)
 	mux.Handle(termPath, termSvcHandler)
+
+	dataPath, dataSvcHandler := omegav1connect.NewDataServiceHandler(dataH, withMetrics()...)
+	mux.Handle(dataPath, dataSvcHandler)
 
 	// Observability endpoints.
 	observability.NewHealthHandler(composite).RegisterRoutes(mux)
