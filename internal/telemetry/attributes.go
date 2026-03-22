@@ -94,4 +94,18 @@ const (
 
 	MetricNodeExecutionLatency    = "omega.node.execution.latency"
 	MetricCycleDuration           = "omega.orchestrator.cycle.duration"
+
+	MetricRegistryNodesTotal  = "omega.registry.nodes"
+	MetricRegistryHealthChecks = "omega.registry.health_checks"
+)
+
+// Registry span names.
+const (
+	SpanRegistryHealthCheck = "omega.registry.health_check"
+)
+
+// Registry attribute keys.
+var (
+	AttrRegistryNodeState    = attribute.Key("omega.registry.node_state")
+	AttrRegistryNodeLanguage = attribute.Key("omega.registry.node_language")
 )
