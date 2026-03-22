@@ -4,14 +4,20 @@ package handler
 import (
 	"context"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"connectrpc.com/connect"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/db"
+	"github.com/benebsworth/omega/internal/telemetry"
 )
 
 // Ensure interface satisfaction at compile time.
@@ -20,6 +26,10 @@ var _ omegav1connect.OrchestratorServiceHandler = (*OrchestratorHandler)(nil)
 // OrchestratorHandler implements OrchestratorService.
 type OrchestratorHandler struct {
 	db *db.DB
+
+	mu     sync.Mutex
+	cancel context.CancelFunc // non-nil while orchestrator loop is running
+	cycleN atomic.Int64       // total cycles completed
 }
 
 // New creates an OrchestratorHandler backed by the given DB.
@@ -528,25 +538,117 @@ func (h *OrchestratorHandler) SubmitFeedback(
 
 // ── Orchestrator control ──────────────────────────────────────────────────────
 
+// StartOrchestrator starts the Go orchestration loop if it is not already running.
+// The loop runs one cycle per heartbeat_secs, emitting an OTel span per cycle and
+// recording a DB activity entry.  It exits cleanly when the returned context is
+// cancelled (via StopOrchestrator) or when the parent server context is done.
 func (h *OrchestratorHandler) StartOrchestrator(
 	ctx context.Context,
 	req *connect.Request[omegav1.StartOrchestratorRequest],
 ) (*connect.Response[omegav1.StartOrchestratorResponse], error) {
-	_, _ = ctx, req
-	// TODO: replace with Go-native orchestrator launch once a Go orchestrator is implemented.
-	// The Python subprocess exec call has been removed as a security hardening measure.
+	interval := time.Duration(req.Msg.HeartbeatSecs) * time.Second
+	if interval <= 0 {
+		interval = 60 * time.Second
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if h.cancel != nil {
+		return connect.NewResponse(&omegav1.StartOrchestratorResponse{
+			Started: false, Message: "orchestrator already running",
+		}), nil
+	}
+
+	loopCtx, cancel := context.WithCancel(ctx)
+	h.cancel = cancel
+
+	go h.runLoop(loopCtx, interval)
+
 	return connect.NewResponse(&omegav1.StartOrchestratorResponse{
-		Started: false, Message: "orchestrator launch not available (pending Go implementation)",
+		Started: true, Message: fmt.Sprintf("orchestrator started (interval=%s)", interval),
 	}), nil
+}
+
+// runLoop is the main orchestration goroutine.  It runs until ctx is cancelled.
+func (h *OrchestratorHandler) runLoop(ctx context.Context, interval time.Duration) {
+	defer func() {
+		h.mu.Lock()
+		h.cancel = nil
+		h.mu.Unlock()
+	}()
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.runCycle(ctx)
+		}
+	}
+}
+
+// runCycle executes one orchestration cycle: spans each registered node and logs activity.
+func (h *OrchestratorHandler) runCycle(ctx context.Context) {
+	cycle := h.cycleN.Add(1)
+
+	tracer := telemetry.Tracer()
+	cycleCtx, cycleSpan := tracer.Start(ctx, "orchestrator.cycle",
+		trace.WithAttributes(attribute.Int64("cycle", cycle)),
+	)
+	defer cycleSpan.End()
+
+	nodes, err := h.db.AllNodes()
+	if err != nil {
+		cycleSpan.SetStatus(codes.Error, err.Error())
+		_ = h.db.LogActivity("cycle_error", "system", "orchestrator", map[string]any{
+			"cycle": cycle, "error": err.Error(),
+		}, cycle)
+		return
+	}
+
+	for _, n := range nodes {
+		_, nodeSpan := tracer.Start(cycleCtx, "orchestrator.node",
+			trace.WithAttributes(
+				attribute.String("node_id", n.NodeID),
+				attribute.String("node_name", n.Name),
+				attribute.Float64("health", n.Health),
+				attribute.Int64("cycle", cycle),
+			),
+		)
+		nodeSpan.End()
+	}
+
+	_ = h.db.LogActivity("cycle_complete", "system", "orchestrator", map[string]any{
+		"cycle": cycle, "node_count": len(nodes),
+	}, cycle)
+
+	cycleSpan.SetStatus(codes.Ok, "")
 }
 
 func (h *OrchestratorHandler) StopOrchestrator(
 	ctx context.Context,
 	req *connect.Request[omegav1.StopOrchestratorRequest],
 ) (*connect.Response[omegav1.StopOrchestratorResponse], error) {
-	_, _ = ctx, req
+	_ = ctx
+	_ = req
+
+	h.mu.Lock()
+	cancel := h.cancel
+	h.mu.Unlock()
+
+	if cancel == nil {
+		return connect.NewResponse(&omegav1.StopOrchestratorResponse{
+			Stopped: false, Message: "orchestrator is not running",
+		}), nil
+	}
+
+	cancel()
 	return connect.NewResponse(&omegav1.StopOrchestratorResponse{
-		Stopped: false, Message: "not running",
+		Stopped: true, Message: "orchestrator stopped",
 	}), nil
 }
 
