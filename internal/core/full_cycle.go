@@ -27,8 +27,13 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	adversarialpkg "github.com/benebsworth/omega/internal/adversarial"
 	"github.com/benebsworth/omega/internal/observability"
+	"github.com/benebsworth/omega/internal/telemetry"
 )
 
 // ---------------------------------------------------------------------------
@@ -111,7 +116,14 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 	cycleID := o.nextCycleID()
 	start := time.Now()
 
-	cycleCtx, cancel := context.WithTimeout(ctx, o.cfg.CycleTimeout)
+	// Create a parent span for the entire orchestration cycle.
+	tracer := telemetry.Tracer()
+	spanCtx, cycleSpan := tracer.Start(ctx, telemetry.SpanOrchestratorCycle,
+		trace.WithAttributes(telemetry.AttrCycleID.Int64(int64(cycleID))),
+	)
+	defer cycleSpan.End()
+
+	cycleCtx, cancel := context.WithTimeout(spanCtx, o.cfg.CycleTimeout)
 	defer cancel()
 
 	report := &CycleReport{
@@ -200,8 +212,20 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 		// ── 4c. Execute node ──────────────────────────────────────────────
 		nodeCtx, nodeCancel := context.WithTimeout(cycleCtx, o.cfg.NodeTimeout)
 		nodeStart := time.Now()
+		nodeCtx, nodeSpan := tracer.Start(nodeCtx, telemetry.SpanNodeExecution,
+			trace.WithAttributes(
+				telemetry.AttrNodeName.String(nodeID),
+				telemetry.AttrCycleID.Int64(int64(cycleID)),
+			),
+		)
 		execErr := entry.executor.Execute(nodeCtx)
 		nr.Duration = time.Since(nodeStart)
+		nodeSpan.SetAttributes(attribute.Key("omega.node.duration_ms").Int64(nr.Duration.Milliseconds()))
+		if execErr != nil {
+			nodeSpan.RecordError(execErr)
+			nodeSpan.SetStatus(codes.Error, execErr.Error())
+		}
+		nodeSpan.End()
 		nodeCancel()
 
 		if execErr != nil {
