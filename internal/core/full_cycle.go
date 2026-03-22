@@ -68,8 +68,11 @@ type FullCycleConfig struct {
 	// Safety — hard-constraint gate applied before each node execution.
 	Safety *SafetyEnvelope
 
-	// Adversarial — three-rings pressure layer.
-	Adversarial *AdversarialPressure
+	// AdversarialV2 — enhanced three-rings pressure layer with adaptive threshold,
+	// outlier attribution, and FP tracking.  Replaces the old AdversarialPressure field.
+	// When set, proposals are rejected (ProposalBlocked=true) if AdversarialScore > 0.4
+	// (i.e. ensemble disagreement score < 0.6).
+	AdversarialV2 *AdversarialPressureV2
 
 	// Memory — episodic + semantic kernel.
 	Memory *MemoryKernel
@@ -218,8 +221,13 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 			}
 		}
 
-		// ── 4d. Adversarial Ring 1 — ensemble disagreement ────────────────
-		if cfg.Adversarial != nil {
+		// ── 4d. Adversarial gate (AdversarialPressureV2) ─────────────────
+		// AdversarialPressureV2 is always required; production callers must wire it.
+		// Proposals (node outputs) are REJECTED (ProposalBlocked=true) when
+		// the adversarial score exceeds the quality threshold (disagreement > 0.4,
+		// i.e. score = 1 - disagreement < 0.6).
+		const adversarialScoreThreshold = 0.4
+		if cfg.AdversarialV2 != nil {
 			variantOutputs := nctx.VariantOutputs
 			if len(variantOutputs) == 0 && len(nctx.Signals) > 0 {
 				// Synthesise a single-node variant from node signals so Ring 1
@@ -227,27 +235,40 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 				variantOutputs = map[string]map[string]float64{nodeID: nctx.Signals}
 			}
 
-			adversarialReport := cfg.Adversarial.Run(
+			adversarialReport := cfg.AdversarialV2.RunV2(
 				cycleCtx,
 				cycleNum,
 				variantOutputs,
 				nctx.Signals,
 				nctx.StrategyParams,
 				nctx.FitnessFunc,
+				nil, // strategyCallable — optional Ring 2 simulation
 			)
 
-			if adversarialReport.Ring1Result != nil {
-				nr.AdversarialFlagged = adversarialReport.Ring1Result.Flagged
-				nr.AdversarialScore = adversarialReport.Ring1Result.MaxDisagreement
+			if adversarialReport.BaseReport.Ring1Result != nil {
+				nr.AdversarialFlagged = adversarialReport.BaseReport.Ring1Result.Flagged
+				nr.AdversarialScore = adversarialReport.BaseReport.Ring1Result.MaxDisagreement
+			}
+
+			// Block proposal when disagreement is too high (score < 0.6).
+			if nr.AdversarialScore > adversarialScoreThreshold {
+				nr.ProposalBlocked = true
+				slog.Warn("full_cycle: proposal blocked by adversarial gate",
+					"node_id", nodeID,
+					"cycle_id", cycleID,
+					"adversarial_score", nr.AdversarialScore,
+					"score", 1.0-nr.AdversarialScore,
+					"threshold", adversarialScoreThreshold,
+				)
 			}
 
 			// ── 4e. Ring 2 / Ring 3 cascade ──────────────────────────────
 			if nr.AdversarialFlagged {
-				nr.Ring2Triggered = len(adversarialReport.Ring2Scenarios) > 0
-				nr.Ring3Triggered = adversarialReport.Ring3Result != nil
+				nr.Ring2Triggered = len(adversarialReport.BaseReport.Ring2Scenarios) > 0
+				nr.Ring3Triggered = adversarialReport.BaseReport.Ring3Result != nil
 
 				o.EmitAdversarialAlert(1, nodeID, nr.AdversarialScore,
-					cfg.Adversarial.Ring1.DisagreementThreshold)
+					cfg.AdversarialV2.Ring1().DisagreementThreshold)
 
 				report.AdversarialAlerts = append(report.AdversarialAlerts, AdversarialAlert{
 					NodeID:          nodeID,

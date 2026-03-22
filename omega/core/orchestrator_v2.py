@@ -50,6 +50,10 @@ from omega.core.registry import NodeRegistry
 
 logger = logging.getLogger("omega.orchestrator_v2")
 
+# Proposals with adversarial disagreement score above this threshold (score = 1 - max_disagreement < 0.6)
+# are blocked even in PICO mode.  Prevents rubber-stamping all proposals regardless of signal quality.
+_ADVERSARIAL_SCORE_THRESHOLD = 0.4
+
 
 # ---------------------------------------------------------------------------
 # NodeHealth — lightweight health record per node
@@ -126,7 +130,9 @@ class OmegaOrchestrator:
         self._improvement_engine = improvement_engine or ImprovementEngine()
         self._improvement_scheduler = improvement_scheduler or ImprovementScheduler()
         self._regime_handler = regime_handler or RegimeTransitionHandler()
-        self._adversarial = adversarial
+        # Always wire an adversarial instance — never leave the gate as None in production.
+        # Callers may inject a custom instance (e.g., with DebateGate) for domain-specific behaviour.
+        self._adversarial = adversarial if adversarial is not None else AdversarialPressureV2()
         self._consolidation = memory_consolidation
         self._metrics = metrics_exporter
 
@@ -627,8 +633,26 @@ class OmegaOrchestrator:
                 )
                 approved.append(modified)
             else:
-                # PICO or unknown: pass through (deterministic strategies are trusted)
-                approved.append(proposal)
+                # PICO or unknown: block only when disagreement is extreme (score < 0.6).
+                # Moderate disagreement (score >= 0.6) is acceptable for deterministic strategies.
+                assert ring1_result is not None  # narrowing: ring1_flagged is True
+                if ring1_result.max_disagreement > _ADVERSARIAL_SCORE_THRESHOLD:
+                    result.add_adversarial_flag(
+                        ring="ring1",
+                        severity="critical",
+                        reason="high_disagreement_block",
+                        details={
+                            "node_id": node_id,
+                            "symbol": proposal.get("symbol", "unknown"),
+                            "max_disagreement": ring1_result.max_disagreement,
+                            "score": 1.0 - ring1_result.max_disagreement,
+                        },
+                    )
+                    if self._metrics:
+                        self._metrics.record_adversarial_flag("ring1", "critical")
+                    # do NOT append — blocked by adversarial gate
+                else:
+                    approved.append(proposal)
 
         # Critical flag → demote autonomy for all active nodes
         if result.had_critical_flag:

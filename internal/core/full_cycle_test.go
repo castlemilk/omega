@@ -24,9 +24,13 @@ func newSafeEnvelope() *SafetyEnvelope {
 	return NewSafetyEnvelope(0.9, 0.9, 0.99, 10.0)
 }
 
-// newAdversarialAll returns an AdversarialPressure with all three rings active.
-func newAdversarialAll(threshold float64) *AdversarialPressure {
-	return NewAdversarialPressure(threshold, 5, []int{1, 2, 3})
+// newAdversarialV2All returns an AdversarialPressureV2 with all three rings active.
+func newAdversarialV2All(threshold float64) *AdversarialPressureV2 {
+	cfg := DefaultAdversarialPressureV2Config()
+	cfg.Ring1Threshold = threshold
+	cfg.ActiveRings = []int{1, 2, 3}
+	cfg.ThresholdCfg.InitialThreshold = threshold
+	return NewAdversarialPressureV2(cfg)
 }
 
 // newDebateGate returns a default DebateGate for testing.
@@ -74,7 +78,7 @@ func TestRunFullCycle_HappyPath(t *testing.T) {
 
 	cfg := FullCycleConfig{
 		Safety:      newSafeEnvelope(),
-		Adversarial: newAdversarialAll(0.5),
+		AdversarialV2: newAdversarialV2All(0.5),
 		Memory:      kern,
 		Autonomy:    autonomy,
 		NodeContextProvider: func(nodeID string) NodeCycleContext {
@@ -164,7 +168,7 @@ func TestRunFullCycle_Mixed(t *testing.T) {
 
 	cfg := FullCycleConfig{
 		Safety:      tightSafety,
-		Adversarial: newAdversarialAll(0.5),
+		AdversarialV2: newAdversarialV2All(0.5),
 		Memory:      kern,
 		Autonomy:    autonomy,
 		NodeContextProvider: func(nodeID string) NodeCycleContext {
@@ -256,7 +260,7 @@ func TestRunFullCycle_AdversarialEscalation(t *testing.T) {
 	setNextCycleID(orch, 50)
 
 	// Low threshold so Ring 1 fires easily.
-	adversarial := newAdversarialAll(0.1)
+	adversarialV2 := newAdversarialV2All(0.1)
 
 	// Provide a fitness function so Ring 3 has something to evaluate.
 	fitnessFn := func(params map[string]any) float64 {
@@ -264,7 +268,7 @@ func TestRunFullCycle_AdversarialEscalation(t *testing.T) {
 	}
 
 	// Seed Ring 3 population so it doesn't skip.
-	adversarial.Ring3.InitialisePopulation(map[string]any{
+	adversarialV2.Ring3().InitialisePopulation(map[string]any{
 		"signal_threshold_long": 0.5,
 		"rsi_threshold":         30.0,
 	})
@@ -276,9 +280,9 @@ func TestRunFullCycle_AdversarialEscalation(t *testing.T) {
 	}
 
 	cfg := FullCycleConfig{
-		Safety:      newSafeEnvelope(),
-		Adversarial: adversarial,
-		Memory:      kern,
+		Safety:        newSafeEnvelope(),
+		AdversarialV2: adversarialV2,
+		Memory:        kern,
 		NodeContextProvider: func(nodeID string) NodeCycleContext {
 			return NodeCycleContext{
 				Signals:        map[string]float64{"signal": 0.5},
@@ -381,7 +385,7 @@ func TestRunFullCycle_ImprovementTriggers(t *testing.T) {
 
 	cfg := FullCycleConfig{
 		Safety:      newSafeEnvelope(),
-		Adversarial: newAdversarialAll(0.5),
+		AdversarialV2: newAdversarialV2All(0.5),
 		Memory:      kern,
 		Autonomy:    autonomy,
 		Improvement: engine,
@@ -428,7 +432,7 @@ func TestRunFullCycle_DebateGate(t *testing.T) {
 
 	cfg := FullCycleConfig{
 		Safety:      newSafeEnvelope(),
-		Adversarial: newAdversarialAll(0.5),
+		AdversarialV2: newAdversarialV2All(0.5),
 		Memory:      kern,
 		DebateGate:  debateGate,
 		NodeContextProvider: func(string) NodeCycleContext {
@@ -480,6 +484,93 @@ func TestRunFullCycle_NilSubsystems(t *testing.T) {
 	}
 	if report.Summary.Passed != 1 {
 		t.Errorf("Passed = %d, want 1", report.Summary.Passed)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Test 7: AdversarialV2 gate rejects proposals with high disagreement
+// ---------------------------------------------------------------------------
+
+// TestRunFullCycle_AdversarialV2BlocksHighDisagreement verifies that when two
+// variants strongly disagree (score < 0.6), ProposalBlocked is set to true.
+func TestRunFullCycle_AdversarialV2BlocksHighDisagreement(t *testing.T) {
+	orch := newFullCycleOrch(t)
+
+	node := &stubNode{id: "node-bad-proposal"}
+	orch.Register(node)
+
+	// Very low threshold (0.05) so Ring 1 fires on any disagreement.
+	// Variant outputs strongly disagree: bull=+1, bear=-1 → max_disagreement ≈ 1.0 > 0.4 threshold.
+	adversarialV2 := newAdversarialV2All(0.05)
+	highDisagreement := map[string]map[string]float64{
+		"variant-bull": {"signal": 1.0, "momentum": 0.9},
+		"variant-bear": {"signal": -1.0, "momentum": -0.9},
+	}
+
+	cfg := FullCycleConfig{
+		AdversarialV2: adversarialV2,
+		NodeContextProvider: func(string) NodeCycleContext {
+			return NodeCycleContext{
+				Signals:        map[string]float64{"signal": 0.0},
+				VariantOutputs: highDisagreement,
+			}
+		},
+	}
+
+	report, err := orch.RunFullCycle(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("RunFullCycle: %v", err)
+	}
+
+	nr := report.PerNode[node.id]
+	if nr == nil {
+		t.Fatal("missing PerNodeReport for node-bad-proposal")
+	}
+	if !nr.AdversarialFlagged {
+		t.Errorf("AdversarialFlagged = false, want true (high disagreement inputs)")
+	}
+	if !nr.ProposalBlocked {
+		t.Errorf("ProposalBlocked = false, want true — adversarial gate must reject high-disagreement proposals (score=%.3f > 0.4)", nr.AdversarialScore)
+	}
+}
+
+// TestRunFullCycle_AdversarialV2PassesLowDisagreement verifies that when
+// variants roughly agree (score >= 0.6), ProposalBlocked is false.
+func TestRunFullCycle_AdversarialV2PassesLowDisagreement(t *testing.T) {
+	orch := newFullCycleOrch(t)
+
+	node := &stubNode{id: "node-good-proposal"}
+	orch.Register(node)
+
+	// Threshold 0.5 — only fire when disagreement > 0.5.
+	// Variant outputs agree closely: both near +0.8.
+	adversarialV2 := newAdversarialV2All(0.5)
+	lowDisagreement := map[string]map[string]float64{
+		"variant-a": {"signal": 0.8, "momentum": 0.75},
+		"variant-b": {"signal": 0.82, "momentum": 0.77},
+	}
+
+	cfg := FullCycleConfig{
+		AdversarialV2: adversarialV2,
+		NodeContextProvider: func(string) NodeCycleContext {
+			return NodeCycleContext{
+				Signals:        map[string]float64{"signal": 0.8},
+				VariantOutputs: lowDisagreement,
+			}
+		},
+	}
+
+	report, err := orch.RunFullCycle(context.Background(), cfg)
+	if err != nil {
+		t.Fatalf("RunFullCycle: %v", err)
+	}
+
+	nr := report.PerNode[node.id]
+	if nr == nil {
+		t.Fatal("missing PerNodeReport for node-good-proposal")
+	}
+	if nr.ProposalBlocked {
+		t.Errorf("ProposalBlocked = true, want false — low-disagreement proposals must pass (score=%.3f)", nr.AdversarialScore)
 	}
 }
 
