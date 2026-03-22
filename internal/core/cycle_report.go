@@ -24,6 +24,7 @@ type PerNodeReport struct {
 	// Adversarial
 	AdversarialFlagged  bool
 	AdversarialScore    float64
+	ProposalBlocked     bool // true when adversarial score > threshold (score < 0.6) — proposal rejected
 	Ring2Triggered      bool
 	Ring3Triggered      bool
 

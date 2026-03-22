@@ -596,3 +596,103 @@ class TestAdversarialIntegration:
         assert mock_adv.last_variant_outputs is not None
         # Should contain the node's signal data
         assert any("BTC" in v for v in mock_adv.last_variant_outputs.values())
+
+
+# ---------------------------------------------------------------------------
+# Configurable-disagreement mock
+# ---------------------------------------------------------------------------
+
+
+class ConfigurableDisagreementAdversarial:
+    """Mock adversarial that fires Ring 1 with a configurable max_disagreement."""
+
+    def __init__(self, max_disagreement: float) -> None:
+        self.max_disagreement = max_disagreement
+        self.call_count = 0
+
+    def run_v2(
+        self,
+        cycle: int,
+        variant_outputs: dict,
+        current_signals: dict,
+        strategy_params: dict,
+        fitness_fn: Any = None,
+        strategy_callable: Any = None,
+    ):
+        from omega.core.adversarial import AdversarialReport, DisagreementResult
+        from omega.core.adversarial_v2 import AdversarialReportV2, AttributionResult
+
+        self.call_count += 1
+        ring1 = DisagreementResult(
+            flagged=True,
+            max_disagreement=self.max_disagreement,
+            disagreeing_variants=list(variant_outputs.keys()),
+            outputs=variant_outputs,
+        )
+        base = AdversarialReport(
+            cycle=cycle,
+            ring1_result=ring1,
+            ring2_scenarios=[],
+            ring3_result=None,
+            failure_cases=[],
+        )
+        return AdversarialReportV2(
+            base_report=base,
+            attribution=AttributionResult(
+                outlier_variants=[],
+                outlier_scores={},
+                method="mock",
+                confidence=0.0,
+            ),
+            threshold_adjustment=None,
+            fp_summary={},
+            ring2_sim_report=None,
+            ring2_activated=False,
+            current_threshold=0.20,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Adversarial gate rejection tests
+# ---------------------------------------------------------------------------
+
+
+class TestAdversarialGateRejectsLowQualityProposals:
+    def test_adversarial_wired_by_default(self):
+        """OmegaOrchestrator must wire AdversarialPressureV2 by default, never leave it None."""
+        orch = OmegaOrchestrator()
+        assert orch._adversarial is not None, (
+            "_adversarial is None — adversarial gate is dead in production"
+        )
+
+    def test_high_disagreement_blocks_pico_proposal(self):
+        """When Ring 1 fires with extreme disagreement (score < 0.6), PICO proposals must be blocked."""
+        # max_disagreement=0.9 → score=0.1 < 0.6 threshold → proposal must be blocked
+        mock_adv = ConfigurableDisagreementAdversarial(max_disagreement=0.9)
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        orch.register_node(StrategyNode("strat", capabilities=["construct_portfolio"]))
+
+        result = orch.run_one_cycle()
+
+        assert result.trades_executed == 0, (
+            f"Expected 0 trades (blocked: disagreement=0.9, score=0.1 < 0.6), "
+            f"got {result.trades_executed}"
+        )
+        blocked_flags = [
+            f for f in result.adversarial_flags if f.get("reason") == "high_disagreement_block"
+        ]
+        assert blocked_flags, "high_disagreement_block flag not recorded"
+
+    def test_moderate_disagreement_passes_pico_proposal(self):
+        """When Ring 1 fires with moderate disagreement (score >= 0.6), PICO proposals pass."""
+        # max_disagreement=0.3 → score=0.7 >= 0.6 threshold → proposal must pass
+        mock_adv = ConfigurableDisagreementAdversarial(max_disagreement=0.3)
+        orch = OmegaOrchestrator(adversarial=mock_adv)
+        orch.register_node(StrategyNode("strat", capabilities=["construct_portfolio"]))
+
+        result = orch.run_one_cycle()
+
+        assert result.trades_executed >= 1, (
+            f"Expected trades to execute (disagreement=0.3, score=0.7 >= 0.6), "
+            f"got {result.trades_executed}"
+        )
