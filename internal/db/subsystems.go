@@ -337,3 +337,107 @@ func (d *DB) ImprovementHistory(limit int) ([]*ImprovementDetail, error) {
 	}
 	return out, nil
 }
+
+// ── Terminal ──────────────────────────────────────────────────────────────────
+
+// TerminalSessionRecord is a persisted terminal session (flushed on close/timeout).
+type TerminalSessionRecord struct {
+	ID            string
+	WorkDir       string
+	AutonomyLevel string
+	Status        string
+	CreatedAt     float64
+	ClosedAt      float64 // 0 if still active
+}
+
+// TerminalCommandRecord is a single executed command within a session.
+type TerminalCommandRecord struct {
+	ID         string
+	SessionID  string
+	Command    string
+	Args       string // JSON-encoded []string
+	ExitCode   int
+	Stdout     string
+	Stderr     string
+	DurationMS int64
+	Truncated  bool
+	ExecutedAt float64
+}
+
+// SaveTerminalSession upserts a terminal session record.
+func (d *DB) SaveTerminalSession(s *TerminalSessionRecord) error {
+	_, err := d.state.Exec(`
+		INSERT INTO terminal_sessions(id, work_dir, autonomy_level, status, created_at, closed_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET
+			status=excluded.status, closed_at=excluded.closed_at`,
+		s.ID, s.WorkDir, s.AutonomyLevel, s.Status, s.CreatedAt, nullableFloat(s.ClosedAt),
+	)
+	return err
+}
+
+// SaveTerminalCommand inserts a single command record.
+func (d *DB) SaveTerminalCommand(c *TerminalCommandRecord) error {
+	truncated := 0
+	if c.Truncated {
+		truncated = 1
+	}
+	_, err := d.state.Exec(`
+		INSERT OR IGNORE INTO terminal_commands
+			(id, session_id, command, args, exit_code, stdout, stderr, duration_ms, truncated, executed_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		c.ID, c.SessionID, c.Command, c.Args,
+		c.ExitCode, c.Stdout, c.Stderr, c.DurationMS, truncated, c.ExecutedAt,
+	)
+	return err
+}
+
+// GetTerminalSession retrieves a session by ID. Returns nil, nil if not found.
+func (d *DB) GetTerminalSession(id string) (*TerminalSessionRecord, error) {
+	row := d.state.QueryRow(`
+		SELECT id, work_dir, autonomy_level, status, created_at, COALESCE(closed_at, 0)
+		FROM terminal_sessions WHERE id = ?`, id)
+	s := &TerminalSessionRecord{}
+	err := row.Scan(&s.ID, &s.WorkDir, &s.AutonomyLevel, &s.Status, &s.CreatedAt, &s.ClosedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return s, err
+}
+
+// GetTerminalCommands returns all commands for a session in execution order.
+func (d *DB) GetTerminalCommands(sessionID string) ([]*TerminalCommandRecord, error) {
+	rows, err := d.state.Query(`
+		SELECT id, session_id, command, args, exit_code, stdout, stderr,
+		       duration_ms, truncated, executed_at
+		FROM terminal_commands WHERE session_id = ?
+		ORDER BY executed_at ASC`, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []*TerminalCommandRecord
+	for rows.Next() {
+		c := &TerminalCommandRecord{}
+		var truncated int
+		if err := rows.Scan(&c.ID, &c.SessionID, &c.Command, &c.Args,
+			&c.ExitCode, &c.Stdout, &c.Stderr, &c.DurationMS, &truncated, &c.ExecutedAt); err != nil {
+			return nil, err
+		}
+		c.Truncated = truncated == 1
+		out = append(out, c)
+	}
+	if out == nil {
+		return []*TerminalCommandRecord{}, nil
+	}
+	return out, nil
+}
+
+// nullableFloat returns nil for zero values (used for closed_at).
+func nullableFloat(f float64) any {
+	if f == 0 {
+		return nil
+	}
+	return f
+}
+
