@@ -20,6 +20,7 @@ import (
 	"github.com/benebsworth/omega/internal/handler"
 	mw "github.com/benebsworth/omega/internal/middleware"
 	"github.com/benebsworth/omega/internal/observability"
+	"github.com/benebsworth/omega/internal/registry"
 	"github.com/benebsworth/omega/internal/telemetry"
 	"github.com/benebsworth/omega/internal/terminal"
 )
@@ -149,6 +150,19 @@ func main() {
 
 	improvementH := handler.NewImprovement()
 
+	// ── Node registry + handler ───────────────────────────────────────────────
+	nodeReg, err := registry.NewNodeRegistry()
+	if err != nil {
+		log.Printf("warn: node registry init failed (%v), using unimplemented stub", err)
+	}
+	if nodeReg != nil {
+		nodeReg.StartHealthLoop(ctx, 15*time.Second)
+	}
+	var nodeH *handler.NodeHandler
+	if nodeReg != nil {
+		nodeH = handler.NewNodeHandler(nodeReg)
+	}
+
 	// ── Terminal manager + handler ────────────────────────────────────────────
 	terminalMgr := terminal.NewManager(terminal.WithDB(database))
 	terminalH := handler.NewTerminal(terminalMgr, database)
@@ -197,6 +211,16 @@ func main() {
 
 	termPath, termSvcHandler := omegav1connect.NewTerminalServiceHandler(terminalH, withMetrics()...)
 	mux.Handle(termPath, termSvcHandler)
+
+	if nodeH != nil {
+		nodePath, nodeSvcHandler := omegav1connect.NewNodeServiceHandler(nodeH, withMetrics()...)
+		mux.Handle(nodePath, nodeSvcHandler)
+	} else {
+		nodePath, nodeSvcHandler := omegav1connect.NewNodeServiceHandler(
+			omegav1connect.UnimplementedNodeServiceHandler{}, withMetrics()...,
+		)
+		mux.Handle(nodePath, nodeSvcHandler)
+	}
 
 	// Observability endpoints.
 	observability.NewHealthHandler(composite).RegisterRoutes(mux)
