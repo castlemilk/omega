@@ -322,7 +322,7 @@ class RoleNode(Node):
       - "Portfolio Manager"      = Strategy + RiskMgmt + Reporting
 
     Architecture note:
-      The current Vectora pipeline IS effectively a "Quant Research" role
+      The current Victoria pipeline IS effectively a "Quant Research" role
       composed of 7 capability nodes. RoleNode formalises this pattern so
       future roles can be created by composition without duplication.
 

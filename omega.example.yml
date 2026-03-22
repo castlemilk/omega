@@ -9,9 +9,9 @@
 
 database:
   # SQLite file paths — shared between Python nodes and Go API
-  state_db_path: /data/omega_vectora_state.db
-  memory_db_path: /data/omega_vectora_memory.db
-  orchestrator_db_path: /data/omega_vectora.db
+  state_db_path: /data/omega_victoria_state.db
+  memory_db_path: /data/omega_victoria_memory.db
+  orchestrator_db_path: /data/omega_victoria.db
 
 nodes:
   # LLM brain provider: "anthropic" | "openai" | "deepseek" | "ollama" | "none"

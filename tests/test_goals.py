@@ -154,7 +154,7 @@ class TestAdaptiveReferenceTracker:
 class TestHTNDecomposer:
     def setup_method(self):
         self.htn = HTNDecomposer()
-        self.htn.register_vectora_methods()
+        self.htn.register_victoria_methods()
 
     def test_decompose_research_cycle(self):
         state = {"health": 0.9, "error_rate": 0.02}

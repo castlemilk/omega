@@ -10,7 +10,7 @@ export default {
           700: "#1e2533",
           600: "#252d3d",
         },
-        vectora: {
+        victoria: {
           black: "#000000",
           green: "#00ff00",
           dim: "#006600",

@@ -11,12 +11,8 @@ import type { Message } from "@bufbuild/protobuf";
 /**
  * Describes the file omega/v1/adversarial_service.proto.
  */
-export const file_omega_v1_adversarial_service: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "CiJvbWVnYS92MS9hZHZlcnNhcmlhbF9zZXJ2aWNlLnByb3RvEghvbWVnYS52MSKvAgoXUmluZzFEaXNhZ3JlZW1lbnRSZXN1bHQSDwoHZmxhZ2dlZBgBIAEoCBIaChJkaXNhZ3JlZW1lbnRfc2NvcmUYAiABKAESFgoOdGhyZXNob2xkX3VzZWQYAyABKAESGAoQb3V0bGllcl92YXJpYW50cxgEIAMoCRJMCg52YXJpYW50X3Njb3JlcxgFIAMoCzI0Lm9tZWdhLnYxLlJpbmcxRGlzYWdyZWVtZW50UmVzdWx0LlZhcmlhbnRTY29yZXNFbnRyeRIaChJ0aHJlc2hvbGRfYWRqdXN0ZWQYBiABKAgSFQoNbmV3X3RocmVzaG9sZBgHIAEoARo0ChJWYXJpYW50U2NvcmVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASL1AQoRU2NlbmFyaW9SdW5SZXN1bHQSEwoLc2NlbmFyaW9faWQYASABKAkSFQoNc2NlbmFyaW9fbmFtZRgCIAEoCRIYChByZXNpbGllbmNlX3Njb3JlGAMgASgBEg4KBnBhc3NlZBgEIAEoCBJGCg5vdXRwdXRfc2lnbmFscxgFIAMoCzIuLm9tZWdhLnYxLlNjZW5hcmlvUnVuUmVzdWx0Lk91dHB1dFNpZ25hbHNFbnRyeRIMCgR0YWdzGAYgAygJGjQKEk91dHB1dFNpZ25hbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBItkBChVSaW5nMlNpbXVsYXRpb25SZXBvcnQSEwoLZ2F0ZV9wYXNzZWQYASABKAgSGgoSb3ZlcmFsbF9yZXNpbGllbmNlGAIgASgBEh0KFXdvcnN0X2Nhc2VfcmVzaWxpZW5jZRgDIAEoARIRCglwYXNzX3JhdGUYBCABKAESFQoNc2NlbmFyaW9zX3J1bhgFIAEoBRIsCgdyZXN1bHRzGAYgAygLMhsub21lZ2EudjEuU2NlbmFyaW9SdW5SZXN1bHQSGAoQZ2F0ZV9mYWlsX3JlYXNvbhgHIAEoCSK0AQoRVG91cm5hbWVudFZhcmlhbnQSEgoKdmFyaWFudF9pZBgBIAEoCRI3CgZwYXJhbXMYAiADKAsyJy5vbWVnYS52MS5Ub3VybmFtZW50VmFyaWFudC5QYXJhbXNFbnRyeRIVCg1maXRuZXNzX3Njb3JlGAMgASgBEgwKBHJhbmsYBCABKAUaLQoLUGFyYW1zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASKLAgoVUmluZzNUb3VybmFtZW50UmVzdWx0EhcKD2Jlc3RfdmFyaWFudF9pZBgBIAEoCRJECgtiZXN0X3BhcmFtcxgCIAMoCzIvLm9tZWdhLnYxLlJpbmczVG91cm5hbWVudFJlc3VsdC5CZXN0UGFyYW1zRW50cnkSFAoMYmVzdF9maXRuZXNzGAMgASgBEjEKDGFsbF92YXJpYW50cxgEIAMoCzIbLm9tZWdhLnYxLlRvdXJuYW1lbnRWYXJpYW50EhcKD2dlbmVyYXRpb25zX3J1bhgFIAEoBRoxCg9CZXN0UGFyYW1zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASLGAQoNU2lnbmFsQ29udGV4dBIYChBjb21wb3NpdGVfc2lnbmFsGAEgASgBEhAKCGljX3Nob3J0GAIgASgBEg8KB2ljX2xvbmcYAyABKAESEgoKdm9sX3JlZ2ltZRgEIAEoARIRCglyZWdpbWVfaWMYBSABKAESFQoNcmVjZW50X3NoYXJwZRgGIAEoARIXCg9ub2RlX2Vycm9yX3JhdGUYByABKAESFAoMYXRsX2Rpc3RhbmNlGAggASgBEgsKA3JzaRgJIAEoASKsAQoNRGViYXRlVmVyZGljdBIrCglkaXJlY3Rpb24YASABKA4yGC5vbWVnYS52MS5UcmFkZURpcmVjdGlvbhISCgpjb25maWRlbmNlGAIgASgBEhYKDnBvc2l0aW9uX3NjYWxlGAMgASgBEhUKDWJ1bGxfZXZpZGVuY2UYBCADKAkSFQoNYmVhcl9ldmlkZW5jZRgFIAMoCRIUCgx3aW5uaW5nX3NpZGUYBiABKAkixQIKC1Jpc2tDb250ZXh0EhsKE2Jhc2VfcG9zaXRpb25fc2NhbGUYASABKAESGgoScG9ydGZvbGlvX2RyYXdkb3duGAIgASgBEhoKEmN1cnJlbnRfdm9sYXRpbGl0eRgDIAEoARIXCg9yZWNlbnRfd2luX3JhdGUYBCABKAESFgoOa2VsbHlfZnJhY3Rpb24YBSABKAESUQoXY29ycmVsYXRpb25fbWF0cml4X2ZsYXQYBiADKAsyMC5vbWVnYS52MS5SaXNrQ29udGV4dC5Db3JyZWxhdGlvbk1hdHJpeEZsYXRFbnRyeRIfChdjb3JyZWxhdGlvbl9tYXRyaXhfc2l6ZRgHIAEoBRo8ChpDb3JyZWxhdGlvbk1hdHJpeEZsYXRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBImQKDlBlcnNvbmFWZXJkaWN0Eg8KB3BlcnNvbmEYASABKAkSGQoRcmVjb21tZW5kZWRfc2NhbGUYAiABKAESEwoLY3JlZGliaWxpdHkYAyABKAESEQoJcmF0aW9uYWxlGAQgASgJInYKEFJpc2tEZWJhdGVSZXN1bHQSHAoUZmluYWxfcG9zaXRpb25fc2NhbGUYASABKAESKgoIdmVyZGljdHMYAiADKAsyGC5vbWVnYS52MS5QZXJzb25hVmVyZGljdBIYChBkb21pbmFudF9wZXJzb25hGAMgASgJIv0DChJSdW5QcmVzc3VyZVJlcXVlc3QSDQoFY3ljbGUYASABKAMSSQoPdmFyaWFudF9vdXRwdXRzGAIgAygLMjAub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0LlZhcmlhbnRPdXRwdXRzRW50cnkSSQoPY3VycmVudF9zaWduYWxzGAMgAygLMjAub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0LkN1cnJlbnRTaWduYWxzRW50cnkSSQoPc3RyYXRlZ3lfcGFyYW1zGAQgAygLMjAub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0LlN0cmF0ZWd5UGFyYW1zRW50cnkSEQoJcnVuX3JpbmcyGAUgASgIEhEKCXJ1bl9yaW5nMxgGIAEoCBISCgpydW5fZGViYXRlGAcgASgIGk8KE1ZhcmlhbnRPdXRwdXRzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhgub21lZ2EudjEuVmFyaWFudE91dHB1dHM6AjgBGjUKE0N1cnJlbnRTaWduYWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ARo1ChNTdHJhdGVneVBhcmFtc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEieAoOVmFyaWFudE91dHB1dHMSNgoHbWV0cmljcxgBIAMoCzIlLm9tZWdhLnYxLlZhcmlhbnRPdXRwdXRzLk1ldHJpY3NFbnRyeRouCgxNZXRyaWNzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASLjAgoTQWR2ZXJzYXJpYWxSZXBvcnRWMhINCgVjeWNsZRgBIAEoAxIwCgVyaW5nMRgCIAEoCzIhLm9tZWdhLnYxLlJpbmcxRGlzYWdyZWVtZW50UmVzdWx0Ei4KBXJpbmcyGAMgASgLMh8ub21lZ2EudjEuUmluZzJTaW11bGF0aW9uUmVwb3J0Ei4KBXJpbmczGAQgASgLMh8ub21lZ2EudjEuUmluZzNUb3VybmFtZW50UmVzdWx0Ei8KDmRlYmF0ZV92ZXJkaWN0GAUgASgLMhcub21lZ2EudjEuRGViYXRlVmVyZGljdBIvCgtyaXNrX2RlYmF0ZRgGIAEoCzIaLm9tZWdhLnYxLlJpc2tEZWJhdGVSZXN1bHQSFwoPb3ZlcmFsbF9mbGFnZ2VkGAcgASgIEjAKDGNvbXBsZXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiRAoTUnVuUHJlc3N1cmVSZXNwb25zZRItCgZyZXBvcnQYASABKAsyHS5vbWVnYS52MS5BZHZlcnNhcmlhbFJlcG9ydFYyIjwKEFJ1bkRlYmF0ZVJlcXVlc3QSKAoHY29udGV4dBgBIAEoCzIXLm9tZWdhLnYxLlNpZ25hbENvbnRleHQiPQoRUnVuRGViYXRlUmVzcG9uc2USKAoHdmVyZGljdBgBIAEoCzIXLm9tZWdhLnYxLkRlYmF0ZVZlcmRpY3QiPAoSUmVzb2x2ZVJpc2tSZXF1ZXN0EiYKB2NvbnRleHQYASABKAsyFS5vbWVnYS52MS5SaXNrQ29udGV4dCJBChNSZXNvbHZlUmlza1Jlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLm9tZWdhLnYxLlJpc2tEZWJhdGVSZXN1bHQijAEKF1JlY29yZEdhdGVSZXN1bHRSZXF1ZXN0Eg0KBWN5Y2xlGAEgASgDEhEKCWdhdGVfbmFtZRgCIAEoCRIOCgZyZXN1bHQYAyABKAkSDwoHZGV0YWlscxgEIAEoCRIuCgpjaGVja2VkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCImChhSZWNvcmRHYXRlUmVzdWx0UmVzcG9uc2USCgoCb2sYASABKAgiLAobR2V0QWR2ZXJzYXJpYWxSZXBvcnRSZXF1ZXN0Eg0KBWN5Y2xlGAEgASgDIlwKHEdldEFkdmVyc2FyaWFsUmVwb3J0UmVzcG9uc2USLQoGcmVwb3J0GAEgASgLMh0ub21lZ2EudjEuQWR2ZXJzYXJpYWxSZXBvcnRWMhINCgVmb3VuZBgCIAEoCCI3ChtTdHJlYW1QcmVzc3VyZUV2ZW50c1JlcXVlc3QSGAoQcG9sbF9pbnRlcnZhbF9tcxgBIAEoBSKJAQoYQWR2ZXJzYXJpYWxQcmVzc3VyZUV2ZW50Eg0KBWN5Y2xlGAEgASgDEg8KB2ZsYWdnZWQYAiABKAgSDAoEcmluZxgDIAEoCRIPCgdzdW1tYXJ5GAQgASgJEi4KCmVtaXR0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wKukBCg1TeW50aGV0aWNNb2RlEh4KGlNZTlRIRVRJQ19NT0RFX1VOU1BFQ0lGSUVEEAASIwofU1lOVEhFVElDX01PREVfVk9MQVRJTElUWV9TUElLRRABEigKJFNZTlRIRVRJQ19NT0RFX0NPUlJFTEFUSU9OX0JSRUFLRE9XThACEiEKHVNZTlRIRVRJQ19NT0RFX01FQU5fUkVWRVJTSU9OEAMSIQodU1lOVEhFVElDX01PREVfTU9NRU5UVU1fQ1JBU0gQBBIjCh9TWU5USEVUSUNfTU9ERV9MSVFVSURJVFlfQ1JJU0lTEAUqfgoOVHJhZGVEaXJlY3Rpb24SHwobVFJBREVfRElSRUNUSU9OX1VOU1BFQ0lGSUVEEAASFwoTVFJBREVfRElSRUNUSU9OX0JVWRABEhgKFFRSQURFX0RJUkVDVElPTl9TRUxMEAISGAoUVFJBREVfRElSRUNUSU9OX0hPTEQQAzKZBAoSQWR2ZXJzYXJpYWxTZXJ2aWNlEkoKC1J1blByZXNzdXJlEhwub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0Gh0ub21lZ2EudjEuUnVuUHJlc3N1cmVSZXNwb25zZRJECglSdW5EZWJhdGUSGi5vbWVnYS52MS5SdW5EZWJhdGVSZXF1ZXN0Ghsub21lZ2EudjEuUnVuRGViYXRlUmVzcG9uc2USSgoLUmVzb2x2ZVJpc2sSHC5vbWVnYS52MS5SZXNvbHZlUmlza1JlcXVlc3QaHS5vbWVnYS52MS5SZXNvbHZlUmlza1Jlc3BvbnNlElkKEFJlY29yZEdhdGVSZXN1bHQSIS5vbWVnYS52MS5SZWNvcmRHYXRlUmVzdWx0UmVxdWVzdBoiLm9tZWdhLnYxLlJlY29yZEdhdGVSZXN1bHRSZXNwb25zZRJlChRHZXRBZHZlcnNhcmlhbFJlcG9ydBIlLm9tZWdhLnYxLkdldEFkdmVyc2FyaWFsUmVwb3J0UmVxdWVzdBomLm9tZWdhLnYxLkdldEFkdmVyc2FyaWFsUmVwb3J0UmVzcG9uc2USYwoUU3RyZWFtUHJlc3N1cmVFdmVudHMSJS5vbWVnYS52MS5TdHJlYW1QcmVzc3VyZUV2ZW50c1JlcXVlc3QaIi5vbWVnYS52MS5BZHZlcnNhcmlhbFByZXNzdXJlRXZlbnQwAUKeAQoMY29tLm9tZWdhLnYxQhdBZHZlcnNhcmlhbFNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM",
-    [file_google_protobuf_timestamp]
-  );
+export const file_omega_v1_adversarial_service: GenFile = /*@__PURE__*/
+  fileDesc("CiJvbWVnYS92MS9hZHZlcnNhcmlhbF9zZXJ2aWNlLnByb3RvEghvbWVnYS52MSKvAgoXUmluZzFEaXNhZ3JlZW1lbnRSZXN1bHQSDwoHZmxhZ2dlZBgBIAEoCBIaChJkaXNhZ3JlZW1lbnRfc2NvcmUYAiABKAESFgoOdGhyZXNob2xkX3VzZWQYAyABKAESGAoQb3V0bGllcl92YXJpYW50cxgEIAMoCRJMCg52YXJpYW50X3Njb3JlcxgFIAMoCzI0Lm9tZWdhLnYxLlJpbmcxRGlzYWdyZWVtZW50UmVzdWx0LlZhcmlhbnRTY29yZXNFbnRyeRIaChJ0aHJlc2hvbGRfYWRqdXN0ZWQYBiABKAgSFQoNbmV3X3RocmVzaG9sZBgHIAEoARo0ChJWYXJpYW50U2NvcmVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASL1AQoRU2NlbmFyaW9SdW5SZXN1bHQSEwoLc2NlbmFyaW9faWQYASABKAkSFQoNc2NlbmFyaW9fbmFtZRgCIAEoCRIYChByZXNpbGllbmNlX3Njb3JlGAMgASgBEg4KBnBhc3NlZBgEIAEoCBJGCg5vdXRwdXRfc2lnbmFscxgFIAMoCzIuLm9tZWdhLnYxLlNjZW5hcmlvUnVuUmVzdWx0Lk91dHB1dFNpZ25hbHNFbnRyeRIMCgR0YWdzGAYgAygJGjQKEk91dHB1dFNpZ25hbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBItkBChVSaW5nMlNpbXVsYXRpb25SZXBvcnQSEwoLZ2F0ZV9wYXNzZWQYASABKAgSGgoSb3ZlcmFsbF9yZXNpbGllbmNlGAIgASgBEh0KFXdvcnN0X2Nhc2VfcmVzaWxpZW5jZRgDIAEoARIRCglwYXNzX3JhdGUYBCABKAESFQoNc2NlbmFyaW9zX3J1bhgFIAEoBRIsCgdyZXN1bHRzGAYgAygLMhsub21lZ2EudjEuU2NlbmFyaW9SdW5SZXN1bHQSGAoQZ2F0ZV9mYWlsX3JlYXNvbhgHIAEoCSK0AQoRVG91cm5hbWVudFZhcmlhbnQSEgoKdmFyaWFudF9pZBgBIAEoCRI3CgZwYXJhbXMYAiADKAsyJy5vbWVnYS52MS5Ub3VybmFtZW50VmFyaWFudC5QYXJhbXNFbnRyeRIVCg1maXRuZXNzX3Njb3JlGAMgASgBEgwKBHJhbmsYBCABKAUaLQoLUGFyYW1zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASKLAgoVUmluZzNUb3VybmFtZW50UmVzdWx0EhcKD2Jlc3RfdmFyaWFudF9pZBgBIAEoCRJECgtiZXN0X3BhcmFtcxgCIAMoCzIvLm9tZWdhLnYxLlJpbmczVG91cm5hbWVudFJlc3VsdC5CZXN0UGFyYW1zRW50cnkSFAoMYmVzdF9maXRuZXNzGAMgASgBEjEKDGFsbF92YXJpYW50cxgEIAMoCzIbLm9tZWdhLnYxLlRvdXJuYW1lbnRWYXJpYW50EhcKD2dlbmVyYXRpb25zX3J1bhgFIAEoBRoxCg9CZXN0UGFyYW1zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASLGAQoNU2lnbmFsQ29udGV4dBIYChBjb21wb3NpdGVfc2lnbmFsGAEgASgBEhAKCGljX3Nob3J0GAIgASgBEg8KB2ljX2xvbmcYAyABKAESEgoKdm9sX3JlZ2ltZRgEIAEoARIRCglyZWdpbWVfaWMYBSABKAESFQoNcmVjZW50X3NoYXJwZRgGIAEoARIXCg9ub2RlX2Vycm9yX3JhdGUYByABKAESFAoMYXRsX2Rpc3RhbmNlGAggASgBEgsKA3JzaRgJIAEoASKsAQoNRGViYXRlVmVyZGljdBIrCglkaXJlY3Rpb24YASABKA4yGC5vbWVnYS52MS5UcmFkZURpcmVjdGlvbhISCgpjb25maWRlbmNlGAIgASgBEhYKDnBvc2l0aW9uX3NjYWxlGAMgASgBEhUKDWJ1bGxfZXZpZGVuY2UYBCADKAkSFQoNYmVhcl9ldmlkZW5jZRgFIAMoCRIUCgx3aW5uaW5nX3NpZGUYBiABKAkixQIKC1Jpc2tDb250ZXh0EhsKE2Jhc2VfcG9zaXRpb25fc2NhbGUYASABKAESGgoScG9ydGZvbGlvX2RyYXdkb3duGAIgASgBEhoKEmN1cnJlbnRfdm9sYXRpbGl0eRgDIAEoARIXCg9yZWNlbnRfd2luX3JhdGUYBCABKAESFgoOa2VsbHlfZnJhY3Rpb24YBSABKAESUQoXY29ycmVsYXRpb25fbWF0cml4X2ZsYXQYBiADKAsyMC5vbWVnYS52MS5SaXNrQ29udGV4dC5Db3JyZWxhdGlvbk1hdHJpeEZsYXRFbnRyeRIfChdjb3JyZWxhdGlvbl9tYXRyaXhfc2l6ZRgHIAEoBRo8ChpDb3JyZWxhdGlvbk1hdHJpeEZsYXRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBImQKDlBlcnNvbmFWZXJkaWN0Eg8KB3BlcnNvbmEYASABKAkSGQoRcmVjb21tZW5kZWRfc2NhbGUYAiABKAESEwoLY3JlZGliaWxpdHkYAyABKAESEQoJcmF0aW9uYWxlGAQgASgJInYKEFJpc2tEZWJhdGVSZXN1bHQSHAoUZmluYWxfcG9zaXRpb25fc2NhbGUYASABKAESKgoIdmVyZGljdHMYAiADKAsyGC5vbWVnYS52MS5QZXJzb25hVmVyZGljdBIYChBkb21pbmFudF9wZXJzb25hGAMgASgJIv0DChJSdW5QcmVzc3VyZVJlcXVlc3QSDQoFY3ljbGUYASABKAMSSQoPdmFyaWFudF9vdXRwdXRzGAIgAygLMjAub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0LlZhcmlhbnRPdXRwdXRzRW50cnkSSQoPY3VycmVudF9zaWduYWxzGAMgAygLMjAub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0LkN1cnJlbnRTaWduYWxzRW50cnkSSQoPc3RyYXRlZ3lfcGFyYW1zGAQgAygLMjAub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0LlN0cmF0ZWd5UGFyYW1zRW50cnkSEQoJcnVuX3JpbmcyGAUgASgIEhEKCXJ1bl9yaW5nMxgGIAEoCBISCgpydW5fZGViYXRlGAcgASgIGk8KE1ZhcmlhbnRPdXRwdXRzRW50cnkSCwoDa2V5GAEgASgJEicKBXZhbHVlGAIgASgLMhgub21lZ2EudjEuVmFyaWFudE91dHB1dHM6AjgBGjUKE0N1cnJlbnRTaWduYWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ARo1ChNTdHJhdGVneVBhcmFtc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEieAoOVmFyaWFudE91dHB1dHMSNgoHbWV0cmljcxgBIAMoCzIlLm9tZWdhLnYxLlZhcmlhbnRPdXRwdXRzLk1ldHJpY3NFbnRyeRouCgxNZXRyaWNzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASLjAgoTQWR2ZXJzYXJpYWxSZXBvcnRWMhINCgVjeWNsZRgBIAEoAxIwCgVyaW5nMRgCIAEoCzIhLm9tZWdhLnYxLlJpbmcxRGlzYWdyZWVtZW50UmVzdWx0Ei4KBXJpbmcyGAMgASgLMh8ub21lZ2EudjEuUmluZzJTaW11bGF0aW9uUmVwb3J0Ei4KBXJpbmczGAQgASgLMh8ub21lZ2EudjEuUmluZzNUb3VybmFtZW50UmVzdWx0Ei8KDmRlYmF0ZV92ZXJkaWN0GAUgASgLMhcub21lZ2EudjEuRGViYXRlVmVyZGljdBIvCgtyaXNrX2RlYmF0ZRgGIAEoCzIaLm9tZWdhLnYxLlJpc2tEZWJhdGVSZXN1bHQSFwoPb3ZlcmFsbF9mbGFnZ2VkGAcgASgIEjAKDGNvbXBsZXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiRAoTUnVuUHJlc3N1cmVSZXNwb25zZRItCgZyZXBvcnQYASABKAsyHS5vbWVnYS52MS5BZHZlcnNhcmlhbFJlcG9ydFYyIjwKEFJ1bkRlYmF0ZVJlcXVlc3QSKAoHY29udGV4dBgBIAEoCzIXLm9tZWdhLnYxLlNpZ25hbENvbnRleHQiPQoRUnVuRGViYXRlUmVzcG9uc2USKAoHdmVyZGljdBgBIAEoCzIXLm9tZWdhLnYxLkRlYmF0ZVZlcmRpY3QiPAoSUmVzb2x2ZVJpc2tSZXF1ZXN0EiYKB2NvbnRleHQYASABKAsyFS5vbWVnYS52MS5SaXNrQ29udGV4dCJBChNSZXNvbHZlUmlza1Jlc3BvbnNlEioKBnJlc3VsdBgBIAEoCzIaLm9tZWdhLnYxLlJpc2tEZWJhdGVSZXN1bHQijAEKF1JlY29yZEdhdGVSZXN1bHRSZXF1ZXN0Eg0KBWN5Y2xlGAEgASgDEhEKCWdhdGVfbmFtZRgCIAEoCRIOCgZyZXN1bHQYAyABKAkSDwoHZGV0YWlscxgEIAEoCRIuCgpjaGVja2VkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCImChhSZWNvcmRHYXRlUmVzdWx0UmVzcG9uc2USCgoCb2sYASABKAgiLAobR2V0QWR2ZXJzYXJpYWxSZXBvcnRSZXF1ZXN0Eg0KBWN5Y2xlGAEgASgDIlwKHEdldEFkdmVyc2FyaWFsUmVwb3J0UmVzcG9uc2USLQoGcmVwb3J0GAEgASgLMh0ub21lZ2EudjEuQWR2ZXJzYXJpYWxSZXBvcnRWMhINCgVmb3VuZBgCIAEoCCI3ChtTdHJlYW1QcmVzc3VyZUV2ZW50c1JlcXVlc3QSGAoQcG9sbF9pbnRlcnZhbF9tcxgBIAEoBSKJAQoYQWR2ZXJzYXJpYWxQcmVzc3VyZUV2ZW50Eg0KBWN5Y2xlGAEgASgDEg8KB2ZsYWdnZWQYAiABKAgSDAoEcmluZxgDIAEoCRIPCgdzdW1tYXJ5GAQgASgJEi4KCmVtaXR0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wKukBCg1TeW50aGV0aWNNb2RlEh4KGlNZTlRIRVRJQ19NT0RFX1VOU1BFQ0lGSUVEEAASIwofU1lOVEhFVElDX01PREVfVk9MQVRJTElUWV9TUElLRRABEigKJFNZTlRIRVRJQ19NT0RFX0NPUlJFTEFUSU9OX0JSRUFLRE9XThACEiEKHVNZTlRIRVRJQ19NT0RFX01FQU5fUkVWRVJTSU9OEAMSIQodU1lOVEhFVElDX01PREVfTU9NRU5UVU1fQ1JBU0gQBBIjCh9TWU5USEVUSUNfTU9ERV9MSVFVSURJVFlfQ1JJU0lTEAUqfgoOVHJhZGVEaXJlY3Rpb24SHwobVFJBREVfRElSRUNUSU9OX1VOU1BFQ0lGSUVEEAASFwoTVFJBREVfRElSRUNUSU9OX0JVWRABEhgKFFRSQURFX0RJUkVDVElPTl9TRUxMEAISGAoUVFJBREVfRElSRUNUSU9OX0hPTEQQAzKZBAoSQWR2ZXJzYXJpYWxTZXJ2aWNlEkoKC1J1blByZXNzdXJlEhwub21lZ2EudjEuUnVuUHJlc3N1cmVSZXF1ZXN0Gh0ub21lZ2EudjEuUnVuUHJlc3N1cmVSZXNwb25zZRJECglSdW5EZWJhdGUSGi5vbWVnYS52MS5SdW5EZWJhdGVSZXF1ZXN0Ghsub21lZ2EudjEuUnVuRGViYXRlUmVzcG9uc2USSgoLUmVzb2x2ZVJpc2sSHC5vbWVnYS52MS5SZXNvbHZlUmlza1JlcXVlc3QaHS5vbWVnYS52MS5SZXNvbHZlUmlza1Jlc3BvbnNlElkKEFJlY29yZEdhdGVSZXN1bHQSIS5vbWVnYS52MS5SZWNvcmRHYXRlUmVzdWx0UmVxdWVzdBoiLm9tZWdhLnYxLlJlY29yZEdhdGVSZXN1bHRSZXNwb25zZRJlChRHZXRBZHZlcnNhcmlhbFJlcG9ydBIlLm9tZWdhLnYxLkdldEFkdmVyc2FyaWFsUmVwb3J0UmVxdWVzdBomLm9tZWdhLnYxLkdldEFkdmVyc2FyaWFsUmVwb3J0UmVzcG9uc2USYwoUU3RyZWFtUHJlc3N1cmVFdmVudHMSJS5vbWVnYS52MS5TdHJlYW1QcmVzc3VyZUV2ZW50c1JlcXVlc3QaIi5vbWVnYS52MS5BZHZlcnNhcmlhbFByZXNzdXJlRXZlbnQwAUKeAQoMY29tLm9tZWdhLnYxQhdBZHZlcnNhcmlhbFNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message omega.v1.Ring1DisagreementResult
@@ -68,8 +64,7 @@ export type Ring1DisagreementResult = Message<"omega.v1.Ring1DisagreementResult"
  * Describes the message omega.v1.Ring1DisagreementResult.
  * Use `create(Ring1DisagreementResultSchema)` to create a new message.
  */
-export const Ring1DisagreementResultSchema: GenMessage<Ring1DisagreementResult> =
-  /*@__PURE__*/
+export const Ring1DisagreementResultSchema: GenMessage<Ring1DisagreementResult> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 0);
 
 /**
@@ -113,8 +108,7 @@ export type ScenarioRunResult = Message<"omega.v1.ScenarioRunResult"> & {
  * Describes the message omega.v1.ScenarioRunResult.
  * Use `create(ScenarioRunResultSchema)` to create a new message.
  */
-export const ScenarioRunResultSchema: GenMessage<ScenarioRunResult> =
-  /*@__PURE__*/
+export const ScenarioRunResultSchema: GenMessage<ScenarioRunResult> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 1);
 
 /**
@@ -161,8 +155,7 @@ export type Ring2SimulationReport = Message<"omega.v1.Ring2SimulationReport"> & 
  * Describes the message omega.v1.Ring2SimulationReport.
  * Use `create(Ring2SimulationReportSchema)` to create a new message.
  */
-export const Ring2SimulationReportSchema: GenMessage<Ring2SimulationReport> =
-  /*@__PURE__*/
+export const Ring2SimulationReportSchema: GenMessage<Ring2SimulationReport> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 2);
 
 /**
@@ -194,8 +187,7 @@ export type TournamentVariant = Message<"omega.v1.TournamentVariant"> & {
  * Describes the message omega.v1.TournamentVariant.
  * Use `create(TournamentVariantSchema)` to create a new message.
  */
-export const TournamentVariantSchema: GenMessage<TournamentVariant> =
-  /*@__PURE__*/
+export const TournamentVariantSchema: GenMessage<TournamentVariant> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 3);
 
 /**
@@ -232,8 +224,7 @@ export type Ring3TournamentResult = Message<"omega.v1.Ring3TournamentResult"> & 
  * Describes the message omega.v1.Ring3TournamentResult.
  * Use `create(Ring3TournamentResultSchema)` to create a new message.
  */
-export const Ring3TournamentResultSchema: GenMessage<Ring3TournamentResult> =
-  /*@__PURE__*/
+export const Ring3TournamentResultSchema: GenMessage<Ring3TournamentResult> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 4);
 
 /**
@@ -298,8 +289,7 @@ export type SignalContext = Message<"omega.v1.SignalContext"> & {
  * Describes the message omega.v1.SignalContext.
  * Use `create(SignalContextSchema)` to create a new message.
  */
-export const SignalContextSchema: GenMessage<SignalContext> =
-  /*@__PURE__*/
+export const SignalContextSchema: GenMessage<SignalContext> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 5);
 
 /**
@@ -347,8 +337,7 @@ export type DebateVerdict = Message<"omega.v1.DebateVerdict"> & {
  * Describes the message omega.v1.DebateVerdict.
  * Use `create(DebateVerdictSchema)` to create a new message.
  */
-export const DebateVerdictSchema: GenMessage<DebateVerdict> =
-  /*@__PURE__*/
+export const DebateVerdictSchema: GenMessage<DebateVerdict> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 6);
 
 /**
@@ -401,8 +390,7 @@ export type RiskContext = Message<"omega.v1.RiskContext"> & {
  * Describes the message omega.v1.RiskContext.
  * Use `create(RiskContextSchema)` to create a new message.
  */
-export const RiskContextSchema: GenMessage<RiskContext> =
-  /*@__PURE__*/
+export const RiskContextSchema: GenMessage<RiskContext> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 7);
 
 /**
@@ -438,8 +426,7 @@ export type PersonaVerdict = Message<"omega.v1.PersonaVerdict"> & {
  * Describes the message omega.v1.PersonaVerdict.
  * Use `create(PersonaVerdictSchema)` to create a new message.
  */
-export const PersonaVerdictSchema: GenMessage<PersonaVerdict> =
-  /*@__PURE__*/
+export const PersonaVerdictSchema: GenMessage<PersonaVerdict> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 8);
 
 /**
@@ -468,8 +455,7 @@ export type RiskDebateResult = Message<"omega.v1.RiskDebateResult"> & {
  * Describes the message omega.v1.RiskDebateResult.
  * Use `create(RiskDebateResultSchema)` to create a new message.
  */
-export const RiskDebateResultSchema: GenMessage<RiskDebateResult> =
-  /*@__PURE__*/
+export const RiskDebateResultSchema: GenMessage<RiskDebateResult> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 9);
 
 /**
@@ -524,8 +510,7 @@ export type RunPressureRequest = Message<"omega.v1.RunPressureRequest"> & {
  * Describes the message omega.v1.RunPressureRequest.
  * Use `create(RunPressureRequestSchema)` to create a new message.
  */
-export const RunPressureRequestSchema: GenMessage<RunPressureRequest> =
-  /*@__PURE__*/
+export const RunPressureRequestSchema: GenMessage<RunPressureRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 10);
 
 /**
@@ -544,8 +529,7 @@ export type VariantOutputs = Message<"omega.v1.VariantOutputs"> & {
  * Describes the message omega.v1.VariantOutputs.
  * Use `create(VariantOutputsSchema)` to create a new message.
  */
-export const VariantOutputsSchema: GenMessage<VariantOutputs> =
-  /*@__PURE__*/
+export const VariantOutputsSchema: GenMessage<VariantOutputs> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 11);
 
 /**
@@ -599,8 +583,7 @@ export type AdversarialReportV2 = Message<"omega.v1.AdversarialReportV2"> & {
  * Describes the message omega.v1.AdversarialReportV2.
  * Use `create(AdversarialReportV2Schema)` to create a new message.
  */
-export const AdversarialReportV2Schema: GenMessage<AdversarialReportV2> =
-  /*@__PURE__*/
+export const AdversarialReportV2Schema: GenMessage<AdversarialReportV2> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 12);
 
 /**
@@ -617,8 +600,7 @@ export type RunPressureResponse = Message<"omega.v1.RunPressureResponse"> & {
  * Describes the message omega.v1.RunPressureResponse.
  * Use `create(RunPressureResponseSchema)` to create a new message.
  */
-export const RunPressureResponseSchema: GenMessage<RunPressureResponse> =
-  /*@__PURE__*/
+export const RunPressureResponseSchema: GenMessage<RunPressureResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 13);
 
 /**
@@ -635,8 +617,7 @@ export type RunDebateRequest = Message<"omega.v1.RunDebateRequest"> & {
  * Describes the message omega.v1.RunDebateRequest.
  * Use `create(RunDebateRequestSchema)` to create a new message.
  */
-export const RunDebateRequestSchema: GenMessage<RunDebateRequest> =
-  /*@__PURE__*/
+export const RunDebateRequestSchema: GenMessage<RunDebateRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 14);
 
 /**
@@ -653,8 +634,7 @@ export type RunDebateResponse = Message<"omega.v1.RunDebateResponse"> & {
  * Describes the message omega.v1.RunDebateResponse.
  * Use `create(RunDebateResponseSchema)` to create a new message.
  */
-export const RunDebateResponseSchema: GenMessage<RunDebateResponse> =
-  /*@__PURE__*/
+export const RunDebateResponseSchema: GenMessage<RunDebateResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 15);
 
 /**
@@ -671,8 +651,7 @@ export type ResolveRiskRequest = Message<"omega.v1.ResolveRiskRequest"> & {
  * Describes the message omega.v1.ResolveRiskRequest.
  * Use `create(ResolveRiskRequestSchema)` to create a new message.
  */
-export const ResolveRiskRequestSchema: GenMessage<ResolveRiskRequest> =
-  /*@__PURE__*/
+export const ResolveRiskRequestSchema: GenMessage<ResolveRiskRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 16);
 
 /**
@@ -689,8 +668,7 @@ export type ResolveRiskResponse = Message<"omega.v1.ResolveRiskResponse"> & {
  * Describes the message omega.v1.ResolveRiskResponse.
  * Use `create(ResolveRiskResponseSchema)` to create a new message.
  */
-export const ResolveRiskResponseSchema: GenMessage<ResolveRiskResponse> =
-  /*@__PURE__*/
+export const ResolveRiskResponseSchema: GenMessage<ResolveRiskResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 17);
 
 /**
@@ -729,8 +707,7 @@ export type RecordGateResultRequest = Message<"omega.v1.RecordGateResultRequest"
  * Describes the message omega.v1.RecordGateResultRequest.
  * Use `create(RecordGateResultRequestSchema)` to create a new message.
  */
-export const RecordGateResultRequestSchema: GenMessage<RecordGateResultRequest> =
-  /*@__PURE__*/
+export const RecordGateResultRequestSchema: GenMessage<RecordGateResultRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 18);
 
 /**
@@ -747,8 +724,7 @@ export type RecordGateResultResponse = Message<"omega.v1.RecordGateResultRespons
  * Describes the message omega.v1.RecordGateResultResponse.
  * Use `create(RecordGateResultResponseSchema)` to create a new message.
  */
-export const RecordGateResultResponseSchema: GenMessage<RecordGateResultResponse> =
-  /*@__PURE__*/
+export const RecordGateResultResponseSchema: GenMessage<RecordGateResultResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 19);
 
 /**
@@ -765,8 +741,7 @@ export type GetAdversarialReportRequest = Message<"omega.v1.GetAdversarialReport
  * Describes the message omega.v1.GetAdversarialReportRequest.
  * Use `create(GetAdversarialReportRequestSchema)` to create a new message.
  */
-export const GetAdversarialReportRequestSchema: GenMessage<GetAdversarialReportRequest> =
-  /*@__PURE__*/
+export const GetAdversarialReportRequestSchema: GenMessage<GetAdversarialReportRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 20);
 
 /**
@@ -788,8 +763,7 @@ export type GetAdversarialReportResponse = Message<"omega.v1.GetAdversarialRepor
  * Describes the message omega.v1.GetAdversarialReportResponse.
  * Use `create(GetAdversarialReportResponseSchema)` to create a new message.
  */
-export const GetAdversarialReportResponseSchema: GenMessage<GetAdversarialReportResponse> =
-  /*@__PURE__*/
+export const GetAdversarialReportResponseSchema: GenMessage<GetAdversarialReportResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 21);
 
 /**
@@ -806,8 +780,7 @@ export type StreamPressureEventsRequest = Message<"omega.v1.StreamPressureEvents
  * Describes the message omega.v1.StreamPressureEventsRequest.
  * Use `create(StreamPressureEventsRequestSchema)` to create a new message.
  */
-export const StreamPressureEventsRequestSchema: GenMessage<StreamPressureEventsRequest> =
-  /*@__PURE__*/
+export const StreamPressureEventsRequestSchema: GenMessage<StreamPressureEventsRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 22);
 
 /**
@@ -846,8 +819,7 @@ export type AdversarialPressureEvent = Message<"omega.v1.AdversarialPressureEven
  * Describes the message omega.v1.AdversarialPressureEvent.
  * Use `create(AdversarialPressureEventSchema)` to create a new message.
  */
-export const AdversarialPressureEventSchema: GenMessage<AdversarialPressureEvent> =
-  /*@__PURE__*/
+export const AdversarialPressureEventSchema: GenMessage<AdversarialPressureEvent> = /*@__PURE__*/
   messageDesc(file_omega_v1_adversarial_service, 23);
 
 /**
@@ -888,8 +860,7 @@ export enum SyntheticMode {
 /**
  * Describes the enum omega.v1.SyntheticMode.
  */
-export const SyntheticModeSchema: GenEnum<SyntheticMode> =
-  /*@__PURE__*/
+export const SyntheticModeSchema: GenEnum<SyntheticMode> = /*@__PURE__*/
   enumDesc(file_omega_v1_adversarial_service, 0);
 
 /**
@@ -920,8 +891,7 @@ export enum TradeDirection {
 /**
  * Describes the enum omega.v1.TradeDirection.
  */
-export const TradeDirectionSchema: GenEnum<TradeDirection> =
-  /*@__PURE__*/
+export const TradeDirectionSchema: GenEnum<TradeDirection> = /*@__PURE__*/
   enumDesc(file_omega_v1_adversarial_service, 1);
 
 /**
@@ -942,7 +912,7 @@ export const AdversarialService: GenService<{
     methodKind: "unary";
     input: typeof RunPressureRequestSchema;
     output: typeof RunPressureResponseSchema;
-  };
+  },
   /**
    * RunDebate runs the Bull/Bear debate gate on a signal context.
    *
@@ -952,7 +922,7 @@ export const AdversarialService: GenService<{
     methodKind: "unary";
     input: typeof RunDebateRequestSchema;
     output: typeof RunDebateResponseSchema;
-  };
+  },
   /**
    * ResolveRisk runs the three-persona risk debate for position sizing.
    *
@@ -962,7 +932,7 @@ export const AdversarialService: GenService<{
     methodKind: "unary";
     input: typeof ResolveRiskRequestSchema;
     output: typeof ResolveRiskResponseSchema;
-  };
+  },
   /**
    * RecordGateResult persists the result of a simulation gate evaluation.
    *
@@ -972,7 +942,7 @@ export const AdversarialService: GenService<{
     methodKind: "unary";
     input: typeof RecordGateResultRequestSchema;
     output: typeof RecordGateResultResponseSchema;
-  };
+  },
   /**
    * GetAdversarialReport retrieves the stored adversarial report for a cycle.
    *
@@ -982,7 +952,7 @@ export const AdversarialService: GenService<{
     methodKind: "unary";
     input: typeof GetAdversarialReportRequestSchema;
     output: typeof GetAdversarialReportResponseSchema;
-  };
+  },
   /**
    * StreamPressureEvents streams adversarial pressure events as they occur.
    *
@@ -992,5 +962,7 @@ export const AdversarialService: GenService<{
     methodKind: "server_streaming";
     input: typeof StreamPressureEventsRequestSchema;
     output: typeof AdversarialPressureEventSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_omega_v1_adversarial_service, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_omega_v1_adversarial_service, 0);
+

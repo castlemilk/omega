@@ -11,7 +11,7 @@ import math
 
 class TestCalculateSlippage:
     def _make_node(self):
-        from omega.nodes.vectora.strategy import StrategyNode
+        from omega.nodes.victoria.strategy import StrategyNode
 
         return StrategyNode()
 

@@ -3,7 +3,7 @@ omega.math.brier
 ~~~~~~~~~~~~~~~~
 Brier score engine for evaluating probabilistic forecast calibration.
 
-All signal sources in the Vectora system are ranked by their rolling Brier score.
+All signal sources in the Victoria system are ranked by their rolling Brier score.
 Use this module as the single source of truth for calibration metrics.
 
 Mathematical Background

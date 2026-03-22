@@ -161,12 +161,12 @@ func TestConfig_DomainRegistration(t *testing.T) {
 		"signal_ttl":  "5m",
 		"max_signals": 100,
 	}
-	cfg.RegisterDomainDefaults("vectora", schema)
+	cfg.RegisterDomainDefaults("victoria", schema)
 
-	if cfg.GetString("vectora.signal_ttl") != "5m" {
-		t.Fatalf("expected domain default '5m', got %q", cfg.GetString("vectora.signal_ttl"))
+	if cfg.GetString("victoria.signal_ttl") != "5m" {
+		t.Fatalf("expected domain default '5m', got %q", cfg.GetString("victoria.signal_ttl"))
 	}
-	if cfg.GetInt("vectora.max_signals") != 100 {
-		t.Fatalf("expected domain default 100, got %d", cfg.GetInt("vectora.max_signals"))
+	if cfg.GetInt("victoria.max_signals") != 100 {
+		t.Fatalf("expected domain default 100, got %d", cfg.GetInt("victoria.max_signals"))
 	}
 }

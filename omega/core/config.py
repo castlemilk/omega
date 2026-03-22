@@ -60,13 +60,13 @@ except ImportError:
 class DatabaseConfig:
     """SQLite database file paths."""
 
-    state_db_path: str = "/tmp/omega_vectora_state.db"
+    state_db_path: str = "/tmp/omega_victoria_state.db"
     """Node registry, executions, traces, issues, costs, improvements."""
 
-    memory_db_path: str = "/tmp/omega_vectora_memory.db"
+    memory_db_path: str = "/tmp/omega_victoria_memory.db"
     """Episodic + semantic memory (MemoryKernel)."""
 
-    orchestrator_db_path: str = "/tmp/omega_vectora.db"
+    orchestrator_db_path: str = "/tmp/omega_victoria.db"
     """Orchestrator internal state."""
 
 
@@ -195,9 +195,9 @@ class OmegaConfig:
         _e = os.environ.get
 
         database = DatabaseConfig(
-            state_db_path=_e("OMEGA_STATE_DB_PATH", "/tmp/omega_vectora_state.db"),
-            memory_db_path=_e("OMEGA_MEMORY_DB_PATH", "/tmp/omega_vectora_memory.db"),
-            orchestrator_db_path=_e("OMEGA_DB_PATH", "/tmp/omega_vectora.db"),
+            state_db_path=_e("OMEGA_STATE_DB_PATH", "/tmp/omega_victoria_state.db"),
+            memory_db_path=_e("OMEGA_MEMORY_DB_PATH", "/tmp/omega_victoria_memory.db"),
+            orchestrator_db_path=_e("OMEGA_DB_PATH", "/tmp/omega_victoria.db"),
         )
 
         nodes = NodesConfig(

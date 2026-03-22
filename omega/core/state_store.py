@@ -1386,7 +1386,7 @@ def make_state_backend(db_path: str = ":memory:") -> StateBackend:
     implementation is active.
 
     Example:
-        store = make_state_backend("/tmp/omega_vectora_state.db")
+        store = make_state_backend("/tmp/omega_victoria_state.db")
     """
     import os
 

@@ -3,7 +3,7 @@ omega.math.kelly
 ~~~~~~~~~~~~~~~~
 Kelly criterion position sizer with fat-tail and multi-asset extensions.
 
-All position sizing in the Vectora system flows through this module.
+All position sizing in the Victoria system flows through this module.
 Use fractional Kelly by default to account for model uncertainty.
 
 Mathematical Background

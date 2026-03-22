@@ -3,18 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  EvaluateRequest,
-  EvaluateResponse,
-  ExecuteRequest,
-  ExecuteResponse,
-  GetCapabilitiesRequest,
-  GetCapabilitiesResponse,
-  GetStateRequest,
-  GetStateResponse,
-  ImproveRequest,
-  ImproveResponse,
-} from "./node_service_pb.js";
+import { EvaluateRequest, EvaluateResponse, ExecuteRequest, ExecuteResponse, GetCapabilitiesRequest, GetCapabilitiesResponse, GetStateRequest, GetStateResponse, ImproveRequest, ImproveResponse } from "./node_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -68,5 +57,6 @@ export const NodeService = {
       O: GetCapabilitiesResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+

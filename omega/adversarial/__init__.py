@@ -1,7 +1,7 @@
 """
 omega.adversarial
 ~~~~~~~~~~~~~~~~~
-Adversarial debate layer for Omega/Vectora.
+Adversarial debate layer for Omega/Victoria.
 
 Provides structured Bull/Bear debate (DebateGate) and three-perspective
 risk persona debate (RiskPersonas) for signal disagreement resolution.

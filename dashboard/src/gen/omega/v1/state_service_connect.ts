@@ -3,42 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  BeginExecutionRequest,
-  BeginExecutionResponse,
-  BeginSpanRequest,
-  BeginSpanResponse,
-  EndExecutionRequest,
-  EndExecutionResponse,
-  EndSpanRequest,
-  EndSpanResponse,
-  EscalateIssueRequest,
-  EscalateIssueResponse,
-  LogActivityRequest,
-  LogActivityResponse,
-  OpenIssueRequest,
-  OpenIssueResponse,
-  RecordAdversarialResultRequest,
-  RecordAdversarialResultResponse,
-  RecordAlignmentDecisionRequest,
-  RecordAlignmentDecisionResponse,
-  RecordBrainExecutionRequest,
-  RecordBrainExecutionResponse,
-  RecordCostRequest,
-  RecordCostResponse,
-  RecordGoalTrackingRequest,
-  RecordGoalTrackingResponse,
-  RecordImprovementRequest,
-  RecordImprovementResponse,
-  ResolveIssueRequest,
-  ResolveIssueResponse,
-  SaveConfigRevisionRequest,
-  SaveConfigRevisionResponse,
-  UpdateBrainOutcomeRequest,
-  UpdateBrainOutcomeResponse,
-  UpsertNodeRequest,
-  UpsertNodeResponse,
-} from "./state_service_pb.js";
+import { BeginExecutionRequest, BeginExecutionResponse, BeginSpanRequest, BeginSpanResponse, EndExecutionRequest, EndExecutionResponse, EndSpanRequest, EndSpanResponse, EscalateIssueRequest, EscalateIssueResponse, LogActivityRequest, LogActivityResponse, OpenIssueRequest, OpenIssueResponse, RecordAdversarialResultRequest, RecordAdversarialResultResponse, RecordAlignmentDecisionRequest, RecordAlignmentDecisionResponse, RecordBrainExecutionRequest, RecordBrainExecutionResponse, RecordCostRequest, RecordCostResponse, RecordGoalTrackingRequest, RecordGoalTrackingResponse, RecordImprovementRequest, RecordImprovementResponse, ResolveIssueRequest, ResolveIssueResponse, SaveConfigRevisionRequest, SaveConfigRevisionResponse, UpdateBrainOutcomeRequest, UpdateBrainOutcomeResponse, UpsertNodeRequest, UpsertNodeResponse } from "./state_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -203,5 +168,6 @@ export const StateService = {
       O: RecordGoalTrackingResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+

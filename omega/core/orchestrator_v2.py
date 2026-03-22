@@ -20,7 +20,7 @@ Main loop (one iteration):
   7. post_cycle()  — improvement scheduling, memory consolidation, metrics
 
 The orchestrator is deliberately generic — domain logic lives in nodes.
-VectoraNode is one node among many; the system works with zero nodes.
+VictoriaNode is one node among many; the system works with zero nodes.
 
 Prometheus metrics (via MetricsExporter)
 -----------------------------------------

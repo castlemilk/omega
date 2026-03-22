@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a Devil's Advocate meta-node that challenges every architectural decision, gates improvements with property/invariant checks, and maintains a persistent challenge registry — wired into the Vectora heartbeat loop.
+**Goal:** Build a Devil's Advocate meta-node that challenges every architectural decision, gates improvements with property/invariant checks, and maintains a persistent challenge registry — wired into the Victoria heartbeat loop.
 
-**Architecture:** Three new `omega/core/` modules (`challenge_registry.py`, `verification_gates.py`) plus one new node (`omega/nodes/devils_advocate.py`), all following the existing Node/StateStore/SQLite patterns. The `DevilsAdvocateNode` implements the `Node` ABC and runs after `improve_system()` in `vectora_main.py`. `ChallengeRegistry` gets its own SQLite table seeded with 16 substantive challenges covering both current and planned architecture.
+**Architecture:** Three new `omega/core/` modules (`challenge_registry.py`, `verification_gates.py`) plus one new node (`omega/nodes/devils_advocate.py`), all following the existing Node/StateStore/SQLite patterns. The `DevilsAdvocateNode` implements the `Node` ABC and runs after `improve_system()` in `victoria_main.py`. `ChallengeRegistry` gets its own SQLite table seeded with 16 substantive challenges covering both current and planned architecture.
 
 **Tech Stack:** Python 3.10+, sqlite3 (stdlib), pytest, existing `omega.core.node`, `omega.core.state_store`, `omega.core.orchestrator`.
 
@@ -19,7 +19,7 @@
 | `omega/nodes/devils_advocate.py` | Create | `DevilsAdvocateNode` — 5 operating modes, runs review, produces Challenge reports |
 | `omega/skills/devils-advocate/SKILL.md` | Create | Adversarial thinking skill for agents |
 | `omega/nodes/__init__.py` | Modify | Export `DevilsAdvocateNode` |
-| `omega/examples/vectora_main.py` | Modify | Wire DA node after `improve_system()` in heartbeat |
+| `omega/examples/victoria_main.py` | Modify | Wire DA node after `improve_system()` in heartbeat |
 | `tests/test_challenge_registry.py` | Create | Unit tests for ChallengeRegistry |
 | `tests/test_verification_gates.py` | Create | Unit tests for VerificationGateSystem |
 | `tests/test_devils_advocate.py` | Create | Unit + integration tests for DevilsAdvocateNode |
@@ -232,7 +232,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.signal_generation",
+        target_subsystem="victoria.signal_generation",
         severity=ChallengeSeverity.HIGH,
         description=(
             "SignalGenerationNode self-improvement unlocks new indicator types each cycle. "
@@ -246,7 +246,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.verification",
+        target_subsystem="victoria.verification",
         severity=ChallengeSeverity.MEDIUM,
         description=(
             "VerificationNode uses a fixed 30% regression threshold. This is arbitrary. "
@@ -260,7 +260,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.data_ingestion",
+        target_subsystem="victoria.data_ingestion",
         severity=ChallengeSeverity.HIGH,
         description=(
             "DataIngestionNode falls back to cached data on failure without staleness "
@@ -270,7 +270,7 @@ _SEED_CHALLENGES = [
         ),
         evidence=(
             "data_ingestion.py — fallback path returns self._cache without timestamp "
-            "comparison; vectora_main.py logs a warning but does not halt the pipeline."
+            "comparison; victoria_main.py logs a warning but does not halt the pipeline."
         ),
     ),
     dict(
@@ -400,7 +400,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.strategy",
+        target_subsystem="victoria.strategy",
         severity=ChallengeSeverity.MEDIUM,
         description=(
             "StrategyNode backtest uses the same data window for both signal training "
@@ -1657,7 +1657,7 @@ git commit -m "feat(devil): add DevilsAdvocateNode with 5 operating modes"
 
 **Files:**
 - Modify: `omega/nodes/__init__.py`
-- Modify: `omega/examples/vectora_main.py`
+- Modify: `omega/examples/victoria_main.py`
 
 - [ ] **Step 4.1: Export DevilsAdvocateNode from nodes package**
 
@@ -1667,9 +1667,9 @@ from omega.nodes.devils_advocate import DevilsAdvocateNode
 ```
 And add `"DevilsAdvocateNode"` to `__all__`.
 
-- [ ] **Step 4.2: Wire into vectora_main.py**
+- [ ] **Step 4.2: Wire into victoria_main.py**
 
-In `__init__` of `VectoraSystem`:
+In `__init__` of `VictoriaSystem`:
 ```python
 from omega.core.challenge_registry import ChallengeRegistry
 from omega.core.verification_gates import (
@@ -1681,7 +1681,7 @@ from omega.nodes.devils_advocate import DevilsAdvocateNode
 self.challenge_registry = ChallengeRegistry(db_path=db_path)
 self.challenge_registry.seed_initial_challenges()
 
-# Build default gates for the Vectora pipeline
+# Build default gates for the Victoria pipeline
 self.gate_system = VerificationGateSystem()
 self.gate_system.register(PropertyGate(
     "health_bounded",
@@ -1720,7 +1720,7 @@ da_context = {
     "before": getattr(self, "_last_metrics", {}),
     "after": system_metrics,
     "history": [s.score for s in self.orchestrator._iteration_history[-5:]],
-    "subsystem": "vectora",
+    "subsystem": "victoria",
 }
 da_out = self.devils_advocate.execute(
     NodeInput(action="architectural_review", parameters=da_context)
@@ -1750,8 +1750,8 @@ Expected: all tests pass.
 - [ ] **Step 4.4: Commit**
 
 ```bash
-git add omega/nodes/__init__.py omega/examples/vectora_main.py
-git commit -m "feat(devil): wire DevilsAdvocateNode into Vectora heartbeat loop"
+git add omega/nodes/__init__.py omega/examples/victoria_main.py
+git commit -m "feat(devil): wire DevilsAdvocateNode into Victoria heartbeat loop"
 ```
 
 ---

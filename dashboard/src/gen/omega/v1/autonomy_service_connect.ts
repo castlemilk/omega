@@ -3,20 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  GetAutonomyHistoryRequest,
-  GetAutonomyHistoryResponse,
-  GetAutonomyLevelRequest,
-  GetAutonomyLevelResponse,
-  NodeMetricsEvent,
-  RecordCycleMetricsRequest,
-  RecordCycleMetricsResponse,
-  RecordPromotionRequest,
-  RecordPromotionResponse,
-  RequestPromotionRequest,
-  RequestPromotionResponse,
-  StreamNodeMetricsRequest,
-} from "./autonomy_service_pb.js";
+import { GetAutonomyHistoryRequest, GetAutonomyHistoryResponse, GetAutonomyLevelRequest, GetAutonomyLevelResponse, NodeMetricsEvent, RecordCycleMetricsRequest, RecordCycleMetricsResponse, RecordPromotionRequest, RecordPromotionResponse, RequestPromotionRequest, RequestPromotionResponse, StreamNodeMetricsRequest } from "./autonomy_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -96,5 +83,6 @@ export const AutonomyService = {
       O: NodeMetricsEvent,
       kind: MethodKind.ServerStreaming,
     },
-  },
+  }
 } as const;
+

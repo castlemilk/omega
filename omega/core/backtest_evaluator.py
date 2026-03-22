@@ -359,7 +359,7 @@ class BacktestEvaluator(ImprovementEvaluator):
 
     def _load_real_prices(self, symbol: str, start: str, end: str) -> list[float]:
         from omega.core.node import NodeInput
-        from omega.nodes.vectora.data_ingestion import DataIngestionNode
+        from omega.nodes.victoria.data_ingestion import DataIngestionNode
 
         node = DataIngestionNode()
         inp = NodeInput(

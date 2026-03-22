@@ -1,8 +1,8 @@
-"""Tests for omega.nodes.vectora.signals_advanced"""
+"""Tests for omega.nodes.victoria.signals_advanced"""
 
 import math
 
-from omega.nodes.vectora.signals_advanced import (
+from omega.nodes.victoria.signals_advanced import (
     CrossAssetSignal,
     MicrostructureSignal,
     OrderFlowSignal,

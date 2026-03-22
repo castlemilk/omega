@@ -154,7 +154,7 @@ class ConstitutionalConstraints:
         return passed, violations
 
     def register_defaults(self) -> None:
-        """Register sensible defaults for the Vectora pipeline."""
+        """Register sensible defaults for the Victoria pipeline."""
         self.register(
             "max_drawdown_limit",
             "max_drawdown_pct",
@@ -423,8 +423,8 @@ class HTNDecomposer:
         )
         logger.debug("Registered HTN method '%s' for goal '%s'", method_name, goal)
 
-    def register_vectora_methods(self) -> None:
-        """Register default Vectora pipeline decompositions."""
+    def register_victoria_methods(self) -> None:
+        """Register default Victoria pipeline decompositions."""
         self.register_method(
             goal="research_cycle",
             method_name="standard_pipeline",
@@ -746,7 +746,7 @@ class GoalArchitecture:
 
         # Layer 3
         self._htn = HTNDecomposer()
-        self._htn.register_vectora_methods()
+        self._htn.register_victoria_methods()
 
         # Adaptive reference tracker (replaces MPC)
         self._tracker = AdaptiveReferenceTracker(objectives=self._objectives)

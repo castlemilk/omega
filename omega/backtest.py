@@ -1,7 +1,7 @@
 """
 omega.backtest
 ~~~~~~~~~~~~~~
-Backtesting engine — replays historical OHLCV data through the Vectora
+Backtesting engine — replays historical OHLCV data through the Victoria
 signal/strategy pipeline and computes performance metrics.
 
 Usage::
@@ -182,7 +182,7 @@ class BacktestEngine:
 
     def _load_real_data(self, start_date: str, end_date: str) -> dict[str, list[OHLCV]]:
         from omega.core.node import NodeInput
-        from omega.nodes.vectora.data_ingestion import DataIngestionNode
+        from omega.nodes.victoria.data_ingestion import DataIngestionNode
 
         node = DataIngestionNode()
         inp = NodeInput(

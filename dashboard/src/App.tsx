@@ -17,11 +17,11 @@ import Adversarial from "./pages/Adversarial";
 import Goals from "./pages/Goals";
 import Challenges from "./pages/Challenges";
 import Improvements from "./pages/Improvements";
-import VectoraDashboard from "./pages/VectoraDashboard";
-import VectoraPortfolio from "./pages/VectoraPortfolio";
-import VectoraSignals from "./pages/VectoraSignals";
-import VectoraTrades from "./pages/VectoraTrades";
-import VectoraBacktest from "./pages/VectoraBacktest";
+import VictoriaDashboard from "./pages/VictoriaDashboard";
+import VictoriaPortfolio from "./pages/VictoriaPortfolio";
+import VictoriaSignals from "./pages/VictoriaSignals";
+import VictoriaTrades from "./pages/VictoriaTrades";
+import VictoriaBacktest from "./pages/VictoriaBacktest";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
@@ -73,11 +73,11 @@ export default function App() {
               <Route path="/goals" element={<Goals />} />
               <Route path="/challenges" element={<Challenges />} />
               <Route path="/improvements" element={<Improvements />} />
-              <Route path="/vectora" element={<VectoraDashboard />} />
-              <Route path="/vectora/portfolio" element={<VectoraPortfolio />} />
-              <Route path="/vectora/signals" element={<VectoraSignals />} />
-              <Route path="/vectora/trades" element={<VectoraTrades />} />
-              <Route path="/vectora/backtest" element={<VectoraBacktest />} />
+              <Route path="/victoria" element={<VictoriaDashboard />} />
+              <Route path="/victoria/portfolio" element={<VictoriaPortfolio />} />
+              <Route path="/victoria/signals" element={<VictoriaSignals />} />
+              <Route path="/victoria/trades" element={<VictoriaTrades />} />
+              <Route path="/victoria/backtest" element={<VictoriaBacktest />} />
             </Routes>
           </main>
         </div>

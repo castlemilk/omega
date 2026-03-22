@@ -3,20 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  AdversarialPressureEvent,
-  GetAdversarialReportRequest,
-  GetAdversarialReportResponse,
-  RecordGateResultRequest,
-  RecordGateResultResponse,
-  ResolveRiskRequest,
-  ResolveRiskResponse,
-  RunDebateRequest,
-  RunDebateResponse,
-  RunPressureRequest,
-  RunPressureResponse,
-  StreamPressureEventsRequest,
-} from "./adversarial_service_pb.js";
+import { AdversarialPressureEvent, GetAdversarialReportRequest, GetAdversarialReportResponse, RecordGateResultRequest, RecordGateResultResponse, ResolveRiskRequest, ResolveRiskResponse, RunDebateRequest, RunDebateResponse, RunPressureRequest, RunPressureResponse, StreamPressureEventsRequest } from "./adversarial_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -96,5 +83,6 @@ export const AdversarialService = {
       O: AdversarialPressureEvent,
       kind: MethodKind.ServerStreaming,
     },
-  },
+  }
 } as const;
+

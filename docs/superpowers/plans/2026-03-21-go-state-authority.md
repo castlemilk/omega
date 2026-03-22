@@ -1752,7 +1752,7 @@ git commit -m "feat: add StateServiceHandler with tests"
 
 - [ ] **Step 7.1: Update `cmd/omega-api/main.go`**
 
-After the line `vh := handler.NewVectora(vdb)`, add:
+After the line `vh := handler.NewVictoria(vdb)`, add:
 ```go
 sh := handler.NewState(database)
 ```
@@ -2326,7 +2326,7 @@ def make_state_backend(db_path: str = ":memory:") -> StateBackend:
     which implementation is active.
 
     Example:
-        store = make_state_backend("/tmp/omega_vectora_state.db")
+        store = make_state_backend("/tmp/omega_victoria_state.db")
     """
     import os
 

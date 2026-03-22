@@ -3,24 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  CheckAlignmentRequest,
-  CheckAlignmentResponse,
-  EvaluateGoalsRequest,
-  EvaluateGoalsResponse,
-  GetGoalDecisionRequest,
-  GetGoalDecisionResponse,
-  HasBlockingChallengesRequest,
-  HasBlockingChallengesResponse,
-  OpenChallengeRequest,
-  OpenChallengeResponse,
-  RecordOutcomeScoreRequest,
-  RecordOutcomeScoreResponse,
-  ResolveChallengeRequest,
-  ResolveChallengeResponse,
-  VerifyGatesRequest,
-  VerifyGatesResponse,
-} from "./safety_service_pb.js";
+import { CheckAlignmentRequest, CheckAlignmentResponse, EvaluateGoalsRequest, EvaluateGoalsResponse, GetGoalDecisionRequest, GetGoalDecisionResponse, HasBlockingChallengesRequest, HasBlockingChallengesResponse, OpenChallengeRequest, OpenChallengeResponse, RecordOutcomeScoreRequest, RecordOutcomeScoreResponse, ResolveChallengeRequest, ResolveChallengeResponse, VerifyGatesRequest, VerifyGatesResponse } from "./safety_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -124,5 +107,6 @@ export const SafetyService = {
       O: ResolveChallengeResponse,
       kind: MethodKind.Unary,
     },
-  },
+  }
 } as const;
+

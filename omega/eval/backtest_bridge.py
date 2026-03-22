@@ -6,7 +6,7 @@ OHLCV data, cycle-by-cycle, without hardcoding any strategy logic.
 
 Design
 ------
-- Historical OHLCV data is fed to VectoraNode one bar at a time, simulating
+- Historical OHLCV data is fed to VictoriaNode one bar at a time, simulating
   the live data-poll → signals → strategy → adversarial → execute pipeline.
 - The bridge intercepts trade proposals and simulates execution at the next
   bar's open price (realistic fill assumption).
@@ -30,7 +30,7 @@ Each entry in `ohlcv` is a dict::
     }
 
 The bridge builds a sliding window of historical prices and feeds it to
-VectoraNode on each cycle, mimicking DataIngestionNode's output format.
+VictoriaNode on each cycle, mimicking DataIngestionNode's output format.
 """
 
 from __future__ import annotations
@@ -45,7 +45,7 @@ from omega.core.autonomy import AutonomyLevel
 from omega.eval.baselines import BaselineResult, buy_and_hold, sma_crossover
 from omega.eval.metrics import EvalReport, TradeRecord, build_eval_report
 from omega.eval.significance import sharpe_is_significant
-from omega.nodes.vectora.vectora_node import VectoraNode
+from omega.nodes.victoria.victoria_node import VictoriaNode
 
 logger = logging.getLogger("omega.eval.backtest_bridge")
 
@@ -114,7 +114,7 @@ class OmegaBacktestBridge:
     periods_per_year  : Annualisation factor for Sharpe.
     use_orchestrator_proposals : If True (default), use proposals from the full
         orchestrator cycle (includes adversarial filtering).  If False, fall back
-        to calling VectoraNode._do_construct_portfolio directly (bypasses adversarial
+        to calling VictoriaNode._do_construct_portfolio directly (bypasses adversarial
         but avoids any orchestrator overhead).
     """
 
@@ -136,10 +136,10 @@ class OmegaBacktestBridge:
         self.periods_per_year = periods_per_year
         self.use_orchestrator_proposals = use_orchestrator_proposals
 
-        # Build orchestrator with a VectoraNode (lazy import breaks circular dependency)
+        # Build orchestrator with a VictoriaNode (lazy import breaks circular dependency)
         from omega.core.orchestrator_v2 import OmegaOrchestrator
 
-        self._node = VectoraNode()
+        self._node = VictoriaNode()
         self._orchestrator = OmegaOrchestrator(name=f"backtest_{mode.value}")
         self._orchestrator.register_node(self._node, activate=True)
 
@@ -162,7 +162,7 @@ class OmegaBacktestBridge:
 
         Each cycle corresponds to one bar. The bridge:
           1. Builds a sliding window of historical prices (lookback_window bars).
-          2. Constructs market_data in VectoraNode's expected format.
+          2. Constructs market_data in VictoriaNode's expected format.
           3. Calls orchestrator.run_one_cycle() with injected market data.
           4. Interprets proposals as position targets and fills at next bar's open.
           5. Records per-cycle metrics.
@@ -204,7 +204,7 @@ class OmegaBacktestBridge:
         returns: list[float] = []
         trades: list[TradeRecord] = []
 
-        # Patch VectoraNode's DataIngestionNode to use injected data
+        # Patch VictoriaNode's DataIngestionNode to use injected data
         # We intercept by overriding the internal _last_market_data directly.
 
         for i in range(self.lookback_window, n - 1):
@@ -218,7 +218,7 @@ class OmegaBacktestBridge:
             window_bars = bars[i - self.lookback_window : i + 1]
             market_data = self._build_market_data(window_bars)
 
-            # Inject data directly into VectoraNode (bypassing network fetch)
+            # Inject data directly into VictoriaNode (bypassing network fetch)
             self._node._last_market_data = market_data
 
             # Run one full orchestrator cycle (signals → strategy → adversarial)
@@ -363,7 +363,7 @@ class OmegaBacktestBridge:
 
     def _build_market_data(self, bars: list[dict[str, Any]]) -> dict[str, Any]:
         """
-        Build VectoraNode's expected market_data dict from a window of OHLCV bars.
+        Build VictoriaNode's expected market_data dict from a window of OHLCV bars.
 
         DataIngestionNode returns::
 

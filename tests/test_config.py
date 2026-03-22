@@ -17,8 +17,8 @@ from omega.core.config import (
 class TestDefaults:
     def test_database_defaults(self):
         cfg = DatabaseConfig()
-        assert cfg.state_db_path == "/tmp/omega_vectora_state.db"
-        assert cfg.memory_db_path == "/tmp/omega_vectora_memory.db"
+        assert cfg.state_db_path == "/tmp/omega_victoria_state.db"
+        assert cfg.memory_db_path == "/tmp/omega_victoria_memory.db"
 
     def test_nodes_defaults(self):
         cfg = NodesConfig()

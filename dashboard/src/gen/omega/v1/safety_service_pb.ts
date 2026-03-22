@@ -11,12 +11,8 @@ import type { Message } from "@bufbuild/protobuf";
 /**
  * Describes the file omega/v1/safety_service.proto.
  */
-export const file_omega_v1_safety_service: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "Ch1vbWVnYS92MS9zYWZldHlfc2VydmljZS5wcm90bxIIb21lZ2EudjEimgEKE0NvbnN0cmFpbnRWaW9sYXRpb24SFwoPY29uc3RyYWludF9uYW1lGAEgASgJEi4KCHNldmVyaXR5GAIgASgOMhwub21lZ2EudjEuQ29uc3RyYWludFNldmVyaXR5EhMKC2Rlc2NyaXB0aW9uGAMgASgJEhYKDm9ic2VydmVkX3ZhbHVlGAQgASgBEg0KBWxpbWl0GAUgASgBIoMBCgtOb2RlTWV0cmljcxIPCgdub2RlX2lkGAEgASgJEjMKB21ldHJpY3MYAiADKAsyIi5vbWVnYS52MS5Ob2RlTWV0cmljcy5NZXRyaWNzRW50cnkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiygIKFUNoZWNrQWxpZ25tZW50UmVxdWVzdBIrCgxub2RlX21ldHJpY3MYASADKAsyFS5vbWVnYS52MS5Ob2RlTWV0cmljcxJKCg5zeXN0ZW1fbWV0cmljcxgCIAMoCzIyLm9tZWdhLnYxLkNoZWNrQWxpZ25tZW50UmVxdWVzdC5TeXN0ZW1NZXRyaWNzRW50cnkSQQoJcG9ydGZvbGlvGAMgAygLMi4ub21lZ2EudjEuQ2hlY2tBbGlnbm1lbnRSZXF1ZXN0LlBvcnRmb2xpb0VudHJ5Eg0KBWN5Y2xlGAQgASgDGjQKElN5c3RlbU1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBGjAKDlBvcnRmb2xpb0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiRgoKUGFyZXRvUmFuaxIPCgdub2RlX2lkGAEgASgJEgwKBHJhbmsYAiABKAUSGQoRY3Jvd2RpbmdfZGlzdGFuY2UYAyABKAEiTgoMT3V0Y29tZVNjb3JlEg8KB25vZGVfaWQYASABKAkSEAoIYWNjdXJhY3kYAiABKAESGwoTc2hhcnBlX2NvbnRyaWJ1dGlvbhgDIAEoASKUAgoWQ2hlY2tBbGlnbm1lbnRSZXNwb25zZRIQCghhcHByb3ZlZBgBIAEoCBIxCgp2aW9sYXRpb25zGAIgAygLMh0ub21lZ2EudjEuQ29uc3RyYWludFZpb2xhdGlvbhIqCgxwYXJldG9fcmFua3MYAyADKAsyFC5vbWVnYS52MS5QYXJldG9SYW5rEi4KDm91dGNvbWVfc2NvcmVzGAQgAygLMhYub21lZ2EudjEuT3V0Y29tZVNjb3JlEhgKEGdvb2RoYXJ0X3dhcm5pbmcYBSABKAgSDwoHcmVhc29ucxgGIAMoCRIuCgpjaGVja2VkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKZAQoPR2F0ZUNoZWNrUmVzdWx0Eg8KB2dhdGVfaWQYASABKAkSEQoJZ2F0ZV9uYW1lGAIgASgJEhEKCWdhdGVfdHlwZRgDIAEoCRIOCgZwYXNzZWQYBCABKAgSDwoHZGV0YWlscxgFIAEoCRIuCgpjaGVja2VkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKzAQoSVmVyaWZ5R2F0ZXNSZXF1ZXN0EiIKBXBoYXNlGAEgASgOMhMub21lZ2EudjEuR2F0ZVBoYXNlEjoKB2NvbnRleHQYAiADKAsyKS5vbWVnYS52MS5WZXJpZnlHYXRlc1JlcXVlc3QuQ29udGV4dEVudHJ5Eg0KBWN5Y2xlGAMgASgDGi4KDENvbnRleHRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIoEBChNWZXJpZnlHYXRlc1Jlc3BvbnNlEhIKCmFsbF9wYXNzZWQYASABKAgSKgoHcmVzdWx0cxgCIAMoCzIZLm9tZWdhLnYxLkdhdGVDaGVja1Jlc3VsdBIUCgxwYXNzZWRfY291bnQYAyABKAUSFAoMZmFpbGVkX2NvdW50GAQgASgFIrwBCgxBc3NpZ25lZFRhc2sSEQoJdGFza19uYW1lGAEgASgJEhgKEGFzc2lnbmVkX3RvX25vZGUYAiABKAkSEAoIcHJpb3JpdHkYAyABKAUSOgoKcGFyYW1ldGVycxgEIAMoCzImLm9tZWdhLnYxLkFzc2lnbmVkVGFzay5QYXJhbWV0ZXJzRW50cnkaMQoPUGFyYW1ldGVyc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEijgIKFEV2YWx1YXRlR29hbHNSZXF1ZXN0EjwKB21ldHJpY3MYASADKAsyKy5vbWVnYS52MS5FdmFsdWF0ZUdvYWxzUmVxdWVzdC5NZXRyaWNzRW50cnkSRQoMc3lzdGVtX3N0YXRlGAIgAygLMi8ub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1JlcXVlc3QuU3lzdGVtU3RhdGVFbnRyeRINCgVjeWNsZRgDIAEoAxouCgxNZXRyaWNzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ARoyChBTeXN0ZW1TdGF0ZUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi4AMKFUV2YWx1YXRlR29hbHNSZXNwb25zZRIQCghhcHByb3ZlZBgBIAEoCBIxCgp2aW9sYXRpb25zGAIgAygLMh0ub21lZ2EudjEuQ29uc3RyYWludFZpb2xhdGlvbhJBCglzY29yZWNhcmQYAyADKAsyLi5vbWVnYS52MS5FdmFsdWF0ZUdvYWxzUmVzcG9uc2UuU2NvcmVjYXJkRW50cnkSFwoPY29tcG9zaXRlX3Njb3JlGAQgASgBEigKCHN1YnRhc2tzGAUgAygLMhYub21lZ2EudjEuQXNzaWduZWRUYXNrEhYKDnRyYWNraW5nX2Vycm9yGAYgASgBEkoKDmNvbnRyb2xfYWN0aW9uGAcgAygLMjIub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1Jlc3BvbnNlLkNvbnRyb2xBY3Rpb25FbnRyeRIwCgxldmFsdWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wGjAKDlNjb3JlY2FyZEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEaNAoSQ29udHJvbEFjdGlvbkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiewoZUmVjb3JkT3V0Y29tZVNjb3JlUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEhEKCXByZWRpY3RlZBgCIAEoARIOCgZhY3R1YWwYAyABKAESGwoTcmV0dXJuX2NvbnRyaWJ1dGlvbhgEIAEoARINCgVjeWNsZRgFIAEoAyIoChpSZWNvcmRPdXRjb21lU2NvcmVSZXNwb25zZRIKCgJvaxgBIAEoCCInChZHZXRHb2FsRGVjaXNpb25SZXF1ZXN0Eg0KBWN5Y2xlGAEgASgDIlsKF0dldEdvYWxEZWNpc2lvblJlc3BvbnNlEjEKCGRlY2lzaW9uGAEgASgLMh8ub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1Jlc3BvbnNlEg0KBWZvdW5kGAIgASgIIh4KHEhhc0Jsb2NraW5nQ2hhbGxlbmdlc1JlcXVlc3QiYQodSGFzQmxvY2tpbmdDaGFsbGVuZ2VzUmVzcG9uc2USFAoMaGFzX2Jsb2NraW5nGAEgASgIEhYKDmNyaXRpY2FsX2NvdW50GAIgASgFEhIKCmhpZ2hfY291bnQYAyABKAUinAEKFE9wZW5DaGFsbGVuZ2VSZXF1ZXN0EhgKEHRhcmdldF9zdWJzeXN0ZW0YASABKAkSLQoIc2V2ZXJpdHkYAiABKA4yGy5vbWVnYS52MS5DaGFsbGVuZ2VTZXZlcml0eRITCgtkZXNjcmlwdGlvbhgDIAEoCRIQCghldmlkZW5jZRgEIAEoCRIUCgxjaGFsbGVuZ2VfaWQYBSABKAkiPgoVT3BlbkNoYWxsZW5nZVJlc3BvbnNlEhQKDGNoYWxsZW5nZV9pZBgBIAEoCRIPCgdjcmVhdGVkGAIgASgIInEKF1Jlc29sdmVDaGFsbGVuZ2VSZXF1ZXN0EhQKDGNoYWxsZW5nZV9pZBgBIAEoCRIxCgpyZXNvbHV0aW9uGAIgASgOMh0ub21lZ2EudjEuQ2hhbGxlbmdlUmVzb2x1dGlvbhINCgVub3RlcxgDIAEoCSImChhSZXNvbHZlQ2hhbGxlbmdlUmVzcG9uc2USCgoCb2sYASABKAgqdQoSQ29uc3RyYWludFNldmVyaXR5EiMKH0NPTlNUUkFJTlRfU0VWRVJJVFlfVU5TUEVDSUZJRUQQABIcChhDT05TVFJBSU5UX1NFVkVSSVRZX0hBUkQQARIcChhDT05TVFJBSU5UX1NFVkVSSVRZX1NPRlQQAip8CglHYXRlUGhhc2USGgoWR0FURV9QSEFTRV9VTlNQRUNJRklFRBAAEhgKFEdBVEVfUEhBU0VfUFJFX0NZQ0xFEAESGQoVR0FURV9QSEFTRV9QT1NUX0NZQ0xFEAISHgoaR0FURV9QSEFTRV9QUkVfSU1QUk9WRU1FTlQQAyqwAQoRQ2hhbGxlbmdlU2V2ZXJpdHkSIgoeQ0hBTExFTkdFX1NFVkVSSVRZX1VOU1BFQ0lGSUVEEAASHwobQ0hBTExFTkdFX1NFVkVSSVRZX0NSSVRJQ0FMEAESGwoXQ0hBTExFTkdFX1NFVkVSSVRZX0hJR0gQAhIdChlDSEFMTEVOR0VfU0VWRVJJVFlfTUVESVVNEAMSGgoWQ0hBTExFTkdFX1NFVkVSSVRZX0xPVxAEKqcBChNDaGFsbGVuZ2VSZXNvbHV0aW9uEiQKIENIQUxMRU5HRV9SRVNPTFVUSU9OX1VOU1BFQ0lGSUVEEAASIQodQ0hBTExFTkdFX1JFU09MVVRJT05fUkVTT0xWRUQQARIgChxDSEFMTEVOR0VfUkVTT0xVVElPTl9XT05URklYEAISJQohQ0hBTExFTkdFX1JFU09MVVRJT05fQUNLTk9XTEVER0VEEAMy0gUKDVNhZmV0eVNlcnZpY2USUwoOQ2hlY2tBbGlnbm1lbnQSHy5vbWVnYS52MS5DaGVja0FsaWdubWVudFJlcXVlc3QaIC5vbWVnYS52MS5DaGVja0FsaWdubWVudFJlc3BvbnNlEkoKC1ZlcmlmeUdhdGVzEhwub21lZ2EudjEuVmVyaWZ5R2F0ZXNSZXF1ZXN0Gh0ub21lZ2EudjEuVmVyaWZ5R2F0ZXNSZXNwb25zZRJQCg1FdmFsdWF0ZUdvYWxzEh4ub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1JlcXVlc3QaHy5vbWVnYS52MS5FdmFsdWF0ZUdvYWxzUmVzcG9uc2USXwoSUmVjb3JkT3V0Y29tZVNjb3JlEiMub21lZ2EudjEuUmVjb3JkT3V0Y29tZVNjb3JlUmVxdWVzdBokLm9tZWdhLnYxLlJlY29yZE91dGNvbWVTY29yZVJlc3BvbnNlElYKD0dldEdvYWxEZWNpc2lvbhIgLm9tZWdhLnYxLkdldEdvYWxEZWNpc2lvblJlcXVlc3QaIS5vbWVnYS52MS5HZXRHb2FsRGVjaXNpb25SZXNwb25zZRJoChVIYXNCbG9ja2luZ0NoYWxsZW5nZXMSJi5vbWVnYS52MS5IYXNCbG9ja2luZ0NoYWxsZW5nZXNSZXF1ZXN0Gicub21lZ2EudjEuSGFzQmxvY2tpbmdDaGFsbGVuZ2VzUmVzcG9uc2USUAoNT3BlbkNoYWxsZW5nZRIeLm9tZWdhLnYxLk9wZW5DaGFsbGVuZ2VSZXF1ZXN0Gh8ub21lZ2EudjEuT3BlbkNoYWxsZW5nZVJlc3BvbnNlElkKEFJlc29sdmVDaGFsbGVuZ2USIS5vbWVnYS52MS5SZXNvbHZlQ2hhbGxlbmdlUmVxdWVzdBoiLm9tZWdhLnYxLlJlc29sdmVDaGFsbGVuZ2VSZXNwb25zZUKZAQoMY29tLm9tZWdhLnYxQhJTYWZldHlTZXJ2aWNlUHJvdG9QAVo0Z2l0aHViLmNvbS9iZW5lYnN3b3J0aC9vbWVnYS9nZW4vZ28vb21lZ2EvdjE7b21lZ2F2MaICA09YWKoCCE9tZWdhLlYxygIIT21lZ2FcVjHiAhRPbWVnYVxWMVxHUEJNZXRhZGF0YeoCCU9tZWdhOjpWMWIGcHJvdG8z",
-    [file_google_protobuf_timestamp]
-  );
+export const file_omega_v1_safety_service: GenFile = /*@__PURE__*/
+  fileDesc("Ch1vbWVnYS92MS9zYWZldHlfc2VydmljZS5wcm90bxIIb21lZ2EudjEimgEKE0NvbnN0cmFpbnRWaW9sYXRpb24SFwoPY29uc3RyYWludF9uYW1lGAEgASgJEi4KCHNldmVyaXR5GAIgASgOMhwub21lZ2EudjEuQ29uc3RyYWludFNldmVyaXR5EhMKC2Rlc2NyaXB0aW9uGAMgASgJEhYKDm9ic2VydmVkX3ZhbHVlGAQgASgBEg0KBWxpbWl0GAUgASgBIoMBCgtOb2RlTWV0cmljcxIPCgdub2RlX2lkGAEgASgJEjMKB21ldHJpY3MYAiADKAsyIi5vbWVnYS52MS5Ob2RlTWV0cmljcy5NZXRyaWNzRW50cnkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiygIKFUNoZWNrQWxpZ25tZW50UmVxdWVzdBIrCgxub2RlX21ldHJpY3MYASADKAsyFS5vbWVnYS52MS5Ob2RlTWV0cmljcxJKCg5zeXN0ZW1fbWV0cmljcxgCIAMoCzIyLm9tZWdhLnYxLkNoZWNrQWxpZ25tZW50UmVxdWVzdC5TeXN0ZW1NZXRyaWNzRW50cnkSQQoJcG9ydGZvbGlvGAMgAygLMi4ub21lZ2EudjEuQ2hlY2tBbGlnbm1lbnRSZXF1ZXN0LlBvcnRmb2xpb0VudHJ5Eg0KBWN5Y2xlGAQgASgDGjQKElN5c3RlbU1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBGjAKDlBvcnRmb2xpb0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiRgoKUGFyZXRvUmFuaxIPCgdub2RlX2lkGAEgASgJEgwKBHJhbmsYAiABKAUSGQoRY3Jvd2RpbmdfZGlzdGFuY2UYAyABKAEiTgoMT3V0Y29tZVNjb3JlEg8KB25vZGVfaWQYASABKAkSEAoIYWNjdXJhY3kYAiABKAESGwoTc2hhcnBlX2NvbnRyaWJ1dGlvbhgDIAEoASKUAgoWQ2hlY2tBbGlnbm1lbnRSZXNwb25zZRIQCghhcHByb3ZlZBgBIAEoCBIxCgp2aW9sYXRpb25zGAIgAygLMh0ub21lZ2EudjEuQ29uc3RyYWludFZpb2xhdGlvbhIqCgxwYXJldG9fcmFua3MYAyADKAsyFC5vbWVnYS52MS5QYXJldG9SYW5rEi4KDm91dGNvbWVfc2NvcmVzGAQgAygLMhYub21lZ2EudjEuT3V0Y29tZVNjb3JlEhgKEGdvb2RoYXJ0X3dhcm5pbmcYBSABKAgSDwoHcmVhc29ucxgGIAMoCRIuCgpjaGVja2VkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKZAQoPR2F0ZUNoZWNrUmVzdWx0Eg8KB2dhdGVfaWQYASABKAkSEQoJZ2F0ZV9uYW1lGAIgASgJEhEKCWdhdGVfdHlwZRgDIAEoCRIOCgZwYXNzZWQYBCABKAgSDwoHZGV0YWlscxgFIAEoCRIuCgpjaGVja2VkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKzAQoSVmVyaWZ5R2F0ZXNSZXF1ZXN0EiIKBXBoYXNlGAEgASgOMhMub21lZ2EudjEuR2F0ZVBoYXNlEjoKB2NvbnRleHQYAiADKAsyKS5vbWVnYS52MS5WZXJpZnlHYXRlc1JlcXVlc3QuQ29udGV4dEVudHJ5Eg0KBWN5Y2xlGAMgASgDGi4KDENvbnRleHRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIoEBChNWZXJpZnlHYXRlc1Jlc3BvbnNlEhIKCmFsbF9wYXNzZWQYASABKAgSKgoHcmVzdWx0cxgCIAMoCzIZLm9tZWdhLnYxLkdhdGVDaGVja1Jlc3VsdBIUCgxwYXNzZWRfY291bnQYAyABKAUSFAoMZmFpbGVkX2NvdW50GAQgASgFIrwBCgxBc3NpZ25lZFRhc2sSEQoJdGFza19uYW1lGAEgASgJEhgKEGFzc2lnbmVkX3RvX25vZGUYAiABKAkSEAoIcHJpb3JpdHkYAyABKAUSOgoKcGFyYW1ldGVycxgEIAMoCzImLm9tZWdhLnYxLkFzc2lnbmVkVGFzay5QYXJhbWV0ZXJzRW50cnkaMQoPUGFyYW1ldGVyc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEijgIKFEV2YWx1YXRlR29hbHNSZXF1ZXN0EjwKB21ldHJpY3MYASADKAsyKy5vbWVnYS52MS5FdmFsdWF0ZUdvYWxzUmVxdWVzdC5NZXRyaWNzRW50cnkSRQoMc3lzdGVtX3N0YXRlGAIgAygLMi8ub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1JlcXVlc3QuU3lzdGVtU3RhdGVFbnRyeRINCgVjeWNsZRgDIAEoAxouCgxNZXRyaWNzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ARoyChBTeXN0ZW1TdGF0ZUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi4AMKFUV2YWx1YXRlR29hbHNSZXNwb25zZRIQCghhcHByb3ZlZBgBIAEoCBIxCgp2aW9sYXRpb25zGAIgAygLMh0ub21lZ2EudjEuQ29uc3RyYWludFZpb2xhdGlvbhJBCglzY29yZWNhcmQYAyADKAsyLi5vbWVnYS52MS5FdmFsdWF0ZUdvYWxzUmVzcG9uc2UuU2NvcmVjYXJkRW50cnkSFwoPY29tcG9zaXRlX3Njb3JlGAQgASgBEigKCHN1YnRhc2tzGAUgAygLMhYub21lZ2EudjEuQXNzaWduZWRUYXNrEhYKDnRyYWNraW5nX2Vycm9yGAYgASgBEkoKDmNvbnRyb2xfYWN0aW9uGAcgAygLMjIub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1Jlc3BvbnNlLkNvbnRyb2xBY3Rpb25FbnRyeRIwCgxldmFsdWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wGjAKDlNjb3JlY2FyZEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEaNAoSQ29udHJvbEFjdGlvbkVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiewoZUmVjb3JkT3V0Y29tZVNjb3JlUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEhEKCXByZWRpY3RlZBgCIAEoARIOCgZhY3R1YWwYAyABKAESGwoTcmV0dXJuX2NvbnRyaWJ1dGlvbhgEIAEoARINCgVjeWNsZRgFIAEoAyIoChpSZWNvcmRPdXRjb21lU2NvcmVSZXNwb25zZRIKCgJvaxgBIAEoCCInChZHZXRHb2FsRGVjaXNpb25SZXF1ZXN0Eg0KBWN5Y2xlGAEgASgDIlsKF0dldEdvYWxEZWNpc2lvblJlc3BvbnNlEjEKCGRlY2lzaW9uGAEgASgLMh8ub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1Jlc3BvbnNlEg0KBWZvdW5kGAIgASgIIh4KHEhhc0Jsb2NraW5nQ2hhbGxlbmdlc1JlcXVlc3QiYQodSGFzQmxvY2tpbmdDaGFsbGVuZ2VzUmVzcG9uc2USFAoMaGFzX2Jsb2NraW5nGAEgASgIEhYKDmNyaXRpY2FsX2NvdW50GAIgASgFEhIKCmhpZ2hfY291bnQYAyABKAUinAEKFE9wZW5DaGFsbGVuZ2VSZXF1ZXN0EhgKEHRhcmdldF9zdWJzeXN0ZW0YASABKAkSLQoIc2V2ZXJpdHkYAiABKA4yGy5vbWVnYS52MS5DaGFsbGVuZ2VTZXZlcml0eRITCgtkZXNjcmlwdGlvbhgDIAEoCRIQCghldmlkZW5jZRgEIAEoCRIUCgxjaGFsbGVuZ2VfaWQYBSABKAkiPgoVT3BlbkNoYWxsZW5nZVJlc3BvbnNlEhQKDGNoYWxsZW5nZV9pZBgBIAEoCRIPCgdjcmVhdGVkGAIgASgIInEKF1Jlc29sdmVDaGFsbGVuZ2VSZXF1ZXN0EhQKDGNoYWxsZW5nZV9pZBgBIAEoCRIxCgpyZXNvbHV0aW9uGAIgASgOMh0ub21lZ2EudjEuQ2hhbGxlbmdlUmVzb2x1dGlvbhINCgVub3RlcxgDIAEoCSImChhSZXNvbHZlQ2hhbGxlbmdlUmVzcG9uc2USCgoCb2sYASABKAgqdQoSQ29uc3RyYWludFNldmVyaXR5EiMKH0NPTlNUUkFJTlRfU0VWRVJJVFlfVU5TUEVDSUZJRUQQABIcChhDT05TVFJBSU5UX1NFVkVSSVRZX0hBUkQQARIcChhDT05TVFJBSU5UX1NFVkVSSVRZX1NPRlQQAip8CglHYXRlUGhhc2USGgoWR0FURV9QSEFTRV9VTlNQRUNJRklFRBAAEhgKFEdBVEVfUEhBU0VfUFJFX0NZQ0xFEAESGQoVR0FURV9QSEFTRV9QT1NUX0NZQ0xFEAISHgoaR0FURV9QSEFTRV9QUkVfSU1QUk9WRU1FTlQQAyqwAQoRQ2hhbGxlbmdlU2V2ZXJpdHkSIgoeQ0hBTExFTkdFX1NFVkVSSVRZX1VOU1BFQ0lGSUVEEAASHwobQ0hBTExFTkdFX1NFVkVSSVRZX0NSSVRJQ0FMEAESGwoXQ0hBTExFTkdFX1NFVkVSSVRZX0hJR0gQAhIdChlDSEFMTEVOR0VfU0VWRVJJVFlfTUVESVVNEAMSGgoWQ0hBTExFTkdFX1NFVkVSSVRZX0xPVxAEKqcBChNDaGFsbGVuZ2VSZXNvbHV0aW9uEiQKIENIQUxMRU5HRV9SRVNPTFVUSU9OX1VOU1BFQ0lGSUVEEAASIQodQ0hBTExFTkdFX1JFU09MVVRJT05fUkVTT0xWRUQQARIgChxDSEFMTEVOR0VfUkVTT0xVVElPTl9XT05URklYEAISJQohQ0hBTExFTkdFX1JFU09MVVRJT05fQUNLTk9XTEVER0VEEAMy0gUKDVNhZmV0eVNlcnZpY2USUwoOQ2hlY2tBbGlnbm1lbnQSHy5vbWVnYS52MS5DaGVja0FsaWdubWVudFJlcXVlc3QaIC5vbWVnYS52MS5DaGVja0FsaWdubWVudFJlc3BvbnNlEkoKC1ZlcmlmeUdhdGVzEhwub21lZ2EudjEuVmVyaWZ5R2F0ZXNSZXF1ZXN0Gh0ub21lZ2EudjEuVmVyaWZ5R2F0ZXNSZXNwb25zZRJQCg1FdmFsdWF0ZUdvYWxzEh4ub21lZ2EudjEuRXZhbHVhdGVHb2Fsc1JlcXVlc3QaHy5vbWVnYS52MS5FdmFsdWF0ZUdvYWxzUmVzcG9uc2USXwoSUmVjb3JkT3V0Y29tZVNjb3JlEiMub21lZ2EudjEuUmVjb3JkT3V0Y29tZVNjb3JlUmVxdWVzdBokLm9tZWdhLnYxLlJlY29yZE91dGNvbWVTY29yZVJlc3BvbnNlElYKD0dldEdvYWxEZWNpc2lvbhIgLm9tZWdhLnYxLkdldEdvYWxEZWNpc2lvblJlcXVlc3QaIS5vbWVnYS52MS5HZXRHb2FsRGVjaXNpb25SZXNwb25zZRJoChVIYXNCbG9ja2luZ0NoYWxsZW5nZXMSJi5vbWVnYS52MS5IYXNCbG9ja2luZ0NoYWxsZW5nZXNSZXF1ZXN0Gicub21lZ2EudjEuSGFzQmxvY2tpbmdDaGFsbGVuZ2VzUmVzcG9uc2USUAoNT3BlbkNoYWxsZW5nZRIeLm9tZWdhLnYxLk9wZW5DaGFsbGVuZ2VSZXF1ZXN0Gh8ub21lZ2EudjEuT3BlbkNoYWxsZW5nZVJlc3BvbnNlElkKEFJlc29sdmVDaGFsbGVuZ2USIS5vbWVnYS52MS5SZXNvbHZlQ2hhbGxlbmdlUmVxdWVzdBoiLm9tZWdhLnYxLlJlc29sdmVDaGFsbGVuZ2VSZXNwb25zZUKZAQoMY29tLm9tZWdhLnYxQhJTYWZldHlTZXJ2aWNlUHJvdG9QAVo0Z2l0aHViLmNvbS9iZW5lYnN3b3J0aC9vbWVnYS9nZW4vZ28vb21lZ2EvdjE7b21lZ2F2MaICA09YWKoCCE9tZWdhLlYxygIIT21lZ2FcVjHiAhRPbWVnYVxWMVxHUEJNZXRhZGF0YeoCCU9tZWdhOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message omega.v1.ConstraintViolation
@@ -52,8 +48,7 @@ export type ConstraintViolation = Message<"omega.v1.ConstraintViolation"> & {
  * Describes the message omega.v1.ConstraintViolation.
  * Use `create(ConstraintViolationSchema)` to create a new message.
  */
-export const ConstraintViolationSchema: GenMessage<ConstraintViolation> =
-  /*@__PURE__*/
+export const ConstraintViolationSchema: GenMessage<ConstraintViolation> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 0);
 
 /**
@@ -75,8 +70,7 @@ export type NodeMetrics = Message<"omega.v1.NodeMetrics"> & {
  * Describes the message omega.v1.NodeMetrics.
  * Use `create(NodeMetricsSchema)` to create a new message.
  */
-export const NodeMetricsSchema: GenMessage<NodeMetrics> =
-  /*@__PURE__*/
+export const NodeMetricsSchema: GenMessage<NodeMetrics> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 1);
 
 /**
@@ -110,8 +104,7 @@ export type CheckAlignmentRequest = Message<"omega.v1.CheckAlignmentRequest"> & 
  * Describes the message omega.v1.CheckAlignmentRequest.
  * Use `create(CheckAlignmentRequestSchema)` to create a new message.
  */
-export const CheckAlignmentRequestSchema: GenMessage<CheckAlignmentRequest> =
-  /*@__PURE__*/
+export const CheckAlignmentRequestSchema: GenMessage<CheckAlignmentRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 2);
 
 /**
@@ -140,8 +133,7 @@ export type ParetoRank = Message<"omega.v1.ParetoRank"> & {
  * Describes the message omega.v1.ParetoRank.
  * Use `create(ParetoRankSchema)` to create a new message.
  */
-export const ParetoRankSchema: GenMessage<ParetoRank> =
-  /*@__PURE__*/
+export const ParetoRankSchema: GenMessage<ParetoRank> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 3);
 
 /**
@@ -170,8 +162,7 @@ export type OutcomeScore = Message<"omega.v1.OutcomeScore"> & {
  * Describes the message omega.v1.OutcomeScore.
  * Use `create(OutcomeScoreSchema)` to create a new message.
  */
-export const OutcomeScoreSchema: GenMessage<OutcomeScore> =
-  /*@__PURE__*/
+export const OutcomeScoreSchema: GenMessage<OutcomeScore> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 4);
 
 /**
@@ -220,8 +211,7 @@ export type CheckAlignmentResponse = Message<"omega.v1.CheckAlignmentResponse"> 
  * Describes the message omega.v1.CheckAlignmentResponse.
  * Use `create(CheckAlignmentResponseSchema)` to create a new message.
  */
-export const CheckAlignmentResponseSchema: GenMessage<CheckAlignmentResponse> =
-  /*@__PURE__*/
+export const CheckAlignmentResponseSchema: GenMessage<CheckAlignmentResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 5);
 
 /**
@@ -265,8 +255,7 @@ export type GateCheckResult = Message<"omega.v1.GateCheckResult"> & {
  * Describes the message omega.v1.GateCheckResult.
  * Use `create(GateCheckResultSchema)` to create a new message.
  */
-export const GateCheckResultSchema: GenMessage<GateCheckResult> =
-  /*@__PURE__*/
+export const GateCheckResultSchema: GenMessage<GateCheckResult> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 6);
 
 /**
@@ -295,8 +284,7 @@ export type VerifyGatesRequest = Message<"omega.v1.VerifyGatesRequest"> & {
  * Describes the message omega.v1.VerifyGatesRequest.
  * Use `create(VerifyGatesRequestSchema)` to create a new message.
  */
-export const VerifyGatesRequestSchema: GenMessage<VerifyGatesRequest> =
-  /*@__PURE__*/
+export const VerifyGatesRequestSchema: GenMessage<VerifyGatesRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 7);
 
 /**
@@ -328,8 +316,7 @@ export type VerifyGatesResponse = Message<"omega.v1.VerifyGatesResponse"> & {
  * Describes the message omega.v1.VerifyGatesResponse.
  * Use `create(VerifyGatesResponseSchema)` to create a new message.
  */
-export const VerifyGatesResponseSchema: GenMessage<VerifyGatesResponse> =
-  /*@__PURE__*/
+export const VerifyGatesResponseSchema: GenMessage<VerifyGatesResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 8);
 
 /**
@@ -363,8 +350,7 @@ export type AssignedTask = Message<"omega.v1.AssignedTask"> & {
  * Describes the message omega.v1.AssignedTask.
  * Use `create(AssignedTaskSchema)` to create a new message.
  */
-export const AssignedTaskSchema: GenMessage<AssignedTask> =
-  /*@__PURE__*/
+export const AssignedTaskSchema: GenMessage<AssignedTask> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 9);
 
 /**
@@ -393,8 +379,7 @@ export type EvaluateGoalsRequest = Message<"omega.v1.EvaluateGoalsRequest"> & {
  * Describes the message omega.v1.EvaluateGoalsRequest.
  * Use `create(EvaluateGoalsRequestSchema)` to create a new message.
  */
-export const EvaluateGoalsRequestSchema: GenMessage<EvaluateGoalsRequest> =
-  /*@__PURE__*/
+export const EvaluateGoalsRequestSchema: GenMessage<EvaluateGoalsRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 10);
 
 /**
@@ -454,8 +439,7 @@ export type EvaluateGoalsResponse = Message<"omega.v1.EvaluateGoalsResponse"> & 
  * Describes the message omega.v1.EvaluateGoalsResponse.
  * Use `create(EvaluateGoalsResponseSchema)` to create a new message.
  */
-export const EvaluateGoalsResponseSchema: GenMessage<EvaluateGoalsResponse> =
-  /*@__PURE__*/
+export const EvaluateGoalsResponseSchema: GenMessage<EvaluateGoalsResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 11);
 
 /**
@@ -492,8 +476,7 @@ export type RecordOutcomeScoreRequest = Message<"omega.v1.RecordOutcomeScoreRequ
  * Describes the message omega.v1.RecordOutcomeScoreRequest.
  * Use `create(RecordOutcomeScoreRequestSchema)` to create a new message.
  */
-export const RecordOutcomeScoreRequestSchema: GenMessage<RecordOutcomeScoreRequest> =
-  /*@__PURE__*/
+export const RecordOutcomeScoreRequestSchema: GenMessage<RecordOutcomeScoreRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 12);
 
 /**
@@ -510,8 +493,7 @@ export type RecordOutcomeScoreResponse = Message<"omega.v1.RecordOutcomeScoreRes
  * Describes the message omega.v1.RecordOutcomeScoreResponse.
  * Use `create(RecordOutcomeScoreResponseSchema)` to create a new message.
  */
-export const RecordOutcomeScoreResponseSchema: GenMessage<RecordOutcomeScoreResponse> =
-  /*@__PURE__*/
+export const RecordOutcomeScoreResponseSchema: GenMessage<RecordOutcomeScoreResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 13);
 
 /**
@@ -528,8 +510,7 @@ export type GetGoalDecisionRequest = Message<"omega.v1.GetGoalDecisionRequest"> 
  * Describes the message omega.v1.GetGoalDecisionRequest.
  * Use `create(GetGoalDecisionRequestSchema)` to create a new message.
  */
-export const GetGoalDecisionRequestSchema: GenMessage<GetGoalDecisionRequest> =
-  /*@__PURE__*/
+export const GetGoalDecisionRequestSchema: GenMessage<GetGoalDecisionRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 14);
 
 /**
@@ -551,21 +532,20 @@ export type GetGoalDecisionResponse = Message<"omega.v1.GetGoalDecisionResponse"
  * Describes the message omega.v1.GetGoalDecisionResponse.
  * Use `create(GetGoalDecisionResponseSchema)` to create a new message.
  */
-export const GetGoalDecisionResponseSchema: GenMessage<GetGoalDecisionResponse> =
-  /*@__PURE__*/
+export const GetGoalDecisionResponseSchema: GenMessage<GetGoalDecisionResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 15);
 
 /**
  * @generated from message omega.v1.HasBlockingChallengesRequest
  */
-export type HasBlockingChallengesRequest = Message<"omega.v1.HasBlockingChallengesRequest"> & {};
+export type HasBlockingChallengesRequest = Message<"omega.v1.HasBlockingChallengesRequest"> & {
+};
 
 /**
  * Describes the message omega.v1.HasBlockingChallengesRequest.
  * Use `create(HasBlockingChallengesRequestSchema)` to create a new message.
  */
-export const HasBlockingChallengesRequestSchema: GenMessage<HasBlockingChallengesRequest> =
-  /*@__PURE__*/
+export const HasBlockingChallengesRequestSchema: GenMessage<HasBlockingChallengesRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 16);
 
 /**
@@ -592,8 +572,7 @@ export type HasBlockingChallengesResponse = Message<"omega.v1.HasBlockingChallen
  * Describes the message omega.v1.HasBlockingChallengesResponse.
  * Use `create(HasBlockingChallengesResponseSchema)` to create a new message.
  */
-export const HasBlockingChallengesResponseSchema: GenMessage<HasBlockingChallengesResponse> =
-  /*@__PURE__*/
+export const HasBlockingChallengesResponseSchema: GenMessage<HasBlockingChallengesResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 17);
 
 /**
@@ -632,8 +611,7 @@ export type OpenChallengeRequest = Message<"omega.v1.OpenChallengeRequest"> & {
  * Describes the message omega.v1.OpenChallengeRequest.
  * Use `create(OpenChallengeRequestSchema)` to create a new message.
  */
-export const OpenChallengeRequestSchema: GenMessage<OpenChallengeRequest> =
-  /*@__PURE__*/
+export const OpenChallengeRequestSchema: GenMessage<OpenChallengeRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 18);
 
 /**
@@ -655,8 +633,7 @@ export type OpenChallengeResponse = Message<"omega.v1.OpenChallengeResponse"> & 
  * Describes the message omega.v1.OpenChallengeResponse.
  * Use `create(OpenChallengeResponseSchema)` to create a new message.
  */
-export const OpenChallengeResponseSchema: GenMessage<OpenChallengeResponse> =
-  /*@__PURE__*/
+export const OpenChallengeResponseSchema: GenMessage<OpenChallengeResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 19);
 
 /**
@@ -683,8 +660,7 @@ export type ResolveChallengeRequest = Message<"omega.v1.ResolveChallengeRequest"
  * Describes the message omega.v1.ResolveChallengeRequest.
  * Use `create(ResolveChallengeRequestSchema)` to create a new message.
  */
-export const ResolveChallengeRequestSchema: GenMessage<ResolveChallengeRequest> =
-  /*@__PURE__*/
+export const ResolveChallengeRequestSchema: GenMessage<ResolveChallengeRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 20);
 
 /**
@@ -701,8 +677,7 @@ export type ResolveChallengeResponse = Message<"omega.v1.ResolveChallengeRespons
  * Describes the message omega.v1.ResolveChallengeResponse.
  * Use `create(ResolveChallengeResponseSchema)` to create a new message.
  */
-export const ResolveChallengeResponseSchema: GenMessage<ResolveChallengeResponse> =
-  /*@__PURE__*/
+export const ResolveChallengeResponseSchema: GenMessage<ResolveChallengeResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_safety_service, 21);
 
 /**
@@ -732,8 +707,7 @@ export enum ConstraintSeverity {
 /**
  * Describes the enum omega.v1.ConstraintSeverity.
  */
-export const ConstraintSeveritySchema: GenEnum<ConstraintSeverity> =
-  /*@__PURE__*/
+export const ConstraintSeveritySchema: GenEnum<ConstraintSeverity> = /*@__PURE__*/
   enumDesc(file_omega_v1_safety_service, 0);
 
 /**
@@ -770,8 +744,7 @@ export enum GatePhase {
 /**
  * Describes the enum omega.v1.GatePhase.
  */
-export const GatePhaseSchema: GenEnum<GatePhase> =
-  /*@__PURE__*/
+export const GatePhaseSchema: GenEnum<GatePhase> = /*@__PURE__*/
   enumDesc(file_omega_v1_safety_service, 1);
 
 /**
@@ -807,8 +780,7 @@ export enum ChallengeSeverity {
 /**
  * Describes the enum omega.v1.ChallengeSeverity.
  */
-export const ChallengeSeveritySchema: GenEnum<ChallengeSeverity> =
-  /*@__PURE__*/
+export const ChallengeSeveritySchema: GenEnum<ChallengeSeverity> = /*@__PURE__*/
   enumDesc(file_omega_v1_safety_service, 2);
 
 /**
@@ -839,8 +811,7 @@ export enum ChallengeResolution {
 /**
  * Describes the enum omega.v1.ChallengeResolution.
  */
-export const ChallengeResolutionSchema: GenEnum<ChallengeResolution> =
-  /*@__PURE__*/
+export const ChallengeResolutionSchema: GenEnum<ChallengeResolution> = /*@__PURE__*/
   enumDesc(file_omega_v1_safety_service, 3);
 
 /**
@@ -863,7 +834,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof CheckAlignmentRequestSchema;
     output: typeof CheckAlignmentResponseSchema;
-  };
+  },
   /**
    * VerifyGates runs the full verification gate system (pre- or post-cycle).
    *
@@ -873,7 +844,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof VerifyGatesRequestSchema;
     output: typeof VerifyGatesResponseSchema;
-  };
+  },
   /**
    * EvaluateGoals runs the HTN goal architecture for one cycle step.
    *
@@ -883,7 +854,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof EvaluateGoalsRequestSchema;
     output: typeof EvaluateGoalsResponseSchema;
-  };
+  },
   /**
    * RecordOutcomeScore stores a post-hoc accuracy observation for a node.
    *
@@ -893,7 +864,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof RecordOutcomeScoreRequestSchema;
     output: typeof RecordOutcomeScoreResponseSchema;
-  };
+  },
   /**
    * GetGoalDecision retrieves the stored goal decision for a cycle.
    *
@@ -903,7 +874,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof GetGoalDecisionRequestSchema;
     output: typeof GetGoalDecisionResponseSchema;
-  };
+  },
   /**
    * HasBlockingChallenges checks whether any open CRITICAL challenges block execution.
    *
@@ -913,7 +884,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof HasBlockingChallengesRequestSchema;
     output: typeof HasBlockingChallengesResponseSchema;
-  };
+  },
   /**
    * OpenChallenge records a new Devil's Advocate challenge for a subsystem.
    *
@@ -923,7 +894,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof OpenChallengeRequestSchema;
     output: typeof OpenChallengeResponseSchema;
-  };
+  },
   /**
    * ResolveChallenge marks an existing challenge as resolved or won't-fix.
    *
@@ -933,5 +904,7 @@ export const SafetyService: GenService<{
     methodKind: "unary";
     input: typeof ResolveChallengeRequestSchema;
     output: typeof ResolveChallengeResponseSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_omega_v1_safety_service, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_omega_v1_safety_service, 0);
+

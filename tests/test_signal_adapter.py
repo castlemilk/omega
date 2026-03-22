@@ -3,7 +3,7 @@ Tests for omega.eval.signal_adapter — signal format normalisation.
 
 The adapter must handle three input formats:
   1. Orchestrator-wrapped:  {node_id: {basic_signals: {...}, order_flow: {...}, ...}}
-  2. Raw VectoraNode:       {basic_signals: {...}, order_flow: {...}, ...}
+  2. Raw VictoriaNode:       {basic_signals: {...}, order_flow: {...}, ...}
   3. Flat ticker:           {ticker: {"composite": float}, ...}
 
 All must produce {ticker: {"composite": float, ...}} as output.
@@ -15,7 +15,7 @@ from omega.eval.signal_adapter import (
     adapt_signals,
     flatten_to_ticker_signals,
     is_orchestrator_format,
-    is_raw_vectora_format,
+    is_raw_victoria_format,
     unwrap_orchestrator_signals,
 )
 
@@ -31,7 +31,7 @@ _BASIC_SIGNALS = {
     ETH: {"composite": -0.2, "rsi": 60.0, "return_1d": -0.01},
 }
 
-_RAW_VECTORA = {
+_RAW_VICTORIA = {
     "basic_signals": _BASIC_SIGNALS,
     "order_flow": {"value": 0.3, "confidence": 0.8, "regime_tag": "bull", "raw": {}},
     "cross_asset": {"value": -0.1, "confidence": 0.5, "regime_tag": "neutral", "raw": {}},
@@ -41,7 +41,7 @@ _RAW_VECTORA = {
 
 NODE_ID = "abc-123"
 
-_ORCHESTRATOR_FORMAT = {NODE_ID: _RAW_VECTORA}
+_ORCHESTRATOR_FORMAT = {NODE_ID: _RAW_VICTORIA}
 
 _FLAT_TICKER = {
     TICKER: {"composite": 0.6},
@@ -58,8 +58,8 @@ class TestIsOrchestratorFormat:
     def test_detects_orchestrator_format(self):
         assert is_orchestrator_format(_ORCHESTRATOR_FORMAT) is True
 
-    def test_rejects_raw_vectora(self):
-        assert is_orchestrator_format(_RAW_VECTORA) is False
+    def test_rejects_raw_victoria(self):
+        assert is_orchestrator_format(_RAW_VICTORIA) is False
 
     def test_rejects_flat_ticker(self):
         assert is_orchestrator_format(_FLAT_TICKER) is False
@@ -69,33 +69,33 @@ class TestIsOrchestratorFormat:
 
     def test_multi_node_orchestrator(self):
         multi = {
-            "node-1": _RAW_VECTORA,
+            "node-1": _RAW_VICTORIA,
             "node-2": {"basic_signals": {TICKER: {"composite": 0.1}}},
         }
         assert is_orchestrator_format(multi) is True
 
 
 # ---------------------------------------------------------------------------
-# is_raw_vectora_format
+# is_raw_victoria_format
 # ---------------------------------------------------------------------------
 
 
-class TestIsRawVectoraFormat:
-    def test_detects_raw_vectora(self):
-        assert is_raw_vectora_format(_RAW_VECTORA) is True
+class TestIsRawVictoriaFormat:
+    def test_detects_raw_victoria(self):
+        assert is_raw_victoria_format(_RAW_VICTORIA) is True
 
     def test_detects_only_basic_signals(self):
-        assert is_raw_vectora_format({"basic_signals": {TICKER: {"composite": 0.5}}}) is True
+        assert is_raw_victoria_format({"basic_signals": {TICKER: {"composite": 0.5}}}) is True
 
     def test_rejects_orchestrator_format(self):
         # The outer dict has node_id keys, not category names
-        assert is_raw_vectora_format(_ORCHESTRATOR_FORMAT) is False
+        assert is_raw_victoria_format(_ORCHESTRATOR_FORMAT) is False
 
     def test_rejects_flat_ticker(self):
-        assert is_raw_vectora_format(_FLAT_TICKER) is False
+        assert is_raw_victoria_format(_FLAT_TICKER) is False
 
     def test_rejects_empty(self):
-        assert is_raw_vectora_format({}) is False
+        assert is_raw_victoria_format({}) is False
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +115,7 @@ class TestUnwrapOrchestratorSignals:
             "basic_signals": {TICKER: {"composite": 0.9, "rsi": 30.0}},
             "_regime": "volatile",
         }
-        multi = {"node-1": _RAW_VECTORA, "node-2": node2_signals}
+        multi = {"node-1": _RAW_VICTORIA, "node-2": node2_signals}
         result = unwrap_orchestrator_signals(multi)
         # node-2 overwrites node-1's basic_signals and _regime
         assert result["_regime"] == "volatile"
@@ -132,19 +132,19 @@ class TestUnwrapOrchestratorSignals:
 
 class TestFlattenToTickerSignals:
     def test_expands_basic_signals(self):
-        result = flatten_to_ticker_signals(_RAW_VECTORA)
+        result = flatten_to_ticker_signals(_RAW_VICTORIA)
         assert TICKER in result
         assert ETH in result
         assert result[TICKER]["composite"] == pytest.approx(0.6)
         assert result[ETH]["composite"] == pytest.approx(-0.2)
 
     def test_skips_metadata_keys(self):
-        result = flatten_to_ticker_signals(_RAW_VECTORA)
+        result = flatten_to_ticker_signals(_RAW_VICTORIA)
         assert "_weights" not in result
         assert "_regime" not in result
 
     def test_scalar_categories_become_adv_entries(self):
-        result = flatten_to_ticker_signals(_RAW_VECTORA)
+        result = flatten_to_ticker_signals(_RAW_VICTORIA)
         assert "adv_order_flow" in result
         assert result["adv_order_flow"]["composite"] == pytest.approx(0.3)
         assert "adv_cross_asset" in result
@@ -182,8 +182,8 @@ class TestAdaptSignals:
         assert ETH in result
         assert result[TICKER]["composite"] == pytest.approx(0.6)
 
-    def test_raw_vectora_format(self):
-        result = adapt_signals(_RAW_VECTORA)
+    def test_raw_victoria_format(self):
+        result = adapt_signals(_RAW_VICTORIA)
         assert TICKER in result
         assert result[TICKER]["composite"] == pytest.approx(0.6)
 
@@ -200,7 +200,7 @@ class TestAdaptSignals:
 
     def test_both_formats_produce_same_tickers(self):
         """Raw and orchestrator formats for same data should yield same tickers."""
-        from_raw = adapt_signals(_RAW_VECTORA)
+        from_raw = adapt_signals(_RAW_VICTORIA)
         from_orch = adapt_signals(_ORCHESTRATOR_FORMAT)
         assert set(from_raw.keys()) == set(from_orch.keys())
         for ticker in (TICKER, ETH):

@@ -1,6 +1,6 @@
-"""Tests for omega.nodes.vectora.dynamic_weights"""
+"""Tests for omega.nodes.victoria.dynamic_weights"""
 
-from omega.nodes.vectora.dynamic_weights import (
+from omega.nodes.victoria.dynamic_weights import (
     MAX_SINGLE_WEIGHT,
     MIN_IC_SAMPLES,
     AllocationResult,

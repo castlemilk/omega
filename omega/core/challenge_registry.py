@@ -104,7 +104,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.signal_generation",
+        target_subsystem="victoria.signal_generation",
         severity=ChallengeSeverity.HIGH,
         description=(
             "SignalGenerationNode self-improvement unlocks new indicator types each "
@@ -118,7 +118,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.verification",
+        target_subsystem="victoria.verification",
         severity=ChallengeSeverity.MEDIUM,
         description=(
             "VerificationNode uses a fixed 30% regression threshold — arbitrary. "
@@ -132,7 +132,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.data_ingestion",
+        target_subsystem="victoria.data_ingestion",
         severity=ChallengeSeverity.HIGH,
         description=(
             "DataIngestionNode falls back to cached data on failure without staleness "
@@ -142,7 +142,7 @@ _SEED_CHALLENGES = [
         ),
         evidence=(
             "data_ingestion.py — fallback path returns self._cache without timestamp "
-            "comparison; vectora_main.py logs a warning but does not halt the pipeline."
+            "comparison; victoria_main.py logs a warning but does not halt the pipeline."
         ),
     ),
     dict(
@@ -173,7 +173,7 @@ _SEED_CHALLENGES = [
         ),
     ),
     dict(
-        target_subsystem="vectora.strategy",
+        target_subsystem="victoria.strategy",
         severity=ChallengeSeverity.HIGH,
         description=(
             "StrategyNode backtest uses the same data window for both signal training "

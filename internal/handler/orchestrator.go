@@ -523,7 +523,7 @@ func (h *OrchestratorHandler) SubmitFeedback(
 	req *connect.Request[omegav1.SubmitFeedbackRequest],
 ) (*connect.Response[omegav1.SubmitFeedbackResponse], error) {
 	script := fmt.Sprintf("from omega.core.memory import MemoryKernel\n"+
-		"m = MemoryKernel(db_path='/tmp/omega_vectora_memory.db')\n"+
+		"m = MemoryKernel(db_path='/tmp/omega_victoria_memory.db')\n"+
 		"m.store_episode('human_feedback', {'text': %q, 'target_node': %q}, tags=['feedback','human'], importance=0.9)\n"+
 		"print('ok')\n",
 		req.Msg.Text, req.Msg.TargetNode)
@@ -551,7 +551,7 @@ func (h *OrchestratorHandler) StartOrchestrator(
 	if heartbeat <= 0 {
 		heartbeat = 120
 	}
-	cmd := exec.Command("python3", "-m", "omega.examples.vectora_main", //nolint:gosec
+	cmd := exec.Command("python3", "-m", "omega.examples.victoria_main", //nolint:gosec
 		"--heartbeat", fmt.Sprintf("%d", heartbeat))
 	if err := cmd.Start(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("start orchestrator: %w", err))
@@ -595,7 +595,7 @@ func (h *OrchestratorHandler) TriggerHeartbeat(
 	ctx context.Context,
 	req *connect.Request[omegav1.TriggerHeartbeatRequest],
 ) (*connect.Response[omegav1.TriggerHeartbeatResponse], error) {
-	cmd := exec.CommandContext(ctx, "python3", "-m", "omega.examples.vectora_main", "--once")
+	cmd := exec.CommandContext(ctx, "python3", "-m", "omega.examples.victoria_main", "--once")
 	go cmd.Run() //nolint:errcheck,gosec
 	return connect.NewResponse(&omegav1.TriggerHeartbeatResponse{
 		Triggered: true, Message: "triggered single heartbeat",
