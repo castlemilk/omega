@@ -202,6 +202,91 @@ func (h *NodeHandler) resolveNode(
 	)
 }
 
+// ── Registration RPCs ─────────────────────────────────────────────────────────
+
+// RegisterNode registers a new node in the registry.
+func (h *NodeHandler) RegisterNode(
+	_ context.Context,
+	req *connect.Request[omegav1.RegisterNodeRequest],
+) (*connect.Response[omegav1.RegisterNodeResponse], error) {
+	r := req.Msg
+	caps := make([]string, len(r.GetCapabilities()))
+	for i, c := range r.GetCapabilities() {
+		caps[i] = c.String()
+	}
+	entry := registry.NodeEntry{
+		ID:           r.GetId(),
+		Name:         r.GetName(),
+		Language:     r.GetLanguage(),
+		Address:      r.GetAddress(),
+		Version:      r.GetVersion(),
+		Capabilities: caps,
+	}
+	if err := h.reg.Register(entry); err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	return connect.NewResponse(&omegav1.RegisterNodeResponse{NodeId: r.GetId()}), nil
+}
+
+// DeregisterNode removes a node from the registry.
+func (h *NodeHandler) DeregisterNode(
+	_ context.Context,
+	req *connect.Request[omegav1.DeregisterNodeRequest],
+) (*connect.Response[omegav1.DeregisterNodeResponse], error) {
+	h.reg.Deregister(req.Msg.GetNodeId())
+	return connect.NewResponse(&omegav1.DeregisterNodeResponse{}), nil
+}
+
+// Heartbeat updates a node's last-seen timestamp.
+func (h *NodeHandler) Heartbeat(
+	_ context.Context,
+	req *connect.Request[omegav1.HeartbeatRequest],
+) (*connect.Response[omegav1.HeartbeatResponse], error) {
+	h.reg.Heartbeat(req.Msg.GetNodeId())
+	return connect.NewResponse(&omegav1.HeartbeatResponse{}), nil
+}
+
+// ListNodes returns all nodes in the registry, optionally filtered by status.
+func (h *NodeHandler) ListNodes(
+	_ context.Context,
+	_ *connect.Request[omegav1.ListRegisteredNodesRequest],
+) (*connect.Response[omegav1.ListRegisteredNodesResponse], error) {
+	entries := h.reg.All()
+	nodes := make([]*omegav1.NodeRegistration, 0, len(entries))
+	for _, e := range entries {
+		nodes = append(nodes, entryToRegistration(e))
+	}
+	return connect.NewResponse(&omegav1.ListRegisteredNodesResponse{Nodes: nodes}), nil
+}
+
+// GetNodeHealth returns health information for a single node.
+func (h *NodeHandler) GetNodeHealth(
+	_ context.Context,
+	req *connect.Request[omegav1.GetNodeHealthRequest],
+) (*connect.Response[omegav1.GetNodeHealthResponse], error) {
+	entry, ok := h.reg.Get(req.Msg.GetNodeId())
+	if !ok {
+		return nil, connect.NewError(connect.CodeNotFound,
+			fmt.Errorf("node %q not registered", req.Msg.GetNodeId()))
+	}
+	return connect.NewResponse(&omegav1.GetNodeHealthResponse{
+		NodeId:      entry.ID,
+		HealthScore: entry.Health,
+		Status:      string(entry.State),
+	}), nil
+}
+
+// entryToRegistration converts a registry.NodeEntry to the proto NodeRegistration type.
+func entryToRegistration(e registry.NodeEntry) *omegav1.NodeRegistration {
+	return &omegav1.NodeRegistration{
+		Id:       e.ID,
+		Name:     e.Name,
+		Language: e.Language,
+		Address:  e.Address,
+		Version:  e.Version,
+	}
+}
+
 // translateErr wraps a Connect error from a downstream node call so the caller
 // sees a consistent error code.
 func translateErr(err error) error {

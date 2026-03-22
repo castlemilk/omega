@@ -23,6 +23,7 @@ import (
 	"github.com/benebsworth/omega/internal/integrations/connectors"
 	mw "github.com/benebsworth/omega/internal/middleware"
 	"github.com/benebsworth/omega/internal/observability"
+	"github.com/benebsworth/omega/internal/registry"
 	"github.com/benebsworth/omega/internal/telemetry"
 	"github.com/benebsworth/omega/internal/terminal"
 )
@@ -197,6 +198,19 @@ func main() {
 	}
 
 	dataH := handler.NewData(connectorRegistry, binanceConnector, cgConnector)
+
+	// ── Node registry + handler ───────────────────────────────────────────────
+	nodeReg, err := registry.NewNodeRegistry()
+	if err != nil {
+		log.Printf("warn: node registry init failed (%v), using unimplemented stub", err)
+	}
+	if nodeReg != nil {
+		nodeReg.StartHealthLoop(ctx, 15*time.Second)
+	}
+	var nodeH *handler.NodeHandler
+	if nodeReg != nil {
+		nodeH = handler.NewNodeHandler(nodeReg)
+	}
 
 	// ── Mux registration ──────────────────────────────────────────────────────
 	mux := http.NewServeMux()
