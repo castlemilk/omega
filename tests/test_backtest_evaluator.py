@@ -288,3 +288,99 @@ class TestImprovementEngineWithBacktestEvaluator:
         engine.record_outcome("node-1", {"short_window": 10}, score=1.23)
         assert diag.n_trials == 1
         assert diag.best_score == pytest.approx(1.23)
+
+
+# ---------------------------------------------------------------------------
+# DataSplitter integration
+# ---------------------------------------------------------------------------
+
+
+class TestBacktestEvaluatorWithSplitter:
+    def test_from_splitter_sets_validate_window(self):
+        from omega.eval.data_splitter import DataSplitter
+
+        splitter = DataSplitter("2022-01-01", "2024-12-31")
+        ev = BacktestEvaluator.from_splitter(splitter, allow_synthetic=True)
+        split = splitter.split()
+        assert ev._oos_start == split.validate_start
+        assert ev._oos_end == split.validate_end
+
+    def test_from_splitter_stores_splitter(self):
+        from omega.eval.data_splitter import DataSplitter
+
+        splitter = DataSplitter("2022-01-01", "2024-12-31")
+        ev = BacktestEvaluator.from_splitter(splitter, allow_synthetic=True)
+        assert ev._splitter is splitter
+
+    def test_evaluate_test_split_raises_without_splitter(self):
+        ev = BacktestEvaluator(
+            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
+        )
+        with pytest.raises(RuntimeError, match="from_splitter"):
+            ev.evaluate_test_split("BTC", {})
+
+    def test_evaluate_test_split_returns_metrics(self):
+        from omega.eval.data_splitter import DataSplitter
+
+        splitter = DataSplitter("2022-01-01", "2024-12-31")
+        ev = BacktestEvaluator.from_splitter(splitter, allow_synthetic=True)
+        score, metrics = ev.evaluate_test_split("BTC", {"short_window": 10, "long_window": 30})
+        assert isinstance(score, float)
+        assert "sharpe" in metrics
+        assert "oos_start" in metrics
+        assert "oos_end" in metrics
+
+    def test_test_split_window_differs_from_validate(self):
+        from omega.eval.data_splitter import DataSplitter
+
+        splitter = DataSplitter("2022-01-01", "2024-12-31")
+        ev = BacktestEvaluator.from_splitter(splitter, allow_synthetic=True)
+        split = splitter.split()
+        _, metrics = ev.evaluate_test_split("BTC", {})
+        assert metrics["oos_start"] == split.test_start
+        assert metrics["oos_end"] == split.test_end
+        # Test window must not overlap with validate window
+        assert metrics["oos_start"] > ev._oos_end
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap Sharpe CI in metrics
+# ---------------------------------------------------------------------------
+
+
+class TestBacktestEvaluatorSharpeCI:
+    def test_metrics_include_sharpe_ci(self):
+        ev = BacktestEvaluator(
+            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
+        )
+        _, metrics = ev.evaluate("BTC", {"short_window": 10, "long_window": 30})
+        assert "sharpe_ci_lower" in metrics
+        assert "sharpe_ci_upper" in metrics
+
+    def test_ci_lower_le_sharpe_le_ci_upper(self):
+        ev = BacktestEvaluator(
+            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
+        )
+        _, metrics = ev.evaluate("BTC", {"short_window": 5, "long_window": 20})
+        assert metrics["sharpe_ci_lower"] <= metrics["sharpe"]
+        assert metrics["sharpe_ci_upper"] >= metrics["sharpe"]
+
+    def test_ci_values_are_finite_floats(self):
+        import math
+        ev = BacktestEvaluator(
+            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
+        )
+        _, metrics = ev.evaluate("BTC", {"short_window": 10, "long_window": 30})
+        assert math.isfinite(metrics["sharpe_ci_lower"])
+        assert math.isfinite(metrics["sharpe_ci_upper"])
+
+    def test_test_split_metrics_also_include_ci(self):
+        from omega.eval.data_splitter import DataSplitter
+
+        splitter = DataSplitter("2022-01-01", "2024-12-31")
+        ev = BacktestEvaluator.from_splitter(splitter, allow_synthetic=True)
+        _, metrics = ev.evaluate_test_split("BTC", {"short_window": 10, "long_window": 30})
+        assert "sharpe_ci_lower" in metrics
+        assert "sharpe_ci_upper" in metrics
+        assert metrics["sharpe_ci_lower"] <= metrics["sharpe"]
+        assert metrics["sharpe_ci_upper"] >= metrics["sharpe"]
