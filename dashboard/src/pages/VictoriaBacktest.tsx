@@ -52,7 +52,7 @@ export default function VictoriaBacktest() {
         if (!riskResult.fromMock) {
           setCrashes(riskResult.crashes);
           setAblation(riskResult.ablation);
-          setTpeSeries(riskResult.tpeSeries);
+          if (riskResult.tpeSeries?.length > 0) setTpeSeries(riskResult.tpeSeries);
           setRegimes(riskResult.regimes);
         }
         setFromMock(btResult.fromMock && curveResult.fromMock && riskResult.fromMock);
@@ -345,7 +345,9 @@ export default function VictoriaBacktest() {
           <Panel title="TPE CONVERGENCE">
             <StatRow
               label="BEST SCORE"
-              value={tpeSeries[tpeSeries.length - 1].best.toFixed(4)}
+              value={(
+                (tpeSeries.length > 0 ? tpeSeries[tpeSeries.length - 1].best : 0) ?? 0
+              ).toFixed(4)}
               glow
             />
             <StatRow label="TRIALS" value="200" color={T.white} />

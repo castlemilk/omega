@@ -631,7 +631,8 @@ function AdvPanel() {
 // Panel 8 — TPE Convergence
 // ---------------------------------------------------------------------------
 function TPEPanel() {
-  const best = tpeSeries[tpeSeries.length - 1].best;
+  const last = tpeSeries.length > 0 ? tpeSeries[tpeSeries.length - 1] : null;
+  const best = last?.best ?? 0;
   const data = tpeSeries.filter((_, i) => i % 3 === 0);
   return (
     <Panel title="TPE CONVERGENCE">
@@ -917,7 +918,7 @@ export default function VictoriaDashboard() {
         latestFunding = riskResult.latestFunding;
         latestOI = riskResult.latestOI;
         advSeries = riskResult.advSeries;
-        tpeSeries = riskResult.tpeSeries;
+        if (riskResult.tpeSeries?.length > 0) tpeSeries = riskResult.tpeSeries;
         anyLive = true;
       }
       if (!sigResult.fromMock) {
