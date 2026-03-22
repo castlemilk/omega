@@ -104,18 +104,21 @@ class ImprovementServiceClient:
         Returns:
             ScheduleEntry dict.
         """
-        return self._call(
-            "ScheduleImprovement",
-            {
-                "nodeId": node_id,
-                "priority": priority,
-                "interval": {"seconds": interval_seconds, "nanos": 0},
-                "firstRunAt": {} if first_run_delay_seconds == 0 else {
-                    "seconds": first_run_delay_seconds,
-                    "nanos": 0,
-                },
-            },
-        )
+        body: dict[str, Any] = {
+            "nodeId": node_id,
+            "priority": priority,
+            # google.protobuf.Duration JSON encoding: "<seconds>s"
+            "interval": f"{interval_seconds}s",
+        }
+        # Only include firstRunAt when a delay is requested; omitting it means "now".
+        if first_run_delay_seconds > 0:
+            import datetime
+
+            run_at = datetime.datetime.now(datetime.UTC) + datetime.timedelta(
+                seconds=first_run_delay_seconds
+            )
+            body["firstRunAt"] = run_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+        return self._call("ScheduleImprovement", body)
 
     # ── RecordOutcome ──────────────────────────────────────────────────────
 
@@ -178,13 +181,15 @@ class ImprovementServiceClient:
             {params: dict[str, float], expectedImprovement: float, strategy: str}
         """
         encoded_history = []
-        for entry in (history or []):
-            encoded_history.append({
-                "params": entry.get("params", {}),
-                "score": float(entry.get("score", 0.0)),
-                "success": bool(entry.get("success", True)),
-                "cycle": int(entry.get("cycle", 0)),
-            })
+        for entry in history or []:
+            encoded_history.append(
+                {
+                    "params": entry.get("params", {}),
+                    "score": float(entry.get("score", 0.0)),
+                    "success": bool(entry.get("success", True)),
+                    "cycle": int(entry.get("cycle", 0)),
+                }
+            )
 
         encoded_space: dict[str, str] = {}
         for k, v in (param_space or {}).items():
