@@ -12,6 +12,9 @@ RUN CGO_ENABLED=0 go build -o /omega-api ./cmd/omega-api
 # ── Runtime ────────────────────────────────────────────────────────────────────
 FROM debian:bookworm-slim
 
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN mkdir -p /data
 
 COPY --from=builder /omega-api /omega-api
