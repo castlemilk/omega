@@ -71,7 +71,6 @@ func main() {
 	// ---------------------------------------------------------------------------
 	stateDBPath := db.StateDBPath()
 	memoryDBPath := db.MemoryDBPath()
-	_ = os.MkdirAll("/tmp", 0755) //nolint:errcheck,gosec
 	for _, p := range []string{stateDBPath, memoryDBPath} {
 		if _, err := os.Stat(p); os.IsNotExist(err) {
 			f, _ := os.Create(p) //nolint:gosec

@@ -57,11 +57,16 @@ class DashboardNode:
         self,
         state_store: Any,
         api_url: str = "http://localhost:8080",
-        state_db_path: str = "/tmp/omega_victoria_state.db",
+        state_db_path: str | None = None,
     ) -> None:
+        import os
+
         self._store = state_store
         self._api_url = api_url.rstrip("/")
-        self._state_db_path = state_db_path
+        self._state_db_path = state_db_path or os.environ.get(
+            "OMEGA_STATE_DB_PATH",
+            os.path.join(os.environ.get("OMEGA_DATA_DIR", "./data"), "omega_victoria_state.db"),
+        )
 
         # Metrics tracking
         self._api_latencies_ms: list[float] = []

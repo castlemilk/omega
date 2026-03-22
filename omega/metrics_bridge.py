@@ -49,9 +49,7 @@ try:
 
     _OTEL_AVAILABLE = True
 except ImportError:
-    logger.info(
-        "opentelemetry-sdk not installed — metrics bridge will use SQLite fallback"
-    )
+    logger.info("opentelemetry-sdk not installed — metrics bridge will use SQLite fallback")
 
 if TYPE_CHECKING:
     from opentelemetry.metrics import Counter, Histogram, Meter
@@ -61,7 +59,10 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 _DEFAULT_OTLP_ENDPOINT = os.environ.get("OTLP_ENDPOINT", "http://localhost:4318")
-_BRIDGE_DB_PATH = os.environ.get("OMEGA_BRIDGE_DB", "/tmp/omega_metrics_bridge.db")
+_BRIDGE_DB_PATH = os.environ.get(
+    "OMEGA_BRIDGE_DB",
+    os.path.join(os.environ.get("OMEGA_DATA_DIR", "./data"), "omega_metrics_bridge.db"),
+)
 _EXPORT_INTERVAL_MS = 15_000  # 15 s — matches Go side
 
 
@@ -192,11 +193,13 @@ class MetricsBridge:
         service_version: str,
         otlp_endpoint: str,
     ) -> None:
-        resource = Resource.create({
-            "service.name": service_name,
-            "service.version": service_version,
-            "telemetry.sdk.language": "python",
-        })
+        resource = Resource.create(
+            {
+                "service.name": service_name,
+                "service.version": service_version,
+                "telemetry.sdk.language": "python",
+            }
+        )
 
         exporter = OTLPMetricExporter(
             endpoint=otlp_endpoint + "/v1/metrics",
@@ -251,8 +254,7 @@ class MetricsBridge:
             )
         """)
         self._db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_metrics_name_ts "
-            "ON omega_metrics(metric_name, ts)"
+            "CREATE INDEX IF NOT EXISTS idx_metrics_name_ts ON omega_metrics(metric_name, ts)"
         )
         self._db.commit()
         logger.info("MetricsBridge: using SQLite fallback at %s", _BRIDGE_DB_PATH)

@@ -136,3 +136,8 @@ ignore_errors = true
 # Pre-existing no-any-return issues in math helpers — suppressed pending refactor
 module = ["omega.core.memory_v2"]
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Bridge clients return untyped dicts from JSON HTTP responses — no-any-return suppressed
+module = ["omega.bridge.*"]
+warn_return_any = false

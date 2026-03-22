@@ -41,6 +41,13 @@ from typing import Any
 
 logger = logging.getLogger("omega.core.config")
 
+
+def _db_path(filename: str) -> str:
+    """Resolve a DB filename against OMEGA_DATA_DIR (default: ./data)."""
+    data_dir = os.environ.get("OMEGA_DATA_DIR", "./data")
+    return os.path.join(data_dir, filename)
+
+
 # Optional YAML support — fail gracefully if PyYAML is not installed
 _YAML_AVAILABLE = False
 try:
@@ -60,14 +67,21 @@ except ImportError:
 class DatabaseConfig:
     """SQLite database file paths."""
 
-    state_db_path: str = "/tmp/omega_victoria_state.db"
+    state_db_path: str = field(default_factory=lambda: _db_path("omega_victoria_state.db"))
     """Node registry, executions, traces, issues, costs, improvements."""
 
-    memory_db_path: str = "/tmp/omega_victoria_memory.db"
+    memory_db_path: str = field(default_factory=lambda: _db_path("omega_victoria_memory.db"))
     """Episodic + semantic memory (MemoryKernel)."""
 
-    orchestrator_db_path: str = "/tmp/omega_victoria.db"
+    orchestrator_db_path: str = field(default_factory=lambda: _db_path("omega_victoria.db"))
     """Orchestrator internal state."""
+
+    def ensure_dirs(self) -> None:
+        """Create parent directories for all configured DB paths."""
+        for path in (self.state_db_path, self.memory_db_path, self.orchestrator_db_path):
+            dir_ = os.path.dirname(path)
+            if dir_:
+                os.makedirs(dir_, exist_ok=True)
 
 
 @dataclass
@@ -195,9 +209,9 @@ class OmegaConfig:
         _e = os.environ.get
 
         database = DatabaseConfig(
-            state_db_path=_e("OMEGA_STATE_DB_PATH", "/tmp/omega_victoria_state.db"),
-            memory_db_path=_e("OMEGA_MEMORY_DB_PATH", "/tmp/omega_victoria_memory.db"),
-            orchestrator_db_path=_e("OMEGA_DB_PATH", "/tmp/omega_victoria.db"),
+            state_db_path=_e("OMEGA_STATE_DB_PATH") or _db_path("omega_victoria_state.db"),
+            memory_db_path=_e("OMEGA_MEMORY_DB_PATH") or _db_path("omega_victoria_memory.db"),
+            orchestrator_db_path=_e("OMEGA_DB_PATH") or _db_path("omega_victoria.db"),
         )
 
         nodes = NodesConfig(
@@ -306,9 +320,9 @@ class OmegaConfig:
         """
         if yaml_path is None:
             yaml_path = os.environ.get("OMEGA_CONFIG")
-        if yaml_path:
-            return cls.from_yaml(yaml_path)
-        return cls.from_env()
+        cfg = cls.from_yaml(yaml_path) if yaml_path else cls.from_env()
+        cfg.database.ensure_dirs()
+        return cfg
 
     # ------------------------------------------------------------------
     # Validation & introspection

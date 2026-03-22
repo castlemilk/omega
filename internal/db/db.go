@@ -7,31 +7,53 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	_ "modernc.org/sqlite"
 )
 
-const (
-	defaultStateDBPath  = "/tmp/omega_victoria_state.db"
-	defaultMemoryDBPath = "/tmp/omega_victoria_memory.db"
-	ChallengeDBPath     = "/tmp/omega_challenge_registry.db"
-)
+// DataDir returns the base directory for all Omega SQLite databases.
+// Reads OMEGA_DATA_DIR; defaults to ./data for dev, /data in Docker.
+func DataDir() string {
+	if d := os.Getenv("OMEGA_DATA_DIR"); d != "" {
+		return d
+	}
+	return "./data"
+}
 
-// StateDBPath returns the SQLite state DB path, honouring OMEGA_STATE_DB_PATH.
+// StateDBPath returns the SQLite state DB path.
+// Reads OMEGA_STATE_DB_PATH first, then OMEGA_DATA_DIR/omega_victoria_state.db.
 func StateDBPath() string {
 	if p := os.Getenv("OMEGA_STATE_DB_PATH"); p != "" {
 		return p
 	}
-	return defaultStateDBPath
+	return filepath.Join(DataDir(), "omega_victoria_state.db")
 }
 
-// MemoryDBPath returns the SQLite memory DB path, honouring OMEGA_MEMORY_DB_PATH.
+// MemoryDBPath returns the SQLite memory DB path.
+// Reads OMEGA_MEMORY_DB_PATH first, then OMEGA_DATA_DIR/omega_victoria_memory.db.
 func MemoryDBPath() string {
 	if p := os.Getenv("OMEGA_MEMORY_DB_PATH"); p != "" {
 		return p
 	}
-	return defaultMemoryDBPath
+	return filepath.Join(DataDir(), "omega_victoria_memory.db")
+}
+
+// ChallengeDBPath returns the SQLite challenge registry DB path.
+// Reads OMEGA_CHALLENGE_DB_PATH first, then OMEGA_DATA_DIR/omega_challenge_registry.db.
+func ChallengeDBPath() string {
+	if p := os.Getenv("OMEGA_CHALLENGE_DB_PATH"); p != "" {
+		return p
+	}
+	return filepath.Join(DataDir(), "omega_challenge_registry.db")
+}
+
+// ensureDir creates the parent directory of path if it does not exist.
+func ensureDir(path string) {
+	if dir := filepath.Dir(path); dir != "" && dir != "." {
+		os.MkdirAll(dir, 0750) //nolint:errcheck,gosec
+	}
 }
 
 // DB holds connections to both Omega SQLite databases.
@@ -43,6 +65,9 @@ type DB struct {
 
 // New opens both databases in WAL mode for concurrent reads.
 func New(stateDBPath, memoryDBPath string) (*DB, error) {
+	ensureDir(stateDBPath)
+	ensureDir(memoryDBPath)
+	ensureDir(ChallengeDBPath())
 	state, err := openDB(stateDBPath)
 	if err != nil {
 		return nil, fmt.Errorf("open state db: %w", err)
@@ -52,7 +77,7 @@ func New(stateDBPath, memoryDBPath string) (*DB, error) {
 		state.Close() //nolint:errcheck,gosec,gosec
 		return nil, fmt.Errorf("open memory db: %w", err)
 	}
-	challengeDB, _ := openDB(ChallengeDBPath) // nil if file not yet created by Python
+	challengeDB, _ := openDB(ChallengeDBPath()) // nil if file not yet created by Python
 	d := &DB{state: state, memory: memory, challenge: challengeDB}
 	if err := d.ensureStateTables(); err != nil {
 		state.Close()  //nolint:errcheck,gosec

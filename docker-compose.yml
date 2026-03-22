@@ -15,6 +15,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      OMEGA_DATA_DIR: /data
       OMEGA_STATE_DB_PATH: /data/omega_victoria_state.db
       OMEGA_MEMORY_DB_PATH: /data/omega_victoria_memory.db
       OMEGA_DB_PATH: /data/omega_victoria.db
@@ -41,6 +42,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      OMEGA_DATA_DIR: /data
       OMEGA_STATE_DB_PATH: /data/omega_victoria_state.db
       OMEGA_MEMORY_DB_PATH: /data/omega_victoria_memory.db
     ports:

@@ -4,14 +4,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"os"
+	"path/filepath"
 )
 
 // VictoriaDBPath returns the SQLite DB path for Victoria trading state.
+// Reads VICTORIA_STATE_DB_PATH first, then OMEGA_DATA_DIR/victoria_state.db.
 func VictoriaDBPath() string {
 	if p := os.Getenv("VICTORIA_STATE_DB_PATH"); p != "" {
 		return p
 	}
-	return "/tmp/victoria_state.db"
+	return filepath.Join(DataDir(), "victoria_state.db")
 }
 
 // ── Victoria DB ────────────────────────────────────────────────────────────────
@@ -25,6 +27,7 @@ type VictoriaDB struct {
 // NewVictoria opens the Victoria SQLite database. If the file doesn't exist yet,
 // it creates an empty one so the server can start before the trading engine runs.
 func NewVictoria(path string) (*VictoriaDB, error) {
+	ensureDir(path)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		f, _ := os.Create(path) //nolint:gosec
 		if f != nil {
