@@ -62,7 +62,10 @@ func main() {
 	// ---------------------------------------------------------------------------
 	// Auth — JWT + API key interceptor (optional, controlled by OMEGA_AUTH_ENABLED)
 	// ---------------------------------------------------------------------------
-	jwtValidator, _ := auth.NewValidator()  // nil if not configured (auth disabled)
+	jwtValidator, jwtErr := auth.NewValidator()
+	if jwtErr != nil {
+		log.Printf("warn: JWT validator init: %v — JWT auth will be unavailable", jwtErr)
+	}
 	keyStore := auth.NewKeyStore()
 	authCfg := auth.DefaultConfig()
 	authInterceptor := auth.NewInterceptor(authCfg, jwtValidator, keyStore)

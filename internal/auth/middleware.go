@@ -96,16 +96,15 @@ func (a *authInterceptor) authenticate(ctx context.Context, procedure string, he
 
 	// Check allowlist.
 	for _, prefix := range a.cfg.Allowlist {
-		if strings.HasPrefix(procedure, prefix) || procedure == prefix {
+		if strings.HasPrefix(procedure, prefix) {
 			return ctx, nil
 		}
 	}
 
 	// Try Bearer JWT.
 	if authHeader := header.Get("Authorization"); authHeader != "" {
-		const prefix = "Bearer "
-		if strings.HasPrefix(authHeader, prefix) {
-			tokenStr := authHeader[len(prefix):]
+		if len(authHeader) > 7 && strings.EqualFold(authHeader[:7], "Bearer ") && a.jwt != nil {
+			tokenStr := authHeader[7:]
 			claims, err := a.jwt.ValidateToken(tokenStr)
 			if err == nil {
 				id := &Identity{

@@ -3,7 +3,6 @@ package auth
 import (
 	"crypto/subtle"
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -75,17 +74,19 @@ func (ks *KeyStore) Validate(key string) (*Identity, error) {
 		return nil, errors.New("auth: empty API key")
 	}
 
+	keyBytes := []byte(key)
+	var found *Identity
 	for keyID, secret := range ks.keys {
-		if subtle.ConstantTimeCompare([]byte(key), []byte(secret)) == 1 {
-			return &Identity{
-				Subject: keyID,
-				Roles:   []string{"api"},
-				KeyID:   keyID,
-			}, nil
+		match := subtle.ConstantTimeCompare(keyBytes, []byte(secret)) == 1
+		if match && found == nil {
+			id := Identity{Subject: keyID, KeyID: keyID, Roles: []string{"api"}}
+			found = &id
 		}
 	}
-
-	return nil, fmt.Errorf("auth: unknown API key")
+	if found == nil {
+		return nil, errors.New("auth: unknown API key")
+	}
+	return found, nil
 }
 
 // Allow checks the rate limiter for the given keyID.
