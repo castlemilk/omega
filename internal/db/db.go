@@ -70,7 +70,43 @@ func New(stateDBPath, memoryDBPath string) (*DB, error) {
 		}
 		return nil, fmt.Errorf("ensure brain tables: %w", err)
 	}
+	if err := d.ensureTerminalTables(); err != nil {
+		state.Close()  //nolint:errcheck,gosec
+		memory.Close() //nolint:errcheck,gosec
+		if challengeDB != nil {
+			challengeDB.Close() //nolint:errcheck,gosec
+		}
+		return nil, fmt.Errorf("ensure terminal tables: %w", err)
+	}
 	return d, nil
+}
+
+func (d *DB) ensureTerminalTables() error {
+	_, err := d.state.Exec(`
+		CREATE TABLE IF NOT EXISTS terminal_sessions (
+			id             TEXT PRIMARY KEY,
+			work_dir       TEXT NOT NULL DEFAULT '',
+			autonomy_level TEXT NOT NULL DEFAULT 'pico',
+			status         TEXT NOT NULL DEFAULT 'active',
+			created_at     REAL NOT NULL,
+			closed_at      REAL
+		);
+		CREATE TABLE IF NOT EXISTS terminal_commands (
+			id           TEXT PRIMARY KEY,
+			session_id   TEXT NOT NULL REFERENCES terminal_sessions(id),
+			command      TEXT NOT NULL,
+			args         TEXT NOT NULL DEFAULT '[]',
+			exit_code    INTEGER NOT NULL DEFAULT 0,
+			stdout       TEXT NOT NULL DEFAULT '',
+			stderr       TEXT NOT NULL DEFAULT '',
+			duration_ms  INTEGER NOT NULL DEFAULT 0,
+			truncated    INTEGER NOT NULL DEFAULT 0,
+			executed_at  REAL NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_terminal_commands_session
+			ON terminal_commands(session_id);
+	`)
+	return err
 }
 
 func openDB(path string) (*sql.DB, error) {

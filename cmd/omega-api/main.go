@@ -19,6 +19,7 @@ import (
 	"github.com/benebsworth/omega/internal/handler"
 	"github.com/benebsworth/omega/internal/observability"
 	"github.com/benebsworth/omega/internal/telemetry"
+	"github.com/benebsworth/omega/internal/terminal"
 )
 
 func main() {
@@ -147,6 +148,10 @@ func main() {
 
 	improvementH := handler.NewImprovement()
 
+	// ── Terminal manager + handler ────────────────────────────────────────────
+	terminalMgr := terminal.NewManager(terminal.WithDB(database))
+	terminalH := handler.NewTerminal(terminalMgr, database)
+
 	// ── Mux registration ──────────────────────────────────────────────────────
 	mux := http.NewServeMux()
 
@@ -188,6 +193,9 @@ func main() {
 
 	impPath, impSvcHandler := omegav1connect.NewImprovementServiceHandler(improvementH, withMetrics()...)
 	mux.Handle(impPath, impSvcHandler)
+
+	termPath, termSvcHandler := omegav1connect.NewTerminalServiceHandler(terminalH, withMetrics()...)
+	mux.Handle(termPath, termSvcHandler)
 
 	// Observability endpoints.
 	observability.NewHealthHandler(composite).RegisterRoutes(mux)

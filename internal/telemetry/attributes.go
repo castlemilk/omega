@@ -59,6 +59,21 @@ const (
 	SpanMiddlewareChain      = "omega.middleware.chain"
 )
 
+// Terminal execution
+const (
+	SpanTerminalExec = "omega.terminal.exec"
+)
+
+var (
+	AttrTerminalSessionID     = attribute.Key("omega.terminal.session_id")
+	AttrTerminalCommand       = attribute.Key("omega.terminal.command")
+	AttrTerminalExitCode      = attribute.Key("omega.terminal.exit_code")
+	AttrTerminalAutonomyLevel = attribute.Key("omega.terminal.autonomy_level")
+	AttrTerminalCycleID       = attribute.Key("omega.terminal.cycle_id")
+	AttrTerminalDurationMS    = attribute.Key("omega.terminal.duration_ms")
+	AttrTerminalBlocked       = attribute.Key("omega.terminal.blocked")
+)
+
 // Meter/instrument names.
 const (
 	MetricHandlerRequestDuration  = "omega.handler.request.duration"
