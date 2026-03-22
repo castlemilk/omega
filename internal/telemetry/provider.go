@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -10,13 +11,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
-
 )
 
 // Config controls the OTel provider initialisation.
@@ -168,6 +170,7 @@ func buildTracerProvider(ctx context.Context, cfg Config, res *resource.Resource
 	var exp sdktrace.SpanExporter
 
 	if cfg.OtlpEndpoint != "" {
+		log.Printf("[telemetry] traces → OTLP %s", cfg.OtlpEndpoint)
 		e, err := otlptracehttp.New(ctx,
 			otlptracehttp.WithEndpointURL(cfg.OtlpEndpoint+"/v1/traces"),
 			otlptracehttp.WithInsecure(),
@@ -177,9 +180,12 @@ func buildTracerProvider(ctx context.Context, cfg Config, res *resource.Resource
 		}
 		exp = e
 	} else {
-		// No-op exporter — traces are still created for context propagation
-		// but not sent anywhere. Useful in development / tests.
-		exp = &noopSpanExporter{}
+		log.Printf("[telemetry] OTLP_ENDPOINT not set — traces → stdout (set OTLP_ENDPOINT to send to a collector)")
+		e, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+		if err != nil {
+			return nil, err
+		}
+		exp = e
 	}
 
 	sampler := sdktrace.TraceIDRatioBased(cfg.SampleRate)
@@ -196,6 +202,7 @@ func buildTracerProvider(ctx context.Context, cfg Config, res *resource.Resource
 
 func buildMeterProvider(ctx context.Context, cfg Config, res *resource.Resource) (*sdkmetric.MeterProvider, error) {
 	if cfg.OtlpEndpoint != "" {
+		log.Printf("[telemetry] metrics → OTLP %s", cfg.OtlpEndpoint)
 		exp, err := otlpmetrichttp.New(ctx,
 			otlpmetrichttp.WithEndpointURL(cfg.OtlpEndpoint+"/v1/metrics"),
 			otlpmetrichttp.WithInsecure(),
@@ -213,15 +220,17 @@ func buildMeterProvider(ctx context.Context, cfg Config, res *resource.Resource)
 		), nil
 	}
 
-	// No-op: metrics are recorded in-memory but never exported.
-	return sdkmetric.NewMeterProvider(sdkmetric.WithResource(res)), nil
+	log.Printf("[telemetry] OTLP_ENDPOINT not set — metrics → stdout (set OTLP_ENDPOINT to send to a collector)")
+	exp, err := stdoutmetric.New()
+	if err != nil {
+		return nil, err
+	}
+	return sdkmetric.NewMeterProvider(
+		sdkmetric.WithResource(res),
+		sdkmetric.WithReader(
+			sdkmetric.NewPeriodicReader(exp,
+				sdkmetric.WithInterval(cfg.MetricExportInterval),
+			),
+		),
+	), nil
 }
-
-// ---------------------------------------------------------------------------
-// noopSpanExporter — used when no OTLP endpoint is configured
-// ---------------------------------------------------------------------------
-
-type noopSpanExporter struct{}
-
-func (noopSpanExporter) ExportSpans(_ context.Context, _ []sdktrace.ReadOnlySpan) error { return nil }
-func (noopSpanExporter) Shutdown(_ context.Context) error                               { return nil }
