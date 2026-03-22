@@ -372,7 +372,7 @@ func withPanicRecovery(h http.Handler) http.Handler {
 func withExecChain(chain *mw.Chain, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := r.URL.Path
-		if p == "/healthz" || p == "/readyz" || p == "/metrics" || strings.HasPrefix(p, "/debug/") {
+		if p == "/healthz" || p == "/readyz" || p == "/metrics" || strings.HasPrefix(p, "/debug/") || strings.HasPrefix(p, "/omega.v1.") {
 			h.ServeHTTP(w, r)
 			return
 		}
