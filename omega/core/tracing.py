@@ -45,12 +45,21 @@ class TraceContext:
     Immutable context carrier. Propagate through the call chain.
 
     frozen=True so it can be used as a dict key and can't be mutated.
+
+    trace_id and span_id conform to W3C Trace Context (RFC):
+      trace_id : 32 lowercase hex chars (128-bit)
+      span_id  : 16 lowercase hex chars (64-bit)
     """
 
     trace_id: str
     span_id: str
     parent_span_id: str | None = None
     cycle: int = 0
+
+    @property
+    def traceparent(self) -> str:
+        """W3C traceparent header value: ``00-<trace_id>-<span_id>-01``."""
+        return f"00-{self.trace_id}-{self.span_id}-01"
 
     def child(self, new_span_id: str) -> "TraceContext":
         """Create a child context with this span as parent."""
@@ -110,7 +119,7 @@ class Tracer:
         node_name: str | None = None,
     ) -> TraceContext:
         """Start a new root trace. Returns the root TraceContext."""
-        trace_id = str(uuid.uuid4())
+        trace_id = uuid.uuid4().hex  # 32 lowercase hex chars — W3C trace-id format
         span_id = self._store.begin_span(
             trace_id=trace_id,
             node_id=node_id or "orchestrator",

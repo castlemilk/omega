@@ -511,7 +511,7 @@ class SQLiteBackend(StateBackend):
         parent_span_id: str | None = None,
         cycle: int = 0,
     ) -> str:
-        span_id = str(uuid.uuid4())
+        span_id = uuid.uuid4().hex[:16]  # 16 lowercase hex chars — W3C parent-id format
         now = time.time()
         self._conn.execute(
             """INSERT INTO traces

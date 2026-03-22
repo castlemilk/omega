@@ -38,16 +38,19 @@ class StateServiceClient:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
 
-    def _call(self, method: str, body: dict) -> Any:
+    def _call(self, method: str, body: dict, traceparent: str | None = None) -> Any:
         url = self._base_url + _BASE_PATH + method
         data = json.dumps(body).encode()
+        headers: dict[str, str] = {
+            "Content-Type": "application/json",
+            "Connect-Protocol-Version": "1",
+        }
+        if traceparent:
+            headers["traceparent"] = traceparent
         req = urllib.request.Request(
             url,
             data=data,
-            headers={
-                "Content-Type": "application/json",
-                "Connect-Protocol-Version": "1",
-            },
+            headers=headers,
             method="POST",
         )
         try:
@@ -106,6 +109,7 @@ class StateServiceClient:
         span_id: str | None = None,
         cycle: int = 0,
     ) -> str:
+        traceparent = f"00-{trace_id}-{span_id}-01" if trace_id and span_id else None
         resp = self._call(
             "BeginExecution",
             {
@@ -116,6 +120,7 @@ class StateServiceClient:
                 "spanId": span_id or "",
                 "cycle": cycle,
             },
+            traceparent=traceparent,
         )
         return str(resp["execId"])
 
@@ -147,6 +152,7 @@ class StateServiceClient:
         parent_span_id: str | None = None,
         cycle: int = 0,
     ) -> str:
+        traceparent = f"00-{trace_id}-{parent_span_id}-01" if parent_span_id else None
         resp = self._call(
             "BeginSpan",
             {
@@ -157,6 +163,7 @@ class StateServiceClient:
                 "parentSpanId": parent_span_id or "",
                 "cycle": cycle,
             },
+            traceparent=traceparent,
         )
         return str(resp["spanId"])
 
