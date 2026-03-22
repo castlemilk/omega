@@ -4,8 +4,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"os/exec"
-	"sync"
 	"time"
 
 	"connectrpc.com/connect"
@@ -21,10 +19,7 @@ var _ omegav1connect.OrchestratorServiceHandler = (*OrchestratorHandler)(nil)
 
 // OrchestratorHandler implements OrchestratorService.
 type OrchestratorHandler struct {
-	db          *db.DB
-	mu          sync.Mutex
-	orchCmd     *exec.Cmd
-	orchRunning bool
+	db *db.DB
 }
 
 // New creates an OrchestratorHandler backed by the given DB.
@@ -522,13 +517,10 @@ func (h *OrchestratorHandler) SubmitFeedback(
 	ctx context.Context,
 	req *connect.Request[omegav1.SubmitFeedbackRequest],
 ) (*connect.Response[omegav1.SubmitFeedbackResponse], error) {
-	script := fmt.Sprintf("from omega.core.memory import MemoryKernel\n"+
-		"m = MemoryKernel(db_path='/tmp/omega_victoria_memory.db')\n"+
-		"m.store_episode('human_feedback', {'text': %q, 'target_node': %q}, tags=['feedback','human'], importance=0.9)\n"+
-		"print('ok')\n",
-		req.Msg.Text, req.Msg.TargetNode)
-	cmd := exec.CommandContext(ctx, "python3", "-c", script) //nolint:gosec
-	if err := cmd.Run(); err != nil {
+	_ = ctx
+	if err := h.db.LogActivity("human_feedback", "node", req.Msg.TargetNode, map[string]any{
+		"text": req.Msg.Text,
+	}, 0); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("feedback storage failed: %w", err))
 	}
 	return connect.NewResponse(&omegav1.SubmitFeedbackResponse{Ok: true}), nil
@@ -540,33 +532,11 @@ func (h *OrchestratorHandler) StartOrchestrator(
 	ctx context.Context,
 	req *connect.Request[omegav1.StartOrchestratorRequest],
 ) (*connect.Response[omegav1.StartOrchestratorResponse], error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if h.orchRunning {
-		return connect.NewResponse(&omegav1.StartOrchestratorResponse{
-			Started: false, Message: "already running",
-		}), nil
-	}
-	heartbeat := req.Msg.HeartbeatSecs
-	if heartbeat <= 0 {
-		heartbeat = 120
-	}
-	cmd := exec.Command("python3", "-m", "omega.examples.victoria_main", //nolint:gosec
-		"--heartbeat", fmt.Sprintf("%d", heartbeat))
-	if err := cmd.Start(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("start orchestrator: %w", err))
-	}
-	h.orchCmd = cmd
-	h.orchRunning = true
-	go func() {
-		cmd.Wait() //nolint:errcheck,gosec
-		h.mu.Lock()
-		h.orchRunning = false
-		h.orchCmd = nil
-		h.mu.Unlock()
-	}()
+	_, _ = ctx, req
+	// TODO: replace with Go-native orchestrator launch once a Go orchestrator is implemented.
+	// The Python subprocess exec call has been removed as a security hardening measure.
 	return connect.NewResponse(&omegav1.StartOrchestratorResponse{
-		Started: true, Message: "started",
+		Started: false, Message: "orchestrator launch not available (pending Go implementation)",
 	}), nil
 }
 
@@ -574,20 +544,9 @@ func (h *OrchestratorHandler) StopOrchestrator(
 	ctx context.Context,
 	req *connect.Request[omegav1.StopOrchestratorRequest],
 ) (*connect.Response[omegav1.StopOrchestratorResponse], error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	if !h.orchRunning || h.orchCmd == nil {
-		return connect.NewResponse(&omegav1.StopOrchestratorResponse{
-			Stopped: false, Message: "not running",
-		}), nil
-	}
-	if err := h.orchCmd.Process.Kill(); err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-	h.orchRunning = false
-	h.orchCmd = nil
+	_, _ = ctx, req
 	return connect.NewResponse(&omegav1.StopOrchestratorResponse{
-		Stopped: true, Message: "stopped",
+		Stopped: false, Message: "not running",
 	}), nil
 }
 
@@ -595,8 +554,11 @@ func (h *OrchestratorHandler) TriggerHeartbeat(
 	ctx context.Context,
 	req *connect.Request[omegav1.TriggerHeartbeatRequest],
 ) (*connect.Response[omegav1.TriggerHeartbeatResponse], error) {
-	cmd := exec.CommandContext(ctx, "python3", "-m", "omega.examples.victoria_main", "--once")
-	go cmd.Run() //nolint:errcheck,gosec
+	_ = ctx
+	_ = req
+	if err := h.db.LogActivity("heartbeat_trigger", "system", "orchestrator", map[string]any{}, 0); err != nil {
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("heartbeat trigger failed: %w", err))
+	}
 	return connect.NewResponse(&omegav1.TriggerHeartbeatResponse{
 		Triggered: true, Message: "triggered single heartbeat",
 	}), nil

@@ -512,7 +512,7 @@ func buildPriceSeries(
 		low := math.Max(math.Min(open, close)*(1-intraRange), 1e-10)
 
 		// Volume spikes with large returns (kurtotic relationship).
-		volFactor := 1.0 + ret*20.0 + math.Pow(ret*10, 2)*5.0
+		volFactor := 1.0 + ret*20.0 + (ret*10)*(ret*10)*5.0
 		volume := math.Max(volFactor*(0.8+rng.Float64()*0.4), 0.01)
 
 		bars[i] = OHLCV{

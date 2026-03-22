@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
+	mw "github.com/benebsworth/omega/internal/middleware"
 	"github.com/benebsworth/omega/internal/observability"
 	"github.com/benebsworth/omega/internal/telemetry"
 )
@@ -196,18 +198,53 @@ func main() {
 
 	_ = bus // available for event streaming integration
 
+	// ── Execution middleware chain (wired into HTTP handler) ──────────────────
+	// context_recovery: injects recovery signal when execution depth exceeds threshold.
+	// metrics_collector: counts total/success/error executions.
+	// loop_detection: warns/aborts on repeated identical (node, action, path) calls.
+	// TODO(security): add mw.NewAutonomyGateMiddleware() once auth is implemented.
+	mwCounters := new(mw.Counters)
+	execChain := mw.NewChain(
+		func(_ context.Context, _ *mw.ExecutionRequest) (*mw.ExecutionResponse, error) {
+			return &mw.ExecutionResponse{}, nil
+		},
+		mw.NewContextRecoveryMiddleware(0),
+		mw.NewMetricsCollectorMiddleware(mwCounters),
+		mw.NewLoopDetectionMiddleware(),
+	)
+
 	addr := ":8080"
 	if p := os.Getenv("OMEGA_API_PORT"); p != "" {
 		addr = ":" + p
 	}
 	log.Printf("Omega API listening on %s", addr) //nolint:gosec
 	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics (OTel endpoint=%q)", telCfg.OtlpEndpoint)
-	log.Fatal(http.ListenAndServe(addr, h2c.NewHandler(withCORS(mux), &http2.Server{}))) //nolint:gosec,gocritic
+	log.Fatal(http.ListenAndServe(addr, h2c.NewHandler( //nolint:gosec,gocritic
+		withCORS(withPanicRecovery(withExecChain(execChain, mux))),
+		&http2.Server{},
+	)))
 }
 
+// withCORS enforces a configurable CORS origin allowlist.
+// Origins are read from OMEGA_CORS_ORIGINS (comma-separated).
+// Defaults to localhost dev origins when the env var is unset.
 func withCORS(h http.Handler) http.Handler {
+	rawOrigins := os.Getenv("OMEGA_CORS_ORIGINS")
+	if rawOrigins == "" {
+		rawOrigins = "http://localhost:5173,http://localhost:3000,http://localhost:3001"
+	}
+	allowed := make(map[string]bool)
+	for _, o := range strings.Split(rawOrigins, ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			allowed[o] = true
+		}
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		if origin := r.Header.Get("Origin"); allowed[origin] {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+			w.Header().Set("Vary", "Origin")
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers",
 			"Content-Type, Connect-Protocol-Version, Connect-Timeout-Ms, "+
@@ -218,6 +255,43 @@ func withCORS(h http.Handler) http.Handler {
 				"connect-accept-encoding, connect-content-encoding")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		h.ServeHTTP(w, r)
+	})
+}
+
+// withPanicRecovery wraps h with an HTTP-level panic recovery handler.
+// Any panics are logged and converted to 500 responses.
+func withPanicRecovery(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rv := recover(); rv != nil {
+				slog.ErrorContext(r.Context(), "panic recovered in HTTP handler", "panic", rv)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+		}()
+		h.ServeHTTP(w, r)
+	})
+}
+
+// withExecChain adapts the internal execution middleware chain to the HTTP handler.
+// Observability endpoints (/healthz, /readyz, /metrics, /debug/) bypass the chain
+// to avoid loop-detection false positives from polling.
+func withExecChain(chain *mw.Chain, h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		p := r.URL.Path
+		if p == "/healthz" || p == "/readyz" || p == "/metrics" || strings.HasPrefix(p, "/debug/") {
+			h.ServeHTTP(w, r)
+			return
+		}
+		execReq := &mw.ExecutionRequest{
+			NodeID: "http",
+			Action: r.Method,
+			Payload: []byte(p),
+		}
+		if _, err := chain.Execute(r.Context(), execReq); err != nil {
+			http.Error(w, err.Error(), http.StatusTooManyRequests)
 			return
 		}
 		h.ServeHTTP(w, r)
