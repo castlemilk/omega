@@ -1,0 +1,245 @@
+{
+  "__inputs": [],
+  "__requires": [
+    {"type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0"},
+    {"type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0"},
+    {"type": "datasource", "id": "tempo", "name": "Tempo", "version": "1.0.0"}
+  ],
+  "annotations": {"list": []},
+  "description": "Omega system overview — handler throughput, memory queue, signal latency, traces, eval score",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate & Latency",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(omega_handler_requests_total[1m])",
+          "legendFormat": "req/s {{method}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, rate(omega_handler_request_duration_seconds_bucket[5m]))",
+          "legendFormat": "p99 latency {{method}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"lineWidth": 2},
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "p99 latency"},
+            "properties": [{"id": "unit", "value": "s"}, {"id": "custom.axisPlacement", "value": "right"}]
+          }
+        ]
+      },
+      "options": {"tooltip": {"mode": "multi"}}
+    },
+    {
+      "id": 2,
+      "title": "Error Rate by Method",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(omega_handler_errors_total[1m])",
+          "legendFormat": "errors/s {{method}}"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(omega_handler_errors_total[1m]) / rate(omega_handler_requests_total[1m])",
+          "legendFormat": "error rate {{method}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"lineWidth": 2},
+          "color": {"mode": "palette-classic"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{"color": "green", "value": null}, {"color": "red", "value": 0.05}]
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Memory Write Queue Depth",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "omega_memory_write_queue_depth",
+          "legendFormat": "queue depth"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(omega_memory_writes_total[1m])",
+          "legendFormat": "writes/s"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"lineWidth": 2},
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 100},
+              {"color": "red", "value": 500}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Signal Generation Latency (Python Bridge)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, rate(omega_signal_generation_duration_seconds_bucket[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, rate(omega_signal_generation_duration_seconds_bucket[5m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, rate(omega_signal_generation_duration_seconds_bucket[5m]))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {"lineWidth": 2}
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Active Traces (Tempo)",
+      "type": "table",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "datasource": {"type": "tempo", "uid": "tempo"},
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "nativeSearch",
+          "serviceName": "omega",
+          "limit": 20
+        }
+      ],
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true
+      }
+    },
+    {
+      "id": 6,
+      "title": "Node Execution Duration Distribution",
+      "type": "heatmap",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(omega_node_execution_duration_seconds_bucket[5m])",
+          "legendFormat": "{{le}}",
+          "format": "heatmap"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "options": {
+        "calculate": false,
+        "yAxis": {"unit": "s"},
+        "color": {"scheme": "Oranges", "fill": "opacity"}
+      }
+    },
+    {
+      "id": 7,
+      "title": "System Health Score (Eval Suite)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 24},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "omega_eval_health_score",
+          "legendFormat": "overall score"
+        },
+        {
+          "refId": "B",
+          "expr": "omega_eval_trace_volume",
+          "legendFormat": "trace volume"
+        },
+        {
+          "refId": "C",
+          "expr": "omega_eval_error_span_rate",
+          "legendFormat": "error span rate"
+        },
+        {
+          "refId": "D",
+          "expr": "omega_eval_p99_latency_seconds",
+          "legendFormat": "p99 latency"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {"lineWidth": 2},
+          "min": 0,
+          "max": 1
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "overall score"},
+            "properties": [
+              {"id": "color", "value": {"fixedColor": "#73BF69", "mode": "fixed"}},
+              {"id": "custom.lineWidth", "value": 3}
+            ]
+          }
+        ]
+      },
+      "options": {
+        "tooltip": {"mode": "multi"},
+        "legend": {"displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"]}
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["omega", "otel", "system"],
+  "templating": {"list": []},
+  "time": {"from": "now-1h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Omega — System Overview",
+  "uid": "omega-overview",
+  "version": 1
+}

@@ -338,8 +338,8 @@ func (e *emptyProvider) Snapshot() (*VictoriaSnapshot, error) {
 	return &VictoriaSnapshot{
 		Source:    "live-db",
 		Available: false,
-		Portfolio: &db.VectoraPortfolio{},
-		PnL:       &db.VectoraPnL{},
+		Portfolio: &db.VictoriaPortfolio{},
+		PnL:       &db.VictoriaPnL{},
 	}, nil
 }
 func (e *emptyProvider) IsLive() bool   { return true }

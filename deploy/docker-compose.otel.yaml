@@ -1,0 +1,42 @@
+name: omega-otel
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics exporter (for Grafana)
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    depends_on:
+      - tempo
+
+  tempo:
+    image: grafana/tempo:latest
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "9095:9095"   # Tempo gRPC
+    volumes:
+      - ./tempo-config.yaml:/etc/tempo/config.yaml
+      - tempo-data:/var/tempo
+    command: ["-config.file=/etc/tempo/config.yaml"]
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"   # Grafana UI (3001 to avoid conflict with Omega dashboard on 3000)
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=omega
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - tempo
+      - otel-collector
+
+volumes:
+  tempo-data:
+  grafana-data:

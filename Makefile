@@ -2,7 +2,8 @@
         up down logs run api dashboard \
         fe-install fe-build fe-lint fe-typecheck fe-format \
         py-test py-lint \
-        test-db test-handler all
+        test-db test-handler all \
+        otel-up otel-down otel-logs
 
 # ---------------------------------------------------------------------------
 # Go build / test
@@ -140,6 +141,20 @@ monitoring-down:
 
 monitoring-status:
 	docker compose -f monitoring/docker-compose.yml ps
+
+otel-up:
+	cd deploy && docker compose -f docker-compose.otel.yaml up -d
+	@echo "OTel Collector gRPC : localhost:4317"
+	@echo "OTel Collector HTTP : localhost:4318"
+	@echo "OTel Metrics        : http://localhost:8889/metrics"
+	@echo "Tempo HTTP API      : http://localhost:3200"
+	@echo "Grafana             : http://localhost:3001  (admin / omega)"
+
+otel-down:
+	cd deploy && docker compose -f docker-compose.otel.yaml down
+
+otel-logs:
+	cd deploy && docker compose -f docker-compose.otel.yaml logs -f
 
 # ---------------------------------------------------------------------------
 # Build all

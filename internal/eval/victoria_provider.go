@@ -10,12 +10,12 @@ import (
 // at a point in time. Fields are non-nil but zero-valued when the underlying
 // table is empty or the DB is unavailable.
 type VictoriaSnapshot struct {
-	Portfolio    *db.VectoraPortfolio
-	PnL          *db.VectoraPnL
-	Signals      []*db.VectoraSignal
-	BacktestStats *db.VectoraBacktestStats
-	RiskMetrics  *db.VectoraRiskMetrics
-	EquityCurve  []*db.VectoraEquityPoint
+	Portfolio    *db.VictoriaPortfolio
+	PnL          *db.VictoriaPnL
+	Signals      []*db.VictoriaSignal
+	BacktestStats *db.VictoriaBacktestStats
+	RiskMetrics  *db.VictoriaRiskMetrics
+	EquityCurve  []*db.VictoriaEquityPoint
 
 	// Source is "live-db" or "stub".
 	Source string
@@ -36,14 +36,14 @@ type VictoriaProvider interface {
 // VectoraDBProvider reads from the live Vectora SQLite database written by
 // the Python trading engine.
 type VectoraDBProvider struct {
-	vdb *db.VectoraDB
+	vdb *db.VictoriaDB
 }
 
-// NewVectoraDBProvider opens the Vectora DB at the path from db.VectoraDBPath().
+// NewVectoraDBProvider opens the Vectora DB at the path from db.VictoriaDBPath().
 // Returns an error only if the file cannot be opened; an empty/unpopulated DB
 // is accepted and will produce a snapshot with Available=false.
 func NewVectoraDBProvider() (*VectoraDBProvider, error) {
-	vdb, err := db.NewVectora(db.VectoraDBPath())
+	vdb, err := db.NewVictoria(db.VictoriaDBPath())
 	if err != nil {
 		return nil, fmt.Errorf("open vectora db: %w", err)
 	}
@@ -57,7 +57,7 @@ func (p *VectoraDBProvider) Close() { p.vdb.Close() }
 func (p *VectoraDBProvider) IsLive() bool { return true }
 
 // Source returns the DB file path.
-func (p *VectoraDBProvider) Source() string { return db.VectoraDBPath() }
+func (p *VectoraDBProvider) Source() string { return db.VictoriaDBPath() }
 
 // Snapshot queries all observable Victoria state from the database.
 func (p *VectoraDBProvider) Snapshot() (*VictoriaSnapshot, error) {
@@ -123,7 +123,7 @@ func (s *StubVictoriaProvider) Snapshot() (*VictoriaSnapshot, error) {
 	return &VictoriaSnapshot{
 		Source:    "stub",
 		Available: true,
-		Portfolio: &db.VectoraPortfolio{
+		Portfolio: &db.VictoriaPortfolio{
 			PortfolioValue: 100_000,
 			UnrealisedPnL:  1_200,
 			RealisedPnL:    8_500,
@@ -135,7 +135,7 @@ func (s *StubVictoriaProvider) Snapshot() (*VictoriaSnapshot, error) {
 			Sharpe:         1.21,
 			AnnVol:         0.18,
 		},
-		PnL: &db.VectoraPnL{
+		PnL: &db.VictoriaPnL{
 			UnrealisedPnL: 1_200,
 			RealisedPnL:   8_500,
 			TotalPnL:      9_700,
@@ -151,13 +151,13 @@ func (s *StubVictoriaProvider) Snapshot() (*VictoriaSnapshot, error) {
 			Sortino:       1.74,
 			Calmar:        1.71,
 		},
-		Signals: []*db.VectoraSignal{
+		Signals: []*db.VictoriaSignal{
 			{Name: "momentum", AvgIC: 0.12, Weight: 0.35, HalfLife: 5, Conviction: 0.68, BrierScore: 0.21, CurrentValue: 0.4, Trend: "up"},
 			{Name: "microstructure", AvgIC: 0.09, Weight: 0.25, HalfLife: 2, Conviction: 0.55, BrierScore: 0.24, CurrentValue: 0.2, Trend: "flat"},
 			{Name: "sentiment", AvgIC: 0.06, Weight: 0.20, HalfLife: 10, Conviction: 0.48, BrierScore: 0.27, CurrentValue: -0.1, Trend: "down"},
 			{Name: "funding", AvgIC: 0.04, Weight: 0.20, HalfLife: 8, Conviction: 0.41, BrierScore: 0.29, CurrentValue: 0.05, Trend: "flat"},
 		},
-		BacktestStats: &db.VectoraBacktestStats{
+		BacktestStats: &db.VictoriaBacktestStats{
 			SharpeAnn:    1.31,
 			SortinoAnn:   1.89,
 			MaxDDPct:     0.092,
@@ -174,19 +174,19 @@ func (s *StubVictoriaProvider) Snapshot() (*VictoriaSnapshot, error) {
 			WinRate:      0.59,
 			ProfitFactor: 1.48,
 		},
-		RiskMetrics: &db.VectoraRiskMetrics{
-			Ablation: []db.VectoraAblationEntry{
+		RiskMetrics: &db.VictoriaRiskMetrics{
+			Ablation: []db.VictoriaAblationEntry{
 				{Name: "momentum", DSharpe: 0.38, Sig: true},
 				{Name: "microstructure", DSharpe: 0.22, Sig: true},
 				{Name: "sentiment", DSharpe: 0.09, Sig: false},
 				{Name: "funding", DSharpe: 0.06, Sig: false},
 			},
-			Regimes: []db.VectoraRegime{
+			Regimes: []db.VictoriaRegime{
 				{Name: "trending", Sharpe: 1.82, Ret: 0.21, Trades: 48, Pct: 0.38},
 				{Name: "ranging", Sharpe: 0.44, Ret: 0.04, Trades: 62, Pct: 0.41},
 				{Name: "high-vol", Sharpe: -0.31, Ret: -0.08, Trades: 19, Pct: 0.21},
 			},
-			Crashes: []db.VectoraCrashScenario{
+			Crashes: []db.VictoriaCrashScenario{
 				{Name: "COVID-2020", Sym: "BTC", DD: 0.52, Recov: &recovDays, SL: 2, Pnl: -0.04, Pass: true},
 				{Name: "May-2021", Sym: "BTC", DD: 0.54, Recov: &recovDays, SL: 1, Pnl: -0.03, Pass: true},
 				{Name: "LUNA-2022", Sym: "BTC", DD: 0.59, Recov: nil, SL: 3, Pnl: -0.06, Pass: false},
@@ -197,8 +197,8 @@ func (s *StubVictoriaProvider) Snapshot() (*VictoriaSnapshot, error) {
 }
 
 // stubEquityCurve returns n synthetic equity points with a deterministic walk.
-func stubEquityCurve(n int) []*db.VectoraEquityPoint {
-	pts := make([]*db.VectoraEquityPoint, n)
+func stubEquityCurve(n int) []*db.VictoriaEquityPoint {
+	pts := make([]*db.VictoriaEquityPoint, n)
 	omega, btc := 1.0, 1.0
 	for i := 0; i < n; i++ {
 		omega *= 1.0 + 0.0012 - float64(i%7)*0.0001
@@ -207,7 +207,7 @@ func stubEquityCurve(n int) []*db.VectoraEquityPoint {
 		if i >= 10 && i < 20 {
 			dd = -0.04 * float64(i-10) / 10.0
 		}
-		pts[i] = &db.VectoraEquityPoint{
+		pts[i] = &db.VictoriaEquityPoint{
 			Date:  fmt.Sprintf("2024-%02d-%02d", (i/30)+1, (i%30)+1),
 			I:     i,
 			Omega: omega,
