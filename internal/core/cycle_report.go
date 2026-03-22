@@ -1,6 +1,10 @@
 package core
 
-import "time"
+import (
+	"time"
+
+	omegaerrs "github.com/benebsworth/omega/internal/errors"
+)
 
 // ---------------------------------------------------------------------------
 // CycleReport — aggregated output of RunFullCycle
@@ -15,6 +19,9 @@ type PerNodeReport struct {
 	Skipped       bool
 	SkipReason    string
 	ExecutionErr  string
+	ErrorClass    omegaerrs.ErrorClass // structured classification of ExecutionErr
+	ErrorCode     string               // machine-readable sub-code
+	IsRetryable   bool
 	Duration      time.Duration
 
 	// Safety

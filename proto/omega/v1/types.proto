@@ -25,6 +25,19 @@ message Node {
   ExecutionRecord last_execution = 14;
 }
 
+// ErrorClassification categorises the root cause of a node execution failure
+// to enable aggregation, filtering, and alerting by error type.
+enum ErrorClassification {
+  ERROR_CLASSIFICATION_UNSPECIFIED    = 0;
+  ERROR_CLASSIFICATION_TIMEOUT        = 1;
+  ERROR_CLASSIFICATION_DATA_QUALITY   = 2;
+  ERROR_CLASSIFICATION_DEPENDENCY_FAILURE = 3;
+  ERROR_CLASSIFICATION_RESOURCE_EXHAUSTION = 4;
+  ERROR_CLASSIFICATION_VALIDATION_ERROR = 5;
+  ERROR_CLASSIFICATION_LLM_ERROR      = 6;
+  ERROR_CLASSIFICATION_UNKNOWN        = 7;
+}
+
 message ExecutionRecord {
   string exec_id = 1;
   string node_id = 2;
@@ -39,6 +52,10 @@ message ExecutionRecord {
   string error_text = 11;
   map<string, double> metrics = 12;
   int64 cycle = 13;
+  // Structured error classification (populated on failure).
+  ErrorClassification error_class = 14;
+  string error_code = 15;   // machine-readable sub-code, e.g. "circuit_open"
+  bool is_retryable = 16;
 }
 
 // ── Traces ─────────────────────────────────────────────────────────────────

@@ -5,9 +5,150 @@ package omegaerrs
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 )
+
+// ---------------------------------------------------------------------------
+// Error classification
+// ---------------------------------------------------------------------------
+
+// ErrorClass enumerates the root cause categories for execution failures.
+// Values match the ErrorClassification proto enum.
+type ErrorClass int32
+
+const (
+	ErrorClassUnspecified        ErrorClass = 0
+	ErrorClassTimeout            ErrorClass = 1
+	ErrorClassDataQuality        ErrorClass = 2
+	ErrorClassDependencyFailure  ErrorClass = 3
+	ErrorClassResourceExhaustion ErrorClass = 4
+	ErrorClassValidationError    ErrorClass = 5
+	ErrorClassLLMError           ErrorClass = 6
+	ErrorClassUnknown            ErrorClass = 7
+)
+
+// Classification holds the structured error classification for an execution failure.
+type Classification struct {
+	Class     ErrorClass
+	Code      string // machine-readable sub-code, e.g. "circuit_open"
+	Retryable bool
+}
+
+// Classify inspects err and returns a structured Classification.
+// It checks sentinel types first, then falls back to string heuristics.
+func Classify(err error) Classification {
+	if err == nil {
+		return Classification{Class: ErrorClassUnspecified}
+	}
+
+	// Structured OmegaError — use its code and retryability.
+	var oe *OmegaError
+	if errors.As(err, &oe) {
+		return Classification{
+			Class:     classFromConnectCode(oe.Code),
+			Code:      codeFromOmegaError(oe),
+			Retryable: oe.Retryable,
+		}
+	}
+
+	// Connect-RPC error — classify by status code.
+	var ce *connect.Error
+	if errors.As(err, &ce) {
+		return Classification{
+			Class:     classFromConnectCode(ce.Code()),
+			Code:      connectCodeName(ce.Code()),
+			Retryable: isRetryableCode(ce.Code()),
+		}
+	}
+
+	// Sentinel checks.
+	switch {
+	case errors.Is(err, ErrCircuitOpen):
+		return Classification{Class: ErrorClassDependencyFailure, Code: "circuit_open", Retryable: true}
+	case errors.Is(err, ErrCycleTimeout):
+		return Classification{Class: ErrorClassTimeout, Code: "cycle_timeout", Retryable: true}
+	case errors.Is(err, ErrSafetyViolation):
+		return Classification{Class: ErrorClassValidationError, Code: "safety_violation", Retryable: false}
+	case errors.Is(err, ErrConstitutionalBlock):
+		return Classification{Class: ErrorClassValidationError, Code: "constitutional_block", Retryable: false}
+	case errors.Is(err, ErrNodeNotFound):
+		return Classification{Class: ErrorClassDependencyFailure, Code: "node_not_found", Retryable: false}
+	case errors.Is(err, ErrMemoryCapacity):
+		return Classification{Class: ErrorClassResourceExhaustion, Code: "memory_capacity", Retryable: true}
+	}
+
+	// String heuristics as last resort.
+	msg := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(msg, "context deadline exceeded") || strings.Contains(msg, "deadline exceeded") || strings.Contains(msg, "timeout"):
+		return Classification{Class: ErrorClassTimeout, Code: "deadline_exceeded", Retryable: true}
+	case strings.Contains(msg, "connection refused") || strings.Contains(msg, "no such host") || strings.Contains(msg, "connection reset"):
+		return Classification{Class: ErrorClassDependencyFailure, Code: "connection_refused", Retryable: true}
+	case strings.Contains(msg, "circuit open"):
+		return Classification{Class: ErrorClassDependencyFailure, Code: "circuit_open", Retryable: true}
+	case strings.Contains(msg, "resource exhausted") || strings.Contains(msg, "out of memory") || strings.Contains(msg, "too many requests"):
+		return Classification{Class: ErrorClassResourceExhaustion, Code: "resource_exhausted", Retryable: true}
+	case strings.Contains(msg, "llm") || strings.Contains(msg, "model") || strings.Contains(msg, "token limit") || strings.Contains(msg, "rate limit"):
+		return Classification{Class: ErrorClassLLMError, Code: "llm_error", Retryable: true}
+	case strings.Contains(msg, "invalid") || strings.Contains(msg, "validation") || strings.Contains(msg, "malformed"):
+		return Classification{Class: ErrorClassValidationError, Code: "validation_error", Retryable: false}
+	case strings.Contains(msg, "data quality") || strings.Contains(msg, "stale data") || strings.Contains(msg, "missing data"):
+		return Classification{Class: ErrorClassDataQuality, Code: "data_quality", Retryable: false}
+	}
+
+	return Classification{Class: ErrorClassUnknown, Code: "unknown", Retryable: false}
+}
+
+func classFromConnectCode(code connect.Code) ErrorClass {
+	switch code {
+	case connect.CodeDeadlineExceeded:
+		return ErrorClassTimeout
+	case connect.CodeUnavailable, connect.CodeNotFound:
+		return ErrorClassDependencyFailure
+	case connect.CodeResourceExhausted:
+		return ErrorClassResourceExhaustion
+	case connect.CodeFailedPrecondition, connect.CodeInvalidArgument, connect.CodePermissionDenied:
+		return ErrorClassValidationError
+	case connect.CodeAborted:
+		return ErrorClassDependencyFailure
+	default:
+		return ErrorClassUnknown
+	}
+}
+
+func codeFromOmegaError(oe *OmegaError) string {
+	if oe.Op != "" {
+		// Convert op like "circuit.mynode" → "circuit_open"
+		if strings.HasPrefix(oe.Op, "circuit.") {
+			return "circuit_open"
+		}
+		return strings.ReplaceAll(oe.Op, ".", "_")
+	}
+	return connectCodeName(oe.Code)
+}
+
+func connectCodeName(code connect.Code) string {
+	switch code {
+	case connect.CodeDeadlineExceeded:
+		return "deadline_exceeded"
+	case connect.CodeUnavailable:
+		return "unavailable"
+	case connect.CodeNotFound:
+		return "not_found"
+	case connect.CodeResourceExhausted:
+		return "resource_exhausted"
+	case connect.CodeFailedPrecondition:
+		return "failed_precondition"
+	case connect.CodeInvalidArgument:
+		return "invalid_argument"
+	case connect.CodeAborted:
+		return "aborted"
+	default:
+		return "unknown"
+	}
+}
 
 // ---------------------------------------------------------------------------
 // Sentinel errors

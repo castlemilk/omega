@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -103,7 +104,35 @@ func New(stateDBPath, memoryDBPath string) (*DB, error) {
 		}
 		return nil, fmt.Errorf("ensure terminal tables: %w", err)
 	}
+	if err := d.ensureErrorClassColumns(); err != nil {
+		state.Close()  //nolint:errcheck,gosec
+		memory.Close() //nolint:errcheck,gosec
+		if challengeDB != nil {
+			challengeDB.Close() //nolint:errcheck,gosec
+		}
+		return nil, fmt.Errorf("ensure error class columns: %w", err)
+	}
 	return d, nil
+}
+
+// ensureErrorClassColumns adds the error classification columns to node_executions
+// if they don't already exist (idempotent migration).
+func (d *DB) ensureErrorClassColumns() error {
+	for _, col := range []struct{ name, def string }{
+		{"error_class", "INTEGER NOT NULL DEFAULT 0"},
+		{"error_code", "TEXT NOT NULL DEFAULT ''"},
+		{"is_retryable", "INTEGER NOT NULL DEFAULT 0"},
+	} {
+		_, err := d.state.Exec(`ALTER TABLE node_executions ADD COLUMN ` + col.name + ` ` + col.def)
+		if err != nil {
+			msg := err.Error()
+			if strings.Contains(msg, "duplicate column name") || strings.Contains(msg, "already exists") {
+				continue // column already present
+			}
+			return fmt.Errorf("add column %s: %w", col.name, err)
+		}
+	}
+	return nil
 }
 
 func (d *DB) ensureTerminalTables() error {
@@ -190,6 +219,9 @@ type Execution struct {
 	ErrorText  string
 	Metrics    map[string]float64
 	Cycle      int64
+	ErrorClass int32  // matches ErrorClassification proto enum
+	ErrorCode  string // machine-readable sub-code
+	IsRetryable bool
 }
 
 type LatencyPoint struct {
@@ -690,7 +722,8 @@ func (d *DB) lastExecution(nodeID string) (*Execution, error) {
 	row := d.state.QueryRow(`
 		SELECT exec_id, node_id, node_name, COALESCE(trace_id,''), COALESCE(span_id,''),
 		       action, started_at, ended_at, duration_ms, success,
-		       COALESCE(error_text,''), COALESCE(metrics_json,'{}'), cycle
+		       COALESCE(error_text,''), COALESCE(metrics_json,'{}'), cycle,
+		       COALESCE(error_class,0), COALESCE(error_code,''), COALESCE(is_retryable,0)
 		FROM node_executions WHERE node_id = ?
 		ORDER BY started_at DESC LIMIT 1`, nodeID)
 	return scanExecution(row)
@@ -699,15 +732,18 @@ func (d *DB) lastExecution(nodeID string) (*Execution, error) {
 func scanExecution(row *sql.Row) (*Execution, error) {
 	e := &Execution{}
 	var metricsJSON string
-	var success int
+	var success, errorClass, isRetryable int
 	var endedAt, durationMS sql.NullFloat64
 	err := row.Scan(&e.ExecID, &e.NodeID, &e.NodeName, &e.TraceID, &e.SpanID,
 		&e.Action, &e.StartedAt, &endedAt, &durationMS, &success,
-		&e.ErrorText, &metricsJSON, &e.Cycle)
+		&e.ErrorText, &metricsJSON, &e.Cycle,
+		&errorClass, &e.ErrorCode, &isRetryable)
 	if err != nil {
 		return nil, err
 	}
 	e.Success = success == 1
+	e.ErrorClass = int32(errorClass) //nolint:gosec
+	e.IsRetryable = isRetryable == 1
 	if endedAt.Valid {
 		v := endedAt.Float64
 		e.EndedAt = &v
@@ -723,7 +759,8 @@ func scanExecution(row *sql.Row) (*Execution, error) {
 func (d *DB) GetExecutions(nodeID string, limit int) ([]*Execution, error) {
 	query := `SELECT exec_id, node_id, node_name, COALESCE(trace_id,''), COALESCE(span_id,''),
 		action, started_at, ended_at, duration_ms, success,
-		COALESCE(error_text,''), COALESCE(metrics_json,'{}'), cycle
+		COALESCE(error_text,''), COALESCE(metrics_json,'{}'), cycle,
+		COALESCE(error_class,0), COALESCE(error_code,''), COALESCE(is_retryable,0)
 		FROM node_executions WHERE 1=1`
 	args := []any{}
 	if nodeID != "" {
@@ -746,14 +783,17 @@ func scanExecutions(rows *sql.Rows) ([]*Execution, error) {
 	for rows.Next() {
 		e := &Execution{}
 		var metricsJSON string
-		var success int
+		var success, errorClass, isRetryable int
 		var endedAt, durationMS sql.NullFloat64
 		if err := rows.Scan(&e.ExecID, &e.NodeID, &e.NodeName, &e.TraceID, &e.SpanID,
 			&e.Action, &e.StartedAt, &endedAt, &durationMS, &success,
-			&e.ErrorText, &metricsJSON, &e.Cycle); err != nil {
+			&e.ErrorText, &metricsJSON, &e.Cycle,
+			&errorClass, &e.ErrorCode, &isRetryable); err != nil {
 			return nil, err
 		}
 		e.Success = success == 1
+		e.ErrorClass = int32(errorClass) //nolint:gosec
+		e.IsRetryable = isRetryable == 1
 		if endedAt.Valid {
 			v := endedAt.Float64
 			e.EndedAt = &v

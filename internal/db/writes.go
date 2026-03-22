@@ -52,8 +52,8 @@ func (d *DB) BeginExecution(nodeID, nodeName, action string, traceID, spanID *st
 	return execID, nil
 }
 
-// EndExecution updates an existing execution row with outcome, duration, and metrics.
-func (d *DB) EndExecution(execID string, success bool, errorText string, metrics map[string]float64) error {
+// EndExecution updates an existing execution row with outcome, duration, metrics, and error classification.
+func (d *DB) EndExecution(execID string, success bool, errorText string, errorClass int32, errorCode string, isRetryable bool, metrics map[string]float64) error {
 	now := unixNow()
 	var startedAt float64
 	if err := d.state.QueryRow(`SELECT started_at FROM node_executions WHERE exec_id = ?`, execID).Scan(&startedAt); err != nil {
@@ -65,11 +65,17 @@ func (d *DB) EndExecution(execID string, success bool, errorText string, metrics
 	if success {
 		successInt = 1
 	}
+	isRetryableInt := 0
+	if isRetryable {
+		isRetryableInt = 1
+	}
 	_, err := d.state.Exec(`
 		UPDATE node_executions
-		SET ended_at=?, duration_ms=?, success=?, error_text=?, metrics_json=?
+		SET ended_at=?, duration_ms=?, success=?, error_text=?, metrics_json=?,
+		    error_class=?, error_code=?, is_retryable=?
 		WHERE exec_id=?`,
-		now, durationMS, successInt, errorText, string(metricsJSON), execID)
+		now, durationMS, successInt, errorText, string(metricsJSON),
+		errorClass, errorCode, isRetryableInt, execID)
 	return err
 }
 

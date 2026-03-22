@@ -64,7 +64,7 @@ func TestBeginEndExecution(t *testing.T) {
 	if execID == "" {
 		t.Fatal("expected non-empty execID")
 	}
-	if err = d.EndExecution(execID, true, "", map[string]float64{"score": 0.9}); err != nil {
+	if err = d.EndExecution(execID, true, "", 0, "", false, map[string]float64{"score": 0.9}); err != nil {
 		t.Fatalf("end execution: %v", err)
 	}
 	execs, err := d.GetExecutions("n1", 10)

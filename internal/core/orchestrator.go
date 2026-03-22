@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	omegaerrs "github.com/benebsworth/omega/internal/errors"
 	"github.com/benebsworth/omega/internal/observability"
 )
 
@@ -230,8 +231,10 @@ func (o *Orchestrator) RunCycle(ctx context.Context) (*CycleResult, error) {
 			o.circuit.RecordFailure(nodeID)
 			results[nodeID] = false
 			errors[nodeID] = err.Error()
+			cls := omegaerrs.Classify(err)
 			o.logger.Error("orchestrator: node execution failed",
-				"node_id", nodeID, "cycle_id", cycleID, "error", err)
+				"node_id", nodeID, "cycle_id", cycleID, "error", err,
+				"error_class", cls.Class, "error_code", cls.Code, "retryable", cls.Retryable)
 			if o.metrics != nil {
 				o.metrics.RecordNodeExecution(nodeID, nodeDur.Seconds(), false)
 			}
