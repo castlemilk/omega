@@ -282,3 +282,33 @@ func (r *CircuitBreakerRegistry) Snapshot() map[string]CircuitState {
 	}
 	return snap
 }
+
+// CircuitBreakerInfo holds a point-in-time snapshot of a breaker's state.
+type CircuitBreakerInfo struct {
+	State       CircuitState
+	Failures    int32
+	LastFailure time.Time
+}
+
+// Info returns a snapshot of the breaker's current state without mutating it.
+func (cb *CircuitBreaker) Info() CircuitBreakerInfo {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	return CircuitBreakerInfo{
+		State:       cb.currentState(),
+		Failures:    int32(cb.failures), //nolint:gosec // failures is bounded by FailureThreshold (default 5)
+		LastFailure: cb.lastFailure,
+	}
+}
+
+// NodeInfo returns circuit breaker info for a node if it exists.
+// Returns (info, true) if the breaker exists, (zero, false) if not.
+func (r *CircuitBreakerRegistry) NodeInfo(nodeID string) (CircuitBreakerInfo, bool) {
+	r.mu.RLock()
+	cb, ok := r.breakers[nodeID]
+	r.mu.RUnlock()
+	if !ok {
+		return CircuitBreakerInfo{}, false
+	}
+	return cb.Info(), true
+}

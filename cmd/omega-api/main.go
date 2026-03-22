@@ -149,7 +149,7 @@ func main() {
 	diagCollector := observability.NewDiagnosticsCollector(nil, nil, cbRegistry, logger)
 
 	// ── Service handlers ──────────────────────────────────────────────────────
-	h := handler.New(database)
+	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry)
 	vh := handler.NewVictoria(vdb)
 	sh := handler.NewState(database)
 

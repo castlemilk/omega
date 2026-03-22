@@ -17,6 +17,7 @@ import (
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/db"
+	"github.com/benebsworth/omega/internal/observability"
 	"github.com/benebsworth/omega/internal/telemetry"
 )
 
@@ -25,7 +26,8 @@ var _ omegav1connect.OrchestratorServiceHandler = (*OrchestratorHandler)(nil)
 
 // OrchestratorHandler implements OrchestratorService.
 type OrchestratorHandler struct {
-	db *db.DB
+	db         *db.DB
+	cbRegistry *observability.CircuitBreakerRegistry // may be nil
 
 	mu     sync.Mutex
 	cancel context.CancelFunc // non-nil while orchestrator loop is running
@@ -35,6 +37,13 @@ type OrchestratorHandler struct {
 // New creates an OrchestratorHandler backed by the given DB.
 func New(database *db.DB) *OrchestratorHandler {
 	return &OrchestratorHandler{db: database}
+}
+
+// WithCircuitBreakerRegistry attaches a circuit breaker registry so that
+// ListNodes and GetNode responses include live circuit breaker state.
+func (h *OrchestratorHandler) WithCircuitBreakerRegistry(r *observability.CircuitBreakerRegistry) *OrchestratorHandler {
+	h.cbRegistry = r
+	return h
 }
 
 // tsFromUnix converts a float64 Unix timestamp to a protobuf Timestamp.
@@ -94,7 +103,9 @@ func (h *OrchestratorHandler) ListNodes(
 	}
 	var protoNodes []*omegav1.Node
 	for _, n := range nodes {
-		protoNodes = append(protoNodes, dbNodeToProto(n))
+		pn := dbNodeToProto(n)
+		h.attachCircuitBreaker(pn, n.NodeID)
+		protoNodes = append(protoNodes, pn)
 	}
 	return connect.NewResponse(&omegav1.ListNodesResponse{Nodes: protoNodes}), nil
 }
@@ -111,8 +122,10 @@ func (h *OrchestratorHandler) GetNode(
 	imps, _ := h.db.GetImprovements(req.Msg.NodeId, 20)
 	history, _ := h.db.LatencyHistory(req.Msg.NodeId, 100)
 
+	pn := dbNodeToProto(n)
+	h.attachCircuitBreaker(pn, req.Msg.NodeId)
 	resp := &omegav1.GetNodeResponse{
-		Node:         dbNodeToProto(n),
+		Node:         pn,
 		Improvements: dbImpsToProto(imps),
 	}
 	for _, e := range execs {
@@ -167,6 +180,26 @@ func dbNodeToProto(n *db.Node) *omegav1.Node {
 		node.LastExecution = dbExecToProto(n.LastExecution)
 	}
 	return node
+}
+
+// attachCircuitBreaker populates the circuit_breaker field on a Node proto
+// from the in-memory registry. No-op if the registry is nil or has no entry.
+func (h *OrchestratorHandler) attachCircuitBreaker(n *omegav1.Node, nodeID string) {
+	if h.cbRegistry == nil {
+		return
+	}
+	info, ok := h.cbRegistry.NodeInfo(nodeID)
+	if !ok {
+		return
+	}
+	cb := &omegav1.CircuitBreakerState{
+		State:        info.State.String(),
+		FailureCount: info.Failures,
+	}
+	if !info.LastFailure.IsZero() {
+		cb.LastFailureTime = timestamppb.New(info.LastFailure)
+	}
+	n.CircuitBreaker = cb
 }
 
 func dbExecToProto(e *db.Execution) *omegav1.ExecutionRecord {
