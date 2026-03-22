@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
+	"github.com/benebsworth/omega/internal/auth"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
 	mw "github.com/benebsworth/omega/internal/middleware"
@@ -58,12 +59,22 @@ func main() {
 		log.Printf("warn: handler metrics init failed (%v) — continuing without RPC metrics", err)
 	}
 
-	// Convenience helper: returns the interceptor option, or a no-op if hMetrics is nil.
-	withMetrics := func(opts ...connect.HandlerOption) []connect.HandlerOption {
+	// ---------------------------------------------------------------------------
+	// Auth — JWT + API key interceptor (optional, controlled by OMEGA_AUTH_ENABLED)
+	// ---------------------------------------------------------------------------
+	jwtValidator, _ := auth.NewValidator()  // nil if not configured (auth disabled)
+	keyStore := auth.NewKeyStore()
+	authCfg := auth.DefaultConfig()
+	authInterceptor := auth.NewInterceptor(authCfg, jwtValidator, keyStore)
+
+	// Convenience helper: returns the interceptor options, or a no-op if hMetrics is nil.
+	withHandlerOpts := func(opts ...connect.HandlerOption) []connect.HandlerOption {
 		if hMetrics != nil {
 			opts = append(opts, connect.WithInterceptors(hMetrics.MetricsInterceptor()))
 		}
-		return append(opts, connect.WithCompressMinBytes(1024))
+		opts = append(opts, connect.WithInterceptors(authInterceptor))
+		opts = append(opts, connect.WithCompressMinBytes(1024))
+		return opts
 	}
 
 	// ---------------------------------------------------------------------------
@@ -157,45 +168,45 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Connect-RPC service handlers — all wrapped with OTel interceptor.
-	path, svcHandler := omegav1connect.NewOrchestratorServiceHandler(h, withMetrics()...)
+	path, svcHandler := omegav1connect.NewOrchestratorServiceHandler(h, withHandlerOpts()...)
 	mux.Handle(path, svcHandler)
 
-	vPath, vSvcHandler := omegav1connect.NewVictoriaServiceHandler(vh, withMetrics()...)
+	vPath, vSvcHandler := omegav1connect.NewVictoriaServiceHandler(vh, withHandlerOpts()...)
 	mux.Handle(vPath, vSvcHandler)
 
-	sPath, sSvcHandler := omegav1connect.NewStateServiceHandler(sh, withMetrics()...)
+	sPath, sSvcHandler := omegav1connect.NewStateServiceHandler(sh, withHandlerOpts()...)
 	mux.Handle(sPath, sSvcHandler)
 
-	aPath, aSvcHandler := omegav1connect.NewAutonomyServiceHandler(autonomyH, withMetrics()...)
+	aPath, aSvcHandler := omegav1connect.NewAutonomyServiceHandler(autonomyH, withHandlerOpts()...)
 	mux.Handle(aPath, aSvcHandler)
 
-	advPath, advSvcHandler := omegav1connect.NewAdversarialServiceHandler(adversarialH, withMetrics()...)
+	advPath, advSvcHandler := omegav1connect.NewAdversarialServiceHandler(adversarialH, withHandlerOpts()...)
 	mux.Handle(advPath, advSvcHandler)
 
 	if safetyH != nil {
-		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(safetyH, withMetrics()...)
+		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(safetyH, withHandlerOpts()...)
 		mux.Handle(sfPath, sfSvcHandler)
 	} else {
 		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(
-			omegav1connect.UnimplementedSafetyServiceHandler{}, withMetrics()...,
+			omegav1connect.UnimplementedSafetyServiceHandler{}, withHandlerOpts()...,
 		)
 		mux.Handle(sfPath, sfSvcHandler)
 	}
 
 	if memoryH != nil {
-		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(memoryH, withMetrics()...)
+		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(memoryH, withHandlerOpts()...)
 		mux.Handle(mPath, mSvcHandler)
 	} else {
 		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(
-			omegav1connect.UnimplementedMemoryServiceHandler{}, withMetrics()...,
+			omegav1connect.UnimplementedMemoryServiceHandler{}, withHandlerOpts()...,
 		)
 		mux.Handle(mPath, mSvcHandler)
 	}
 
-	impPath, impSvcHandler := omegav1connect.NewImprovementServiceHandler(improvementH, withMetrics()...)
+	impPath, impSvcHandler := omegav1connect.NewImprovementServiceHandler(improvementH, withHandlerOpts()...)
 	mux.Handle(impPath, impSvcHandler)
 
-	termPath, termSvcHandler := omegav1connect.NewTerminalServiceHandler(terminalH, withMetrics()...)
+	termPath, termSvcHandler := omegav1connect.NewTerminalServiceHandler(terminalH, withHandlerOpts()...)
 	mux.Handle(termPath, termSvcHandler)
 
 	// Observability endpoints.
@@ -209,7 +220,7 @@ func main() {
 	// context_recovery: injects recovery signal when execution depth exceeds threshold.
 	// metrics_collector: counts total/success/error executions.
 	// loop_detection: warns/aborts on repeated identical (node, action, path) calls.
-	// TODO(security): add mw.NewAutonomyGateMiddleware() once auth is implemented.
+	// autonomy_gate: enforces autonomy level constraints on execution requests.
 	mwCounters := new(mw.Counters)
 	execChain := mw.NewChain(
 		func(_ context.Context, _ *mw.ExecutionRequest) (*mw.ExecutionResponse, error) {
@@ -218,6 +229,7 @@ func main() {
 		mw.NewContextRecoveryMiddleware(0),
 		mw.NewMetricsCollectorMiddleware(mwCounters),
 		mw.NewLoopDetectionMiddleware(),
+		mw.NewAutonomyGateMiddleware(),
 	)
 
 	addr := ":8080"
@@ -256,7 +268,8 @@ func withCORS(h http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Headers",
 			"Content-Type, Connect-Protocol-Version, Connect-Timeout-Ms, "+
 				"Grpc-Timeout, X-Grpc-Web, X-User-Agent, "+
-				"connect-accept-encoding, connect-content-encoding")
+				"connect-accept-encoding, connect-content-encoding, "+
+				"Authorization, X-Api-Key")
 		w.Header().Set("Access-Control-Expose-Headers",
 			"Grpc-Status, Grpc-Message, Grpc-Status-Details-Bin, "+
 				"connect-accept-encoding, connect-content-encoding")
