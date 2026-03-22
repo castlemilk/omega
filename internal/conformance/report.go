@@ -22,7 +22,7 @@ func GenerateReport(results []ConformanceResult) string {
 
 	var sb strings.Builder
 	sb.WriteString("# Conformance Report\n\n")
-	sb.WriteString(fmt.Sprintf("**Total**: %d | **Passed**: %d | **Failed**: %d\n\n", len(results), passed, failed))
+	fmt.Fprintf(&sb, "**Total**: %d | **Passed**: %d | **Failed**: %d\n\n", len(results), passed, failed)
 	sb.WriteString("| Test | Result | Duration | Details |\n")
 	sb.WriteString("|------|--------|----------|---------|\n")
 
@@ -32,15 +32,15 @@ func GenerateReport(results []ConformanceResult) string {
 			status = "❌ FAIL"
 		}
 		details := strings.ReplaceAll(r.Details, "|", "\\|")
-		sb.WriteString(fmt.Sprintf("| `%s` | %s | %s | %s |\n",
-			r.TestName, status, r.Duration.Round(1000).String(), details))
+		fmt.Fprintf(&sb, "| `%s` | %s | %s | %s |\n",
+			r.TestName, status, r.Duration.Round(1000).String(), details)
 	}
 
 	if failed > 0 {
 		sb.WriteString("\n## Failures\n\n")
 		for _, r := range results {
 			if !r.Passed {
-				sb.WriteString(fmt.Sprintf("### `%s`\n\n%s\n\n", r.TestName, r.Details))
+				fmt.Fprintf(&sb, "### `%s`\n\n%s\n\n", r.TestName, r.Details)
 			}
 		}
 	}

@@ -67,7 +67,7 @@ func (s *ConformanceSuite) Add(t ConformanceTest) {
 
 // Run executes all tests whose AutonomyLevel matches level and returns the results.
 func (s *ConformanceSuite) Run(level AutonomyLevel) []ConformanceResult {
-	var results []ConformanceResult
+	results := make([]ConformanceResult, 0, len(s.tests))
 	for _, t := range s.tests {
 		if t.AutonomyLevel != level {
 			continue
