@@ -15,6 +15,11 @@ dependencies = []   # stdlib only: abc, dataclasses, sqlite3, urllib, uuid, math
 math = [
     "numpy>=1.26",
 ]
+telemetry = [
+    "opentelemetry-api>=1.25",
+    "opentelemetry-sdk>=1.25",
+    "opentelemetry-exporter-otlp-proto-http>=1.25",
+]
 dev = [
     "numpy>=1.26",
     "pytest>=8.0",

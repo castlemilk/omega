@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"connectrpc.com/connect"
@@ -16,10 +18,54 @@ import (
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
 	"github.com/benebsworth/omega/internal/observability"
+	"github.com/benebsworth/omega/internal/telemetry"
 )
 
 func main() {
-	// Ensure DB files exist (Python orchestrator creates them on first run)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	// ---------------------------------------------------------------------------
+	// OpenTelemetry — initialise before anything else so all downstream code
+	// gets instrumented automatically.
+	// ---------------------------------------------------------------------------
+	telCfg := telemetry.Config{
+		OtlpEndpoint:         os.Getenv("OTLP_ENDPOINT"), // e.g. "http://otel-collector:4318"
+		ServiceName:          "omega-api",
+		ServiceVersion:       "0.1.0",
+		SampleRate:           1.0,
+		MetricExportInterval: 15 * time.Second,
+	}
+	if _, err := telemetry.Init(ctx, telCfg); err != nil {
+		log.Printf("warn: telemetry init failed (%v) — continuing without OTel", err)
+	}
+	defer func() {
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := telemetry.Shutdown(shutCtx); err != nil {
+			log.Printf("warn: telemetry shutdown error: %v", err)
+		}
+	}()
+
+	// ---------------------------------------------------------------------------
+	// Handler metrics (OTel interceptor shared across all Connect-RPC services)
+	// ---------------------------------------------------------------------------
+	hMetrics, err := handler.NewHandlerMetrics()
+	if err != nil {
+		log.Printf("warn: handler metrics init failed (%v) — continuing without RPC metrics", err)
+	}
+
+	// Convenience helper: returns the interceptor option, or a no-op if hMetrics is nil.
+	withMetrics := func(opts ...connect.HandlerOption) []connect.HandlerOption {
+		if hMetrics != nil {
+			opts = append(opts, connect.WithInterceptors(hMetrics.MetricsInterceptor()))
+		}
+		return append(opts, connect.WithCompressMinBytes(1024))
+	}
+
+	// ---------------------------------------------------------------------------
+	// Database
+	// ---------------------------------------------------------------------------
 	stateDBPath := db.StateDBPath()
 	memoryDBPath := db.MemoryDBPath()
 	_ = os.MkdirAll("/tmp", 0755) //nolint:errcheck,gosec
@@ -53,7 +99,7 @@ func main() {
 	defer vdb.Close()
 
 	// ---------------------------------------------------------------------------
-	// Observability layer
+	// Prometheus observability layer (existing, coexists with OTel)
 	// ---------------------------------------------------------------------------
 	logger := slog.Default()
 
@@ -104,61 +150,43 @@ func main() {
 	// ── Mux registration ──────────────────────────────────────────────────────
 	mux := http.NewServeMux()
 
-	// Connect-RPC service handlers.
-	path, svcHandler := omegav1connect.NewOrchestratorServiceHandler(h,
-		connect.WithCompressMinBytes(1024),
-	)
+	// Connect-RPC service handlers — all wrapped with OTel interceptor.
+	path, svcHandler := omegav1connect.NewOrchestratorServiceHandler(h, withMetrics()...)
 	mux.Handle(path, svcHandler)
 
-	vPath, vSvcHandler := omegav1connect.NewVictoriaServiceHandler(vh,
-		connect.WithCompressMinBytes(1024),
-	)
+	vPath, vSvcHandler := omegav1connect.NewVictoriaServiceHandler(vh, withMetrics()...)
 	mux.Handle(vPath, vSvcHandler)
 
-	sPath, sSvcHandler := omegav1connect.NewStateServiceHandler(sh,
-		connect.WithCompressMinBytes(1024),
-	)
+	sPath, sSvcHandler := omegav1connect.NewStateServiceHandler(sh, withMetrics()...)
 	mux.Handle(sPath, sSvcHandler)
 
-	aPath, aSvcHandler := omegav1connect.NewAutonomyServiceHandler(autonomyH,
-		connect.WithCompressMinBytes(1024),
-	)
+	aPath, aSvcHandler := omegav1connect.NewAutonomyServiceHandler(autonomyH, withMetrics()...)
 	mux.Handle(aPath, aSvcHandler)
 
-	advPath, advSvcHandler := omegav1connect.NewAdversarialServiceHandler(adversarialH,
-		connect.WithCompressMinBytes(1024),
-	)
+	advPath, advSvcHandler := omegav1connect.NewAdversarialServiceHandler(adversarialH, withMetrics()...)
 	mux.Handle(advPath, advSvcHandler)
 
 	if safetyH != nil {
-		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(safetyH,
-			connect.WithCompressMinBytes(1024),
-		)
+		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(safetyH, withMetrics()...)
 		mux.Handle(sfPath, sfSvcHandler)
 	} else {
 		sfPath, sfSvcHandler := omegav1connect.NewSafetyServiceHandler(
-			omegav1connect.UnimplementedSafetyServiceHandler{},
-			connect.WithCompressMinBytes(1024),
+			omegav1connect.UnimplementedSafetyServiceHandler{}, withMetrics()...,
 		)
 		mux.Handle(sfPath, sfSvcHandler)
 	}
 
 	if memoryH != nil {
-		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(memoryH,
-			connect.WithCompressMinBytes(1024),
-		)
+		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(memoryH, withMetrics()...)
 		mux.Handle(mPath, mSvcHandler)
 	} else {
 		mPath, mSvcHandler := omegav1connect.NewMemoryServiceHandler(
-			omegav1connect.UnimplementedMemoryServiceHandler{},
-			connect.WithCompressMinBytes(1024),
+			omegav1connect.UnimplementedMemoryServiceHandler{}, withMetrics()...,
 		)
 		mux.Handle(mPath, mSvcHandler)
 	}
 
-	impPath, impSvcHandler := omegav1connect.NewImprovementServiceHandler(improvementH,
-		connect.WithCompressMinBytes(1024),
-	)
+	impPath, impSvcHandler := omegav1connect.NewImprovementServiceHandler(improvementH, withMetrics()...)
 	mux.Handle(impPath, impSvcHandler)
 
 	// Observability endpoints.
@@ -173,7 +201,7 @@ func main() {
 		addr = ":" + p
 	}
 	log.Printf("Omega API listening on %s", addr) //nolint:gosec
-	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics")
+	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics (OTel endpoint=%q)", telCfg.OtlpEndpoint)
 	log.Fatal(http.ListenAndServe(addr, h2c.NewHandler(withCORS(mux), &http2.Server{}))) //nolint:gosec,gocritic
 }
 
