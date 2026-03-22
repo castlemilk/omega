@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { client } from "../client";
 import NodeCard from "../components/NodeCard";
 import PipelineCycle from "../components/PipelineCycle";
+import { useProject } from "../context/ProjectContext";
 import type { SystemHealth, Node, ActivityEntry } from "../gen/omega/v1/types_pb";
 
 // Maps raw action_type strings to human-readable labels and colors.
@@ -64,6 +65,7 @@ interface DashboardProps {
 export default function Dashboard({ health }: DashboardProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
+  const { selectedProject } = useProject();
 
   useEffect(() => {
     client
@@ -111,10 +113,12 @@ export default function Dashboard({ health }: DashboardProps) {
         ))}
       </div>
 
-      {/* Victoria pipeline cycle */}
+      {/* Project pipeline cycle — dynamic from selected project's pipeline_config */}
       <PipelineCycle
         nodes={nodes}
         totalCycles={health?.totalCycles ? Number(health.totalCycles) : undefined}
+        projectName={selectedProject?.name}
+        pipelineSteps={selectedProject?.pipelineConfig}
       />
 
       {/* Node grid */}

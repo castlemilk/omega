@@ -17,10 +17,16 @@ import {
   Zap,
   List,
   FlaskConical,
+  Layers,
+  ChevronDown,
 } from "lucide-react";
+import { useState } from "react";
+import { useProject } from "../../context/ProjectContext";
+import type { Project } from "../../gen/omega/v1/types_pb";
 
 const OMEGA_NAV = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/projects", icon: Layers, label: "Projects" },
   { to: "/nodes", icon: Server, label: "Nodes" },
   { to: "/traces", icon: GitBranch, label: "Traces" },
   { to: "/metrics", icon: BarChart2, label: "Metrics" },
@@ -34,6 +40,7 @@ const OMEGA_NAV = [
   { to: "/improvements", icon: History, label: "Improvements" },
 ];
 
+// Victoria's project-specific views. Future projects will declare their own.
 const VICTORIA_NAV = [
   { to: "/victoria", icon: Terminal, label: "Terminal" },
   { to: "/victoria/portfolio", icon: PieChart, label: "Portfolio" },
@@ -42,15 +49,81 @@ const VICTORIA_NAV = [
   { to: "/victoria/backtest", icon: FlaskConical, label: "Backtest" },
 ];
 
+function projectNavItems(project: Project) {
+  if (project.projectId === "proj_victoria" || project.name === "Victoria") {
+    return VICTORIA_NAV;
+  }
+  return [];
+}
+
+function ProjectSelector() {
+  const { projects, selectedProject, setSelectedProject } = useProject();
+  const [open, setOpen] = useState(false);
+
+  if (projects.length === 0) {
+    return <div className="px-3 py-2 text-xs text-gray-600 italic">No projects</div>;
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-surface-700 text-white hover:bg-surface-600 transition-colors"
+      >
+        <span className="truncate">{selectedProject?.name ?? "Select project"}</span>
+        <ChevronDown
+          size={14}
+          className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-700 border border-surface-500 rounded-lg shadow-lg overflow-hidden">
+          {projects.map((p) => (
+            <button
+              key={p.projectId}
+              onClick={() => {
+                setSelectedProject(p);
+                setOpen(false);
+              }}
+              className={`w-full text-left px-3 py-2 text-sm hover:bg-surface-600 transition-colors ${
+                selectedProject?.projectId === p.projectId
+                  ? "text-white font-semibold"
+                  : "text-gray-300"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                {p.metadata?.color && (
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: p.metadata.color }}
+                  />
+                )}
+                {p.name}
+              </span>
+              {p.domain && <span className="text-xs text-gray-500 ml-4">{p.domain}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Sidebar() {
+  const { selectedProject } = useProject();
+  const projectNav = selectedProject ? projectNavItems(selectedProject) : [];
+  const accentColor = selectedProject?.metadata?.color ?? "#00ff00";
+  const accentDim = accentColor === "#00ff00" ? "#009900" : accentColor;
+
   return (
     <aside className="w-56 min-h-screen bg-surface-800 border-r border-surface-600 flex flex-col py-6 px-3 gap-1 shrink-0 overflow-y-auto">
+      {/* Logo */}
       <div className="px-3 mb-6">
         <span className="text-xl font-bold tracking-tight text-white">Ω Omega</span>
-        <p className="text-xs text-gray-500 mt-0.5">Agent Dashboard</p>
+        <p className="text-xs text-gray-500 mt-0.5">Platform</p>
       </div>
 
-      {/* Omega section */}
+      {/* OMEGA — global platform section */}
       <div className="px-3 mb-2">
         <span className="text-xs text-gray-600 uppercase tracking-widest font-semibold">
           Omega
@@ -77,35 +150,49 @@ export default function Sidebar() {
       {/* Divider */}
       <div className="border-t border-surface-600 my-3" />
 
-      {/* Victoria section */}
+      {/* Project selector */}
       <div className="px-3 mb-2">
-        <span
-          className="text-xs uppercase tracking-widest font-semibold"
-          style={{ color: "#009900" }}
-        >
-          Victoria
+        <span className="text-xs text-gray-600 uppercase tracking-widest font-semibold">
+          Project
         </span>
       </div>
-      {VICTORIA_NAV.map(({ to, icon: Icon, label }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={to === "/victoria"}
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isActive ? "text-black" : "hover:bg-surface-700"
-            }`
-          }
-          style={({ isActive }) =>
-            isActive
-              ? { backgroundColor: "#00ff00", color: "#000", textShadow: "none" }
-              : { color: "#009900" }
-          }
-        >
-          <Icon size={17} />
-          {label}
-        </NavLink>
-      ))}
+      <div className="mb-2">
+        <ProjectSelector />
+      </div>
+
+      {/* Selected project nav */}
+      {projectNav.length > 0 && selectedProject && (
+        <>
+          <div className="px-3 mb-1 mt-1">
+            <span
+              className="text-xs uppercase tracking-widest font-semibold"
+              style={{ color: accentDim }}
+            >
+              {selectedProject.name}
+            </span>
+          </div>
+          {projectNav.map(({ to, icon: Icon, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === "/victoria"}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive ? "text-black" : "hover:bg-surface-700"
+                }`
+              }
+              style={({ isActive }) =>
+                isActive
+                  ? { backgroundColor: accentColor, color: "#000", textShadow: "none" }
+                  : { color: accentDim }
+              }
+            >
+              <Icon size={17} />
+              {label}
+            </NavLink>
+          ))}
+        </>
+      )}
     </aside>
   );
 }

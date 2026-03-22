@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "omega/v1/types.proto";
+
+service ProjectService {
+  rpc CreateProject(CreateProjectRequest)                     returns (CreateProjectResponse);
+  rpc GetProject(GetProjectRequest)                           returns (GetProjectResponse);
+  rpc ListProjects(ListProjectsRequest)                       returns (ListProjectsResponse);
+  rpc UpdateProject(UpdateProjectRequest)                     returns (UpdateProjectResponse);
+  rpc DeleteProject(DeleteProjectRequest)                     returns (DeleteProjectResponse);
+  rpc AssignNodeToProject(AssignNodeToProjectRequest)         returns (AssignNodeToProjectResponse);
+  rpc RemoveNodeFromProject(RemoveNodeFromProjectRequest)     returns (RemoveNodeFromProjectResponse);
+}
+
+message CreateProjectRequest {
+  string name           = 1;
+  string description    = 2;
+  string domain         = 3;
+  string autonomy_level = 4;
+  repeated string       node_ids        = 5;
+  repeated PipelineStep pipeline_config = 6;
+  EvalConfig            eval_config     = 7;
+  ImprovementConfig     improvement_config = 8;
+  map<string, string>   metadata        = 9;
+}
+message CreateProjectResponse { Project project = 1; }
+
+message GetProjectRequest  { string project_id = 1; }
+message GetProjectResponse { Project project   = 1; }
+
+message ListProjectsRequest  {}
+message ListProjectsResponse { repeated Project projects = 1; }
+
+message UpdateProjectRequest {
+  string project_id     = 1;
+  string name           = 2;
+  string description    = 3;
+  string status         = 4;
+  string domain         = 5;
+  string autonomy_level = 6;
+  repeated PipelineStep pipeline_config  = 7;
+  EvalConfig            eval_config      = 8;
+  ImprovementConfig     improvement_config = 9;
+  map<string, string>   metadata         = 10;
+}
+message UpdateProjectResponse { Project project = 1; }
+
+message DeleteProjectRequest  { string project_id = 1; }
+message DeleteProjectResponse { bool   success    = 1; }
+
+message AssignNodeToProjectRequest {
+  string project_id = 1;
+  string node_id    = 2;
+}
+message AssignNodeToProjectResponse { Project project = 1; }
+
+message RemoveNodeFromProjectRequest {
+  string project_id = 1;
+  string node_id    = 2;
+}
+message RemoveNodeFromProjectResponse { Project project = 1; }

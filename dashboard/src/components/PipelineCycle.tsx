@@ -1,8 +1,9 @@
-// PipelineCycle — horizontal stepper showing the Victoria 9-step execution pipeline.
-// Status is derived by matching step names against registered node data.
-import type { Node } from "../gen/omega/v1/types_pb";
+// PipelineCycle — horizontal stepper showing a project's execution pipeline.
+// When pipelineSteps is provided (from ProjectContext), uses those dynamically.
+// Falls back to the hardcoded Victoria 9-step pipeline when not provided.
+import type { Node, PipelineStep } from "../gen/omega/v1/types_pb";
 
-const STEPS = [
+const VICTORIA_STEPS = [
   { key: "data_ingestion", label: "DataIngestion", short: "INGEST" },
   { key: "signal_research", label: "SignalResearch", short: "SIGNALS" },
   { key: "ic_scoring", label: "IC Scoring", short: "IC" },
@@ -16,14 +17,14 @@ const STEPS = [
 
 type StepStatus = "idle" | "running" | "completed" | "error";
 
-function resolveStatus(stepKey: string, nodes: Node[]): StepStatus {
+function resolveStatus(key: string, nodes: Node[]): StepStatus {
   const node = nodes.find(
     (n) =>
-      n.nodeId.toLowerCase().includes(stepKey.replace(/_/g, "")) ||
+      n.nodeId.toLowerCase().includes(key.replace(/_/g, "")) ||
       n.name
         .toLowerCase()
         .replace(/[\s_-]/g, "")
-        .includes(stepKey.replace(/_/g, ""))
+        .includes(key.replace(/_/g, ""))
   );
   if (!node) return "idle";
   if (node.status === "error" || node.errorRate > 0.5) return "error";
@@ -72,10 +73,29 @@ const STATUS_LABELS: Record<StepStatus, string> = {
 interface PipelineCycleProps {
   nodes: Node[];
   totalCycles?: number;
+  projectName?: string;
+  pipelineSteps?: PipelineStep[];
 }
 
-export default function PipelineCycle({ nodes, totalCycles }: PipelineCycleProps) {
-  const steps = STEPS.map((s) => ({
+export default function PipelineCycle({
+  nodes,
+  totalCycles,
+  projectName,
+  pipelineSteps,
+}: PipelineCycleProps) {
+  // Build display steps: use project pipeline_config if provided, else fall back to hardcoded.
+  const displaySteps =
+    pipelineSteps && pipelineSteps.length > 0
+      ? [...pipelineSteps]
+          .sort((a, b) => a.order - b.order)
+          .map((s) => ({
+            key: s.name.toLowerCase().replace(/\s+/g, "_"),
+            label: s.name,
+            short: s.name.length > 8 ? s.name.slice(0, 7).toUpperCase() : s.name.toUpperCase(),
+          }))
+      : VICTORIA_STEPS.map((s) => ({ ...s }));
+
+  const steps = displaySteps.map((s) => ({
     ...s,
     status: resolveStatus(s.key, nodes) as StepStatus,
   }));
@@ -83,12 +103,13 @@ export default function PipelineCycle({ nodes, totalCycles }: PipelineCycleProps
   const runningCount = steps.filter((s) => s.status === "running").length;
   const completedCount = steps.filter((s) => s.status === "completed").length;
   const errorCount = steps.filter((s) => s.status === "error").length;
+  const pipelineLabel = projectName ? `${projectName} Pipeline` : "Victoria Pipeline";
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">
-          Victoria Pipeline
+          {pipelineLabel}
         </h2>
         <div className="flex items-center gap-3 text-xs text-gray-500">
           {totalCycles !== undefined && totalCycles > 0 && (
@@ -96,7 +117,9 @@ export default function PipelineCycle({ nodes, totalCycles }: PipelineCycleProps
           )}
           {runningCount > 0 && <span className="text-indigo-400">{runningCount} running</span>}
           {errorCount > 0 && <span className="text-red-400">{errorCount} errors</span>}
-          {completedCount === STEPS.length && <span className="text-green-400">all healthy</span>}
+          {completedCount === steps.length && steps.length > 0 && (
+            <span className="text-green-400">all healthy</span>
+          )}
         </div>
       </div>
 

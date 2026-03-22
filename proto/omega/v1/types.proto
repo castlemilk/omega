@@ -319,6 +319,58 @@ message NodeRegistration {
   google.protobuf.Timestamp registered_at = 12;
 }
 
+// ── Projects ────────────────────────────────────────────────────────────────
+
+// PipelineStep is one ordered step in a project's execution pipeline.
+// node_type references a NodeCapability enum name (e.g. "DATA_INGESTION").
+message PipelineStep {
+  string step_id     = 1;
+  string name        = 2;
+  string node_type   = 3;
+  string description = 4;
+  int32  order       = 5;
+  map<string, string> config = 6;
+}
+
+// EvalConfig declares which metrics matter for a project and their targets.
+message EvalConfig {
+  repeated string         primary_metrics = 1;
+  map<string, double>     metric_targets  = 2;
+  string                  eval_frequency  = 3; // "per_cycle" | "daily" | "weekly"
+}
+
+// ImprovementConfig controls how Omega's improvement engine runs for a project.
+message ImprovementConfig {
+  bool   tpe_enabled           = 1;
+  int32  tpe_trials            = 2;
+  bool   adversarial_enabled   = 3;
+  int32  adversarial_rounds    = 4;
+  bool   walk_forward_enabled  = 5;
+  map<string, string> extra    = 6;
+}
+
+// Project is a configured instance driven by the Omega platform.
+// Omega owns orchestration, eval, and self-improvement; Projects declare WHAT runs.
+message Project {
+  string project_id     = 1;
+  string name           = 2;
+  string description    = 3;
+  // status: "active" | "paused" | "archived"
+  string status         = 4;
+  // domain: "crypto_quant" | "macro_research" | "options_arb" | "custom"
+  string domain         = 5;
+  // autonomy_level mirrors NodeRegistration.autonomy_level
+  string autonomy_level = 6;
+  // node_ids references nodes in the global Omega node registry
+  repeated string       node_ids        = 7;
+  repeated PipelineStep pipeline_config = 8;
+  EvalConfig            eval_config     = 9;
+  ImprovementConfig     improvement_config = 10;
+  google.protobuf.Timestamp created_at  = 11;
+  google.protobuf.Timestamp updated_at  = 12;
+  map<string, string>   metadata        = 13;
+}
+
 // ── Improvement detail (with alignment context) ───────────────────────────────
 
 message ImprovementDetail {
