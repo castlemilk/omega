@@ -2,12 +2,27 @@ import { useEffect, useState } from "react";
 import { client } from "../client";
 import BrainConfigPanel from "../components/BrainConfigPanel";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
-import type { Node, ExecutionRecord } from "../gen/omega/v1/types_pb";
+import type { Node, ExecutionRecord, CircuitBreakerState } from "../gen/omega/v1/types_pb";
 import type { LatencyPoint } from "../gen/omega/v1/omega_service_pb";
 
 function formatTs(ts?: { seconds: bigint }): string {
   if (!ts) return "—";
   return new Date(Number(ts.seconds) * 1000).toLocaleTimeString();
+}
+
+function circuitBreakerBadge(cb?: CircuitBreakerState) {
+  if (!cb) return null;
+  const state = cb.state || "CLOSED";
+  const colorClass =
+    state === "OPEN"
+      ? "bg-red-900 text-red-400"
+      : state === "HALF_OPEN"
+        ? "bg-yellow-900 text-yellow-400"
+        : "bg-green-900 text-green-400";
+  const label = state === "HALF_OPEN" ? "HALF-OPEN" : state;
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${colorClass}`}>{label}</span>
+  );
 }
 
 export default function Nodes() {
@@ -46,7 +61,16 @@ export default function Nodes() {
         <table className="w-full text-sm">
           <thead className="text-xs text-gray-400 uppercase bg-gray-900">
             <tr>
-              {["Node", "Version", "Health", "p95 ms", "Err Rate", "Cycles", "Status"].map((h) => (
+              {[
+                "Node",
+                "Version",
+                "Health",
+                "p95 ms",
+                "Err Rate",
+                "Cycles",
+                "Status",
+                "Circuit Breaker",
+              ].map((h) => (
                 <th key={h} className="px-4 py-3 text-left font-medium">
                   {h}
                 </th>
@@ -84,6 +108,26 @@ export default function Nodes() {
                   >
                     {n.status}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  {n.circuitBreaker ? (
+                    <div className="flex flex-col gap-1">
+                      {circuitBreakerBadge(n.circuitBreaker)}
+                      {n.circuitBreaker.failureCount > 0 && (
+                        <span className="text-xs text-gray-500 font-mono">
+                          {n.circuitBreaker.failureCount} fail
+                          {n.circuitBreaker.failureCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                      {n.circuitBreaker.lastFailureTime && (
+                        <span className="text-xs text-gray-600 font-mono">
+                          last: {formatTs(n.circuitBreaker.lastFailureTime)}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-600">—</span>
+                  )}
                 </td>
               </tr>
             ))}

@@ -23,6 +23,7 @@ message Node {
   double p95_latency_ms = 12;
   int64 improvement_count = 13;
   ExecutionRecord last_execution = 14;
+  CircuitBreakerState circuit_breaker = 15;
 }
 
 message ExecutionRecord {
@@ -275,6 +276,18 @@ message GateResult {
   string result = 4;
   string details = 5;
   google.protobuf.Timestamp checked_at = 6;
+}
+
+// ── Circuit breaker ────────────────────────────────────────────────────────────
+
+// CircuitBreakerState captures the current state of a node's circuit breaker.
+message CircuitBreakerState {
+  // state is one of "CLOSED", "OPEN", or "HALF_OPEN".
+  string state = 1;
+  // failure_count is the number of consecutive failures recorded.
+  int32 failure_count = 2;
+  // last_failure_time is when the last failure was recorded (zero if never).
+  google.protobuf.Timestamp last_failure_time = 3;
 }
 
 // ── Node capability & status ───────────────────────────────────────────────────
