@@ -5,12 +5,21 @@ BacktestEvaluator: plugs real backtest runs into the TPE improvement loop.
 Implements ImprovementEvaluator by running a parameterised strategy over a
 fixed out-of-sample window, returning the Sharpe ratio as the score.
 
-Walk-forward design
--------------------
-- ``oos_start`` / ``oos_end`` define the out-of-sample evaluation window.
-- All TPE trials are scored on the *same* OOS window so results are comparable.
-- In-sample data is not used here — the TPE itself is the "model"; the backtest
-  is purely the objective function.
+Walk-forward design (with DataSplitter)
+----------------------------------------
+Use ``BacktestEvaluator.from_splitter(DataSplitter(...))`` to get a clean
+three-way split:
+
+- Train   (60 %): price history for signal fitting — not used by BacktestEvaluator
+  directly, but reserved so data is never leaked into the TPE objective.
+- Validate (20 %): the TPE objective window. All 100+ TPE trials evaluate here.
+- Test     (20 %): held out completely. Call ``evaluate_test_split()`` once, after
+  TPE finishes, to produce the honest out-of-sample number.
+
+Bootstrap Sharpe CIs
+---------------------
+Every call to ``evaluate()`` now returns ``sharpe_ci_lower`` and
+``sharpe_ci_upper`` in the metrics dict (95 % bootstrap, 1 000 resamples).
 
 Thread safety
 -------------
@@ -31,7 +40,8 @@ from omega.core.improvement_engine import (
     _max_drawdown,
     composite_score,
 )
-from omega.eval.sharpe import sharpe_ratio as _sharpe_ratio
+from omega.eval.data_splitter import DataSplitter
+from omega.eval.sharpe import compute_sharpe_confidence_interval, sharpe_ratio as _sharpe_ratio
 
 logger = logging.getLogger("omega.core.backtest_evaluator")
 
@@ -215,6 +225,43 @@ class BacktestEvaluator(ImprovementEvaluator):
 
         self._cache: dict[str, tuple[float, dict[str, Any]]] = {}
         self._lock = threading.Lock()
+        self._splitter: DataSplitter | None = None  # set by from_splitter()
+
+    @classmethod
+    def from_splitter(
+        cls,
+        splitter: DataSplitter,
+        symbols: list[str] | None = None,
+        sharpe_weight: float = 0.7,
+        dd_weight: float = 0.3,
+        max_cache: int = 512,
+        allow_synthetic: bool = False,
+    ) -> "BacktestEvaluator":
+        """
+        Construct a BacktestEvaluator whose TPE objective uses the validate window.
+
+        The validate window is derived from the DataSplitter — callers cannot
+        accidentally pass the test window as the objective.
+
+        Parameters
+        ----------
+        splitter : DataSplitter — defines train/validate/test boundaries.
+
+        All other parameters mirror BacktestEvaluator.__init__.
+        """
+        split = splitter.split()
+        instance = cls(
+            symbols=symbols,
+            oos_start=split.validate_start,
+            oos_end=split.validate_end,
+            use_oos=True,
+            sharpe_weight=sharpe_weight,
+            dd_weight=dd_weight,
+            max_cache=max_cache,
+            allow_synthetic=allow_synthetic,
+        )
+        instance._splitter = splitter
+        return instance
 
     # ------------------------------------------------------------------
     # ImprovementEvaluator interface
@@ -280,25 +327,59 @@ class BacktestEvaluator(ImprovementEvaluator):
         parts = f"{node_id}:" + ":".join(f"{k}={v}" for k, v in sorted(params.items()))
         return hashlib.sha256(parts.encode()).hexdigest()
 
-    def _run_backtest(self, params: dict[str, Any]) -> tuple[float, dict[str, Any]]:
-        """Run strategy over all symbols and aggregate metrics."""
-        start = self._oos_start
-        end = self._oos_end
+    def evaluate_test_split(
+        self,
+        node_id: str,
+        params: dict[str, Any],
+    ) -> tuple[float, dict[str, Any]]:
+        """
+        Evaluate best-found params on the held-out test split.
 
+        Call this ONCE, after TPE optimisation completes. Never feed the result
+        back into the TPE — the test split must remain unseen by the optimizer.
+
+        Raises RuntimeError if no DataSplitter was provided (i.e. the evaluator
+        was not constructed via from_splitter()).
+        """
+        if self._splitter is None:
+            raise RuntimeError(
+                "evaluate_test_split() requires a DataSplitter. "
+                "Construct via BacktestEvaluator.from_splitter(splitter)."
+            )
+        split = self._splitter.split()
+        resolved = self._resolve_params(params)
+        # Deliberately bypass the validate-window cache — this is a one-off evaluation
+        # on a different date range.
+        return self._run_backtest_on_window(resolved, split.test_start, split.test_end)
+
+    def _run_backtest(self, params: dict[str, Any]) -> tuple[float, dict[str, Any]]:
+        """Run strategy over all symbols using the configured OOS window."""
+        return self._run_backtest_on_window(params, self._oos_start, self._oos_end)
+
+    def _run_backtest_on_window(
+        self, params: dict[str, Any], start: str, end: str
+    ) -> tuple[float, dict[str, Any]]:
+        """Run strategy over all symbols in [start, end] and aggregate metrics."""
         all_returns: list[float] = []
         all_equity: list[float] = [1.0]
 
         for symbol in self._symbols:
-            # Try real data first; fall back to synthetic
             prices = self._load_prices(symbol, start, end)
             if len(prices) < params["long_window"] + 5:
-                # Not enough bars — return neutral score
                 logger.warning(
                     "Insufficient data for %s (%d bars), using neutral score.",
                     symbol,
                     len(prices),
                 )
-                return 0.0, {"sharpe": 0.0, "max_drawdown": 0.0, "composite": 0.0}
+                return 0.0, {
+                    "sharpe": 0.0,
+                    "sharpe_ci_lower": 0.0,
+                    "sharpe_ci_upper": 0.0,
+                    "max_drawdown": 0.0,
+                    "composite": 0.0,
+                    "oos_start": start,
+                    "oos_end": end,
+                }
 
             rets, equity = _run_parameterised_strategy(
                 prices=prices,
@@ -315,20 +396,31 @@ class BacktestEvaluator(ImprovementEvaluator):
                 all_equity.extend(equity[1:])
 
         if not all_returns:
-            return 0.0, {"sharpe": 0.0, "max_drawdown": 0.0, "composite": 0.0}
+            return 0.0, {
+                "sharpe": 0.0,
+                "sharpe_ci_lower": 0.0,
+                "sharpe_ci_upper": 0.0,
+                "max_drawdown": 0.0,
+                "composite": 0.0,
+                "oos_start": start,
+                "oos_end": end,
+            }
 
         sharpe = _sharpe_ratio(all_returns)
+        ci_lower, ci_upper = compute_sharpe_confidence_interval(all_returns)
         mdd = _max_drawdown(all_equity)  # negative value, lower is worse
         comp = composite_score(sharpe, mdd, self._sharpe_weight, self._dd_weight)
 
         metrics = {
             "sharpe": round(sharpe, 4),
+            "sharpe_ci_lower": round(ci_lower, 4),
+            "sharpe_ci_upper": round(ci_upper, 4),
             "max_drawdown": round(mdd, 4),
             "composite": round(comp, 4),
             "n_bars": len(all_returns),
             "total_return": round(sum(all_returns), 4),
-            "oos_start": self._oos_start,
-            "oos_end": self._oos_end,
+            "oos_start": start,
+            "oos_end": end,
         }
         return comp, metrics
 
