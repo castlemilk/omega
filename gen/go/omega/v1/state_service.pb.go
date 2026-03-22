@@ -292,6 +292,9 @@ type EndExecutionRequest struct {
 	Success       bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
 	ErrorText     string                 `protobuf:"bytes,3,opt,name=error_text,json=errorText,proto3" json:"error_text,omitempty"`
 	Metrics       map[string]float64     `protobuf:"bytes,4,rep,name=metrics,proto3" json:"metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	ErrorClass    ErrorClassification    `protobuf:"varint,5,opt,name=error_class,json=errorClass,proto3,enum=omega.v1.ErrorClassification" json:"error_class,omitempty"`
+	ErrorCode     string                 `protobuf:"bytes,6,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"` // machine-readable sub-code, e.g. "circuit_open"
+	IsRetryable   bool                   `protobuf:"varint,7,opt,name=is_retryable,json=isRetryable,proto3" json:"is_retryable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -352,6 +355,27 @@ func (x *EndExecutionRequest) GetMetrics() map[string]float64 {
 		return x.Metrics
 	}
 	return nil
+}
+
+func (x *EndExecutionRequest) GetErrorClass() ErrorClassification {
+	if x != nil {
+		return x.ErrorClass
+	}
+	return ErrorClassification_ERROR_CLASSIFICATION_UNSPECIFIED
+}
+
+func (x *EndExecutionRequest) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *EndExecutionRequest) GetIsRetryable() bool {
+	if x != nil {
+		return x.IsRetryable
+	}
+	return false
 }
 
 type EndExecutionResponse struct {
@@ -2171,7 +2195,7 @@ var File_omega_v1_state_service_proto protoreflect.FileDescriptor
 
 const file_omega_v1_state_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1comega/v1/state_service.proto\x12\bomega.v1\"\xbf\x02\n" +
+	"\x1comega/v1/state_service.proto\x12\bomega.v1\x1a\x14omega/v1/types.proto\"\xbf\x02\n" +
 	"\x11UpsertNodeRequest\x12\x17\n" +
 	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -2193,13 +2217,18 @@ const file_omega_v1_state_service_proto_rawDesc = "" +
 	"\aspan_id\x18\x05 \x01(\tR\x06spanId\x12\x14\n" +
 	"\x05cycle\x18\x06 \x01(\x03R\x05cycle\"1\n" +
 	"\x16BeginExecutionResponse\x12\x17\n" +
-	"\aexec_id\x18\x01 \x01(\tR\x06execId\"\xe9\x01\n" +
+	"\aexec_id\x18\x01 \x01(\tR\x06execId\"\xeb\x02\n" +
 	"\x13EndExecutionRequest\x12\x17\n" +
 	"\aexec_id\x18\x01 \x01(\tR\x06execId\x12\x18\n" +
 	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x1d\n" +
 	"\n" +
 	"error_text\x18\x03 \x01(\tR\terrorText\x12D\n" +
-	"\ametrics\x18\x04 \x03(\v2*.omega.v1.EndExecutionRequest.MetricsEntryR\ametrics\x1a:\n" +
+	"\ametrics\x18\x04 \x03(\v2*.omega.v1.EndExecutionRequest.MetricsEntryR\ametrics\x12>\n" +
+	"\verror_class\x18\x05 \x01(\x0e2\x1d.omega.v1.ErrorClassificationR\n" +
+	"errorClass\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x06 \x01(\tR\terrorCode\x12!\n" +
+	"\fis_retryable\x18\a \x01(\bR\visRetryable\x1a:\n" +
 	"\fMetricsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"&\n" +
@@ -2475,64 +2504,66 @@ var file_omega_v1_state_service_proto_goTypes = []any{
 	nil,                                     // 48: omega.v1.RecordGoalTrackingRequest.ScorecardEntry
 	nil,                                     // 49: omega.v1.RecordGoalTrackingRequest.NashWeightsEntry
 	nil,                                     // 50: omega.v1.RecordGoalTrackingRequest.ControlActionEntry
+	(ErrorClassification)(0),                // 51: omega.v1.ErrorClassification
 }
 var file_omega_v1_state_service_proto_depIdxs = []int32{
 	34, // 0: omega.v1.UpsertNodeRequest.brain_config:type_name -> omega.v1.UpsertNodeRequest.BrainConfigEntry
 	35, // 1: omega.v1.EndExecutionRequest.metrics:type_name -> omega.v1.EndExecutionRequest.MetricsEntry
-	36, // 2: omega.v1.EndSpanRequest.metadata:type_name -> omega.v1.EndSpanRequest.MetadataEntry
-	37, // 3: omega.v1.RecordCostRequest.metadata:type_name -> omega.v1.RecordCostRequest.MetadataEntry
-	38, // 4: omega.v1.OpenIssueRequest.context:type_name -> omega.v1.OpenIssueRequest.ContextEntry
-	39, // 5: omega.v1.LogActivityRequest.data:type_name -> omega.v1.LogActivityRequest.DataEntry
-	40, // 6: omega.v1.RecordImprovementRequest.before_metrics:type_name -> omega.v1.RecordImprovementRequest.BeforeMetricsEntry
-	41, // 7: omega.v1.RecordImprovementRequest.after_metrics:type_name -> omega.v1.RecordImprovementRequest.AfterMetricsEntry
-	42, // 8: omega.v1.SaveConfigRevisionRequest.config:type_name -> omega.v1.SaveConfigRevisionRequest.ConfigEntry
-	43, // 9: omega.v1.RecordBrainExecutionRequest.parameters:type_name -> omega.v1.RecordBrainExecutionRequest.ParametersEntry
-	44, // 10: omega.v1.RecordAlignmentDecisionRequest.pareto_ranks:type_name -> omega.v1.RecordAlignmentDecisionRequest.ParetoRanksEntry
-	45, // 11: omega.v1.RecordAlignmentDecisionRequest.adjustments:type_name -> omega.v1.RecordAlignmentDecisionRequest.AdjustmentsEntry
-	46, // 12: omega.v1.RecordAlignmentDecisionRequest.vcg_payments:type_name -> omega.v1.RecordAlignmentDecisionRequest.VcgPaymentsEntry
-	47, // 13: omega.v1.RecordAdversarialResultRequest.details:type_name -> omega.v1.RecordAdversarialResultRequest.DetailsEntry
-	48, // 14: omega.v1.RecordGoalTrackingRequest.scorecard:type_name -> omega.v1.RecordGoalTrackingRequest.ScorecardEntry
-	49, // 15: omega.v1.RecordGoalTrackingRequest.nash_weights:type_name -> omega.v1.RecordGoalTrackingRequest.NashWeightsEntry
-	50, // 16: omega.v1.RecordGoalTrackingRequest.control_action:type_name -> omega.v1.RecordGoalTrackingRequest.ControlActionEntry
-	0,  // 17: omega.v1.StateService.UpsertNode:input_type -> omega.v1.UpsertNodeRequest
-	2,  // 18: omega.v1.StateService.BeginExecution:input_type -> omega.v1.BeginExecutionRequest
-	4,  // 19: omega.v1.StateService.EndExecution:input_type -> omega.v1.EndExecutionRequest
-	6,  // 20: omega.v1.StateService.BeginSpan:input_type -> omega.v1.BeginSpanRequest
-	8,  // 21: omega.v1.StateService.EndSpan:input_type -> omega.v1.EndSpanRequest
-	10, // 22: omega.v1.StateService.RecordCost:input_type -> omega.v1.RecordCostRequest
-	12, // 23: omega.v1.StateService.OpenIssue:input_type -> omega.v1.OpenIssueRequest
-	14, // 24: omega.v1.StateService.EscalateIssue:input_type -> omega.v1.EscalateIssueRequest
-	16, // 25: omega.v1.StateService.ResolveIssue:input_type -> omega.v1.ResolveIssueRequest
-	18, // 26: omega.v1.StateService.LogActivity:input_type -> omega.v1.LogActivityRequest
-	20, // 27: omega.v1.StateService.RecordImprovement:input_type -> omega.v1.RecordImprovementRequest
-	22, // 28: omega.v1.StateService.SaveConfigRevision:input_type -> omega.v1.SaveConfigRevisionRequest
-	24, // 29: omega.v1.StateService.RecordBrainExecution:input_type -> omega.v1.RecordBrainExecutionRequest
-	26, // 30: omega.v1.StateService.UpdateBrainOutcome:input_type -> omega.v1.UpdateBrainOutcomeRequest
-	28, // 31: omega.v1.StateService.RecordAlignmentDecision:input_type -> omega.v1.RecordAlignmentDecisionRequest
-	30, // 32: omega.v1.StateService.RecordAdversarialResult:input_type -> omega.v1.RecordAdversarialResultRequest
-	32, // 33: omega.v1.StateService.RecordGoalTracking:input_type -> omega.v1.RecordGoalTrackingRequest
-	1,  // 34: omega.v1.StateService.UpsertNode:output_type -> omega.v1.UpsertNodeResponse
-	3,  // 35: omega.v1.StateService.BeginExecution:output_type -> omega.v1.BeginExecutionResponse
-	5,  // 36: omega.v1.StateService.EndExecution:output_type -> omega.v1.EndExecutionResponse
-	7,  // 37: omega.v1.StateService.BeginSpan:output_type -> omega.v1.BeginSpanResponse
-	9,  // 38: omega.v1.StateService.EndSpan:output_type -> omega.v1.EndSpanResponse
-	11, // 39: omega.v1.StateService.RecordCost:output_type -> omega.v1.RecordCostResponse
-	13, // 40: omega.v1.StateService.OpenIssue:output_type -> omega.v1.OpenIssueResponse
-	15, // 41: omega.v1.StateService.EscalateIssue:output_type -> omega.v1.EscalateIssueResponse
-	17, // 42: omega.v1.StateService.ResolveIssue:output_type -> omega.v1.ResolveIssueResponse
-	19, // 43: omega.v1.StateService.LogActivity:output_type -> omega.v1.LogActivityResponse
-	21, // 44: omega.v1.StateService.RecordImprovement:output_type -> omega.v1.RecordImprovementResponse
-	23, // 45: omega.v1.StateService.SaveConfigRevision:output_type -> omega.v1.SaveConfigRevisionResponse
-	25, // 46: omega.v1.StateService.RecordBrainExecution:output_type -> omega.v1.RecordBrainExecutionResponse
-	27, // 47: omega.v1.StateService.UpdateBrainOutcome:output_type -> omega.v1.UpdateBrainOutcomeResponse
-	29, // 48: omega.v1.StateService.RecordAlignmentDecision:output_type -> omega.v1.RecordAlignmentDecisionResponse
-	31, // 49: omega.v1.StateService.RecordAdversarialResult:output_type -> omega.v1.RecordAdversarialResultResponse
-	33, // 50: omega.v1.StateService.RecordGoalTracking:output_type -> omega.v1.RecordGoalTrackingResponse
-	34, // [34:51] is the sub-list for method output_type
-	17, // [17:34] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	51, // 2: omega.v1.EndExecutionRequest.error_class:type_name -> omega.v1.ErrorClassification
+	36, // 3: omega.v1.EndSpanRequest.metadata:type_name -> omega.v1.EndSpanRequest.MetadataEntry
+	37, // 4: omega.v1.RecordCostRequest.metadata:type_name -> omega.v1.RecordCostRequest.MetadataEntry
+	38, // 5: omega.v1.OpenIssueRequest.context:type_name -> omega.v1.OpenIssueRequest.ContextEntry
+	39, // 6: omega.v1.LogActivityRequest.data:type_name -> omega.v1.LogActivityRequest.DataEntry
+	40, // 7: omega.v1.RecordImprovementRequest.before_metrics:type_name -> omega.v1.RecordImprovementRequest.BeforeMetricsEntry
+	41, // 8: omega.v1.RecordImprovementRequest.after_metrics:type_name -> omega.v1.RecordImprovementRequest.AfterMetricsEntry
+	42, // 9: omega.v1.SaveConfigRevisionRequest.config:type_name -> omega.v1.SaveConfigRevisionRequest.ConfigEntry
+	43, // 10: omega.v1.RecordBrainExecutionRequest.parameters:type_name -> omega.v1.RecordBrainExecutionRequest.ParametersEntry
+	44, // 11: omega.v1.RecordAlignmentDecisionRequest.pareto_ranks:type_name -> omega.v1.RecordAlignmentDecisionRequest.ParetoRanksEntry
+	45, // 12: omega.v1.RecordAlignmentDecisionRequest.adjustments:type_name -> omega.v1.RecordAlignmentDecisionRequest.AdjustmentsEntry
+	46, // 13: omega.v1.RecordAlignmentDecisionRequest.vcg_payments:type_name -> omega.v1.RecordAlignmentDecisionRequest.VcgPaymentsEntry
+	47, // 14: omega.v1.RecordAdversarialResultRequest.details:type_name -> omega.v1.RecordAdversarialResultRequest.DetailsEntry
+	48, // 15: omega.v1.RecordGoalTrackingRequest.scorecard:type_name -> omega.v1.RecordGoalTrackingRequest.ScorecardEntry
+	49, // 16: omega.v1.RecordGoalTrackingRequest.nash_weights:type_name -> omega.v1.RecordGoalTrackingRequest.NashWeightsEntry
+	50, // 17: omega.v1.RecordGoalTrackingRequest.control_action:type_name -> omega.v1.RecordGoalTrackingRequest.ControlActionEntry
+	0,  // 18: omega.v1.StateService.UpsertNode:input_type -> omega.v1.UpsertNodeRequest
+	2,  // 19: omega.v1.StateService.BeginExecution:input_type -> omega.v1.BeginExecutionRequest
+	4,  // 20: omega.v1.StateService.EndExecution:input_type -> omega.v1.EndExecutionRequest
+	6,  // 21: omega.v1.StateService.BeginSpan:input_type -> omega.v1.BeginSpanRequest
+	8,  // 22: omega.v1.StateService.EndSpan:input_type -> omega.v1.EndSpanRequest
+	10, // 23: omega.v1.StateService.RecordCost:input_type -> omega.v1.RecordCostRequest
+	12, // 24: omega.v1.StateService.OpenIssue:input_type -> omega.v1.OpenIssueRequest
+	14, // 25: omega.v1.StateService.EscalateIssue:input_type -> omega.v1.EscalateIssueRequest
+	16, // 26: omega.v1.StateService.ResolveIssue:input_type -> omega.v1.ResolveIssueRequest
+	18, // 27: omega.v1.StateService.LogActivity:input_type -> omega.v1.LogActivityRequest
+	20, // 28: omega.v1.StateService.RecordImprovement:input_type -> omega.v1.RecordImprovementRequest
+	22, // 29: omega.v1.StateService.SaveConfigRevision:input_type -> omega.v1.SaveConfigRevisionRequest
+	24, // 30: omega.v1.StateService.RecordBrainExecution:input_type -> omega.v1.RecordBrainExecutionRequest
+	26, // 31: omega.v1.StateService.UpdateBrainOutcome:input_type -> omega.v1.UpdateBrainOutcomeRequest
+	28, // 32: omega.v1.StateService.RecordAlignmentDecision:input_type -> omega.v1.RecordAlignmentDecisionRequest
+	30, // 33: omega.v1.StateService.RecordAdversarialResult:input_type -> omega.v1.RecordAdversarialResultRequest
+	32, // 34: omega.v1.StateService.RecordGoalTracking:input_type -> omega.v1.RecordGoalTrackingRequest
+	1,  // 35: omega.v1.StateService.UpsertNode:output_type -> omega.v1.UpsertNodeResponse
+	3,  // 36: omega.v1.StateService.BeginExecution:output_type -> omega.v1.BeginExecutionResponse
+	5,  // 37: omega.v1.StateService.EndExecution:output_type -> omega.v1.EndExecutionResponse
+	7,  // 38: omega.v1.StateService.BeginSpan:output_type -> omega.v1.BeginSpanResponse
+	9,  // 39: omega.v1.StateService.EndSpan:output_type -> omega.v1.EndSpanResponse
+	11, // 40: omega.v1.StateService.RecordCost:output_type -> omega.v1.RecordCostResponse
+	13, // 41: omega.v1.StateService.OpenIssue:output_type -> omega.v1.OpenIssueResponse
+	15, // 42: omega.v1.StateService.EscalateIssue:output_type -> omega.v1.EscalateIssueResponse
+	17, // 43: omega.v1.StateService.ResolveIssue:output_type -> omega.v1.ResolveIssueResponse
+	19, // 44: omega.v1.StateService.LogActivity:output_type -> omega.v1.LogActivityResponse
+	21, // 45: omega.v1.StateService.RecordImprovement:output_type -> omega.v1.RecordImprovementResponse
+	23, // 46: omega.v1.StateService.SaveConfigRevision:output_type -> omega.v1.SaveConfigRevisionResponse
+	25, // 47: omega.v1.StateService.RecordBrainExecution:output_type -> omega.v1.RecordBrainExecutionResponse
+	27, // 48: omega.v1.StateService.UpdateBrainOutcome:output_type -> omega.v1.UpdateBrainOutcomeResponse
+	29, // 49: omega.v1.StateService.RecordAlignmentDecision:output_type -> omega.v1.RecordAlignmentDecisionResponse
+	31, // 50: omega.v1.StateService.RecordAdversarialResult:output_type -> omega.v1.RecordAdversarialResultResponse
+	33, // 51: omega.v1.StateService.RecordGoalTracking:output_type -> omega.v1.RecordGoalTrackingResponse
+	35, // [35:52] is the sub-list for method output_type
+	18, // [18:35] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_state_service_proto_init() }
@@ -2540,6 +2571,7 @@ func file_omega_v1_state_service_proto_init() {
 	if File_omega_v1_state_service_proto != nil {
 		return
 	}
+	file_omega_v1_types_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

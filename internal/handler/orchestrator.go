@@ -204,18 +204,21 @@ func (h *OrchestratorHandler) attachCircuitBreaker(n *omegav1.Node, nodeID strin
 
 func dbExecToProto(e *db.Execution) *omegav1.ExecutionRecord {
 	rec := &omegav1.ExecutionRecord{
-		ExecId:    e.ExecID,
-		NodeId:    e.NodeID,
-		NodeName:  e.NodeName,
-		TraceId:   e.TraceID,
-		SpanId:    e.SpanID,
-		Action:    e.Action,
-		StartedAt: tsFromUnix(e.StartedAt),
-		EndedAt:   tsFromUnixPtr(e.EndedAt),
-		Success:   e.Success,
-		ErrorText: e.ErrorText,
-		Metrics:   e.Metrics,
-		Cycle:     e.Cycle,
+		ExecId:      e.ExecID,
+		NodeId:      e.NodeID,
+		NodeName:    e.NodeName,
+		TraceId:     e.TraceID,
+		SpanId:      e.SpanID,
+		Action:      e.Action,
+		StartedAt:   tsFromUnix(e.StartedAt),
+		EndedAt:     tsFromUnixPtr(e.EndedAt),
+		Success:     e.Success,
+		ErrorText:   e.ErrorText,
+		Metrics:     e.Metrics,
+		Cycle:       e.Cycle,
+		ErrorClass:  omegav1.ErrorClassification(e.ErrorClass),
+		ErrorCode:   e.ErrorCode,
+		IsRetryable: e.IsRetryable,
 	}
 	if e.DurationMS != nil {
 		rec.DurationMs = *e.DurationMS

@@ -3,7 +3,36 @@ import { client } from "../client";
 import BrainConfigPanel from "../components/BrainConfigPanel";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 import type { Node, ExecutionRecord, CircuitBreakerState } from "../gen/omega/v1/types_pb";
+import { ErrorClassification } from "../gen/omega/v1/types_pb";
 import type { LatencyPoint } from "../gen/omega/v1/omega_service_pb";
+
+const ERROR_CLASS_LABELS: Record<number, string> = {
+  [ErrorClassification.UNSPECIFIED]: "",
+  [ErrorClassification.TIMEOUT]: "TIMEOUT",
+  [ErrorClassification.DATA_QUALITY]: "DATA_QUALITY",
+  [ErrorClassification.DEPENDENCY_FAILURE]: "DEPENDENCY",
+  [ErrorClassification.RESOURCE_EXHAUSTION]: "RESOURCE",
+  [ErrorClassification.VALIDATION_ERROR]: "VALIDATION",
+  [ErrorClassification.LLM_ERROR]: "LLM_ERROR",
+  [ErrorClassification.UNKNOWN]: "UNKNOWN",
+};
+
+const ERROR_CLASS_COLORS: Record<number, string> = {
+  [ErrorClassification.TIMEOUT]: "bg-yellow-900 text-yellow-400",
+  [ErrorClassification.DATA_QUALITY]: "bg-orange-900 text-orange-400",
+  [ErrorClassification.DEPENDENCY_FAILURE]: "bg-red-900 text-red-400",
+  [ErrorClassification.RESOURCE_EXHAUSTION]: "bg-purple-900 text-purple-400",
+  [ErrorClassification.VALIDATION_ERROR]: "bg-orange-900 text-orange-400",
+  [ErrorClassification.LLM_ERROR]: "bg-indigo-900 text-indigo-400",
+  [ErrorClassification.UNKNOWN]: "bg-gray-700 text-gray-400",
+};
+
+function ErrorClassBadge({ errorClass }: { errorClass: number }) {
+  const label = ERROR_CLASS_LABELS[errorClass];
+  if (!label) return null;
+  const color = ERROR_CLASS_COLORS[errorClass] ?? "bg-gray-700 text-gray-400";
+  return <span className={`text-xs px-2 py-0.5 rounded-full font-mono ${color}`}>{label}</span>;
+}
 
 function formatTs(ts?: { seconds: bigint }): string {
   if (!ts) return "—";
@@ -31,6 +60,7 @@ export default function Nodes() {
   const [detail, setDetail] = useState<Node | null>(null);
   const [history, setHistory] = useState<LatencyPoint[]>([]);
   const [recentExecutions, setRecentExecutions] = useState<ExecutionRecord[]>([]);
+  const [errorFilter, setErrorFilter] = useState<number | null>(null);
 
   useEffect(() => {
     client
@@ -180,14 +210,39 @@ export default function Nodes() {
           </div>
 
           <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
-            <div className="px-4 py-3 bg-gray-900 border-b border-gray-700">
+            <div className="px-4 py-3 bg-gray-900 border-b border-gray-700 flex items-center justify-between gap-2 flex-wrap">
               <h3 className="text-xs font-semibold text-gray-400 uppercase">Recent Executions</h3>
+              <div className="flex gap-1 flex-wrap">
+                <button
+                  onClick={() => setErrorFilter(null)}
+                  className={`text-xs px-2 py-0.5 rounded-full transition-colors ${errorFilter === null ? "bg-indigo-600 text-white" : "bg-gray-700 text-gray-400 hover:bg-gray-600"}`}
+                >
+                  All
+                </button>
+                {Object.entries(ERROR_CLASS_LABELS)
+                  .filter(([, label]) => label !== "")
+                  .map(([cls, label]) => (
+                    <button
+                      key={cls}
+                      onClick={() =>
+                        setErrorFilter(errorFilter === Number(cls) ? null : Number(cls))
+                      }
+                      className={`text-xs px-2 py-0.5 rounded-full font-mono transition-colors ${
+                        errorFilter === Number(cls)
+                          ? "bg-indigo-600 text-white"
+                          : `${ERROR_CLASS_COLORS[Number(cls)] ?? "bg-gray-700 text-gray-400"} hover:opacity-80`
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+              </div>
             </div>
             {recentExecutions.length > 0 ? (
               <table className="w-full text-sm">
                 <thead className="text-xs text-gray-400 uppercase bg-gray-900">
                   <tr>
-                    {["Time", "Action", "Duration", "Status", "Error"].map((h) => (
+                    {["Time", "Action", "Duration", "Status", "Class", "Error"].map((h) => (
                       <th key={h} className="px-4 py-3 text-left font-medium">
                         {h}
                       </th>
@@ -195,29 +250,37 @@ export default function Nodes() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
-                  {recentExecutions.map((e) => (
-                    <tr key={e.execId} className="hover:bg-gray-700/50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-xs text-gray-400">
-                        {formatTs(e.startedAt)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-300 font-mono text-xs">
-                        {e.action || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-gray-300">{e.durationMs.toFixed(0)}ms</td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-full ${
-                            e.success ? "bg-green-900 text-green-400" : "bg-red-900 text-red-400"
-                          }`}
+                  {recentExecutions
+                    .filter((e) => errorFilter === null || e.errorClass === errorFilter)
+                    .map((e) => (
+                      <tr key={e.execId} className="hover:bg-gray-700/50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                          {formatTs(e.startedAt)}
+                        </td>
+                        <td className="px-4 py-3 text-gray-300 font-mono text-xs">
+                          {e.action || "—"}
+                        </td>
+                        <td className="px-4 py-3 text-gray-300">{e.durationMs.toFixed(0)}ms</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full ${
+                              e.success ? "bg-green-900 text-green-400" : "bg-red-900 text-red-400"
+                            }`}
+                          >
+                            {e.success ? "success" : "error"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <ErrorClassBadge errorClass={e.errorClass} />
+                        </td>
+                        <td
+                          className="px-4 py-3 text-red-400 text-xs font-mono max-w-xs truncate"
+                          title={e.errorText}
                         >
-                          {e.success ? "success" : "error"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-red-400 text-xs font-mono max-w-xs truncate">
-                        {e.errorText || "—"}
-                      </td>
-                    </tr>
-                  ))}
+                          {e.errorText || "—"}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             ) : (

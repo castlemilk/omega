@@ -88,7 +88,15 @@ func (h *StateHandler) EndExecution(
 	ctx context.Context,
 	req *connect.Request[omegav1.EndExecutionRequest],
 ) (*connect.Response[omegav1.EndExecutionResponse], error) {
-	if err := h.db.EndExecution(req.Msg.ExecId, req.Msg.Success, req.Msg.ErrorText, req.Msg.Metrics); err != nil {
+	if err := h.db.EndExecution(
+		req.Msg.ExecId,
+		req.Msg.Success,
+		req.Msg.ErrorText,
+		int32(req.Msg.ErrorClass),
+		req.Msg.ErrorCode,
+		req.Msg.IsRetryable,
+		req.Msg.Metrics,
+	); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return connect.NewResponse(&omegav1.EndExecutionResponse{Ok: true}), nil

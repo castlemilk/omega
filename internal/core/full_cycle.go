@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	adversarialpkg "github.com/benebsworth/omega/internal/adversarial"
+	omegaerrs "github.com/benebsworth/omega/internal/errors"
 	"github.com/benebsworth/omega/internal/observability"
 	"github.com/benebsworth/omega/internal/telemetry"
 )
@@ -182,6 +183,9 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 		if !o.circuit.AllowExecution(nodeID) {
 			nr.Skipped = true
 			nr.SkipReason = observability.ErrCircuitOpen.Error()
+			nr.ErrorClass = omegaerrs.ErrorClassDependencyFailure
+			nr.ErrorCode = "circuit_open"
+			nr.IsRetryable = true
 			o.logger.Info("full_cycle: node skipped (circuit open)", "node_id", nodeID)
 			o.updateNodeState(nodeID, "active", "skipped", "circuit open")
 			if cfg.Autonomy != nil {
@@ -231,9 +235,14 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 		if execErr != nil {
 			nr.Executed = false
 			nr.ExecutionErr = execErr.Error()
+			cls := omegaerrs.Classify(execErr)
+			nr.ErrorClass = cls.Class
+			nr.ErrorCode = cls.Code
+			nr.IsRetryable = cls.Retryable
 			o.circuit.RecordFailure(nodeID)
 			o.logger.Error("full_cycle: node execution failed",
-				"node_id", nodeID, "cycle_id", cycleID, "err", execErr)
+				"node_id", nodeID, "cycle_id", cycleID, "err", execErr,
+				"error_class", cls.Class, "error_code", cls.Code, "retryable", cls.Retryable)
 			if o.metrics != nil {
 				o.metrics.RecordNodeExecution(nodeID, nr.Duration.Seconds(), false)
 			}

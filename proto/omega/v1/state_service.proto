@@ -4,6 +4,8 @@ package omega.v1;
 
 option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
 
+import "omega/v1/types.proto";
+
 // StateService is the authoritative write interface for Omega system state.
 // Python calls these RPCs instead of writing SQLite directly.
 service StateService {
@@ -59,6 +61,9 @@ message EndExecutionRequest {
   bool success = 2;
   string error_text = 3;
   map<string, double> metrics = 4;
+  ErrorClassification error_class = 5;
+  string error_code = 6;   // machine-readable sub-code, e.g. "circuit_open"
+  bool is_retryable = 7;
 }
 message EndExecutionResponse { bool ok = 1; }
 
