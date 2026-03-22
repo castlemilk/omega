@@ -44,15 +44,35 @@ const (
 	// NodeServiceGetCapabilitiesProcedure is the fully-qualified name of the NodeService's
 	// GetCapabilities RPC.
 	NodeServiceGetCapabilitiesProcedure = "/omega.v1.NodeService/GetCapabilities"
+	// NodeServiceRegisterNodeProcedure is the fully-qualified name of the NodeService's RegisterNode
+	// RPC.
+	NodeServiceRegisterNodeProcedure = "/omega.v1.NodeService/RegisterNode"
+	// NodeServiceDeregisterNodeProcedure is the fully-qualified name of the NodeService's
+	// DeregisterNode RPC.
+	NodeServiceDeregisterNodeProcedure = "/omega.v1.NodeService/DeregisterNode"
+	// NodeServiceHeartbeatProcedure is the fully-qualified name of the NodeService's Heartbeat RPC.
+	NodeServiceHeartbeatProcedure = "/omega.v1.NodeService/Heartbeat"
+	// NodeServiceListNodesProcedure is the fully-qualified name of the NodeService's ListNodes RPC.
+	NodeServiceListNodesProcedure = "/omega.v1.NodeService/ListNodes"
+	// NodeServiceGetNodeHealthProcedure is the fully-qualified name of the NodeService's GetNodeHealth
+	// RPC.
+	NodeServiceGetNodeHealthProcedure = "/omega.v1.NodeService/GetNodeHealth"
 )
 
 // NodeServiceClient is a client for the omega.v1.NodeService service.
 type NodeServiceClient interface {
+	// ── Execution ────────────────────────────────────────────────────────────
 	Execute(context.Context, *connect.Request[v1.ExecuteRequest]) (*connect.Response[v1.ExecuteResponse], error)
 	Evaluate(context.Context, *connect.Request[v1.EvaluateRequest]) (*connect.Response[v1.EvaluateResponse], error)
 	Improve(context.Context, *connect.Request[v1.ImproveRequest]) (*connect.Response[v1.ImproveResponse], error)
 	GetState(context.Context, *connect.Request[v1.GetStateRequest]) (*connect.Response[v1.GetStateResponse], error)
 	GetCapabilities(context.Context, *connect.Request[v1.GetCapabilitiesRequest]) (*connect.Response[v1.GetCapabilitiesResponse], error)
+	// ── Registration ─────────────────────────────────────────────────────────
+	RegisterNode(context.Context, *connect.Request[v1.RegisterNodeRequest]) (*connect.Response[v1.RegisterNodeResponse], error)
+	DeregisterNode(context.Context, *connect.Request[v1.DeregisterNodeRequest]) (*connect.Response[v1.DeregisterNodeResponse], error)
+	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
+	ListNodes(context.Context, *connect.Request[v1.ListRegisteredNodesRequest]) (*connect.Response[v1.ListRegisteredNodesResponse], error)
+	GetNodeHealth(context.Context, *connect.Request[v1.GetNodeHealthRequest]) (*connect.Response[v1.GetNodeHealthResponse], error)
 }
 
 // NewNodeServiceClient constructs a client for the omega.v1.NodeService service. By default, it
@@ -96,6 +116,36 @@ func NewNodeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(nodeServiceMethods.ByName("GetCapabilities")),
 			connect.WithClientOptions(opts...),
 		),
+		registerNode: connect.NewClient[v1.RegisterNodeRequest, v1.RegisterNodeResponse](
+			httpClient,
+			baseURL+NodeServiceRegisterNodeProcedure,
+			connect.WithSchema(nodeServiceMethods.ByName("RegisterNode")),
+			connect.WithClientOptions(opts...),
+		),
+		deregisterNode: connect.NewClient[v1.DeregisterNodeRequest, v1.DeregisterNodeResponse](
+			httpClient,
+			baseURL+NodeServiceDeregisterNodeProcedure,
+			connect.WithSchema(nodeServiceMethods.ByName("DeregisterNode")),
+			connect.WithClientOptions(opts...),
+		),
+		heartbeat: connect.NewClient[v1.HeartbeatRequest, v1.HeartbeatResponse](
+			httpClient,
+			baseURL+NodeServiceHeartbeatProcedure,
+			connect.WithSchema(nodeServiceMethods.ByName("Heartbeat")),
+			connect.WithClientOptions(opts...),
+		),
+		listNodes: connect.NewClient[v1.ListRegisteredNodesRequest, v1.ListRegisteredNodesResponse](
+			httpClient,
+			baseURL+NodeServiceListNodesProcedure,
+			connect.WithSchema(nodeServiceMethods.ByName("ListNodes")),
+			connect.WithClientOptions(opts...),
+		),
+		getNodeHealth: connect.NewClient[v1.GetNodeHealthRequest, v1.GetNodeHealthResponse](
+			httpClient,
+			baseURL+NodeServiceGetNodeHealthProcedure,
+			connect.WithSchema(nodeServiceMethods.ByName("GetNodeHealth")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -106,6 +156,11 @@ type nodeServiceClient struct {
 	improve         *connect.Client[v1.ImproveRequest, v1.ImproveResponse]
 	getState        *connect.Client[v1.GetStateRequest, v1.GetStateResponse]
 	getCapabilities *connect.Client[v1.GetCapabilitiesRequest, v1.GetCapabilitiesResponse]
+	registerNode    *connect.Client[v1.RegisterNodeRequest, v1.RegisterNodeResponse]
+	deregisterNode  *connect.Client[v1.DeregisterNodeRequest, v1.DeregisterNodeResponse]
+	heartbeat       *connect.Client[v1.HeartbeatRequest, v1.HeartbeatResponse]
+	listNodes       *connect.Client[v1.ListRegisteredNodesRequest, v1.ListRegisteredNodesResponse]
+	getNodeHealth   *connect.Client[v1.GetNodeHealthRequest, v1.GetNodeHealthResponse]
 }
 
 // Execute calls omega.v1.NodeService.Execute.
@@ -133,13 +188,45 @@ func (c *nodeServiceClient) GetCapabilities(ctx context.Context, req *connect.Re
 	return c.getCapabilities.CallUnary(ctx, req)
 }
 
+// RegisterNode calls omega.v1.NodeService.RegisterNode.
+func (c *nodeServiceClient) RegisterNode(ctx context.Context, req *connect.Request[v1.RegisterNodeRequest]) (*connect.Response[v1.RegisterNodeResponse], error) {
+	return c.registerNode.CallUnary(ctx, req)
+}
+
+// DeregisterNode calls omega.v1.NodeService.DeregisterNode.
+func (c *nodeServiceClient) DeregisterNode(ctx context.Context, req *connect.Request[v1.DeregisterNodeRequest]) (*connect.Response[v1.DeregisterNodeResponse], error) {
+	return c.deregisterNode.CallUnary(ctx, req)
+}
+
+// Heartbeat calls omega.v1.NodeService.Heartbeat.
+func (c *nodeServiceClient) Heartbeat(ctx context.Context, req *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
+	return c.heartbeat.CallUnary(ctx, req)
+}
+
+// ListNodes calls omega.v1.NodeService.ListNodes.
+func (c *nodeServiceClient) ListNodes(ctx context.Context, req *connect.Request[v1.ListRegisteredNodesRequest]) (*connect.Response[v1.ListRegisteredNodesResponse], error) {
+	return c.listNodes.CallUnary(ctx, req)
+}
+
+// GetNodeHealth calls omega.v1.NodeService.GetNodeHealth.
+func (c *nodeServiceClient) GetNodeHealth(ctx context.Context, req *connect.Request[v1.GetNodeHealthRequest]) (*connect.Response[v1.GetNodeHealthResponse], error) {
+	return c.getNodeHealth.CallUnary(ctx, req)
+}
+
 // NodeServiceHandler is an implementation of the omega.v1.NodeService service.
 type NodeServiceHandler interface {
+	// ── Execution ────────────────────────────────────────────────────────────
 	Execute(context.Context, *connect.Request[v1.ExecuteRequest]) (*connect.Response[v1.ExecuteResponse], error)
 	Evaluate(context.Context, *connect.Request[v1.EvaluateRequest]) (*connect.Response[v1.EvaluateResponse], error)
 	Improve(context.Context, *connect.Request[v1.ImproveRequest]) (*connect.Response[v1.ImproveResponse], error)
 	GetState(context.Context, *connect.Request[v1.GetStateRequest]) (*connect.Response[v1.GetStateResponse], error)
 	GetCapabilities(context.Context, *connect.Request[v1.GetCapabilitiesRequest]) (*connect.Response[v1.GetCapabilitiesResponse], error)
+	// ── Registration ─────────────────────────────────────────────────────────
+	RegisterNode(context.Context, *connect.Request[v1.RegisterNodeRequest]) (*connect.Response[v1.RegisterNodeResponse], error)
+	DeregisterNode(context.Context, *connect.Request[v1.DeregisterNodeRequest]) (*connect.Response[v1.DeregisterNodeResponse], error)
+	Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error)
+	ListNodes(context.Context, *connect.Request[v1.ListRegisteredNodesRequest]) (*connect.Response[v1.ListRegisteredNodesResponse], error)
+	GetNodeHealth(context.Context, *connect.Request[v1.GetNodeHealthRequest]) (*connect.Response[v1.GetNodeHealthResponse], error)
 }
 
 // NewNodeServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -179,6 +266,36 @@ func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(nodeServiceMethods.ByName("GetCapabilities")),
 		connect.WithHandlerOptions(opts...),
 	)
+	nodeServiceRegisterNodeHandler := connect.NewUnaryHandler(
+		NodeServiceRegisterNodeProcedure,
+		svc.RegisterNode,
+		connect.WithSchema(nodeServiceMethods.ByName("RegisterNode")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nodeServiceDeregisterNodeHandler := connect.NewUnaryHandler(
+		NodeServiceDeregisterNodeProcedure,
+		svc.DeregisterNode,
+		connect.WithSchema(nodeServiceMethods.ByName("DeregisterNode")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nodeServiceHeartbeatHandler := connect.NewUnaryHandler(
+		NodeServiceHeartbeatProcedure,
+		svc.Heartbeat,
+		connect.WithSchema(nodeServiceMethods.ByName("Heartbeat")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nodeServiceListNodesHandler := connect.NewUnaryHandler(
+		NodeServiceListNodesProcedure,
+		svc.ListNodes,
+		connect.WithSchema(nodeServiceMethods.ByName("ListNodes")),
+		connect.WithHandlerOptions(opts...),
+	)
+	nodeServiceGetNodeHealthHandler := connect.NewUnaryHandler(
+		NodeServiceGetNodeHealthProcedure,
+		svc.GetNodeHealth,
+		connect.WithSchema(nodeServiceMethods.ByName("GetNodeHealth")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/omega.v1.NodeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case NodeServiceExecuteProcedure:
@@ -191,6 +308,16 @@ func NewNodeServiceHandler(svc NodeServiceHandler, opts ...connect.HandlerOption
 			nodeServiceGetStateHandler.ServeHTTP(w, r)
 		case NodeServiceGetCapabilitiesProcedure:
 			nodeServiceGetCapabilitiesHandler.ServeHTTP(w, r)
+		case NodeServiceRegisterNodeProcedure:
+			nodeServiceRegisterNodeHandler.ServeHTTP(w, r)
+		case NodeServiceDeregisterNodeProcedure:
+			nodeServiceDeregisterNodeHandler.ServeHTTP(w, r)
+		case NodeServiceHeartbeatProcedure:
+			nodeServiceHeartbeatHandler.ServeHTTP(w, r)
+		case NodeServiceListNodesProcedure:
+			nodeServiceListNodesHandler.ServeHTTP(w, r)
+		case NodeServiceGetNodeHealthProcedure:
+			nodeServiceGetNodeHealthHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -218,4 +345,24 @@ func (UnimplementedNodeServiceHandler) GetState(context.Context, *connect.Reques
 
 func (UnimplementedNodeServiceHandler) GetCapabilities(context.Context, *connect.Request[v1.GetCapabilitiesRequest]) (*connect.Response[v1.GetCapabilitiesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.NodeService.GetCapabilities is not implemented"))
+}
+
+func (UnimplementedNodeServiceHandler) RegisterNode(context.Context, *connect.Request[v1.RegisterNodeRequest]) (*connect.Response[v1.RegisterNodeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.NodeService.RegisterNode is not implemented"))
+}
+
+func (UnimplementedNodeServiceHandler) DeregisterNode(context.Context, *connect.Request[v1.DeregisterNodeRequest]) (*connect.Response[v1.DeregisterNodeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.NodeService.DeregisterNode is not implemented"))
+}
+
+func (UnimplementedNodeServiceHandler) Heartbeat(context.Context, *connect.Request[v1.HeartbeatRequest]) (*connect.Response[v1.HeartbeatResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.NodeService.Heartbeat is not implemented"))
+}
+
+func (UnimplementedNodeServiceHandler) ListNodes(context.Context, *connect.Request[v1.ListRegisteredNodesRequest]) (*connect.Response[v1.ListRegisteredNodesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.NodeService.ListNodes is not implemented"))
+}
+
+func (UnimplementedNodeServiceHandler) GetNodeHealth(context.Context, *connect.Request[v1.GetNodeHealthRequest]) (*connect.Response[v1.GetNodeHealthResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.NodeService.GetNodeHealth is not implemented"))
 }

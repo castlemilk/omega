@@ -4,13 +4,26 @@ package omega.v1;
 
 option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
 
+import "omega/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
 service NodeService {
+  // ── Execution ────────────────────────────────────────────────────────────
   rpc Execute(ExecuteRequest) returns (ExecuteResponse);
   rpc Evaluate(EvaluateRequest) returns (EvaluateResponse);
   rpc Improve(ImproveRequest) returns (ImproveResponse);
   rpc GetState(GetStateRequest) returns (GetStateResponse);
   rpc GetCapabilities(GetCapabilitiesRequest) returns (GetCapabilitiesResponse);
+
+  // ── Registration ─────────────────────────────────────────────────────────
+  rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
+  rpc DeregisterNode(DeregisterNodeRequest) returns (DeregisterNodeResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc ListNodes(ListRegisteredNodesRequest) returns (ListRegisteredNodesResponse);
+  rpc GetNodeHealth(GetNodeHealthRequest) returns (GetNodeHealthResponse);
 }
+
+// ── Execute ─────────────────────────────────────────────────────────────────
 
 message ExecuteRequest {
   string action = 1;
@@ -25,11 +38,17 @@ message ExecuteResponse {
   map<string, double> metrics = 4;
 }
 
+// ── Evaluate ────────────────────────────────────────────────────────────────
+
 message EvaluateRequest {}
 message EvaluateResponse { map<string, double> metrics = 1; }
 
+// ── Improve ─────────────────────────────────────────────────────────────────
+
 message ImproveRequest { map<string, string> feedback = 1; }
 message ImproveResponse { bool changed = 1; string new_version = 2; }
+
+// ── GetState ────────────────────────────────────────────────────────────────
 
 message GetStateRequest {}
 message GetStateResponse {
@@ -41,5 +60,74 @@ message GetStateResponse {
   repeated string capabilities = 6;
 }
 
+// ── GetCapabilities ─────────────────────────────────────────────────────────
+
 message GetCapabilitiesRequest {}
 message GetCapabilitiesResponse { repeated string capabilities = 1; }
+
+// ── RegisterNode ────────────────────────────────────────────────────────────
+
+message RegisterNodeRequest {
+  string id = 1;
+  string name = 2;
+  string language = 3;                     // "go" | "python" | "typescript" etc.
+  repeated NodeCapability capabilities = 4;
+  string address = 5;                      // host:port the node listens on
+  string version = 6;
+  string autonomy_level = 7;               // mirrors AutonomyLevel enum value name
+  map<string, string> metadata = 8;
+}
+
+message RegisterNodeResponse {
+  bool accepted = 1;
+  string node_id = 2;
+  string reason = 3;                       // set when not accepted
+}
+
+// ── DeregisterNode ──────────────────────────────────────────────────────────
+
+message DeregisterNodeRequest {
+  string node_id = 1;
+  string reason = 2;
+}
+
+message DeregisterNodeResponse { bool ok = 1; }
+
+// ── Heartbeat ───────────────────────────────────────────────────────────────
+
+message HeartbeatRequest {
+  string node_id = 1;
+  double health_score = 2;                 // [0.0, 1.0]
+  string status = 3;                       // NodeStatus name
+  map<string, double> metrics = 4;
+  int64 cycle = 5;
+}
+
+message HeartbeatResponse {
+  bool acknowledged = 1;
+  google.protobuf.Timestamp server_time = 2;
+}
+
+// ── ListNodes ───────────────────────────────────────────────────────────────
+
+message ListRegisteredNodesRequest {
+  string status_filter = 1;               // optional NodeStatus name; empty = all
+}
+
+message ListRegisteredNodesResponse {
+  repeated NodeRegistration nodes = 1;
+}
+
+// ── GetNodeHealth ────────────────────────────────────────────────────────────
+
+message GetNodeHealthRequest {
+  string node_id = 1;
+}
+
+message GetNodeHealthResponse {
+  string node_id = 1;
+  double health_score = 2;
+  string status = 3;                       // NodeStatus name
+  google.protobuf.Timestamp last_heartbeat = 4;
+  map<string, double> metrics = 5;
+}

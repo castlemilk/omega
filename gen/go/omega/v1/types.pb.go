@@ -22,6 +22,133 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// NodeCapability describes a functional role a node can perform.
+type NodeCapability int32
+
+const (
+	NodeCapability_NODE_CAPABILITY_UNSPECIFIED     NodeCapability = 0
+	NodeCapability_NODE_CAPABILITY_SIGNAL_RESEARCH NodeCapability = 1
+	NodeCapability_NODE_CAPABILITY_RISK_MANAGEMENT NodeCapability = 2
+	NodeCapability_NODE_CAPABILITY_DATA_INGESTION  NodeCapability = 3
+	NodeCapability_NODE_CAPABILITY_STRATEGY        NodeCapability = 4
+	NodeCapability_NODE_CAPABILITY_VERIFICATION    NodeCapability = 5
+	NodeCapability_NODE_CAPABILITY_ADVERSARIAL     NodeCapability = 6
+	NodeCapability_NODE_CAPABILITY_MEMORY          NodeCapability = 7
+	NodeCapability_NODE_CAPABILITY_IMPROVEMENT     NodeCapability = 8
+)
+
+// Enum value maps for NodeCapability.
+var (
+	NodeCapability_name = map[int32]string{
+		0: "NODE_CAPABILITY_UNSPECIFIED",
+		1: "NODE_CAPABILITY_SIGNAL_RESEARCH",
+		2: "NODE_CAPABILITY_RISK_MANAGEMENT",
+		3: "NODE_CAPABILITY_DATA_INGESTION",
+		4: "NODE_CAPABILITY_STRATEGY",
+		5: "NODE_CAPABILITY_VERIFICATION",
+		6: "NODE_CAPABILITY_ADVERSARIAL",
+		7: "NODE_CAPABILITY_MEMORY",
+		8: "NODE_CAPABILITY_IMPROVEMENT",
+	}
+	NodeCapability_value = map[string]int32{
+		"NODE_CAPABILITY_UNSPECIFIED":     0,
+		"NODE_CAPABILITY_SIGNAL_RESEARCH": 1,
+		"NODE_CAPABILITY_RISK_MANAGEMENT": 2,
+		"NODE_CAPABILITY_DATA_INGESTION":  3,
+		"NODE_CAPABILITY_STRATEGY":        4,
+		"NODE_CAPABILITY_VERIFICATION":    5,
+		"NODE_CAPABILITY_ADVERSARIAL":     6,
+		"NODE_CAPABILITY_MEMORY":          7,
+		"NODE_CAPABILITY_IMPROVEMENT":     8,
+	}
+)
+
+func (x NodeCapability) Enum() *NodeCapability {
+	p := new(NodeCapability)
+	*p = x
+	return p
+}
+
+func (x NodeCapability) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NodeCapability) Descriptor() protoreflect.EnumDescriptor {
+	return file_omega_v1_types_proto_enumTypes[0].Descriptor()
+}
+
+func (NodeCapability) Type() protoreflect.EnumType {
+	return &file_omega_v1_types_proto_enumTypes[0]
+}
+
+func (x NodeCapability) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NodeCapability.Descriptor instead.
+func (NodeCapability) EnumDescriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{0}
+}
+
+// NodeStatus reflects the current operational state of a registered node.
+type NodeStatus int32
+
+const (
+	NodeStatus_NODE_STATUS_UNSPECIFIED NodeStatus = 0
+	NodeStatus_NODE_STATUS_STARTING    NodeStatus = 1
+	NodeStatus_NODE_STATUS_HEALTHY     NodeStatus = 2
+	NodeStatus_NODE_STATUS_DEGRADED    NodeStatus = 3
+	NodeStatus_NODE_STATUS_OFFLINE     NodeStatus = 4
+	NodeStatus_NODE_STATUS_STOPPING    NodeStatus = 5
+)
+
+// Enum value maps for NodeStatus.
+var (
+	NodeStatus_name = map[int32]string{
+		0: "NODE_STATUS_UNSPECIFIED",
+		1: "NODE_STATUS_STARTING",
+		2: "NODE_STATUS_HEALTHY",
+		3: "NODE_STATUS_DEGRADED",
+		4: "NODE_STATUS_OFFLINE",
+		5: "NODE_STATUS_STOPPING",
+	}
+	NodeStatus_value = map[string]int32{
+		"NODE_STATUS_UNSPECIFIED": 0,
+		"NODE_STATUS_STARTING":    1,
+		"NODE_STATUS_HEALTHY":     2,
+		"NODE_STATUS_DEGRADED":    3,
+		"NODE_STATUS_OFFLINE":     4,
+		"NODE_STATUS_STOPPING":    5,
+	}
+)
+
+func (x NodeStatus) Enum() *NodeStatus {
+	p := new(NodeStatus)
+	*p = x
+	return p
+}
+
+func (x NodeStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NodeStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_omega_v1_types_proto_enumTypes[1].Descriptor()
+}
+
+func (NodeStatus) Type() protoreflect.EnumType {
+	return &file_omega_v1_types_proto_enumTypes[1]
+}
+
+func (x NodeStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NodeStatus.Descriptor instead.
+func (NodeStatus) EnumDescriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{1}
+}
+
 type Node struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	NodeId           string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
@@ -2232,6 +2359,140 @@ func (x *GateResult) GetCheckedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+// NodeRegistration is the canonical record the orchestrator keeps for each
+// connected intelligence node.
+type NodeRegistration struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Language      string                 `protobuf:"bytes,3,opt,name=language,proto3" json:"language,omitempty"` // "go" | "python" | "typescript" etc.
+	Capabilities  []NodeCapability       `protobuf:"varint,4,rep,packed,name=capabilities,proto3,enum=omega.v1.NodeCapability" json:"capabilities,omitempty"`
+	Address       string                 `protobuf:"bytes,5,opt,name=address,proto3" json:"address,omitempty"`                              // host:port the node listens on
+	HealthScore   float64                `protobuf:"fixed64,6,opt,name=health_score,json=healthScore,proto3" json:"health_score,omitempty"` // [0.0, 1.0]
+	LastHeartbeat *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_heartbeat,json=lastHeartbeat,proto3" json:"last_heartbeat,omitempty"`
+	AutonomyLevel string                 `protobuf:"bytes,8,opt,name=autonomy_level,json=autonomyLevel,proto3" json:"autonomy_level,omitempty"` // mirrors AutonomyLevel enum value name
+	Version       string                 `protobuf:"bytes,9,opt,name=version,proto3" json:"version,omitempty"`
+	Status        NodeStatus             `protobuf:"varint,10,opt,name=status,proto3,enum=omega.v1.NodeStatus" json:"status,omitempty"`
+	Metadata      map[string]string      `protobuf:"bytes,11,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	RegisteredAt  *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=registered_at,json=registeredAt,proto3" json:"registered_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeRegistration) Reset() {
+	*x = NodeRegistration{}
+	mi := &file_omega_v1_types_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeRegistration) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeRegistration) ProtoMessage() {}
+
+func (x *NodeRegistration) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_types_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeRegistration.ProtoReflect.Descriptor instead.
+func (*NodeRegistration) Descriptor() ([]byte, []int) {
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *NodeRegistration) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *NodeRegistration) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *NodeRegistration) GetLanguage() string {
+	if x != nil {
+		return x.Language
+	}
+	return ""
+}
+
+func (x *NodeRegistration) GetCapabilities() []NodeCapability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *NodeRegistration) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *NodeRegistration) GetHealthScore() float64 {
+	if x != nil {
+		return x.HealthScore
+	}
+	return 0
+}
+
+func (x *NodeRegistration) GetLastHeartbeat() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastHeartbeat
+	}
+	return nil
+}
+
+func (x *NodeRegistration) GetAutonomyLevel() string {
+	if x != nil {
+		return x.AutonomyLevel
+	}
+	return ""
+}
+
+func (x *NodeRegistration) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *NodeRegistration) GetStatus() NodeStatus {
+	if x != nil {
+		return x.Status
+	}
+	return NodeStatus_NODE_STATUS_UNSPECIFIED
+}
+
+func (x *NodeRegistration) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+func (x *NodeRegistration) GetRegisteredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.RegisteredAt
+	}
+	return nil
+}
+
 type ImprovementDetail struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
 	ImproveId            string                 `protobuf:"bytes,1,opt,name=improve_id,json=improveId,proto3" json:"improve_id,omitempty"`
@@ -2253,7 +2514,7 @@ type ImprovementDetail struct {
 
 func (x *ImprovementDetail) Reset() {
 	*x = ImprovementDetail{}
-	mi := &file_omega_v1_types_proto_msgTypes[23]
+	mi := &file_omega_v1_types_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2265,7 +2526,7 @@ func (x *ImprovementDetail) String() string {
 func (*ImprovementDetail) ProtoMessage() {}
 
 func (x *ImprovementDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_omega_v1_types_proto_msgTypes[23]
+	mi := &file_omega_v1_types_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2278,7 +2539,7 @@ func (x *ImprovementDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImprovementDetail.ProtoReflect.Descriptor instead.
 func (*ImprovementDetail) Descriptor() ([]byte, []int) {
-	return file_omega_v1_types_proto_rawDescGZIP(), []int{23}
+	return file_omega_v1_types_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ImprovementDetail) GetImproveId() string {
@@ -2634,7 +2895,24 @@ const file_omega_v1_types_proto_rawDesc = "" +
 	"\x06result\x18\x04 \x01(\tR\x06result\x12\x18\n" +
 	"\adetails\x18\x05 \x01(\tR\adetails\x129\n" +
 	"\n" +
-	"checked_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcheckedAt\"\xe0\x05\n" +
+	"checked_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcheckedAt\"\xc3\x04\n" +
+	"\x10NodeRegistration\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\blanguage\x18\x03 \x01(\tR\blanguage\x12<\n" +
+	"\fcapabilities\x18\x04 \x03(\x0e2\x18.omega.v1.NodeCapabilityR\fcapabilities\x12\x18\n" +
+	"\aaddress\x18\x05 \x01(\tR\aaddress\x12!\n" +
+	"\fhealth_score\x18\x06 \x01(\x01R\vhealthScore\x12A\n" +
+	"\x0elast_heartbeat\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\rlastHeartbeat\x12%\n" +
+	"\x0eautonomy_level\x18\b \x01(\tR\rautonomyLevel\x12\x18\n" +
+	"\aversion\x18\t \x01(\tR\aversion\x12,\n" +
+	"\x06status\x18\n" +
+	" \x01(\x0e2\x14.omega.v1.NodeStatusR\x06status\x12D\n" +
+	"\bmetadata\x18\v \x03(\v2(.omega.v1.NodeRegistration.MetadataEntryR\bmetadata\x12?\n" +
+	"\rregistered_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\fregisteredAt\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe0\x05\n" +
 	"\x11ImprovementDetail\x12\x1d\n" +
 	"\n" +
 	"improve_id\x18\x01 \x01(\tR\timproveId\x12\x17\n" +
@@ -2658,7 +2936,25 @@ const file_omega_v1_types_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\x1a?\n" +
 	"\x11AfterMetricsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01B\x91\x01\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01*\xbd\x02\n" +
+	"\x0eNodeCapability\x12\x1f\n" +
+	"\x1bNODE_CAPABILITY_UNSPECIFIED\x10\x00\x12#\n" +
+	"\x1fNODE_CAPABILITY_SIGNAL_RESEARCH\x10\x01\x12#\n" +
+	"\x1fNODE_CAPABILITY_RISK_MANAGEMENT\x10\x02\x12\"\n" +
+	"\x1eNODE_CAPABILITY_DATA_INGESTION\x10\x03\x12\x1c\n" +
+	"\x18NODE_CAPABILITY_STRATEGY\x10\x04\x12 \n" +
+	"\x1cNODE_CAPABILITY_VERIFICATION\x10\x05\x12\x1f\n" +
+	"\x1bNODE_CAPABILITY_ADVERSARIAL\x10\x06\x12\x1a\n" +
+	"\x16NODE_CAPABILITY_MEMORY\x10\a\x12\x1f\n" +
+	"\x1bNODE_CAPABILITY_IMPROVEMENT\x10\b*\xa9\x01\n" +
+	"\n" +
+	"NodeStatus\x12\x1b\n" +
+	"\x17NODE_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14NODE_STATUS_STARTING\x10\x01\x12\x17\n" +
+	"\x13NODE_STATUS_HEALTHY\x10\x02\x12\x18\n" +
+	"\x14NODE_STATUS_DEGRADED\x10\x03\x12\x17\n" +
+	"\x13NODE_STATUS_OFFLINE\x10\x04\x12\x18\n" +
+	"\x14NODE_STATUS_STOPPING\x10\x05B\x91\x01\n" +
 	"\fcom.omega.v1B\n" +
 	"TypesProtoP\x01Z4github.com/benebsworth/omega/gen/go/omega/v1;omegav1\xa2\x02\x03OXX\xaa\x02\bOmega.V1\xca\x02\bOmega\\V1\xe2\x02\x14Omega\\V1\\GPBMetadata\xea\x02\tOmega::V1b\x06proto3"
 
@@ -2674,88 +2970,98 @@ func file_omega_v1_types_proto_rawDescGZIP() []byte {
 	return file_omega_v1_types_proto_rawDescData
 }
 
-var file_omega_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 33)
+var file_omega_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_omega_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 35)
 var file_omega_v1_types_proto_goTypes = []any{
-	(*Node)(nil),                  // 0: omega.v1.Node
-	(*ExecutionRecord)(nil),       // 1: omega.v1.ExecutionRecord
-	(*TraceSummary)(nil),          // 2: omega.v1.TraceSummary
-	(*Span)(nil),                  // 3: omega.v1.Span
-	(*Issue)(nil),                 // 4: omega.v1.Issue
-	(*ActivityEntry)(nil),         // 5: omega.v1.ActivityEntry
-	(*ImprovementRecord)(nil),     // 6: omega.v1.ImprovementRecord
-	(*SystemHealth)(nil),          // 7: omega.v1.SystemHealth
-	(*SemanticConcept)(nil),       // 8: omega.v1.SemanticConcept
-	(*EpisodeEntry)(nil),          // 9: omega.v1.EpisodeEntry
-	(*ConvergencePoint)(nil),      // 10: omega.v1.ConvergencePoint
-	(*CostEntry)(nil),             // 11: omega.v1.CostEntry
-	(*EventResponse)(nil),         // 12: omega.v1.EventResponse
-	(*BrainConfig)(nil),           // 13: omega.v1.BrainConfig
-	(*NodeConfig)(nil),            // 14: omega.v1.NodeConfig
-	(*BrainExecutionEntry)(nil),   // 15: omega.v1.BrainExecutionEntry
-	(*ProviderInfo)(nil),          // 16: omega.v1.ProviderInfo
-	(*AlignmentDecision)(nil),     // 17: omega.v1.AlignmentDecision
-	(*AdversarialResult)(nil),     // 18: omega.v1.AdversarialResult
-	(*GoalState)(nil),             // 19: omega.v1.GoalState
-	(*Challenge)(nil),             // 20: omega.v1.Challenge
-	(*MemoryStats)(nil),           // 21: omega.v1.MemoryStats
-	(*GateResult)(nil),            // 22: omega.v1.GateResult
-	(*ImprovementDetail)(nil),     // 23: omega.v1.ImprovementDetail
-	nil,                           // 24: omega.v1.ExecutionRecord.MetricsEntry
-	nil,                           // 25: omega.v1.ImprovementRecord.BeforeMetricsEntry
-	nil,                           // 26: omega.v1.ImprovementRecord.AfterMetricsEntry
-	nil,                           // 27: omega.v1.BrainConfig.ExtraConfigEntry
-	nil,                           // 28: omega.v1.NodeConfig.ParametersEntry
-	nil,                           // 29: omega.v1.GoalState.ConstitutionalChecksEntry
-	nil,                           // 30: omega.v1.GoalState.ScorecardValuesEntry
-	nil,                           // 31: omega.v1.ImprovementDetail.BeforeMetricsEntry
-	nil,                           // 32: omega.v1.ImprovementDetail.AfterMetricsEntry
-	(*timestamppb.Timestamp)(nil), // 33: google.protobuf.Timestamp
+	(NodeCapability)(0),           // 0: omega.v1.NodeCapability
+	(NodeStatus)(0),               // 1: omega.v1.NodeStatus
+	(*Node)(nil),                  // 2: omega.v1.Node
+	(*ExecutionRecord)(nil),       // 3: omega.v1.ExecutionRecord
+	(*TraceSummary)(nil),          // 4: omega.v1.TraceSummary
+	(*Span)(nil),                  // 5: omega.v1.Span
+	(*Issue)(nil),                 // 6: omega.v1.Issue
+	(*ActivityEntry)(nil),         // 7: omega.v1.ActivityEntry
+	(*ImprovementRecord)(nil),     // 8: omega.v1.ImprovementRecord
+	(*SystemHealth)(nil),          // 9: omega.v1.SystemHealth
+	(*SemanticConcept)(nil),       // 10: omega.v1.SemanticConcept
+	(*EpisodeEntry)(nil),          // 11: omega.v1.EpisodeEntry
+	(*ConvergencePoint)(nil),      // 12: omega.v1.ConvergencePoint
+	(*CostEntry)(nil),             // 13: omega.v1.CostEntry
+	(*EventResponse)(nil),         // 14: omega.v1.EventResponse
+	(*BrainConfig)(nil),           // 15: omega.v1.BrainConfig
+	(*NodeConfig)(nil),            // 16: omega.v1.NodeConfig
+	(*BrainExecutionEntry)(nil),   // 17: omega.v1.BrainExecutionEntry
+	(*ProviderInfo)(nil),          // 18: omega.v1.ProviderInfo
+	(*AlignmentDecision)(nil),     // 19: omega.v1.AlignmentDecision
+	(*AdversarialResult)(nil),     // 20: omega.v1.AdversarialResult
+	(*GoalState)(nil),             // 21: omega.v1.GoalState
+	(*Challenge)(nil),             // 22: omega.v1.Challenge
+	(*MemoryStats)(nil),           // 23: omega.v1.MemoryStats
+	(*GateResult)(nil),            // 24: omega.v1.GateResult
+	(*NodeRegistration)(nil),      // 25: omega.v1.NodeRegistration
+	(*ImprovementDetail)(nil),     // 26: omega.v1.ImprovementDetail
+	nil,                           // 27: omega.v1.ExecutionRecord.MetricsEntry
+	nil,                           // 28: omega.v1.ImprovementRecord.BeforeMetricsEntry
+	nil,                           // 29: omega.v1.ImprovementRecord.AfterMetricsEntry
+	nil,                           // 30: omega.v1.BrainConfig.ExtraConfigEntry
+	nil,                           // 31: omega.v1.NodeConfig.ParametersEntry
+	nil,                           // 32: omega.v1.GoalState.ConstitutionalChecksEntry
+	nil,                           // 33: omega.v1.GoalState.ScorecardValuesEntry
+	nil,                           // 34: omega.v1.NodeRegistration.MetadataEntry
+	nil,                           // 35: omega.v1.ImprovementDetail.BeforeMetricsEntry
+	nil,                           // 36: omega.v1.ImprovementDetail.AfterMetricsEntry
+	(*timestamppb.Timestamp)(nil), // 37: google.protobuf.Timestamp
 }
 var file_omega_v1_types_proto_depIdxs = []int32{
-	33, // 0: omega.v1.Node.registered_at:type_name -> google.protobuf.Timestamp
-	33, // 1: omega.v1.Node.last_updated:type_name -> google.protobuf.Timestamp
-	1,  // 2: omega.v1.Node.last_execution:type_name -> omega.v1.ExecutionRecord
-	33, // 3: omega.v1.ExecutionRecord.started_at:type_name -> google.protobuf.Timestamp
-	33, // 4: omega.v1.ExecutionRecord.ended_at:type_name -> google.protobuf.Timestamp
-	24, // 5: omega.v1.ExecutionRecord.metrics:type_name -> omega.v1.ExecutionRecord.MetricsEntry
-	33, // 6: omega.v1.TraceSummary.trace_started:type_name -> google.protobuf.Timestamp
-	33, // 7: omega.v1.TraceSummary.trace_ended:type_name -> google.protobuf.Timestamp
-	33, // 8: omega.v1.Span.started_at:type_name -> google.protobuf.Timestamp
-	33, // 9: omega.v1.Span.ended_at:type_name -> google.protobuf.Timestamp
-	33, // 10: omega.v1.Issue.opened_at:type_name -> google.protobuf.Timestamp
-	33, // 11: omega.v1.Issue.resolved_at:type_name -> google.protobuf.Timestamp
-	33, // 12: omega.v1.ActivityEntry.recorded_at:type_name -> google.protobuf.Timestamp
-	33, // 13: omega.v1.ImprovementRecord.recorded_at:type_name -> google.protobuf.Timestamp
-	25, // 14: omega.v1.ImprovementRecord.before_metrics:type_name -> omega.v1.ImprovementRecord.BeforeMetricsEntry
-	26, // 15: omega.v1.ImprovementRecord.after_metrics:type_name -> omega.v1.ImprovementRecord.AfterMetricsEntry
-	33, // 16: omega.v1.EpisodeEntry.timestamp:type_name -> google.protobuf.Timestamp
-	33, // 17: omega.v1.ConvergencePoint.timestamp:type_name -> google.protobuf.Timestamp
-	7,  // 18: omega.v1.EventResponse.health_update:type_name -> omega.v1.SystemHealth
-	0,  // 19: omega.v1.EventResponse.node_update:type_name -> omega.v1.Node
-	4,  // 20: omega.v1.EventResponse.new_issue:type_name -> omega.v1.Issue
-	6,  // 21: omega.v1.EventResponse.improvement:type_name -> omega.v1.ImprovementRecord
-	5,  // 22: omega.v1.EventResponse.activity:type_name -> omega.v1.ActivityEntry
-	27, // 23: omega.v1.BrainConfig.extra_config:type_name -> omega.v1.BrainConfig.ExtraConfigEntry
-	13, // 24: omega.v1.NodeConfig.brain:type_name -> omega.v1.BrainConfig
-	28, // 25: omega.v1.NodeConfig.parameters:type_name -> omega.v1.NodeConfig.ParametersEntry
-	33, // 26: omega.v1.NodeConfig.updated_at:type_name -> google.protobuf.Timestamp
-	33, // 27: omega.v1.BrainExecutionEntry.executed_at:type_name -> google.protobuf.Timestamp
-	33, // 28: omega.v1.AlignmentDecision.recorded_at:type_name -> google.protobuf.Timestamp
-	33, // 29: omega.v1.AdversarialResult.recorded_at:type_name -> google.protobuf.Timestamp
-	29, // 30: omega.v1.GoalState.constitutional_checks:type_name -> omega.v1.GoalState.ConstitutionalChecksEntry
-	30, // 31: omega.v1.GoalState.scorecard_values:type_name -> omega.v1.GoalState.ScorecardValuesEntry
-	33, // 32: omega.v1.GoalState.recorded_at:type_name -> google.protobuf.Timestamp
-	33, // 33: omega.v1.Challenge.created_at:type_name -> google.protobuf.Timestamp
-	33, // 34: omega.v1.Challenge.updated_at:type_name -> google.protobuf.Timestamp
-	33, // 35: omega.v1.GateResult.checked_at:type_name -> google.protobuf.Timestamp
-	33, // 36: omega.v1.ImprovementDetail.recorded_at:type_name -> google.protobuf.Timestamp
-	31, // 37: omega.v1.ImprovementDetail.before_metrics:type_name -> omega.v1.ImprovementDetail.BeforeMetricsEntry
-	32, // 38: omega.v1.ImprovementDetail.after_metrics:type_name -> omega.v1.ImprovementDetail.AfterMetricsEntry
-	39, // [39:39] is the sub-list for method output_type
-	39, // [39:39] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	37, // 0: omega.v1.Node.registered_at:type_name -> google.protobuf.Timestamp
+	37, // 1: omega.v1.Node.last_updated:type_name -> google.protobuf.Timestamp
+	3,  // 2: omega.v1.Node.last_execution:type_name -> omega.v1.ExecutionRecord
+	37, // 3: omega.v1.ExecutionRecord.started_at:type_name -> google.protobuf.Timestamp
+	37, // 4: omega.v1.ExecutionRecord.ended_at:type_name -> google.protobuf.Timestamp
+	27, // 5: omega.v1.ExecutionRecord.metrics:type_name -> omega.v1.ExecutionRecord.MetricsEntry
+	37, // 6: omega.v1.TraceSummary.trace_started:type_name -> google.protobuf.Timestamp
+	37, // 7: omega.v1.TraceSummary.trace_ended:type_name -> google.protobuf.Timestamp
+	37, // 8: omega.v1.Span.started_at:type_name -> google.protobuf.Timestamp
+	37, // 9: omega.v1.Span.ended_at:type_name -> google.protobuf.Timestamp
+	37, // 10: omega.v1.Issue.opened_at:type_name -> google.protobuf.Timestamp
+	37, // 11: omega.v1.Issue.resolved_at:type_name -> google.protobuf.Timestamp
+	37, // 12: omega.v1.ActivityEntry.recorded_at:type_name -> google.protobuf.Timestamp
+	37, // 13: omega.v1.ImprovementRecord.recorded_at:type_name -> google.protobuf.Timestamp
+	28, // 14: omega.v1.ImprovementRecord.before_metrics:type_name -> omega.v1.ImprovementRecord.BeforeMetricsEntry
+	29, // 15: omega.v1.ImprovementRecord.after_metrics:type_name -> omega.v1.ImprovementRecord.AfterMetricsEntry
+	37, // 16: omega.v1.EpisodeEntry.timestamp:type_name -> google.protobuf.Timestamp
+	37, // 17: omega.v1.ConvergencePoint.timestamp:type_name -> google.protobuf.Timestamp
+	9,  // 18: omega.v1.EventResponse.health_update:type_name -> omega.v1.SystemHealth
+	2,  // 19: omega.v1.EventResponse.node_update:type_name -> omega.v1.Node
+	6,  // 20: omega.v1.EventResponse.new_issue:type_name -> omega.v1.Issue
+	8,  // 21: omega.v1.EventResponse.improvement:type_name -> omega.v1.ImprovementRecord
+	7,  // 22: omega.v1.EventResponse.activity:type_name -> omega.v1.ActivityEntry
+	30, // 23: omega.v1.BrainConfig.extra_config:type_name -> omega.v1.BrainConfig.ExtraConfigEntry
+	15, // 24: omega.v1.NodeConfig.brain:type_name -> omega.v1.BrainConfig
+	31, // 25: omega.v1.NodeConfig.parameters:type_name -> omega.v1.NodeConfig.ParametersEntry
+	37, // 26: omega.v1.NodeConfig.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 27: omega.v1.BrainExecutionEntry.executed_at:type_name -> google.protobuf.Timestamp
+	37, // 28: omega.v1.AlignmentDecision.recorded_at:type_name -> google.protobuf.Timestamp
+	37, // 29: omega.v1.AdversarialResult.recorded_at:type_name -> google.protobuf.Timestamp
+	32, // 30: omega.v1.GoalState.constitutional_checks:type_name -> omega.v1.GoalState.ConstitutionalChecksEntry
+	33, // 31: omega.v1.GoalState.scorecard_values:type_name -> omega.v1.GoalState.ScorecardValuesEntry
+	37, // 32: omega.v1.GoalState.recorded_at:type_name -> google.protobuf.Timestamp
+	37, // 33: omega.v1.Challenge.created_at:type_name -> google.protobuf.Timestamp
+	37, // 34: omega.v1.Challenge.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 35: omega.v1.GateResult.checked_at:type_name -> google.protobuf.Timestamp
+	0,  // 36: omega.v1.NodeRegistration.capabilities:type_name -> omega.v1.NodeCapability
+	37, // 37: omega.v1.NodeRegistration.last_heartbeat:type_name -> google.protobuf.Timestamp
+	1,  // 38: omega.v1.NodeRegistration.status:type_name -> omega.v1.NodeStatus
+	34, // 39: omega.v1.NodeRegistration.metadata:type_name -> omega.v1.NodeRegistration.MetadataEntry
+	37, // 40: omega.v1.NodeRegistration.registered_at:type_name -> google.protobuf.Timestamp
+	37, // 41: omega.v1.ImprovementDetail.recorded_at:type_name -> google.protobuf.Timestamp
+	35, // 42: omega.v1.ImprovementDetail.before_metrics:type_name -> omega.v1.ImprovementDetail.BeforeMetricsEntry
+	36, // 43: omega.v1.ImprovementDetail.after_metrics:type_name -> omega.v1.ImprovementDetail.AfterMetricsEntry
+	44, // [44:44] is the sub-list for method output_type
+	44, // [44:44] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_types_proto_init() }
@@ -2775,13 +3081,14 @@ func file_omega_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_types_proto_rawDesc), len(file_omega_v1_types_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   33,
+			NumEnums:      2,
+			NumMessages:   35,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_omega_v1_types_proto_goTypes,
 		DependencyIndexes: file_omega_v1_types_proto_depIdxs,
+		EnumInfos:         file_omega_v1_types_proto_enumTypes,
 		MessageInfos:      file_omega_v1_types_proto_msgTypes,
 	}.Build()
 	File_omega_v1_types_proto = out.File

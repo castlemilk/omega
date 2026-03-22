@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// ConfigService provides runtime configuration management for Omega nodes and
+// the orchestrator. Callers can read, update, or watch config key-value pairs
+// within a named scope (global, per-node, or per-service).
+service ConfigService {
+  // GetConfig retrieves current values for one or more config keys.
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+
+  // UpdateConfig sets or updates config key-value pairs at runtime.
+  rpc UpdateConfig(UpdateConfigRequest) returns (UpdateConfigResponse);
+
+  // WatchConfig streams config changes as they occur.
+  rpc WatchConfig(WatchConfigRequest) returns (stream ConfigUpdate);
+}
+
+// ── GetConfig ───────────────────────────────────────────────────────────────
+
+message GetConfigRequest {
+  // Scope identifies the config namespace:
+  //   "global"             — orchestrator-wide settings
+  //   "node:<node_id>"     — per-node overrides
+  //   "service:<service>"  — per-service settings
+  string scope = 1;
+  // keys to retrieve; empty = return all keys in scope.
+  repeated string keys = 2;
+}
+
+message GetConfigResponse {
+  string scope = 1;
+  map<string, string> values = 2;
+  string revision = 3;                     // opaque monotonic version token
+  google.protobuf.Timestamp as_of = 4;
+}
+
+// ── UpdateConfig ────────────────────────────────────────────────────────────
+
+message UpdateConfigRequest {
+  string scope = 1;
+  map<string, string> updates = 2;
+  string updated_by = 3;                   // node_id or "human" for audit trail
+  string reason = 4;
+}
+
+message UpdateConfigResponse {
+  bool ok = 1;
+  string revision = 2;                     // revision after update
+  google.protobuf.Timestamp updated_at = 3;
+}
+
+// ── WatchConfig ─────────────────────────────────────────────────────────────
+
+message WatchConfigRequest {
+  // scope to watch; empty = watch all scopes.
+  string scope = 1;
+  // keys to watch within scope; empty = watch all keys.
+  repeated string keys = 2;
+  // resume from a prior revision to replay missed updates (optional).
+  string since_revision = 3;
+}
+
+// ConfigUpdate is a single streamed change event.
+message ConfigUpdate {
+  string scope = 1;
+  string key = 2;
+  string old_value = 3;
+  string new_value = 4;
+  string updated_by = 5;
+  string revision = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}

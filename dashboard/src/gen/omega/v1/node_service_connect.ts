@@ -3,7 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import { EvaluateRequest, EvaluateResponse, ExecuteRequest, ExecuteResponse, GetCapabilitiesRequest, GetCapabilitiesResponse, GetStateRequest, GetStateResponse, ImproveRequest, ImproveResponse } from "./node_service_pb.js";
+import { DeregisterNodeRequest, DeregisterNodeResponse, EvaluateRequest, EvaluateResponse, ExecuteRequest, ExecuteResponse, GetCapabilitiesRequest, GetCapabilitiesResponse, GetNodeHealthRequest, GetNodeHealthResponse, GetStateRequest, GetStateResponse, HeartbeatRequest, HeartbeatResponse, ImproveRequest, ImproveResponse, ListRegisteredNodesRequest, ListRegisteredNodesResponse, RegisterNodeRequest, RegisterNodeResponse } from "./node_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -13,6 +13,8 @@ export const NodeService = {
   typeName: "omega.v1.NodeService",
   methods: {
     /**
+     * ── Execution ────────────────────────────────────────────────────────────
+     *
      * @generated from rpc omega.v1.NodeService.Execute
      */
     execute: {
@@ -55,6 +57,53 @@ export const NodeService = {
       name: "GetCapabilities",
       I: GetCapabilitiesRequest,
       O: GetCapabilitiesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * ── Registration ─────────────────────────────────────────────────────────
+     *
+     * @generated from rpc omega.v1.NodeService.RegisterNode
+     */
+    registerNode: {
+      name: "RegisterNode",
+      I: RegisterNodeRequest,
+      O: RegisterNodeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.NodeService.DeregisterNode
+     */
+    deregisterNode: {
+      name: "DeregisterNode",
+      I: DeregisterNodeRequest,
+      O: DeregisterNodeResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.NodeService.Heartbeat
+     */
+    heartbeat: {
+      name: "Heartbeat",
+      I: HeartbeatRequest,
+      O: HeartbeatResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.NodeService.ListNodes
+     */
+    listNodes: {
+      name: "ListNodes",
+      I: ListRegisteredNodesRequest,
+      O: ListRegisteredNodesResponse,
+      kind: MethodKind.Unary,
+    },
+    /**
+     * @generated from rpc omega.v1.NodeService.GetNodeHealth
+     */
+    getNodeHealth: {
+      name: "GetNodeHealth",
+      I: GetNodeHealthRequest,
+      O: GetNodeHealthResponse,
       kind: MethodKind.Unary,
     },
   }

@@ -4,13 +4,17 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { NodeCapability, NodeRegistration } from "./types_pb";
+import { file_omega_v1_types } from "./types_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file omega/v1/node_service.proto.
  */
 export const file_omega_v1_node_service: GenFile = /*@__PURE__*/
-  fileDesc("ChtvbWVnYS92MS9ub2RlX3NlcnZpY2UucHJvdG8SCG9tZWdhLnYxIvkBCg5FeGVjdXRlUmVxdWVzdBIOCgZhY3Rpb24YASABKAkSPAoKcGFyYW1ldGVycxgCIAMoCzIoLm9tZWdhLnYxLkV4ZWN1dGVSZXF1ZXN0LlBhcmFtZXRlcnNFbnRyeRI2Cgdjb250ZXh0GAMgAygLMiUub21lZ2EudjEuRXhlY3V0ZVJlcXVlc3QuQ29udGV4dEVudHJ5GjEKD1BhcmFtZXRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGi4KDENvbnRleHRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrABCg9FeGVjdXRlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBITCgtyZXN1bHRfanNvbhgCIAEoDBIOCgZlcnJvcnMYAyADKAkSNwoHbWV0cmljcxgEIAMoCzImLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZS5NZXRyaWNzRW50cnkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiEQoPRXZhbHVhdGVSZXF1ZXN0InwKEEV2YWx1YXRlUmVzcG9uc2USOAoHbWV0cmljcxgBIAMoCzInLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2UuTWV0cmljc0VudHJ5Gi4KDE1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBInsKDkltcHJvdmVSZXF1ZXN0EjgKCGZlZWRiYWNrGAEgAygLMiYub21lZ2EudjEuSW1wcm92ZVJlcXVlc3QuRmVlZGJhY2tFbnRyeRovCg1GZWVkYmFja0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNwoPSW1wcm92ZVJlc3BvbnNlEg8KB2NoYW5nZWQYASABKAgSEwoLbmV3X3ZlcnNpb24YAiABKAkiEQoPR2V0U3RhdGVSZXF1ZXN0IngKEEdldFN0YXRlUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg8KB3ZlcnNpb24YAyABKAkSDgoGaGVhbHRoGAQgASgBEg4KBnN0YXR1cxgFIAEoCRIUCgxjYXBhYmlsaXRpZXMYBiADKAkiGAoWR2V0Q2FwYWJpbGl0aWVzUmVxdWVzdCIvChdHZXRDYXBhYmlsaXRpZXNSZXNwb25zZRIUCgxjYXBhYmlsaXRpZXMYASADKAky6wIKC05vZGVTZXJ2aWNlEj4KB0V4ZWN1dGUSGC5vbWVnYS52MS5FeGVjdXRlUmVxdWVzdBoZLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZRJBCghFdmFsdWF0ZRIZLm9tZWdhLnYxLkV2YWx1YXRlUmVxdWVzdBoaLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2USPgoHSW1wcm92ZRIYLm9tZWdhLnYxLkltcHJvdmVSZXF1ZXN0Ghkub21lZ2EudjEuSW1wcm92ZVJlc3BvbnNlEkEKCEdldFN0YXRlEhkub21lZ2EudjEuR2V0U3RhdGVSZXF1ZXN0Ghoub21lZ2EudjEuR2V0U3RhdGVSZXNwb25zZRJWCg9HZXRDYXBhYmlsaXRpZXMSIC5vbWVnYS52MS5HZXRDYXBhYmlsaXRpZXNSZXF1ZXN0GiEub21lZ2EudjEuR2V0Q2FwYWJpbGl0aWVzUmVzcG9uc2VClwEKDGNvbS5vbWVnYS52MUIQTm9kZVNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM");
+  fileDesc("ChtvbWVnYS92MS9ub2RlX3NlcnZpY2UucHJvdG8SCG9tZWdhLnYxIvkBCg5FeGVjdXRlUmVxdWVzdBIOCgZhY3Rpb24YASABKAkSPAoKcGFyYW1ldGVycxgCIAMoCzIoLm9tZWdhLnYxLkV4ZWN1dGVSZXF1ZXN0LlBhcmFtZXRlcnNFbnRyeRI2Cgdjb250ZXh0GAMgAygLMiUub21lZ2EudjEuRXhlY3V0ZVJlcXVlc3QuQ29udGV4dEVudHJ5GjEKD1BhcmFtZXRlcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGi4KDENvbnRleHRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIrABCg9FeGVjdXRlUmVzcG9uc2USDwoHc3VjY2VzcxgBIAEoCBITCgtyZXN1bHRfanNvbhgCIAEoDBIOCgZlcnJvcnMYAyADKAkSNwoHbWV0cmljcxgEIAMoCzImLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZS5NZXRyaWNzRW50cnkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiEQoPRXZhbHVhdGVSZXF1ZXN0InwKEEV2YWx1YXRlUmVzcG9uc2USOAoHbWV0cmljcxgBIAMoCzInLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2UuTWV0cmljc0VudHJ5Gi4KDE1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBInsKDkltcHJvdmVSZXF1ZXN0EjgKCGZlZWRiYWNrGAEgAygLMiYub21lZ2EudjEuSW1wcm92ZVJlcXVlc3QuRmVlZGJhY2tFbnRyeRovCg1GZWVkYmFja0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiNwoPSW1wcm92ZVJlc3BvbnNlEg8KB2NoYW5nZWQYASABKAgSEwoLbmV3X3ZlcnNpb24YAiABKAkiEQoPR2V0U3RhdGVSZXF1ZXN0IngKEEdldFN0YXRlUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg8KB3ZlcnNpb24YAyABKAkSDgoGaGVhbHRoGAQgASgBEg4KBnN0YXR1cxgFIAEoCRIUCgxjYXBhYmlsaXRpZXMYBiADKAkiGAoWR2V0Q2FwYWJpbGl0aWVzUmVxdWVzdCIvChdHZXRDYXBhYmlsaXRpZXNSZXNwb25zZRIUCgxjYXBhYmlsaXRpZXMYASADKAkimwIKE1JlZ2lzdGVyTm9kZVJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIQCghsYW5ndWFnZRgDIAEoCRIuCgxjYXBhYmlsaXRpZXMYBCADKA4yGC5vbWVnYS52MS5Ob2RlQ2FwYWJpbGl0eRIPCgdhZGRyZXNzGAUgASgJEg8KB3ZlcnNpb24YBiABKAkSFgoOYXV0b25vbXlfbGV2ZWwYByABKAkSPQoIbWV0YWRhdGEYCCADKAsyKy5vbWVnYS52MS5SZWdpc3Rlck5vZGVSZXF1ZXN0Lk1ldGFkYXRhRW50cnkaLwoNTWV0YWRhdGFFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIkkKFFJlZ2lzdGVyTm9kZVJlc3BvbnNlEhAKCGFjY2VwdGVkGAEgASgIEg8KB25vZGVfaWQYAiABKAkSDgoGcmVhc29uGAMgASgJIjgKFURlcmVnaXN0ZXJOb2RlUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEg4KBnJlYXNvbhgCIAEoCSIkChZEZXJlZ2lzdGVyTm9kZVJlc3BvbnNlEgoKAm9rGAEgASgIIsIBChBIZWFydGJlYXRSZXF1ZXN0Eg8KB25vZGVfaWQYASABKAkSFAoMaGVhbHRoX3Njb3JlGAIgASgBEg4KBnN0YXR1cxgDIAEoCRI4CgdtZXRyaWNzGAQgAygLMicub21lZ2EudjEuSGVhcnRiZWF0UmVxdWVzdC5NZXRyaWNzRW50cnkSDQoFY3ljbGUYBSABKAMaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEiWgoRSGVhcnRiZWF0UmVzcG9uc2USFAoMYWNrbm93bGVkZ2VkGAEgASgIEi8KC3NlcnZlcl90aW1lGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIzChpMaXN0UmVnaXN0ZXJlZE5vZGVzUmVxdWVzdBIVCg1zdGF0dXNfZmlsdGVyGAEgASgJIkgKG0xpc3RSZWdpc3RlcmVkTm9kZXNSZXNwb25zZRIpCgVub2RlcxgBIAMoCzIaLm9tZWdhLnYxLk5vZGVSZWdpc3RyYXRpb24iJwoUR2V0Tm9kZUhlYWx0aFJlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCSLxAQoVR2V0Tm9kZUhlYWx0aFJlc3BvbnNlEg8KB25vZGVfaWQYASABKAkSFAoMaGVhbHRoX3Njb3JlGAIgASgBEg4KBnN0YXR1cxgDIAEoCRIyCg5sYXN0X2hlYXJ0YmVhdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASPQoHbWV0cmljcxgFIAMoCzIsLm9tZWdhLnYxLkdldE5vZGVIZWFsdGhSZXNwb25zZS5NZXRyaWNzRW50cnkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEygQYKC05vZGVTZXJ2aWNlEj4KB0V4ZWN1dGUSGC5vbWVnYS52MS5FeGVjdXRlUmVxdWVzdBoZLm9tZWdhLnYxLkV4ZWN1dGVSZXNwb25zZRJBCghFdmFsdWF0ZRIZLm9tZWdhLnYxLkV2YWx1YXRlUmVxdWVzdBoaLm9tZWdhLnYxLkV2YWx1YXRlUmVzcG9uc2USPgoHSW1wcm92ZRIYLm9tZWdhLnYxLkltcHJvdmVSZXF1ZXN0Ghkub21lZ2EudjEuSW1wcm92ZVJlc3BvbnNlEkEKCEdldFN0YXRlEhkub21lZ2EudjEuR2V0U3RhdGVSZXF1ZXN0Ghoub21lZ2EudjEuR2V0U3RhdGVSZXNwb25zZRJWCg9HZXRDYXBhYmlsaXRpZXMSIC5vbWVnYS52MS5HZXRDYXBhYmlsaXRpZXNSZXF1ZXN0GiEub21lZ2EudjEuR2V0Q2FwYWJpbGl0aWVzUmVzcG9uc2USTQoMUmVnaXN0ZXJOb2RlEh0ub21lZ2EudjEuUmVnaXN0ZXJOb2RlUmVxdWVzdBoeLm9tZWdhLnYxLlJlZ2lzdGVyTm9kZVJlc3BvbnNlElMKDkRlcmVnaXN0ZXJOb2RlEh8ub21lZ2EudjEuRGVyZWdpc3Rlck5vZGVSZXF1ZXN0GiAub21lZ2EudjEuRGVyZWdpc3Rlck5vZGVSZXNwb25zZRJECglIZWFydGJlYXQSGi5vbWVnYS52MS5IZWFydGJlYXRSZXF1ZXN0Ghsub21lZ2EudjEuSGVhcnRiZWF0UmVzcG9uc2USWAoJTGlzdE5vZGVzEiQub21lZ2EudjEuTGlzdFJlZ2lzdGVyZWROb2Rlc1JlcXVlc3QaJS5vbWVnYS52MS5MaXN0UmVnaXN0ZXJlZE5vZGVzUmVzcG9uc2USUAoNR2V0Tm9kZUhlYWx0aBIeLm9tZWdhLnYxLkdldE5vZGVIZWFsdGhSZXF1ZXN0Gh8ub21lZ2EudjEuR2V0Tm9kZUhlYWx0aFJlc3BvbnNlQpcBCgxjb20ub21lZ2EudjFCEE5vZGVTZXJ2aWNlUHJvdG9QAVo0Z2l0aHViLmNvbS9iZW5lYnN3b3J0aC9vbWVnYS9nZW4vZ28vb21lZ2EvdjE7b21lZ2F2MaICA09YWKoCCE9tZWdhLlYxygIIT21lZ2FcVjHiAhRPbWVnYVxWMVxHUEJNZXRhZGF0YeoCCU9tZWdhOjpWMWIGcHJvdG8z", [file_omega_v1_types, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message omega.v1.ExecuteRequest
@@ -226,10 +230,293 @@ export const GetCapabilitiesResponseSchema: GenMessage<GetCapabilitiesResponse> 
   messageDesc(file_omega_v1_node_service, 9);
 
 /**
+ * @generated from message omega.v1.RegisterNodeRequest
+ */
+export type RegisterNodeRequest = Message<"omega.v1.RegisterNodeRequest"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * "go" | "python" | "typescript" etc.
+   *
+   * @generated from field: string language = 3;
+   */
+  language: string;
+
+  /**
+   * @generated from field: repeated omega.v1.NodeCapability capabilities = 4;
+   */
+  capabilities: NodeCapability[];
+
+  /**
+   * host:port the node listens on
+   *
+   * @generated from field: string address = 5;
+   */
+  address: string;
+
+  /**
+   * @generated from field: string version = 6;
+   */
+  version: string;
+
+  /**
+   * mirrors AutonomyLevel enum value name
+   *
+   * @generated from field: string autonomy_level = 7;
+   */
+  autonomyLevel: string;
+
+  /**
+   * @generated from field: map<string, string> metadata = 8;
+   */
+  metadata: { [key: string]: string };
+};
+
+/**
+ * Describes the message omega.v1.RegisterNodeRequest.
+ * Use `create(RegisterNodeRequestSchema)` to create a new message.
+ */
+export const RegisterNodeRequestSchema: GenMessage<RegisterNodeRequest> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 10);
+
+/**
+ * @generated from message omega.v1.RegisterNodeResponse
+ */
+export type RegisterNodeResponse = Message<"omega.v1.RegisterNodeResponse"> & {
+  /**
+   * @generated from field: bool accepted = 1;
+   */
+  accepted: boolean;
+
+  /**
+   * @generated from field: string node_id = 2;
+   */
+  nodeId: string;
+
+  /**
+   * set when not accepted
+   *
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message omega.v1.RegisterNodeResponse.
+ * Use `create(RegisterNodeResponseSchema)` to create a new message.
+ */
+export const RegisterNodeResponseSchema: GenMessage<RegisterNodeResponse> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 11);
+
+/**
+ * @generated from message omega.v1.DeregisterNodeRequest
+ */
+export type DeregisterNodeRequest = Message<"omega.v1.DeregisterNodeRequest"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+
+  /**
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * Describes the message omega.v1.DeregisterNodeRequest.
+ * Use `create(DeregisterNodeRequestSchema)` to create a new message.
+ */
+export const DeregisterNodeRequestSchema: GenMessage<DeregisterNodeRequest> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 12);
+
+/**
+ * @generated from message omega.v1.DeregisterNodeResponse
+ */
+export type DeregisterNodeResponse = Message<"omega.v1.DeregisterNodeResponse"> & {
+  /**
+   * @generated from field: bool ok = 1;
+   */
+  ok: boolean;
+};
+
+/**
+ * Describes the message omega.v1.DeregisterNodeResponse.
+ * Use `create(DeregisterNodeResponseSchema)` to create a new message.
+ */
+export const DeregisterNodeResponseSchema: GenMessage<DeregisterNodeResponse> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 13);
+
+/**
+ * @generated from message omega.v1.HeartbeatRequest
+ */
+export type HeartbeatRequest = Message<"omega.v1.HeartbeatRequest"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+
+  /**
+   * [0.0, 1.0]
+   *
+   * @generated from field: double health_score = 2;
+   */
+  healthScore: number;
+
+  /**
+   * NodeStatus name
+   *
+   * @generated from field: string status = 3;
+   */
+  status: string;
+
+  /**
+   * @generated from field: map<string, double> metrics = 4;
+   */
+  metrics: { [key: string]: number };
+
+  /**
+   * @generated from field: int64 cycle = 5;
+   */
+  cycle: bigint;
+};
+
+/**
+ * Describes the message omega.v1.HeartbeatRequest.
+ * Use `create(HeartbeatRequestSchema)` to create a new message.
+ */
+export const HeartbeatRequestSchema: GenMessage<HeartbeatRequest> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 14);
+
+/**
+ * @generated from message omega.v1.HeartbeatResponse
+ */
+export type HeartbeatResponse = Message<"omega.v1.HeartbeatResponse"> & {
+  /**
+   * @generated from field: bool acknowledged = 1;
+   */
+  acknowledged: boolean;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp server_time = 2;
+   */
+  serverTime?: Timestamp;
+};
+
+/**
+ * Describes the message omega.v1.HeartbeatResponse.
+ * Use `create(HeartbeatResponseSchema)` to create a new message.
+ */
+export const HeartbeatResponseSchema: GenMessage<HeartbeatResponse> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 15);
+
+/**
+ * @generated from message omega.v1.ListRegisteredNodesRequest
+ */
+export type ListRegisteredNodesRequest = Message<"omega.v1.ListRegisteredNodesRequest"> & {
+  /**
+   * optional NodeStatus name; empty = all
+   *
+   * @generated from field: string status_filter = 1;
+   */
+  statusFilter: string;
+};
+
+/**
+ * Describes the message omega.v1.ListRegisteredNodesRequest.
+ * Use `create(ListRegisteredNodesRequestSchema)` to create a new message.
+ */
+export const ListRegisteredNodesRequestSchema: GenMessage<ListRegisteredNodesRequest> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 16);
+
+/**
+ * @generated from message omega.v1.ListRegisteredNodesResponse
+ */
+export type ListRegisteredNodesResponse = Message<"omega.v1.ListRegisteredNodesResponse"> & {
+  /**
+   * @generated from field: repeated omega.v1.NodeRegistration nodes = 1;
+   */
+  nodes: NodeRegistration[];
+};
+
+/**
+ * Describes the message omega.v1.ListRegisteredNodesResponse.
+ * Use `create(ListRegisteredNodesResponseSchema)` to create a new message.
+ */
+export const ListRegisteredNodesResponseSchema: GenMessage<ListRegisteredNodesResponse> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 17);
+
+/**
+ * @generated from message omega.v1.GetNodeHealthRequest
+ */
+export type GetNodeHealthRequest = Message<"omega.v1.GetNodeHealthRequest"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+};
+
+/**
+ * Describes the message omega.v1.GetNodeHealthRequest.
+ * Use `create(GetNodeHealthRequestSchema)` to create a new message.
+ */
+export const GetNodeHealthRequestSchema: GenMessage<GetNodeHealthRequest> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 18);
+
+/**
+ * @generated from message omega.v1.GetNodeHealthResponse
+ */
+export type GetNodeHealthResponse = Message<"omega.v1.GetNodeHealthResponse"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+
+  /**
+   * @generated from field: double health_score = 2;
+   */
+  healthScore: number;
+
+  /**
+   * NodeStatus name
+   *
+   * @generated from field: string status = 3;
+   */
+  status: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp last_heartbeat = 4;
+   */
+  lastHeartbeat?: Timestamp;
+
+  /**
+   * @generated from field: map<string, double> metrics = 5;
+   */
+  metrics: { [key: string]: number };
+};
+
+/**
+ * Describes the message omega.v1.GetNodeHealthResponse.
+ * Use `create(GetNodeHealthResponseSchema)` to create a new message.
+ */
+export const GetNodeHealthResponseSchema: GenMessage<GetNodeHealthResponse> = /*@__PURE__*/
+  messageDesc(file_omega_v1_node_service, 19);
+
+/**
  * @generated from service omega.v1.NodeService
  */
 export const NodeService: GenService<{
   /**
+   * ── Execution ────────────────────────────────────────────────────────────
+   *
    * @generated from rpc omega.v1.NodeService.Execute
    */
   execute: {
@@ -268,6 +555,48 @@ export const NodeService: GenService<{
     methodKind: "unary";
     input: typeof GetCapabilitiesRequestSchema;
     output: typeof GetCapabilitiesResponseSchema;
+  },
+  /**
+   * ── Registration ─────────────────────────────────────────────────────────
+   *
+   * @generated from rpc omega.v1.NodeService.RegisterNode
+   */
+  registerNode: {
+    methodKind: "unary";
+    input: typeof RegisterNodeRequestSchema;
+    output: typeof RegisterNodeResponseSchema;
+  },
+  /**
+   * @generated from rpc omega.v1.NodeService.DeregisterNode
+   */
+  deregisterNode: {
+    methodKind: "unary";
+    input: typeof DeregisterNodeRequestSchema;
+    output: typeof DeregisterNodeResponseSchema;
+  },
+  /**
+   * @generated from rpc omega.v1.NodeService.Heartbeat
+   */
+  heartbeat: {
+    methodKind: "unary";
+    input: typeof HeartbeatRequestSchema;
+    output: typeof HeartbeatResponseSchema;
+  },
+  /**
+   * @generated from rpc omega.v1.NodeService.ListNodes
+   */
+  listNodes: {
+    methodKind: "unary";
+    input: typeof ListRegisteredNodesRequestSchema;
+    output: typeof ListRegisteredNodesResponseSchema;
+  },
+  /**
+   * @generated from rpc omega.v1.NodeService.GetNodeHealth
+   */
+  getNodeHealth: {
+    methodKind: "unary";
+    input: typeof GetNodeHealthRequestSchema;
+    output: typeof GetNodeHealthResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_omega_v1_node_service, 0);

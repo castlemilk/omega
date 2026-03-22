@@ -9,6 +9,7 @@ package omegav1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -525,11 +526,603 @@ func (x *GetCapabilitiesResponse) GetCapabilities() []string {
 	return nil
 }
 
+type RegisterNodeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Language      string                 `protobuf:"bytes,3,opt,name=language,proto3" json:"language,omitempty"` // "go" | "python" | "typescript" etc.
+	Capabilities  []NodeCapability       `protobuf:"varint,4,rep,packed,name=capabilities,proto3,enum=omega.v1.NodeCapability" json:"capabilities,omitempty"`
+	Address       string                 `protobuf:"bytes,5,opt,name=address,proto3" json:"address,omitempty"` // host:port the node listens on
+	Version       string                 `protobuf:"bytes,6,opt,name=version,proto3" json:"version,omitempty"`
+	AutonomyLevel string                 `protobuf:"bytes,7,opt,name=autonomy_level,json=autonomyLevel,proto3" json:"autonomy_level,omitempty"` // mirrors AutonomyLevel enum value name
+	Metadata      map[string]string      `protobuf:"bytes,8,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterNodeRequest) Reset() {
+	*x = RegisterNodeRequest{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterNodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterNodeRequest) ProtoMessage() {}
+
+func (x *RegisterNodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterNodeRequest.ProtoReflect.Descriptor instead.
+func (*RegisterNodeRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *RegisterNodeRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RegisterNodeRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *RegisterNodeRequest) GetLanguage() string {
+	if x != nil {
+		return x.Language
+	}
+	return ""
+}
+
+func (x *RegisterNodeRequest) GetCapabilities() []NodeCapability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+func (x *RegisterNodeRequest) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *RegisterNodeRequest) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *RegisterNodeRequest) GetAutonomyLevel() string {
+	if x != nil {
+		return x.AutonomyLevel
+	}
+	return ""
+}
+
+func (x *RegisterNodeRequest) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+type RegisterNodeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	NodeId        string                 `protobuf:"bytes,2,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"` // set when not accepted
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegisterNodeResponse) Reset() {
+	*x = RegisterNodeResponse{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegisterNodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegisterNodeResponse) ProtoMessage() {}
+
+func (x *RegisterNodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegisterNodeResponse.ProtoReflect.Descriptor instead.
+func (*RegisterNodeResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *RegisterNodeResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *RegisterNodeResponse) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *RegisterNodeResponse) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type DeregisterNodeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeregisterNodeRequest) Reset() {
+	*x = DeregisterNodeRequest{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeregisterNodeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeregisterNodeRequest) ProtoMessage() {}
+
+func (x *DeregisterNodeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeregisterNodeRequest.ProtoReflect.Descriptor instead.
+func (*DeregisterNodeRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DeregisterNodeRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *DeregisterNodeRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type DeregisterNodeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ok            bool                   `protobuf:"varint,1,opt,name=ok,proto3" json:"ok,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeregisterNodeResponse) Reset() {
+	*x = DeregisterNodeResponse{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeregisterNodeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeregisterNodeResponse) ProtoMessage() {}
+
+func (x *DeregisterNodeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeregisterNodeResponse.ProtoReflect.Descriptor instead.
+func (*DeregisterNodeResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *DeregisterNodeResponse) GetOk() bool {
+	if x != nil {
+		return x.Ok
+	}
+	return false
+}
+
+type HeartbeatRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	HealthScore   float64                `protobuf:"fixed64,2,opt,name=health_score,json=healthScore,proto3" json:"health_score,omitempty"` // [0.0, 1.0]
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`                                // NodeStatus name
+	Metrics       map[string]float64     `protobuf:"bytes,4,rep,name=metrics,proto3" json:"metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	Cycle         int64                  `protobuf:"varint,5,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatRequest) Reset() {
+	*x = HeartbeatRequest{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatRequest) ProtoMessage() {}
+
+func (x *HeartbeatRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatRequest.ProtoReflect.Descriptor instead.
+func (*HeartbeatRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *HeartbeatRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *HeartbeatRequest) GetHealthScore() float64 {
+	if x != nil {
+		return x.HealthScore
+	}
+	return 0
+}
+
+func (x *HeartbeatRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *HeartbeatRequest) GetMetrics() map[string]float64 {
+	if x != nil {
+		return x.Metrics
+	}
+	return nil
+}
+
+func (x *HeartbeatRequest) GetCycle() int64 {
+	if x != nil {
+		return x.Cycle
+	}
+	return 0
+}
+
+type HeartbeatResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Acknowledged  bool                   `protobuf:"varint,1,opt,name=acknowledged,proto3" json:"acknowledged,omitempty"`
+	ServerTime    *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=server_time,json=serverTime,proto3" json:"server_time,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HeartbeatResponse) Reset() {
+	*x = HeartbeatResponse{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HeartbeatResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HeartbeatResponse) ProtoMessage() {}
+
+func (x *HeartbeatResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HeartbeatResponse.ProtoReflect.Descriptor instead.
+func (*HeartbeatResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *HeartbeatResponse) GetAcknowledged() bool {
+	if x != nil {
+		return x.Acknowledged
+	}
+	return false
+}
+
+func (x *HeartbeatResponse) GetServerTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ServerTime
+	}
+	return nil
+}
+
+type ListRegisteredNodesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StatusFilter  string                 `protobuf:"bytes,1,opt,name=status_filter,json=statusFilter,proto3" json:"status_filter,omitempty"` // optional NodeStatus name; empty = all
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRegisteredNodesRequest) Reset() {
+	*x = ListRegisteredNodesRequest{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRegisteredNodesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRegisteredNodesRequest) ProtoMessage() {}
+
+func (x *ListRegisteredNodesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRegisteredNodesRequest.ProtoReflect.Descriptor instead.
+func (*ListRegisteredNodesRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ListRegisteredNodesRequest) GetStatusFilter() string {
+	if x != nil {
+		return x.StatusFilter
+	}
+	return ""
+}
+
+type ListRegisteredNodesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Nodes         []*NodeRegistration    `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListRegisteredNodesResponse) Reset() {
+	*x = ListRegisteredNodesResponse{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListRegisteredNodesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListRegisteredNodesResponse) ProtoMessage() {}
+
+func (x *ListRegisteredNodesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListRegisteredNodesResponse.ProtoReflect.Descriptor instead.
+func (*ListRegisteredNodesResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListRegisteredNodesResponse) GetNodes() []*NodeRegistration {
+	if x != nil {
+		return x.Nodes
+	}
+	return nil
+}
+
+type GetNodeHealthRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNodeHealthRequest) Reset() {
+	*x = GetNodeHealthRequest{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNodeHealthRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNodeHealthRequest) ProtoMessage() {}
+
+func (x *GetNodeHealthRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNodeHealthRequest.ProtoReflect.Descriptor instead.
+func (*GetNodeHealthRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GetNodeHealthRequest) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+type GetNodeHealthResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	HealthScore   float64                `protobuf:"fixed64,2,opt,name=health_score,json=healthScore,proto3" json:"health_score,omitempty"`
+	Status        string                 `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"` // NodeStatus name
+	LastHeartbeat *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=last_heartbeat,json=lastHeartbeat,proto3" json:"last_heartbeat,omitempty"`
+	Metrics       map[string]float64     `protobuf:"bytes,5,rep,name=metrics,proto3" json:"metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetNodeHealthResponse) Reset() {
+	*x = GetNodeHealthResponse{}
+	mi := &file_omega_v1_node_service_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetNodeHealthResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetNodeHealthResponse) ProtoMessage() {}
+
+func (x *GetNodeHealthResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_node_service_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetNodeHealthResponse.ProtoReflect.Descriptor instead.
+func (*GetNodeHealthResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_node_service_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *GetNodeHealthResponse) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *GetNodeHealthResponse) GetHealthScore() float64 {
+	if x != nil {
+		return x.HealthScore
+	}
+	return 0
+}
+
+func (x *GetNodeHealthResponse) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *GetNodeHealthResponse) GetLastHeartbeat() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastHeartbeat
+	}
+	return nil
+}
+
+func (x *GetNodeHealthResponse) GetMetrics() map[string]float64 {
+	if x != nil {
+		return x.Metrics
+	}
+	return nil
+}
+
 var File_omega_v1_node_service_proto protoreflect.FileDescriptor
 
 const file_omega_v1_node_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1bomega/v1/node_service.proto\x12\bomega.v1\"\xae\x02\n" +
+	"\x1bomega/v1/node_service.proto\x12\bomega.v1\x1a\x14omega/v1/types.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xae\x02\n" +
 	"\x0eExecuteRequest\x12\x16\n" +
 	"\x06action\x18\x01 \x01(\tR\x06action\x12H\n" +
 	"\n" +
@@ -576,13 +1169,67 @@ const file_omega_v1_node_service_proto_rawDesc = "" +
 	"\fcapabilities\x18\x06 \x03(\tR\fcapabilities\"\x18\n" +
 	"\x16GetCapabilitiesRequest\"=\n" +
 	"\x17GetCapabilitiesResponse\x12\"\n" +
-	"\fcapabilities\x18\x01 \x03(\tR\fcapabilities2\xeb\x02\n" +
+	"\fcapabilities\x18\x01 \x03(\tR\fcapabilities\"\xf4\x02\n" +
+	"\x13RegisterNodeRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1a\n" +
+	"\blanguage\x18\x03 \x01(\tR\blanguage\x12<\n" +
+	"\fcapabilities\x18\x04 \x03(\x0e2\x18.omega.v1.NodeCapabilityR\fcapabilities\x12\x18\n" +
+	"\aaddress\x18\x05 \x01(\tR\aaddress\x12\x18\n" +
+	"\aversion\x18\x06 \x01(\tR\aversion\x12%\n" +
+	"\x0eautonomy_level\x18\a \x01(\tR\rautonomyLevel\x12G\n" +
+	"\bmetadata\x18\b \x03(\v2+.omega.v1.RegisterNodeRequest.MetadataEntryR\bmetadata\x1a;\n" +
+	"\rMetadataEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"c\n" +
+	"\x14RegisterNodeResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x17\n" +
+	"\anode_id\x18\x02 \x01(\tR\x06nodeId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason\"H\n" +
+	"\x15DeregisterNodeRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"(\n" +
+	"\x16DeregisterNodeResponse\x12\x0e\n" +
+	"\x02ok\x18\x01 \x01(\bR\x02ok\"\xfb\x01\n" +
+	"\x10HeartbeatRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12!\n" +
+	"\fhealth_score\x18\x02 \x01(\x01R\vhealthScore\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12A\n" +
+	"\ametrics\x18\x04 \x03(\v2'.omega.v1.HeartbeatRequest.MetricsEntryR\ametrics\x12\x14\n" +
+	"\x05cycle\x18\x05 \x01(\x03R\x05cycle\x1a:\n" +
+	"\fMetricsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"t\n" +
+	"\x11HeartbeatResponse\x12\"\n" +
+	"\facknowledged\x18\x01 \x01(\bR\facknowledged\x12;\n" +
+	"\vserver_time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"serverTime\"A\n" +
+	"\x1aListRegisteredNodesRequest\x12#\n" +
+	"\rstatus_filter\x18\x01 \x01(\tR\fstatusFilter\"O\n" +
+	"\x1bListRegisteredNodesResponse\x120\n" +
+	"\x05nodes\x18\x01 \x03(\v2\x1a.omega.v1.NodeRegistrationR\x05nodes\"/\n" +
+	"\x14GetNodeHealthRequest\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"\xb2\x02\n" +
+	"\x15GetNodeHealthResponse\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12!\n" +
+	"\fhealth_score\x18\x02 \x01(\x01R\vhealthScore\x12\x16\n" +
+	"\x06status\x18\x03 \x01(\tR\x06status\x12A\n" +
+	"\x0elast_heartbeat\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\rlastHeartbeat\x12F\n" +
+	"\ametrics\x18\x05 \x03(\v2,.omega.v1.GetNodeHealthResponse.MetricsEntryR\ametrics\x1a:\n" +
+	"\fMetricsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x012\x81\x06\n" +
 	"\vNodeService\x12>\n" +
 	"\aExecute\x12\x18.omega.v1.ExecuteRequest\x1a\x19.omega.v1.ExecuteResponse\x12A\n" +
 	"\bEvaluate\x12\x19.omega.v1.EvaluateRequest\x1a\x1a.omega.v1.EvaluateResponse\x12>\n" +
 	"\aImprove\x12\x18.omega.v1.ImproveRequest\x1a\x19.omega.v1.ImproveResponse\x12A\n" +
 	"\bGetState\x12\x19.omega.v1.GetStateRequest\x1a\x1a.omega.v1.GetStateResponse\x12V\n" +
-	"\x0fGetCapabilities\x12 .omega.v1.GetCapabilitiesRequest\x1a!.omega.v1.GetCapabilitiesResponseB\x97\x01\n" +
+	"\x0fGetCapabilities\x12 .omega.v1.GetCapabilitiesRequest\x1a!.omega.v1.GetCapabilitiesResponse\x12M\n" +
+	"\fRegisterNode\x12\x1d.omega.v1.RegisterNodeRequest\x1a\x1e.omega.v1.RegisterNodeResponse\x12S\n" +
+	"\x0eDeregisterNode\x12\x1f.omega.v1.DeregisterNodeRequest\x1a .omega.v1.DeregisterNodeResponse\x12D\n" +
+	"\tHeartbeat\x12\x1a.omega.v1.HeartbeatRequest\x1a\x1b.omega.v1.HeartbeatResponse\x12X\n" +
+	"\tListNodes\x12$.omega.v1.ListRegisteredNodesRequest\x1a%.omega.v1.ListRegisteredNodesResponse\x12P\n" +
+	"\rGetNodeHealth\x12\x1e.omega.v1.GetNodeHealthRequest\x1a\x1f.omega.v1.GetNodeHealthResponseB\x97\x01\n" +
 	"\fcom.omega.v1B\x10NodeServiceProtoP\x01Z4github.com/benebsworth/omega/gen/go/omega/v1;omegav1\xa2\x02\x03OXX\xaa\x02\bOmega.V1\xca\x02\bOmega\\V1\xe2\x02\x14Omega\\V1\\GPBMetadata\xea\x02\tOmega::V1b\x06proto3"
 
 var (
@@ -597,45 +1244,78 @@ func file_omega_v1_node_service_proto_rawDescGZIP() []byte {
 	return file_omega_v1_node_service_proto_rawDescData
 }
 
-var file_omega_v1_node_service_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_omega_v1_node_service_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_omega_v1_node_service_proto_goTypes = []any{
-	(*ExecuteRequest)(nil),          // 0: omega.v1.ExecuteRequest
-	(*ExecuteResponse)(nil),         // 1: omega.v1.ExecuteResponse
-	(*EvaluateRequest)(nil),         // 2: omega.v1.EvaluateRequest
-	(*EvaluateResponse)(nil),        // 3: omega.v1.EvaluateResponse
-	(*ImproveRequest)(nil),          // 4: omega.v1.ImproveRequest
-	(*ImproveResponse)(nil),         // 5: omega.v1.ImproveResponse
-	(*GetStateRequest)(nil),         // 6: omega.v1.GetStateRequest
-	(*GetStateResponse)(nil),        // 7: omega.v1.GetStateResponse
-	(*GetCapabilitiesRequest)(nil),  // 8: omega.v1.GetCapabilitiesRequest
-	(*GetCapabilitiesResponse)(nil), // 9: omega.v1.GetCapabilitiesResponse
-	nil,                             // 10: omega.v1.ExecuteRequest.ParametersEntry
-	nil,                             // 11: omega.v1.ExecuteRequest.ContextEntry
-	nil,                             // 12: omega.v1.ExecuteResponse.MetricsEntry
-	nil,                             // 13: omega.v1.EvaluateResponse.MetricsEntry
-	nil,                             // 14: omega.v1.ImproveRequest.FeedbackEntry
+	(*ExecuteRequest)(nil),              // 0: omega.v1.ExecuteRequest
+	(*ExecuteResponse)(nil),             // 1: omega.v1.ExecuteResponse
+	(*EvaluateRequest)(nil),             // 2: omega.v1.EvaluateRequest
+	(*EvaluateResponse)(nil),            // 3: omega.v1.EvaluateResponse
+	(*ImproveRequest)(nil),              // 4: omega.v1.ImproveRequest
+	(*ImproveResponse)(nil),             // 5: omega.v1.ImproveResponse
+	(*GetStateRequest)(nil),             // 6: omega.v1.GetStateRequest
+	(*GetStateResponse)(nil),            // 7: omega.v1.GetStateResponse
+	(*GetCapabilitiesRequest)(nil),      // 8: omega.v1.GetCapabilitiesRequest
+	(*GetCapabilitiesResponse)(nil),     // 9: omega.v1.GetCapabilitiesResponse
+	(*RegisterNodeRequest)(nil),         // 10: omega.v1.RegisterNodeRequest
+	(*RegisterNodeResponse)(nil),        // 11: omega.v1.RegisterNodeResponse
+	(*DeregisterNodeRequest)(nil),       // 12: omega.v1.DeregisterNodeRequest
+	(*DeregisterNodeResponse)(nil),      // 13: omega.v1.DeregisterNodeResponse
+	(*HeartbeatRequest)(nil),            // 14: omega.v1.HeartbeatRequest
+	(*HeartbeatResponse)(nil),           // 15: omega.v1.HeartbeatResponse
+	(*ListRegisteredNodesRequest)(nil),  // 16: omega.v1.ListRegisteredNodesRequest
+	(*ListRegisteredNodesResponse)(nil), // 17: omega.v1.ListRegisteredNodesResponse
+	(*GetNodeHealthRequest)(nil),        // 18: omega.v1.GetNodeHealthRequest
+	(*GetNodeHealthResponse)(nil),       // 19: omega.v1.GetNodeHealthResponse
+	nil,                                 // 20: omega.v1.ExecuteRequest.ParametersEntry
+	nil,                                 // 21: omega.v1.ExecuteRequest.ContextEntry
+	nil,                                 // 22: omega.v1.ExecuteResponse.MetricsEntry
+	nil,                                 // 23: omega.v1.EvaluateResponse.MetricsEntry
+	nil,                                 // 24: omega.v1.ImproveRequest.FeedbackEntry
+	nil,                                 // 25: omega.v1.RegisterNodeRequest.MetadataEntry
+	nil,                                 // 26: omega.v1.HeartbeatRequest.MetricsEntry
+	nil,                                 // 27: omega.v1.GetNodeHealthResponse.MetricsEntry
+	(NodeCapability)(0),                 // 28: omega.v1.NodeCapability
+	(*timestamppb.Timestamp)(nil),       // 29: google.protobuf.Timestamp
+	(*NodeRegistration)(nil),            // 30: omega.v1.NodeRegistration
 }
 var file_omega_v1_node_service_proto_depIdxs = []int32{
-	10, // 0: omega.v1.ExecuteRequest.parameters:type_name -> omega.v1.ExecuteRequest.ParametersEntry
-	11, // 1: omega.v1.ExecuteRequest.context:type_name -> omega.v1.ExecuteRequest.ContextEntry
-	12, // 2: omega.v1.ExecuteResponse.metrics:type_name -> omega.v1.ExecuteResponse.MetricsEntry
-	13, // 3: omega.v1.EvaluateResponse.metrics:type_name -> omega.v1.EvaluateResponse.MetricsEntry
-	14, // 4: omega.v1.ImproveRequest.feedback:type_name -> omega.v1.ImproveRequest.FeedbackEntry
-	0,  // 5: omega.v1.NodeService.Execute:input_type -> omega.v1.ExecuteRequest
-	2,  // 6: omega.v1.NodeService.Evaluate:input_type -> omega.v1.EvaluateRequest
-	4,  // 7: omega.v1.NodeService.Improve:input_type -> omega.v1.ImproveRequest
-	6,  // 8: omega.v1.NodeService.GetState:input_type -> omega.v1.GetStateRequest
-	8,  // 9: omega.v1.NodeService.GetCapabilities:input_type -> omega.v1.GetCapabilitiesRequest
-	1,  // 10: omega.v1.NodeService.Execute:output_type -> omega.v1.ExecuteResponse
-	3,  // 11: omega.v1.NodeService.Evaluate:output_type -> omega.v1.EvaluateResponse
-	5,  // 12: omega.v1.NodeService.Improve:output_type -> omega.v1.ImproveResponse
-	7,  // 13: omega.v1.NodeService.GetState:output_type -> omega.v1.GetStateResponse
-	9,  // 14: omega.v1.NodeService.GetCapabilities:output_type -> omega.v1.GetCapabilitiesResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	20, // 0: omega.v1.ExecuteRequest.parameters:type_name -> omega.v1.ExecuteRequest.ParametersEntry
+	21, // 1: omega.v1.ExecuteRequest.context:type_name -> omega.v1.ExecuteRequest.ContextEntry
+	22, // 2: omega.v1.ExecuteResponse.metrics:type_name -> omega.v1.ExecuteResponse.MetricsEntry
+	23, // 3: omega.v1.EvaluateResponse.metrics:type_name -> omega.v1.EvaluateResponse.MetricsEntry
+	24, // 4: omega.v1.ImproveRequest.feedback:type_name -> omega.v1.ImproveRequest.FeedbackEntry
+	28, // 5: omega.v1.RegisterNodeRequest.capabilities:type_name -> omega.v1.NodeCapability
+	25, // 6: omega.v1.RegisterNodeRequest.metadata:type_name -> omega.v1.RegisterNodeRequest.MetadataEntry
+	26, // 7: omega.v1.HeartbeatRequest.metrics:type_name -> omega.v1.HeartbeatRequest.MetricsEntry
+	29, // 8: omega.v1.HeartbeatResponse.server_time:type_name -> google.protobuf.Timestamp
+	30, // 9: omega.v1.ListRegisteredNodesResponse.nodes:type_name -> omega.v1.NodeRegistration
+	29, // 10: omega.v1.GetNodeHealthResponse.last_heartbeat:type_name -> google.protobuf.Timestamp
+	27, // 11: omega.v1.GetNodeHealthResponse.metrics:type_name -> omega.v1.GetNodeHealthResponse.MetricsEntry
+	0,  // 12: omega.v1.NodeService.Execute:input_type -> omega.v1.ExecuteRequest
+	2,  // 13: omega.v1.NodeService.Evaluate:input_type -> omega.v1.EvaluateRequest
+	4,  // 14: omega.v1.NodeService.Improve:input_type -> omega.v1.ImproveRequest
+	6,  // 15: omega.v1.NodeService.GetState:input_type -> omega.v1.GetStateRequest
+	8,  // 16: omega.v1.NodeService.GetCapabilities:input_type -> omega.v1.GetCapabilitiesRequest
+	10, // 17: omega.v1.NodeService.RegisterNode:input_type -> omega.v1.RegisterNodeRequest
+	12, // 18: omega.v1.NodeService.DeregisterNode:input_type -> omega.v1.DeregisterNodeRequest
+	14, // 19: omega.v1.NodeService.Heartbeat:input_type -> omega.v1.HeartbeatRequest
+	16, // 20: omega.v1.NodeService.ListNodes:input_type -> omega.v1.ListRegisteredNodesRequest
+	18, // 21: omega.v1.NodeService.GetNodeHealth:input_type -> omega.v1.GetNodeHealthRequest
+	1,  // 22: omega.v1.NodeService.Execute:output_type -> omega.v1.ExecuteResponse
+	3,  // 23: omega.v1.NodeService.Evaluate:output_type -> omega.v1.EvaluateResponse
+	5,  // 24: omega.v1.NodeService.Improve:output_type -> omega.v1.ImproveResponse
+	7,  // 25: omega.v1.NodeService.GetState:output_type -> omega.v1.GetStateResponse
+	9,  // 26: omega.v1.NodeService.GetCapabilities:output_type -> omega.v1.GetCapabilitiesResponse
+	11, // 27: omega.v1.NodeService.RegisterNode:output_type -> omega.v1.RegisterNodeResponse
+	13, // 28: omega.v1.NodeService.DeregisterNode:output_type -> omega.v1.DeregisterNodeResponse
+	15, // 29: omega.v1.NodeService.Heartbeat:output_type -> omega.v1.HeartbeatResponse
+	17, // 30: omega.v1.NodeService.ListNodes:output_type -> omega.v1.ListRegisteredNodesResponse
+	19, // 31: omega.v1.NodeService.GetNodeHealth:output_type -> omega.v1.GetNodeHealthResponse
+	22, // [22:32] is the sub-list for method output_type
+	12, // [12:22] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_node_service_proto_init() }
@@ -643,13 +1323,14 @@ func file_omega_v1_node_service_proto_init() {
 	if File_omega_v1_node_service_proto != nil {
 		return
 	}
+	file_omega_v1_types_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_node_service_proto_rawDesc), len(file_omega_v1_node_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

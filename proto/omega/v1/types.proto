@@ -277,6 +277,48 @@ message GateResult {
   google.protobuf.Timestamp checked_at = 6;
 }
 
+// ── Node capability & status ───────────────────────────────────────────────────
+
+// NodeCapability describes a functional role a node can perform.
+enum NodeCapability {
+  NODE_CAPABILITY_UNSPECIFIED  = 0;
+  NODE_CAPABILITY_SIGNAL_RESEARCH = 1;
+  NODE_CAPABILITY_RISK_MANAGEMENT = 2;
+  NODE_CAPABILITY_DATA_INGESTION  = 3;
+  NODE_CAPABILITY_STRATEGY        = 4;
+  NODE_CAPABILITY_VERIFICATION    = 5;
+  NODE_CAPABILITY_ADVERSARIAL     = 6;
+  NODE_CAPABILITY_MEMORY          = 7;
+  NODE_CAPABILITY_IMPROVEMENT     = 8;
+}
+
+// NodeStatus reflects the current operational state of a registered node.
+enum NodeStatus {
+  NODE_STATUS_UNSPECIFIED = 0;
+  NODE_STATUS_STARTING    = 1;
+  NODE_STATUS_HEALTHY     = 2;
+  NODE_STATUS_DEGRADED    = 3;
+  NODE_STATUS_OFFLINE     = 4;
+  NODE_STATUS_STOPPING    = 5;
+}
+
+// NodeRegistration is the canonical record the orchestrator keeps for each
+// connected intelligence node.
+message NodeRegistration {
+  string id                           = 1;
+  string name                         = 2;
+  string language                     = 3;  // "go" | "python" | "typescript" etc.
+  repeated NodeCapability capabilities = 4;
+  string address                      = 5;  // host:port the node listens on
+  double health_score                 = 6;  // [0.0, 1.0]
+  google.protobuf.Timestamp last_heartbeat = 7;
+  string autonomy_level               = 8;  // mirrors AutonomyLevel enum value name
+  string version                      = 9;
+  NodeStatus status                   = 10;
+  map<string, string> metadata        = 11;
+  google.protobuf.Timestamp registered_at = 12;
+}
+
 // ── Improvement detail (with alignment context) ───────────────────────────────
 
 message ImprovementDetail {
