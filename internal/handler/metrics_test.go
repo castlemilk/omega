@@ -68,7 +68,7 @@ func TestMetricsInterceptor_Success(t *testing.T) {
 func TestMetricsInterceptor_Error(t *testing.T) {
 	ctx := context.Background()
 	// Second Init is a no-op (singleton).
-	telemetry.Init(ctx, telemetry.Config{ServiceName: "test"}) //nolint:errcheck
+	telemetry.Init(ctx, telemetry.Config{ServiceName: "test"}) //nolint:errcheck,gosec
 
 	hm, err := handler.NewHandlerMetrics()
 	if err != nil {

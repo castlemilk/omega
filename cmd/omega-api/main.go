@@ -80,7 +80,7 @@ func main() {
 
 	database, err := db.New(stateDBPath, memoryDBPath)
 	if err != nil {
-		log.Fatalf("open DB: %v", err)
+		log.Fatalf("open DB: %v", err) //nolint:gocritic
 	}
 
 	victoriaDBPath := db.VictoriaDBPath()

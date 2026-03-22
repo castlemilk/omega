@@ -150,7 +150,7 @@ func writeConfig(t *testing.T, path string, vc VersionedConfig) {
 	if err != nil {
 		t.Fatalf("marshal config: %v", err)
 	}
-	if err := os.WriteFile(path, b, 0o644); err != nil {
+	if err := os.WriteFile(path, b, 0o600); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
 }

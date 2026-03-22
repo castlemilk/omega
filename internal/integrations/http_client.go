@@ -168,12 +168,12 @@ func (c *SharedHTTPClient) execute(ctx context.Context, req *FetchRequest) (*Fet
 	}
 
 	start := time.Now()
-	httpResp, err := c.client.Do(httpReq)
+	httpResp, err := c.client.Do(httpReq) //nolint:gosec
 	elapsed := time.Since(start)
 	if err != nil {
 		return nil, fmt.Errorf("http do: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer httpResp.Body.Close() //nolint:errcheck
 
 	body, err := io.ReadAll(httpResp.Body)
 	if err != nil {

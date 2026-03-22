@@ -18,7 +18,7 @@ func initTelemetry(t *testing.T) {
 	t.Cleanup(func() {
 		ctx2, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		telemetry.Shutdown(ctx2) //nolint:errcheck
+		telemetry.Shutdown(ctx2) //nolint:errcheck,gosec
 	})
 }
 

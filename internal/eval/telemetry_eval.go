@@ -91,11 +91,11 @@ func (t *TelemetryHealthCheck) queryTempo(ctx context.Context) (*tempoSearchResu
 	if err != nil {
 		return nil, fmt.Errorf("build tempo request: %w", err)
 	}
-	resp, err := t.HTTPClient.Do(req)
+	resp, err := t.HTTPClient.Do(req) //nolint:gosec
 	if err != nil {
 		return nil, fmt.Errorf("tempo search: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("tempo search returned HTTP %d", resp.StatusCode)
 	}
@@ -113,11 +113,11 @@ func (t *TelemetryHealthCheck) queryMetrics(ctx context.Context) (string, time.T
 		return "", time.Time{}, fmt.Errorf("build metrics request: %w", err)
 	}
 	req.Header.Set("Accept", "text/plain")
-	resp, err := t.HTTPClient.Do(req)
+	resp, err := t.HTTPClient.Do(req) //nolint:gosec
 	if err != nil {
 		return "", time.Time{}, fmt.Errorf("metrics fetch: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode != http.StatusOK {
 		return "", time.Time{}, fmt.Errorf("metrics endpoint returned HTTP %d", resp.StatusCode)
 	}

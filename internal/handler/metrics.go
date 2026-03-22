@@ -121,7 +121,8 @@ func (hm *HandlerMetrics) MetricsInterceptor() connect.UnaryInterceptorFunc {
 				span.SetStatus(codes.Ok, "")
 			}
 
-			resultAttrs := append(baseAttrs, telemetry.AttrRPCStatus.String(statusCode))
+			statusAttr := telemetry.AttrRPCStatus.String(statusCode)
+			resultAttrs := append(baseAttrs, statusAttr) //nolint:gocritic
 			hm.requestDuration.Record(ctx, latency.Seconds(), metric.WithAttributes(resultAttrs...))
 			hm.requestCount.Add(ctx, 1, metric.WithAttributes(resultAttrs...))
 

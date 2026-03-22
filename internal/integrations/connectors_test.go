@@ -510,6 +510,7 @@ func TestFRED_GetSeriesInfo(t *testing.T) {
 // We achieve this by replacing the base URL via a custom FetchRequest interceptor
 // implemented as a thin wrapper connector.
 
+//nolint:unused
 type mockConnector struct {
 	inner  interface {
 		Fetch(context.Context, *integrations.FetchRequest) (*integrations.FetchResponse, error)
@@ -519,6 +520,7 @@ type mockConnector struct {
 	client     *integrations.SharedHTTPClient
 }
 
+//nolint:unused
 func rebaseRequest(req *integrations.FetchRequest, realBase, mockBase string) *integrations.FetchRequest {
 	newEndpoint := mockBase + req.Endpoint[len(realBase):]
 	return &integrations.FetchRequest{

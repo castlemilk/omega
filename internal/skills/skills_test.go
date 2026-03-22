@@ -27,10 +27,10 @@ func TestPackageUnpackageRoundtrip(t *testing.T) {
 
 	// Create a minimal source directory.
 	srcDir := filepath.Join(dir, "src")
-	if err := os.MkdirAll(srcDir, 0o755); err != nil {
+	if err := os.MkdirAll(srcDir, 0o750); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(srcDir, "main.go"), []byte("package main"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(srcDir, "main.go"), []byte("package main"), 0o600); err != nil {
 		t.Fatalf("write: %v", err)
 	}
 

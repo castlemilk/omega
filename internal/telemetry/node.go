@@ -86,10 +86,11 @@ func (b *BaseNodeInstrumentation) StartSpan(
 
 // RecordExecution records execution outcome metrics and sets span status.
 func (b *BaseNodeInstrumentation) RecordExecution(ctx context.Context, latency time.Duration, err error) {
-	attrs := []attribute.KeyValue{
+	attrs := make([]attribute.KeyValue, 0, 3)
+	attrs = append(attrs,
 		AttrNodeName.String(b.nodeName),
 		AttrNodeType.String(b.nodeType),
-	}
+	)
 
 	outcome := "success"
 	if err != nil {

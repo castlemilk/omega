@@ -26,10 +26,10 @@ func main() {
 	enc.SetIndent("", "  ")
 
 	fmt.Println("=== Victoria Eval Report ===")
-	enc.Encode(result.VictoriaReport)
+	_ = enc.Encode(result.VictoriaReport) //nolint:errcheck
 
 	if result.Telemetry != nil {
 		fmt.Println("=== Telemetry Health Report ===")
-		enc.Encode(result.Telemetry)
+		_ = enc.Encode(result.Telemetry) //nolint:errcheck
 	}
 }

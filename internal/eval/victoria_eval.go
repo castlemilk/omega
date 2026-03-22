@@ -44,7 +44,7 @@ func (v *VictoriaEvalSuite) Run() EvalResult {
 	}
 
 	var passed, failed int
-	var details []string
+	details := make([]string, 0, 32)
 
 	check := func(name string, ok bool, msg string) {
 		if ok {
@@ -253,14 +253,15 @@ func (o *ObservabilityAudit) Run() EvalResult {
 	audit := o.RunAudit()
 
 	total := audit.ObservableCount + audit.PartialCount + audit.BlackBoxCount
-	var details []string
+	details := make([]string, 0, len(audit.Packages)+1)
 	for _, p := range audit.Packages {
 		marker := "✓"
-		if p.Status == ObsBlackBox {
+		switch p.Status {
+		case ObsBlackBox:
 			marker = "✗"
-		} else if p.Status == ObsPartial {
+		case ObsPartial:
 			marker = "~"
-		} else if p.Status == ObsNA {
+		case ObsNA:
 			marker = "-"
 		}
 		details = append(details, fmt.Sprintf("%s [%s] %s — %s", marker, p.Status, p.Package, p.Notes))
