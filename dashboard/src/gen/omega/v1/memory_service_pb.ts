@@ -5,21 +5,14 @@
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Duration, Timestamp } from "@bufbuild/protobuf/wkt";
-import {
-  file_google_protobuf_duration,
-  file_google_protobuf_timestamp,
-} from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_duration, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file omega/v1/memory_service.proto.
  */
-export const file_omega_v1_memory_service: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "Ch1vbWVnYS92MS9tZW1vcnlfc2VydmljZS5wcm90bxIIb21lZ2EudjEihQIKB0VwaXNvZGUSEgoKZXBpc29kZV9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSEgoKZXZlbnRfdHlwZRgDIAEoCRIvCgdjb250ZW50GAQgAygLMh4ub21lZ2EudjEuRXBpc29kZS5Db250ZW50RW50cnkSDAoEdGFncxgFIAMoCRISCgppbXBvcnRhbmNlGAYgASgBEg0KBWN5Y2xlGAcgASgDEi0KCXRpbWVzdGFtcBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAaLgoMQ29udGVudEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiQgoNU2NvcmVkRXBpc29kZRIiCgdlcGlzb2RlGAEgASgLMhEub21lZ2EudjEuRXBpc29kZRINCgVzY29yZRgCIAEoASLaAQoTU3RvcmVFcGlzb2RlUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSEgoKZXZlbnRfdHlwZRgCIAEoCRI7Cgdjb250ZW50GAMgAygLMioub21lZ2EudjEuU3RvcmVFcGlzb2RlUmVxdWVzdC5Db250ZW50RW50cnkSDAoEdGFncxgEIAMoCRISCgppbXBvcnRhbmNlGAUgASgBEg0KBWN5Y2xlGAYgASgDGi4KDENvbnRlbnRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIioKFFN0b3JlRXBpc29kZVJlc3BvbnNlEhIKCmVwaXNvZGVfaWQYASABKAkizQEKFFF1ZXJ5RXBpc29kZXNSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRISCgpyZWdpbWVfdGFnGAIgASgJEhMKC3NpZ25hbF90eXBlGAMgASgJEikKBXN0YXJ0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBInCgNlbmQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmN1cnJlbnRfcmVnaW1lGAYgASgJEg0KBXRvcF9rGAcgASgFIkEKFVF1ZXJ5RXBpc29kZXNSZXNwb25zZRIoCgdyZXN1bHRzGAEgAygLMhcub21lZ2EudjEuU2NvcmVkRXBpc29kZSJxChNTdG9yZVdvcmtpbmdSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRILCgNrZXkYAiABKAkSEgoKdmFsdWVfanNvbhgDIAEoCRImCgN0dGwYBCABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iIgoUU3RvcmVXb3JraW5nUmVzcG9uc2USCgoCb2sYASABKAgiMwoRR2V0V29ya2luZ1JlcXVlc3QSEQoJbmFtZXNwYWNlGAEgASgJEgsKA2tleRgCIAEoCSJnChJHZXRXb3JraW5nUmVzcG9uc2USEgoKdmFsdWVfanNvbhgBIAEoCRINCgVmb3VuZBgCIAEoCBIuCgpleHBpcmVzX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI2ChREZWxldGVXb3JraW5nUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSCwoDa2V5GAIgASgJIiMKFURlbGV0ZVdvcmtpbmdSZXNwb25zZRIKCgJvaxgBIAEoCCJ3ChNDb25zb2xpZGF0aW9uUmVzdWx0EhkKEWVwaXNvZGVzX2V4YW1pbmVkGAEgASgFEhwKFHByb21vdGVkX3RvX3NlbWFudGljGAIgASgFEg4KBnBydW5lZBgDIAEoBRIXCg9uZXdfY29uY2VwdF9pZHMYBCADKAkiMAobVHJpZ2dlckNvbnNvbGlkYXRpb25SZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCSJNChxUcmlnZ2VyQ29uc29saWRhdGlvblJlc3BvbnNlEi0KBnJlc3VsdBgBIAEoCzIdLm9tZWdhLnYxLkNvbnNvbGlkYXRpb25SZXN1bHQixAEKDU1lbW9yeUNvbmNlcHQSEgoKY29uY2VwdF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSDwoHY29uY2VwdBgDIAEoCRIPCgdjb250ZW50GAQgASgJEhIKCmNvbmZpZGVuY2UYBSABKAESFgoOZXZpZGVuY2VfY291bnQYBiABKAMSDAoEdGFncxgHIAMoCRIwCgxsYXN0X3VwZGF0ZWQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wImAKFFF1ZXJ5U2VtYW50aWNSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRISCgp0YWdfZmlsdGVyGAIgASgJEhIKCnRleHRfcXVlcnkYAyABKAkSDQoFdG9wX2sYBCABKAUiQgoVUXVlcnlTZW1hbnRpY1Jlc3BvbnNlEikKCGNvbmNlcHRzGAEgAygLMhcub21lZ2EudjEuTWVtb3J5Q29uY2VwdCI1ChFCZWdpbkN5Y2xlUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSDQoFY3ljbGUYAiABKAMiWwoSQmVnaW5DeWNsZVJlc3BvbnNlEgoKAm9rGAEgASgIEh8KF3dvcmtpbmdfZW50cmllc19jbGVhcmVkGAIgASgFEhgKEGVwaXNvZGVzX2RlY2F5ZWQYAyABKAUi5wEKD0VuZEN5Y2xlUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSDQoFY3ljbGUYAiABKAMSQgoNY3ljbGVfc3VtbWFyeRgDIAMoCzIrLm9tZWdhLnYxLkVuZEN5Y2xlUmVxdWVzdC5DeWNsZVN1bW1hcnlFbnRyeRIaChJzdW1tYXJ5X2ltcG9ydGFuY2UYBCABKAESHQoVdHJpZ2dlcl9jb25zb2xpZGF0aW9uGAUgASgIGjMKEUN5Y2xlU3VtbWFyeUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiXAoQRW5kQ3ljbGVSZXNwb25zZRISCgplcGlzb2RlX2lkGAEgASgJEjQKDWNvbnNvbGlkYXRpb24YAiABKAsyHS5vbWVnYS52MS5Db25zb2xpZGF0aW9uUmVzdWx0IjAKG01lbW9yeU5hbWVzcGFjZVN0YXRzUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkirQEKHE1lbW9yeU5hbWVzcGFjZVN0YXRzUmVzcG9uc2USEQoJbmFtZXNwYWNlGAEgASgJEhYKDmVwaXNvZGljX2NvdW50GAIgASgDEhYKDnNlbWFudGljX2NvdW50GAMgASgDEhUKDXdvcmtpbmdfY291bnQYBCABKAMSGwoTY29udHJhZGljdGlvbl9jb3VudBgFIAEoAxIWCg5yZWdpbWVfaGlzdG9yeRgGIAMoCSJIChlTdHJlYW1NZW1vcnlFdmVudHNSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRIYChBwb2xsX2ludGVydmFsX21zGAIgASgFIqEBChRNZW1vcnlMaWZlY3ljbGVFdmVudBInCgR0eXBlGAEgASgOMhkub21lZ2EudjEuTWVtb3J5RXZlbnRUeXBlEhEKCW5hbWVzcGFjZRgCIAEoCRINCgVjeWNsZRgDIAEoAxIOCgZkZXRhaWwYBCABKAkSLgoKZW1pdHRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAq4QEKD01lbW9yeUV2ZW50VHlwZRIhCh1NRU1PUllfRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEiQKIE1FTU9SWV9FVkVOVF9UWVBFX0VQSVNPREVfU1RPUkVEEAESIgoeTUVNT1JZX0VWRU5UX1RZUEVfQ09OU09MSURBVEVEEAISHQoZTUVNT1JZX0VWRU5UX1RZUEVfREVDQVlFRBADEiEKHU1FTU9SWV9FVkVOVF9UWVBFX0NZQ0xFX0JFR0lOEAQSHwobTUVNT1JZX0VWRU5UX1RZUEVfQ1lDTEVfRU5EEAUynQcKDU1lbW9yeVNlcnZpY2USTQoMU3RvcmVFcGlzb2RlEh0ub21lZ2EudjEuU3RvcmVFcGlzb2RlUmVxdWVzdBoeLm9tZWdhLnYxLlN0b3JlRXBpc29kZVJlc3BvbnNlElAKDVF1ZXJ5RXBpc29kZXMSHi5vbWVnYS52MS5RdWVyeUVwaXNvZGVzUmVxdWVzdBofLm9tZWdhLnYxLlF1ZXJ5RXBpc29kZXNSZXNwb25zZRJNCgxTdG9yZVdvcmtpbmcSHS5vbWVnYS52MS5TdG9yZVdvcmtpbmdSZXF1ZXN0Gh4ub21lZ2EudjEuU3RvcmVXb3JraW5nUmVzcG9uc2USRwoKR2V0V29ya2luZxIbLm9tZWdhLnYxLkdldFdvcmtpbmdSZXF1ZXN0Ghwub21lZ2EudjEuR2V0V29ya2luZ1Jlc3BvbnNlElAKDURlbGV0ZVdvcmtpbmcSHi5vbWVnYS52MS5EZWxldGVXb3JraW5nUmVxdWVzdBofLm9tZWdhLnYxLkRlbGV0ZVdvcmtpbmdSZXNwb25zZRJlChRUcmlnZ2VyQ29uc29saWRhdGlvbhIlLm9tZWdhLnYxLlRyaWdnZXJDb25zb2xpZGF0aW9uUmVxdWVzdBomLm9tZWdhLnYxLlRyaWdnZXJDb25zb2xpZGF0aW9uUmVzcG9uc2USUAoNUXVlcnlTZW1hbnRpYxIeLm9tZWdhLnYxLlF1ZXJ5U2VtYW50aWNSZXF1ZXN0Gh8ub21lZ2EudjEuUXVlcnlTZW1hbnRpY1Jlc3BvbnNlEkcKCkJlZ2luQ3ljbGUSGy5vbWVnYS52MS5CZWdpbkN5Y2xlUmVxdWVzdBocLm9tZWdhLnYxLkJlZ2luQ3ljbGVSZXNwb25zZRJBCghFbmRDeWNsZRIZLm9tZWdhLnYxLkVuZEN5Y2xlUmVxdWVzdBoaLm9tZWdhLnYxLkVuZEN5Y2xlUmVzcG9uc2USXwoOR2V0TWVtb3J5U3RhdHMSJS5vbWVnYS52MS5NZW1vcnlOYW1lc3BhY2VTdGF0c1JlcXVlc3QaJi5vbWVnYS52MS5NZW1vcnlOYW1lc3BhY2VTdGF0c1Jlc3BvbnNlElsKElN0cmVhbU1lbW9yeUV2ZW50cxIjLm9tZWdhLnYxLlN0cmVhbU1lbW9yeUV2ZW50c1JlcXVlc3QaHi5vbWVnYS52MS5NZW1vcnlMaWZlY3ljbGVFdmVudDABQpkBCgxjb20ub21lZ2EudjFCEk1lbW9yeVNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM",
-    [file_google_protobuf_timestamp, file_google_protobuf_duration]
-  );
+export const file_omega_v1_memory_service: GenFile = /*@__PURE__*/
+  fileDesc("Ch1vbWVnYS92MS9tZW1vcnlfc2VydmljZS5wcm90bxIIb21lZ2EudjEihQIKB0VwaXNvZGUSEgoKZXBpc29kZV9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSEgoKZXZlbnRfdHlwZRgDIAEoCRIvCgdjb250ZW50GAQgAygLMh4ub21lZ2EudjEuRXBpc29kZS5Db250ZW50RW50cnkSDAoEdGFncxgFIAMoCRISCgppbXBvcnRhbmNlGAYgASgBEg0KBWN5Y2xlGAcgASgDEi0KCXRpbWVzdGFtcBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAaLgoMQ29udGVudEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiQgoNU2NvcmVkRXBpc29kZRIiCgdlcGlzb2RlGAEgASgLMhEub21lZ2EudjEuRXBpc29kZRINCgVzY29yZRgCIAEoASLaAQoTU3RvcmVFcGlzb2RlUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSEgoKZXZlbnRfdHlwZRgCIAEoCRI7Cgdjb250ZW50GAMgAygLMioub21lZ2EudjEuU3RvcmVFcGlzb2RlUmVxdWVzdC5Db250ZW50RW50cnkSDAoEdGFncxgEIAMoCRISCgppbXBvcnRhbmNlGAUgASgBEg0KBWN5Y2xlGAYgASgDGi4KDENvbnRlbnRFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIioKFFN0b3JlRXBpc29kZVJlc3BvbnNlEhIKCmVwaXNvZGVfaWQYASABKAkizQEKFFF1ZXJ5RXBpc29kZXNSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRISCgpyZWdpbWVfdGFnGAIgASgJEhMKC3NpZ25hbF90eXBlGAMgASgJEikKBXN0YXJ0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBInCgNlbmQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhYKDmN1cnJlbnRfcmVnaW1lGAYgASgJEg0KBXRvcF9rGAcgASgFIkEKFVF1ZXJ5RXBpc29kZXNSZXNwb25zZRIoCgdyZXN1bHRzGAEgAygLMhcub21lZ2EudjEuU2NvcmVkRXBpc29kZSJxChNTdG9yZVdvcmtpbmdSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRILCgNrZXkYAiABKAkSEgoKdmFsdWVfanNvbhgDIAEoCRImCgN0dGwYBCABKAsyGS5nb29nbGUucHJvdG9idWYuRHVyYXRpb24iIgoUU3RvcmVXb3JraW5nUmVzcG9uc2USCgoCb2sYASABKAgiMwoRR2V0V29ya2luZ1JlcXVlc3QSEQoJbmFtZXNwYWNlGAEgASgJEgsKA2tleRgCIAEoCSJnChJHZXRXb3JraW5nUmVzcG9uc2USEgoKdmFsdWVfanNvbhgBIAEoCRINCgVmb3VuZBgCIAEoCBIuCgpleHBpcmVzX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCI2ChREZWxldGVXb3JraW5nUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSCwoDa2V5GAIgASgJIiMKFURlbGV0ZVdvcmtpbmdSZXNwb25zZRIKCgJvaxgBIAEoCCJ3ChNDb25zb2xpZGF0aW9uUmVzdWx0EhkKEWVwaXNvZGVzX2V4YW1pbmVkGAEgASgFEhwKFHByb21vdGVkX3RvX3NlbWFudGljGAIgASgFEg4KBnBydW5lZBgDIAEoBRIXCg9uZXdfY29uY2VwdF9pZHMYBCADKAkiMAobVHJpZ2dlckNvbnNvbGlkYXRpb25SZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCSJNChxUcmlnZ2VyQ29uc29saWRhdGlvblJlc3BvbnNlEi0KBnJlc3VsdBgBIAEoCzIdLm9tZWdhLnYxLkNvbnNvbGlkYXRpb25SZXN1bHQixAEKDU1lbW9yeUNvbmNlcHQSEgoKY29uY2VwdF9pZBgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAkSDwoHY29uY2VwdBgDIAEoCRIPCgdjb250ZW50GAQgASgJEhIKCmNvbmZpZGVuY2UYBSABKAESFgoOZXZpZGVuY2VfY291bnQYBiABKAMSDAoEdGFncxgHIAMoCRIwCgxsYXN0X3VwZGF0ZWQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wImAKFFF1ZXJ5U2VtYW50aWNSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRISCgp0YWdfZmlsdGVyGAIgASgJEhIKCnRleHRfcXVlcnkYAyABKAkSDQoFdG9wX2sYBCABKAUiQgoVUXVlcnlTZW1hbnRpY1Jlc3BvbnNlEikKCGNvbmNlcHRzGAEgAygLMhcub21lZ2EudjEuTWVtb3J5Q29uY2VwdCI1ChFCZWdpbkN5Y2xlUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSDQoFY3ljbGUYAiABKAMiWwoSQmVnaW5DeWNsZVJlc3BvbnNlEgoKAm9rGAEgASgIEh8KF3dvcmtpbmdfZW50cmllc19jbGVhcmVkGAIgASgFEhgKEGVwaXNvZGVzX2RlY2F5ZWQYAyABKAUi5wEKD0VuZEN5Y2xlUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkSDQoFY3ljbGUYAiABKAMSQgoNY3ljbGVfc3VtbWFyeRgDIAMoCzIrLm9tZWdhLnYxLkVuZEN5Y2xlUmVxdWVzdC5DeWNsZVN1bW1hcnlFbnRyeRIaChJzdW1tYXJ5X2ltcG9ydGFuY2UYBCABKAESHQoVdHJpZ2dlcl9jb25zb2xpZGF0aW9uGAUgASgIGjMKEUN5Y2xlU3VtbWFyeUVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiXAoQRW5kQ3ljbGVSZXNwb25zZRISCgplcGlzb2RlX2lkGAEgASgJEjQKDWNvbnNvbGlkYXRpb24YAiABKAsyHS5vbWVnYS52MS5Db25zb2xpZGF0aW9uUmVzdWx0IjAKG01lbW9yeU5hbWVzcGFjZVN0YXRzUmVxdWVzdBIRCgluYW1lc3BhY2UYASABKAkirQEKHE1lbW9yeU5hbWVzcGFjZVN0YXRzUmVzcG9uc2USEQoJbmFtZXNwYWNlGAEgASgJEhYKDmVwaXNvZGljX2NvdW50GAIgASgDEhYKDnNlbWFudGljX2NvdW50GAMgASgDEhUKDXdvcmtpbmdfY291bnQYBCABKAMSGwoTY29udHJhZGljdGlvbl9jb3VudBgFIAEoAxIWCg5yZWdpbWVfaGlzdG9yeRgGIAMoCSJIChlTdHJlYW1NZW1vcnlFdmVudHNSZXF1ZXN0EhEKCW5hbWVzcGFjZRgBIAEoCRIYChBwb2xsX2ludGVydmFsX21zGAIgASgFIqEBChRNZW1vcnlMaWZlY3ljbGVFdmVudBInCgR0eXBlGAEgASgOMhkub21lZ2EudjEuTWVtb3J5RXZlbnRUeXBlEhEKCW5hbWVzcGFjZRgCIAEoCRINCgVjeWNsZRgDIAEoAxIOCgZkZXRhaWwYBCABKAkSLgoKZW1pdHRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAq4QEKD01lbW9yeUV2ZW50VHlwZRIhCh1NRU1PUllfRVZFTlRfVFlQRV9VTlNQRUNJRklFRBAAEiQKIE1FTU9SWV9FVkVOVF9UWVBFX0VQSVNPREVfU1RPUkVEEAESIgoeTUVNT1JZX0VWRU5UX1RZUEVfQ09OU09MSURBVEVEEAISHQoZTUVNT1JZX0VWRU5UX1RZUEVfREVDQVlFRBADEiEKHU1FTU9SWV9FVkVOVF9UWVBFX0NZQ0xFX0JFR0lOEAQSHwobTUVNT1JZX0VWRU5UX1RZUEVfQ1lDTEVfRU5EEAUynQcKDU1lbW9yeVNlcnZpY2USTQoMU3RvcmVFcGlzb2RlEh0ub21lZ2EudjEuU3RvcmVFcGlzb2RlUmVxdWVzdBoeLm9tZWdhLnYxLlN0b3JlRXBpc29kZVJlc3BvbnNlElAKDVF1ZXJ5RXBpc29kZXMSHi5vbWVnYS52MS5RdWVyeUVwaXNvZGVzUmVxdWVzdBofLm9tZWdhLnYxLlF1ZXJ5RXBpc29kZXNSZXNwb25zZRJNCgxTdG9yZVdvcmtpbmcSHS5vbWVnYS52MS5TdG9yZVdvcmtpbmdSZXF1ZXN0Gh4ub21lZ2EudjEuU3RvcmVXb3JraW5nUmVzcG9uc2USRwoKR2V0V29ya2luZxIbLm9tZWdhLnYxLkdldFdvcmtpbmdSZXF1ZXN0Ghwub21lZ2EudjEuR2V0V29ya2luZ1Jlc3BvbnNlElAKDURlbGV0ZVdvcmtpbmcSHi5vbWVnYS52MS5EZWxldGVXb3JraW5nUmVxdWVzdBofLm9tZWdhLnYxLkRlbGV0ZVdvcmtpbmdSZXNwb25zZRJlChRUcmlnZ2VyQ29uc29saWRhdGlvbhIlLm9tZWdhLnYxLlRyaWdnZXJDb25zb2xpZGF0aW9uUmVxdWVzdBomLm9tZWdhLnYxLlRyaWdnZXJDb25zb2xpZGF0aW9uUmVzcG9uc2USUAoNUXVlcnlTZW1hbnRpYxIeLm9tZWdhLnYxLlF1ZXJ5U2VtYW50aWNSZXF1ZXN0Gh8ub21lZ2EudjEuUXVlcnlTZW1hbnRpY1Jlc3BvbnNlEkcKCkJlZ2luQ3ljbGUSGy5vbWVnYS52MS5CZWdpbkN5Y2xlUmVxdWVzdBocLm9tZWdhLnYxLkJlZ2luQ3ljbGVSZXNwb25zZRJBCghFbmRDeWNsZRIZLm9tZWdhLnYxLkVuZEN5Y2xlUmVxdWVzdBoaLm9tZWdhLnYxLkVuZEN5Y2xlUmVzcG9uc2USXwoOR2V0TWVtb3J5U3RhdHMSJS5vbWVnYS52MS5NZW1vcnlOYW1lc3BhY2VTdGF0c1JlcXVlc3QaJi5vbWVnYS52MS5NZW1vcnlOYW1lc3BhY2VTdGF0c1Jlc3BvbnNlElsKElN0cmVhbU1lbW9yeUV2ZW50cxIjLm9tZWdhLnYxLlN0cmVhbU1lbW9yeUV2ZW50c1JlcXVlc3QaHi5vbWVnYS52MS5NZW1vcnlMaWZlY3ljbGVFdmVudDABQpkBCgxjb20ub21lZ2EudjFCEk1lbW9yeVNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp, file_google_protobuf_duration]);
 
 /**
  * @generated from message omega.v1.Episode
@@ -78,8 +71,7 @@ export type Episode = Message<"omega.v1.Episode"> & {
  * Describes the message omega.v1.Episode.
  * Use `create(EpisodeSchema)` to create a new message.
  */
-export const EpisodeSchema: GenMessage<Episode> =
-  /*@__PURE__*/
+export const EpisodeSchema: GenMessage<Episode> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 0);
 
 /**
@@ -103,8 +95,7 @@ export type ScoredEpisode = Message<"omega.v1.ScoredEpisode"> & {
  * Describes the message omega.v1.ScoredEpisode.
  * Use `create(ScoredEpisodeSchema)` to create a new message.
  */
-export const ScoredEpisodeSchema: GenMessage<ScoredEpisode> =
-  /*@__PURE__*/
+export const ScoredEpisodeSchema: GenMessage<ScoredEpisode> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 1);
 
 /**
@@ -146,8 +137,7 @@ export type StoreEpisodeRequest = Message<"omega.v1.StoreEpisodeRequest"> & {
  * Describes the message omega.v1.StoreEpisodeRequest.
  * Use `create(StoreEpisodeRequestSchema)` to create a new message.
  */
-export const StoreEpisodeRequestSchema: GenMessage<StoreEpisodeRequest> =
-  /*@__PURE__*/
+export const StoreEpisodeRequestSchema: GenMessage<StoreEpisodeRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 2);
 
 /**
@@ -164,8 +154,7 @@ export type StoreEpisodeResponse = Message<"omega.v1.StoreEpisodeResponse"> & {
  * Describes the message omega.v1.StoreEpisodeResponse.
  * Use `create(StoreEpisodeResponseSchema)` to create a new message.
  */
-export const StoreEpisodeResponseSchema: GenMessage<StoreEpisodeResponse> =
-  /*@__PURE__*/
+export const StoreEpisodeResponseSchema: GenMessage<StoreEpisodeResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 3);
 
 /**
@@ -218,8 +207,7 @@ export type QueryEpisodesRequest = Message<"omega.v1.QueryEpisodesRequest"> & {
  * Describes the message omega.v1.QueryEpisodesRequest.
  * Use `create(QueryEpisodesRequestSchema)` to create a new message.
  */
-export const QueryEpisodesRequestSchema: GenMessage<QueryEpisodesRequest> =
-  /*@__PURE__*/
+export const QueryEpisodesRequestSchema: GenMessage<QueryEpisodesRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 4);
 
 /**
@@ -236,8 +224,7 @@ export type QueryEpisodesResponse = Message<"omega.v1.QueryEpisodesResponse"> & 
  * Describes the message omega.v1.QueryEpisodesResponse.
  * Use `create(QueryEpisodesResponseSchema)` to create a new message.
  */
-export const QueryEpisodesResponseSchema: GenMessage<QueryEpisodesResponse> =
-  /*@__PURE__*/
+export const QueryEpisodesResponseSchema: GenMessage<QueryEpisodesResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 5);
 
 /**
@@ -273,8 +260,7 @@ export type StoreWorkingRequest = Message<"omega.v1.StoreWorkingRequest"> & {
  * Describes the message omega.v1.StoreWorkingRequest.
  * Use `create(StoreWorkingRequestSchema)` to create a new message.
  */
-export const StoreWorkingRequestSchema: GenMessage<StoreWorkingRequest> =
-  /*@__PURE__*/
+export const StoreWorkingRequestSchema: GenMessage<StoreWorkingRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 6);
 
 /**
@@ -291,8 +277,7 @@ export type StoreWorkingResponse = Message<"omega.v1.StoreWorkingResponse"> & {
  * Describes the message omega.v1.StoreWorkingResponse.
  * Use `create(StoreWorkingResponseSchema)` to create a new message.
  */
-export const StoreWorkingResponseSchema: GenMessage<StoreWorkingResponse> =
-  /*@__PURE__*/
+export const StoreWorkingResponseSchema: GenMessage<StoreWorkingResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 7);
 
 /**
@@ -314,8 +299,7 @@ export type GetWorkingRequest = Message<"omega.v1.GetWorkingRequest"> & {
  * Describes the message omega.v1.GetWorkingRequest.
  * Use `create(GetWorkingRequestSchema)` to create a new message.
  */
-export const GetWorkingRequestSchema: GenMessage<GetWorkingRequest> =
-  /*@__PURE__*/
+export const GetWorkingRequestSchema: GenMessage<GetWorkingRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 8);
 
 /**
@@ -342,8 +326,7 @@ export type GetWorkingResponse = Message<"omega.v1.GetWorkingResponse"> & {
  * Describes the message omega.v1.GetWorkingResponse.
  * Use `create(GetWorkingResponseSchema)` to create a new message.
  */
-export const GetWorkingResponseSchema: GenMessage<GetWorkingResponse> =
-  /*@__PURE__*/
+export const GetWorkingResponseSchema: GenMessage<GetWorkingResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 9);
 
 /**
@@ -365,8 +348,7 @@ export type DeleteWorkingRequest = Message<"omega.v1.DeleteWorkingRequest"> & {
  * Describes the message omega.v1.DeleteWorkingRequest.
  * Use `create(DeleteWorkingRequestSchema)` to create a new message.
  */
-export const DeleteWorkingRequestSchema: GenMessage<DeleteWorkingRequest> =
-  /*@__PURE__*/
+export const DeleteWorkingRequestSchema: GenMessage<DeleteWorkingRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 10);
 
 /**
@@ -383,8 +365,7 @@ export type DeleteWorkingResponse = Message<"omega.v1.DeleteWorkingResponse"> & 
  * Describes the message omega.v1.DeleteWorkingResponse.
  * Use `create(DeleteWorkingResponseSchema)` to create a new message.
  */
-export const DeleteWorkingResponseSchema: GenMessage<DeleteWorkingResponse> =
-  /*@__PURE__*/
+export const DeleteWorkingResponseSchema: GenMessage<DeleteWorkingResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 11);
 
 /**
@@ -416,8 +397,7 @@ export type ConsolidationResult = Message<"omega.v1.ConsolidationResult"> & {
  * Describes the message omega.v1.ConsolidationResult.
  * Use `create(ConsolidationResultSchema)` to create a new message.
  */
-export const ConsolidationResultSchema: GenMessage<ConsolidationResult> =
-  /*@__PURE__*/
+export const ConsolidationResultSchema: GenMessage<ConsolidationResult> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 12);
 
 /**
@@ -434,8 +414,7 @@ export type TriggerConsolidationRequest = Message<"omega.v1.TriggerConsolidation
  * Describes the message omega.v1.TriggerConsolidationRequest.
  * Use `create(TriggerConsolidationRequestSchema)` to create a new message.
  */
-export const TriggerConsolidationRequestSchema: GenMessage<TriggerConsolidationRequest> =
-  /*@__PURE__*/
+export const TriggerConsolidationRequestSchema: GenMessage<TriggerConsolidationRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 13);
 
 /**
@@ -452,8 +431,7 @@ export type TriggerConsolidationResponse = Message<"omega.v1.TriggerConsolidatio
  * Describes the message omega.v1.TriggerConsolidationResponse.
  * Use `create(TriggerConsolidationResponseSchema)` to create a new message.
  */
-export const TriggerConsolidationResponseSchema: GenMessage<TriggerConsolidationResponse> =
-  /*@__PURE__*/
+export const TriggerConsolidationResponseSchema: GenMessage<TriggerConsolidationResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 14);
 
 /**
@@ -514,8 +492,7 @@ export type MemoryConcept = Message<"omega.v1.MemoryConcept"> & {
  * Describes the message omega.v1.MemoryConcept.
  * Use `create(MemoryConceptSchema)` to create a new message.
  */
-export const MemoryConceptSchema: GenMessage<MemoryConcept> =
-  /*@__PURE__*/
+export const MemoryConceptSchema: GenMessage<MemoryConcept> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 15);
 
 /**
@@ -551,8 +528,7 @@ export type QuerySemanticRequest = Message<"omega.v1.QuerySemanticRequest"> & {
  * Describes the message omega.v1.QuerySemanticRequest.
  * Use `create(QuerySemanticRequestSchema)` to create a new message.
  */
-export const QuerySemanticRequestSchema: GenMessage<QuerySemanticRequest> =
-  /*@__PURE__*/
+export const QuerySemanticRequestSchema: GenMessage<QuerySemanticRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 16);
 
 /**
@@ -569,8 +545,7 @@ export type QuerySemanticResponse = Message<"omega.v1.QuerySemanticResponse"> & 
  * Describes the message omega.v1.QuerySemanticResponse.
  * Use `create(QuerySemanticResponseSchema)` to create a new message.
  */
-export const QuerySemanticResponseSchema: GenMessage<QuerySemanticResponse> =
-  /*@__PURE__*/
+export const QuerySemanticResponseSchema: GenMessage<QuerySemanticResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 17);
 
 /**
@@ -592,8 +567,7 @@ export type BeginCycleRequest = Message<"omega.v1.BeginCycleRequest"> & {
  * Describes the message omega.v1.BeginCycleRequest.
  * Use `create(BeginCycleRequestSchema)` to create a new message.
  */
-export const BeginCycleRequestSchema: GenMessage<BeginCycleRequest> =
-  /*@__PURE__*/
+export const BeginCycleRequestSchema: GenMessage<BeginCycleRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 18);
 
 /**
@@ -620,8 +594,7 @@ export type BeginCycleResponse = Message<"omega.v1.BeginCycleResponse"> & {
  * Describes the message omega.v1.BeginCycleResponse.
  * Use `create(BeginCycleResponseSchema)` to create a new message.
  */
-export const BeginCycleResponseSchema: GenMessage<BeginCycleResponse> =
-  /*@__PURE__*/
+export const BeginCycleResponseSchema: GenMessage<BeginCycleResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 19);
 
 /**
@@ -660,8 +633,7 @@ export type EndCycleRequest = Message<"omega.v1.EndCycleRequest"> & {
  * Describes the message omega.v1.EndCycleRequest.
  * Use `create(EndCycleRequestSchema)` to create a new message.
  */
-export const EndCycleRequestSchema: GenMessage<EndCycleRequest> =
-  /*@__PURE__*/
+export const EndCycleRequestSchema: GenMessage<EndCycleRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 20);
 
 /**
@@ -685,8 +657,7 @@ export type EndCycleResponse = Message<"omega.v1.EndCycleResponse"> & {
  * Describes the message omega.v1.EndCycleResponse.
  * Use `create(EndCycleResponseSchema)` to create a new message.
  */
-export const EndCycleResponseSchema: GenMessage<EndCycleResponse> =
-  /*@__PURE__*/
+export const EndCycleResponseSchema: GenMessage<EndCycleResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 21);
 
 /**
@@ -703,8 +674,7 @@ export type MemoryNamespaceStatsRequest = Message<"omega.v1.MemoryNamespaceStats
  * Describes the message omega.v1.MemoryNamespaceStatsRequest.
  * Use `create(MemoryNamespaceStatsRequestSchema)` to create a new message.
  */
-export const MemoryNamespaceStatsRequestSchema: GenMessage<MemoryNamespaceStatsRequest> =
-  /*@__PURE__*/
+export const MemoryNamespaceStatsRequestSchema: GenMessage<MemoryNamespaceStatsRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 22);
 
 /**
@@ -746,8 +716,7 @@ export type MemoryNamespaceStatsResponse = Message<"omega.v1.MemoryNamespaceStat
  * Describes the message omega.v1.MemoryNamespaceStatsResponse.
  * Use `create(MemoryNamespaceStatsResponseSchema)` to create a new message.
  */
-export const MemoryNamespaceStatsResponseSchema: GenMessage<MemoryNamespaceStatsResponse> =
-  /*@__PURE__*/
+export const MemoryNamespaceStatsResponseSchema: GenMessage<MemoryNamespaceStatsResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 23);
 
 /**
@@ -771,8 +740,7 @@ export type StreamMemoryEventsRequest = Message<"omega.v1.StreamMemoryEventsRequ
  * Describes the message omega.v1.StreamMemoryEventsRequest.
  * Use `create(StreamMemoryEventsRequestSchema)` to create a new message.
  */
-export const StreamMemoryEventsRequestSchema: GenMessage<StreamMemoryEventsRequest> =
-  /*@__PURE__*/
+export const StreamMemoryEventsRequestSchema: GenMessage<StreamMemoryEventsRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 24);
 
 /**
@@ -811,8 +779,7 @@ export type MemoryLifecycleEvent = Message<"omega.v1.MemoryLifecycleEvent"> & {
  * Describes the message omega.v1.MemoryLifecycleEvent.
  * Use `create(MemoryLifecycleEventSchema)` to create a new message.
  */
-export const MemoryLifecycleEventSchema: GenMessage<MemoryLifecycleEvent> =
-  /*@__PURE__*/
+export const MemoryLifecycleEventSchema: GenMessage<MemoryLifecycleEvent> = /*@__PURE__*/
   messageDesc(file_omega_v1_memory_service, 25);
 
 /**
@@ -853,8 +820,7 @@ export enum MemoryEventType {
 /**
  * Describes the enum omega.v1.MemoryEventType.
  */
-export const MemoryEventTypeSchema: GenEnum<MemoryEventType> =
-  /*@__PURE__*/
+export const MemoryEventTypeSchema: GenEnum<MemoryEventType> = /*@__PURE__*/
   enumDesc(file_omega_v1_memory_service, 0);
 
 /**
@@ -878,7 +844,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof StoreEpisodeRequestSchema;
     output: typeof StoreEpisodeResponseSchema;
-  };
+  },
   /**
    * QueryEpisodes retrieves episodic memories matching the given filters.
    *
@@ -888,7 +854,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof QueryEpisodesRequestSchema;
     output: typeof QueryEpisodesResponseSchema;
-  };
+  },
   /**
    * StoreWorking writes a key/value entry to in-process working memory.
    *
@@ -898,7 +864,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof StoreWorkingRequestSchema;
     output: typeof StoreWorkingResponseSchema;
-  };
+  },
   /**
    * GetWorking reads a working memory entry by key (returns empty if expired/absent).
    *
@@ -908,7 +874,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof GetWorkingRequestSchema;
     output: typeof GetWorkingResponseSchema;
-  };
+  },
   /**
    * DeleteWorking removes an entry from working memory.
    *
@@ -918,7 +884,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof DeleteWorkingRequestSchema;
     output: typeof DeleteWorkingResponseSchema;
-  };
+  },
   /**
    * TriggerConsolidation runs the consolidation pipeline for a namespace,
    * promoting high-importance episodes to semantic memories.
@@ -929,7 +895,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof TriggerConsolidationRequestSchema;
     output: typeof TriggerConsolidationResponseSchema;
-  };
+  },
   /**
    * QuerySemantic retrieves semantic memory concepts by tag and/or text search.
    *
@@ -939,7 +905,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof QuerySemanticRequestSchema;
     output: typeof QuerySemanticResponseSchema;
-  };
+  },
   /**
    * BeginCycle clears working memory and applies episodic decay for a new cycle.
    *
@@ -949,7 +915,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof BeginCycleRequestSchema;
     output: typeof BeginCycleResponseSchema;
-  };
+  },
   /**
    * EndCycle stores the cycle summary episode and optionally triggers consolidation.
    *
@@ -959,7 +925,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof EndCycleRequestSchema;
     output: typeof EndCycleResponseSchema;
-  };
+  },
   /**
    * GetMemoryStats returns aggregate counts for a namespace.
    *
@@ -969,7 +935,7 @@ export const MemoryService: GenService<{
     methodKind: "unary";
     input: typeof MemoryNamespaceStatsRequestSchema;
     output: typeof MemoryNamespaceStatsResponseSchema;
-  };
+  },
   /**
    * StreamMemoryEvents streams memory lifecycle events (store, consolidate, decay).
    *
@@ -979,5 +945,7 @@ export const MemoryService: GenService<{
     methodKind: "server_streaming";
     input: typeof StreamMemoryEventsRequestSchema;
     output: typeof MemoryLifecycleEventSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_omega_v1_memory_service, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_omega_v1_memory_service, 0);
+

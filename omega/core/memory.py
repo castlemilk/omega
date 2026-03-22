@@ -79,10 +79,10 @@ class SemanticMemory:
 
 class MemoryKernel:
     """
-    Central memory system for the Omega Vectora domain.
+    Central memory system for the Omega Victoria domain.
 
     Usage::
-        mem = MemoryKernel(db_path="vectora_memory.db")
+        mem = MemoryKernel(db_path="victoria_memory.db")
 
         # Working memory (current cycle, ephemeral)
         mem.set_working("current_signals", {...})

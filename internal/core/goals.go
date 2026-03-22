@@ -139,7 +139,7 @@ func (cc *ConstitutionalConstraints) Check(_ context.Context, metrics map[string
 	return !hardViolated, violations
 }
 
-// RegisterDefaults registers sensible defaults for the Vectora pipeline.
+// RegisterDefaults registers sensible defaults for the Victoria pipeline.
 func (cc *ConstitutionalConstraints) RegisterDefaults() {
 	cc.Register("max_drawdown_limit", "max_drawdown_pct", 15.0, "max", "hard")
 	cc.Register("max_position_limit", "max_position_pct", 25.0, "max", "hard")
@@ -520,8 +520,8 @@ func (h *HTNDecomposer) RegisterMethod(goal, methodName string, preconditions ma
 	slog.Debug("registered HTN method", "method", methodName, "goal", goal)
 }
 
-// RegisterVectoraMethods registers the default Vectora pipeline decompositions.
-func (h *HTNDecomposer) RegisterVectoraMethods() {
+// RegisterVictoriaMethods registers the default Victoria pipeline decompositions.
+func (h *HTNDecomposer) RegisterVictoriaMethods() {
 	h.RegisterMethod("research_cycle", "standard_pipeline", map[string]any{}, []htnSubtask{
 		{name: "ingest_data", parameters: map[string]any{}, assignedTo: "data_ingestion_node", priority: 1.0},
 		{name: "generate_signals", parameters: map[string]any{}, assignedTo: "signal_generation_node", priority: 0.9},
@@ -1050,7 +1050,7 @@ func NewGoalArchitecture(objectives []string) *GoalArchitecture {
 	cc.RegisterDefaults()
 
 	htn := NewHTNDecomposer()
-	htn.RegisterVectoraMethods()
+	htn.RegisterVictoriaMethods()
 
 	ga := &GoalArchitecture{
 		objectives:  objectives,

@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	defaultStateDBPath  = "/tmp/omega_vectora_state.db"
-	defaultMemoryDBPath = "/tmp/omega_vectora_memory.db"
+	defaultStateDBPath  = "/tmp/omega_victoria_state.db"
+	defaultMemoryDBPath = "/tmp/omega_victoria_memory.db"
 	ChallengeDBPath     = "/tmp/omega_challenge_registry.db"
 )
 

@@ -4,7 +4,7 @@ omega.math.bayesian
 Bayesian signal aggregator with log-odds representation for numerical stability.
 
 This module implements the core probabilistic updating logic used by the
-Vectora signal aggregation layer. All multi-signal fusion should go through
+Victoria signal aggregation layer. All multi-signal fusion should go through
 the functions here rather than ad-hoc probability arithmetic.
 
 Mathematical Background

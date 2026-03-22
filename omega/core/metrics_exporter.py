@@ -15,8 +15,8 @@ Design constraints
   methods from the heartbeat loop to populate them.
 
 Usage::
-    store  = StateStore(db_path="/tmp/omega_vectora_state.db")
-    memory = MemoryKernel(db_path="/tmp/omega_vectora_memory.db")
+    store  = StateStore(db_path="/tmp/omega_victoria_state.db")
+    memory = MemoryKernel(db_path="/tmp/omega_victoria_memory.db")
     exporter = MetricsExporter(state_store=store, memory_kernel=memory)
     exporter.start()          # non-blocking — starts background daemon thread
 

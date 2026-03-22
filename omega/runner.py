@@ -160,8 +160,8 @@ class OmegaRunner:
         self._setup_nodes()
 
     def _setup_nodes(self) -> None:
-        """Register Vectora nodes with the orchestrator."""
-        from omega.nodes.vectora import (
+        """Register Victoria nodes with the orchestrator."""
+        from omega.nodes.victoria import (
             DataIngestionNode,
             ReportingNode,
             RiskManagementNode,

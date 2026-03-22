@@ -11,12 +11,8 @@ import type { Message } from "@bufbuild/protobuf";
 /**
  * Describes the file omega/v1/autonomy_service.proto.
  */
-export const file_omega_v1_autonomy_service: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "Ch9vbWVnYS92MS9hdXRvbm9teV9zZXJ2aWNlLnByb3RvEghvbWVnYS52MSLwAQoZUmVjb3JkQ3ljbGVNZXRyaWNzUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEg0KBWN5Y2xlGAIgASgDEkEKB21ldHJpY3MYAyADKAsyMC5vbWVnYS52MS5SZWNvcmRDeWNsZU1ldHJpY3NSZXF1ZXN0Lk1ldHJpY3NFbnRyeRIPCgdzdWNjZXNzGAQgASgIEi8KC3JlY29yZGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBouCgxNZXRyaWNzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASIoChpSZWNvcmRDeWNsZU1ldHJpY3NSZXNwb25zZRIKCgJvaxgBIAEoCCIqChdHZXRBdXRvbm9teUxldmVsUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJIqsBChhHZXRBdXRvbm9teUxldmVsUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRImCgVsZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSEgoKY29uZmlkZW5jZRgDIAEoARIXCg9jeWNsZXNfYXRfbGV2ZWwYBCABKAMSKQoFc2luY2UYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIosCChdSZXF1ZXN0UHJvbW90aW9uUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEjAKD3JlcXVlc3RlZF9sZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSDgoGcmVhc29uGAMgASgJElQKEnN1cHBvcnRpbmdfbWV0cmljcxgEIAMoCzI4Lm9tZWdhLnYxLlJlcXVlc3RQcm9tb3Rpb25SZXF1ZXN0LlN1cHBvcnRpbmdNZXRyaWNzRW50cnkSDQoFY3ljbGUYBSABKAMaOAoWU3VwcG9ydGluZ01ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBIm0KGFJlcXVlc3RQcm9tb3Rpb25SZXNwb25zZRIQCghhcHByb3ZlZBgBIAEoCBIuCg1ncmFudGVkX2xldmVsGAIgASgOMhcub21lZ2EudjEuQXV0b25vbXlMZXZlbBIPCgdyZWFzb25zGAMgAygJItIBChZSZWNvcmRQcm9tb3Rpb25SZXF1ZXN0Eg8KB25vZGVfaWQYASABKAkSKwoKZnJvbV9sZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSKQoIdG9fbGV2ZWwYAyABKA4yFy5vbWVnYS52MS5BdXRvbm9teUxldmVsEg8KB3RyaWdnZXIYBCABKAkSDQoFY3ljbGUYBSABKAMSLwoLcmVjb3JkZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIiUKF1JlY29yZFByb21vdGlvblJlc3BvbnNlEgoKAm9rGAEgASgIIskBCg1BdXRvbm9teUV2ZW50Eg8KB25vZGVfaWQYASABKAkSKwoKZnJvbV9sZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSKQoIdG9fbGV2ZWwYAyABKA4yFy5vbWVnYS52MS5BdXRvbm9teUxldmVsEg8KB3RyaWdnZXIYBCABKAkSDQoFY3ljbGUYBSABKAMSLwoLcmVjb3JkZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIjsKGUdldEF1dG9ub215SGlzdG9yeVJlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCRINCgVsaW1pdBgCIAEoBSJFChpHZXRBdXRvbm9teUhpc3RvcnlSZXNwb25zZRInCgZldmVudHMYASADKAsyFy5vbWVnYS52MS5BdXRvbm9teUV2ZW50IkUKGFN0cmVhbU5vZGVNZXRyaWNzUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEhgKEHBvbGxfaW50ZXJ2YWxfbXMYAiABKAUi/AEKEE5vZGVNZXRyaWNzRXZlbnQSDwoHbm9kZV9pZBgBIAEoCRINCgVjeWNsZRgCIAEoAxI4CgdtZXRyaWNzGAMgAygLMicub21lZ2EudjEuTm9kZU1ldHJpY3NFdmVudC5NZXRyaWNzRW50cnkSLgoNY3VycmVudF9sZXZlbBgEIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSLgoKZW1pdHRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEqmwEKDUF1dG9ub215TGV2ZWwSHgoaQVVUT05PTVlfTEVWRUxfVU5TUEVDSUZJRUQQABIZChVBVVRPTk9NWV9MRVZFTF9NQU5VQUwQARIdChlBVVRPTk9NWV9MRVZFTF9TVVBFUlZJU0VEEAISFwoTQVVUT05PTVlfTEVWRUxfU0VNSRADEhcKE0FVVE9OT01ZX0xFVkVMX0ZVTEwQBDK4BAoPQXV0b25vbXlTZXJ2aWNlEl8KElJlY29yZEN5Y2xlTWV0cmljcxIjLm9tZWdhLnYxLlJlY29yZEN5Y2xlTWV0cmljc1JlcXVlc3QaJC5vbWVnYS52MS5SZWNvcmRDeWNsZU1ldHJpY3NSZXNwb25zZRJZChBHZXRBdXRvbm9teUxldmVsEiEub21lZ2EudjEuR2V0QXV0b25vbXlMZXZlbFJlcXVlc3QaIi5vbWVnYS52MS5HZXRBdXRvbm9teUxldmVsUmVzcG9uc2USWQoQUmVxdWVzdFByb21vdGlvbhIhLm9tZWdhLnYxLlJlcXVlc3RQcm9tb3Rpb25SZXF1ZXN0GiIub21lZ2EudjEuUmVxdWVzdFByb21vdGlvblJlc3BvbnNlElYKD1JlY29yZFByb21vdGlvbhIgLm9tZWdhLnYxLlJlY29yZFByb21vdGlvblJlcXVlc3QaIS5vbWVnYS52MS5SZWNvcmRQcm9tb3Rpb25SZXNwb25zZRJfChJHZXRBdXRvbm9teUhpc3RvcnkSIy5vbWVnYS52MS5HZXRBdXRvbm9teUhpc3RvcnlSZXF1ZXN0GiQub21lZ2EudjEuR2V0QXV0b25vbXlIaXN0b3J5UmVzcG9uc2USVQoRU3RyZWFtTm9kZU1ldHJpY3MSIi5vbWVnYS52MS5TdHJlYW1Ob2RlTWV0cmljc1JlcXVlc3QaGi5vbWVnYS52MS5Ob2RlTWV0cmljc0V2ZW50MAFCmwEKDGNvbS5vbWVnYS52MUIUQXV0b25vbXlTZXJ2aWNlUHJvdG9QAVo0Z2l0aHViLmNvbS9iZW5lYnN3b3J0aC9vbWVnYS9nZW4vZ28vb21lZ2EvdjE7b21lZ2F2MaICA09YWKoCCE9tZWdhLlYxygIIT21lZ2FcVjHiAhRPbWVnYVxWMVxHUEJNZXRhZGF0YeoCCU9tZWdhOjpWMWIGcHJvdG8z",
-    [file_google_protobuf_timestamp]
-  );
+export const file_omega_v1_autonomy_service: GenFile = /*@__PURE__*/
+  fileDesc("Ch9vbWVnYS92MS9hdXRvbm9teV9zZXJ2aWNlLnByb3RvEghvbWVnYS52MSLwAQoZUmVjb3JkQ3ljbGVNZXRyaWNzUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEg0KBWN5Y2xlGAIgASgDEkEKB21ldHJpY3MYAyADKAsyMC5vbWVnYS52MS5SZWNvcmRDeWNsZU1ldHJpY3NSZXF1ZXN0Lk1ldHJpY3NFbnRyeRIPCgdzdWNjZXNzGAQgASgIEi8KC3JlY29yZGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBouCgxNZXRyaWNzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASIoChpSZWNvcmRDeWNsZU1ldHJpY3NSZXNwb25zZRIKCgJvaxgBIAEoCCIqChdHZXRBdXRvbm9teUxldmVsUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJIqsBChhHZXRBdXRvbm9teUxldmVsUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRImCgVsZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSEgoKY29uZmlkZW5jZRgDIAEoARIXCg9jeWNsZXNfYXRfbGV2ZWwYBCABKAMSKQoFc2luY2UYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIosCChdSZXF1ZXN0UHJvbW90aW9uUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEjAKD3JlcXVlc3RlZF9sZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSDgoGcmVhc29uGAMgASgJElQKEnN1cHBvcnRpbmdfbWV0cmljcxgEIAMoCzI4Lm9tZWdhLnYxLlJlcXVlc3RQcm9tb3Rpb25SZXF1ZXN0LlN1cHBvcnRpbmdNZXRyaWNzRW50cnkSDQoFY3ljbGUYBSABKAMaOAoWU3VwcG9ydGluZ01ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAE6AjgBIm0KGFJlcXVlc3RQcm9tb3Rpb25SZXNwb25zZRIQCghhcHByb3ZlZBgBIAEoCBIuCg1ncmFudGVkX2xldmVsGAIgASgOMhcub21lZ2EudjEuQXV0b25vbXlMZXZlbBIPCgdyZWFzb25zGAMgAygJItIBChZSZWNvcmRQcm9tb3Rpb25SZXF1ZXN0Eg8KB25vZGVfaWQYASABKAkSKwoKZnJvbV9sZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSKQoIdG9fbGV2ZWwYAyABKA4yFy5vbWVnYS52MS5BdXRvbm9teUxldmVsEg8KB3RyaWdnZXIYBCABKAkSDQoFY3ljbGUYBSABKAMSLwoLcmVjb3JkZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIiUKF1JlY29yZFByb21vdGlvblJlc3BvbnNlEgoKAm9rGAEgASgIIskBCg1BdXRvbm9teUV2ZW50Eg8KB25vZGVfaWQYASABKAkSKwoKZnJvbV9sZXZlbBgCIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSKQoIdG9fbGV2ZWwYAyABKA4yFy5vbWVnYS52MS5BdXRvbm9teUxldmVsEg8KB3RyaWdnZXIYBCABKAkSDQoFY3ljbGUYBSABKAMSLwoLcmVjb3JkZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIjsKGUdldEF1dG9ub215SGlzdG9yeVJlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCRINCgVsaW1pdBgCIAEoBSJFChpHZXRBdXRvbm9teUhpc3RvcnlSZXNwb25zZRInCgZldmVudHMYASADKAsyFy5vbWVnYS52MS5BdXRvbm9teUV2ZW50IkUKGFN0cmVhbU5vZGVNZXRyaWNzUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJEhgKEHBvbGxfaW50ZXJ2YWxfbXMYAiABKAUi/AEKEE5vZGVNZXRyaWNzRXZlbnQSDwoHbm9kZV9pZBgBIAEoCRINCgVjeWNsZRgCIAEoAxI4CgdtZXRyaWNzGAMgAygLMicub21lZ2EudjEuTm9kZU1ldHJpY3NFdmVudC5NZXRyaWNzRW50cnkSLgoNY3VycmVudF9sZXZlbBgEIAEoDjIXLm9tZWdhLnYxLkF1dG9ub215TGV2ZWwSLgoKZW1pdHRlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAEqmwEKDUF1dG9ub215TGV2ZWwSHgoaQVVUT05PTVlfTEVWRUxfVU5TUEVDSUZJRUQQABIZChVBVVRPTk9NWV9MRVZFTF9NQU5VQUwQARIdChlBVVRPTk9NWV9MRVZFTF9TVVBFUlZJU0VEEAISFwoTQVVUT05PTVlfTEVWRUxfU0VNSRADEhcKE0FVVE9OT01ZX0xFVkVMX0ZVTEwQBDK4BAoPQXV0b25vbXlTZXJ2aWNlEl8KElJlY29yZEN5Y2xlTWV0cmljcxIjLm9tZWdhLnYxLlJlY29yZEN5Y2xlTWV0cmljc1JlcXVlc3QaJC5vbWVnYS52MS5SZWNvcmRDeWNsZU1ldHJpY3NSZXNwb25zZRJZChBHZXRBdXRvbm9teUxldmVsEiEub21lZ2EudjEuR2V0QXV0b25vbXlMZXZlbFJlcXVlc3QaIi5vbWVnYS52MS5HZXRBdXRvbm9teUxldmVsUmVzcG9uc2USWQoQUmVxdWVzdFByb21vdGlvbhIhLm9tZWdhLnYxLlJlcXVlc3RQcm9tb3Rpb25SZXF1ZXN0GiIub21lZ2EudjEuUmVxdWVzdFByb21vdGlvblJlc3BvbnNlElYKD1JlY29yZFByb21vdGlvbhIgLm9tZWdhLnYxLlJlY29yZFByb21vdGlvblJlcXVlc3QaIS5vbWVnYS52MS5SZWNvcmRQcm9tb3Rpb25SZXNwb25zZRJfChJHZXRBdXRvbm9teUhpc3RvcnkSIy5vbWVnYS52MS5HZXRBdXRvbm9teUhpc3RvcnlSZXF1ZXN0GiQub21lZ2EudjEuR2V0QXV0b25vbXlIaXN0b3J5UmVzcG9uc2USVQoRU3RyZWFtTm9kZU1ldHJpY3MSIi5vbWVnYS52MS5TdHJlYW1Ob2RlTWV0cmljc1JlcXVlc3QaGi5vbWVnYS52MS5Ob2RlTWV0cmljc0V2ZW50MAFCmwEKDGNvbS5vbWVnYS52MUIUQXV0b25vbXlTZXJ2aWNlUHJvdG9QAVo0Z2l0aHViLmNvbS9iZW5lYnN3b3J0aC9vbWVnYS9nZW4vZ28vb21lZ2EvdjE7b21lZ2F2MaICA09YWKoCCE9tZWdhLlYxygIIT21lZ2FcVjHiAhRPbWVnYVxWMVxHUEJNZXRhZGF0YeoCCU9tZWdhOjpWMWIGcHJvdG8z", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message omega.v1.RecordCycleMetricsRequest
@@ -54,8 +50,7 @@ export type RecordCycleMetricsRequest = Message<"omega.v1.RecordCycleMetricsRequ
  * Describes the message omega.v1.RecordCycleMetricsRequest.
  * Use `create(RecordCycleMetricsRequestSchema)` to create a new message.
  */
-export const RecordCycleMetricsRequestSchema: GenMessage<RecordCycleMetricsRequest> =
-  /*@__PURE__*/
+export const RecordCycleMetricsRequestSchema: GenMessage<RecordCycleMetricsRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 0);
 
 /**
@@ -72,8 +67,7 @@ export type RecordCycleMetricsResponse = Message<"omega.v1.RecordCycleMetricsRes
  * Describes the message omega.v1.RecordCycleMetricsResponse.
  * Use `create(RecordCycleMetricsResponseSchema)` to create a new message.
  */
-export const RecordCycleMetricsResponseSchema: GenMessage<RecordCycleMetricsResponse> =
-  /*@__PURE__*/
+export const RecordCycleMetricsResponseSchema: GenMessage<RecordCycleMetricsResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 1);
 
 /**
@@ -90,8 +84,7 @@ export type GetAutonomyLevelRequest = Message<"omega.v1.GetAutonomyLevelRequest"
  * Describes the message omega.v1.GetAutonomyLevelRequest.
  * Use `create(GetAutonomyLevelRequestSchema)` to create a new message.
  */
-export const GetAutonomyLevelRequestSchema: GenMessage<GetAutonomyLevelRequest> =
-  /*@__PURE__*/
+export const GetAutonomyLevelRequestSchema: GenMessage<GetAutonomyLevelRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 2);
 
 /**
@@ -132,8 +125,7 @@ export type GetAutonomyLevelResponse = Message<"omega.v1.GetAutonomyLevelRespons
  * Describes the message omega.v1.GetAutonomyLevelResponse.
  * Use `create(GetAutonomyLevelResponseSchema)` to create a new message.
  */
-export const GetAutonomyLevelResponseSchema: GenMessage<GetAutonomyLevelResponse> =
-  /*@__PURE__*/
+export const GetAutonomyLevelResponseSchema: GenMessage<GetAutonomyLevelResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 3);
 
 /**
@@ -170,8 +162,7 @@ export type RequestPromotionRequest = Message<"omega.v1.RequestPromotionRequest"
  * Describes the message omega.v1.RequestPromotionRequest.
  * Use `create(RequestPromotionRequestSchema)` to create a new message.
  */
-export const RequestPromotionRequestSchema: GenMessage<RequestPromotionRequest> =
-  /*@__PURE__*/
+export const RequestPromotionRequestSchema: GenMessage<RequestPromotionRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 4);
 
 /**
@@ -200,8 +191,7 @@ export type RequestPromotionResponse = Message<"omega.v1.RequestPromotionRespons
  * Describes the message omega.v1.RequestPromotionResponse.
  * Use `create(RequestPromotionResponseSchema)` to create a new message.
  */
-export const RequestPromotionResponseSchema: GenMessage<RequestPromotionResponse> =
-  /*@__PURE__*/
+export const RequestPromotionResponseSchema: GenMessage<RequestPromotionResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 5);
 
 /**
@@ -245,8 +235,7 @@ export type RecordPromotionRequest = Message<"omega.v1.RecordPromotionRequest"> 
  * Describes the message omega.v1.RecordPromotionRequest.
  * Use `create(RecordPromotionRequestSchema)` to create a new message.
  */
-export const RecordPromotionRequestSchema: GenMessage<RecordPromotionRequest> =
-  /*@__PURE__*/
+export const RecordPromotionRequestSchema: GenMessage<RecordPromotionRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 6);
 
 /**
@@ -263,8 +252,7 @@ export type RecordPromotionResponse = Message<"omega.v1.RecordPromotionResponse"
  * Describes the message omega.v1.RecordPromotionResponse.
  * Use `create(RecordPromotionResponseSchema)` to create a new message.
  */
-export const RecordPromotionResponseSchema: GenMessage<RecordPromotionResponse> =
-  /*@__PURE__*/
+export const RecordPromotionResponseSchema: GenMessage<RecordPromotionResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 7);
 
 /**
@@ -306,8 +294,7 @@ export type AutonomyEvent = Message<"omega.v1.AutonomyEvent"> & {
  * Describes the message omega.v1.AutonomyEvent.
  * Use `create(AutonomyEventSchema)` to create a new message.
  */
-export const AutonomyEventSchema: GenMessage<AutonomyEvent> =
-  /*@__PURE__*/
+export const AutonomyEventSchema: GenMessage<AutonomyEvent> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 8);
 
 /**
@@ -329,8 +316,7 @@ export type GetAutonomyHistoryRequest = Message<"omega.v1.GetAutonomyHistoryRequ
  * Describes the message omega.v1.GetAutonomyHistoryRequest.
  * Use `create(GetAutonomyHistoryRequestSchema)` to create a new message.
  */
-export const GetAutonomyHistoryRequestSchema: GenMessage<GetAutonomyHistoryRequest> =
-  /*@__PURE__*/
+export const GetAutonomyHistoryRequestSchema: GenMessage<GetAutonomyHistoryRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 9);
 
 /**
@@ -347,8 +333,7 @@ export type GetAutonomyHistoryResponse = Message<"omega.v1.GetAutonomyHistoryRes
  * Describes the message omega.v1.GetAutonomyHistoryResponse.
  * Use `create(GetAutonomyHistoryResponseSchema)` to create a new message.
  */
-export const GetAutonomyHistoryResponseSchema: GenMessage<GetAutonomyHistoryResponse> =
-  /*@__PURE__*/
+export const GetAutonomyHistoryResponseSchema: GenMessage<GetAutonomyHistoryResponse> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 10);
 
 /**
@@ -372,8 +357,7 @@ export type StreamNodeMetricsRequest = Message<"omega.v1.StreamNodeMetricsReques
  * Describes the message omega.v1.StreamNodeMetricsRequest.
  * Use `create(StreamNodeMetricsRequestSchema)` to create a new message.
  */
-export const StreamNodeMetricsRequestSchema: GenMessage<StreamNodeMetricsRequest> =
-  /*@__PURE__*/
+export const StreamNodeMetricsRequestSchema: GenMessage<StreamNodeMetricsRequest> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 11);
 
 /**
@@ -410,8 +394,7 @@ export type NodeMetricsEvent = Message<"omega.v1.NodeMetricsEvent"> & {
  * Describes the message omega.v1.NodeMetricsEvent.
  * Use `create(NodeMetricsEventSchema)` to create a new message.
  */
-export const NodeMetricsEventSchema: GenMessage<NodeMetricsEvent> =
-  /*@__PURE__*/
+export const NodeMetricsEventSchema: GenMessage<NodeMetricsEvent> = /*@__PURE__*/
   messageDesc(file_omega_v1_autonomy_service, 12);
 
 /**
@@ -457,8 +440,7 @@ export enum AutonomyLevel {
 /**
  * Describes the enum omega.v1.AutonomyLevel.
  */
-export const AutonomyLevelSchema: GenEnum<AutonomyLevel> =
-  /*@__PURE__*/
+export const AutonomyLevelSchema: GenEnum<AutonomyLevel> = /*@__PURE__*/
   enumDesc(file_omega_v1_autonomy_service, 0);
 
 /**
@@ -478,7 +460,7 @@ export const AutonomyService: GenService<{
     methodKind: "unary";
     input: typeof RecordCycleMetricsRequestSchema;
     output: typeof RecordCycleMetricsResponseSchema;
-  };
+  },
   /**
    * GetAutonomyLevel returns the current autonomy level for a node.
    *
@@ -488,7 +470,7 @@ export const AutonomyService: GenService<{
     methodKind: "unary";
     input: typeof GetAutonomyLevelRequestSchema;
     output: typeof GetAutonomyLevelResponseSchema;
-  };
+  },
   /**
    * RequestPromotion asks the autonomy system to evaluate whether a node
    * should be promoted to a higher autonomy tier.
@@ -499,7 +481,7 @@ export const AutonomyService: GenService<{
     methodKind: "unary";
     input: typeof RequestPromotionRequestSchema;
     output: typeof RequestPromotionResponseSchema;
-  };
+  },
   /**
    * RecordPromotion persists a confirmed promotion or demotion event.
    *
@@ -509,7 +491,7 @@ export const AutonomyService: GenService<{
     methodKind: "unary";
     input: typeof RecordPromotionRequestSchema;
     output: typeof RecordPromotionResponseSchema;
-  };
+  },
   /**
    * GetAutonomyHistory returns the promotion/demotion history for a node.
    *
@@ -519,7 +501,7 @@ export const AutonomyService: GenService<{
     methodKind: "unary";
     input: typeof GetAutonomyHistoryRequestSchema;
     output: typeof GetAutonomyHistoryResponseSchema;
-  };
+  },
   /**
    * StreamNodeMetrics streams live per-node metrics as they are recorded.
    *
@@ -529,5 +511,7 @@ export const AutonomyService: GenService<{
     methodKind: "server_streaming";
     input: typeof StreamNodeMetricsRequestSchema;
     output: typeof NodeMetricsEventSchema;
-  };
-}> = /*@__PURE__*/ serviceDesc(file_omega_v1_autonomy_service, 0);
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_omega_v1_autonomy_service, 0);
+

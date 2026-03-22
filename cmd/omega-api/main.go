@@ -37,17 +37,17 @@ func main() {
 		log.Fatalf("open DB: %v", err)
 	}
 
-	vectoraDBPath := db.VectoraDBPath()
-	if _, err := os.Stat(vectoraDBPath); os.IsNotExist(err) {
-		f, _ := os.Create(vectoraDBPath) //nolint:gosec
+	victoriaDBPath := db.VictoriaDBPath()
+	if _, err := os.Stat(victoriaDBPath); os.IsNotExist(err) {
+		f, _ := os.Create(victoriaDBPath) //nolint:gosec
 		if f != nil {
 			f.Close() //nolint:errcheck,gosec
 		}
 	}
-	vdb, err := db.NewVectora(vectoraDBPath)
+	vdb, err := db.NewVictoria(victoriaDBPath)
 	if err != nil {
 		database.Close() //nolint:errcheck,gosec
-		log.Fatalf("open Vectora DB: %v", err)
+		log.Fatalf("open Victoria DB: %v", err)
 	}
 	defer database.Close()
 	defer vdb.Close()
@@ -82,7 +82,7 @@ func main() {
 
 	// ── Service handlers ──────────────────────────────────────────────────────
 	h := handler.New(database)
-	vh := handler.NewVectora(vdb)
+	vh := handler.NewVictoria(vdb)
 	sh := handler.NewState(database)
 
 	// ── New proto-service handlers ────────────────────────────────────────────
@@ -110,7 +110,7 @@ func main() {
 	)
 	mux.Handle(path, svcHandler)
 
-	vPath, vSvcHandler := omegav1connect.NewVectoraServiceHandler(vh,
+	vPath, vSvcHandler := omegav1connect.NewVictoriaServiceHandler(vh,
 		connect.WithCompressMinBytes(1024),
 	)
 	mux.Handle(vPath, vSvcHandler)

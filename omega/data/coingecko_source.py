@@ -52,7 +52,7 @@ class CoinGeckoSource(DataSource):
         self._last_request: float = 0.0
         self._session_headers = {
             "Accept": "application/json",
-            "User-Agent": "omega-vectora/1.0",
+            "User-Agent": "omega-victoria/1.0",
         }
 
     # ------------------------------------------------------------------

@@ -122,7 +122,7 @@ var seedChallenges = []seedChallenge{
 			"urgent consolidation when high-confidence contradictions appear.",
 	},
 	{
-		targetSubsystem: "vectora.signal_generation",
+		targetSubsystem: "victoria.signal_generation",
 		severity:        SeverityHigh,
 		description: "SignalGenerationNode self-improvement unlocks new indicator types each " +
 			"cycle. No check that adding a new indicator doesn't re-introduce a " +
@@ -132,7 +132,7 @@ var seedChallenges = []seedChallenge{
 			"correlation check against existing set.",
 	},
 	{
-		targetSubsystem: "vectora.verification",
+		targetSubsystem: "victoria.verification",
 		severity:        SeverityMedium,
 		description: "VerificationNode uses a fixed 30% regression threshold — arbitrary. " +
 			"A 29% regression in Sharpe during high-volatility may be noise; " +
@@ -142,14 +142,14 @@ var seedChallenges = []seedChallenge{
 			"to all metrics regardless of scale or business impact.",
 	},
 	{
-		targetSubsystem: "vectora.data_ingestion",
+		targetSubsystem: "victoria.data_ingestion",
 		severity:        SeverityHigh,
 		description: "DataIngestionNode falls back to cached data on failure without staleness " +
 			"bounds. If Binance and CoinGecko both fail for 24+ hours, the pipeline " +
 			"continues on day-old data producing 'valid' signals with no staleness " +
 			"warning in the output.",
 		evidence: "data_ingestion.py — fallback path returns self._cache without timestamp " +
-			"comparison; vectora_main.py logs a warning but does not halt the pipeline.",
+			"comparison; victoria_main.py logs a warning but does not halt the pipeline.",
 	},
 	{
 		targetSubsystem: "state_store",
@@ -171,7 +171,7 @@ var seedChallenges = []seedChallenge{
 			"No epsilon-greedy or UCB exploration. New nodes are starved of execution data.",
 	},
 	{
-		targetSubsystem: "vectora.strategy",
+		targetSubsystem: "victoria.strategy",
 		severity:        SeverityHigh,
 		description: "StrategyNode backtest uses the same data window for both signal training " +
 			"and portfolio evaluation — look-ahead bias. Reported Sharpe ratios are " +

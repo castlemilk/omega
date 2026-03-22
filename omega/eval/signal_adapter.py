@@ -6,7 +6,7 @@ orchestration pipeline.
 
 Signal formats
 --------------
-1. **VectoraNode compute_signals ("raw") format** — what ``_do_compute_signals``
+1. **VictoriaNode compute_signals ("raw") format** — what ``_do_compute_signals``
    returns::
 
        {
@@ -21,7 +21,7 @@ Signal formats
 
 2. **Orchestrator _step_signals ("wrapped") format** — keyed by node_id::
 
-       {node_id: <VectoraNode compute_signals result>, ...}
+       {node_id: <VictoriaNode compute_signals result>, ...}
 
 3. **Flat ticker format** — what ``StrategyNode._construct_portfolio`` expects::
 
@@ -35,8 +35,8 @@ from __future__ import annotations
 
 from typing import Any
 
-# VectoraNode signal category names used to detect raw vs orchestrator-wrapped.
-_VECTORA_CATEGORIES = frozenset(
+# VictoriaNode signal category names used to detect raw vs orchestrator-wrapped.
+_VICTORIA_CATEGORIES = frozenset(
     ["basic_signals", "order_flow", "cross_asset", "microstructure", "sentiment"]
 )
 
@@ -53,7 +53,7 @@ def is_orchestrator_format(signal_data: dict[str, Any]) -> bool:
     Detection heuristic: at least one value must be a dict that contains
     ``"basic_signals"`` as a key whose own value is also a dict.  This
     distinguishes the orchestrator-wrapped format from the ``_weights`` metadata
-    entry inside raw VectoraNode output (which contains ``"basic_signals"`` as a
+    entry inside raw VictoriaNode output (which contains ``"basic_signals"`` as a
     key but maps it to a *float*, not a dict).
     """
     if not signal_data:
@@ -68,11 +68,11 @@ def is_orchestrator_format(signal_data: dict[str, Any]) -> bool:
     return False
 
 
-def is_raw_vectora_format(signal_data: dict[str, Any]) -> bool:
-    """Return True if *signal_data* is a VectoraNode compute_signals result."""
+def is_raw_victoria_format(signal_data: dict[str, Any]) -> bool:
+    """Return True if *signal_data* is a VictoriaNode compute_signals result."""
     if not signal_data:
         return False
-    return bool(_VECTORA_CATEGORIES.intersection(signal_data.keys()))
+    return bool(_VICTORIA_CATEGORIES.intersection(signal_data.keys()))
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +97,7 @@ def unwrap_orchestrator_signals(signal_data: dict[str, Any]) -> dict[str, Any]:
 
 def flatten_to_ticker_signals(raw_signals: dict[str, Any]) -> dict[str, Any]:
     """
-    Convert a VectoraNode compute_signals result to flat ticker format.
+    Convert a VictoriaNode compute_signals result to flat ticker format.
 
     Rules:
     - Keys starting with ``_`` (e.g. ``_weights``, ``_regime``) are skipped.
@@ -147,7 +147,7 @@ def adapt_signals(signal_data: dict[str, Any]) -> dict[str, Any]:
     Handles all three known formats:
 
     - **Orchestrator format** ``{node_id: {basic_signals: {...}, ...}}``
-    - **Raw VectoraNode format** ``{basic_signals: {...}, order_flow: {...}, ...}``
+    - **Raw VictoriaNode format** ``{basic_signals: {...}, order_flow: {...}, ...}``
     - **Flat ticker format** ``{ticker: {"composite": float}, ...}`` (pass-through)
     """
     if not signal_data:
@@ -158,10 +158,10 @@ def adapt_signals(signal_data: dict[str, Any]) -> dict[str, Any]:
         signal_data = unwrap_orchestrator_signals(signal_data)
 
     # Step 2: if already flat ticker format, pass through
-    if not is_raw_vectora_format(signal_data):
+    if not is_raw_victoria_format(signal_data):
         first_val = next(iter(signal_data.values()), None)
         if isinstance(first_val, dict) and "composite" in first_val:
             return signal_data
 
-    # Step 3: flatten raw VectoraNode format → ticker format
+    # Step 3: flatten raw VictoriaNode format → ticker format
     return flatten_to_ticker_signals(signal_data)

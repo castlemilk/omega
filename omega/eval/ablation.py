@@ -12,7 +12,7 @@ Usage::
 
     from omega.eval.ablation import AblationHarness
 
-    harness = AblationHarness(nodes=[my_vectora_node], n_cycles=200)
+    harness = AblationHarness(nodes=[my_victoria_node], n_cycles=200)
     results = harness.run_all_ablations()
     attribution = harness.compute_attribution()
     print(attribution)

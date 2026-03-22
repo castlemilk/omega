@@ -3,26 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  CompileStrategyRequest,
-  CompileStrategyResponse,
-  DueNodesRequest,
-  DueNodesResponse,
-  GetImprovementScheduleRequest,
-  GetImprovementScheduleResponse,
-  ImprovementEvent,
-  ListImprovedNodesRequest,
-  ListImprovedNodesResponse,
-  ProposeTrialParamsRequest,
-  ProposeTrialParamsResponse,
-  RecordOutcomeRequest,
-  RecordOutcomeResponse,
-  RollbackStrategyRequest,
-  RollbackStrategyResponse,
-  ScheduleImprovementRequest,
-  ScheduleImprovementResponse,
-  StreamImprovementEventsRequest,
-} from "./improvement_service_pb.js";
+import { CompileStrategyRequest, CompileStrategyResponse, DueNodesRequest, DueNodesResponse, GetImprovementScheduleRequest, GetImprovementScheduleResponse, ImprovementEvent, ListImprovedNodesRequest, ListImprovedNodesResponse, ProposeTrialParamsRequest, ProposeTrialParamsResponse, RecordOutcomeRequest, RecordOutcomeResponse, RollbackStrategyRequest, RollbackStrategyResponse, ScheduleImprovementRequest, ScheduleImprovementResponse, StreamImprovementEventsRequest } from "./improvement_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -138,5 +119,6 @@ export const ImprovementService = {
       O: ImprovementEvent,
       kind: MethodKind.ServerStreaming,
     },
-  },
+  }
 } as const;
+

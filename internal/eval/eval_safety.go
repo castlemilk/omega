@@ -34,7 +34,7 @@ func NewSafetyHarness() *SafetyHarness {
 	}
 
 	htn := core.NewHTNDecomposer()
-	htn.RegisterVectoraMethods()
+	htn.RegisterVictoriaMethods()
 
 	return &SafetyHarness{
 		Envelope:    core.NewSafetyEnvelope(0.25, 0.15, 0.85, 0.5),

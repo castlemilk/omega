@@ -269,7 +269,7 @@ class RegimeSignalModifier:
 
     The multiplier table is domain-specific and must be injected at
     construction.  The framework provides no defaults — a trading domain
-    injects its own table (see omega/nodes/vectora/domain_config.py).
+    injects its own table (see omega/nodes/victoria/domain_config.py).
 
     multiplier_table : dict[str, dict[str, float]]
         Mapping of {regime_label: {signal_name: multiplier}}.

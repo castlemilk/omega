@@ -95,7 +95,7 @@ class Tracer:
     """
     Creates and manages trace spans, backed by StateStore.
 
-    Thread-safety: not required (Vectora runs single-threaded heartbeats).
+    Thread-safety: not required (Victoria runs single-threaded heartbeats).
     """
 
     def __init__(self, store: StateStore) -> None:

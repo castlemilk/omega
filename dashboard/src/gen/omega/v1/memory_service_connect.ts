@@ -3,30 +3,7 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import {
-  BeginCycleRequest,
-  BeginCycleResponse,
-  DeleteWorkingRequest,
-  DeleteWorkingResponse,
-  EndCycleRequest,
-  EndCycleResponse,
-  GetWorkingRequest,
-  GetWorkingResponse,
-  MemoryLifecycleEvent,
-  MemoryNamespaceStatsRequest,
-  MemoryNamespaceStatsResponse,
-  QueryEpisodesRequest,
-  QueryEpisodesResponse,
-  QuerySemanticRequest,
-  QuerySemanticResponse,
-  StoreEpisodeRequest,
-  StoreEpisodeResponse,
-  StoreWorkingRequest,
-  StoreWorkingResponse,
-  StreamMemoryEventsRequest,
-  TriggerConsolidationRequest,
-  TriggerConsolidationResponse,
-} from "./memory_service_pb.js";
+import { BeginCycleRequest, BeginCycleResponse, DeleteWorkingRequest, DeleteWorkingResponse, EndCycleRequest, EndCycleResponse, GetWorkingRequest, GetWorkingResponse, MemoryLifecycleEvent, MemoryNamespaceStatsRequest, MemoryNamespaceStatsResponse, QueryEpisodesRequest, QueryEpisodesResponse, QuerySemanticRequest, QuerySemanticResponse, StoreEpisodeRequest, StoreEpisodeResponse, StoreWorkingRequest, StoreWorkingResponse, StreamMemoryEventsRequest, TriggerConsolidationRequest, TriggerConsolidationResponse } from "./memory_service_pb.js";
 import { MethodKind } from "@bufbuild/protobuf";
 
 /**
@@ -165,5 +142,6 @@ export const MemoryService = {
       O: MemoryLifecycleEvent,
       kind: MethodKind.ServerStreaming,
     },
-  },
+  }
 } as const;
+

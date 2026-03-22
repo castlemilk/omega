@@ -198,7 +198,7 @@ class BridgeEvaluator(ImprovementEvaluator):
             periods_per_year=self._periods_per_year,
         )
 
-        # Attempt to apply TPE params to the VectoraNode's strategy.
+        # Attempt to apply TPE params to the VictoriaNode's strategy.
         # This is best-effort: unknown params are silently ignored.
         self._apply_params_to_node(bridge, params)
 
@@ -298,7 +298,7 @@ class BridgeEvaluator(ImprovementEvaluator):
 
     def _apply_params_to_node(self, bridge: Any, params: dict[str, Any]) -> None:
         """
-        Best-effort application of TPE params to the bridge's VectoraNode
+        Best-effort application of TPE params to the bridge's VictoriaNode
         strategy.  Unknown params are silently ignored so the bridge always
         runs, even when params don't map to known attributes.
         """

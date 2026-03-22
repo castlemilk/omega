@@ -12,9 +12,9 @@
 
 ## Key Data Facts (from existing Python codebase)
 
-- **State store DB**: `/tmp/omega_vectora_state.db`
+- **State store DB**: `/tmp/omega_victoria_state.db`
   - Tables: `nodes`, `node_executions`, `traces`, `cost_events`, `issues`, `activity_log`, `improvement_log`, `config_revisions`
-- **Memory DB**: `/tmp/omega_vectora_memory.db`
+- **Memory DB**: `/tmp/omega_victoria_memory.db`
   - Tables: `episodes`, `semantic_memories`, `memory_ratings`
 - **Convergence data**: `episodes WHERE event_type='cycle_summary'` contains `score`, `pipeline_ms` per cycle
 - **Node namespacing**: memory is namespaced by node name (e.g., `"DataIngestionNode"`)
@@ -664,8 +664,8 @@ import (
 )
 
 const (
-	StateDBPath  = "/tmp/omega_vectora_state.db"
-	MemoryDBPath = "/tmp/omega_vectora_memory.db"
+	StateDBPath  = "/tmp/omega_victoria_state.db"
+	MemoryDBPath = "/tmp/omega_victoria_memory.db"
 )
 
 // DB holds connections to both Omega SQLite databases.
@@ -2117,7 +2117,7 @@ func (h *OrchestratorHandler) SubmitFeedback(
 	// Shell out to Python to store feedback in MemoryKernel
 	cmd := exec.CommandContext(ctx, "python3", "-c", fmt.Sprintf(`
 from omega.core.memory import MemoryKernel
-m = MemoryKernel(db_path='/tmp/omega_vectora_memory.db')
+m = MemoryKernel(db_path='/tmp/omega_victoria_memory.db')
 m.store_episode('human_feedback', {'text': %q, 'target_node': %q}, tags=['feedback','human'], importance=0.9)
 print('ok')
 `, req.Msg.Text, req.Msg.TargetNode))
@@ -2144,7 +2144,7 @@ func (h *OrchestratorHandler) StartOrchestrator(
 	if heartbeat <= 0 {
 		heartbeat = 120
 	}
-	cmd := exec.Command("python3", "-m", "omega.examples.vectora_main",
+	cmd := exec.Command("python3", "-m", "omega.examples.victoria_main",
 		"--heartbeat", fmt.Sprintf("%d", heartbeat))
 	if err := cmd.Start(); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("start orchestrator: %w", err))
@@ -2189,7 +2189,7 @@ func (h *OrchestratorHandler) TriggerHeartbeat(
 	ctx context.Context,
 	req *connect.Request[omegav1.TriggerHeartbeatRequest],
 ) (*connect.Response[omegav1.TriggerHeartbeatResponse], error) {
-	cmd := exec.CommandContext(ctx, "python3", "-m", "omega.examples.vectora_main", "--once")
+	cmd := exec.CommandContext(ctx, "python3", "-m", "omega.examples.victoria_main", "--once")
 	go cmd.Run() //nolint:errcheck
 	return connect.NewResponse(&omegav1.TriggerHeartbeatResponse{
 		Triggered: true, Message: "triggered single heartbeat",
@@ -3210,10 +3210,10 @@ git commit -m "feat(dashboard): complete all 7 pages"
 
 ```bash
 cd /Users/benebsworth/projects/omega
-python -m omega.examples.vectora_main --once
+python -m omega.examples.victoria_main --once
 ```
 
-Expected: heartbeat runs, data written to `/tmp/omega_vectora_state.db`.
+Expected: heartbeat runs, data written to `/tmp/omega_victoria_state.db`.
 
 - [ ] **Step 2: Start Go API server**
 
@@ -3286,7 +3286,7 @@ cd /Users/benebsworth/projects/omega/dashboard
 npm run dev
 
 # Terminal 3: Python orchestrator
-python -m omega.examples.vectora_main --heartbeat 60
+python -m omega.examples.victoria_main --heartbeat 60
 
 # Open dashboard
 open http://localhost:5173

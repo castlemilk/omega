@@ -1,5 +1,5 @@
 /**
- * VECTORA TERMINAL v0.1
+ * VICTORIA TERMINAL v0.1
  * Crypto quant research node eval dashboard within the Omega system.
  *
  * Aesthetic: CRT phosphor — pure black, bright #00ff00, IBM Plex Mono, no borders radius,
@@ -9,7 +9,7 @@
  *  1.  Performance Overview   — equity curve BTC/USDT + ETH/USDT, vs BTC B&H
  *  2.  Sharpe Analysis        — raw + DSR, bootstrap CI, IS/OOS split
  *  3.  Risk Metrics           — max DD, Sortino, Calmar, VaR, funding rate, OI
- *  4.  Ablation Results       — Sharpe attribution per Vectora subsystem
+ *  4.  Ablation Results       — Sharpe attribution per Victoria subsystem
  *  5.  Regime Performance     — RISK-ON / RISK-OFF / DELEVERAGE / ACCUMULATION
  *  6.  Crash Replay           — COVID / China ban / LUNA / FTX / Flash crash
  *  7.  Adversarial Health     — Ring 1 flag rate, false positive rate
@@ -143,7 +143,7 @@ const fundingData = Array.from({length:60},(_,i)=>({
 const latestFunding = fundingData[fundingData.length-1].funding;
 const latestOI      = fundingData[fundingData.length-1].oi;
 
-// Ablation — Vectora subsystems
+// Ablation — Victoria subsystems
 const ablation = [
   {name:'OrderFlow',     dSharpe:0.58, sig:true },
   {name:'CrossAsset',    dSharpe:0.44, sig:true },
@@ -199,7 +199,7 @@ const autonomyHistory = [
 ];
 const CURRENT_LEVEL = 'AUTONOMOUS';
 
-// Vectora signals
+// Victoria signals
 const signals = [
   {name:'ORDERFLOW (VPIN)',  avgIC:0.0812, weight:0.34, t2:7, color:T.green},
   {name:'CROSS-ASSET',       avgIC:0.0631, weight:0.26, t2:9, color:T.cyan},
@@ -312,7 +312,7 @@ function TopBar() {
         <div style={{display:'flex',alignItems:'center',gap:10}}>
           <span style={{fontSize:20,color:T.green,textShadow:T.glow,fontWeight:'bold'}}>Ω</span>
           <span style={{color:T.green,fontSize:14,letterSpacing:'0.18em',textShadow:T.glow}}>
-            VECTORA TERMINAL
+            VICTORIA TERMINAL
           </span>
           <span style={{color:T.dim,fontSize:10}}>v0.1</span>
           <span style={{color:T.dim,fontSize:10}}>│ CRYPTO QUANT RESEARCH NODE │ OMEGA SYSTEM</span>
@@ -400,7 +400,7 @@ function PerfChart() {
               <Line type="monotone" dataKey="btc" stroke={T.dim} strokeWidth={1}
                     dot={false} name="BTC B&H" strokeDasharray="3 3"/>
               <Line type="monotone" dataKey="omega" stroke={T.green} strokeWidth={2}
-                    dot={false} name="VECTORA"
+                    dot={false} name="VICTORIA"
                     style={{filter:`drop-shadow(0 0 4px ${T.green})`}}/>
             </ComposedChart>
           ):(
@@ -714,7 +714,7 @@ function AutoPanel() {
 // ---------------------------------------------------------------------------
 function SignalPanel() {
   return (
-    <P title="SIGNAL QUALITY — VECTORA FACTORS">
+    <P title="SIGNAL QUALITY — VICTORIA FACTORS">
       {signals.map(s=>(
         <div key={s.name} style={{marginBottom:5}}>
           <div style={{display:'flex',justifyContent:'space-between',fontSize:10,marginBottom:2}}>
@@ -836,7 +836,7 @@ export default function App() {
 
       <div style={{borderTop:`1px solid ${T.dim}`,padding:'3px 12px',
                    fontSize:9,color:T.dim,textAlign:'center'}}>
-        Ω VECTORA TERMINAL v0.1 │ OMEGA SYSTEM │ {D.labels[0]} → {D.labels[D.labels.length-1]} │ 504 TRADING DAYS │ COMMISSION 0.1%
+        Ω VICTORIA TERMINAL v0.1 │ OMEGA SYSTEM │ {D.labels[0]} → {D.labels[D.labels.length-1]} │ 504 TRADING DAYS │ COMMISSION 0.1%
       </div>
     </div>
   );

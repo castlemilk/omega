@@ -246,12 +246,12 @@ class ImprovementEngine:
 
         Previously this method imported DataIngestionNode and fetched BTCUSDT,
         coupling the framework to the trading domain.  That logic now lives in
-        omega/nodes/vectora/domain_config.py (VectoraDomainConfig.evaluator).
+        omega/nodes/victoria/domain_config.py (VictoriaDomainConfig.evaluator).
 
         To use the improvement engine, pass an explicit evaluator::
 
             ImprovementEngine(evaluator=SyntheticEvaluator())        # tests
-            ImprovementEngine(evaluator=BacktestEvaluator())         # Vectora
+            ImprovementEngine(evaluator=BacktestEvaluator())         # Victoria
             ImprovementEngine(evaluator=MyDomainEvaluator())         # custom
         """
         return NullEvaluator()

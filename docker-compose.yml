@@ -15,9 +15,9 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      OMEGA_STATE_DB_PATH: /data/omega_vectora_state.db
-      OMEGA_MEMORY_DB_PATH: /data/omega_vectora_memory.db
-      OMEGA_DB_PATH: /data/omega_vectora.db
+      OMEGA_STATE_DB_PATH: /data/omega_victoria_state.db
+      OMEGA_MEMORY_DB_PATH: /data/omega_victoria_memory.db
+      OMEGA_DB_PATH: /data/omega_victoria.db
       OMEGA_API_BASE_URL: http://omega-api:8080
       OMEGA_JSON_LOGS: "true"
     volumes:
@@ -27,7 +27,7 @@ services:
         condition: service_healthy
     healthcheck:
       # Python process writes state DB on first cycle; poll for it
-      test: ["CMD", "python3", "-c", "import sqlite3, os; sqlite3.connect(os.environ.get('OMEGA_STATE_DB_PATH','/data/omega_vectora_state.db'))"]
+      test: ["CMD", "python3", "-c", "import sqlite3, os; sqlite3.connect(os.environ.get('OMEGA_STATE_DB_PATH','/data/omega_victoria_state.db'))"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -41,8 +41,8 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      OMEGA_STATE_DB_PATH: /data/omega_vectora_state.db
-      OMEGA_MEMORY_DB_PATH: /data/omega_vectora_memory.db
+      OMEGA_STATE_DB_PATH: /data/omega_victoria_state.db
+      OMEGA_MEMORY_DB_PATH: /data/omega_victoria_memory.db
     ports:
       - "8080:8080"
     volumes:

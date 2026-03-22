@@ -31,7 +31,7 @@ Usage::
 
     configure_logging(level="INFO", json_output=True)
 
-    log = get_logger("omega.nodes.vectora.data_ingestion")
+    log = get_logger("omega.nodes.victoria.data_ingestion")
     log.info("Fetched market data", extra={"node_id": "ingestion-01", "cycle_id": 3})
 
     # Or pre-bind correlation fields for a whole node:
@@ -170,7 +170,7 @@ class bound_logger:  # noqa: N801 — intentionally lowercase for ergonomics
     Example::
 
         log = bound_logger(
-            get_logger("omega.nodes.vectora.ingestion"),
+            get_logger("omega.nodes.victoria.ingestion"),
             node_id="ingestion-01",
             trace_id="abc123",
             cycle_id=5,

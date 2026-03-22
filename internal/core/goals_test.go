@@ -160,9 +160,9 @@ func TestAdaptiveReferenceTracker_ManualReference(t *testing.T) {
 // HTNDecomposer
 // ---------------------------------------------------------------------------
 
-func TestHTNDecomposer_VectoraMethods_ResearchCycle(t *testing.T) {
+func TestHTNDecomposer_VictoriaMethods_ResearchCycle(t *testing.T) {
 	htn := NewHTNDecomposer()
-	htn.RegisterVectoraMethods()
+	htn.RegisterVictoriaMethods()
 	tasks := htn.Decompose("research_cycle", map[string]any{})
 	if len(tasks) == 0 {
 		t.Fatal("expected subtasks for research_cycle, got none")
@@ -181,7 +181,7 @@ func TestHTNDecomposer_VectoraMethods_ResearchCycle(t *testing.T) {
 
 func TestHTNDecomposer_RiskBreach_Precondition(t *testing.T) {
 	htn := NewHTNDecomposer()
-	htn.RegisterVectoraMethods()
+	htn.RegisterVictoriaMethods()
 	// Precondition: max_drawdown_pct > 10.
 	tasks := htn.Decompose("risk_breach", map[string]any{"max_drawdown_pct": 15.0})
 	if len(tasks) == 0 {
@@ -194,7 +194,7 @@ func TestHTNDecomposer_RiskBreach_Precondition(t *testing.T) {
 
 func TestHTNDecomposer_RiskBreach_PreconditionNotMet(t *testing.T) {
 	htn := NewHTNDecomposer()
-	htn.RegisterVectoraMethods()
+	htn.RegisterVictoriaMethods()
 	// Drawdown below threshold — precondition not met, fallback task.
 	tasks := htn.Decompose("risk_breach", map[string]any{"max_drawdown_pct": 5.0})
 	if len(tasks) != 1 {

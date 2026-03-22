@@ -563,7 +563,7 @@ class AdversarialPressureV2:
         # Scenario bank seed
         scenario_seed: int | None = None,
         # Optional domain-specific debate layer.
-        # Pass None (default) for non-trading domains; Vectora injects DebateGate().
+        # Pass None (default) for non-trading domains; Victoria injects DebateGate().
         debate_gate: DebateGate | None = None,
     ) -> None:
         self._base = AdversarialPressure(
@@ -594,7 +594,7 @@ class AdversarialPressureV2:
         )
 
         # DebateGate + RiskDebate are optional trading-domain extensions.
-        # Non-trading domains leave these as None; Vectora injects DebateGate().
+        # Non-trading domains leave these as None; Victoria injects DebateGate().
         self.debate_gate: DebateGate | None = debate_gate
         self.risk_debate: RiskDebate | None = RiskDebate() if debate_gate is not None else None
 

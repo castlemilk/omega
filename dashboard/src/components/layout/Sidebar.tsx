@@ -34,12 +34,12 @@ const OMEGA_NAV = [
   { to: "/improvements", icon: History, label: "Improvements" },
 ];
 
-const VECTORA_NAV = [
-  { to: "/vectora", icon: Terminal, label: "Terminal" },
-  { to: "/vectora/portfolio", icon: PieChart, label: "Portfolio" },
-  { to: "/vectora/signals", icon: Zap, label: "Signals" },
-  { to: "/vectora/trades", icon: List, label: "Trades" },
-  { to: "/vectora/backtest", icon: FlaskConical, label: "Backtest" },
+const VICTORIA_NAV = [
+  { to: "/victoria", icon: Terminal, label: "Terminal" },
+  { to: "/victoria/portfolio", icon: PieChart, label: "Portfolio" },
+  { to: "/victoria/signals", icon: Zap, label: "Signals" },
+  { to: "/victoria/trades", icon: List, label: "Trades" },
+  { to: "/victoria/backtest", icon: FlaskConical, label: "Backtest" },
 ];
 
 export default function Sidebar() {
@@ -77,20 +77,20 @@ export default function Sidebar() {
       {/* Divider */}
       <div className="border-t border-surface-600 my-3" />
 
-      {/* Vectora section */}
+      {/* Victoria section */}
       <div className="px-3 mb-2">
         <span
           className="text-xs uppercase tracking-widest font-semibold"
           style={{ color: "#009900" }}
         >
-          Vectora
+          Victoria
         </span>
       </div>
-      {VECTORA_NAV.map(({ to, icon: Icon, label }) => (
+      {VICTORIA_NAV.map(({ to, icon: Icon, label }) => (
         <NavLink
           key={to}
           to={to}
-          end={to === "/vectora"}
+          end={to === "/victoria"}
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               isActive ? "text-black" : "hover:bg-surface-700"
