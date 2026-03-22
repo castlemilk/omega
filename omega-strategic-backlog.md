@@ -1,0 +1,1195 @@
+# Omega Strategic Backlog: Neural Distributed System Architecture
+## March 2026 → March 2027
+
+---
+
+## 1. Vision Statement
+
+### Where Omega Is Today
+
+Omega is a platform with a working proof of concept. Victoria — the first project node — runs a 9-step Python pipeline producing real signals, a React dashboard serves real data through Connect-RPC, and OTel tracing now instruments the full cycle. The multi-project architecture exists in code. The graduated autonomy model (PICO → Supervised → Autonomous) is designed but mostly manual. The vision is articulated but not yet structural.
+
+What we have is a sophisticated research system that happens to be architected like a platform. What we need is a platform that happens to be doing research.
+
+### Where Omega Needs to Be in 12 Months
+
+In March 2027, Omega operates as a **neural distributed system**: a meta-architecture where individual software capabilities are nodes that compose through coordination layers to produce goal-directed intelligence. The analogy to neural networks is precise, not metaphorical:
+
+- **Nodes** are like neurons — discrete computational units with defined input/output interfaces
+- **Coordination Layer** is like the connectivity matrix — routes signals between nodes based on relevance and attention
+- **State Tensors** are like activation values — structured representations of each node's current state exposed to the coordination layer
+- **Self-Improvement Loop** is like backpropagation — error signals from outcomes flow back through the system, updating node weights and configurations
+- **Trust Boundaries** are like inhibitory neurons — dampening nodes that are misbehaving, routing around failures
+
+This is not theoretical. In 12 months:
+
+1. **Victoria runs autonomously** — the quant research loop runs without human intervention: hypothesis → experiment → evaluation → improvement → next hypothesis. LLM analysts propose new vectors, the system validates them, promotes them to production, and the improvement engine learns from outcomes.
+
+2. **Multiple projects are live nodes** — Telesis (observability), Shorted/Victoria (market intelligence), Flaggr (feature management), and Cuttlefish (deployment) all expose the Node Protocol. Cross-node composition produces capabilities none of them have alone (e.g., Telesis detects anomalies in Victoria's signal quality, automatically triggering Cuttlefish to roll back a bad model deployment).
+
+3. **The coordination layer routes intelligence** — a central coordinator runs an attention-like mechanism over node state tensors, deciding which nodes to activate for a given goal, how to compose their outputs, and how to route feedback from outcomes back to relevant nodes.
+
+4. **Full observability is production-grade** — OTLP backend running, Grafana dashboards with SLOs, alerting on safety violations, metric regression detection, and a live/backtest reconciliation layer that surfaces when the model is drifting from its historical performance.
+
+5. **Trust and safety are structural** — every autonomous action passes through a trust layer with escalation paths. PICO mode is enforced cryptographically (sandbox boundary), Supervised mode requires human-in-the-loop for irreversible actions, Autonomous mode requires sustained performance above defined thresholds.
+
+The prior art for this vision: Minsky's Society of Mind (nodes with specialized competencies composing into general intelligence), Wiener's Cybernetics (feedback loops as the fundamental mechanism), and the autopoietic systems literature (systems that maintain and reproduce their own organization). Omega is an engineering implementation of these ideas on top of real software infrastructure.
+
+The 12-month goal: **Omega is a self-improving, multi-domain intelligence platform where each capability is a composable node, the coordination layer learns which nodes to trust and when, and the system converges on high-level goals through iterative cycles without per-task human intervention.**
+
+---
+
+## 2. Architecture Evolution Roadmap
+
+### Q2 2026 (Months 1–3): Foundation
+
+**Theme: Make the existing system trustworthy and instrumented.**
+
+Current state is a working prototype with significant observability gaps (P0–P2 issues identified). Before scaling intelligence, we need reliable infrastructure. This quarter closes the observation gap, standardizes the node protocol, and builds the Go/Python bridge that everything else depends on.
+
+**Core deliverables:**
+- OTLP backend deployed (Grafana Cloud or self-hosted), zero silent metric drops
+- W3C-compliant trace IDs propagated Python → Go
+- Node Protocol v1: standardized interface all nodes must implement
+- Go/Python bridge: bidirectional Connect-RPC, Python nodes callable from Go
+- Full observability of one complete Victoria cycle end-to-end
+- Safety violations persisted and queryable
+
+### Q3 2026 (Months 4–6): Scale
+
+**Theme: Build the message bus, node registry, and real distributed execution.**
+
+With reliable instrumentation, scale the architecture. NATS or equivalent message bus replaces synchronous calls where appropriate. Nodes register capabilities. State tensors are defined. The coordination layer prototype exists.
+
+**Core deliverables:**
+- NATS message bus deployed, core node communication async
+- Node Capability Registry: discovery, health, capability advertisement
+- State Tensor Protocol v1: nodes expose structured state snapshots
+- Coordination Layer v1: routing table, no learning yet
+- Shorted/Victoria promoted to full Node Protocol implementation
+- Distributed execution prototype (k8s or Docker Compose cluster)
+- Multi-project isolation: resource quotas, namespace separation
+
+### Q4 2026 (Months 7–9): Intelligence
+
+**Theme: Close the self-improvement loop and begin cross-node composition.**
+
+The system becomes genuinely self-improving. LLM analysts are integrated. The geometric math library is production-quality. Victoria's quant pipeline runs with less human intervention each week.
+
+**Core deliverables:**
+- LLM-as-analyst integrated: Claude/GPT reviews experiments, proposes vectors
+- Self-improvement loop fully automated (no human needed per experiment)
+- Cross-node composition: Telesis + Victoria producing anomaly-detected signals
+- Geometric math library: manifold learning, TDA, spectral methods stable
+- Coordination Layer v2: learning-based routing, attention mechanism
+- Multi-market data layer: unified adapter for ASX, crypto, forex
+- Trust scoring: nodes earn and lose trust based on outcome history
+
+### Q1 2027 (Months 10–12): Autonomy
+
+**Theme: Full neural distributed system, self-organizing, production-ready.**
+
+The system operates autonomously within defined trust boundaries. New nodes can be onboarded through the protocol without manual integration work. The coordination layer self-organizes. Omega is ready for external projects to join as nodes.
+
+**Core deliverables:**
+- Autonomous node onboarding: new capability registered and integrated by protocol
+- Coordination Layer v3: self-organizing, persistent learning across cycles
+- Full autonomy for Victoria's quant research within Supervised mode
+- External node integration path documented and tested
+- Production SLOs met: uptime, latency, improvement cycle cadence
+- Omega CLI: interact with the coordination layer from the terminal
+
+---
+
+## 3. Detailed Backlog
+
+---
+
+### Q2 2026 (Months 1–3): Foundation Epics
+
+---
+
+#### EPIC-001: Observability Infrastructure (P0 Closure)
+**Effort:** L
+**Dependencies:** None
+
+**Description:**
+The current OTel setup silently discards metrics when no OTLP backend is configured. Python trace IDs are not W3C-compliant, breaking distributed tracing across the Go/Python boundary. Error classification is absent. This epic makes the telemetry system trustworthy.
+
+**Deliverables:**
+- Deploy OTLP backend: either Grafana Cloud (recommended for speed) or self-hosted Grafana + Mimir + Tempo stack
+- Configure Go and Python SDKs to export to the same OTLP endpoint
+- Python TraceContext propagation fixed to W3C `traceparent` format
+- Error classification taxonomy: `system_error`, `validation_error`, `timeout`, `safety_violation`, `data_quality`
+- Grafana dashboards: per-node trace count, error rate, cycle duration (P50/P95/P99)
+- Alerting: error rate > 5% on any node triggers Slack/PagerDuty notification
+- Health check endpoint on every service verifying OTLP connectivity
+
+**Success Criteria:**
+- Zero silent metric drops (verified by comparing emitted vs received counts)
+- A complete Victoria cycle (DataIngestion → Ring3Adversarial) produces a single trace visible in Tempo with all spans from both Go and Python
+- Error rate dashboard shows real values, not zeros
+
+---
+
+#### EPIC-002: Go/Python Bridge Protocol
+**Effort:** L
+**Dependencies:** EPIC-001 (tracing must propagate across boundary)
+
+**Description:**
+Victoria's Python pipeline currently connects to the Go API via SQLite and informal conventions. This is fragile, untyped, and impossible to observe. The bridge should use the same Connect-RPC + Protobuf stack that Go uses, making Python a first-class API participant.
+
+**Deliverables:**
+- Protobuf definitions for the Bridge API: `PipelineRequest`, `PipelineResult`, `StepState`, `ArtifactRef`
+- Python Connect-RPC client (using `connectrpc` Python library or buf-generated stubs)
+- Go Connect-RPC server handlers for Python pipeline invocations
+- Bidirectional: Go can call Python pipeline steps; Python can call Go services
+- SQLite dependency removed from the communication path (may retain as persistence)
+- W3C trace context propagated in all bridge calls
+- Integration test: Go calls Python `SignalResearch` step and receives typed result
+
+**Success Criteria:**
+- Victoria pipeline steps callable from Go with typed request/response
+- All bridge calls appear as spans in distributed traces
+- No SQLite read/write in the hot communication path
+
+---
+
+#### EPIC-003: Node Protocol v1
+**Effort:** M
+**Dependencies:** EPIC-002
+
+**Description:**
+Define the standard interface every Omega node must implement. This is the most important architectural decision of the year — get it right here or pay the refactoring cost later. The protocol should be minimal but extensible.
+
+**Deliverables:**
+- `node.proto`: defines `NodeInfo`, `CapabilityDescriptor`, `StateSnapshot`, `HealthStatus`, `InvokeRequest`, `InvokeResponse`
+- Node lifecycle: `Register`, `Heartbeat`, `Invoke`, `Shutdown`
+- State snapshot: structured representation of current node state (not arbitrary JSON — typed fields with versioning)
+- Capability declaration: what the node can do, input/output types, latency SLOs
+- Victoria refactored to implement Node Protocol v1 as the reference implementation
+- Node SDK (Go + Python): helpers for implementing the protocol without boilerplate
+- Protocol documentation: "How to write a new Omega node" (1-2 pages)
+
+**Protocol Design (key decisions):**
+```protobuf
+message NodeInfo {
+  string node_id = 1;
+  string node_type = 2;       // e.g., "market_intelligence", "observability"
+  string version = 3;
+  repeated CapabilityDescriptor capabilities = 4;
+  TrustLevel current_trust = 5;
+}
+
+message StateSnapshot {
+  string node_id = 1;
+  google.protobuf.Timestamp captured_at = 2;
+  bytes state_tensor = 3;     // serialized tensor (float32 array, shape defined by schema)
+  map<string, string> metadata = 4;
+  HealthStatus health = 5;
+}
+```
+
+**Success Criteria:**
+- Victoria implements Node Protocol v1 and passes protocol conformance tests
+- A new stub node can be created using the SDK in under 2 hours
+- Protocol has at least one versioning mechanism (capability negotiation)
+
+---
+
+#### EPIC-004: Safety Violation Persistence
+**Effort:** S
+**Dependencies:** EPIC-001
+
+**Description:**
+Currently, safety violations are detected but not persisted. This means the system has no memory of past violations, making trust scoring and graduated autonomy impossible. Violations must be stored, queryable, and surfaced in the dashboard.
+
+**Deliverables:**
+- `safety_violations` table (or collection) with: node_id, timestamp, violation_type, severity, context, resolved_at
+- Go service endpoint: `LogViolation`, `QueryViolations`, `ResolveViolation`
+- Dashboard: Safety violations list on Issues page with filter by severity
+- Alerting: Critical violations trigger immediate notification
+- Violation history used in trust score computation (EPIC-012)
+
+**Success Criteria:**
+- Every safety violation from the last 30 days queryable by node and type
+- Dashboard Issues page shows real violation data
+
+---
+
+#### EPIC-005: Traces Page Node Filter + Span Detail Overlay
+**Effort:** S
+**Dependencies:** EPIC-001
+
+**Description:**
+The Traces dashboard page is missing a `node_id` filter, making it difficult to debug specific node behavior. Span detail overlay (clicking a span to see attributes) is also missing.
+
+**Deliverables:**
+- Traces page: `node_id` dropdown filter (populated from live trace data)
+- Traces page: time range filter
+- Span detail overlay: click any span row to see all span attributes, events, and links
+- Cycle replay: select a historical cycle ID and replay its trace timeline
+
+**Success Criteria:**
+- Can filter traces to a single node and see only that node's spans
+- Clicking a span shows full attribute set including custom Omega attributes
+
+---
+
+#### EPIC-006: Metric Regression Detection
+**Effort:** M
+**Dependencies:** EPIC-001
+
+**Description:**
+The system collects metrics but has no automated way to detect when a metric has regressed. This is a prerequisite for autonomous operation — the system needs to know when something got worse.
+
+**Deliverables:**
+- Baseline computation: for each tracked metric, compute rolling 7-day baseline with P10/P50/P90
+- Regression detection: flag when current value deviates > 2σ from baseline
+- Regression events surfaced on Issues page as `metric_regression` issue type
+- Grafana alerting rules for key metrics: cycle duration, signal quality, adversarial ensemble score
+
+**Success Criteria:**
+- Artificially degrading a metric triggers an issue within one cycle
+- Dashboard shows metric regression history per node
+
+---
+
+### Q3 2026 (Months 4–6): Scale Epics
+
+---
+
+#### EPIC-007: NATS Message Bus
+**Effort:** L
+**Dependencies:** EPIC-003 (Node Protocol must be stable)
+
+**Description:**
+Synchronous Connect-RPC calls create tight coupling and make the system brittle under partial failure. NATS provides async pub/sub, request-reply, and JetStream persistence that fits the Omega node communication pattern naturally. NATS is chosen over Kafka (too heavy) and Redis pub/sub (no durability) for this scale.
+
+**Architecture Decision:**
+NATS with JetStream for:
+- Node state broadcasts (`omega.nodes.{node_id}.state`)
+- Coordination commands (`omega.coordination.commands`)
+- Improvement proposals (`omega.improvements.proposals`)
+- Safety events (`omega.safety.violations`)
+
+Connect-RPC retained for:
+- Synchronous typed API calls (dashboard → backend)
+- Go/Python bridge for pipeline steps requiring request-reply semantics
+
+**Deliverables:**
+- NATS server deployed (docker-compose for local, k8s for production)
+- Go NATS client library with Omega-specific helpers
+- Python NATS client library (nats.py) with matching helpers
+- Node state broadcasts: every node publishes `StateSnapshot` on heartbeat
+- Coordination command consumer: nodes subscribe to commands from coordinator
+- JetStream streams: `OMEGA_IMPROVEMENTS`, `OMEGA_SAFETY`, `OMEGA_STATES` with retention policies
+- Dashboard: NATS cluster health on Metrics page
+- Dead letter queue handling for failed message processing
+
+**Success Criteria:**
+- Victoria publishes state snapshots to NATS on every heartbeat
+- Coordinator receives state updates without polling
+- A node failure does not block other nodes (async decoupling verified)
+
+---
+
+#### EPIC-008: Node Capability Registry
+**Effort:** M
+**Dependencies:** EPIC-003, EPIC-007
+
+**Description:**
+The coordination layer needs to know what nodes exist, what they can do, and whether they're healthy. A capability registry is the service discovery layer for Omega's neural architecture.
+
+**Design (inspired by Consul, but purpose-built):**
+- Nodes register on startup with capabilities and SLO declarations
+- Registry publishes `NodeRegistered`, `NodeDeregistered`, `NodeHealthChanged` events to NATS
+- Registry persists to SQLite (simple, reliable, queryable)
+- Coordination layer subscribes to registry events for real-time node topology
+
+**Deliverables:**
+- `NodeRegistry` Go service with `Register`, `Deregister`, `List`, `GetCapabilities` endpoints
+- Capability matching: given a goal description, return nodes that can contribute
+- Health-weighted routing: prefer healthy nodes with high trust scores
+- Dashboard: Nodes page enhanced with live registry data (capabilities, trust, uptime)
+- Registry API used by coordination layer in EPIC-010
+
+**Success Criteria:**
+- All live nodes visible in registry within 5 seconds of startup
+- Node failure detected within 2 heartbeat intervals (configurable, default 30s)
+- Capability query returns correct node set for given goal type
+
+---
+
+#### EPIC-009: State Tensor Protocol
+**Effort:** L
+**Dependencies:** EPIC-003, EPIC-007
+
+**Description:**
+The most novel architectural element. Nodes expose their internal state as a typed tensor — a structured numeric representation that the coordination layer can use for routing decisions. This is the mechanism through which nodes become "neurons" in the network analogy.
+
+**Design:**
+Each node defines a `StateTensorSchema` declaring the dimensions and semantics of its state tensor. The tensor is a float32 array where each dimension has a defined meaning:
+
+- Victoria's state tensor might include: `[signal_quality, cycle_health, last_improvement_score, data_freshness, adversarial_ensemble_score, active_experiment_count, ...]`
+- Telesis state tensor: `[error_rate_5m, p99_latency_ms, active_alerts, ingestion_lag_s, ...]`
+
+The coordination layer learns to interpret these tensors to make routing decisions (Q4 2026).
+
+**Deliverables:**
+- `StateTensorSchema` protobuf definition: dimension names, types, ranges, semantics
+- Tensor serialization: float32 little-endian bytes, schema versioned separately
+- Victoria implements state tensor with 12–20 dimensions
+- State tensor published to NATS on every heartbeat
+- Tensor history stored (ring buffer, last 1000 snapshots per node)
+- Dashboard: Convergence page shows state tensor heatmap over time
+- Schema registry: coordination layer can fetch schema for any node
+
+**Success Criteria:**
+- Victoria's state tensor captures the essential health of the quant pipeline in a 16-dimensional vector
+- Tensor values tracked in Grafana (each dimension as a metric)
+- Tensor schema versioned with backward compatibility
+
+---
+
+#### EPIC-010: Coordination Layer v1
+**Effort:** XL
+**Dependencies:** EPIC-007, EPIC-008, EPIC-009
+
+**Description:**
+The coordination layer is the nervous system of Omega. v1 is a routing table with hand-specified rules — not learned yet, but structurally correct. This establishes the interface that v2 (learned routing) will replace.
+
+**Design:**
+The coordinator runs as a standalone Go service:
+1. Receives goals from external input (user command, scheduled trigger, improvement engine)
+2. Queries node registry for relevant capabilities
+3. Reads current state tensors from subscribed nodes
+4. Routes the goal to a plan: ordered sequence of node invocations
+5. Dispatches invocations via NATS, collects results
+6. Evaluates outcome, emits feedback signal
+7. Persists the plan→outcome tuple for learning (used in v2)
+
+**Deliverables:**
+- `Coordinator` Go service: goal intake, plan generation, execution, outcome evaluation
+- Routing rules DSL: `IF goal.type == "quant_research" AND victoria.health > 0.7 THEN route to victoria`
+- Plan representation: `CoordinationPlan` protobuf (steps, dependencies, estimated duration)
+- Execution engine: dispatches plan steps, handles partial failures
+- Outcome store: persists (goal, plan, result, feedback_signal) for every coordination cycle
+- Dashboard: new Coordination page showing active/recent plans, routing decisions
+- Feedback signal definition: scalar value in [-1, 1] representing outcome quality
+
+**Success Criteria:**
+- Coordinator successfully routes a quant research goal through Victoria end-to-end
+- Plans visible in dashboard with step-by-step execution status
+- Outcome history queryable (will be training data for v2)
+
+---
+
+#### EPIC-011: Distributed Execution (k8s)
+**Effort:** XL
+**Dependencies:** EPIC-007, EPIC-008
+
+**Description:**
+Currently everything runs on a single machine. To scale and to enforce isolation between projects, deploy on k8s. Each node runs as a separate deployment with resource quotas.
+
+**Design:**
+Kubernetes (local: k3s or minikube; production: GKE given existing GCP projects):
+- Each Omega node = one k8s Deployment
+- NATS = StatefulSet
+- Go API + Coordinator = Deployment
+- Resource quotas enforce multi-project isolation
+- ConfigMaps/Secrets for per-project configuration
+
+**Deliverables:**
+- Helm chart for Omega platform (NATS, Go API, Coordinator, Node Registry)
+- Per-project Helm chart (parameterized for Victoria, future projects)
+- CI/CD pipeline: push to main → build images → deploy to k8s
+- Resource quotas: CPU/memory limits per project namespace
+- Network policies: nodes in project A cannot call nodes in project B directly (must route through coordinator)
+- Monitoring: k8s metrics integrated into Grafana
+- Local dev experience: `docker-compose up` still works for single-machine development
+
+**Success Criteria:**
+- Victoria runs on k8s with the same behavior as local
+- A crash-loop in Victoria does not affect the Go API pod
+- Deployment takes < 5 minutes from merged PR
+
+---
+
+#### EPIC-012: Trust Scoring System
+**Effort:** M
+**Dependencies:** EPIC-004, EPIC-010
+
+**Description:**
+Trust is the mechanism through which graduated autonomy becomes real. Nodes earn trust through consistent good outcomes and lose trust through failures, safety violations, and poor outcomes. Trust score gates what actions a node is permitted to take autonomously.
+
+**Design:**
+```
+TrustScore ∈ [0.0, 1.0]
+- 0.0–0.3: PICO (sandbox only, no external calls)
+- 0.3–0.7: Supervised (human approval for irreversible actions)
+- 0.7–1.0: Autonomous (acts within pre-approved capability envelope)
+```
+
+Trust decay: without activity, trust decays toward 0.5 (center). Trust is not sticky — it must be earned continuously.
+
+**Deliverables:**
+- `TrustScore` computed per node from: outcome history, safety violations, metric regression events, uptime
+- Trust score exposed in `NodeInfo` and state tensor
+- PICO sandbox: hard enforcement — Python subprocesses cannot make external network calls when trust < 0.3
+- Supervised gate: coordinator requires human approval for actions on nodes with trust 0.3–0.7
+- Trust history dashboard: node trust score over time with event annotations
+- Trust score configuration: adjustable weights per factor
+
+**Success Criteria:**
+- A node that produces 10 consecutive good outcomes advances from Supervised → Autonomous
+- A safety violation drops trust by measurable amount immediately
+- PICO sandbox enforcement tested and verified
+
+---
+
+### Q4 2026 (Months 7–9): Intelligence Epics
+
+---
+
+#### EPIC-013: LLM-as-Analyst Integration
+**Effort:** L
+**Dependencies:** EPIC-002, EPIC-010
+
+**Description:**
+The self-improvement engine currently proposes new parameter combinations via TPE. LLM analysts can propose new *vector types* — entirely new signal sources that TPE cannot imagine. Claude (or GPT-4o) reviews experiment results, reads the current signal library, and proposes new hypotheses.
+
+**Design:**
+```
+Improvement Cycle:
+1. Run N experiments
+2. LLM Analyst receives: experiment results, current vector library, market context
+3. Analyst proposes: new vectors, modified hyperparameter search space, new pipeline steps
+4. Proposals queued in `OMEGA_IMPROVEMENTS` JetStream stream
+5. Human reviews proposals (Supervised mode) or auto-approved (Autonomous mode)
+6. Approved proposals become experiments in next cycle
+```
+
+**Deliverables:**
+- `LLMAnalyst` Go service: wraps Claude API, manages context window for experiment results
+- Prompt engineering: system prompt establishing analyst role, output format (structured JSON proposals)
+- Proposal types: `NewVectorProposal`, `HyperparameterProposal`, `PipelineModificationProposal`
+- Proposal queue: persisted in JetStream, reviewable in dashboard
+- Approval workflow: dashboard UI for reviewing/approving/rejecting proposals
+- Auto-approval rules: low-risk proposals (new vectors with cost < 1 experiment) approved automatically
+- Feedback loop: approved proposals' outcomes fed back to analyst as context in next cycle
+
+**Success Criteria:**
+- LLM analyst produces at least 3 novel vector proposals per week
+- At least 1 LLM-proposed vector outperforms baseline within first month
+- Analyst context includes last 50 experiments with outcomes (no context overflow)
+
+---
+
+#### EPIC-014: Geometric Math Library Maturation
+**Effort:** L
+**Dependencies:** None (parallel workstream)
+
+**Description:**
+Victoria's quant architecture includes geometric market modelling: differential geometry, manifold learning, TDA (topological data analysis), information geometry, and spectral methods. These are partially implemented. This epic makes them production-quality.
+
+**Deliverables:**
+- Manifold learning: Riemannian metric estimation on price/volume manifolds, stable implementation
+- TDA: persistent homology for detecting regime changes, tuned for financial time series
+- Information geometry: Fisher information metric for comparing distributions (useful for detecting distribution shift in signals)
+- Spectral methods: graph Laplacian on correlation matrices, eigenvalue decomposition stable at scale
+- Benchmarks: each method benchmarked on 3.7M price rows, performance envelope documented
+- Unit tests: mathematical correctness verified against known properties (e.g., geodesic distances satisfy triangle inequality)
+- Integration with signal research step: geometry-derived features available as vectors
+
+**Success Criteria:**
+- TDA regime change detection achieves recall > 0.7 on labeled historical regime transitions
+- All geometric methods run within latency budget (< 500ms per signal research cycle)
+- Library has 90%+ unit test coverage
+
+---
+
+#### EPIC-015: Multi-Market Data Layer
+**Effort:** L
+**Dependencies:** EPIC-002
+
+**Description:**
+Victoria currently processes crypto (Binance/CoinGecko) and ASIC short data. A unified data adapter pattern allows adding ASX equities, NASDAQ, forex, and derivatives without restructuring the pipeline.
+
+**Design:**
+```
+MarketDataAdapter interface:
+- GetOHLCV(symbol, timeframe, start, end) → []OHLCV
+- GetOrderBook(symbol, depth) → OrderBook
+- GetFundamentals(symbol) → Fundamentals (equities only)
+- StreamTrades(symbol) → chan Trade
+- GetReferenceData(symbol) → ReferenceData
+```
+
+Adapters: Binance (existing), CoinGecko (existing), ASX (new), NASDAQ via Polygon.io (new), Forex via OANDA (new)
+
+**Deliverables:**
+- `MarketDataAdapter` protobuf interface + Go implementation
+- ASX adapter: scraping/API integration for Australian equities
+- NASDAQ adapter: Polygon.io integration
+- Forex adapter: OANDA or equivalent
+- Data normalization layer: unified OHLCV schema across all markets
+- Backfill tooling: populate historical data for new symbols
+- Dashboard: multi-market symbol search on Portfolio page
+- Data quality monitoring: per-source freshness, gap detection
+
+**Success Criteria:**
+- Victoria pipeline runs on ASX data with same steps as crypto
+- Data quality dashboard shows freshness for all active sources
+- Adding a new market takes < 1 day (adapter pattern is truly pluggable)
+
+---
+
+#### EPIC-016: Coordination Layer v2 (Learning-Based Routing)
+**Effort:** XL
+**Dependencies:** EPIC-010, EPIC-009, EPIC-013
+
+**Description:**
+The v1 coordination layer uses hand-written routing rules. v2 replaces this with a learned routing function trained on the (goal, state_tensor, plan, outcome) tuples accumulated since v1 launch. The attention mechanism reads current node state tensors and produces a routing distribution over available nodes.
+
+**Architecture:**
+A small transformer-like attention layer (implementable in Go with a simple matrix library, no PyTorch needed at this scale):
+- Query: goal embedding (encoded from goal type + context)
+- Keys: node state tensors (from EPIC-009)
+- Values: node capability vectors (from registry)
+- Output: routing weights → plan generation
+
+**Deliverables:**
+- Outcome dataset: at least 1000 (goal, plan, outcome) tuples from v1 operation
+- Attention routing model: trained offline, exported as ONNX or equivalent
+- Go inference: load ONNX model, run attention at coordination time
+- A/B testing: run v1 and v2 in parallel, compare outcome quality
+- Model update cadence: retrain weekly on new outcome data
+- Dashboard: routing visualization showing attention weights per node
+
+**Success Criteria:**
+- v2 routing achieves better outcomes than v1 on 70% of coordination cycles (verified by A/B)
+- Routing decisions explainable: dashboard shows why each node was selected
+- Model update works without downtime (hot-swap)
+
+---
+
+#### EPIC-017: Cross-Node Composition
+**Effort:** L
+**Dependencies:** EPIC-010, EPIC-008
+
+**Description:**
+Emergent capabilities arise when nodes compose. The first composition: Telesis (observability) + Victoria (market intelligence). Telesis detects signal quality anomalies in Victoria's outputs; Victoria uses Telesis health metrics as features in its own models.
+
+**Deliverables:**
+- Telesis node implements Node Protocol v1
+- Telesis state tensor: error rates, latency percentiles, active alerts
+- Coordinator routes composition goal: "improve signal quality" → activates both Telesis and Victoria
+- Victoria can consume Telesis state tensor as an input feature (system health as a signal)
+- Anomaly composition: Telesis spike + Victoria degradation → automatic escalation
+- Dashboard: Composition page showing cross-node activation patterns
+
+**Success Criteria:**
+- A Telesis anomaly in Victoria's pipeline triggers Victoria to run self-diagnostic automatically
+- At least one composition-derived feature improves Victoria's signal quality metrics
+
+---
+
+### Q1 2027 (Months 10–12): Autonomy Epics
+
+---
+
+#### EPIC-018: Autonomous Node Onboarding
+**Effort:** L
+**Dependencies:** EPIC-003, EPIC-008, EPIC-010, EPIC-012
+
+**Description:**
+Currently, adding a new node requires manual integration work. This epic defines and implements the protocol for a new project to join Omega as a node without bespoke integration code.
+
+**Process:**
+1. Project implements Node Protocol v1 SDK
+2. Project calls `Registry.Register` with capabilities and state tensor schema
+3. Coordinator automatically discovers the new node and adds it to routing table
+4. Trust score starts at 0.1 (PICO mode, sandboxed)
+5. Human reviews the capability declaration and approves or rejects
+6. Approved node begins receiving routing requests
+
+**Deliverables:**
+- Onboarding checklist: automated protocol conformance tests a new node must pass
+- Capability declaration UI: dashboard form for defining node capabilities
+- Trust bootstrap: manual override to set initial trust score with justification
+- Onboarding documentation: "Add your project to Omega" guide (target: 1 day for a new project)
+- Flaggr node onboarded as second production node using this process
+- Cuttlefish node onboarded as third production node
+
+**Success Criteria:**
+- Flaggr onboarded in < 1 day using documented process
+- Automated conformance tests pass for both new nodes
+- Both nodes appearing in coordination routing within first week
+
+---
+
+#### EPIC-019: Victoria Full Autonomy
+**Effort:** L
+**Dependencies:** EPIC-012, EPIC-013, EPIC-016
+
+**Description:**
+Victoria's quant research loop runs without human intervention within the Supervised trust level. The improvement engine proposes, the LLM analyst proposes, experiments run, results are evaluated, and the best configurations are promoted to production — all automatically.
+
+**Deliverables:**
+- Improvement proposals auto-approved for low-risk changes (vector parameter tweaks)
+- Experiment queue management: coordinator schedules experiments without manual trigger
+- Production promotion: configurations meeting performance threshold auto-promoted
+- Rollback automation: performance regression triggers automatic rollback within 1 cycle
+- Weekly summary report: auto-generated markdown report of improvements made, experiments run, performance delta
+- Human escalation: changes classified as "high-risk" still require approval (structural pipeline changes, new data sources)
+
+**Success Criteria:**
+- Victoria runs for 2 consecutive weeks without human-initiated improvement cycles
+- At least 1 auto-promoted configuration beats previous baseline
+- Rollback automation tested and verified
+
+---
+
+#### EPIC-020: Production SLOs and Alerting
+**Effort:** M
+**Dependencies:** EPIC-001, EPIC-011
+
+**Description:**
+Define and enforce Service Level Objectives for the Omega platform. This is a prerequisite for claiming "production-ready."
+
+**SLOs:**
+- Platform availability: 99.5% uptime (measured monthly)
+- Coordination cycle completion: 95% of cycles complete within SLA
+- Victoria cycle duration: P95 < 10 minutes
+- Signal quality: ensemble score > 0.30 (current baseline: 34.2%)
+- Safety: zero unhandled critical violations
+
+**Deliverables:**
+- SLO definitions in code (Prometheus recording rules or Grafana alerts)
+- SLO dashboard: burn rate, error budget remaining, historical compliance
+- Alerting: SLO breach within 1 hour triggers PagerDuty
+- Runbooks: one-page response guide for each alert type
+- Quarterly SLO review: automated report comparing actual vs targets
+
+**Success Criteria:**
+- Platform meets all SLOs for 30 consecutive days
+- Every alert has a corresponding runbook
+- Error budget visualization showing remaining budget per SLO
+
+---
+
+#### EPIC-021: Coordination Layer v3 (Self-Organizing)
+**Effort:** XL
+**Dependencies:** EPIC-016, EPIC-017, EPIC-018
+
+**Description:**
+The coordination layer develops persistent memory of node relationships and emergent composition patterns. v3 adds: long-term node relationship learning, capability composition discovery, and automatic addition of new composition patterns to the routing table.
+
+**Key advancement over v2:**
+v2 learns to route individual goals. v3 learns that *combinations* of nodes produce better outcomes than either alone, and actively seeks those combinations for new goals.
+
+**Deliverables:**
+- Node relationship graph: persistent graph of (node_A, node_B, composition_outcome) tuples
+- Composition discovery: automatically identifies node pairs/triplets that produce superadditive outcomes
+- Emergent routing rules: discovered compositions added to routing table automatically
+- Coordination memory: coordinator maintains rolling context of last 100 cycles
+- Self-organization dashboard: visualize node relationship graph and composition strength
+
+**Success Criteria:**
+- At least 3 emergent node compositions discovered without manual specification
+- v3 routing outperforms v2 on 80% of coordination cycles
+- Node relationship graph stable and interpretable
+
+---
+
+#### EPIC-022: Omega CLI
+**Effort:** M
+**Dependencies:** EPIC-010, EPIC-008
+
+**Description:**
+A terminal-native interface to the Omega coordination layer. Consistent with Cloud Guardian's aesthetic — terminal intimacy, not cosplay.
+
+**Commands:**
+```
+omega nodes list                    # all nodes, health, trust
+omega nodes inspect victoria        # node detail, state tensor
+omega goals submit "improve alpha"  # submit a goal to the coordinator
+omega goals status <goal_id>        # plan execution status
+omega improvements list             # pending LLM analyst proposals
+omega improvements approve <id>     # approve a proposal
+omega trust history victoria        # trust score timeline
+omega traces tail victoria          # live trace stream
+```
+
+**Deliverables:**
+- Go CLI binary (`omega`) using Cobra
+- `omega nodes`, `omega goals`, `omega improvements`, `omega trust`, `omega traces` command groups
+- Output: terminal-native tables, JSON output flag for scripting
+- Auth: API key or JWT for remote connections
+- Shell completion: zsh/bash completion scripts
+- Binary distribution: `brew install omega` or direct download
+
+**Success Criteria:**
+- All dashboard operations accessible via CLI
+- `omega goals submit` to `omega goals status` workflow verified end-to-end
+- CLI usable for remote Omega instances (not just localhost)
+
+---
+
+## 4. Research-Backed Architecture Decisions
+
+---
+
+### Node Communication: NATS vs gRPC vs Custom
+
+**Decision: NATS + JetStream for async; Connect-RPC retained for sync**
+
+NATS is chosen for async inter-node communication over the alternatives:
+
+- **Kafka** (Apache/Confluent): Excellent durability, but operational complexity (ZooKeeper/KRaft, consumer groups, partition management) is disproportionate for a system of this scale. Kafka shines at millions of messages/second with strict ordering guarantees — Omega's inter-node communication is more like hundreds of messages/minute.
+- **Redis pub/sub**: Zero durability. A crashed consumer misses messages. Unacceptable for improvement proposals and safety events.
+- **Custom message bus**: Not invented here. NATS is trivially deployable (single binary, 35MB), has excellent Go support, and JetStream provides exactly the durability semantics needed.
+- **Temporal/Cadence**: Excellent for durable workflow orchestration, but the workflow model is too prescriptive. Omega's coordination logic is custom and needs to own its execution model. Temporal is worth revisiting if the coordinator becomes complex enough to need durable workflows (Q4 2026).
+
+NATS JetStream reference: https://docs.nats.io/nats-concepts/jetstream
+
+Connect-RPC is retained for synchronous typed calls (dashboard, Go/Python bridge) because the type safety and schema-first approach (Protobuf) provides the interface contract needed for the node protocol.
+
+---
+
+### State Synchronization: CRDTs vs Event Sourcing vs Shared State
+
+**Decision: Event sourcing for state changes; state tensors as materialized views**
+
+State in Omega has two distinct needs:
+1. **Node internal state** — each node owns its state, others observe it
+2. **Coordination state** — the coordinator needs a current snapshot of all nodes
+
+For node-internal state, event sourcing (append-only log of state transitions) provides the auditability needed for debugging and the ability to replay cycles. Each node publishes events (`ExperimentStarted`, `SignalGenerated`, `ImprovementApplied`) to JetStream. These events are the source of truth.
+
+State tensors are materialized views of this event log — a compact numeric summary computed on demand from recent events. This keeps the coordination layer fast (reading tensors, not replaying event logs) while maintaining full auditability.
+
+CRDTs (Automerge, Yjs) are appropriate for collaborative editing scenarios where multiple writers need to merge concurrent changes. Omega's state is single-writer-per-node; CRDTs add complexity without benefit.
+
+Reference: Martin Kleppmann, "Designing Data-Intensive Applications" (Chapter 11, Event-Driven Systems). Automerge project for CRDT reference: https://automerge.org
+
+---
+
+### Consensus: Raft vs Gossip vs Central Coordinator
+
+**Decision: Central coordinator with no distributed consensus required at this scale**
+
+Distributed consensus (Raft, implemented by etcd; gossip, implemented by Serf/Consul) solves the problem of multiple nodes needing to agree on a single value without a central authority. Omega's architecture has a deliberate central coordinator — this is a design choice, not a limitation.
+
+Arguments for central coordinator:
+- Omega is not a peer-to-peer system. There is a deliberate hierarchy: coordination layer routes intelligence; nodes execute.
+- At the scale of 5–20 nodes, the complexity of distributed consensus is not worth the availability gain.
+- A central coordinator that crashes is recoverable in < 30s (k8s restarts). The window of unavailability during a coordinator crash is acceptable; the complexity of a leaderless system is not.
+
+When to revisit: if Omega scales to 100+ nodes across multiple data centers, or if the coordinator becomes a write-intensive hot path, consider etcd for coordinator leader election and configuration storage.
+
+Reference: Diego Ongaro & John Ousterhout, "In Search of an Understandable Consensus Algorithm (Raft)", USENIX ATC 2014. etcd documentation for production Raft deployment patterns.
+
+---
+
+### Self-Improvement: NAS, AutoML, Meta-Learning
+
+**Decision: Hierarchical self-improvement (parameter → architecture → meta)**
+
+Victoria's current TPE-based hyperparameter optimization is Level 1 self-improvement: search over a fixed parameter space. The roadmap adds two higher levels:
+
+**Level 2: Architecture search (Q3–Q4 2026)**
+LLM-as-analyst proposes new pipeline steps and vector types — effectively Neural Architecture Search (NAS) applied to the quant pipeline. The search space is discrete (which nodes/steps to include) and compositional (which features to combine). Reference: Elsken et al., "Neural Architecture Search: A Survey" (JMLR 2019).
+
+**Level 3: Meta-learning (Q1 2027)**
+The coordination layer learns to adapt routing strategy based on market regime — different node compositions work better in trending vs mean-reverting vs volatile markets. This is meta-learning: learning to learn differently based on context. Reference: Chelsea Finn et al., "Model-Agnostic Meta-Learning for Fast Adaptation of Deep Networks" (ICML 2017). More applicable to Omega: Schmidhuber's "Evolutionary Principles in Self-Referential Learning" (1987) — the original framing of self-improving systems.
+
+AutoML reference (for TPE context): Bergstra & Bengio, "Random Search for Hyper-Parameter Optimization" (JMLR 2012). TPE specifically: Bergstra et al., "Algorithms for Hyper-Parameter Optimization" (NeurIPS 2011).
+
+---
+
+### Trust Boundaries: Capability-Based Security
+
+**Decision: Capability-based trust model with cryptographic sandbox enforcement**
+
+The graduated autonomy model (PICO → Supervised → Autonomous) maps cleanly to capability-based security theory: a node's permissions are the capabilities it currently holds, not a fixed identity. Trust score determines what capabilities are granted.
+
+Reference: Dennis & Van Horn, "Programming Semantics for Multiprogrammed Computations" (JACM 1966) — original capability paper. More practical: OCAP (Object Capabilities) design patterns, implemented in languages like E and Caja.
+
+For Omega's implementation:
+- PICO nodes: given a "sandbox capability" — can read data, write to local state, but cannot make external network calls or modify shared state
+- Supervised nodes: given "external-read capability" but not "external-write capability"
+- Autonomous nodes: hold the full capability set declared at registration
+
+Cryptographic enforcement: sandbox boundary implemented as a Linux network namespace (via k8s NetworkPolicy) — not just software trust but OS-level enforcement.
+
+---
+
+### Observability at Scale: OpenTelemetry + Grafana Stack
+
+**Decision: Full OTLP stack with Grafana for visualization**
+
+The OTel ecosystem has become the de-facto standard for cloud-native observability. The specific stack for Omega:
+
+- **Traces**: Tempo (Grafana Labs, compatible with Jaeger format, scales horizontally)
+- **Metrics**: Mimir (Grafana Labs, Prometheus-compatible, long-term storage)
+- **Logs**: Loki (Grafana Labs, label-based, structured log queries)
+- **Frontend**: Grafana (unified query across all three signals)
+
+This is the "LGTM stack" (Loki, Grafana, Tempo, Mimir) — fully open source, well-integrated, and the natural evolution of the Prometheus + Jaeger tooling many engineers already know.
+
+Alternative considered: Datadog (fully managed, excellent UX, high cost at scale). Honeycomb (excellent for distributed traces, but less integrated with metrics/logs). Given that Omega will generate high-cardinality traces at scale, self-hosting is more cost-effective.
+
+Reference: OpenTelemetry specification (https://opentelemetry.io/docs/). Grafana LGTM stack documentation. Charity Majors, "Observability Engineering" (O'Reilly 2022) — chapter on high-cardinality telemetry.
+
+---
+
+## 5. Risk Register
+
+---
+
+### RISK-001: Go/Python Bridge Latency Makes Synchronous Pipeline Untenable
+**Probability:** Medium
+**Impact:** High
+**Description:** If network-serialized Connect-RPC calls between Go and Python add > 50ms per step, the 9-step Victoria pipeline will be significantly slower than the current in-process approach.
+
+**Mitigation:**
+- Benchmark bridge latency before committing to the architecture
+- Design pipeline steps to batch requests (reduce call count, not call latency)
+- Async pipeline execution via NATS (steps publish results, next step subscribes) eliminates synchronous wait
+- Fallback: retain SQLite handoff for latency-sensitive steps, use bridge only for high-level coordination
+
+**Trigger:** Bridge round-trip > 20ms under load → escalate to async-first design
+
+---
+
+### RISK-002: LLM Analyst Produces Low-Quality Proposals
+**Probability:** Medium
+**Impact:** Medium
+**Description:** If Claude/GPT-4o proposals are consistently rejected or produce negative outcomes, the self-improvement loop stalls and the human becomes the bottleneck again.
+
+**Mitigation:**
+- Start with strictly constrained proposal types (parameter tweaks only, no structural changes)
+- Maintain proposal acceptance rate metric; if < 50% over 30 days, review prompt engineering
+- Human-in-the-loop review in early weeks to calibrate prompt quality before enabling auto-approval
+- Log all proposals with rationale and outcomes — use this as few-shot examples in the system prompt
+- Fallback: LLM used for analysis reports only (not actionable proposals) if quality is insufficient
+
+**Trigger:** Proposal acceptance rate < 30% over 2 weeks → full prompt engineering review
+
+---
+
+### RISK-003: NATS Becomes a Single Point of Failure
+**Probability:** Low
+**Impact:** High
+**Description:** If all inter-node communication routes through NATS and NATS goes down, the entire Omega platform becomes unresponsive.
+
+**Mitigation:**
+- NATS JetStream with replication factor 3 in production (k8s StatefulSet with 3 pods)
+- Connect-RPC fallback for critical synchronous calls — don't route everything through NATS
+- Circuit breaker on NATS client: fall back to direct HTTP calls for health-critical operations
+- Recovery time objective: NATS cluster restart < 30s in k8s
+- Chaos testing: deliberately kill NATS pod and verify graceful degradation
+
+**Trigger:** NATS unavailability > 60s in production → incident response
+
+---
+
+### RISK-004: State Tensor Schema Proliferation
+**Probability:** High
+**Impact:** Medium
+**Description:** Each node defines its own state tensor schema. As the node count grows, schemas diverge, making the coordination layer harder to train and the system harder to debug.
+
+**Mitigation:**
+- Define a "common dimensions" set that all nodes must include (health, error_rate, last_cycle_age)
+- Schema versioning from day one (EPIC-009 requirement)
+- Schema registry with human-readable descriptions — makes debugging tractable
+- Coordination layer trained only on common dimensions initially; node-specific dimensions added incrementally
+- Quarterly schema review: remove unused dimensions, consolidate similar ones
+
+**Trigger:** Schema review flag > 20 dimensions per node on average → forced consolidation
+
+---
+
+### RISK-005: Geometric Math Library Performance at Scale
+**Probability:** Medium
+**Impact:** Medium
+**Description:** TDA (topological data analysis) and manifold learning algorithms have superlinear time complexity. At 3.7M rows with high-frequency updates, these may not fit within the signal research cycle budget.
+
+**Mitigation:**
+- Benchmark each method on production data volume before integrating (EPIC-014 requirement)
+- Streaming/incremental algorithms where available (incremental PH for TDA)
+- Precompute geometry on downsampled data, full computation on regime change detection
+- Python-native implementations first (scikit-tda, giotto-tda), then optimize hot paths in Go/C++
+
+**Trigger:** Geometric feature computation > 20% of total cycle time → profile and optimize
+
+---
+
+### RISK-006: Multi-Market Data Quality Heterogeneity
+**Probability:** High
+**Impact:** Medium
+**Description:** Different market data sources have wildly different quality characteristics. ASX data has gaps on public holidays; crypto has wash trading artifacts; forex has weekend spreads. A unified adapter that doesn't account for source-specific quirks will propagate garbage into signals.
+
+**Mitigation:**
+- Data quality framework in EPIC-015: per-source quality profiles with known artifacts
+- Source-specific normalization pipeline stages (not just schema normalization)
+- Quality score as a metadata field on all OHLCV records
+- Signal research step checks data quality score before using source in feature computation
+- Integration tests with known-bad data samples for each source
+
+**Trigger:** Signal quality metric drops > 10% after adding new data source → investigate data quality pipeline
+
+---
+
+### RISK-007: Coordination Layer v2 Training Data Contamination
+**Probability:** Medium
+**Impact:** High
+**Description:** If v1 routing rules systematically bias toward certain nodes, the training data for v2 will be unrepresentative. v2 will learn to replicate v1's biases rather than improving on them.
+
+**Mitigation:**
+- Epsilon-greedy exploration in v1: with probability ε (initially 0.1), route to a random eligible node instead of following the rule
+- Log counterfactual outcomes: when v1 routes to node A, also estimate what would have happened with node B
+- Dataset diversity check before v2 training: verify all nodes appear in training data
+- v2 training includes explicit de-biasing: re-weight training examples to correct for v1's routing frequency
+
+**Trigger:** Any node appears in < 10% of training examples → increase ε for that node class
+
+---
+
+### RISK-008: Trust Score Gaming
+**Probability:** Low
+**Impact:** High
+**Description:** A node that learns the trust scoring function could optimize for trust score rather than actual outcomes — appearing to perform well while degrading real performance.
+
+**Mitigation:**
+- Trust score computation is opaque to nodes (not exposed via Node Protocol)
+- Multiple trust signals, not a single gameable metric (safety violations, metric regression, outcome history, uptime — hard to simultaneously game all)
+- Humans retain override authority at all trust levels — Autonomous mode is not "humans can't intervene"
+- Anomaly detection on trust score velocity: trust increasing faster than outcome improvement is suspicious
+
+**Trigger:** Trust score increases > 0.2 in 1 week without commensurate outcome improvement → manual audit
+
+---
+
+## 6. Key Milestones
+
+---
+
+### Month 1 (April 2026)
+**Theme: Observability foundation**
+
+- OTLP backend deployed and receiving telemetry
+- Victoria produces a complete distributed trace (Go + Python spans in single trace)
+- Python trace IDs fixed to W3C format
+- Safety violations persisted and visible in dashboard
+- EPIC-001 complete, EPIC-004 complete
+
+**Measurable outcome:** Zero silent metric drops. Full Victoria cycle visible in one Tempo trace.
+
+---
+
+### Month 2 (May 2026)
+**Theme: Bridge + Protocol**
+
+- Go/Python bridge operational (Connect-RPC, bidirectional)
+- Node Protocol v1 defined and documented
+- Victoria refactored to implement Node Protocol v1 (reference implementation)
+- Metric regression detection running
+
+**Measurable outcome:** Go can invoke Victoria's `SignalResearch` step via Connect-RPC. Regression on any metric triggers a dashboard issue within one cycle.
+
+---
+
+### Month 3 (June 2026)
+**Theme: Foundation complete**
+
+- Traces page node filter and span detail overlay complete
+- EPIC-005 complete, EPIC-006 complete
+- Q2 retrospective: all P0/P1 observability issues closed
+- Architecture review: Node Protocol v1 signed off, no breaking changes planned for Q3
+
+**Measurable outcome:** Every P0/P1 observability issue from the initial audit is resolved. Q3 work can begin on stable foundation.
+
+---
+
+### Month 4 (July 2026)
+**Theme: Message bus**
+
+- NATS deployed locally and in CI
+- Core node communication async via NATS
+- Node Capability Registry v1 operational
+- All live nodes visible in registry
+
+**Measurable outcome:** Victoria's state snapshots visible in NATS topic. Registry reports all nodes healthy within 5s of startup.
+
+---
+
+### Month 5 (August 2026)
+**Theme: State tensors + distribution**
+
+- State Tensor Protocol v1 implemented in Victoria
+- Victoria's 16-dimensional state tensor tracked in Grafana
+- k8s deployment working locally (k3s or minikube)
+- Victoria running in a k8s pod with the same behavior as local
+
+**Measurable outcome:** Victoria state tensor dimensions visible as Grafana metrics. k8s deployment passes all integration tests.
+
+---
+
+### Month 6 (September 2026)
+**Theme: Coordination v1 + Trust**
+
+- Coordination Layer v1 operational: routes a quant research goal through Victoria
+- Trust scoring live: Victoria has a trust score that moves based on outcomes
+- Trust history visible in dashboard
+- Q3 retrospective: distributed architecture in place
+
+**Measurable outcome:** Coordination dashboard shows live plans. Victoria's trust score changes based on cycle outcomes.
+
+---
+
+### Month 7 (October 2026)
+**Theme: LLM analyst**
+
+- LLM-as-analyst integration complete
+- First LLM-proposed vector in production
+- Proposal approval workflow functional in dashboard
+- Improvement cycle runs without manual trigger
+
+**Measurable outcome:** At least 1 LLM-proposed vector in Victoria's signal library. Improvement cycle runs automatically on schedule.
+
+---
+
+### Month 8 (November 2026)
+**Theme: Geometry + multi-market**
+
+- Geometric math library: all 5 methods stable and benchmarked
+- Multi-market adapter: at least 1 new market (ASX or NASDAQ) producing signals
+- Geometry-derived features available in signal research
+
+**Measurable outcome:** TDA regime change detection achieves > 0.7 recall on test set. Victoria pipeline runs on ASX data.
+
+---
+
+### Month 9 (December 2026)
+**Theme: Cross-node composition**
+
+- Telesis implements Node Protocol v1
+- First cross-node composition: Telesis anomaly → Victoria self-diagnostic
+- Coordination Layer v2 training data collected (> 500 outcome tuples)
+- Q4 retrospective: intelligence layer operational
+
+**Measurable outcome:** Telesis anomaly triggers Victoria diagnostic automatically. 500+ coordination outcomes logged for v2 training.
+
+---
+
+### Month 10 (January 2027)
+**Theme: Coordination v2 + new nodes**
+
+- Coordination Layer v2 deployed (A/B with v1)
+- v2 routing matches or beats v1 on initial validation set
+- Flaggr node onboarded via autonomous onboarding process
+
+**Measurable outcome:** v2 routing on par with v1. Flaggr appears in coordination routing.
+
+---
+
+### Month 11 (February 2027)
+**Theme: Victoria full autonomy**
+
+- Victoria improvement loop runs for 2 weeks without human-initiated cycles
+- At least 1 auto-promoted configuration in production
+- Rollback automation verified
+- SLOs defined and measured for first time
+
+**Measurable outcome:** Two consecutive weeks of autonomous Victoria improvement cycles. All SLOs measured (not necessarily met yet).
+
+---
+
+### Month 12 (March 2027)
+**Theme: Production-ready neural distributed system**
+
+- Platform meets all SLOs for 30 consecutive days
+- Omega CLI v1 shipped
+- Coordination Layer v3 prototype (self-organizing, node relationship graph)
+- Architecture review: Omega is a neural distributed system ✓
+
+**Measurable outcome:** 30-day SLO compliance report. CLI `omega nodes list` works against production. Node relationship graph shows at least 3 emergent compositions.
+
+---
+
+## Appendix A: Epic Summary Table
+
+| Epic | Name | Quarter | Effort | Dependencies |
+|------|------|---------|--------|--------------|
+| EPIC-001 | Observability Infrastructure | Q2 2026 | L | None |
+| EPIC-002 | Go/Python Bridge Protocol | Q2 2026 | L | EPIC-001 |
+| EPIC-003 | Node Protocol v1 | Q2 2026 | M | EPIC-002 |
+| EPIC-004 | Safety Violation Persistence | Q2 2026 | S | EPIC-001 |
+| EPIC-005 | Traces Page Node Filter | Q2 2026 | S | EPIC-001 |
+| EPIC-006 | Metric Regression Detection | Q2 2026 | M | EPIC-001 |
+| EPIC-007 | NATS Message Bus | Q3 2026 | L | EPIC-003 |
+| EPIC-008 | Node Capability Registry | Q3 2026 | M | EPIC-003, EPIC-007 |
+| EPIC-009 | State Tensor Protocol | Q3 2026 | L | EPIC-003, EPIC-007 |
+| EPIC-010 | Coordination Layer v1 | Q3 2026 | XL | EPIC-007, EPIC-008, EPIC-009 |
+| EPIC-011 | Distributed Execution (k8s) | Q3 2026 | XL | EPIC-007, EPIC-008 |
+| EPIC-012 | Trust Scoring System | Q3 2026 | M | EPIC-004, EPIC-010 |
+| EPIC-013 | LLM-as-Analyst Integration | Q4 2026 | L | EPIC-002, EPIC-010 |
+| EPIC-014 | Geometric Math Library | Q4 2026 | L | None |
+| EPIC-015 | Multi-Market Data Layer | Q4 2026 | L | EPIC-002 |
+| EPIC-016 | Coordination Layer v2 | Q4 2026 | XL | EPIC-010, EPIC-009, EPIC-013 |
+| EPIC-017 | Cross-Node Composition | Q4 2026 | L | EPIC-010, EPIC-008 |
+| EPIC-018 | Autonomous Node Onboarding | Q1 2027 | L | EPIC-003, EPIC-008, EPIC-010, EPIC-012 |
+| EPIC-019 | Victoria Full Autonomy | Q1 2027 | L | EPIC-012, EPIC-013, EPIC-016 |
+| EPIC-020 | Production SLOs and Alerting | Q1 2027 | M | EPIC-001, EPIC-011 |
+| EPIC-021 | Coordination Layer v3 | Q1 2027 | XL | EPIC-016, EPIC-017, EPIC-018 |
+| EPIC-022 | Omega CLI | Q1 2027 | M | EPIC-010, EPIC-008 |
+
+---
+
+## Appendix B: Architecture Diagram (Text)
+
+```
+                           ┌─────────────────────────────────────────┐
+                           │             OMEGA PLATFORM              │
+                           │                                         │
+  ┌──────────────┐         │  ┌─────────────┐    ┌───────────────┐  │
+  │   React      │◄────────┼──│  Go API     │    │  Coordinator  │  │
+  │   Dashboard  │         │  │ Connect-RPC │◄───│   (v1→v3)     │  │
+  └──────────────┘         │  └─────────────┘    └───────┬───────┘  │
+                           │         ▲                    │          │
+                           │         │                    ▼          │
+                           │  ┌──────┴──────┐    ┌───────────────┐  │
+                           │  │ Node        │    │ NATS          │  │
+                           │  │ Registry    │    │ JetStream     │  │
+                           │  └─────────────┘    └───────┬───────┘  │
+                           │                             │           │
+                           └─────────────────────────────┼───────────┘
+                                                         │
+                    ┌────────────────┬──────────────────┬┴─────────────┐
+                    ▼                ▼                  ▼              ▼
+           ┌──────────────┐ ┌──────────────┐  ┌──────────────┐ ┌──────────────┐
+           │  VICTORIA    │ │  TELESIS     │  │  FLAGGR      │ │ CUTTLEFISH   │
+           │  (Market     │ │  (Observ-    │  │  (Feature    │ │ (Deployment  │
+           │  Intel Node) │ │  ability     │  │  Mgmt Node)  │ │  Node)       │
+           │              │ │  Node)       │  │              │ │              │
+           │ State Tensor │ │ State Tensor │  │ State Tensor │ │ State Tensor │
+           │ Trust Score  │ │ Trust Score  │  │ Trust Score  │ │ Trust Score  │
+           └──────┬───────┘ └──────────────┘  └──────────────┘ └──────────────┘
+                  │
+                  ▼
+         ┌─────────────────┐
+         │ Python Pipeline │
+         │ 9-step quant    │
+         │ research        │
+         │ (Connect-RPC    │
+         │  bridge)        │
+         └─────────────────┘
+```
+
+---
+
+*Document authored: March 2026. Next review: June 2026 (Q2 retrospective).*
+*Owner: Ben Ebsworth. Classification: Internal.*
