@@ -124,7 +124,7 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 # data_providers: heavy use of dynamic dict keys from external API responses
-module = ["omega.nodes.vectora.data_providers"]
+module = ["omega.nodes.vectora.data_providers", "omega.nodes.victoria.data_providers"]
 ignore_errors = true
 
 [[tool.mypy.overrides]]
