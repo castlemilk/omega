@@ -13,7 +13,7 @@ services:
       - tempo
 
   tempo:
-    image: grafana/tempo:latest
+    image: grafana/tempo:2.7.0
     ports:
       - "3200:3200"   # Tempo HTTP API
       - "9095:9095"   # Tempo gRPC

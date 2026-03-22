@@ -1,3 +1,5 @@
+stream_over_http_enabled: true
+
 server:
   http_listen_port: 3200
   grpc_listen_port: 9095
@@ -7,41 +9,27 @@ distributor:
     otlp:
       protocols:
         grpc:
-          endpoint: 0.0.0.0:9095
-
-ingester:
-  trace_idle_period: 10s
-  max_block_bytes: 1_000_000
-  max_block_duration: 5m
-
-compactor:
-  compaction:
-    compaction_window: 1h
-    max_block_bytes: 100_000_000
-    block_retention: 48h
-    compacted_block_retention: 10m
-
-metrics_generator:
-  registry:
-    external_labels:
-      source: tempo
-      cluster: omega-local
-  storage:
-    path: /var/tempo/generator/wal
-  processors:
-    - service-graphs
-    - span-metrics
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
 
 storage:
   trace:
     backend: local
     local:
-      path: /var/tempo/blocks
+      path: /var/tempo/traces
     wal:
       path: /var/tempo/wal
-    pool:
-      max_workers: 100
-      queue_depth: 10000
+
+metrics_generator:
+  storage:
+    path: /var/tempo/metrics
+  traces_storage:
+    path: /var/tempo/traces
 
 overrides:
-  metrics_generator_processors: [service-graphs, span-metrics]
+  defaults:
+    metrics_generator:
+      processors:
+        - service-graphs
+        - span-metrics
