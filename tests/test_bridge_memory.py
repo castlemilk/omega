@@ -81,9 +81,8 @@ class TestStoreEpisode:
 
     def test_raises_on_error(self):
         client = MemoryServiceClient()
-        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "db error"})):
-            with pytest.raises(MemoryServiceError):
-                client.store_episode("n1", "event")
+        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "db error"})), pytest.raises(MemoryServiceError):
+            client.store_episode("n1", "event")
 
 
 # ── query_episodes ─────────────────────────────────────────────────────────

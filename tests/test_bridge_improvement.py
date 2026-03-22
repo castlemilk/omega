@@ -61,9 +61,8 @@ class TestDueNodes:
 
     def test_raises_on_server_error(self):
         client = ImprovementServiceClient()
-        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "fail"})):
-            with pytest.raises(ImprovementServiceError):
-                client.due_nodes()
+        with patch("urllib.request.urlopen", side_effect=_mock_http_error({"message": "fail"})), pytest.raises(ImprovementServiceError):
+            client.due_nodes()
 
 
 # ── record_outcome ─────────────────────────────────────────────────────────
