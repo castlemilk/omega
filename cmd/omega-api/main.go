@@ -244,16 +244,16 @@ func main() {
 	mux.Handle(termPath, termSvcHandler)
 
 	if nodeH != nil {
-		nodePath, nodeSvcHandler := omegav1connect.NewNodeServiceHandler(nodeH, withMetrics()...)
+		nodePath, nodeSvcHandler := omegav1connect.NewNodeServiceHandler(nodeH, withHandlerOpts()...)
 		mux.Handle(nodePath, nodeSvcHandler)
 	} else {
 		nodePath, nodeSvcHandler := omegav1connect.NewNodeServiceHandler(
-			omegav1connect.UnimplementedNodeServiceHandler{}, withMetrics()...,
+			omegav1connect.UnimplementedNodeServiceHandler{}, withHandlerOpts()...,
 		)
 		mux.Handle(nodePath, nodeSvcHandler)
 	}
 
-	dataPath, dataSvcHandler := omegav1connect.NewDataServiceHandler(dataH, withMetrics()...)
+	dataPath, dataSvcHandler := omegav1connect.NewDataServiceHandler(dataH, withHandlerOpts()...)
 	mux.Handle(dataPath, dataSvcHandler)
 
 	// Observability endpoints.
