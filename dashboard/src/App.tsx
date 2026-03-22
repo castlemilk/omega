@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { client } from "./client";
 import type { SystemHealth } from "./gen/omega/v1/types_pb";
 
@@ -73,11 +74,46 @@ export default function App() {
               <Route path="/goals" element={<Goals />} />
               <Route path="/challenges" element={<Challenges />} />
               <Route path="/improvements" element={<Improvements />} />
-              <Route path="/victoria" element={<VictoriaDashboard />} />
-              <Route path="/victoria/portfolio" element={<VictoriaPortfolio />} />
-              <Route path="/victoria/signals" element={<VictoriaSignals />} />
-              <Route path="/victoria/trades" element={<VictoriaTrades />} />
-              <Route path="/victoria/backtest" element={<VictoriaBacktest />} />
+              <Route
+                path="/victoria"
+                element={
+                  <ErrorBoundary fallbackLabel="VictoriaDashboard">
+                    <VictoriaDashboard />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/victoria/portfolio"
+                element={
+                  <ErrorBoundary fallbackLabel="VictoriaPortfolio">
+                    <VictoriaPortfolio />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/victoria/signals"
+                element={
+                  <ErrorBoundary fallbackLabel="VictoriaSignals">
+                    <VictoriaSignals />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/victoria/trades"
+                element={
+                  <ErrorBoundary fallbackLabel="VictoriaTrades">
+                    <VictoriaTrades />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/victoria/backtest"
+                element={
+                  <ErrorBoundary fallbackLabel="VictoriaBacktest">
+                    <VictoriaBacktest />
+                  </ErrorBoundary>
+                }
+              />
             </Routes>
           </main>
         </div>
