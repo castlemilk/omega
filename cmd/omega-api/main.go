@@ -229,6 +229,16 @@ func main() {
 	termPath, termSvcHandler := omegav1connect.NewTerminalServiceHandler(terminalH, withMetrics()...)
 	mux.Handle(termPath, termSvcHandler)
 
+	if nodeH != nil {
+		nodePath, nodeSvcHandler := omegav1connect.NewNodeServiceHandler(nodeH, withMetrics()...)
+		mux.Handle(nodePath, nodeSvcHandler)
+	} else {
+		nodePath, nodeSvcHandler := omegav1connect.NewNodeServiceHandler(
+			omegav1connect.UnimplementedNodeServiceHandler{}, withMetrics()...,
+		)
+		mux.Handle(nodePath, nodeSvcHandler)
+	}
+
 	dataPath, dataSvcHandler := omegav1connect.NewDataServiceHandler(dataH, withMetrics()...)
 	mux.Handle(dataPath, dataSvcHandler)
 
