@@ -17,7 +17,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger("omega.paper_trading")
@@ -26,12 +26,13 @@ logger = logging.getLogger("omega.paper_trading")
 # Optional psycopg2 import — silently falls back if not installed
 # ---------------------------------------------------------------------------
 
+_PSYCOPG2_AVAILABLE: bool
 try:
-    import psycopg2  # type: ignore
-    import psycopg2.extras  # type: ignore
+    import psycopg2
+    import psycopg2.extras
+
     _PSYCOPG2_AVAILABLE = True
 except ImportError:  # pragma: no cover
-    psycopg2 = None  # type: ignore
     _PSYCOPG2_AVAILABLE = False
 
 # Noise filter: proposals with |weight| below this are ignored
@@ -131,7 +132,7 @@ class PaperTradingEngine:
             else:
                 entry_price = 1.0
 
-            ts_now = datetime.now(timezone.utc)
+            ts_now = datetime.now(UTC)
             trade_id = str(uuid.uuid4())
 
             trade: dict[str, Any] = {
@@ -207,10 +208,11 @@ class PaperTradingEngine:
         try:
             conn = psycopg2.connect(self._db_url)
             try:
-                with conn:
-                    with conn.cursor() as cur:
-                        for trade in trades:
-                            cur.execute(sql, {
+                with conn, conn.cursor() as cur:
+                    for trade in trades:
+                        cur.execute(
+                            sql,
+                            {
                                 "ts": trade.get("ts"),
                                 "sym": trade.get("sym"),
                                 "side": trade.get("side"),
@@ -220,7 +222,8 @@ class PaperTradingEngine:
                                 "pnl": float(trade.get("pnl", 0.0)),
                                 "slippage": float(trade.get("slippage", 0.0)),
                                 "duration": int(trade.get("duration", 0)),
-                            })
+                            },
+                        )
                 logger.debug("Persisted %d trade(s) to DB", len(trades))
             finally:
                 conn.close()
@@ -256,24 +259,26 @@ class PaperTradingEngine:
         try:
             conn = psycopg2.connect(self._db_url)
             try:
-                with conn:
-                    with conn.cursor() as cur:
-                        for proposal in proposals:
-                            if not isinstance(proposal, dict):
-                                continue
-                            name: str = (
-                                proposal.get("node_id")
-                                or proposal.get("symbol")
-                                or proposal.get("ticker")
-                                or "unknown"
-                            )
-                            weight = float(proposal.get("weight", 0.0))
-                            cur.execute(sql, {
+                with conn, conn.cursor() as cur:
+                    for proposal in proposals:
+                        if not isinstance(proposal, dict):
+                            continue
+                        name: str = (
+                            proposal.get("node_id")
+                            or proposal.get("symbol")
+                            or proposal.get("ticker")
+                            or "unknown"
+                        )
+                        weight = float(proposal.get("weight", 0.0))
+                        cur.execute(
+                            sql,
+                            {
                                 "name": name,
                                 "weight": weight,
                                 "current_value": weight,
                                 "conviction": min(abs(weight), 1.0),
-                            })
+                            },
+                        )
                 logger.debug("Persisted %d signal(s) to DB", len(proposals))
             finally:
                 conn.close()
