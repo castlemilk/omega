@@ -112,6 +112,7 @@ The system operates autonomously within defined trust boundaries. New nodes can 
 #### EPIC-001: Observability Infrastructure (P0 Closure)
 **Effort:** L
 **Dependencies:** None
+**Status (2026-03-23):** Not started. D1 confirms OTLP backend not deployed; `deploy/docker-compose.otel.yaml` exists but is not wired into the main stack. D2 confirms Python trace IDs remain non-W3C-compliant. Additionally: `state_tensor.go:Subscribe()` busy-polls at 50ms and never delivers notifications (A2) — fix belongs here as I3.
 
 **Description:**
 The current OTel setup silently discards metrics when no OTLP backend is configured. Python trace IDs are not W3C-compliant, breaking distributed tracing across the Go/Python boundary. Error classification is absent. This epic makes the telemetry system trustworthy.
@@ -135,6 +136,7 @@ The current OTel setup silently discards metrics when no OTLP backend is configu
 #### EPIC-002: Go/Python Bridge Protocol
 **Effort:** L
 **Dependencies:** EPIC-001 (tracing must propagate across boundary)
+**Status (2026-03-23):** Partial. `pipeline_server.py` exists and handles `ExecuteStep` calls from Go. `bridge.PipelineClient` can call Python. However, A6 confirms `OrchestratorHandler.WithPipelineClient()` is optional — the handler runs `runCycle()` without the pipeline client by default. The bidirectional wiring is partially built but not exercised in the default Docker Compose stack.
 
 **Description:**
 Victoria's Python pipeline currently connects to the Go API via SQLite and informal conventions. This is fragile, untyped, and impossible to observe. The bridge should use the same Connect-RPC + Protobuf stack that Go uses, making Python a first-class API participant.
@@ -200,6 +202,7 @@ message StateSnapshot {
 #### EPIC-004: Safety Violation Persistence
 **Effort:** S
 **Dependencies:** EPIC-001
+**Status (2026-03-23):** Not started. E4 confirms adversarial pressure fix is ✅ complete (`AdversarialPressureV2.run_v2()` now called in `_step_adversarial()`), but Ring 1 still cannot fire with a single-node topology (needs ≥2 variants for ensemble disagreement). Safety violations are still not persisted. E5 confirms PICO sandbox has no enforcement — Python nodes in PICO mode can call any system API.
 
 **Description:**
 Currently, safety violations are detected but not persisted. This means the system has no memory of past violations, making trust scoring and graduated autonomy impossible. Violations must be stored, queryable, and surfaced in the dashboard.
@@ -252,6 +255,70 @@ The system collects metrics but has no automated way to detect when a metric has
 **Success Criteria:**
 - Artificially degrading a metric triggers an issue within one cycle
 - Dashboard shows metric regression history per node
+
+---
+
+#### EPIC-023: Data Pipeline Integrity Fixes
+**Effort:** M
+**Dependencies:** None (independent of infrastructure)
+**Priority:** P0 — must complete before any evaluation results are trusted
+
+**Description:**
+The 2026-03-23 system evaluation identified critical data integrity issues that produce misleading evaluation metrics. The system silently falls back to synthetic data, uses an additive (not multiplicative) equity curve, has look-ahead bias in entry pricing, and loses all cycle history on restart. Every metric produced by the current system is suspect until these are fixed.
+
+**Specific Findings (from SYSTEM_EVALUATION_2026_03_23.md):**
+- B1/C1: Silent synthetic data fallback — no loud failure, no `INVALID` marker in results
+- B4/C4: Look-ahead bias in `backtest.py:_sma_crossover_strategy()` — entry pricing uses bar close instead of next-bar open
+- I6: Additive equity curve in `_compute_metrics()` — must be multiplicative (`np.cumprod(1 + daily_returns)`)
+- I7: Bootstrap CIs never included in `EvalReport` — `compute_sharpe_confidence_interval()` is implemented but never called from `build_eval_report()`
+- F5: `CycleHistory` bounded at 500 in-memory entries with no Postgres persistence — all history lost on restart
+- B9: No data freshness/staleness guard — system can operate on hours-old market data without any indication
+- F1/I10: Tight orchestration loop (`sleep_seconds=0.0` default) — will hammer Binance/CoinGecko in production
+
+**Deliverables:**
+- `_load_data()` raises `DataQualityError` (not silent fallback) when real data unavailable; all synthetic results marked `data_source: "synthetic"` in `EvalReport`
+- `backtest.py` entry pricing fixed: use next-bar open price, not current-bar close
+- Equity curve computation changed to multiplicative: `cumulative = np.cumprod(1 + daily_returns)`, CAGR formula corrected
+- `build_eval_report()` calls `compute_sharpe_confidence_interval()` — every report includes 95% CI
+- `cycle_history` Postgres table: write each `CycleResult` on completion; `CycleHistory` reads from DB on startup
+- Data freshness guard: `DataIngestionNode.poll()` stamps `last_successful_fetch`; orchestrator checks freshness before proceeding; signal quality penalty when data age exceeds threshold
+- Configurable orchestrator sleep: `sleep_until="next_candle"` mode to align with market close
+- Fat-tail synthetic fallback (bonus): replace LCG with Student-t (ν=4) + GARCH(1,1) to approximate real crypto return statistics when fallback is unavoidable
+
+**Success Criteria:**
+- Every `EvalReport` on synthetic data shows `data_source: "synthetic"` prominently
+- Running Victoria on real Binance data: equity curve is multiplicative, Sharpe includes 95% CI
+- After restart, last 500 cycle results restored from Postgres
+- Introducing a stale data condition (mock failed poll) triggers a data freshness warning within one cycle
+
+---
+
+#### EPIC-024: Security Hardening
+**Effort:** M
+**Dependencies:** None
+
+**Description:**
+The 2026-03-23 evaluation found multiple security issues that create real risk in any non-local deployment. Default credentials are hardcoded, RPC control endpoints have no auth, and Python nodes have no sandbox despite PICO mode being defined. These must be resolved before any cloud or shared deployment.
+
+**Specific Findings:**
+- C7/E1: `docker-compose.yml` hardcodes `POSTGRES_PASSWORD: omega`; port 5432 exposed on `0.0.0.0`
+- C8/E2: `StartOrchestrator`, `StopOrchestrator`, `RunImprovement` RPC endpoints callable by any HTTP client with port 8080 access — no auth middleware
+- E3: API keys loaded from `.env` with no secret rotation, auditing, or least-privilege
+- D3: No immutable audit trail — safety-critical events (autonomy transitions, adversarial flags, improvement decisions) exist only in ephemeral logs
+- A7: Python data ingestion path has no circuit breaker — Binance/CoinGecko failures fall through silently
+
+**Deliverables:**
+- `docker-compose.yml`: all credentials moved to `.env` with `${VAR}` references; `.env.example` provided; 5432 not exposed on `0.0.0.0` in non-dev configs
+- API key auth middleware on Connect-RPC handlers: `StartOrchestrator`, `StopOrchestrator`, `RunImprovement` require `Authorization: Bearer <api_key>` header
+- `omega_audit_log` Postgres table: append-only log for safety-critical events (schema: `event_type`, `node_id`, `timestamp`, `actor`, `payload`, `previous_state`, `new_state`)
+- Python circuit breaker on `DataIngestionNode`: retry with exponential backoff on rate limits; circuit opens after 3 consecutive failures; logged with full context
+- Secret rotation documentation: how to rotate API keys without downtime
+
+**Success Criteria:**
+- `docker-compose up` with no `.env` fails loudly (not silently uses defaults)
+- RPC control endpoints return 401 without valid API key
+- Every adversarial flag, autonomy transition, and improvement decision writes to `omega_audit_log`
+- Binance rate limit triggers circuit breaker within 3 failures, not a silent synthetic fallback
 
 ---
 
@@ -324,6 +391,7 @@ The coordination layer needs to know what nodes exist, what they can do, and whe
 #### EPIC-009: State Tensor Protocol
 **Effort:** L
 **Dependencies:** EPIC-003, EPIC-007
+**Status (2026-03-23):** Partial — blocked by subscriber bug. `state_tensor.go` is implemented with `StateTensorSchema` and serialisation. However, A2 confirms `Subscribe()` enters a busy-poll loop calling `pg_notification_queue_usage()` every 50ms and never calls `pgxpool.WaitForNotification()` — the channel returned by Subscribe() will never receive a tensor. `StartListening()` wires this broken subscriber into the aggregator. The real-time state propagation described in the spec is silently dead. Fix tracked as I3 in EPIC-001.
 
 **Description:**
 The most novel architectural element. Nodes expose their internal state as a typed tensor — a structured numeric representation that the coordination layer can use for routing decisions. This is the mechanism through which nodes become "neurons" in the network analogy.
@@ -413,6 +481,79 @@ Kubernetes (local: k3s or minikube; production: GKE given existing GCP projects)
 - Victoria runs on k8s with the same behavior as local
 - A crash-loop in Victoria does not affect the Go API pod
 - Deployment takes < 5 minutes from merged PR
+
+---
+
+#### EPIC-025: Self-Improvement Loop Completion
+**Effort:** L
+**Dependencies:** EPIC-002, EPIC-003, EPIC-009, EPIC-010
+
+**Description:**
+The 2026-03-23 evaluation confirmed that the self-improvement loop has multiple broken links: the improvement engine accepts better parameters but never applies them, the goal architecture is never called from the orchestrator, the attention router weights are random and never updated from outcomes, memory consolidation output is never read by the signal layer, and Ring 1 adversarial cannot fire with a single-node topology. This epic closes all five broken links.
+
+**Specific Findings:**
+- C5/I5: `ImprovementEngine` stores best params but never calls `node.apply_params()` — no `apply_params()` interface exists on `Node`
+- A4/I2: `GoalArchitecture` in `goals.py` is fully implemented (HTN + balanced scorecard) but never instantiated or called from `orchestrator_v2.py`
+- A3/I8: `NewAttentionRouter()` initialises `RoutingWeightAdapter` as `nil`; EMA prior path never exercised; weights are random forever despite `OutcomeStore` accumulating the right data
+- C10: `ConsolidationPipeline.consolidate()` moves records from short to long-term memory, but consolidated memories are never read by `VictoriaNode` or signal layer
+- C6/E4: Ring 1 adversarial fires on ensemble disagreement between `variant_outputs`, but a single-node system only has one variant — Ring 1 can never fire
+- A5: Capability vocabulary mismatch — orchestrator uses `"compute_signals"` while Go registry uses `"signal_generation"` — nodes advertising capabilities via registry never match Python orchestrator checks
+- P2.8: No rolling system quality metric — no way to know if the system is getting better week-over-week
+
+**Deliverables:**
+- `Node` ABC gains `apply_params(params: dict) -> None` interface; `VictoriaNode` implements it
+- `ImprovementEngine.evaluate_and_record()` calls `node.apply_params(best_params)` when `trial.accepted = True`
+- `orchestrator_v2.run()` accepts a `Goal` object; `GoalArchitecture` decomposes it into `goal_node_ids` and strategy params
+- `RoutingWeightAdapter` implemented with EMA priors; wired into `NewAttentionRouter()`; updates after each outcome record
+- `VictoriaNode` gains interface to retrieve consolidated patterns from memory; `SignalResearchNode` reads distilled patterns as parameterised feature weights
+- Ring 1 adversarial redesigned for single-node: use temporal variants (compare current signal proposal against last N proposals) instead of requiring multiple node variants
+- Canonical capability vocabulary established in `node.proto`: Go registry and Python orchestrator use identical strings
+- Rolling 30-cycle Sharpe trend metric added to `CycleResult` and dashboard Metrics page
+
+**Success Criteria:**
+- After a successful TPE trial, VictoriaNode's parameters are observably different in the next cycle
+- Goal object passed to `orchestrator_v2.run()` changes which signals are weighted in the pipeline
+- Attention router EMA weights shift measurably after 100 cycles (not identical to Xavier init)
+- Consolidated memory patterns appear as active feature weights in signal research output
+- Ring 1 fires during a cycle where the current proposal diverges significantly from recent history
+- `omega nodes list` and Python orchestrator report the same capability strings for Victoria
+
+---
+
+#### EPIC-026: Paper Trading Mode
+**Effort:** L
+**Dependencies:** EPIC-002
+**Note:** Promoted from Nice-to-Have (N1) based on evaluation finding C2: execution is a no-op, making the "actions_executed" metric misleading. Paper trading provides the feedback loop that makes self-improvement meaningful.
+
+**Description:**
+Victoria's execution step is a confirmed no-op. Every metric saying "actions_executed" is counting "proposals that passed adversarial review," not actual trades. Paper trading creates a virtual order book against real market prices, providing:
+1. A non-misleading execution metric
+2. Real outcome quality for the `OutcomeStore` (actual simulated PnL, not synthetic)
+3. The feedback loop needed for attention router training and trust scoring
+
+**Design:**
+```
+PaperTradingEngine:
+- Maintains virtual portfolio (positions, cash, PnL)
+- On proposal approval: executes against real-time or OHLCV prices (no slippage model initially)
+- Tracks open positions, marks to market each cycle
+- Produces PnL record per trade → feeds OutcomeStore as outcome_quality signal
+- Paper trade history persisted to Postgres
+```
+
+**Deliverables:**
+- `PaperTradingEngine` Python class: virtual portfolio state, execute/close position methods
+- Trade execution against next-bar OHLCV prices (no look-ahead — entry at open of bar after signal)
+- Position tracking: open positions, unrealised PnL, realised PnL per trade
+- Trade history persisted to `paper_trades` Postgres table
+- `OutcomeStore` updated with paper trade PnL as the `outcome_quality` signal
+- Dashboard Portfolio page: live paper portfolio positions, PnL waterfall, drawdown chart
+- Live vs backtest reconciliation: compare paper trade Sharpe against backtest Sharpe for same period
+
+**Success Criteria:**
+- Victoria paper trades for 30 days; `OutcomeStore` contains real PnL-based outcome quality records
+- Paper Sharpe and backtest Sharpe visible side-by-side in dashboard (reconciliation gap quantified)
+- Attention router EMA weights shift based on real paper trade outcomes
 
 ---
 
@@ -548,6 +689,7 @@ Adapters: Binance (existing), CoinGecko (existing), ASX (new), NASDAQ via Polygo
 #### EPIC-016: Coordination Layer v2 (Learning-Based Routing)
 **Effort:** XL
 **Dependencies:** EPIC-010, EPIC-009, EPIC-013
+**Status (2026-03-23):** Structurally present, not learning. A3 confirms `NewAttentionRouter()` initialises `RoutingWeightAdapter` as `nil` — the EMA prior path in `Route()` is never exercised. Weights are Xavier-random at startup and remain constant. `OutcomeStore` correctly persists `(goal, routing, outcome)` tuples and the `TrainingEligible: outcomes >= 1000` gate exists, but nothing reads from the store to update router weights. The attention mechanism computes correct scores over random projections — equivalent to random routing. Fix tracked in EPIC-025 (RoutingWeightAdapter EMA wiring) and the offline training pipeline remains a Q4 deliverable.
 
 **Description:**
 The v1 coordination layer uses hand-written routing rules. v2 replaces this with a learned routing function trained on the (goal, state_tensor, plan, outcome) tuples accumulated since v1 launch. The attention mechanism reads current node state tensors and produces a routing distribution over available nodes.
@@ -592,6 +734,43 @@ Emergent capabilities arise when nodes compose. The first composition: Telesis (
 **Success Criteria:**
 - A Telesis anomaly in Victoria's pipeline triggers Victoria to run self-diagnostic automatically
 - At least one composition-derived feature improves Victoria's signal quality metrics
+
+---
+
+#### EPIC-027: Concept Drift Detection
+**Effort:** L
+**Dependencies:** EPIC-007, EPIC-008
+**Source:** Novel Idea 12.4 (SYSTEM_EVALUATION_2026_03_23.md) + Phase 4 item P4.6
+
+**Description:**
+The current system has no mechanism to detect when its signals have stopped working because the market regime has changed. IC EMA decay is slow and reactive. A dedicated `DriftDetector` node monitors signal quality proactively by computing Jensen-Shannon divergence between current and training-window distributions, triggering coordinated system response when drift is detected.
+
+**Design:**
+The `DriftDetector` registers as an Omega node with `"drift_detection"` capability. It runs on every cycle alongside Victoria:
+```
+For each active signal:
+  1. Compute IC over rolling 20-cycle window
+  2. Compute JS divergence: JSD(signal_dist_current ‖ signal_dist_training)
+  3. If JSD > threshold OR IC drops below min_ic:
+     → Publish ConceptDrift event to NATS omega.drift.events
+     → Orchestrator: demote signal weight in DynamicWeightAllocator
+     → Orchestrator: trigger expedited TPE improvement run
+     → Adversarial layer: increase scrutiny threshold for drifting signal
+```
+
+**Deliverables:**
+- `DriftDetector` Python node implementing Node Protocol v1
+- Jensen-Shannon divergence computation between rolling and training-window signal distributions
+- `ConceptDrift` protobuf event: `signal_id`, `drift_score`, `ic_current`, `ic_training`, `triggered_at`
+- NATS event publication on drift detection
+- Orchestrator handles `ConceptDrift` event: weight demotion + expedited TPE trigger
+- Dashboard: Drift Monitor panel showing per-signal drift score over time, threshold crossings
+- Configurable thresholds per signal type (crypto signals may drift faster than macro signals)
+
+**Success Criteria:**
+- Artificially injecting a regime change in test data triggers `ConceptDrift` event within 5 cycles
+- Drifting signal's weight is demonstrably reduced within 1 cycle of `ConceptDrift` event
+- Drift detection does not produce false positives (< 5% false positive rate on 90-day backtest)
 
 ---
 
@@ -700,6 +879,47 @@ v2 learns to route individual goals. v3 learns that *combinations* of nodes prod
 - At least 3 emergent node compositions discovered without manual specification
 - v3 routing outperforms v2 on 80% of coordination cycles
 - Node relationship graph stable and interpretable
+
+---
+
+#### EPIC-028: Constitutional Memory Distillation
+**Effort:** XL
+**Dependencies:** EPIC-013, EPIC-019
+**Source:** Novel Idea 12.6 (SYSTEM_EVALUATION_2026_03_23.md) + Phase 4 item P4.7
+
+**Description:**
+The current memory consolidation pipeline moves records from short-term to long-term memory (archival). The evaluation found that consolidated memories are never read back by the signal pipeline (C10). This epic transforms consolidation from archival into *distillation*: rather than copying or summarising records, the consolidation LLM extracts abstract strategy principles that become active parameterised constraints in the signal layer.
+
+**Design:**
+```
+Consolidation as Distillation:
+Input:  50-100 cycle records about profitable/losing conditions
+Output: StrategyPrinciple protobuf:
+  - condition: "CrossAssetCorrelation drops during high-VIX regimes"
+  - action: "reduce cross-asset position size by 30%"
+  - trigger: {metric: "vpin", operator: ">", threshold: 0.8}
+  - confidence: 0.82
+  - source_record_ids: [...]
+  - created_at: timestamp
+
+These principles are stored in `strategy_principles` table.
+SignalResearchNode reads active principles on each cycle as parameterised rules.
+```
+
+**Deliverables:**
+- `DistillationPipeline` replacing/extending `ConsolidationPipeline` with LLM-powered principle extraction
+- `StrategyPrinciple` protobuf: condition, action trigger, confidence score, source records
+- `strategy_principles` Postgres table with versioning (principles can be superseded)
+- `SignalResearchNode` reads active high-confidence principles (confidence > 0.7) as parameterised feature weights
+- LLM distillation prompt engineering: structured output for machine-readable principle format
+- Principle confidence decay: principles that contradict recent outcomes get confidence reduced
+- Dashboard: Constitutional Memory page showing active principles, confidence scores, source cycle records
+- Human review gate: new principles require approval before activation (consistent with Supervised mode)
+
+**Success Criteria:**
+- After 200 profitable cross-asset cycles, system distills at least 1 principle about cross-asset behavior
+- Distilled principle is observably active in signal research: the parameterised rule changes position sizing
+- Principle confidence decay: a principle that causes 5 consecutive losing cycles loses > 20% confidence
 
 ---
 
@@ -973,6 +1193,64 @@ Reference: OpenTelemetry specification (https://opentelemetry.io/docs/). Grafana
 
 ---
 
+## 7. Novel Research Ideas
+
+These are speculative but architecturally grounded ideas identified during the 2026-03-23 system evaluation. They are not yet EPICs — they represent potential directions for H1 2027 and beyond. Each has a corresponding EPIC or Phase 4 item where implementation has been scoped.
+
+---
+
+### 7.1 Outcome-Weighted Attention Training as Implicit Reinforcement
+
+The `coordination_outcomes` table stores `(goal, routing, state_snapshot, outcome_quality)` tuples — exactly the data needed for offline RL. Rather than hand-crafted EMA weight updates (EPIC-025), the longer-term training approach treats this as a cross-entropy loss problem: given the state tensor and goal at routing time, which routing decision led to the best outcome? A simple cross-entropy loss on routing decisions weighted by outcome quality — no PyTorch required, just Go matrix operations. After 1000+ records, a weekend training run could produce weights that do meaningfully better than random. The infrastructure is already built; only the training loop is missing.
+
+**Status:** Infrastructure complete (OutcomeStore). Training loop tracked in EPIC-016 (offline training pipeline).
+**When to pursue:** After 1000 outcome records accumulate from EPIC-026 (paper trading provides real outcomes).
+
+---
+
+### 7.2 Adversarial Generator Node as a First-Class Capability
+
+Instead of a fixed `AdversarialPressureV2`, create an `AdversarialNode` that registers with the orchestrator as a node with `"adversarial_review"` capability. This node receives current proposals + signal data and uses an LLM to generate adversarial arguments against each proposal. The orchestrator treats adversarial review as just another node output — weighted, replaceable, upgradeable, and evaluatable like any other capability. This makes adversarial pressure composable and improvable rather than hardcoded.
+
+**Status:** Current adversarial pressure is fixed-logic (✅ v2 fix merged). Composable node architecture is a Q4 2026 direction.
+**When to pursue:** After EPIC-017 (cross-node composition) establishes the composition patterns.
+
+---
+
+### 7.3 Goal-Conditioned Node Activation for Cross-Project Intelligence
+
+The current orchestrator activates nodes by ID. A more powerful model: nodes advertise capabilities and cost (latency, resource), and the goal system decomposes a high-level goal into a capability requirement vector. The attention router finds the cheapest node portfolio satisfying the requirement. This enables "Solve goal X" without specifying which nodes — the coordination layer figures it out. This is the proper AGI-layer primitive: goal-directed, capability-driven orchestration.
+
+**Status:** Partially scoped as Phase 3 item P3.9. Goal decomposition infrastructure exists in `GoalArchitecture` (never wired). Node capability registry planned in EPIC-008.
+**When to pursue:** After EPIC-010 (Coordination Layer v1) + EPIC-025 (GoalArchitecture wiring) are complete.
+
+---
+
+### 7.4 Concept Drift as a First-Class Signal
+
+Full description scoped as **EPIC-027**. The key insight beyond the EPIC: concept drift detection itself becomes a signal input to the strategy layer. When the DriftDetector reports that signal X is drifting, other signals that historically *anticorrelate* with X's drift become temporarily upweighted. Drift is information, not just a failure mode.
+
+**Status:** Scoped as EPIC-027 (Q4 2026). The anticorrelation-as-signal direction is post-EPIC-027 research.
+
+---
+
+### 7.5 Compositional Node Discovery
+
+When the system has 4+ nodes, the coordination layer could discover emergent compositions that outperform any single node. For example: "Telesis anomaly score × Victoria signal quality → gating function that reduces position size when Telesis detects infrastructure stress." These compositions are not hand-coded — the outcome store reveals them statistically as routing vectors that co-activate multiple nodes and achieve better outcomes. A periodic "composition search" job identifies these patterns and registers them as meta-nodes.
+
+**Status:** Partially scoped as Phase 3 item P3.10 and in EPIC-021 (Coordination Layer v3 self-organizing). Prerequisite is EPIC-017 (cross-node composition) generating enough outcome data.
+**When to pursue:** Q1 2027, after the node relationship graph in EPIC-021 has accumulated 90 days of data.
+
+---
+
+### 7.6 Constitutional Memory: Compression as Distillation
+
+Full description scoped as **EPIC-028**. The deeper research question: can the distillation LLM discover principles the human designers didn't anticipate? Over 6–12 months of live trading, the memory system may distill regime-conditional rules that outperform hand-crafted factor models. The "constitutional" framing matters: distilled principles are constraints, not just weights — they override the base signal layer when triggered.
+
+**Status:** Scoped as EPIC-028 (Q1 2027). The constitutional override mechanism (principles as hard constraints) is a post-EPIC-028 research direction.
+
+---
+
 ## 6. Key Milestones
 
 ---
@@ -1146,6 +1424,12 @@ Reference: OpenTelemetry specification (https://opentelemetry.io/docs/). Grafana
 | EPIC-020 | Production SLOs and Alerting | Q1 2027 | M | EPIC-001, EPIC-011 |
 | EPIC-021 | Coordination Layer v3 | Q1 2027 | XL | EPIC-016, EPIC-017, EPIC-018 |
 | EPIC-022 | Omega CLI | Q1 2027 | M | EPIC-010, EPIC-008 |
+| EPIC-023 | Data Pipeline Integrity Fixes | Q2 2026 | M | None — P0 |
+| EPIC-024 | Security Hardening | Q2 2026 | M | None |
+| EPIC-025 | Self-Improvement Loop Completion | Q3 2026 | L | EPIC-002, EPIC-003, EPIC-009, EPIC-010 |
+| EPIC-026 | Paper Trading Mode | Q3 2026 | L | EPIC-002 |
+| EPIC-027 | Concept Drift Detection | Q4 2026 | L | EPIC-007, EPIC-008 |
+| EPIC-028 | Constitutional Memory Distillation | Q1 2027 | XL | EPIC-013, EPIC-019 |
 
 ---
 
