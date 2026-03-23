@@ -322,6 +322,169 @@ The 2026-03-23 evaluation found multiple security issues that create real risk i
 
 ---
 
+---
+
+### E2E Cycle Assessment Action Items (2026-03-24)
+
+The following items were identified from a live end-to-end execution assessment and a gap analysis of the evaluation framework. They are sourced from `docs/E2E_CYCLE_FINDINGS.md`. Items are ordered by priority within each quarter.
+
+---
+
+#### ACTION-001: Project-Driven runCycle (FINDING-003)
+**Effort:** S
+**Priority:** P0 — Platform/project decoupling
+**Quarter:** Q2 2026
+**Status:** Implemented 2026-03-24
+
+`victoriaSteps()` in `internal/handler/orchestrator.go` hardcoded Victoria pipeline steps into platform code — a direct violation of the platform/project separation rule. `runCycle()` now reads `PipelineConfig` from the `ProjectHandler` registry. When no projects are registered, the cycle logs a warning and skips pipeline dispatch. Victoria's steps come from its `omegav1.Project` registration in `main.go`.
+
+---
+
+#### ACTION-002: Paper Trading Persistence (FINDING-002)
+**Effort:** M
+**Priority:** P0 — Zero trading data in DB
+**Quarter:** Q2 2026
+**Status:** Implemented 2026-03-24
+
+`victoria_trades`, `victoria_portfolio`, and `victoria_signals` tables had 0 rows. `PaperTradingEngine` added to `omega/nodes/victoria/paper_trading.py`. After risk management completes, the engine writes signals to `victoria_signals`, simulates fills into `victoria_trades`, and tracks portfolio state in `victoria_portfolio`. Victoria-specific — triggered by Victoria project config, not hardcoded in platform.
+
+---
+
+#### ACTION-003: ImprovementEngine Wired to VictoriaNode (FINDING-004)
+**Effort:** M
+**Priority:** P1 — Self-improvement loop silent
+**Quarter:** Q2 2026
+**Status:** Implemented 2026-03-24
+
+`ImprovementEngine.evaluate_and_record()` stored `best_params` in memory but never called `apply_params()`. `VictoriaNode` is now registered with `ImprovementEngine` at startup. After each cycle with `improvement_config.tpe_enabled=True`, the engine runs with real cycle metrics (Sharpe, error rate). When TPE finds better params, `apply_params()` is called and the node version increments.
+
+---
+
+#### ACTION-004: `make dev` Target (FINDING-013)
+**Effort:** XS
+**Priority:** P1 — Developer experience
+**Quarter:** Q2 2026
+**Status:** Implemented 2026-03-24
+
+Starting the dev environment required 3 manual steps in the correct order. `make dev` now brings up Postgres via Docker Compose, backgrounds the Python pipeline server, and runs the Go API in the foreground with `OTLP_ENDPOINT` set. `make dev-down` tears down the stack.
+
+---
+
+#### ACTION-005: CLI Per-Step Results (FINDING-014)
+**Effort:** S
+**Priority:** P1 — Developer experience
+**Quarter:** Q2 2026
+**Status:** Implemented 2026-03-24
+
+`omega run` showed only a one-line health summary per cycle with no per-step visibility. Added `--cycles N` flag. When set, the CLI runs N cycles synchronously and displays per-step success/failure and latency: `step_name: success (123ms)` or `step_name: FAILED (error)`. Shows cycle summary (total duration, steps completed, error count) at the end.
+
+---
+
+#### ACTION-006: Fix REST Autonomy Gate (FINDING-005)
+**Effort:** S
+**Priority:** P0 — Dashboard broken
+**Quarter:** Q2 2026
+**Status:** Open
+
+`GET /api/v1/nodes` returns `autonomy gate: action "GET" is not permitted at PICO autonomy level`. The gate is matching HTTP method strings against action names. REST paths under `/api/v1/` must bypass the autonomy gate — only semantic action names should be gated.
+
+**Fix:** In `withExecChain`, skip gate evaluation for paths starting with `/api/v1/`. Or filter HTTP verb strings in `NewAutonomyGateMiddleware`.
+
+---
+
+#### ACTION-007: Fix Tracer.end_span() Type Confusion (FINDING-006)
+**Effort:** XS
+**Priority:** P2
+**Quarter:** Q2 2026
+**Status:** Open
+
+`Tracer.end_span()` crashes when passed a `TraceContext` object instead of a `str` span_id. Add runtime type coercion: `if isinstance(span_id, TraceContext): span_id = span_id.span_id`. Add docstring.
+
+---
+
+#### ACTION-008: Set OTLP_ENDPOINT in Default Startup (FINDING-007)
+**Effort:** XS
+**Priority:** P2 — Observability gap
+**Quarter:** Q2 2026
+**Status:** Implemented as part of `make dev`
+
+Resolved by `make dev` setting `OTLP_ENDPOINT=http://localhost:4318`. Remaining: add a startup warning when `OTLP_ENDPOINT` is unset so operators know traces are going to stdout only.
+
+---
+
+#### ACTION-009: Confirm StateService→Postgres Connection (FINDING-008)
+**Effort:** S
+**Priority:** P1
+**Quarter:** Q2 2026
+**Status:** Open
+
+`StateService/BeginExecution` returns success but rows don't appear in Postgres. Verify `DATABASE_URL` is set. Add a startup validation that confirms a test write lands in Postgres. Log the DB host (not password) at startup.
+
+---
+
+#### ACTION-010: Wire AdversarialPressureV2 in _step_adversarial() (FINDING-009)
+**Effort:** S
+**Priority:** P1 — Adversarial layer is no-op
+**Quarter:** Q2 2026
+**Status:** Open
+
+`_step_adversarial()` checks `not isinstance(proposal, dict)` — a condition that can never be True given `_step_strategy()` already filters for dicts. `AdversarialPressureV2` is constructed but never called. Wire `self._adversarial.run_v2(proposals)` in `_step_adversarial()`. Populate 3 default structural challenges.
+
+---
+
+#### ACTION-011: Wire GoalArchitecture into Cycle (FINDING-010)
+**Effort:** M
+**Priority:** P2
+**Quarter:** Q3 2026
+**Status:** Open
+
+`GoalArchitecture` is initialised but never called from any cycle. `goal_tracking` table: 0 rows. Wire `GoalArchitecture.evaluate_cycle(cycle_metrics)` into VictoriaNode's post-cycle hook. Write result to `goal_tracking`. Victoria-specific — belongs in `omega/nodes/victoria/`, not platform.
+
+---
+
+#### ACTION-012: Fix Python Trace IDs to W3C-compliant Format (FINDING-011)
+**Effort:** M
+**Priority:** P2 — Distributed tracing broken
+**Quarter:** Q3 2026 (part of EPIC-001)
+**Status:** Open
+
+Python trace IDs are not W3C `traceparent`-compliant. Python/Go spans appear as disconnected trees in Grafana/Tempo. Generate W3C-compliant trace IDs. Propagate `traceparent` header in all Python → Go calls. This is part of EPIC-001 but called out separately due to severity.
+
+---
+
+#### ACTION-013: Wire Memory Kernel to Cycle Output (FINDING-012)
+**Effort:** M
+**Priority:** P3
+**Quarter:** Q3 2026
+**Status:** Open
+
+`MemoryKernel` initialises but no new memories are written during live runs. After each cycle, extract key facts (signal directions, top/bottom performers) and write episodic memories. Schedule consolidation every N cycles. Victoria-specific.
+
+---
+
+#### ACTION-014: Adversarial Review Substantive Challenges (FINDING-009 continued)
+**Effort:** M
+**Priority:** P2
+**Quarter:** Q3 2026
+**Status:** Open
+
+Even after wiring `AdversarialPressureV2`, the challenges list is empty. Populate default structural challenges:
+1. Concentration risk check (max position weight > 40% → challenge)
+2. Data staleness check (market data > 30min old → challenge)
+3. Signal correlation check (all signals agree by > 90% → correlated signal warning)
+
+---
+
+#### ACTION-015: OOS Contamination and TPE Third Split (EVAL_GAP_ANALYSIS A3)
+**Effort:** L
+**Priority:** P2 — Eval framework integrity
+**Quarter:** Q3 2026
+**Status:** Open
+
+All TPE trials in `BacktestEvaluator` score against the same fixed calendar OOS window, which is no longer out-of-sample after the first trial. A proper design requires a held-out test set that TPE never sees. Add a mandatory third split: train/validate(OOS for TPE)/test(never seen by TPE). Until this is fixed, all Sharpe numbers from TPE optimisation are upper-bounded estimates.
+
+---
+
 ### Q3 2026 (Months 4–6): Scale Epics
 
 ---
