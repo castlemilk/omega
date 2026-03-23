@@ -179,12 +179,10 @@ class OmegaRunner:
 
         result = self._orchestrator.run_one_cycle()
 
-        duration = 0.0
-        if result and isinstance(result, dict):
-            duration = float(result.get("duration_seconds", 0.0))
+        duration = getattr(result, "duration_seconds", 0.0)
 
         if self._exporter:
-            self._exporter.record_heartbeat(duration_seconds=duration)
+            self._exporter.record_heartbeat(duration_s=duration)
 
         logger.debug("Heartbeat %d complete", iteration)
 
