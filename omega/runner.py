@@ -211,7 +211,7 @@ class OmegaRunner:
                 logger.warning("Node %s failed: %s", node_id, exc)
 
         if self._exporter:
-            self._exporter.record_heartbeat(duration_seconds=0.0)
+            self._exporter.record_heartbeat(duration_s=0.0)
 
         logger.debug("Heartbeat %d complete  nodes_ran=%d", iteration, len(results))
 
