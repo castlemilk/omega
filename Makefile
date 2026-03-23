@@ -4,6 +4,7 @@
         py-test py-lint \
         test-db test-handler test-integration all \
         db-up db-down \
+        dev dev-down \
         otel-up otel-down otel-logs
 
 # ---------------------------------------------------------------------------
@@ -36,6 +37,39 @@ db-up:
 ## db-down: stop Postgres container
 db-down:
 	docker compose stop postgres
+
+# ---------------------------------------------------------------------------
+# Full dev stack — single command to bring up the entire local environment
+# ---------------------------------------------------------------------------
+
+## dev: start Postgres + Python pipeline server (background) + Go API (foreground)
+##      Requires: docker, python3, go
+##      Set DATABASE_URL before running if Postgres is external:
+##        export DATABASE_URL=postgres://omega:omega@localhost:5432/omega?sslmode=disable
+dev:
+	@echo "── Starting Postgres ──────────────────────────────────────────────────"
+	docker compose up -d postgres
+	@echo "── Starting Python pipeline server (background, port 9090) ────────────"
+	DATABASE_URL=postgres://omega:omega@localhost:5432/omega?sslmode=disable \
+	  OMEGA_PYTHON_PIPELINE_ADDR=http://localhost:9090 \
+	  python3 -m omega.bridge.pipeline_server &
+	@echo "Pipeline server PID: $$!"
+	@echo "── Waiting 2s for pipeline server to boot ──────────────────────────────"
+	sleep 2
+	@echo "── Starting Go API (foreground) ────────────────────────────────────────"
+	@echo "  Press Ctrl+C to stop.  Run 'make dev-down' to clean up background processes."
+	DATABASE_URL=postgres://omega:omega@localhost:5432/omega?sslmode=disable \
+	  OMEGA_PYTHON_PIPELINE_ADDR=http://localhost:9090 \
+	  OTLP_ENDPOINT=http://localhost:4318 \
+	  go run ./cmd/omega-api
+
+## dev-down: stop Postgres and any background pipeline server processes
+dev-down:
+	@echo "── Stopping Postgres ───────────────────────────────────────────────────"
+	docker compose stop postgres
+	@echo "── Killing pipeline server (port 9090) ─────────────────────────────────"
+	-lsof -ti:9090 | xargs kill -9 2>/dev/null || true
+	@echo "Dev stack stopped."
 
 # ---------------------------------------------------------------------------
 # Proto generation
