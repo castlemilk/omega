@@ -16,6 +16,7 @@ import (
 
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
+	"github.com/benebsworth/omega/internal/bridge"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/observability"
 	"github.com/benebsworth/omega/internal/telemetry"
@@ -26,8 +27,9 @@ var _ omegav1connect.OrchestratorServiceHandler = (*OrchestratorHandler)(nil)
 
 // OrchestratorHandler implements OrchestratorService.
 type OrchestratorHandler struct {
-	db         *db.DB
-	cbRegistry *observability.CircuitBreakerRegistry // may be nil
+	db             *db.DB
+	cbRegistry     *observability.CircuitBreakerRegistry // may be nil
+	pipelineClient *bridge.PipelineClient                // may be nil
 
 	mu     sync.Mutex
 	cancel context.CancelFunc // non-nil while orchestrator loop is running
@@ -43,6 +45,15 @@ func New(database *db.DB) *OrchestratorHandler {
 // ListNodes and GetNode responses include live circuit breaker state.
 func (h *OrchestratorHandler) WithCircuitBreakerRegistry(r *observability.CircuitBreakerRegistry) *OrchestratorHandler {
 	h.cbRegistry = r
+	return h
+}
+
+// WithPipelineClient attaches a Python pipeline client so runCycle() can drive
+// pipeline step execution on the Python side.  When set, each orchestration
+// cycle will call ExecuteStep on the Python server for every Victoria pipeline
+// step in order.
+func (h *OrchestratorHandler) WithPipelineClient(c *bridge.PipelineClient) *OrchestratorHandler {
+	h.pipelineClient = c
 	return h
 }
 
@@ -658,11 +669,64 @@ func (h *OrchestratorHandler) runCycle(ctx context.Context) {
 		nodeSpan.End()
 	}
 
+	// When a Python pipeline client is configured, drive each Victoria pipeline
+	// step in order and record outcomes as OTel span events.
+	if h.pipelineClient != nil {
+		for _, step := range victoriaSteps() {
+			_, stepSpan := tracer.Start(cycleCtx, "orchestrator.pipeline.step",
+				trace.WithAttributes(
+					attribute.String("step_id", step.StepId),
+					attribute.String("step_name", step.Name),
+					attribute.String("node_type", step.NodeType),
+					attribute.Int64("cycle", cycle),
+				),
+			)
+			resp, err := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
+				StepId:   step.StepId,
+				StepName: step.Name,
+				NodeType: step.NodeType,
+				Cycle:    cycle,
+			})
+			if err != nil {
+				stepSpan.SetStatus(codes.Error, err.Error())
+				stepSpan.End()
+				continue
+			}
+			stepSpan.SetStatus(codes.Ok, "")
+			stepSpan.SetAttributes(
+				attribute.Bool("success", resp.Success),
+				attribute.Float64("duration_ms", resp.DurationMs),
+				attribute.String("node_id", resp.NodeId),
+			)
+			if !resp.Success {
+				stepSpan.SetStatus(codes.Error, resp.ErrorText)
+			}
+			stepSpan.End()
+		}
+	}
+
 	_ = h.db.LogActivity("cycle_complete", "system", "orchestrator", map[string]any{
 		"cycle": cycle, "node_count": len(nodes),
 	}, cycle)
 
 	cycleSpan.SetStatus(codes.Ok, "")
+}
+
+// victoriaSteps returns the ordered Victoria pipeline steps.
+// These are the same steps seeded into the Victoria project config in main.go.
+// TODO: replace with a DB/project-config lookup when multi-project lands.
+func victoriaSteps() []*omegav1.PipelineStep {
+	return []*omegav1.PipelineStep{
+		{StepId: "step_1", Name: "DataIngestion", NodeType: "DATA_INGESTION", Order: 1},
+		{StepId: "step_2", Name: "SignalResearch", NodeType: "SIGNAL_RESEARCH", Order: 2},
+		{StepId: "step_3", Name: "IntelligenceCoordination", NodeType: "STRATEGY", Order: 3},
+		{StepId: "step_4", Name: "DynamicWeights", NodeType: "RISK_MANAGEMENT", Order: 4},
+		{StepId: "step_5", Name: "DebateGate", NodeType: "VERIFICATION", Order: 5},
+		{StepId: "step_6", Name: "WalkForward", NodeType: "VERIFICATION", Order: 6},
+		{StepId: "step_7", Name: "Memory", NodeType: "MEMORY", Order: 7},
+		{StepId: "step_8", Name: "ImprovementEngine", NodeType: "IMPROVEMENT", Order: 8},
+		{StepId: "step_9", Name: "Ring3Adversarial", NodeType: "ADVERSARIAL", Order: 9},
+	}
 }
 
 func (h *OrchestratorHandler) StopOrchestrator(
