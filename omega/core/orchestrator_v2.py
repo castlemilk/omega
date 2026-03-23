@@ -119,6 +119,7 @@ class OmegaOrchestrator:
         memory_consolidation: ConsolidationPipeline | None = None,
         metrics_exporter: MetricsExporter | None = None,
         history_size: int = 500,
+        paper_trading: Any | None = None,
     ) -> None:
         self.name = name
         self._registry = NodeRegistry()
@@ -135,6 +136,7 @@ class OmegaOrchestrator:
         self._adversarial = adversarial if adversarial is not None else AdversarialPressureV2()
         self._consolidation = memory_consolidation
         self._metrics = metrics_exporter
+        self._paper_trading = paper_trading
 
         self._history = CycleHistory(max_size=history_size)
         self._cycle_number: int = 0
@@ -745,12 +747,25 @@ class OmegaOrchestrator:
         proposals: list[dict[str, Any]],
         log: Any,
     ) -> None:
-        """Execute approved trade proposals (pluggable execution hook)."""
+        """Execute approved trade proposals via PaperTradingEngine (if wired in)."""
         if not proposals:
             return
-        # Default: log and count; real execution implemented by subclass or injected hook
         result.actions_executed = len(proposals)
         log.debug("Executing %d proposals (cycle %d)", len(proposals), ctx.cycle_number)
+
+        if self._paper_trading is not None:
+            try:
+                executed = self._paper_trading.execute_proposals(
+                    proposals,
+                    cycle_id=ctx.cycle_id,
+                )
+                log.info(
+                    "PaperTrading: executed %d trades (cycle %d)",
+                    len(executed),
+                    ctx.cycle_number,
+                )
+            except Exception as exc:
+                log.warning("PaperTrading execution failed: %s", exc)
 
     # ------------------------------------------------------------------
     # Post-cycle: improvement, consolidation, metrics, regime

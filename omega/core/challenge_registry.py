@@ -429,8 +429,8 @@ class ChallengeRegistry:
                  SUM(CASE WHEN status IN ('resolved','wontfix') THEN 1 ELSE 0 END) as closed
                FROM challenges"""
         ).fetchone()
-        total = row["total"] or 0
-        closed = row["closed"] or 0
+        total = (row["total"] or 0) if row is not None else 0
+        closed = (row["closed"] or 0) if row is not None else 0
         return closed / total if total > 0 else 1.0
 
     def has_blocking_challenges(self) -> bool:
@@ -438,7 +438,7 @@ class ChallengeRegistry:
         row = self._conn.execute(
             "SELECT COUNT(*) as n FROM challenges WHERE severity='critical' AND status='open'"
         ).fetchone()
-        return (row["n"] or 0) > 0
+        return ((row["n"] or 0) if row is not None else 0) > 0
 
     # ------------------------------------------------------------------
     # Seeding
