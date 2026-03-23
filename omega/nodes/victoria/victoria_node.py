@@ -459,7 +459,68 @@ class VictoriaNode(Node):
         signals["_weights"] = raw_weights
         signals["_regime"] = regime
         self._last_signals = signals
+        self._persist_signals_to_db(signals)
         return signals
+
+    def _persist_signals_to_db(self, signals: dict[str, Any]) -> None:
+        """Write computed signals to victoria_signals table.
+
+        Called after every _do_compute_signals() regardless of whether the call
+        came from the Go bridge or direct orchestration.  Silently skips if
+        DATABASE_URL is unset or psycopg2 is unavailable.
+        """
+        import os
+
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            return
+        try:
+            import psycopg2
+        except ImportError:
+            logger.debug("psycopg2 not available — skipping signal persistence")
+            return
+
+        rows = []
+        weights = signals.get("_weights", {})
+        for name, sig in signals.items():
+            if name.startswith("_"):
+                continue
+            if not isinstance(sig, dict):
+                continue
+            value = float(sig.get("value", 0.0))
+            confidence = float(sig.get("confidence", 0.0))
+            weight = float(weights.get(name, value))
+            rows.append(
+                {
+                    "name": name,
+                    "weight": weight,
+                    "current_value": value,
+                    "conviction": confidence,
+                }
+            )
+
+        if not rows:
+            return
+
+        sql = """
+            INSERT INTO victoria_signals (name, weight, current_value, conviction)
+            VALUES (%(name)s, %(weight)s, %(current_value)s, %(conviction)s)
+            ON CONFLICT (name) DO UPDATE SET
+                weight        = EXCLUDED.weight,
+                current_value = EXCLUDED.current_value,
+                conviction    = EXCLUDED.conviction
+        """
+        try:
+            conn = psycopg2.connect(db_url)
+            try:
+                with conn, conn.cursor() as cur:
+                    for row in rows:
+                        cur.execute(sql, row)
+            finally:
+                conn.close()
+            logger.debug("Persisted %d signal(s) to victoria_signals", len(rows))
+        except Exception as exc:
+            logger.warning("Failed to persist signals to victoria_signals: %s", exc)
 
     def _do_construct_portfolio(self, inp: NodeInput) -> list[dict[str, Any]]:
         """Construct portfolio from signals, respecting autonomy level."""
