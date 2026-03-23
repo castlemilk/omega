@@ -236,7 +236,7 @@ func (h *OrchestratorHandler) ListTraces(
 	if limit <= 0 {
 		limit = 20
 	}
-	traces, err := h.db.RecentTraces(limit)
+	traces, err := h.db.RecentTraces(limit, req.Msg.NodeFilter)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -312,7 +312,7 @@ func (h *OrchestratorHandler) GetMetrics(
 	}
 	costs, _ := h.db.GetCosts()
 	issues, _ := h.db.GetIssues("open")
-	traces, _ := h.db.RecentTraces(5)
+	traces, _ := h.db.RecentTraces(5, "")
 
 	resp := &omegav1.GetMetricsResponse{System: dbHealthToProto(health)}
 	for _, n := range nodes {

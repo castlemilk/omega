@@ -180,7 +180,7 @@ func TestRecentTraces_Empty(t *testing.T) {
 	d, cleanup := setupTestDB(t)
 	defer cleanup()
 
-	traces, err := d.RecentTraces(10)
+	traces, err := d.RecentTraces(10, "")
 	if err != nil {
 		t.Fatalf("RecentTraces: %v", err)
 	}
