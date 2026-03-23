@@ -208,3 +208,28 @@ class ChallengeVetoError(OmegaError):
         )
         self.challenge_id = challenge_id
         self.severity = severity
+
+
+class DataQualityError(OmegaError):
+    """Raised when data quality requirements are not met.
+
+    Used by the data pipeline when real data is unavailable and synthetic
+    fallback is not explicitly permitted (allow_synthetic=False).
+
+    Args:
+        message:  Human-readable description.
+        source:   Data source that failed (e.g. ``"binance"``, ``"backtest"``).
+        symbol:   Ticker symbol being fetched (empty string if N/A).
+        **extra:  Additional context (e.g. last_fetch_time, freshness_minutes).
+    """
+
+    def __init__(
+        self,
+        message: str,
+        source: str = "",
+        symbol: str = "",
+        **extra: Any,
+    ) -> None:
+        super().__init__(message, context={"source": source, "symbol": symbol, **extra})
+        self.source = source
+        self.symbol = symbol

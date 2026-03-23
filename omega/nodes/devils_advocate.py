@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import time
 import uuid
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
@@ -36,6 +37,19 @@ from omega.core.challenge_registry import (
 )
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.verification_gates import VerificationGateSystem
+
+
+@dataclass
+class StructuralChallengeResult:
+    """Result of a structural challenge check against live cycle data."""
+
+    fired: bool
+    challenge_id: str
+    check_name: str
+    severity: str
+    description: str
+    value: float  # the metric that triggered (or was checked)
+    threshold: float
 
 
 class ReviewMode(StrEnum):
@@ -119,6 +133,155 @@ class DevilsAdvocateNode(Node):
     def improve(self, feedback: dict[str, Any]) -> bool:
         """Devil's advocate does not self-improve. It challenges others."""
         return False
+
+    # ------------------------------------------------------------------
+    # Structural challenge checks (called per-cycle with live data)
+    # ------------------------------------------------------------------
+
+    def run_structural_checks(
+        self,
+        proposals: list[dict[str, Any]],
+        signals: dict[str, float],
+        data_freshness_minutes: float = 0.0,
+    ) -> list[StructuralChallengeResult]:
+        """
+        Evaluate 3 default structural challenges against live cycle data.
+
+        1. Concentration risk — any single position > 30% of total weight.
+        2. Data staleness    — data older than 60 minutes.
+        3. Signal correlation — top-2 signals (by magnitude) with |1 - normalised
+           distance| > 0.7 (i.e., they are moving nearly identically).
+
+        Returns a list of StructuralChallengeResult; ``fired=True`` entries
+        represent active violations. Results with ``fired=True`` are also
+        registered in the ChallengeRegistry so the DA's normal gate logic
+        can observe them.
+        """
+        results: list[StructuralChallengeResult] = []
+
+        # ── 1. Concentration risk ─────────────────────────────────────────────
+        results.append(self._check_concentration_risk(proposals))
+
+        # ── 2. Data staleness ─────────────────────────────────────────────────
+        results.append(self._check_data_staleness(data_freshness_minutes))
+
+        # ── 3. Signal correlation ─────────────────────────────────────────────
+        results.append(self._check_signal_correlation(signals))
+
+        # Register fired challenges in the registry
+        for res in results:
+            if res.fired:
+                sev = ChallengeSeverity(res.severity)
+                self._registry.add(
+                    target_subsystem="structural",
+                    severity=sev,
+                    description=res.description,
+                    evidence=f"value={res.value:.4f} threshold={res.threshold:.4f}",
+                )
+
+        return results
+
+    def _check_concentration_risk(
+        self, proposals: list[dict[str, Any]]
+    ) -> StructuralChallengeResult:
+        """Flag if any single position weight > 30% of total portfolio weight."""
+        threshold = 0.30
+        if not proposals:
+            return StructuralChallengeResult(
+                fired=False,
+                challenge_id="concentration_risk",
+                check_name="concentration_risk",
+                severity=ChallengeSeverity.HIGH.value,
+                description="No proposals — concentration check skipped.",
+                value=0.0,
+                threshold=threshold,
+            )
+
+        weights = [abs(float(p.get("weight", 0.0))) for p in proposals]
+        total = sum(weights) or 1.0
+        max_fraction = max(weights) / total if weights else 0.0
+        fired = max_fraction > threshold
+        return StructuralChallengeResult(
+            fired=fired,
+            challenge_id="concentration_risk",
+            check_name="concentration_risk",
+            severity=ChallengeSeverity.HIGH.value,
+            description=(
+                f"Concentration risk: largest position is {max_fraction:.1%} of portfolio "
+                f"(threshold {threshold:.0%}). "
+                + (
+                    f"Symbol: {proposals[weights.index(max(weights))].get('symbol', '?')}"
+                    if fired
+                    else ""
+                )
+            ),
+            value=max_fraction,
+            threshold=threshold,
+        )
+
+    def _check_data_staleness(self, data_freshness_minutes: float) -> StructuralChallengeResult:
+        """Flag if data is older than 60 minutes."""
+        threshold_minutes = 60.0
+        fired = data_freshness_minutes > threshold_minutes
+        return StructuralChallengeResult(
+            fired=fired,
+            challenge_id="data_staleness",
+            check_name="data_staleness",
+            severity=ChallengeSeverity.CRITICAL.value,
+            description=(
+                f"Data staleness: last fetch was {data_freshness_minutes:.1f} minutes ago "
+                f"(threshold {threshold_minutes:.0f} minutes)."
+            ),
+            value=data_freshness_minutes,
+            threshold=threshold_minutes,
+        )
+
+    def _check_signal_correlation(self, signals: dict[str, float]) -> StructuralChallengeResult:
+        """
+        Flag if the top-2 signals by magnitude are > 0.7 correlated.
+
+        Correlation proxy: 1 - normalised_distance(a, b) where normalised
+        distance = |a - b| / (|a| + |b| + ε).  Two signals with the same
+        direction and similar magnitude score close to 1.0.
+        """
+        threshold = 0.70
+        if len(signals) < 2:
+            return StructuralChallengeResult(
+                fired=False,
+                challenge_id="signal_correlation",
+                check_name="signal_correlation",
+                severity=ChallengeSeverity.MEDIUM.value,
+                description="Fewer than 2 signals — correlation check skipped.",
+                value=0.0,
+                threshold=threshold,
+            )
+
+        sorted_sigs = sorted(signals.items(), key=lambda kv: abs(kv[1]), reverse=True)
+        _, a = sorted_sigs[0]
+        _, b = sorted_sigs[1]
+
+        eps = 1e-9
+        norm_dist = abs(a - b) / (abs(a) + abs(b) + eps)
+        # norm_dist ≈ 0 → nearly identical (high correlation proxy)
+        # norm_dist ≈ 1 → very different (low correlation)
+        corr_proxy = 1.0 - norm_dist
+
+        # Only flag if both signals have the same sign (co-directional)
+        same_direction = (a * b) > 0
+        fired = same_direction and corr_proxy > threshold
+
+        return StructuralChallengeResult(
+            fired=fired,
+            challenge_id="signal_correlation",
+            check_name="signal_correlation",
+            severity=ChallengeSeverity.MEDIUM.value,
+            description=(
+                f"Signal correlation: top-2 signals correlation proxy = {corr_proxy:.3f} "
+                f"(threshold {threshold:.2f}, same_direction={same_direction})."
+            ),
+            value=corr_proxy,
+            threshold=threshold,
+        )
 
     def execute(self, input: NodeInput) -> NodeOutput:
         t0 = time.perf_counter()

@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 from omega.core.adversarial_v2 import AdversarialPressureV2
@@ -348,6 +349,7 @@ class OmegaOrchestrator:
         self,
         max_cycles: int | None = None,
         sleep_seconds: float = 0.0,
+        sleep_until: str = "fixed",
         goal_node_ids: set[str] | None = None,
     ) -> CycleHistory:
         """
@@ -356,10 +358,25 @@ class OmegaOrchestrator:
         Parameters
         ----------
         max_cycles    : Stop after this many cycles (None = run forever).
-        sleep_seconds : Time to sleep between cycles (0 = tight loop).
+        sleep_seconds : For ``sleep_until="fixed"``, seconds to sleep between cycles.
+                        Ignored when ``sleep_until="next_candle"``.
+        sleep_until   : Sleep strategy between cycles.
+
+                        ``"fixed"`` (default) — sleep for ``sleep_seconds`` seconds.
+                        ``"next_candle"``      — sleep until the next UTC hourly
+                        boundary (aligns with 1-hour candle close times).  If the
+                        computed wait is < 1 s (i.e. we are already at/past the
+                        boundary), wait 1 s to avoid a tight spin.
+
         goal_node_ids : If provided, reconcile active nodes to this set each cycle.
 
         Returns the full CycleHistory.
+
+        Adaptive sleep guard
+        --------------------
+        For ``"fixed"`` mode: if ``sleep_seconds < 1.0`` AND the last cycle
+        completed in under 0.05 s (indicating no real I/O occurred), the loop
+        backs off to 1 s to prevent hammering external APIs.
         """
         self._running = True
         logger.info("Starting OmegaOrchestrator '%s' (max_cycles=%s)", self.name, max_cycles)
@@ -367,9 +384,10 @@ class OmegaOrchestrator:
             while self._running:
                 if max_cycles is not None and self._cycle_number >= max_cycles:
                     break
-                self.run_one_cycle(goal_node_ids=goal_node_ids)
-                if sleep_seconds > 0:
-                    time.sleep(sleep_seconds)
+                cycle_result = self.run_one_cycle(goal_node_ids=goal_node_ids)
+                wait = self._compute_sleep(sleep_until, sleep_seconds, cycle_result)
+                if wait > 0:
+                    time.sleep(wait)
         except KeyboardInterrupt:
             logger.info("OmegaOrchestrator '%s' interrupted", self.name)
         finally:
@@ -381,6 +399,37 @@ class OmegaOrchestrator:
             self._cycle_number,
         )
         return self._history
+
+    @staticmethod
+    def _compute_sleep(
+        sleep_until: str,
+        sleep_seconds: float,
+        cycle_result: CycleResult | None,
+    ) -> float:
+        """Return the number of seconds to sleep before the next cycle.
+
+        ``"fixed"``       — return ``sleep_seconds``, with an adaptive floor of
+                            1 s when the cycle was too fast (< 0.05 s) and
+                            ``sleep_seconds < 1.0``, preventing API hammering.
+        ``"next_candle"`` — compute seconds until the next UTC hour boundary.
+                            Minimum 1 s so we never spin.
+        """
+        if sleep_until == "next_candle":
+            now = datetime.now(UTC)
+            # Next full UTC hour
+            seconds_into_hour = now.minute * 60 + now.second + now.microsecond / 1e6
+            seconds_until_next_hour = 3600.0 - seconds_into_hour
+            return max(1.0, seconds_until_next_hour)
+
+        # "fixed" mode
+        cycle_duration = getattr(cycle_result, "duration_seconds", None)
+        if sleep_seconds < 1.0 and cycle_duration is not None and cycle_duration < 0.05:
+            logger.debug(
+                "Adaptive sleep: cycle too fast (%.3fs), backing off to 1s to avoid API hammering",
+                cycle_duration,
+            )
+            return 1.0
+        return sleep_seconds
 
     def stop(self) -> None:
         """Signal the run loop to stop after the current cycle completes."""
@@ -654,9 +703,19 @@ class OmegaOrchestrator:
                 elif isinstance(v, dict) and "composite_signal" in v:
                     current_signals[k] = float(v["composite_signal"])
 
+        # Build actual position weights from proposals so AdversarialPressureV2
+        # has real portfolio data for structural challenge evaluation.
+        positions: dict[str, float] = {}
+        for prop in clean:
+            sym = prop.get("symbol") or prop.get("node_id", "unknown")
+            positions[sym] = float(prop.get("weight", 0.0))
+
         strategy_params: dict[str, Any] = {
             "proposal_count": len(clean),
             "regime": ctx.regime,
+            # Real proposal data for structural checks
+            "positions": positions,
+            "total_weight": sum(abs(w) for w in positions.values()),
         }
 
         # --- Call AdversarialPressureV2 ---
@@ -671,6 +730,16 @@ class OmegaOrchestrator:
             result.error_count += 1
             log.error("AdversarialPressureV2.run_v2 failed: %s", exc)
             return clean  # fail-open
+
+        # --- DevilsAdvocateNode structural checks ---
+        # Run against real cycle data: proposals, signals, data freshness.
+        self._run_da_structural_checks(
+            ctx=ctx,
+            result=result,
+            proposals=clean,
+            current_signals=current_signals,
+            log=log,
+        )
 
         ring1_result = adv_report.base_report.ring1_result
         ring1_flagged = ring1_result is not None and ring1_result.flagged
@@ -765,6 +834,73 @@ class OmegaOrchestrator:
                 log.warning("Critical adversarial flag → autonomy demotion for node %s", node_id)
 
         return approved
+
+    def _run_da_structural_checks(
+        self,
+        ctx: CycleContext,
+        result: CycleResult,
+        proposals: list[dict[str, Any]],
+        current_signals: dict[str, float],
+        log: Any,
+    ) -> None:
+        """
+        Invoke DevilsAdvocateNode structural checks if one is registered.
+
+        Finds the first active DevilsAdvocateNode and runs its 3 structural
+        checks (concentration risk, data staleness, signal correlation) against
+        the current cycle's proposals and signals.  Fires adversarial flags for
+        any checks that trigger.
+        """
+        from omega.nodes.devils_advocate import DevilsAdvocateNode
+
+        da_node: DevilsAdvocateNode | None = None
+        for node in self.active_nodes:
+            if isinstance(node, DevilsAdvocateNode):
+                da_node = node
+                break
+
+        if da_node is None:
+            return
+
+        # Extract data freshness from node state metrics (if available)
+        data_freshness_minutes = 0.0
+        for node in self.active_nodes:
+            state = node.get_state()
+            freshness = state.metrics.get("data_freshness_minutes")
+            if freshness is not None:
+                data_freshness_minutes = max(data_freshness_minutes, float(freshness))
+
+        try:
+            structural_results = da_node.run_structural_checks(
+                proposals=proposals,
+                signals=current_signals,
+                data_freshness_minutes=data_freshness_minutes,
+            )
+        except Exception as exc:
+            log.warning("DevilsAdvocateNode structural checks failed: %s", exc)
+            return
+
+        for check in structural_results:
+            if check.fired:
+                severity = "critical" if check.severity == "critical" else "warning"
+                log.warning(
+                    "DA structural check fired [cycle=%d]: %s — %s",
+                    ctx.cycle_number,
+                    check.check_name,
+                    check.description,
+                )
+                result.add_adversarial_flag(
+                    ring="da_structural",
+                    severity=severity,
+                    reason=check.check_name,
+                    details={
+                        "description": check.description,
+                        "value": check.value,
+                        "threshold": check.threshold,
+                    },
+                )
+                if self._metrics:
+                    self._metrics.record_adversarial_flag("da_structural", severity)
 
     def _step_execute(
         self,

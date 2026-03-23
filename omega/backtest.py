@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from datetime import date, timedelta
 from typing import Any
 
+from omega.core.errors import DataQualityError
 from omega.eval.sharpe import sharpe_ratio as _canonical_sharpe
 
 logger = logging.getLogger("omega.backtest")
@@ -63,6 +64,7 @@ class BacktestResult:
     win_rate: float
     total_trades: int
     trades: list[Trade] = field(default_factory=list)
+    is_synthetic: bool = False
 
     def to_dict(self) -> dict:
         return {
@@ -76,6 +78,7 @@ class BacktestResult:
             "max_drawdown_pct": round(self.max_drawdown_pct, 4),
             "win_rate": round(self.win_rate, 4),
             "total_trades": self.total_trades,
+            "is_synthetic": self.is_synthetic,
         }
 
 
@@ -133,13 +136,15 @@ class BacktestEngine:
             compare_pico,
         )
 
-        data = self._load_data(start_date, end_date)
+        data, is_synthetic = self._load_data(start_date, end_date)
 
         pico_result = self._run_pico(data, start_date, end_date)
+        pico_result.is_synthetic = is_synthetic
         report: dict = {"pico": pico_result.to_dict()}
 
         if not pico_only:
             omega_result = self._run_omega(data, start_date, end_date)
+            omega_result.is_synthetic = is_synthetic
             report["omega"] = omega_result.to_dict()
 
             if compare_pico:
@@ -150,6 +155,7 @@ class BacktestEngine:
             "end_date": end_date,
             "symbols": self.symbols,
             "trading_days": len(next(iter(data.values()), [])),
+            "is_synthetic": is_synthetic,
         }
         return report
 
@@ -157,28 +163,33 @@ class BacktestEngine:
     # Data loading
     # ------------------------------------------------------------------
 
-    def _load_data(self, start_date: str, end_date: str) -> dict[str, list[OHLCV]]:
+    def _load_data(self, start_date: str, end_date: str) -> tuple[dict[str, list[OHLCV]], bool]:
         """
         Attempt to load real data via the DataIngestionNode.
 
-        When ``allow_synthetic=False`` (the default), raises ``ValueError`` if
-        real data is unavailable — no silent fallback to noise.
+        Returns ``(data, is_synthetic)`` where ``is_synthetic=True`` means the
+        data was generated locally and results are not meaningful.
+
+        When ``allow_synthetic=False`` (the default), raises ``DataQualityError``
+        if real data is unavailable — no silent fallback to noise.
         When ``allow_synthetic=True``, falls back to synthetic data and logs a
         loud WARNING so callers know results are not meaningful.
         """
         try:
-            return self._load_real_data(start_date, end_date)
+            return self._load_real_data(start_date, end_date), False
         except Exception as exc:
             if not self._allow_synthetic:
-                raise ValueError(
+                raise DataQualityError(
                     "No real market data available. "
-                    "Pass allow_synthetic=True to use synthetic data for testing only."
+                    "Pass allow_synthetic=True to use synthetic data for testing only.",
+                    source="backtest",
+                    symbols=self.symbols,
                 ) from exc
             logger.warning(
                 "USING SYNTHETIC DATA — results are not meaningful. Real data unavailable: %s",
                 exc,
             )
-            return self._generate_synthetic_data(start_date, end_date)
+            return self._generate_synthetic_data(start_date, end_date), True
 
     def _load_real_data(self, start_date: str, end_date: str) -> dict[str, list[OHLCV]]:
         from omega.core.node import NodeInput
