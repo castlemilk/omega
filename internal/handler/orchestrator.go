@@ -30,6 +30,7 @@ type OrchestratorHandler struct {
 	db             *db.DB
 	cbRegistry     *observability.CircuitBreakerRegistry // may be nil
 	pipelineClient *bridge.PipelineClient                // may be nil
+	projectHandler *ProjectHandler                       // may be nil; provides pipeline configs
 
 	mu     sync.Mutex
 	cancel context.CancelFunc // non-nil while orchestrator loop is running
@@ -50,10 +51,18 @@ func (h *OrchestratorHandler) WithCircuitBreakerRegistry(r *observability.Circui
 
 // WithPipelineClient attaches a Python pipeline client so runCycle() can drive
 // pipeline step execution on the Python side.  When set, each orchestration
-// cycle will call ExecuteStep on the Python server for every Victoria pipeline
-// step in order.
+// cycle will call ExecuteStep on the Python server for every pipeline step
+// defined in the registered projects.
 func (h *OrchestratorHandler) WithPipelineClient(c *bridge.PipelineClient) *OrchestratorHandler {
 	h.pipelineClient = c
+	return h
+}
+
+// WithProjectHandler attaches the project registry so runCycle() can read
+// pipeline configurations from registered projects instead of using
+// hardcoded step lists.
+func (h *OrchestratorHandler) WithProjectHandler(ph *ProjectHandler) *OrchestratorHandler {
+	h.projectHandler = ph
 	return h
 }
 
@@ -669,39 +678,49 @@ func (h *OrchestratorHandler) runCycle(ctx context.Context) {
 		nodeSpan.End()
 	}
 
-	// When a Python pipeline client is configured, drive each Victoria pipeline
-	// step in order and record outcomes as OTel span events.
+	// When a Python pipeline client is configured, drive each registered
+	// project's pipeline steps in order.  Steps come from project.PipelineConfig
+	// — no Victoria-specific step names live in this file.
 	if h.pipelineClient != nil {
-		for _, step := range victoriaSteps() {
-			_, stepSpan := tracer.Start(cycleCtx, "orchestrator.pipeline.step",
-				trace.WithAttributes(
-					attribute.String("step_id", step.StepId),
-					attribute.String("step_name", step.Name),
-					attribute.String("node_type", step.NodeType),
-					attribute.Int64("cycle", cycle),
-				),
-			)
-			resp, err := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
-				StepId:   step.StepId,
-				StepName: step.Name,
-				NodeType: step.NodeType,
-				Cycle:    cycle,
-			})
-			if err != nil {
-				stepSpan.SetStatus(codes.Error, err.Error())
+		projects := h.projectPipelineSteps()
+		if len(projects) == 0 {
+			_ = h.db.LogActivity("cycle_warning", "system", "orchestrator", map[string]any{
+				"cycle": cycle, "warning": "no projects registered — pipeline dispatch skipped",
+			}, cycle)
+		}
+		for projectID, steps := range projects {
+			for _, step := range steps {
+				_, stepSpan := tracer.Start(cycleCtx, "orchestrator.pipeline.step",
+					trace.WithAttributes(
+						attribute.String("project_id", projectID),
+						attribute.String("step_id", step.StepId),
+						attribute.String("step_name", step.Name),
+						attribute.String("node_type", step.NodeType),
+						attribute.Int64("cycle", cycle),
+					),
+				)
+				resp, err := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
+					StepId:   step.StepId,
+					StepName: step.Name,
+					NodeType: step.NodeType,
+					Cycle:    cycle,
+				})
+				if err != nil {
+					stepSpan.SetStatus(codes.Error, err.Error())
+					stepSpan.End()
+					continue
+				}
+				stepSpan.SetStatus(codes.Ok, "")
+				stepSpan.SetAttributes(
+					attribute.Bool("success", resp.Success),
+					attribute.Float64("duration_ms", resp.DurationMs),
+					attribute.String("node_id", resp.NodeId),
+				)
+				if !resp.Success {
+					stepSpan.SetStatus(codes.Error, resp.ErrorText)
+				}
 				stepSpan.End()
-				continue
 			}
-			stepSpan.SetStatus(codes.Ok, "")
-			stepSpan.SetAttributes(
-				attribute.Bool("success", resp.Success),
-				attribute.Float64("duration_ms", resp.DurationMs),
-				attribute.String("node_id", resp.NodeId),
-			)
-			if !resp.Success {
-				stepSpan.SetStatus(codes.Error, resp.ErrorText)
-			}
-			stepSpan.End()
 		}
 	}
 
@@ -712,21 +731,26 @@ func (h *OrchestratorHandler) runCycle(ctx context.Context) {
 	cycleSpan.SetStatus(codes.Ok, "")
 }
 
-// victoriaSteps returns the ordered Victoria pipeline steps.
-// These are the same steps seeded into the Victoria project config in main.go.
-// TODO: replace with a DB/project-config lookup when multi-project lands.
-func victoriaSteps() []*omegav1.PipelineStep {
-	return []*omegav1.PipelineStep{
-		{StepId: "step_1", Name: "DataIngestion", NodeType: "DATA_INGESTION", Order: 1},
-		{StepId: "step_2", Name: "SignalResearch", NodeType: "SIGNAL_RESEARCH", Order: 2},
-		{StepId: "step_3", Name: "IntelligenceCoordination", NodeType: "STRATEGY", Order: 3},
-		{StepId: "step_4", Name: "DynamicWeights", NodeType: "RISK_MANAGEMENT", Order: 4},
-		{StepId: "step_5", Name: "DebateGate", NodeType: "VERIFICATION", Order: 5},
-		{StepId: "step_6", Name: "WalkForward", NodeType: "VERIFICATION", Order: 6},
-		{StepId: "step_7", Name: "Memory", NodeType: "MEMORY", Order: 7},
-		{StepId: "step_8", Name: "ImprovementEngine", NodeType: "IMPROVEMENT", Order: 8},
-		{StepId: "step_9", Name: "Ring3Adversarial", NodeType: "ADVERSARIAL", Order: 9},
+// projectPipelineSteps returns the ordered pipeline steps for each registered
+// active project, keyed by project_id.  When no ProjectHandler is attached or
+// no projects are registered, returns an empty map.
+//
+// This is the single place where the orchestrator reads project-driven pipeline
+// configurations.  No project-specific step names live in this file.
+func (h *OrchestratorHandler) projectPipelineSteps() map[string][]*omegav1.PipelineStep {
+	result := make(map[string][]*omegav1.PipelineStep)
+	if h.projectHandler == nil {
+		return result
 	}
+	for _, p := range h.projectHandler.AllProjects() {
+		if p.Status != "active" || len(p.PipelineConfig) == 0 {
+			continue
+		}
+		steps := make([]*omegav1.PipelineStep, len(p.PipelineConfig))
+		copy(steps, p.PipelineConfig)
+		result[p.ProjectId] = steps
+	}
+	return result
 }
 
 func (h *OrchestratorHandler) StopOrchestrator(

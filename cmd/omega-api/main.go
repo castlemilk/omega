@@ -124,8 +124,12 @@ func main() {
 
 	diagCollector := observability.NewDiagnosticsCollector(nil, nil, cbRegistry, logger)
 
+	// ── Project handler — created first so the orchestrator can read pipeline configs ──
+	projectH := handler.NewProject()
+	projectH.SeedProject(victoriaProject())
+
 	// ── Service handlers ──────────────────────────────────────────────────────
-	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry)
+	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry).WithProjectHandler(projectH)
 
 	// Pipeline bridge — connects Go orchestrator to Python pipeline server.
 	// Set OMEGA_PYTHON_PIPELINE_ADDR (e.g. "http://localhost:9090") to enable.
@@ -201,10 +205,6 @@ func main() {
 	if nodeReg != nil {
 		nodeH = handler.NewNodeHandler(nodeReg)
 	}
-
-	// ── Project handler ───────────────────────────────────────────────────────
-	projectH := handler.NewProject()
-	projectH.SeedProject(victoriaProject())
 
 	// ── Coordination handler ───────────────────────────────────────────────────
 	var coordH *coordination.Handler

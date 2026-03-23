@@ -85,6 +85,18 @@ func (h *ProjectHandler) ListProjects(
 	return connect.NewResponse(&omegav1.ListProjectsResponse{Projects: out}), nil
 }
 
+// AllProjects returns a snapshot of all registered projects.
+// Used by the orchestrator to read pipeline configurations without going through Connect-RPC.
+func (h *ProjectHandler) AllProjects() []*omegav1.Project {
+	h.mu.RLock()
+	out := make([]*omegav1.Project, 0, len(h.projects))
+	for _, p := range h.projects {
+		out = append(out, p)
+	}
+	h.mu.RUnlock()
+	return out
+}
+
 func (h *ProjectHandler) UpdateProject(
 	_ context.Context, req *connect.Request[omegav1.UpdateProjectRequest],
 ) (*connect.Response[omegav1.UpdateProjectResponse], error) {
