@@ -313,9 +313,7 @@ class TestBacktestEvaluatorWithSplitter:
         assert ev._splitter is splitter
 
     def test_evaluate_test_split_raises_without_splitter(self):
-        ev = BacktestEvaluator(
-            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
-        )
+        ev = BacktestEvaluator(oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True)
         with pytest.raises(RuntimeError, match="from_splitter"):
             ev.evaluate_test_split("BTC", {})
 
@@ -348,28 +346,197 @@ class TestBacktestEvaluatorWithSplitter:
 # ---------------------------------------------------------------------------
 
 
+class TestB3EvaluatorLookAhead:
+    """Verify that _run_parameterised_strategy has no signal-bar look-ahead bias."""
+
+    def _make_crossover_prices(self) -> tuple[list[float], int]:
+        """
+        Build a deterministic price series that guarantees a golden cross at a
+        known bar index.
+
+        Strategy: use short_window=3, long_window=5.
+        Prices rise slowly for the first 10 bars, then jump sharply so that
+        the 3-bar SMA crosses above the 5-bar SMA at a predictable bar.
+
+        Returns (prices, signal_bar_index) where signal_bar_index is the bar
+        at which the golden cross fires (i.e. sma_s[i] > sma_l[i] for the
+        first time after sma_s[i-1] <= sma_l[i-1]).
+        """
+        # Flat/slightly declining then a clear jump guarantees a crossover.
+        prices = [
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            100.0,  # bars 0-4 (flat, short approx long)
+            99.0,
+            98.0,
+            97.0,
+            96.0,
+            95.0,  # bars 5-9 (declining, short < long)
+            110.0,
+            120.0,
+            130.0,  # bars 10-12 (sharp rise -> crossover)
+            130.0,
+            130.0,
+            130.0,
+            130.0,
+            130.0,  # bars 13-17 (stay in position)
+        ]
+        from omega.core.backtest_evaluator import _sma
+
+        short_window = 3
+        long_window = 5
+        sma_s = _sma(prices, short_window)
+        sma_l = _sma(prices, long_window)
+
+        signal_bar = None
+        for i in range(1, len(prices)):
+            cur_s_val = sma_s[i]
+            cur_l_val = sma_l[i]
+            if cur_s_val is None or cur_l_val is None:
+                continue
+            ps = sma_s[i - 1]
+            pl = sma_l[i - 1]
+            if ps is None or pl is None:
+                continue
+            if ps <= pl and cur_s_val > cur_l_val:
+                signal_bar = i
+                break
+
+        assert signal_bar is not None, "Test price series must produce a golden cross"
+        return prices, signal_bar
+
+    def test_signal_bar_earns_zero_return(self):
+        """On the bar where the golden cross fires, position is still 0 → ret == 0."""
+        prices, signal_bar = self._make_crossover_prices()
+        rets, _ = _run_parameterised_strategy(
+            prices,
+            short_window=3,
+            long_window=5,
+            rsi_window=2,
+            rsi_overbought=100.0,  # RSI gate always passes
+            rsi_enabled=False,
+        )
+        # daily_rets[i] corresponds to bar i+1 in the price list
+        # But rets is indexed from bar 1, so rets[signal_bar - 1] is bar signal_bar
+        assert rets[signal_bar - 1] == pytest.approx(0.0), (
+            f"Expected 0 return on signal bar {signal_bar}, got {rets[signal_bar - 1]}"
+        )
+
+    def test_bar_after_signal_is_active(self):
+        """The bar after the golden cross, position should be 1 → non-zero ret (price moved)."""
+        prices, signal_bar = self._make_crossover_prices()
+        rets, _ = _run_parameterised_strategy(
+            prices,
+            short_window=3,
+            long_window=5,
+            rsi_window=2,
+            rsi_overbought=100.0,
+            rsi_enabled=False,
+        )
+        next_bar = signal_bar  # rets[signal_bar] corresponds to prices bar signal_bar+1
+        if next_bar < len(rets):
+            # Price is rising after signal, so return should be non-zero
+            assert rets[next_bar] != pytest.approx(0.0), (
+                f"Expected non-zero return on bar after signal (index {next_bar}), "
+                f"got {rets[next_bar]}"
+            )
+
+    def test_biased_vs_fixed_returns_differ(self):
+        """
+        Manually simulate the biased (original) version and confirm the fixed
+        version produces a different equity curve, proving the fix has effect.
+        """
+        prices, signal_bar = self._make_crossover_prices()
+
+        # Fixed version (no look-ahead)
+        rets_fixed, _equity_fixed = _run_parameterised_strategy(
+            prices,
+            short_window=3,
+            long_window=5,
+            rsi_window=2,
+            rsi_overbought=100.0,
+            rsi_enabled=False,
+        )
+
+        # Simulate the biased version inline (position set immediately on signal bar)
+        from omega.core.backtest_evaluator import _sma
+
+        sma_s = _sma(prices, 3)
+        sma_l = _sma(prices, 5)
+        position_biased = 0.0
+        rets_biased = []
+        for i in range(1, len(prices)):
+            if sma_s[i] is None or sma_l[i] is None:
+                rets_biased.append(0.0)
+                continue
+            ps = sma_s[i - 1]
+            pl = sma_l[i - 1]
+            if ps is None or pl is None:
+                rets_biased.append(0.0)
+                continue
+            cur_s = float(sma_s[i])
+            cur_l = float(sma_l[i])
+            if float(ps) <= float(pl) and cur_s > cur_l and position_biased == 0.0:
+                position_biased = 1.0
+            elif float(ps) >= float(pl) and cur_s < cur_l and position_biased == 1.0:
+                position_biased = 0.0
+            rets_biased.append(position_biased * (prices[i] - prices[i - 1]) / prices[i - 1])
+
+        # The fixed version must differ from the biased one at the signal bar
+        assert rets_fixed != rets_biased, (
+            "Fixed and biased returns should differ — the look-ahead fix has no effect"
+        )
+        # Specifically, signal bar return must differ
+        assert rets_fixed[signal_bar - 1] != rets_biased[signal_bar - 1], (
+            f"Signal bar {signal_bar} return should differ between biased and fixed"
+        )
+
+    def test_equity_starts_at_one(self):
+        """Equity curve must still start at 1.0 after the fix."""
+        prices, _ = self._make_crossover_prices()
+        _, equity = _run_parameterised_strategy(
+            prices,
+            short_window=3,
+            long_window=5,
+            rsi_window=2,
+            rsi_overbought=100.0,
+            rsi_enabled=False,
+        )
+        assert equity[0] == pytest.approx(1.0)
+
+    def test_return_length_unchanged(self):
+        """len(daily_rets) must still equal len(prices) - 1."""
+        prices, _ = self._make_crossover_prices()
+        rets, _ = _run_parameterised_strategy(
+            prices,
+            short_window=3,
+            long_window=5,
+            rsi_window=2,
+            rsi_overbought=100.0,
+            rsi_enabled=False,
+        )
+        assert len(rets) == len(prices) - 1
+
+
 class TestBacktestEvaluatorSharpeCI:
     def test_metrics_include_sharpe_ci(self):
-        ev = BacktestEvaluator(
-            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
-        )
+        ev = BacktestEvaluator(oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True)
         _, metrics = ev.evaluate("BTC", {"short_window": 10, "long_window": 30})
         assert "sharpe_ci_lower" in metrics
         assert "sharpe_ci_upper" in metrics
 
     def test_ci_lower_le_sharpe_le_ci_upper(self):
-        ev = BacktestEvaluator(
-            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
-        )
+        ev = BacktestEvaluator(oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True)
         _, metrics = ev.evaluate("BTC", {"short_window": 5, "long_window": 20})
         assert metrics["sharpe_ci_lower"] <= metrics["sharpe"]
         assert metrics["sharpe_ci_upper"] >= metrics["sharpe"]
 
     def test_ci_values_are_finite_floats(self):
         import math
-        ev = BacktestEvaluator(
-            oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True
-        )
+
+        ev = BacktestEvaluator(oos_start="2024-01-01", oos_end="2024-12-31", allow_synthetic=True)
         _, metrics = ev.evaluate("BTC", {"short_window": 10, "long_window": 30})
         assert math.isfinite(metrics["sharpe_ci_lower"])
         assert math.isfinite(metrics["sharpe_ci_upper"])

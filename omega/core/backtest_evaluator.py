@@ -41,7 +41,8 @@ from omega.core.improvement_engine import (
     composite_score,
 )
 from omega.eval.data_splitter import DataSplitter
-from omega.eval.sharpe import compute_sharpe_confidence_interval, sharpe_ratio as _sharpe_ratio
+from omega.eval.sharpe import compute_sharpe_confidence_interval
+from omega.eval.sharpe import sharpe_ratio as _sharpe_ratio
 
 logger = logging.getLogger("omega.core.backtest_evaluator")
 
@@ -107,8 +108,14 @@ def _run_parameterised_strategy(
     daily_rets: list[float] = []
     equity: list[float] = [1.0]
     position = 0.0
+    pending_position: float | None = None  # position queued for next bar
 
     for i in range(1, len(prices)):
+        # Apply any pending position change (entered at previous bar's signal)
+        if pending_position is not None:
+            position = pending_position
+            pending_position = None
+
         if sma_s[i] is None or sma_l[i] is None or rsi_vals[i] is None:
             daily_rets.append(0.0)
             equity.append(equity[-1])
@@ -125,15 +132,14 @@ def _run_parameterised_strategy(
         cur_l: float = sma_l[i]  # type: ignore[assignment]
         rsi_ok = float(rsi_vals[i]) < rsi_overbought  # type: ignore[arg-type]
 
-        # Golden cross → enter long (RSI gate optional)
+        # Golden cross → queue long entry for NEXT bar (avoids signal-bar look-ahead)
         if prev_s <= prev_l and cur_s > cur_l and position == 0.0:
             if not rsi_enabled or rsi_ok:
-                position = 1.0
-                _entry_price = prices[i]
+                pending_position = 1.0
 
-        # Death cross → exit long
+        # Death cross → queue flat for NEXT bar
         elif prev_s >= prev_l and cur_s < cur_l and position == 1.0:
-            position = 0.0
+            pending_position = 0.0
 
         daily_ret = position * (prices[i] - prices[i - 1]) / prices[i - 1]
         daily_rets.append(daily_ret)
@@ -236,7 +242,7 @@ class BacktestEvaluator(ImprovementEvaluator):
         dd_weight: float = 0.3,
         max_cache: int = 512,
         allow_synthetic: bool = False,
-    ) -> "BacktestEvaluator":
+    ) -> BacktestEvaluator:
         """
         Construct a BacktestEvaluator whose TPE objective uses the validate window.
 
