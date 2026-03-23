@@ -530,20 +530,22 @@ class TestBacktestEngineSyntheticData:
         engine = BacktestEngine(config=cfg, symbols=["BTCUSDT"], allow_synthetic=True)
 
         with patch.object(engine, "_load_real_data", side_effect=RuntimeError("no network")):
-            data = engine._load_data("2024-01-01", "2024-06-30")
+            data, is_synthetic = engine._load_data("2024-01-01", "2024-06-30")
 
         assert "BTCUSDT" in data
         assert len(data["BTCUSDT"]) > 0
+        assert is_synthetic is True
 
     def test_raises_without_real_data_when_synthetic_not_allowed(self):
         from omega.backtest import BacktestEngine
+        from omega.core.errors import DataQualityError
 
         cfg = _make_cfg()
         engine = BacktestEngine(config=cfg, symbols=["BTCUSDT"], allow_synthetic=False)
 
         with (
             patch.object(engine, "_load_real_data", side_effect=RuntimeError("no network")),
-            pytest.raises(ValueError, match="No real market data available"),
+            pytest.raises(DataQualityError, match="No real market data available"),
         ):
             engine._load_data("2024-01-01", "2024-06-30")
 
