@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 if TYPE_CHECKING:
     from omega.core.brain import BrainAdapter, BrainConfig, BrainResponse
+    from omega.core.state_tensor import StateTensor
 
 
 # ---------------------------------------------------------------------------
@@ -302,6 +303,24 @@ class Node(ABC):
 
         Returns True if the node actually changed something.
         """
+
+    # ------------------------------------------------------------------
+    # State tensor (optional — override to participate in attention routing)
+    # ------------------------------------------------------------------
+
+    def get_state_tensor(self) -> "StateTensor | None":
+        """
+        Return a StateTensor snapshot for attention-based routing.
+
+        The default implementation returns None, meaning this node will
+        not contribute tensor data to the coordinator.  Nodes that want
+        to participate in attention routing should override this method
+        and return a fully populated StateTensor using their schema.
+
+        The coordinator calls this on every heartbeat; implementations
+        must be cheap (< 1 ms) and must never raise.
+        """
+        return None
 
 
 # ---------------------------------------------------------------------------

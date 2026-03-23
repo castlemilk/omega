@@ -37,6 +37,7 @@ import uuid
 from typing import Any, ClassVar
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
@@ -215,6 +216,72 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("improve() delegation failed: %s", exc)
         return changed
+
+    def get_state_tensor(self) -> StateTensor:
+        """
+        Return a 16-dimensional state tensor for attention-based routing.
+
+        Dimensions follow VictoriaStateTensorSchema v1.0.0. Values that
+        require external context (e.g. trust_score from the outcome store,
+        adversarial_score from Ring 1) default to neutral values and should
+        be refreshed by the coordinator when richer data is available.
+        """
+        error_rate = self._error_count / max(1, self._execution_count)
+
+        # Derive signal quality from last known signals
+        signal_quality = self._derive_signal_quality()
+
+        # Cycle health: 1 - error_rate (simple proxy)
+        cycle_health = max(0.0, 1.0 - error_rate)
+
+        # Data freshness: treat any cached data as reasonably fresh
+        data_freshness = 1.0 if self._last_market_data else 0.0
+
+        # Signal coverage: fraction of expected signal types present
+        expected_signals = {
+            "basic_signals",
+            "order_flow",
+            "cross_asset",
+            "microstructure",
+            "sentiment",
+        }
+        present = expected_signals.intersection(self._last_signals.keys())
+        signal_coverage = len(present) / len(expected_signals)
+
+        values: dict[str, float] = {
+            "signal_quality": signal_quality,
+            "cycle_health": cycle_health,
+            "data_freshness": data_freshness,
+            "adversarial_score": 1.0,  # default: no disagreement known
+            "improvement_trend": 0.0,  # neutral: no trend data yet
+            "active_experiments": 0.0,  # not tracked at this level
+            "last_sharpe": 0.0,  # not available without backtester
+            "max_drawdown": 0.0,  # lower is healthier; default ok
+            "signal_coverage": signal_coverage,
+            "error_rate": error_rate,
+            "autonomy_level": 0.0,  # default PICO
+            "regime_label": 0.0,  # default / unknown
+            "trust_score": 0.5,  # neutral until outcome history built
+            "memory_utilisation": 0.0,
+            "cycles_since_improvement": 1.0,  # conservative: assume no recent improvement
+            "lm_consultation_rate": 0.0,
+        }
+
+        return VictoriaStateTensorBuilder.build(self._node_id, values)
+
+    def _derive_signal_quality(self) -> float:
+        """Estimate signal quality from last computed signals."""
+        if not self._last_signals:
+            return 0.0
+        confidences = []
+        for name, sig in self._last_signals.items():
+            if name.startswith("_"):
+                continue
+            if isinstance(sig, dict) and "confidence" in sig:
+                confidences.append(float(sig["confidence"]))
+        if not confidences:
+            return 0.5  # signals present but no confidence data
+        return sum(confidences) / len(confidences)
 
     # ------------------------------------------------------------------
     # Action implementations
