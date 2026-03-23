@@ -38,17 +38,35 @@ StepHandler = Callable[[ExecuteStepRequest], ExecuteStepResponse]
 
 
 class StepHandlerRegistry:
-    """Maps node_type strings to step handler callables."""
+    """Maps (project_id, node_type) to step handler callables.
+
+    Lookup order: (project_id, node_type) → ("", node_type) → error.
+    Use project_id="" to register a global fallback handler.
+    """
 
     def __init__(self) -> None:
-        self._handlers: dict[str, StepHandler] = {}
+        # Key is (project_id, node_type); project_id="" means global.
+        self._handlers: dict[tuple[str, str], StepHandler] = {}
 
-    def register(self, node_type: str, handler: StepHandler) -> None:
-        self._handlers[node_type] = handler
-        log.debug("Registered pipeline handler for node_type=%r", node_type)
+    def register(
+        self,
+        node_type: str,
+        handler: StepHandler,
+        project_id: str = "",
+    ) -> None:
+        key = (project_id, node_type)
+        self._handlers[key] = handler
+        log.debug(
+            "Registered pipeline handler for project_id=%r node_type=%r",
+            project_id,
+            node_type,
+        )
 
     def dispatch(self, req: ExecuteStepRequest) -> ExecuteStepResponse:
-        handler = self._handlers.get(req.node_type)
+        # Try project-scoped handler first, then fall back to global.
+        handler = self._handlers.get((req.project_id, req.node_type)) or self._handlers.get(
+            ("", req.node_type)
+        )
         if handler is None:
             return ExecuteStepResponse(
                 success=False,

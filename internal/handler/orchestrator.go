@@ -722,10 +722,11 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 				)
 				t0 := time.Now()
 				resp, stepErr := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
-					StepId:   step.StepId,
-					StepName: step.Name,
-					NodeType: step.NodeType,
-					Cycle:    cycle,
+					StepId:    step.StepId,
+					StepName:  step.Name,
+					NodeType:  step.NodeType,
+					Cycle:     cycle,
+					ProjectId: projectID,
 				})
 				elapsed := float64(time.Since(t0).Milliseconds())
 				sr := stepResult{Name: step.Name, DurationMS: elapsed}

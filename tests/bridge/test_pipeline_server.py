@@ -274,3 +274,57 @@ def test_server_handles_concurrent_requests(server_port):
         results = [f.result() for f in futures]
 
     assert all(r["success"] for r in results)
+
+
+# ── project_id scoped routing ─────────────────────────────────────────────────
+
+
+def test_project_scoped_handler_wins_over_global(server_port):
+    """A handler registered with project_id should handle that project's steps."""
+    port, registry = server_port
+
+    def global_handler(req: ExecuteStepRequest) -> ExecuteStepResponse:
+        return ExecuteStepResponse(success=True, node_id="global")
+
+    def project_handler(req: ExecuteStepRequest) -> ExecuteStepResponse:
+        return ExecuteStepResponse(success=True, node_id="project-victoria")
+
+    registry.register("DATA_INGESTION", global_handler)
+    registry.register("DATA_INGESTION", project_handler, project_id="victoria")
+
+    resp = _post(
+        port, "ExecuteStep", {"nodeType": "DATA_INGESTION", "projectId": "victoria", "cycle": 1}
+    )
+    assert resp["nodeId"] == "project-victoria"
+
+    resp2 = _post(port, "ExecuteStep", {"nodeType": "DATA_INGESTION", "cycle": 1})
+    assert resp2["nodeId"] == "global"
+
+
+def test_project_scoped_fallback_to_global(server_port):
+    """When no project-specific handler, fall back to global node_type handler."""
+    port, registry = server_port
+
+    def fallback_handler(req: ExecuteStepRequest) -> ExecuteStepResponse:
+        return ExecuteStepResponse(success=True, node_id="fallback")
+
+    registry.register("SIGNAL_RESEARCH", fallback_handler)
+
+    resp = _post(
+        port,
+        "ExecuteStep",
+        {"nodeType": "SIGNAL_RESEARCH", "projectId": "other-project", "cycle": 1},
+    )
+    assert resp["success"] is True
+    assert resp["nodeId"] == "fallback"
+
+
+def test_unknown_project_no_global_returns_error(server_port):
+    """No handler for this project or globally → failure."""
+    port, _ = server_port
+
+    resp = _post(
+        port, "ExecuteStep", {"nodeType": "STRATEGY", "projectId": "orphan-project", "cycle": 1}
+    )
+    assert resp["success"] is False
+    assert "STRATEGY" in resp["errorText"]

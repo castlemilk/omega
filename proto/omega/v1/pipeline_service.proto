@@ -22,6 +22,7 @@ message ExecuteStepRequest {
   string parent_span_id = 6;  // current Go span ID (hex, 16 chars)
   map<string, string> parameters = 7;  // step config overrides
   bytes  input_payload  = 8;  // JSON-encoded output from previous step (may be empty)
+  string project_id     = 9;  // scopes handler lookup to this project
 }
 
 message ExecuteStepResponse {

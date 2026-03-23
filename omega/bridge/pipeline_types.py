@@ -19,6 +19,7 @@ class ExecuteStepRequest:
     parent_span_id: str
     parameters: dict[str, str] = field(default_factory=dict)
     input_payload: bytes = b""
+    project_id: str = ""
 
     @classmethod
     def from_json(cls, body: dict) -> ExecuteStepRequest:
@@ -35,6 +36,7 @@ class ExecuteStepRequest:
             parent_span_id=body.get("parentSpanId", ""),
             parameters=dict(body.get("parameters", {})),
             input_payload=payload,
+            project_id=body.get("projectId", ""),
         )
 
 
