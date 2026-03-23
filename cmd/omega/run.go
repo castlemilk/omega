@@ -18,6 +18,7 @@ var (
 	runSymbols  string
 	runDryRun   bool
 	runInterval int
+	runCycles   int
 )
 
 var runCmd = &cobra.Command{
@@ -31,6 +32,7 @@ func init() {
 	runCmd.Flags().StringVar(&runSymbols, "symbols", "BTC/USDT,ETH/USDT", "Comma-separated trading symbols")
 	runCmd.Flags().BoolVar(&runDryRun, "dry-run", false, "Dry run — start but do not trade")
 	runCmd.Flags().IntVar(&runInterval, "interval", 60, "Cycle poll interval in seconds")
+	runCmd.Flags().IntVar(&runCycles, "cycles", 0, "Run N cycles synchronously and print per-step results, then exit")
 }
 
 func runOrchestrator(cmd *cobra.Command, args []string) error {
@@ -48,6 +50,11 @@ func runOrchestrator(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Orchestrator: %s\n", resp.Msg.Message)
 	if !resp.Msg.Started {
 		fmt.Println("Orchestrator was already running.")
+	}
+
+	// --cycles N: run N cycles synchronously, print per-step results, then exit.
+	if runCycles > 0 {
+		return runNCycles(ctx, client, runCycles)
 	}
 
 	sigCh := make(chan os.Signal, 1)
@@ -88,4 +95,31 @@ func runOrchestrator(cmd *cobra.Command, args []string) error {
 				h.Status, h.CompositeScore, h.NodeCount, h.TotalCycles, h.OpenIssues)
 		}
 	}
+}
+
+// runNCycles triggers exactly n synchronous cycles and prints per-step results.
+func runNCycles(ctx context.Context, client interface {
+	TriggerHeartbeat(context.Context, *connect.Request[omegav1.TriggerHeartbeatRequest]) (*connect.Response[omegav1.TriggerHeartbeatResponse], error)
+}, n int) error {
+	fmt.Printf("Running %d cycle(s)...\n\n", n)
+	overallStart := time.Now()
+
+	for i := range n {
+		cycleStart := time.Now()
+		fmt.Printf("── Cycle %d/%d ─────────────────────────────────────────────────\n", i+1, n)
+
+		hb, err := client.TriggerHeartbeat(ctx, connect.NewRequest(&omegav1.TriggerHeartbeatRequest{}))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "  cycle %d error: %v\n", i+1, err)
+			continue
+		}
+		// Message already contains per-step lines formatted by TriggerHeartbeat.
+		fmt.Println(hb.Msg.Message)
+		fmt.Printf("  wall time: %.0fms\n", float64(time.Since(cycleStart).Milliseconds()))
+		fmt.Println()
+	}
+
+	fmt.Printf("═══════════════════════════════════════════════════════════════\n")
+	fmt.Printf("Total: %d cycle(s) in %.0fms\n", n, float64(time.Since(overallStart).Milliseconds()))
+	return nil
 }

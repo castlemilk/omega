@@ -647,8 +647,18 @@ func (h *OrchestratorHandler) runLoop(ctx context.Context, interval time.Duratio
 	}
 }
 
-// runCycle executes one orchestration cycle: spans each registered node and logs activity.
-func (h *OrchestratorHandler) runCycle(ctx context.Context) {
+// stepResult captures the outcome of one pipeline step execution.
+type stepResult struct {
+	Name       string
+	Success    bool
+	DurationMS float64
+	Error      string
+}
+
+// runCycleWithResults executes one orchestration cycle and returns per-step results.
+// It is called synchronously by TriggerHeartbeat so the caller can surface step
+// success/failure and latency directly in the response.
+func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepResult, error) {
 	cycle := h.cycleN.Add(1)
 
 	tracer := telemetry.Tracer()
@@ -663,7 +673,7 @@ func (h *OrchestratorHandler) runCycle(ctx context.Context) {
 		_ = h.db.LogActivity("cycle_error", "system", "orchestrator", map[string]any{
 			"cycle": cycle, "error": err.Error(),
 		}, cycle)
-		return
+		return nil, err
 	}
 
 	for _, n := range nodes {
@@ -678,9 +688,8 @@ func (h *OrchestratorHandler) runCycle(ctx context.Context) {
 		nodeSpan.End()
 	}
 
-	// When a Python pipeline client is configured, drive each registered
-	// project's pipeline steps in order.  Steps come from project.PipelineConfig
-	// — no Victoria-specific step names live in this file.
+	var results []stepResult
+
 	if h.pipelineClient != nil {
 		projects := h.projectPipelineSteps()
 		if len(projects) == 0 {
@@ -699,27 +708,37 @@ func (h *OrchestratorHandler) runCycle(ctx context.Context) {
 						attribute.Int64("cycle", cycle),
 					),
 				)
-				resp, err := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
+				t0 := time.Now()
+				resp, stepErr := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
 					StepId:   step.StepId,
 					StepName: step.Name,
 					NodeType: step.NodeType,
 					Cycle:    cycle,
 				})
-				if err != nil {
-					stepSpan.SetStatus(codes.Error, err.Error())
-					stepSpan.End()
-					continue
-				}
-				stepSpan.SetStatus(codes.Ok, "")
-				stepSpan.SetAttributes(
-					attribute.Bool("success", resp.Success),
-					attribute.Float64("duration_ms", resp.DurationMs),
-					attribute.String("node_id", resp.NodeId),
-				)
-				if !resp.Success {
-					stepSpan.SetStatus(codes.Error, resp.ErrorText)
+				elapsed := float64(time.Since(t0).Milliseconds())
+				sr := stepResult{Name: step.Name, DurationMS: elapsed}
+				if stepErr != nil {
+					sr.Success = false
+					sr.Error = stepErr.Error()
+					stepSpan.SetStatus(codes.Error, stepErr.Error())
+				} else {
+					sr.Success = resp.Success
+					if !resp.Success {
+						sr.Error = resp.ErrorText
+						stepSpan.SetStatus(codes.Error, resp.ErrorText)
+					} else {
+						stepSpan.SetStatus(codes.Ok, "")
+					}
+					stepSpan.SetAttributes(
+						attribute.Bool("success", resp.Success),
+						attribute.Float64("duration_ms", resp.DurationMs),
+						attribute.String("node_id", resp.NodeId),
+					)
+					elapsed = resp.DurationMs // prefer server-side measurement
+					sr.DurationMS = elapsed
 				}
 				stepSpan.End()
+				results = append(results, sr)
 			}
 		}
 	}
@@ -727,8 +746,14 @@ func (h *OrchestratorHandler) runCycle(ctx context.Context) {
 	_ = h.db.LogActivity("cycle_complete", "system", "orchestrator", map[string]any{
 		"cycle": cycle, "node_count": len(nodes),
 	}, cycle)
-
 	cycleSpan.SetStatus(codes.Ok, "")
+	return results, nil
+}
+
+// runCycle executes one orchestration cycle. Delegates to runCycleWithResults
+// and discards the step results (they are only surfaced via TriggerHeartbeat).
+func (h *OrchestratorHandler) runCycle(ctx context.Context) {
+	_, _ = h.runCycleWithResults(ctx) //nolint:errcheck
 }
 
 // projectPipelineSteps returns the ordered pipeline steps for each registered
@@ -780,13 +805,47 @@ func (h *OrchestratorHandler) TriggerHeartbeat(
 	ctx context.Context,
 	req *connect.Request[omegav1.TriggerHeartbeatRequest],
 ) (*connect.Response[omegav1.TriggerHeartbeatResponse], error) {
-	_ = ctx
 	_ = req
 	if err := h.db.LogActivity("heartbeat_trigger", "system", "orchestrator", map[string]any{}, 0); err != nil {
 		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("heartbeat trigger failed: %w", err))
 	}
+
+	t0 := time.Now()
+	results, err := h.runCycleWithResults(ctx)
+	totalMS := float64(time.Since(t0).Milliseconds())
+
+	// Build a human-readable step summary packed into Message.
+	var msg string
+	switch {
+	case err != nil:
+		msg = fmt.Sprintf("cycle error: %s", err)
+	case len(results) == 0:
+		msg = fmt.Sprintf("cycle complete in %.0fms (no pipeline steps)", totalMS)
+	default:
+		var errCount int
+		lines := make([]string, 0, len(results)+2)
+		for _, r := range results {
+			if r.Success {
+				lines = append(lines, fmt.Sprintf("  %s: success (%.0fms)", r.Name, r.DurationMS))
+			} else {
+				errCount++
+				lines = append(lines, fmt.Sprintf("  %s: FAILED (%s)", r.Name, r.Error))
+			}
+		}
+		summary := fmt.Sprintf("cycle complete in %.0fms — %d steps, %d errors",
+			totalMS, len(results), errCount)
+		lines = append([]string{summary}, lines...)
+		for i, l := range lines {
+			if i == 0 {
+				msg = l
+			} else {
+				msg += "\n" + l
+			}
+		}
+	}
+
 	return connect.NewResponse(&omegav1.TriggerHeartbeatResponse{
-		Triggered: true, Message: "triggered single heartbeat",
+		Triggered: true, Message: msg,
 	}), nil
 }
 
