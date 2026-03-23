@@ -382,6 +382,8 @@ def _sma_crossover_strategy(
                 continue
             position = 1.0
             entry_price = bars[i + 1].open  # Enter on next bar's open to prevent look-ahead bias
+            daily_rets.append(0.0)  # B3-RETURN: no return on signal bar itself
+            continue
 
         # Death cross → close long
         # Exit on next bar's open to prevent look-ahead bias
@@ -442,6 +444,8 @@ def _multi_signal_strategy(sym: str, bars: list[OHLCV]) -> tuple[list[Trade], li
                 continue
             position = 1.0
             entry_price = bars[i + 1].open  # Enter on next bar's open to prevent look-ahead bias
+            daily_rets.append(0.0)  # B3-RETURN: no return on signal bar itself
+            continue
         # Exit on next bar's open to prevent look-ahead bias
         elif prev_s >= prev_l and cur_sma_s < cur_sma_l and position == 1.0:
             exit_price = bars[i + 1].open if i + 1 < len(bars) else bars[i].close
@@ -478,24 +482,25 @@ def _compute_metrics(
     trades: list[Trade],
     daily_returns: list[float],
 ) -> BacktestResult:
-    total_ret = sum(daily_returns)
-
     days = (date.fromisoformat(end_date) - date.fromisoformat(start_date)).days or 1
-    annualised = total_ret * (365.0 / days)
 
     sharpe = _canonical_sharpe(daily_returns)
 
-    # Max drawdown
-    cumulative = 0.0
-    peak = 0.0
+    # B4: Multiplicative equity curve for drawdown and total return
+    equity = 1.0
+    peak = 1.0
     max_dd = 0.0
     for r in daily_returns:
-        cumulative += r
-        if cumulative > peak:
-            peak = cumulative
-        dd = peak - cumulative
-        if dd > max_dd:
-            max_dd = dd
+        equity *= 1.0 + r
+        if equity > peak:
+            peak = equity
+        if peak > 0:
+            dd = (peak - equity) / peak
+            if dd > max_dd:
+                max_dd = dd
+
+    # A4: CAGR annualised return using multiplicative equity
+    annualised = (equity ** (365.0 / days)) - 1.0
 
     winners = [t for t in trades if t.pnl_pct > 0]
     win_rate = len(winners) / len(trades) if trades else 0.0
@@ -505,7 +510,7 @@ def _compute_metrics(
         symbols=symbols,
         start_date=start_date,
         end_date=end_date,
-        total_return_pct=total_ret * 100,
+        total_return_pct=(equity - 1.0) * 100,
         annualised_return_pct=annualised * 100,
         sharpe_ratio=sharpe,
         max_drawdown_pct=max_dd * 100,

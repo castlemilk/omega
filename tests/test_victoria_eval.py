@@ -541,7 +541,9 @@ class TestEvalMetrics:
     def test_annualised_return_positive_trend(self):
         returns = [0.001] * 252
         ann = compute_annualised_return(returns)
-        assert ann == pytest.approx(0.252, abs=0.001)
+        # CAGR: 1.001^252 - 1 ≈ 0.2864 (not arithmetic 0.001*252=0.252)
+        expected = 1.001**252 - 1.0
+        assert ann == pytest.approx(expected, rel=0.001)
 
     def test_annualised_volatility_known(self):
         # Std of returns ≈ 0.01 daily → annualised ≈ 0.01 * sqrt(252)

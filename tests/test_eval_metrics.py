@@ -9,6 +9,7 @@ from omega.eval.metrics import (
     TradeRecord,
     build_equity_curve,
     build_eval_report,
+    compute_annualised_return,
     compute_calmar_ratio,
     compute_max_drawdown,
     compute_profit_factor,
@@ -126,10 +127,11 @@ class TestComputeProfitFactor:
 
 class TestComputeCalmarRatio:
     def test_known_value(self):
-        """Calmar = annualised_return / |max_drawdown|."""
+        """Calmar = CAGR annualised_return / |max_drawdown|."""
         returns = [0.001] * 252  # 0.1% per day
-        ann_return = 0.001 * 252  # 25.2% annualised
         max_dd = -0.10  # 10% drawdown
+        # CAGR: (1.001^252) - 1
+        ann_return = compute_annualised_return(returns, 252)
         expected = ann_return / 0.10
         result = compute_calmar_ratio(returns, max_dd)
         assert abs(result - expected) < 1e-6
@@ -148,7 +150,7 @@ class TestComputeCalmarRatio:
         assert compute_calmar_ratio([], -0.1) == 0.0
 
     def test_negative_returns(self):
-        """Negative mean returns → negative Calmar."""
+        """Negative compound returns → negative Calmar."""
         returns = [-0.001] * 100
         result = compute_calmar_ratio(returns, -0.1)
         assert result < 0.0
@@ -311,3 +313,55 @@ class TestBuildEvalReport:
         bm = [rng.gauss(0.0008, 0.018) for _ in range(100)]
         report = build_eval_report("test", "pico", r, benchmark_returns=bm)
         assert math.isfinite(report.information_ratio)
+
+
+class TestCAGRAnnualisedReturn:
+    def test_constant_positive_returns(self):
+        """For constant 1% daily returns over 252 days, CAGR ≈ 1.01^252 - 1."""
+        returns = [0.01] * 252
+        result = compute_annualised_return(returns, 252)
+        expected = 1.01**252 - 1  # ≈ 12.1687, NOT 2.52
+        assert abs(result - expected) < 1e-6
+        # Confirm it is NOT the arithmetic mean result
+        arithmetic_mean_result = 0.01 * 252  # 2.52
+        assert abs(result - arithmetic_mean_result) > 1.0
+
+    def test_zero_returns(self):
+        """All-zero returns → 0.0 (equity stays at 1.0)."""
+        assert compute_annualised_return([0.0] * 100, 252) == 0.0
+
+    def test_empty_returns(self):
+        """Empty sequence → 0.0."""
+        assert compute_annualised_return([], 252) == 0.0
+
+    def test_cagr_less_than_arithmetic_mean_for_volatile_returns(self):
+        """For alternating +10%/-10% returns, CAGR < arithmetic mean."""
+        # Alternating +10% / -10%: arithmetic mean is 0, but compounding loses value
+        returns = [0.10, -0.10] * 50  # 100 periods
+        cagr = compute_annualised_return(returns, 252)
+        arithmetic_mean = sum(returns) / len(returns) * 252  # 0.0
+        # CAGR must be strictly less than arithmetic mean (volatility drag)
+        assert cagr < arithmetic_mean
+
+    def test_cagr_vs_arithmetic_for_known_volatile_series(self):
+        """Verify exact CAGR value for a simple alternating series."""
+        # One up +10%, one down -10%: equity goes 1.0 -> 1.1 -> 0.99
+        returns = [0.10, -0.10]
+        result = compute_annualised_return(returns, 252)
+        # equity[-1] = 0.99, n=2
+        expected = 0.99 ** (252 / 2) - 1.0
+        assert abs(result - expected) < 1e-10
+
+    def test_calmar_uses_cagr(self):
+        """compute_calmar_ratio result differs from old arithmetic formula for volatile series."""
+        returns = [0.10, -0.10] * 50  # 100 periods alternating
+        max_dd = compute_max_drawdown(build_equity_curve(returns))
+
+        cagr_calmar = compute_calmar_ratio(returns, max_dd, 252)
+
+        # Old arithmetic formula: ann_return = mean(returns) * 252 = 0.0 → calmar = 0
+        arithmetic_ann_return = sum(returns) / len(returns) * 252  # 0.0
+        # CAGR-based calmar is negative (compounding drag), arithmetic was 0
+        assert cagr_calmar != arithmetic_ann_return / abs(max_dd)
+        # CAGR for this series is negative (compounding loss), so calmar is also negative
+        assert cagr_calmar < 0.0
