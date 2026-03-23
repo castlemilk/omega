@@ -264,3 +264,115 @@ class TestApproxOneSidedP:
         for t in [-5, -2, -1, 0, 1, 2, 5]:
             p = _approx_one_sided_p(t)
             assert 0.0 <= p <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# Bonferroni multiple-comparison correction
+# ---------------------------------------------------------------------------
+
+
+class TestBonferroniCorrection:
+    def test_report_has_n_trials_correction_field(self):
+        """n_trials_correction field exists and equals n_trials in report."""
+        ev = TPEEvaluator(n_trials=20, seed=42)
+        report = ev.run()
+        assert hasattr(report, "n_trials_correction")
+        assert report.n_trials_correction == report.n_trials
+
+    def test_n_trials_correction_default_is_one(self):
+        """Default TPEEvalReport has n_trials_correction=1."""
+        # Minimal report constructed directly
+        rec = TrialRecord(0, {}, 0.5, 0.5, "tpe")
+        report = TPEEvalReport(
+            n_trials=10,
+            tpe_trials=[rec],
+            random_trials=[rec],
+            tpe_best_score=0.5,
+            random_best_score=0.5,
+            tpe_beats_random=False,
+            p_value=1.0,
+        )
+        assert report.n_trials_correction == 1
+
+    def test_statistical_test_stricter_with_more_comparisons(self):
+        """Same scores: n_comparisons=100 uses stricter threshold than n_comparisons=1."""
+        # TPE is slightly better — should pass lenient threshold but not strict one
+        t1 = [TrialRecord(i, {}, 0.55 + i * 0.001, 0.5, "tpe") for i in range(30)]
+        t2 = [TrialRecord(i, {}, 0.50, 0.5, "random") for i in range(30)]
+
+        beats_lenient, p_val_lenient = TPEEvaluator._statistical_test(t1, t2, n_comparisons=1)
+        beats_strict, p_val_strict = TPEEvaluator._statistical_test(t1, t2, n_comparisons=100)
+
+        # Raw p-values must be identical (same data)
+        assert p_val_lenient == pytest.approx(p_val_strict)
+
+        # With n_comparisons=100, threshold is 0.05/100=0.0005; more likely to reject
+        # At minimum, strict cannot be True when lenient is False
+        if not beats_lenient:
+            assert not beats_strict
+
+    def test_statistical_test_raw_p_value_unchanged(self):
+        """The raw p-value returned is the same regardless of n_comparisons."""
+        t1 = [TrialRecord(i, {}, 0.8, 0.8, "tpe") for i in range(20)]
+        t2 = [TrialRecord(i, {}, 0.5, 0.5, "random") for i in range(20)]
+
+        _, p1 = TPEEvaluator._statistical_test(t1, t2, n_comparisons=1)
+        _, p100 = TPEEvaluator._statistical_test(t1, t2, n_comparisons=100)
+
+        assert p1 == pytest.approx(p100)
+
+    def test_report_p_value_is_raw(self):
+        """Report p_value is the raw (uncorrected) p-value from the t-test."""
+        ev = TPEEvaluator(n_trials=30, seed=42)
+        report = ev.run()
+        # Raw p-value must be in [0, 1]
+        assert 0.0 <= report.p_value <= 1.0
+        # n_trials_correction records the Bonferroni denominator
+        assert report.n_trials_correction == report.n_trials
+
+    def test_clearly_superior_tpe_beats_after_correction(self):
+        """Clearly superior TPE (large effect) still returns True after Bonferroni with n=30."""
+        t1 = [TrialRecord(i, {}, 1.0 + i * 0.01, 1.0, "tpe") for i in range(30)]
+        t2 = [TrialRecord(i, {}, 0.0, 0.0, "random") for i in range(30)]
+        beats, p = TPEEvaluator._statistical_test(t1, t2, n_comparisons=30)
+        assert beats is True
+        # alpha_corrected = 0.05/30 ≈ 0.00167; p should be well below this
+        assert p < 0.05 / 30
+
+    def test_beats_random_applies_bonferroni(self):
+        """beats_random with 100 trials requires p < (1-0.95)/100 = 0.0005."""
+        ev = TPEEvaluator(n_trials=100, seed=42)
+        ev.run()
+
+        # Get raw p-value via _statistical_test with n_comparisons=1
+        _, raw_p = TPEEvaluator._statistical_test(
+            ev._tpe_trials, ev._random_trials, n_comparisons=1
+        )
+
+        # beats_random uses n_comparisons=n_trials internally
+        result = ev.beats_random(confidence=0.95)
+        alpha_corrected = 0.05 / 100  # (1-0.95)/100
+
+        # Verify the result is consistent with the corrected threshold
+        assert result == (raw_p < alpha_corrected)
+
+    def test_beats_random_custom_n_comparisons(self):
+        """beats_random respects explicit n_comparisons override."""
+        ev = TPEEvaluator(n_trials=50, seed=42)
+        ev.run()
+
+        # With n_comparisons=1, threshold is just (1-0.95)/1 = 0.05
+        result_lenient = ev.beats_random(confidence=0.95, n_comparisons=1)
+        # With n_comparisons=1000, threshold is 0.05/1000 = 0.00005 — very strict
+        result_strict = ev.beats_random(confidence=0.95, n_comparisons=1000)
+
+        # Strict can only be True if lenient is True
+        if result_strict:
+            assert result_lenient
+
+    def test_str_includes_n_trials_correction(self):
+        """__str__ of TPEEvalReport includes n_trials_correction."""
+        ev = TPEEvaluator(n_trials=10, seed=1)
+        report = ev.run()
+        s = str(report)
+        assert "n_trials_correction" in s

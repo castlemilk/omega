@@ -67,7 +67,8 @@ class TPEEvalReport:
     tpe_best_score: float
     random_best_score: float
     tpe_beats_random: bool
-    p_value: float  # approximate one-sided p-value
+    p_value: float  # approximate one-sided p-value (raw, uncorrected)
+    n_trials_correction: int = 1  # Bonferroni correction: n_comparisons used
 
     def __str__(self) -> str:
         return (
@@ -77,6 +78,7 @@ class TPEEvalReport:
             f"random_best={self.random_best_score:.6f}\n"
             f"  tpe_beats_random={self.tpe_beats_random}, "
             f"p_value={self.p_value:.4f}\n"
+            f"  n_trials_correction={self.n_trials_correction}\n"
             f")"
         )
 
@@ -138,7 +140,9 @@ class TPEEvaluator:
         tpe_best = max(t.score for t in self._tpe_trials) if self._tpe_trials else -math.inf
         rand_best = max(t.score for t in self._random_trials) if self._random_trials else -math.inf
 
-        beats, p_val = self._statistical_test(self._tpe_trials, self._random_trials)
+        beats, p_val = self._statistical_test(
+            self._tpe_trials, self._random_trials, n_comparisons=self._n_trials
+        )
 
         report = TPEEvalReport(
             n_trials=self._n_trials,
@@ -148,6 +152,7 @@ class TPEEvaluator:
             random_best_score=round(rand_best, 8),
             tpe_beats_random=beats,
             p_value=round(p_val, 6),
+            n_trials_correction=self._n_trials,
         )
         logger.info(
             "TPEEvaluator: tpe_best=%.6f random_best=%.6f beats_random=%s p=%.4f",
@@ -218,15 +223,24 @@ class TPEEvaluator:
 
         return self._n_trials
 
-    def beats_random(self, confidence: float = 0.95) -> bool:
+    def beats_random(self, confidence: float = 0.95, n_comparisons: int | None = None) -> bool:
         """
         Return True if TPE beats random search at the given confidence level.
 
         Uses a simple one-sided t-test approximation (no scipy dependency).
+        Applies Bonferroni correction for multiple comparisons.
+
+        Parameters
+        ----------
+        confidence    : Required confidence level (default 0.95).
+        n_comparisons : Number of comparisons for Bonferroni correction.
+                        Defaults to self._n_trials if None.
         """
         self._assert_ran()
-        _, p_val = self._statistical_test(self._tpe_trials, self._random_trials)
-        return p_val < (1 - confidence)
+        n = n_comparisons if n_comparisons is not None else self._n_trials
+        _, p_val = self._statistical_test(self._tpe_trials, self._random_trials, n_comparisons=n)
+        alpha_corrected = (1.0 - confidence) / max(1, n)
+        return p_val < alpha_corrected
 
     # ------------------------------------------------------------------
     # Internal
@@ -305,12 +319,23 @@ class TPEEvaluator:
     def _statistical_test(
         tpe_trials: list[TrialRecord],
         random_trials: list[TrialRecord],
+        n_comparisons: int = 1,
     ) -> tuple[bool, float]:
         """
         One-sided Welch's t-test approximation (no scipy).
 
         Tests H0: mean(tpe_scores) <= mean(random_scores)
-        Returns (tpe_is_better, p_value).
+        Applies Bonferroni correction for multiple comparisons.
+
+        Parameters
+        ----------
+        tpe_trials     : TPE trial records.
+        random_trials  : Random search trial records.
+        n_comparisons  : Number of comparisons for Bonferroni correction
+                         (alpha_corrected = 0.05 / n_comparisons).
+
+        Returns (tpe_is_better, raw_p_value).
+        The raw p-value is returned uncorrected; the boolean applies the correction.
         """
         tpe_scores = [t.score for t in tpe_trials]
         rand_scores = [t.score for t in random_trials]
@@ -334,7 +359,8 @@ class TPEEvaluator:
         # (valid for large n; fine for our evaluation purposes)
         p_val = _approx_one_sided_p(t_stat)
 
-        return mean_tpe > mean_rand and p_val < 0.05, p_val
+        alpha_corrected = 0.05 / max(1, n_comparisons)
+        return mean_tpe > mean_rand and p_val < alpha_corrected, p_val
 
     def _assert_ran(self) -> None:
         if not self._ran:
