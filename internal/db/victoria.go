@@ -3,47 +3,22 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
-	"os"
-	"path/filepath"
 )
 
-// VictoriaDBPath returns the SQLite DB path for Victoria trading state.
-// Reads VICTORIA_STATE_DB_PATH first, then OMEGA_DATA_DIR/victoria_state.db.
-func VictoriaDBPath() string {
-	if p := os.Getenv("VICTORIA_STATE_DB_PATH"); p != "" {
-		return p
-	}
-	return filepath.Join(DataDir(), "victoria_state.db")
-}
-
-// ── Victoria DB ────────────────────────────────────────────────────────────────
-
-// VictoriaDB holds a connection to the Victoria trading state database.
-// The Python trading engine writes; this Go layer reads.
+// VictoriaDB provides read access to Victoria trading state tables.
+// The Python trading engine writes these tables; Go reads them for the dashboard.
+// With Postgres, they live in the same database as all other Omega tables.
 type VictoriaDB struct {
 	db *sql.DB
 }
 
-// NewVictoria opens the Victoria SQLite database. If the file doesn't exist yet,
-// it creates an empty one so the server can start before the trading engine runs.
-func NewVictoria(path string) (*VictoriaDB, error) {
-	ensureDir(path)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		f, _ := os.Create(path) //nolint:gosec
-		if f != nil {
-			f.Close() //nolint:errcheck,gosec
-		}
-	}
-	d, err := openDB(path)
-	if err != nil {
-		return nil, err
-	}
-	return &VictoriaDB{db: d}, nil
+// NewVictoria creates a VictoriaDB reader backed by the shared Omega database.
+func NewVictoria(db *sql.DB) *VictoriaDB {
+	return &VictoriaDB{db: db}
 }
 
-func (v *VictoriaDB) Close() {
-	v.db.Close() //nolint:errcheck,gosec
-}
+// Close is a no-op — the underlying db is shared with the main DB pool.
+func (v *VictoriaDB) Close() {}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -155,9 +130,9 @@ type VictoriaEquityPoint struct {
 }
 
 type VictoriaAblationEntry struct {
-	Name   string  `json:"name"`
+	Name    string  `json:"name"`
 	DSharpe float64 `json:"dSharpe"`
-	Sig    bool    `json:"sig"`
+	Sig     bool    `json:"sig"`
 }
 
 type VictoriaRegime struct {
@@ -169,13 +144,13 @@ type VictoriaRegime struct {
 }
 
 type VictoriaCrashScenario struct {
-	Name    string   `json:"name"`
-	Sym     string   `json:"sym"`
-	DD      float64  `json:"dd"`
-	Recov   *float64 `json:"recov"`
-	SL      int      `json:"sl"`
-	Pnl     float64  `json:"pnl"`
-	Pass    bool     `json:"pass"`
+	Name  string   `json:"name"`
+	Sym   string   `json:"sym"`
+	DD    float64  `json:"dd"`
+	Recov *float64 `json:"recov"`
+	SL    int      `json:"sl"`
+	Pnl   float64  `json:"pnl"`
+	Pass  bool     `json:"pass"`
 }
 
 type VictoriaFundingPoint struct {
@@ -208,28 +183,14 @@ type VictoriaRiskMetrics struct {
 	LatestOI         float64
 }
 
-// ── Query helpers ─────────────────────────────────────────────────────────────
-
-// tableExists checks if a table exists in the database.
-func (v *VictoriaDB) tableExists(name string) bool {
-	var count int
-	v.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, name).Scan(&count) //nolint:errcheck,gosec
-	return count > 0
-}
-
 // ── Portfolio ─────────────────────────────────────────────────────────────────
 
 func (v *VictoriaDB) GetPortfolio() (*VictoriaPortfolio, error) {
 	p := &VictoriaPortfolio{}
-
-	if !v.tableExists("victoria_portfolio") {
-		return p, nil
-	}
-
 	row := v.db.QueryRow(`
 		SELECT portfolio_value, unrealised_pnl, realised_pnl, total_pnl,
 		       total_return, ann_return, win_rate, profit_factor, sharpe, ann_vol,
-		       COALESCE(allocation_json, '[]')
+		       COALESCE(allocation::text, '[]')
 		FROM victoria_portfolio ORDER BY updated_at DESC LIMIT 1`)
 	var allocJSON string
 	if err := row.Scan(&p.PortfolioValue, &p.UnrealisedPnL, &p.RealisedPnL, &p.TotalPnL,
@@ -247,10 +208,6 @@ func (v *VictoriaDB) GetPortfolio() (*VictoriaPortfolio, error) {
 // ── Positions ─────────────────────────────────────────────────────────────────
 
 func (v *VictoriaDB) GetPositions() ([]*VictoriaPosition, error) {
-	if !v.tableExists("victoria_positions") {
-		return nil, nil
-	}
-
 	rows, err := v.db.Query(`
 		SELECT sym, side, size, entry, mark, upnl, pct, notional, leverage, var95
 		FROM victoria_positions ORDER BY notional DESC`)
@@ -274,11 +231,6 @@ func (v *VictoriaDB) GetPositions() ([]*VictoriaPosition, error) {
 
 func (v *VictoriaDB) GetPnL() (*VictoriaPnL, error) {
 	p := &VictoriaPnL{}
-
-	if !v.tableExists("victoria_pnl") {
-		return p, nil
-	}
-
 	row := v.db.QueryRow(`
 		SELECT unrealised_pnl, realised_pnl, total_pnl, total_return, ann_return,
 		       win_rate, profit_factor, sharpe, ann_vol, max_dd, var95, cvar95, sortino, calmar
@@ -295,10 +247,6 @@ func (v *VictoriaDB) GetPnL() (*VictoriaPnL, error) {
 // ── Signals ──────────────────────────────────────────────────────────────────
 
 func (v *VictoriaDB) GetSignals() ([]*VictoriaSignal, error) {
-	if !v.tableExists("victoria_signals") {
-		return nil, nil
-	}
-
 	rows, err := v.db.Query(`
 		SELECT name, avg_ic, weight, half_life, color, conviction, brier_score, current_value, trend
 		FROM victoria_signals ORDER BY weight DESC`)
@@ -319,17 +267,13 @@ func (v *VictoriaDB) GetSignals() ([]*VictoriaSignal, error) {
 }
 
 func (v *VictoriaDB) GetSignalHistory(signalName string, limit int) ([]*VictoriaSignalICPoint, error) {
-	if !v.tableExists("victoria_signal_history") {
-		return nil, nil
-	}
 	if limit <= 0 {
 		limit = 60
 	}
-
 	rows, err := v.db.Query(`
 		SELECT t, ic FROM victoria_signal_history
-		WHERE signal_name = ?
-		ORDER BY t DESC LIMIT ?`, signalName, limit)
+		WHERE signal_name = $1
+		ORDER BY t DESC LIMIT $2`, signalName, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -342,7 +286,6 @@ func (v *VictoriaDB) GetSignalHistory(signalName string, limit int) ([]*Victoria
 		}
 		points = append(points, p)
 	}
-	// Reverse to chronological order
 	for i, j := 0, len(points)-1; i < j; i, j = i+1, j-1 {
 		points[i], points[j] = points[j], points[i]
 	}
@@ -352,25 +295,24 @@ func (v *VictoriaDB) GetSignalHistory(signalName string, limit int) ([]*Victoria
 // ── Trades ───────────────────────────────────────────────────────────────────
 
 func (v *VictoriaDB) GetTrades(symFilter, sideFilter string, limit int) ([]*VictoriaTrade, error) {
-	if !v.tableExists("victoria_trades") {
-		return nil, nil
-	}
 	if limit <= 0 {
 		limit = 100
 	}
-
 	query := `SELECT ts, sym, side, size, entry, exit_price, pnl, slippage, duration
-		FROM victoria_trades WHERE 1=1`
+		FROM victoria_trades WHERE TRUE`
 	args := []any{}
+	argN := 1
 	if symFilter != "" {
-		query += " AND sym = ?"
+		query += ` AND sym = $` + itoa(argN)
 		args = append(args, symFilter)
+		argN++
 	}
 	if sideFilter != "" {
-		query += " AND side = ?"
+		query += ` AND side = $` + itoa(argN)
 		args = append(args, sideFilter)
+		argN++
 	}
-	query += " ORDER BY recorded_at DESC LIMIT ?"
+	query += ` ORDER BY recorded_at DESC LIMIT $` + itoa(argN) //nolint:gosec
 	args = append(args, limit)
 
 	rows, err := v.db.Query(query, args...)
@@ -394,11 +336,6 @@ func (v *VictoriaDB) GetTrades(symFilter, sideFilter string, limit int) ([]*Vict
 
 func (v *VictoriaDB) GetBacktestStats() (*VictoriaBacktestStats, error) {
 	s := &VictoriaBacktestStats{}
-
-	if !v.tableExists("victoria_backtest") {
-		return s, nil
-	}
-
 	row := v.db.QueryRow(`
 		SELECT sharpe_ann, sortino_ann, max_dd_pct, calmar, sharpe_is, sharpe_oos,
 		       var, cvar, mean_r, std_r, ann_return, total_return, portfolio_value,
@@ -417,17 +354,13 @@ func (v *VictoriaDB) GetBacktestStats() (*VictoriaBacktestStats, error) {
 // ── Equity Curve ─────────────────────────────────────────────────────────────
 
 func (v *VictoriaDB) GetEquityCurve(limit int) ([]*VictoriaEquityPoint, int, error) {
-	if !v.tableExists("victoria_equity_curve") {
-		return nil, 0, nil
-	}
 	if limit <= 0 {
 		limit = 1000
 	}
-
 	rows, err := v.db.Query(`
 		SELECT date, i, omega, btc, dd
 		FROM victoria_equity_curve
-		ORDER BY i ASC LIMIT ?`, limit)
+		ORDER BY i ASC LIMIT $1`, limit)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -451,16 +384,11 @@ func (v *VictoriaDB) GetEquityCurve(limit int) ([]*VictoriaEquityPoint, int, err
 
 func (v *VictoriaDB) GetRiskMetrics() (*VictoriaRiskMetrics, error) {
 	m := &VictoriaRiskMetrics{}
-
-	if !v.tableExists("victoria_risk_metrics") {
-		return m, nil
-	}
-
 	row := v.db.QueryRow(`
-		SELECT COALESCE(ablation_json,'[]'), COALESCE(regimes_json,'[]'),
+		SELECT COALESCE(ablation::text,'[]'), COALESCE(regimes::text,'[]'),
 		       current_regime_idx,
-		       COALESCE(crashes_json,'[]'), COALESCE(funding_json,'[]'),
-		       COALESCE(adv_series_json,'[]'), COALESCE(tpe_series_json,'[]')
+		       COALESCE(crashes::text,'[]'), COALESCE(funding::text,'[]'),
+		       COALESCE(adv_series::text,'[]'), COALESCE(tpe_series::text,'[]')
 		FROM victoria_risk_metrics ORDER BY updated_at DESC LIMIT 1`)
 
 	var ablationJSON, regimesJSON, crashesJSON, fundingJSON, advJSON, tpeJSON string
@@ -473,12 +401,12 @@ func (v *VictoriaDB) GetRiskMetrics() (*VictoriaRiskMetrics, error) {
 		return nil, err
 	}
 
-	json.Unmarshal([]byte(ablationJSON), &m.Ablation)  //nolint:errcheck,gosec
-	json.Unmarshal([]byte(regimesJSON), &m.Regimes)    //nolint:errcheck,gosec
-	json.Unmarshal([]byte(crashesJSON), &m.Crashes)    //nolint:errcheck,gosec
-	json.Unmarshal([]byte(fundingJSON), &m.FundingData) //nolint:errcheck,gosec
-	json.Unmarshal([]byte(advJSON), &m.AdvSeries)      //nolint:errcheck,gosec
-	json.Unmarshal([]byte(tpeJSON), &m.TpeSeries)      //nolint:errcheck,gosec
+	json.Unmarshal([]byte(ablationJSON), &m.Ablation)   //nolint:errcheck,gosec
+	json.Unmarshal([]byte(regimesJSON), &m.Regimes)     //nolint:errcheck,gosec
+	json.Unmarshal([]byte(crashesJSON), &m.Crashes)     //nolint:errcheck,gosec
+	json.Unmarshal([]byte(fundingJSON), &m.FundingData)  //nolint:errcheck,gosec
+	json.Unmarshal([]byte(advJSON), &m.AdvSeries)       //nolint:errcheck,gosec
+	json.Unmarshal([]byte(tpeJSON), &m.TpeSeries)       //nolint:errcheck,gosec
 
 	if len(m.FundingData) > 0 {
 		last := m.FundingData[len(m.FundingData)-1]
@@ -487,4 +415,17 @@ func (v *VictoriaDB) GetRiskMetrics() (*VictoriaRiskMetrics, error) {
 	}
 
 	return m, nil
+}
+
+// itoa converts int to string for query building (avoids fmt import).
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	b := make([]byte, 0, 3)
+	for n > 0 {
+		b = append([]byte{byte('0' + n%10)}, b...)
+		n /= 10
+	}
+	return string(b)
 }

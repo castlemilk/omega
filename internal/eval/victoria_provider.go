@@ -33,31 +33,24 @@ type VictoriaProvider interface {
 
 // ── VectoraDBProvider ─────────────────────────────────────────────────────────
 
-// VectoraDBProvider reads from the live Vectora SQLite database written by
-// the Python trading engine.
+// VectoraDBProvider reads from the shared Postgres database.
 type VectoraDBProvider struct {
 	vdb *db.VictoriaDB
 }
 
-// NewVectoraDBProvider opens the Vectora DB at the path from db.VictoriaDBPath().
-// Returns an error only if the file cannot be opened; an empty/unpopulated DB
-// is accepted and will produce a snapshot with Available=false.
-func NewVectoraDBProvider() (*VectoraDBProvider, error) {
-	vdb, err := db.NewVictoria(db.VictoriaDBPath())
-	if err != nil {
-		return nil, fmt.Errorf("open vectora db: %w", err)
-	}
-	return &VectoraDBProvider{vdb: vdb}, nil
+// NewVectoraDBProvider creates a provider backed by the given VictoriaDB.
+func NewVectoraDBProvider(vdb *db.VictoriaDB) *VectoraDBProvider {
+	return &VectoraDBProvider{vdb: vdb}
 }
 
-// Close releases the database connection.
-func (p *VectoraDBProvider) Close() { p.vdb.Close() }
+// Close is a no-op — the underlying db is shared.
+func (p *VectoraDBProvider) Close() {}
 
 // IsLive returns true.
 func (p *VectoraDBProvider) IsLive() bool { return true }
 
-// Source returns the DB file path.
-func (p *VectoraDBProvider) Source() string { return db.VictoriaDBPath() }
+// Source returns the source identifier.
+func (p *VectoraDBProvider) Source() string { return "postgres" }
 
 // Snapshot queries all observable Victoria state from the database.
 func (p *VectoraDBProvider) Snapshot() (*VictoriaSnapshot, error) {

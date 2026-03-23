@@ -10,7 +10,7 @@ Resolution rate is tracked as a system health metric.
 
 from __future__ import annotations
 
-import sqlite3
+import os
 import time
 import uuid
 from dataclasses import dataclass
@@ -335,12 +335,12 @@ class ChallengeRegistry:
     block deployments. Resolution rate is a system health metric.
     """
 
-    def __init__(self, db_path: str = ":memory:") -> None:
-        self._db_path = db_path
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.executescript(_SCHEMA)
-        self._conn.commit()
+    def __init__(self) -> None:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        dsn = os.environ["DATABASE_URL"]
+        self._conn = psycopg.connect(dsn, row_factory=dict_row)
 
     # ------------------------------------------------------------------
     # CRUD
@@ -360,7 +360,7 @@ class ChallengeRegistry:
             """INSERT INTO challenges
                (challenge_id, target_subsystem, severity, description, evidence,
                 status, resolution_notes, created_at, updated_at)
-               VALUES (?,?,?,?,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (
                 cid,
                 target_subsystem,
@@ -378,7 +378,7 @@ class ChallengeRegistry:
 
     def get(self, challenge_id: str) -> Challenge | None:
         row = self._conn.execute(
-            "SELECT * FROM challenges WHERE challenge_id = ?", (challenge_id,)
+            "SELECT * FROM challenges WHERE challenge_id = %s", (challenge_id,)
         ).fetchone()
         return self._row_to_challenge(row) if row else None
 
@@ -390,18 +390,18 @@ class ChallengeRegistry:
     ) -> bool:
         result = self._conn.execute(
             """UPDATE challenges
-               SET status=?, resolution_notes=?, updated_at=?
-               WHERE challenge_id=?""",
+               SET status=%s, resolution_notes=%s, updated_at=%s
+               WHERE challenge_id=%s""",
             (status.value, resolution_notes, time.time(), challenge_id),
         )
         self._conn.commit()
-        return result.rowcount > 0
+        return bool(result.rowcount > 0)
 
     def all_challenges(self, subsystem: str | None = None) -> list[Challenge]:
         query = "SELECT * FROM challenges"
         params: list = []
         if subsystem:
-            query += " WHERE target_subsystem LIKE ?"
+            query += " WHERE target_subsystem LIKE %s"
             params.append(f"%{subsystem}%")
         query += " ORDER BY created_at"
         rows = self._conn.execute(query, params).fetchall()
@@ -411,7 +411,7 @@ class ChallengeRegistry:
         query = "SELECT * FROM challenges WHERE status = 'open'"
         params: list = []
         if severity:
-            query += " AND severity = ?"
+            query += " AND severity = %s"
             params.append(severity.value)
         query += " ORDER BY created_at"
         rows = self._conn.execute(query, params).fetchall()
@@ -451,7 +451,8 @@ class ChallengeRegistry:
         Returns number of challenges newly inserted.
         """
         existing_descriptions = {
-            row[0] for row in self._conn.execute("SELECT description FROM challenges").fetchall()
+            row["description"]
+            for row in self._conn.execute("SELECT description FROM challenges").fetchall()
         }
         inserted = 0
         for ch in _SEED_CHALLENGES:
@@ -470,7 +471,7 @@ class ChallengeRegistry:
     # Internal
     # ------------------------------------------------------------------
 
-    def _row_to_challenge(self, row: sqlite3.Row) -> Challenge:
+    def _row_to_challenge(self, row: dict) -> Challenge:
         return Challenge(
             challenge_id=row["challenge_id"],
             target_subsystem=row["target_subsystem"],

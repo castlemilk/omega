@@ -20,11 +20,12 @@ The node:
   - Vetoes improvements when CRITICAL open challenges exist or gates fail
   - Never self-improves — improve() always returns False
 """
+
 from __future__ import annotations
 
 import time
 import uuid
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from omega.core.challenge_registry import (
@@ -37,12 +38,12 @@ from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.verification_gates import VerificationGateSystem
 
 
-class ReviewMode(str, Enum):
-    ARCHITECTURAL_REVIEW   = "architectural_review"
-    IMPLEMENTATION_AUDIT   = "implementation_audit"
+class ReviewMode(StrEnum):
+    ARCHITECTURAL_REVIEW = "architectural_review"
+    IMPLEMENTATION_AUDIT = "implementation_audit"
     ASSUMPTION_STRESS_TEST = "assumption_stress_test"
-    REGRESSION_HUNT        = "regression_hunt"
-    COMPLEXITY_AUDIT       = "complexity_audit"
+    REGRESSION_HUNT = "regression_hunt"
+    COMPLEXITY_AUDIT = "complexity_audit"
 
 
 _CAPABILITIES = [m.value for m in ReviewMode]
@@ -64,12 +65,11 @@ class DevilsAdvocateNode(Node):
         self,
         registry: ChallengeRegistry | None = None,
         gate_system: VerificationGateSystem | None = None,
-        db_path: str = ":memory:",
     ) -> None:
         # Skip super().__init__() — no Brain for the devil's advocate
         self._node_id = str(uuid.uuid4())
         self._version = "1.0"
-        self._registry = registry or ChallengeRegistry(db_path=db_path)
+        self._registry = registry or ChallengeRegistry()
         self._gates = gate_system or VerificationGateSystem()
         self._execution_count = 0
         self._veto_count = 0
@@ -172,7 +172,8 @@ class DevilsAdvocateNode(Node):
         open_chs = self._registry.open_challenges()
         relevant = (
             [c for c in open_chs if subsystem.lower() in c.target_subsystem.lower()]
-            if subsystem else open_chs
+            if subsystem
+            else open_chs
         )
 
         gate_results = self._gates.run_all(params)
@@ -221,11 +222,13 @@ class DevilsAdvocateNode(Node):
         """
         all_chs = self._registry.all_challenges()
         critical = [
-            c for c in all_chs
+            c
+            for c in all_chs
             if c.severity == ChallengeSeverity.CRITICAL and c.status == ChallengeStatus.OPEN
         ]
         high = [
-            c for c in all_chs
+            c
+            for c in all_chs
             if c.severity == ChallengeSeverity.HIGH and c.status == ChallengeStatus.OPEN
         ]
 
@@ -276,8 +279,7 @@ class DevilsAdvocateNode(Node):
         """
         all_open = self._registry.open_challenges()
         complexity_chs = [
-            c for c in all_open
-            if any(kw in c.description.lower() for kw in _COMPLEXITY_KEYWORDS)
+            c for c in all_open if any(kw in c.description.lower() for kw in _COMPLEXITY_KEYWORDS)
         ]
 
         gate_results = self._gates.run_all(params)
@@ -299,6 +301,7 @@ class DevilsAdvocateNode(Node):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _ch_dict(c: Challenge) -> dict[str, Any]:
     return {

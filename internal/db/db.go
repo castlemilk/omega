@@ -1,189 +1,490 @@
-// Package db provides read/write access to the Omega SQLite state and memory databases.
-// Go is the authoritative writer; Python calls Go via Connect-RPC to persist state.
+// Package db provides read/write access to the Omega PostgreSQL database.
+// A single pgxpool-backed *sql.DB serves all tables (state, memory, challenges,
+// Victoria trading state). LISTEN/NOTIFY is handled via a raw pgxpool.Pool.
 package db
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
-// DataDir returns the base directory for all Omega SQLite databases.
-// Reads OMEGA_DATA_DIR; defaults to ./data for dev, /data in Docker.
-func DataDir() string {
-	if d := os.Getenv("OMEGA_DATA_DIR"); d != "" {
-		return d
+// DatabaseURL returns the Postgres DSN.
+// Reads DATABASE_URL; defaults to a local dev DSN.
+func DatabaseURL() string {
+	if u := os.Getenv("DATABASE_URL"); u != "" {
+		return u
 	}
-	return "./data"
+	return "postgres://omega:omega@localhost:5432/omega?sslmode=disable"
 }
 
-// StateDBPath returns the SQLite state DB path.
-// Reads OMEGA_STATE_DB_PATH first, then OMEGA_DATA_DIR/omega_victoria_state.db.
-func StateDBPath() string {
-	if p := os.Getenv("OMEGA_STATE_DB_PATH"); p != "" {
-		return p
-	}
-	return filepath.Join(DataDir(), "omega_victoria_state.db")
-}
-
-// MemoryDBPath returns the SQLite memory DB path.
-// Reads OMEGA_MEMORY_DB_PATH first, then OMEGA_DATA_DIR/omega_victoria_memory.db.
-func MemoryDBPath() string {
-	if p := os.Getenv("OMEGA_MEMORY_DB_PATH"); p != "" {
-		return p
-	}
-	return filepath.Join(DataDir(), "omega_victoria_memory.db")
-}
-
-// ChallengeDBPath returns the SQLite challenge registry DB path.
-// Reads OMEGA_CHALLENGE_DB_PATH first, then OMEGA_DATA_DIR/omega_challenge_registry.db.
-func ChallengeDBPath() string {
-	if p := os.Getenv("OMEGA_CHALLENGE_DB_PATH"); p != "" {
-		return p
-	}
-	return filepath.Join(DataDir(), "omega_challenge_registry.db")
-}
-
-// ensureDir creates the parent directory of path if it does not exist.
-func ensureDir(path string) {
-	if dir := filepath.Dir(path); dir != "" && dir != "." {
-		os.MkdirAll(dir, 0750) //nolint:errcheck,gosec
-	}
-}
-
-// DB holds connections to both Omega SQLite databases.
+// DB holds a connection pool to the Omega PostgreSQL database.
 type DB struct {
-	state     *sql.DB
-	memory    *sql.DB
-	challenge *sql.DB // may be nil if challenge_registry.db doesn't exist yet
+	db   *sql.DB        // database/sql facade over pgxpool (all tables)
+	pool *pgxpool.Pool  // raw pool for LISTEN/NOTIFY
 }
 
-// New opens both databases in WAL mode for concurrent reads.
-func New(stateDBPath, memoryDBPath string) (*DB, error) {
-	ensureDir(stateDBPath)
-	ensureDir(memoryDBPath)
-	ensureDir(ChallengeDBPath())
-	state, err := openDB(stateDBPath)
+// StateDB returns the underlying *sql.DB (backwards compat with health checkers).
+func (d *DB) StateDB() *sql.DB { return d.db }
+
+// MemoryDB returns the underlying *sql.DB (same pool — all tables coexist).
+func (d *DB) MemoryDB() *sql.DB { return d.db }
+
+// New opens (and bootstraps) the Omega PostgreSQL database.
+func New(ctx context.Context) (*DB, error) {
+	dsn := DatabaseURL()
+
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
-		return nil, fmt.Errorf("open state db: %w", err)
+		return nil, fmt.Errorf("pgxpool.New: %w", err)
 	}
-	memory, err := openDB(memoryDBPath)
-	if err != nil {
-		state.Close() //nolint:errcheck,gosec,gosec
-		return nil, fmt.Errorf("open memory db: %w", err)
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, fmt.Errorf("postgres ping: %w", err)
 	}
-	challengeDB, _ := openDB(ChallengeDBPath()) // nil if file not yet created by Python
-	d := &DB{state: state, memory: memory, challenge: challengeDB}
-	if err := d.ensureStateTables(); err != nil {
-		state.Close()  //nolint:errcheck,gosec
-		memory.Close() //nolint:errcheck,gosec
-		if challengeDB != nil {
-			challengeDB.Close() //nolint:errcheck,gosec
-		}
-		return nil, fmt.Errorf("ensure state tables: %w", err)
-	}
-	if err := d.ensureBrainTables(); err != nil {
-		state.Close()  //nolint:errcheck,gosec
-		memory.Close() //nolint:errcheck,gosec
-		if challengeDB != nil {
-			challengeDB.Close() //nolint:errcheck,gosec
-		}
-		return nil, fmt.Errorf("ensure brain tables: %w", err)
-	}
-	if err := d.ensureTerminalTables(); err != nil {
-		state.Close()  //nolint:errcheck,gosec
-		memory.Close() //nolint:errcheck,gosec
-		if challengeDB != nil {
-			challengeDB.Close() //nolint:errcheck,gosec
-		}
-		return nil, fmt.Errorf("ensure terminal tables: %w", err)
-	}
-	if err := d.ensureErrorClassColumns(); err != nil {
-		state.Close()  //nolint:errcheck,gosec
-		memory.Close() //nolint:errcheck,gosec
-		if challengeDB != nil {
-			challengeDB.Close() //nolint:errcheck,gosec
-		}
-		return nil, fmt.Errorf("ensure error class columns: %w", err)
+
+	sqlDB := stdlib.OpenDBFromPool(pool)
+
+	d := &DB{db: sqlDB, pool: pool}
+	if err := d.ensureSchema(ctx); err != nil {
+		sqlDB.Close() //nolint:errcheck,gosec
+		pool.Close()
+		return nil, fmt.Errorf("ensure schema: %w", err)
 	}
 	return d, nil
 }
 
-// ensureErrorClassColumns adds the error classification columns to node_executions
-// if they don't already exist (idempotent migration).
-func (d *DB) ensureErrorClassColumns() error {
-	for _, col := range []struct{ name, def string }{
-		{"error_class", "INTEGER NOT NULL DEFAULT 0"},
-		{"error_code", "TEXT NOT NULL DEFAULT ''"},
-		{"is_retryable", "INTEGER NOT NULL DEFAULT 0"},
-	} {
-		_, err := d.state.Exec(`ALTER TABLE node_executions ADD COLUMN ` + col.name + ` ` + col.def)
-		if err != nil {
-			msg := err.Error()
-			if strings.Contains(msg, "duplicate column name") || strings.Contains(msg, "already exists") {
-				continue // column already present
-			}
-			return fmt.Errorf("add column %s: %w", col.name, err)
-		}
-	}
-	return nil
+func (d *DB) Close() {
+	d.db.Close()  //nolint:errcheck,gosec
+	d.pool.Close()
 }
 
-func (d *DB) ensureTerminalTables() error {
-	_, err := d.state.Exec(`
-		CREATE TABLE IF NOT EXISTS terminal_sessions (
-			id             TEXT PRIMARY KEY,
-			work_dir       TEXT NOT NULL DEFAULT '',
-			autonomy_level TEXT NOT NULL DEFAULT 'pico',
-			status         TEXT NOT NULL DEFAULT 'active',
-			created_at     REAL NOT NULL,
-			closed_at      REAL
-		);
-		CREATE TABLE IF NOT EXISTS terminal_commands (
-			id           TEXT PRIMARY KEY,
-			session_id   TEXT NOT NULL REFERENCES terminal_sessions(id),
-			command      TEXT NOT NULL,
-			args         TEXT NOT NULL DEFAULT '[]',
-			exit_code    INTEGER NOT NULL DEFAULT 0,
-			stdout       TEXT NOT NULL DEFAULT '',
-			stderr       TEXT NOT NULL DEFAULT '',
-			duration_ms  INTEGER NOT NULL DEFAULT 0,
-			truncated    INTEGER NOT NULL DEFAULT 0,
-			executed_at  REAL NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_terminal_commands_session
-			ON terminal_commands(session_id);
-	`)
+// ── LISTEN/NOTIFY ─────────────────────────────────────────────────────────────
+
+// Omega coordination pub/sub channels.
+const (
+	ChannelNodeStateChanged      = "omega_node_state_changed"
+	ChannelCycleCompleted        = "omega_cycle_completed"
+	ChannelImprovementTriggered  = "omega_improvement_triggered"
+	ChannelIssueDetected         = "omega_issue_detected"
+)
+
+// Notify sends a NOTIFY on the given channel with the JSON-encoded payload.
+func (d *DB) Notify(ctx context.Context, channel string, payload any) error {
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal payload: %w", err)
+	}
+	conn, err := d.pool.Acquire(ctx)
+	if err != nil {
+		return fmt.Errorf("acquire conn: %w", err)
+	}
+	defer conn.Release()
+	_, err = conn.Exec(ctx, "SELECT pg_notify($1, $2)", channel, string(b))
 	return err
 }
 
-func openDB(path string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)")
+// Listen blocks and calls handler for each NOTIFY received on channel.
+// Returns when ctx is cancelled. Reconnects on transient errors.
+func (d *DB) Listen(ctx context.Context, channel string, handler func(payload string)) error {
+	conn, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("acquire conn for listen: %w", err)
 	}
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	return db, db.Ping()
+	defer conn.Release()
+
+	if _, err := conn.Exec(ctx, "LISTEN "+channel); err != nil {
+		return fmt.Errorf("LISTEN %s: %w", channel, err)
+	}
+	for {
+		n, err := conn.Conn().WaitForNotification(ctx)
+		if err != nil {
+			return err // ctx cancelled or connection lost
+		}
+		handler(n.Payload)
+	}
 }
 
-// StateDB exposes the underlying state sql.DB for test helpers.
-// Production code should use the typed methods on DB instead.
-func (d *DB) StateDB() *sql.DB  { return d.state }
-func (d *DB) MemoryDB() *sql.DB { return d.memory }
+// ── Schema bootstrap ──────────────────────────────────────────────────────────
 
-func (d *DB) Close() {
-	d.state.Close()  //nolint:errcheck,gosec
-	d.memory.Close() //nolint:errcheck,gosec
-	if d.challenge != nil {
-		d.challenge.Close() //nolint:errcheck,gosec
+var stateSchema = []string{
+	`CREATE TABLE IF NOT EXISTS nodes (
+		node_id           TEXT PRIMARY KEY,
+		name              TEXT NOT NULL,
+		version           TEXT NOT NULL DEFAULT '1.0',
+		capabilities      JSONB NOT NULL DEFAULT '[]',
+		health            DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+		status            TEXT NOT NULL DEFAULT 'active',
+		brain_config      JSONB NOT NULL DEFAULT '{"provider":"none"}',
+		registered_at     DOUBLE PRECISION NOT NULL,
+		last_updated      DOUBLE PRECISION NOT NULL
+	)`,
+	`CREATE TABLE IF NOT EXISTS node_executions (
+		exec_id      TEXT PRIMARY KEY,
+		node_id      TEXT NOT NULL,
+		node_name    TEXT NOT NULL,
+		trace_id     TEXT,
+		span_id      TEXT,
+		action       TEXT NOT NULL,
+		started_at   DOUBLE PRECISION NOT NULL,
+		ended_at     DOUBLE PRECISION,
+		duration_ms  DOUBLE PRECISION,
+		success      BOOLEAN NOT NULL DEFAULT TRUE,
+		error_text   TEXT,
+		metrics      JSONB NOT NULL DEFAULT '{}',
+		cycle        BIGINT NOT NULL DEFAULT 0,
+		error_class  INTEGER NOT NULL DEFAULT 0,
+		error_code   TEXT NOT NULL DEFAULT '',
+		is_retryable BOOLEAN NOT NULL DEFAULT FALSE
+	)`,
+	`CREATE TABLE IF NOT EXISTS traces (
+		span_id        TEXT PRIMARY KEY,
+		trace_id       TEXT NOT NULL,
+		parent_span_id TEXT,
+		node_id        TEXT,
+		node_name      TEXT,
+		operation      TEXT NOT NULL,
+		started_at     DOUBLE PRECISION NOT NULL,
+		ended_at       DOUBLE PRECISION,
+		duration_ms    DOUBLE PRECISION,
+		status         TEXT NOT NULL DEFAULT 'ok',
+		metadata       JSONB NOT NULL DEFAULT '{}',
+		cycle          BIGINT NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS cost_events (
+		cost_id            TEXT PRIMARY KEY,
+		node_id            TEXT NOT NULL,
+		exec_id            TEXT,
+		provider           TEXT NOT NULL,
+		call_type          TEXT NOT NULL,
+		duration_ms        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		estimated_cost_usd DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+		metadata           JSONB NOT NULL DEFAULT '{}',
+		recorded_at        DOUBLE PRECISION NOT NULL,
+		cycle              BIGINT NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS issues (
+		issue_id       TEXT PRIMARY KEY,
+		detector       TEXT NOT NULL,
+		severity       TEXT NOT NULL DEFAULT 'warning',
+		description    TEXT NOT NULL,
+		context        JSONB NOT NULL DEFAULT '{}',
+		state          TEXT NOT NULL DEFAULT 'pending',
+		opened_at      DOUBLE PRECISION NOT NULL,
+		resolved_at    DOUBLE PRECISION,
+		cycle_opened   BIGINT NOT NULL DEFAULT 0,
+		cycle_resolved BIGINT
+	)`,
+	`CREATE TABLE IF NOT EXISTS activity_log (
+		log_id      TEXT PRIMARY KEY,
+		action_type TEXT NOT NULL,
+		entity_type TEXT NOT NULL,
+		entity_id   TEXT NOT NULL,
+		data        JSONB NOT NULL DEFAULT '{}',
+		recorded_at DOUBLE PRECISION NOT NULL,
+		cycle       BIGINT NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS improvement_log (
+		improve_id          TEXT PRIMARY KEY,
+		node_id             TEXT NOT NULL,
+		node_name           TEXT NOT NULL,
+		from_version        TEXT NOT NULL,
+		to_version          TEXT NOT NULL,
+		before_metrics      JSONB NOT NULL DEFAULT '{}',
+		after_metrics       JSONB NOT NULL DEFAULT '{}',
+		triggered_by        TEXT NOT NULL DEFAULT 'metrics',
+		recorded_at         DOUBLE PRECISION NOT NULL,
+		cycle               BIGINT NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS config_revisions (
+		revision_id TEXT PRIMARY KEY,
+		node_id     TEXT NOT NULL,
+		version     TEXT NOT NULL,
+		config      JSONB NOT NULL DEFAULT '{}',
+		recorded_at DOUBLE PRECISION NOT NULL
+	)`,
+	`CREATE TABLE IF NOT EXISTS brain_executions (
+		brain_exec_id  TEXT PRIMARY KEY,
+		node_id        TEXT NOT NULL,
+		node_name      TEXT NOT NULL,
+		provider       TEXT NOT NULL DEFAULT 'none',
+		model          TEXT NOT NULL DEFAULT '',
+		operation      TEXT NOT NULL,
+		action_decided TEXT NOT NULL,
+		parameters     JSONB NOT NULL DEFAULT '{}',
+		reasoning      TEXT NOT NULL DEFAULT '',
+		confidence     DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+		outcome        TEXT NOT NULL DEFAULT 'pending',
+		latency_ms     DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+		trace_id       TEXT NOT NULL DEFAULT '',
+		recorded_at    DOUBLE PRECISION NOT NULL,
+		cycle          BIGINT NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS alignment_decisions (
+		decision_id      TEXT PRIMARY KEY,
+		cycle            BIGINT NOT NULL DEFAULT 0,
+		approved         BOOLEAN NOT NULL DEFAULT TRUE,
+		violations       JSONB NOT NULL DEFAULT '[]',
+		pareto_ranks     JSONB NOT NULL DEFAULT '{}',
+		adjustments      JSONB NOT NULL DEFAULT '{}',
+		vcg_payments     JSONB NOT NULL DEFAULT '{}',
+		goodhart_warning BOOLEAN NOT NULL DEFAULT FALSE,
+		recorded_at      DOUBLE PRECISION NOT NULL
+	)`,
+	`CREATE TABLE IF NOT EXISTS adversarial_results (
+		result_id        TEXT PRIMARY KEY,
+		cycle            BIGINT NOT NULL DEFAULT 0,
+		ring             INTEGER NOT NULL DEFAULT 1,
+		flagged          BOOLEAN NOT NULL DEFAULT FALSE,
+		max_disagreement DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+		scenario_count   BIGINT NOT NULL DEFAULT 0,
+		failure_cases    JSONB NOT NULL DEFAULT '[]',
+		details          JSONB NOT NULL DEFAULT '{}',
+		recorded_at      DOUBLE PRECISION NOT NULL
+	)`,
+	`CREATE TABLE IF NOT EXISTS goal_tracking (
+		tracking_id    TEXT PRIMARY KEY,
+		cycle          BIGINT NOT NULL DEFAULT 0,
+		approved       BOOLEAN NOT NULL DEFAULT TRUE,
+		composite_score DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+		scorecard       JSONB NOT NULL DEFAULT '{}',
+		nash_weights    JSONB NOT NULL DEFAULT '{}',
+		tracking_error  DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+		control_action  JSONB NOT NULL DEFAULT '{}',
+		subtasks        JSONB NOT NULL DEFAULT '[]',
+		violations      JSONB NOT NULL DEFAULT '[]',
+		recorded_at     DOUBLE PRECISION NOT NULL
+	)`,
+	`CREATE TABLE IF NOT EXISTS terminal_sessions (
+		id             TEXT PRIMARY KEY,
+		work_dir       TEXT NOT NULL DEFAULT '',
+		autonomy_level TEXT NOT NULL DEFAULT 'pico',
+		status         TEXT NOT NULL DEFAULT 'active',
+		created_at     DOUBLE PRECISION NOT NULL,
+		closed_at      DOUBLE PRECISION
+	)`,
+	`CREATE TABLE IF NOT EXISTS terminal_commands (
+		id          TEXT PRIMARY KEY,
+		session_id  TEXT NOT NULL REFERENCES terminal_sessions(id),
+		command     TEXT NOT NULL,
+		args        JSONB NOT NULL DEFAULT '[]',
+		exit_code   INTEGER NOT NULL DEFAULT 0,
+		stdout      TEXT NOT NULL DEFAULT '',
+		stderr      TEXT NOT NULL DEFAULT '',
+		duration_ms BIGINT NOT NULL DEFAULT 0,
+		truncated   BOOLEAN NOT NULL DEFAULT FALSE,
+		executed_at DOUBLE PRECISION NOT NULL
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_terminal_commands_session ON terminal_commands(session_id)`,
+	`CREATE TABLE IF NOT EXISTS node_brain_config (
+		node_id       TEXT PRIMARY KEY,
+		provider      TEXT NOT NULL DEFAULT 'anthropic',
+		model         TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
+		temperature   DOUBLE PRECISION NOT NULL DEFAULT 0.7,
+		max_tokens    BIGINT NOT NULL DEFAULT 4096,
+		system_prompt TEXT NOT NULL DEFAULT '',
+		extra_config  JSONB NOT NULL DEFAULT '{}',
+		updated_at    DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS brain_execution_log (
+		exec_id           TEXT PRIMARY KEY,
+		node_id           TEXT NOT NULL,
+		provider          TEXT NOT NULL,
+		model             TEXT NOT NULL,
+		prompt_tokens     BIGINT NOT NULL DEFAULT 0,
+		completion_tokens BIGINT NOT NULL DEFAULT 0,
+		latency_ms        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		success           BOOLEAN NOT NULL DEFAULT TRUE,
+		error_text        TEXT NOT NULL DEFAULT '',
+		executed_at       DOUBLE PRECISION NOT NULL DEFAULT 0,
+		cycle             BIGINT NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS verification_gates (
+		gate_id    TEXT PRIMARY KEY,
+		cycle      BIGINT NOT NULL DEFAULT 0,
+		gate_name  TEXT NOT NULL,
+		result     TEXT NOT NULL DEFAULT 'pass',
+		details    TEXT NOT NULL DEFAULT '',
+		checked_at DOUBLE PRECISION NOT NULL
+	)`,
+	// ── Memory tables (previously in a separate memory.db) ─────────────────────
+	`CREATE TABLE IF NOT EXISTS episodes (
+		episode_id   TEXT PRIMARY KEY,
+		timestamp    DOUBLE PRECISION NOT NULL,
+		cycle        BIGINT NOT NULL,
+		event_type   TEXT NOT NULL,
+		content      JSONB NOT NULL DEFAULT '{}',
+		tags         JSONB NOT NULL DEFAULT '[]',
+		importance   DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+		namespace    TEXT NOT NULL DEFAULT 'global'
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_episodes_event_type ON episodes(event_type)`,
+	`CREATE INDEX IF NOT EXISTS idx_episodes_cycle ON episodes(cycle)`,
+	`CREATE INDEX IF NOT EXISTS idx_episodes_namespace ON episodes(namespace)`,
+	`CREATE TABLE IF NOT EXISTS semantic_memories (
+		memory_id       TEXT PRIMARY KEY,
+		concept         TEXT NOT NULL,
+		content         TEXT NOT NULL,
+		confidence      DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+		evidence_count  INTEGER NOT NULL DEFAULT 1,
+		last_reinforced DOUBLE PRECISION NOT NULL,
+		tags            JSONB NOT NULL DEFAULT '[]',
+		namespace       TEXT NOT NULL DEFAULT 'global'
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_semantic_concept ON semantic_memories(concept)`,
+	`CREATE INDEX IF NOT EXISTS idx_semantic_namespace ON semantic_memories(namespace)`,
+	`CREATE TABLE IF NOT EXISTS memory_ratings (
+		rating_id TEXT PRIMARY KEY,
+		memory_id TEXT NOT NULL,
+		namespace TEXT NOT NULL DEFAULT 'global',
+		quality   DOUBLE PRECISION NOT NULL,
+		rated_at  DOUBLE PRECISION NOT NULL
+	)`,
+	// ── Challenge / devil's advocate tables ────────────────────────────────────
+	`CREATE TABLE IF NOT EXISTS challenges (
+		challenge_id      TEXT PRIMARY KEY,
+		target_subsystem  TEXT NOT NULL DEFAULT '',
+		severity          TEXT NOT NULL DEFAULT 'medium',
+		description       TEXT NOT NULL DEFAULT '',
+		evidence          TEXT NOT NULL DEFAULT '',
+		status            TEXT NOT NULL DEFAULT 'open',
+		resolution_notes  TEXT NOT NULL DEFAULT '',
+		created_at        DOUBLE PRECISION NOT NULL,
+		updated_at        DOUBLE PRECISION NOT NULL
+	)`,
+	// ── Victoria trading state tables (written by Python, read by Go) ──────────
+	`CREATE TABLE IF NOT EXISTS victoria_portfolio (
+		id              BIGSERIAL PRIMARY KEY,
+		portfolio_value DOUBLE PRECISION NOT NULL DEFAULT 0,
+		unrealised_pnl  DOUBLE PRECISION NOT NULL DEFAULT 0,
+		realised_pnl    DOUBLE PRECISION NOT NULL DEFAULT 0,
+		total_pnl       DOUBLE PRECISION NOT NULL DEFAULT 0,
+		total_return    DOUBLE PRECISION NOT NULL DEFAULT 0,
+		ann_return      DOUBLE PRECISION NOT NULL DEFAULT 0,
+		win_rate        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		profit_factor   DOUBLE PRECISION NOT NULL DEFAULT 0,
+		sharpe          DOUBLE PRECISION NOT NULL DEFAULT 0,
+		ann_vol         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		allocation      JSONB NOT NULL DEFAULT '[]',
+		updated_at      DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS victoria_positions (
+		sym      TEXT PRIMARY KEY,
+		side     TEXT NOT NULL DEFAULT '',
+		size     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		entry    DOUBLE PRECISION NOT NULL DEFAULT 0,
+		mark     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		upnl     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		pct      DOUBLE PRECISION NOT NULL DEFAULT 0,
+		notional DOUBLE PRECISION NOT NULL DEFAULT 0,
+		leverage DOUBLE PRECISION NOT NULL DEFAULT 0,
+		var95    DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS victoria_pnl (
+		id             BIGSERIAL PRIMARY KEY,
+		unrealised_pnl DOUBLE PRECISION NOT NULL DEFAULT 0,
+		realised_pnl   DOUBLE PRECISION NOT NULL DEFAULT 0,
+		total_pnl      DOUBLE PRECISION NOT NULL DEFAULT 0,
+		total_return   DOUBLE PRECISION NOT NULL DEFAULT 0,
+		ann_return     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		win_rate       DOUBLE PRECISION NOT NULL DEFAULT 0,
+		profit_factor  DOUBLE PRECISION NOT NULL DEFAULT 0,
+		sharpe         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		ann_vol        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		max_dd         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		var95          DOUBLE PRECISION NOT NULL DEFAULT 0,
+		cvar95         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		sortino        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		calmar         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		updated_at     DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS victoria_signals (
+		name          TEXT PRIMARY KEY,
+		avg_ic        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		weight        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		half_life     INTEGER NOT NULL DEFAULT 0,
+		color         TEXT NOT NULL DEFAULT '',
+		conviction    DOUBLE PRECISION NOT NULL DEFAULT 0,
+		brier_score   DOUBLE PRECISION NOT NULL DEFAULT 0,
+		current_value DOUBLE PRECISION NOT NULL DEFAULT 0,
+		trend         TEXT NOT NULL DEFAULT ''
+	)`,
+	`CREATE TABLE IF NOT EXISTS victoria_signal_history (
+		id          BIGSERIAL PRIMARY KEY,
+		signal_name TEXT NOT NULL,
+		t           INTEGER NOT NULL,
+		ic          DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_victoria_signal_history_name ON victoria_signal_history(signal_name)`,
+	`CREATE TABLE IF NOT EXISTS victoria_trades (
+		id          BIGSERIAL PRIMARY KEY,
+		ts          TEXT NOT NULL DEFAULT '',
+		sym         TEXT NOT NULL DEFAULT '',
+		side        TEXT NOT NULL DEFAULT '',
+		size        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		entry       DOUBLE PRECISION NOT NULL DEFAULT 0,
+		exit_price  DOUBLE PRECISION NOT NULL DEFAULT 0,
+		pnl         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		slippage    DOUBLE PRECISION NOT NULL DEFAULT 0,
+		duration    TEXT NOT NULL DEFAULT '',
+		recorded_at DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS victoria_backtest (
+		id             BIGSERIAL PRIMARY KEY,
+		sharpe_ann     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		sortino_ann    DOUBLE PRECISION NOT NULL DEFAULT 0,
+		max_dd_pct     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		calmar         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		sharpe_is      DOUBLE PRECISION NOT NULL DEFAULT 0,
+		sharpe_oos     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		var            DOUBLE PRECISION NOT NULL DEFAULT 0,
+		cvar           DOUBLE PRECISION NOT NULL DEFAULT 0,
+		mean_r         DOUBLE PRECISION NOT NULL DEFAULT 0,
+		std_r          DOUBLE PRECISION NOT NULL DEFAULT 0,
+		ann_return     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		total_return   DOUBLE PRECISION NOT NULL DEFAULT 0,
+		portfolio_value DOUBLE PRECISION NOT NULL DEFAULT 0,
+		max_dd_duration INTEGER NOT NULL DEFAULT 0,
+		win_rate       DOUBLE PRECISION NOT NULL DEFAULT 0,
+		profit_factor  DOUBLE PRECISION NOT NULL DEFAULT 0,
+		train_end      INTEGER NOT NULL DEFAULT 0,
+		updated_at     DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS victoria_equity_curve (
+		id        BIGSERIAL PRIMARY KEY,
+		date      TEXT NOT NULL DEFAULT '',
+		i         INTEGER NOT NULL DEFAULT 0,
+		omega     DOUBLE PRECISION NOT NULL DEFAULT 0,
+		btc       DOUBLE PRECISION NOT NULL DEFAULT 0,
+		dd        DOUBLE PRECISION NOT NULL DEFAULT 0,
+		train_end INTEGER NOT NULL DEFAULT 0
+	)`,
+	`CREATE TABLE IF NOT EXISTS victoria_risk_metrics (
+		id                BIGSERIAL PRIMARY KEY,
+		ablation          JSONB NOT NULL DEFAULT '[]',
+		regimes           JSONB NOT NULL DEFAULT '[]',
+		current_regime_idx INTEGER NOT NULL DEFAULT 0,
+		crashes           JSONB NOT NULL DEFAULT '[]',
+		funding           JSONB NOT NULL DEFAULT '[]',
+		adv_series        JSONB NOT NULL DEFAULT '[]',
+		tpe_series        JSONB NOT NULL DEFAULT '[]',
+		updated_at        DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+}
+
+func (d *DB) ensureSchema(ctx context.Context) error {
+	for _, stmt := range stateSchema {
+		if _, err := d.db.ExecContext(ctx, stmt); err != nil {
+			return fmt.Errorf("schema stmt failed: %w\nSQL: %s", err, stmt)
+		}
 	}
+	return nil
 }
 
 // ── Node types ──────────────────────────────────────────────────────────────
@@ -206,21 +507,21 @@ type Node struct {
 }
 
 type Execution struct {
-	ExecID     string
-	NodeID     string
-	NodeName   string
-	TraceID    string
-	SpanID     string
-	Action     string
-	StartedAt  float64
-	EndedAt    *float64
-	DurationMS *float64
-	Success    bool
-	ErrorText  string
-	Metrics    map[string]float64
-	Cycle      int64
-	ErrorClass int32  // matches ErrorClassification proto enum
-	ErrorCode  string // machine-readable sub-code
+	ExecID      string
+	NodeID      string
+	NodeName    string
+	TraceID     string
+	SpanID      string
+	Action      string
+	StartedAt   float64
+	EndedAt     *float64
+	DurationMS  *float64
+	Success     bool
+	ErrorText   string
+	Metrics     map[string]float64
+	Cycle       int64
+	ErrorClass  int32
+	ErrorCode   string
 	IsRetryable bool
 }
 
@@ -372,195 +673,13 @@ type BrainExecutionEntry struct {
 	Cycle            int64
 }
 
-// ── Schema bootstrap ───────────────────────────────────────────────────────────
-
-// ensureStateTables creates all core state tables that Python's _SCHEMA previously
-// created on startup. Go now owns schema creation.
-func (d *DB) ensureStateTables() error {
-	_, err := d.state.Exec(`
-		CREATE TABLE IF NOT EXISTS nodes (
-			node_id             TEXT PRIMARY KEY,
-			name                TEXT NOT NULL,
-			version             TEXT NOT NULL DEFAULT '1.0',
-			capabilities_json   TEXT NOT NULL DEFAULT '[]',
-			health              REAL NOT NULL DEFAULT 1.0,
-			status              TEXT NOT NULL DEFAULT 'active',
-			brain_config_json   TEXT NOT NULL DEFAULT '{"provider":"none"}',
-			registered_at       REAL NOT NULL,
-			last_updated        REAL NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS node_executions (
-			exec_id      TEXT PRIMARY KEY,
-			node_id      TEXT NOT NULL,
-			node_name    TEXT NOT NULL,
-			trace_id     TEXT,
-			span_id      TEXT,
-			action       TEXT NOT NULL,
-			started_at   REAL NOT NULL,
-			ended_at     REAL,
-			duration_ms  REAL,
-			success      INTEGER NOT NULL DEFAULT 1,
-			error_text   TEXT,
-			metrics_json TEXT NOT NULL DEFAULT '{}',
-			cycle        INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS traces (
-			span_id         TEXT PRIMARY KEY,
-			trace_id        TEXT NOT NULL,
-			parent_span_id  TEXT,
-			node_id         TEXT,
-			node_name       TEXT,
-			operation       TEXT NOT NULL,
-			started_at      REAL NOT NULL,
-			ended_at        REAL,
-			duration_ms     REAL,
-			status          TEXT NOT NULL DEFAULT 'ok',
-			metadata_json   TEXT NOT NULL DEFAULT '{}',
-			cycle           INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS cost_events (
-			cost_id             TEXT PRIMARY KEY,
-			node_id             TEXT NOT NULL,
-			exec_id             TEXT,
-			provider            TEXT NOT NULL,
-			call_type           TEXT NOT NULL,
-			duration_ms         REAL NOT NULL DEFAULT 0,
-			estimated_cost_usd  REAL NOT NULL DEFAULT 0.0,
-			metadata_json       TEXT NOT NULL DEFAULT '{}',
-			recorded_at         REAL NOT NULL,
-			cycle               INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS issues (
-			issue_id        TEXT PRIMARY KEY,
-			detector        TEXT NOT NULL,
-			severity        TEXT NOT NULL DEFAULT 'warning',
-			description     TEXT NOT NULL,
-			context_json    TEXT NOT NULL DEFAULT '{}',
-			state           TEXT NOT NULL DEFAULT 'pending',
-			opened_at       REAL NOT NULL,
-			resolved_at     REAL,
-			cycle_opened    INTEGER NOT NULL DEFAULT 0,
-			cycle_resolved  INTEGER
-		);
-		CREATE TABLE IF NOT EXISTS activity_log (
-			log_id       TEXT PRIMARY KEY,
-			action_type  TEXT NOT NULL,
-			entity_type  TEXT NOT NULL,
-			entity_id    TEXT NOT NULL,
-			data_json    TEXT NOT NULL DEFAULT '{}',
-			recorded_at  REAL NOT NULL,
-			cycle        INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS improvement_log (
-			improve_id           TEXT PRIMARY KEY,
-			node_id              TEXT NOT NULL,
-			node_name            TEXT NOT NULL,
-			from_version         TEXT NOT NULL,
-			to_version           TEXT NOT NULL,
-			before_metrics_json  TEXT NOT NULL DEFAULT '{}',
-			after_metrics_json   TEXT NOT NULL DEFAULT '{}',
-			triggered_by         TEXT NOT NULL DEFAULT 'metrics',
-			recorded_at          REAL NOT NULL,
-			cycle                INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS config_revisions (
-			revision_id  TEXT PRIMARY KEY,
-			node_id      TEXT NOT NULL,
-			version      TEXT NOT NULL,
-			config_json  TEXT NOT NULL DEFAULT '{}',
-			recorded_at  REAL NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS brain_executions (
-			brain_exec_id   TEXT PRIMARY KEY,
-			node_id         TEXT NOT NULL,
-			node_name       TEXT NOT NULL,
-			provider        TEXT NOT NULL DEFAULT 'none',
-			model           TEXT NOT NULL DEFAULT '',
-			operation       TEXT NOT NULL,
-			action_decided  TEXT NOT NULL,
-			parameters_json TEXT NOT NULL DEFAULT '{}',
-			reasoning       TEXT NOT NULL DEFAULT '',
-			confidence      REAL NOT NULL DEFAULT 0.0,
-			outcome         TEXT NOT NULL DEFAULT 'pending',
-			latency_ms      REAL NOT NULL DEFAULT 0.0,
-			trace_id        TEXT NOT NULL DEFAULT '',
-			recorded_at     REAL NOT NULL,
-			cycle           INTEGER NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS alignment_decisions (
-			decision_id         TEXT PRIMARY KEY,
-			cycle               INTEGER NOT NULL DEFAULT 0,
-			approved            INTEGER NOT NULL DEFAULT 1,
-			violations_json     TEXT NOT NULL DEFAULT '[]',
-			pareto_ranks_json   TEXT NOT NULL DEFAULT '{}',
-			adjustments_json    TEXT NOT NULL DEFAULT '{}',
-			vcg_payments_json   TEXT NOT NULL DEFAULT '{}',
-			goodhart_warning    INTEGER NOT NULL DEFAULT 0,
-			recorded_at         REAL NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS adversarial_results (
-			result_id           TEXT PRIMARY KEY,
-			cycle               INTEGER NOT NULL DEFAULT 0,
-			ring                INTEGER NOT NULL DEFAULT 1,
-			flagged             INTEGER NOT NULL DEFAULT 0,
-			max_disagreement    REAL NOT NULL DEFAULT 0.0,
-			scenario_count      INTEGER NOT NULL DEFAULT 0,
-			failure_cases_json  TEXT NOT NULL DEFAULT '[]',
-			details_json        TEXT NOT NULL DEFAULT '{}',
-			recorded_at         REAL NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS goal_tracking (
-			tracking_id         TEXT PRIMARY KEY,
-			cycle               INTEGER NOT NULL DEFAULT 0,
-			approved            INTEGER NOT NULL DEFAULT 1,
-			composite_score     REAL NOT NULL DEFAULT 0.0,
-			scorecard_json      TEXT NOT NULL DEFAULT '{}',
-			nash_weights_json   TEXT NOT NULL DEFAULT '{}',
-			tracking_error      REAL NOT NULL DEFAULT 0.0,
-			control_action_json TEXT NOT NULL DEFAULT '{}',
-			subtasks_json       TEXT NOT NULL DEFAULT '[]',
-			violations_json     TEXT NOT NULL DEFAULT '[]',
-			recorded_at         REAL NOT NULL
-		);
-	`)
-	return err
-}
-
-// ── Brain config DB methods ────────────────────────────────────────────────────
-
-func (d *DB) ensureBrainTables() error {
-	_, err := d.state.Exec(`
-		CREATE TABLE IF NOT EXISTS node_brain_config (
-			node_id       TEXT PRIMARY KEY,
-			provider      TEXT NOT NULL DEFAULT 'anthropic',
-			model         TEXT NOT NULL DEFAULT 'claude-sonnet-4-6',
-			temperature   REAL NOT NULL DEFAULT 0.7,
-			max_tokens    INTEGER NOT NULL DEFAULT 4096,
-			system_prompt TEXT NOT NULL DEFAULT '',
-			extra_config  TEXT NOT NULL DEFAULT '{}',
-			updated_at    REAL NOT NULL DEFAULT (unixepoch('now'))
-		);
-		CREATE TABLE IF NOT EXISTS brain_execution_log (
-			exec_id           TEXT PRIMARY KEY,
-			node_id           TEXT NOT NULL,
-			provider          TEXT NOT NULL,
-			model             TEXT NOT NULL,
-			prompt_tokens     INTEGER NOT NULL DEFAULT 0,
-			completion_tokens INTEGER NOT NULL DEFAULT 0,
-			latency_ms        REAL NOT NULL DEFAULT 0,
-			success           INTEGER NOT NULL DEFAULT 1,
-			error_text        TEXT NOT NULL DEFAULT '',
-			executed_at       REAL NOT NULL DEFAULT (unixepoch('now')),
-			cycle             INTEGER NOT NULL DEFAULT 0
-		);`)
-	return err
-}
+// ── Brain config DB methods ─────────────────────────────────────────────────
 
 func (d *DB) GetBrainConfig(nodeID string) (*BrainConfig, error) {
-	row := d.state.QueryRow(`
+	row := d.db.QueryRow(`
 		SELECT node_id, provider, model, temperature, max_tokens,
 		       system_prompt, extra_config, updated_at
-		FROM node_brain_config WHERE node_id = ?`, nodeID)
+		FROM node_brain_config WHERE node_id = $1`, nodeID)
 	c := &BrainConfig{}
 	var extraJSON string
 	err := row.Scan(&c.NodeID, &c.Provider, &c.Model, &c.Temperature,
@@ -577,32 +696,33 @@ func (d *DB) GetBrainConfig(nodeID string) (*BrainConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal([]byte(extraJSON), &c.ExtraConfig) //nolint:errcheck,gosec,gosec
+	json.Unmarshal([]byte(extraJSON), &c.ExtraConfig) //nolint:errcheck,gosec
 	return c, nil
 }
 
 func (d *DB) SetBrainConfig(c *BrainConfig) error {
 	extraJSON, _ := json.Marshal(c.ExtraConfig)
-	_, err := d.state.Exec(`
+	now := unixNow()
+	_, err := d.db.Exec(`
 		INSERT INTO node_brain_config
 			(node_id, provider, model, temperature, max_tokens, system_prompt, extra_config, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, unixepoch('now'))
-		ON CONFLICT(node_id) DO UPDATE SET
-			provider=excluded.provider, model=excluded.model,
-			temperature=excluded.temperature, max_tokens=excluded.max_tokens,
-			system_prompt=excluded.system_prompt, extra_config=excluded.extra_config,
-			updated_at=excluded.updated_at`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (node_id) DO UPDATE SET
+			provider=EXCLUDED.provider, model=EXCLUDED.model,
+			temperature=EXCLUDED.temperature, max_tokens=EXCLUDED.max_tokens,
+			system_prompt=EXCLUDED.system_prompt, extra_config=EXCLUDED.extra_config,
+			updated_at=EXCLUDED.updated_at`,
 		c.NodeID, c.Provider, c.Model, c.Temperature,
-		c.MaxTokens, c.SystemPrompt, string(extraJSON))
+		c.MaxTokens, c.SystemPrompt, string(extraJSON), now)
 	return err
 }
 
 func (d *DB) GetBrainHistory(nodeID string, limit int) ([]*BrainExecutionEntry, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT exec_id, node_id, provider, model, prompt_tokens, completion_tokens,
 		       latency_ms, success, error_text, executed_at, cycle
-		FROM brain_execution_log WHERE node_id = ?
-		ORDER BY executed_at DESC LIMIT ?`, nodeID, limit)
+		FROM brain_execution_log WHERE node_id = $1
+		ORDER BY executed_at DESC LIMIT $2`, nodeID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -610,23 +730,21 @@ func (d *DB) GetBrainHistory(nodeID string, limit int) ([]*BrainExecutionEntry, 
 	var entries []*BrainExecutionEntry
 	for rows.Next() {
 		e := &BrainExecutionEntry{}
-		var success int
 		if err := rows.Scan(&e.ExecID, &e.NodeID, &e.Provider, &e.Model,
 			&e.PromptTokens, &e.CompletionTokens, &e.LatencyMS,
-			&success, &e.ErrorText, &e.ExecutedAt, &e.Cycle); err != nil {
+			&e.Success, &e.ErrorText, &e.ExecutedAt, &e.Cycle); err != nil {
 			return nil, err
 		}
-		e.Success = success == 1
 		entries = append(entries, e)
 	}
 	return entries, nil
 }
 
-// ── Query methods ──────────────────────────────────────────────────────────────
+// ── Query methods ────────────────────────────────────────────────────────────
 
 func (d *DB) AllNodes() ([]*Node, error) {
-	rows, err := d.state.Query(`
-		SELECT node_id, name, version, capabilities_json, health, status,
+	rows, err := d.db.Query(`
+		SELECT node_id, name, version, capabilities, health, status,
 		       registered_at, last_updated
 		FROM nodes ORDER BY registered_at`)
 	if err != nil {
@@ -642,7 +760,7 @@ func (d *DB) AllNodes() ([]*Node, error) {
 			&n.Health, &n.Status, &n.RegisteredAt, &n.LastUpdated); err != nil {
 			return nil, err
 		}
-		json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck,gosec,gosec
+		json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck,gosec
 		nodes = append(nodes, n)
 	}
 
@@ -655,31 +773,31 @@ func (d *DB) AllNodes() ([]*Node, error) {
 }
 
 func (d *DB) GetNode(nodeID string) (*Node, error) {
-	row := d.state.QueryRow(`
-		SELECT node_id, name, version, capabilities_json, health, status,
+	row := d.db.QueryRow(`
+		SELECT node_id, name, version, capabilities, health, status,
 		       registered_at, last_updated
-		FROM nodes WHERE node_id = ?`, nodeID)
+		FROM nodes WHERE node_id = $1`, nodeID)
 	n := &Node{}
 	var capsJSON string
 	if err := row.Scan(&n.NodeID, &n.Name, &n.Version, &capsJSON,
 		&n.Health, &n.Status, &n.RegisteredAt, &n.LastUpdated); err != nil {
 		return nil, err
 	}
-	json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck,gosec,gosec
+	json.Unmarshal([]byte(capsJSON), &n.Capabilities) //nolint:errcheck,gosec
 	return n, d.enrichNode(n)
 }
 
 func (d *DB) enrichNode(n *Node) error {
-	row := d.state.QueryRow(`
+	row := d.db.QueryRow(`
 		SELECT COUNT(*),
-		       SUM(CASE WHEN success=0 THEN 1 ELSE 0 END),
+		       SUM(CASE WHEN NOT success THEN 1 ELSE 0 END),
 		       AVG(duration_ms),
 		       MAX(started_at)
-		FROM node_executions WHERE node_id = ?`, n.NodeID)
+		FROM node_executions WHERE node_id = $1`, n.NodeID)
 	var total, failed int64
 	var avgMS sql.NullFloat64
 	var lastStarted sql.NullFloat64
-	row.Scan(&total, &failed, &avgMS, &lastStarted) //nolint:errcheck,gosec,gosec
+	row.Scan(&total, &failed, &avgMS, &lastStarted) //nolint:errcheck,gosec
 
 	n.ExecutionsTotal = total
 	if total > 0 {
@@ -689,16 +807,16 @@ func (d *DB) enrichNode(n *Node) error {
 		n.AvgLatencyMS = avgMS.Float64
 	}
 
-	// p95 latency — two-query approach (SQLite rejects COUNT(*) inside OFFSET)
+	// p95 latency
 	var p95Count int64
-	d.state.QueryRow(`SELECT COUNT(*) FROM node_executions WHERE node_id = ? AND duration_ms IS NOT NULL`, n.NodeID).Scan(&p95Count) //nolint:errcheck,gosec
+	d.db.QueryRow(`SELECT COUNT(*) FROM node_executions WHERE node_id = $1 AND duration_ms IS NOT NULL`, n.NodeID).Scan(&p95Count) //nolint:errcheck,gosec
 	if p95Count > 0 {
 		offset := int64(float64(p95Count) * 0.95)
-		p95row := d.state.QueryRow(`
+		p95row := d.db.QueryRow(`
 			SELECT duration_ms FROM node_executions
-			WHERE node_id = ? AND duration_ms IS NOT NULL
+			WHERE node_id = $1 AND duration_ms IS NOT NULL
 			ORDER BY duration_ms
-			LIMIT 1 OFFSET ?
+			LIMIT 1 OFFSET $2
 		`, n.NodeID, offset)
 		var p95 sql.NullFloat64
 		p95row.Scan(&p95) //nolint:errcheck,gosec
@@ -707,8 +825,8 @@ func (d *DB) enrichNode(n *Node) error {
 		}
 	}
 
-	row2 := d.state.QueryRow(
-		`SELECT COUNT(*) FROM improvement_log WHERE node_id = ?`, n.NodeID)
+	row2 := d.db.QueryRow(
+		`SELECT COUNT(*) FROM improvement_log WHERE node_id = $1`, n.NodeID)
 	row2.Scan(&n.ImprovementCount) //nolint:errcheck,gosec
 
 	lastExec, err := d.lastExecution(n.NodeID)
@@ -719,12 +837,12 @@ func (d *DB) enrichNode(n *Node) error {
 }
 
 func (d *DB) lastExecution(nodeID string) (*Execution, error) {
-	row := d.state.QueryRow(`
+	row := d.db.QueryRow(`
 		SELECT exec_id, node_id, node_name, COALESCE(trace_id,''), COALESCE(span_id,''),
 		       action, started_at, ended_at, duration_ms, success,
-		       COALESCE(error_text,''), COALESCE(metrics_json,'{}'), cycle,
-		       COALESCE(error_class,0), COALESCE(error_code,''), COALESCE(is_retryable,0)
-		FROM node_executions WHERE node_id = ?
+		       COALESCE(error_text,''), COALESCE(metrics::text,'{}'), cycle,
+		       COALESCE(error_class,0), COALESCE(error_code,''), COALESCE(is_retryable,false)
+		FROM node_executions WHERE node_id = $1
 		ORDER BY started_at DESC LIMIT 1`, nodeID)
 	return scanExecution(row)
 }
@@ -732,18 +850,16 @@ func (d *DB) lastExecution(nodeID string) (*Execution, error) {
 func scanExecution(row *sql.Row) (*Execution, error) {
 	e := &Execution{}
 	var metricsJSON string
-	var success, errorClass, isRetryable int
+	var errorClass int32
 	var endedAt, durationMS sql.NullFloat64
 	err := row.Scan(&e.ExecID, &e.NodeID, &e.NodeName, &e.TraceID, &e.SpanID,
-		&e.Action, &e.StartedAt, &endedAt, &durationMS, &success,
+		&e.Action, &e.StartedAt, &endedAt, &durationMS, &e.Success,
 		&e.ErrorText, &metricsJSON, &e.Cycle,
-		&errorClass, &e.ErrorCode, &isRetryable)
+		&errorClass, &e.ErrorCode, &e.IsRetryable)
 	if err != nil {
 		return nil, err
 	}
-	e.Success = success == 1
-	e.ErrorClass = int32(errorClass) //nolint:gosec
-	e.IsRetryable = isRetryable == 1
+	e.ErrorClass = errorClass
 	if endedAt.Valid {
 		v := endedAt.Float64
 		e.EndedAt = &v
@@ -759,18 +875,20 @@ func scanExecution(row *sql.Row) (*Execution, error) {
 func (d *DB) GetExecutions(nodeID string, limit int) ([]*Execution, error) {
 	query := `SELECT exec_id, node_id, node_name, COALESCE(trace_id,''), COALESCE(span_id,''),
 		action, started_at, ended_at, duration_ms, success,
-		COALESCE(error_text,''), COALESCE(metrics_json,'{}'), cycle,
-		COALESCE(error_class,0), COALESCE(error_code,''), COALESCE(is_retryable,0)
-		FROM node_executions WHERE 1=1`
+		COALESCE(error_text,''), COALESCE(metrics::text,'{}'), cycle,
+		COALESCE(error_class,0), COALESCE(error_code,''), COALESCE(is_retryable,false)
+		FROM node_executions WHERE TRUE`
 	args := []any{}
+	argN := 1
 	if nodeID != "" {
-		query += " AND node_id = ?"
+		query += fmt.Sprintf(" AND node_id = $%d", argN)
 		args = append(args, nodeID)
+		argN++
 	}
-	query += " ORDER BY started_at DESC LIMIT ?"
+	query += fmt.Sprintf(" ORDER BY started_at DESC LIMIT $%d", argN) //nolint:gosec
 	args = append(args, limit)
 
-	rows, err := d.state.Query(query, args...)
+	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -783,17 +901,15 @@ func scanExecutions(rows *sql.Rows) ([]*Execution, error) {
 	for rows.Next() {
 		e := &Execution{}
 		var metricsJSON string
-		var success, errorClass, isRetryable int
+		var errorClass int32
 		var endedAt, durationMS sql.NullFloat64
 		if err := rows.Scan(&e.ExecID, &e.NodeID, &e.NodeName, &e.TraceID, &e.SpanID,
-			&e.Action, &e.StartedAt, &endedAt, &durationMS, &success,
+			&e.Action, &e.StartedAt, &endedAt, &durationMS, &e.Success,
 			&e.ErrorText, &metricsJSON, &e.Cycle,
-			&errorClass, &e.ErrorCode, &isRetryable); err != nil {
+			&errorClass, &e.ErrorCode, &e.IsRetryable); err != nil {
 			return nil, err
 		}
-		e.Success = success == 1
-		e.ErrorClass = int32(errorClass) //nolint:gosec
-		e.IsRetryable = isRetryable == 1
+		e.ErrorClass = errorClass
 		if endedAt.Valid {
 			v := endedAt.Float64
 			e.EndedAt = &v
@@ -809,11 +925,11 @@ func scanExecutions(rows *sql.Rows) ([]*Execution, error) {
 }
 
 func (d *DB) LatencyHistory(nodeID string, limit int) ([]*LatencyPoint, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT started_at, duration_ms, success
 		FROM node_executions
-		WHERE node_id = ? AND duration_ms IS NOT NULL
-		ORDER BY started_at DESC LIMIT ?`, nodeID, limit)
+		WHERE node_id = $1 AND duration_ms IS NOT NULL
+		ORDER BY started_at DESC LIMIT $2`, nodeID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -821,11 +937,9 @@ func (d *DB) LatencyHistory(nodeID string, limit int) ([]*LatencyPoint, error) {
 	var points []*LatencyPoint
 	for rows.Next() {
 		p := &LatencyPoint{}
-		var success int
-		if err := rows.Scan(&p.StartedAt, &p.DurationMS, &success); err != nil {
+		if err := rows.Scan(&p.StartedAt, &p.DurationMS, &p.Success); err != nil {
 			return nil, err
 		}
-		p.Success = success == 1
 		points = append(points, p)
 	}
 	for i, j := 0, len(points)-1; i < j; i, j = i+1, j-1 {
@@ -838,7 +952,7 @@ func (d *DB) RecentTraces(limit int, nodeFilter string) ([]*TraceSummary, error)
 	var rows *sql.Rows
 	var err error
 	if nodeFilter != "" {
-		rows, err = d.state.Query(`
+		rows, err = d.db.Query(`
 			SELECT trace_id,
 			       MIN(started_at) as trace_started,
 			       MAX(ended_at) as trace_ended,
@@ -847,12 +961,12 @@ func (d *DB) RecentTraces(limit int, nodeFilter string) ([]*TraceSummary, error)
 			       SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as error_spans,
 			       MAX(cycle) as cycle
 			FROM traces
-			WHERE trace_id IN (SELECT DISTINCT trace_id FROM traces WHERE node_name = ?)
+			WHERE trace_id IN (SELECT DISTINCT trace_id FROM traces WHERE node_name = $1)
 			GROUP BY trace_id
 			ORDER BY trace_started DESC
-			LIMIT ?`, nodeFilter, limit)
+			LIMIT $2`, nodeFilter, limit)
 	} else {
-		rows, err = d.state.Query(`
+		rows, err = d.db.Query(`
 			SELECT trace_id,
 			       MIN(started_at) as trace_started,
 			       MAX(ended_at) as trace_ended,
@@ -863,7 +977,7 @@ func (d *DB) RecentTraces(limit int, nodeFilter string) ([]*TraceSummary, error)
 			FROM traces
 			GROUP BY trace_id
 			ORDER BY trace_started DESC
-			LIMIT ?`, limit)
+			LIMIT $1`, limit)
 	}
 	if err != nil {
 		return nil, err
@@ -887,11 +1001,11 @@ func (d *DB) RecentTraces(limit int, nodeFilter string) ([]*TraceSummary, error)
 }
 
 func (d *DB) GetTraceSpans(traceID string) ([]*Span, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT span_id, trace_id, COALESCE(parent_span_id,''),
 		       COALESCE(node_id,''), COALESCE(node_name,''),
 		       operation, started_at, ended_at, duration_ms, status, cycle
-		FROM traces WHERE trace_id = ? ORDER BY started_at`, traceID)
+		FROM traces WHERE trace_id = $1 ORDER BY started_at`, traceID)
 	if err != nil {
 		return nil, err
 	}
@@ -921,19 +1035,20 @@ func (d *DB) GetTraceSpans(traceID string) ([]*Span, error) {
 func (d *DB) GetIssues(stateFilter string) ([]*Issue, error) {
 	query := `SELECT issue_id, detector, severity, description, state,
 		opened_at, resolved_at, cycle_opened, cycle_resolved
-		FROM issues WHERE 1=1`
+		FROM issues WHERE TRUE`
 	args := []any{}
+	argN := 1
 	if stateFilter != "" && stateFilter != "all" {
 		if stateFilter == "open" {
 			query += " AND state != 'resolved'"
 		} else {
-			query += " AND state = ?"
+			query += fmt.Sprintf(" AND state = $%d", argN) //nolint:gosec
 			args = append(args, stateFilter)
 		}
 	}
 	query += " ORDER BY opened_at DESC LIMIT 100"
 
-	rows, err := d.state.Query(query, args...)
+	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -961,9 +1076,9 @@ func (d *DB) GetIssues(stateFilter string) ([]*Issue, error) {
 }
 
 func (d *DB) RecentActivity(limit int) ([]*ActivityEntry, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT log_id, action_type, entity_type, entity_id, recorded_at, cycle
-		FROM activity_log ORDER BY recorded_at DESC LIMIT ?`, limit)
+		FROM activity_log ORDER BY recorded_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -983,17 +1098,19 @@ func (d *DB) RecentActivity(limit int) ([]*ActivityEntry, error) {
 func (d *DB) GetImprovements(nodeID string, limit int) ([]*Improvement, error) {
 	query := `SELECT improve_id, node_id, node_name, from_version, to_version,
 		triggered_by, recorded_at, cycle,
-		COALESCE(before_metrics_json,'{}'), COALESCE(after_metrics_json,'{}')
-		FROM improvement_log WHERE 1=1`
+		COALESCE(before_metrics::text,'{}'), COALESCE(after_metrics::text,'{}')
+		FROM improvement_log WHERE TRUE`
 	args := []any{}
+	argN := 1
 	if nodeID != "" {
-		query += " AND node_id = ?"
+		query += fmt.Sprintf(" AND node_id = $%d", argN)
 		args = append(args, nodeID)
+		argN++
 	}
-	query += " ORDER BY recorded_at DESC LIMIT ?"
+	query += fmt.Sprintf(" ORDER BY recorded_at DESC LIMIT $%d", argN) //nolint:gosec
 	args = append(args, limit)
 
-	rows, err := d.state.Query(query, args...)
+	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1015,7 +1132,7 @@ func (d *DB) GetImprovements(nodeID string, limit int) ([]*Improvement, error) {
 }
 
 func (d *DB) GetCosts() ([]*CostEntry, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT provider, node_id,
 		       COUNT(*) as calls,
 		       SUM(duration_ms) as total_ms,
@@ -1037,10 +1154,10 @@ func (d *DB) GetCosts() ([]*CostEntry, error) {
 }
 
 func (d *DB) GetConvergence(limit int) ([]*ConvergencePoint, error) {
-	rows, err := d.memory.Query(`
-		SELECT cycle, timestamp, content_json
+	rows, err := d.db.Query(`
+		SELECT cycle, timestamp, content::text
 		FROM episodes WHERE event_type = 'cycle_summary'
-		ORDER BY cycle ASC LIMIT ?`, limit)
+		ORDER BY cycle ASC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1069,28 +1186,28 @@ func (d *DB) GetConvergence(limit int) ([]*ConvergencePoint, error) {
 func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept, []*EpisodeEntry, error) {
 	var epCount, semCount int64
 
-	query := "SELECT COUNT(*) FROM episodes"
-	args := []any{}
+	epQuery := "SELECT COUNT(*) FROM episodes"
+	epArgs := []any{}
 	if namespace != "" {
-		query += " WHERE namespace = ?"
-		args = append(args, namespace)
+		epQuery += " WHERE namespace = $1"
+		epArgs = append(epArgs, namespace)
 	}
-	d.memory.QueryRow(query, args...).Scan(&epCount) //nolint:errcheck,gosec
+	d.db.QueryRow(epQuery, epArgs...).Scan(&epCount) //nolint:errcheck,gosec
 
 	semQuery := "SELECT COUNT(*) FROM semantic_memories"
 	semArgs := []any{}
 	if namespace != "" {
-		semQuery += " WHERE namespace = ?"
+		semQuery += " WHERE namespace = $1"
 		semArgs = append(semArgs, namespace)
 	}
-	d.memory.QueryRow(semQuery, semArgs...).Scan(&semCount) //nolint:errcheck,gosec
+	d.db.QueryRow(semQuery, semArgs...).Scan(&semCount) //nolint:errcheck,gosec
 
-	semRowQuery := "SELECT concept, content, confidence, evidence_count, COALESCE(tags_json,'[]') FROM semantic_memories"
+	semRowQuery := "SELECT concept, content, confidence, evidence_count, COALESCE(tags::text,'[]') FROM semantic_memories"
 	if namespace != "" {
-		semRowQuery += " WHERE namespace = ?"
+		semRowQuery += " WHERE namespace = $1"
 	}
 	semRowQuery += " ORDER BY confidence DESC LIMIT 20"
-	semRows, err := d.memory.Query(semRowQuery, semArgs...)
+	semRows, err := d.db.Query(semRowQuery, semArgs...)
 	if err != nil {
 		return epCount, semCount, nil, nil, err
 	}
@@ -1106,12 +1223,12 @@ func (d *DB) GetMemoryStats(namespace string) (int64, int64, []*SemanticConcept,
 		concepts = append(concepts, c)
 	}
 
-	epRowQuery := "SELECT episode_id, event_type, timestamp, cycle, importance, COALESCE(tags_json,'[]') FROM episodes"
+	epRowQuery := "SELECT episode_id, event_type, timestamp, cycle, importance, COALESCE(tags::text,'[]') FROM episodes"
 	if namespace != "" {
-		epRowQuery += " WHERE namespace = ?"
+		epRowQuery += " WHERE namespace = $1"
 	}
 	epRowQuery += " ORDER BY timestamp DESC LIMIT 20"
-	epRows, err := d.memory.Query(epRowQuery, args...)
+	epRows, err := d.db.Query(epRowQuery, epArgs...)
 	if err != nil {
 		return epCount, semCount, concepts, nil, err
 	}
@@ -1141,7 +1258,7 @@ func (d *DB) SystemHealth() (*SystemHealth, error) {
 	}
 
 	var totalHealth float64
-	var minHealth = 1.0
+	minHealth := 1.0
 	for _, n := range nodes {
 		totalHealth += n.Health
 		if n.Health < minHealth {
@@ -1169,35 +1286,36 @@ func (d *DB) SystemHealth() (*SystemHealth, error) {
 	}
 
 	status := "healthy"
-	if composite < 0.6 {
-		status = "critical"
-	} else if composite < 0.8 {
+	if composite < 0.5 {
 		status = "degraded"
 	}
-
-	minRegAt := float64(time.Now().Unix())
-	for _, n := range nodes {
-		if n.RegisteredAt < minRegAt && n.RegisteredAt > 0 {
-			minRegAt = n.RegisteredAt
-		}
+	if composite < 0.3 {
+		status = "critical"
 	}
-	uptime := float64(time.Now().Unix()) - minRegAt
 
 	var totalCycles int64
-	d.state.QueryRow("SELECT COALESCE(MAX(cycle), 0) FROM node_executions").Scan(&totalCycles) //nolint:errcheck,gosec
+	d.db.QueryRow(`SELECT COALESCE(MAX(cycle),0) FROM node_executions`).Scan(&totalCycles) //nolint:errcheck,gosec
+
+	var oldestStart float64
+	d.db.QueryRow(`SELECT COALESCE(MIN(registered_at),0) FROM nodes`).Scan(&oldestStart) //nolint:errcheck,gosec
+	var uptimeSec float64
+	if oldestStart > 0 {
+		uptimeSec = unixNow() - oldestStart
+	}
 
 	return &SystemHealth{
 		Status:         status,
-		CompositeScore: round3(composite),
-		AvgNodeHealth:  round3(avgHealth),
+		CompositeScore: composite,
+		AvgNodeHealth:  avgHealth,
 		NodeCount:      int64(len(nodes)),
 		OpenIssues:     openCount,
 		ErrorIssues:    errorIssues,
-		UptimeSeconds:  uptime,
+		UptimeSeconds:  uptimeSec,
 		TotalCycles:    totalCycles,
 	}, nil
 }
 
-func round3(f float64) float64 {
-	return float64(int(f*1000+0.5)) / 1000
+// unixNow returns the current time as a float64 Unix timestamp.
+func unixNow() float64 {
+	return float64(time.Now().UnixNano()) / 1e9
 }

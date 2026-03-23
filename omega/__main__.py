@@ -164,13 +164,9 @@ def _cmd_backtest(args: argparse.Namespace) -> int:
 
 
 def _cmd_status(args: argparse.Namespace) -> int:
-    from omega.core.config import OmegaConfig
-    from omega.core.state_store import StateStore
+    from omega.core.state_store import make_state_backend
 
-    cfg = OmegaConfig.load(args.config)
-    db_path = args.db or cfg.database.state_db_path
-
-    store = StateStore(db_path=db_path)
+    store = make_state_backend()
     status = _collect_status(store)
 
     if args.output_json:

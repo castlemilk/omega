@@ -1,11 +1,28 @@
 name: omega
 
-# Shared SQLite volume — Python writes, Go reads from the same files.
-# Mount point: /data in both omega-nodes and omega-api.
 volumes:
-  omega-data:
+  omega-pgdata:
 
 services:
+
+  # ── PostgreSQL ────────────────────────────────────────────────────────────────
+  omega-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: omega
+      POSTGRES_USER: omega
+      POSTGRES_PASSWORD: omega
+    volumes:
+      - omega-pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U omega -d omega"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   # ── Python heartbeat loop ────────────────────────────────────────────────────
   omega-nodes:
@@ -15,20 +32,16 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      OMEGA_DATA_DIR: /data
-      OMEGA_STATE_DB_PATH: /data/omega_victoria_state.db
-      OMEGA_MEMORY_DB_PATH: /data/omega_victoria_memory.db
-      OMEGA_DB_PATH: /data/omega_victoria.db
+      DATABASE_URL: postgres://omega:omega@omega-postgres:5432/omega?sslmode=disable
       OMEGA_API_BASE_URL: http://omega-api:8080
       OMEGA_JSON_LOGS: "true"
-    volumes:
-      - omega-data:/data
     depends_on:
+      omega-postgres:
+        condition: service_healthy
       omega-api:
         condition: service_healthy
     healthcheck:
-      # Verify the state DB is open and queryable (not just that the file exists)
-      test: ["CMD", "python3", "-c", "import sqlite3, os; db=sqlite3.connect(os.environ.get('OMEGA_STATE_DB_PATH','/data/omega_victoria_state.db')); db.execute('SELECT COUNT(*) FROM sqlite_master'); db.close()"]
+      test: ["CMD", "python3", "-c", "import psycopg, os; conn=psycopg.connect(os.environ['DATABASE_URL']); conn.execute('SELECT 1'); conn.close()"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -42,13 +55,12 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      OMEGA_DATA_DIR: /data
-      OMEGA_STATE_DB_PATH: /data/omega_victoria_state.db
-      OMEGA_MEMORY_DB_PATH: /data/omega_victoria_memory.db
+      DATABASE_URL: postgres://omega:omega@omega-postgres:5432/omega?sslmode=disable
     ports:
       - "8080:8080"
-    volumes:
-      - omega-data:/data
+    depends_on:
+      omega-postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/healthz"]
       interval: 15s

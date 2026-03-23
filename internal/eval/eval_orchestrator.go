@@ -2,12 +2,12 @@ package eval
 
 import (
 	"context"
-	"database/sql"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/benebsworth/omega/internal/core"
-	_ "modernc.org/sqlite"
+	"github.com/benebsworth/omega/internal/db"
 )
 
 // ---------------------------------------------------------------------------
@@ -25,22 +25,26 @@ type OrchestratorHarness struct {
 	Memory     *core.MemoryKernel
 	Clock      *FixedClock
 
-	db *sql.DB
+	database *db.DB
 }
 
-// NewOrchestratorHarness creates a fully wired orchestrator harness.
-// All components use deterministic fixed clocks and in-memory SQLite.
+// NewOrchestratorHarness creates a fully wired orchestrator harness backed by Postgres.
+// Test is skipped if TEST_DATABASE_URL is not set.
 func NewOrchestratorHarness(t *testing.T) *OrchestratorHarness {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("open in-memory sqlite: %v", err)
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
 	}
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
-	t.Cleanup(func() { _ = db.Close() })
+	t.Setenv("DATABASE_URL", dsn)
 
-	kernel, err := core.NewMemoryKernel(db)
+	database, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	t.Cleanup(func() { database.Close() })
+
+	kernel, err := core.NewMemoryKernel(database.StateDB())
 	if err != nil {
 		t.Fatalf("NewMemoryKernel: %v", err)
 	}
@@ -61,7 +65,7 @@ func NewOrchestratorHarness(t *testing.T) *OrchestratorHarness {
 		Scheduler: core.NewImprovementScheduler(fc.Now),
 		Memory:    kernel,
 		Clock:     fc,
-		db:        db,
+		database:  database,
 	}
 }
 

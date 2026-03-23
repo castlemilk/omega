@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	_ "modernc.org/sqlite"
 )
 
 // LeaderElection implements lease-based leader election using a SQLite row lock.
@@ -58,12 +57,12 @@ func (le *LeaderElection) TryAcquire(ctx context.Context) (bool, error) {
 	// Try to insert (first acquisition) or update an expired lease.
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO leader_election (singleton, leader_id, acquired_at, expires_at)
-		VALUES (1, ?, ?, ?)
+		VALUES (1, $1, $2, $3)
 		ON CONFLICT(singleton) DO UPDATE SET
 			leader_id   = excluded.leader_id,
 			acquired_at = excluded.acquired_at,
 			expires_at  = excluded.expires_at
-		WHERE expires_at < ?
+		WHERE leader_election.expires_at < $4
 	`, le.nodeID, now.UnixNano(), expires.UnixNano(), now.UnixNano())
 	if err != nil {
 		return false, fmt.Errorf("upsert leader: %w", err)
@@ -96,7 +95,7 @@ func (le *LeaderElection) TryAcquire(ctx context.Context) (bool, error) {
 func (le *LeaderElection) Renew(ctx context.Context) error {
 	expires := time.Now().Add(le.ttl)
 	res, err := le.db.ExecContext(ctx, `
-		UPDATE leader_election SET expires_at = ? WHERE leader_id = ?
+		UPDATE leader_election SET expires_at = $1 WHERE leader_id = $2
 	`, expires.UnixNano(), le.nodeID)
 	if err != nil {
 		return fmt.Errorf("renew lease: %w", err)
@@ -112,7 +111,7 @@ func (le *LeaderElection) Renew(ctx context.Context) error {
 // Release voluntarily gives up leadership.
 func (le *LeaderElection) Release(ctx context.Context) error {
 	_, err := le.db.ExecContext(ctx, `
-		DELETE FROM leader_election WHERE leader_id = ?
+		DELETE FROM leader_election WHERE leader_id = $1
 	`, le.nodeID)
 	if err != nil {
 		return fmt.Errorf("release leader: %w", err)
@@ -145,8 +144,8 @@ func ensureLeaderTable(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS leader_election (
 			singleton   INTEGER PRIMARY KEY DEFAULT 1 CHECK (singleton = 1),
 			leader_id   TEXT    NOT NULL,
-			acquired_at INTEGER NOT NULL,
-			expires_at  INTEGER NOT NULL
+			acquired_at BIGINT  NOT NULL,
+			expires_at  BIGINT  NOT NULL
 		)
 	`)
 	return err

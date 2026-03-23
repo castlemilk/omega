@@ -2,11 +2,9 @@ package handler_test
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -16,91 +14,16 @@ import (
 	"github.com/benebsworth/omega/internal/handler"
 )
 
-// bootstrapSubsystemSchema adds the new subsystem tables to an existing state DB.
-func bootstrapSubsystemSchema(t *testing.T, stateDBPath string) {
-	t.Helper()
-	sqlDB, err := sql.Open("sqlite", stateDBPath)
-	if err != nil {
-		t.Fatalf("open state db: %v", err)
-	}
-	defer sqlDB.Close() //nolint:errcheck
-	_, err = sqlDB.Exec(`
-		CREATE TABLE IF NOT EXISTS alignment_decisions (
-			decision_id       TEXT PRIMARY KEY,
-			cycle             INTEGER NOT NULL DEFAULT 0,
-			approved          INTEGER NOT NULL DEFAULT 1,
-			reasons           TEXT NOT NULL DEFAULT '[]',
-			target_subsystem  TEXT NOT NULL DEFAULT '',
-			recorded_at       REAL NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS adversarial_results (
-			result_id   TEXT PRIMARY KEY,
-			cycle       INTEGER NOT NULL DEFAULT 0,
-			ring        INTEGER NOT NULL DEFAULT 0,
-			flags       TEXT NOT NULL DEFAULT '[]',
-			severity    TEXT NOT NULL DEFAULT 'low',
-			recorded_at REAL NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS goal_tracking (
-			id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-			cycle                 INTEGER NOT NULL DEFAULT 0,
-			constitutional_checks TEXT NOT NULL DEFAULT '{}',
-			scorecard_values      TEXT NOT NULL DEFAULT '{}',
-			active_tasks          TEXT NOT NULL DEFAULT '[]',
-			recorded_at           REAL NOT NULL DEFAULT 0
-		);
-		CREATE TABLE IF NOT EXISTS verification_gates (
-			gate_id    TEXT PRIMARY KEY,
-			cycle      INTEGER NOT NULL DEFAULT 0,
-			gate_name  TEXT NOT NULL DEFAULT '',
-			result     TEXT NOT NULL DEFAULT 'pass',
-			details    TEXT NOT NULL DEFAULT '',
-			checked_at REAL NOT NULL DEFAULT 0
-		);
-	`)
-	if err != nil {
-		t.Fatalf("bootstrap subsystem schema: %v", err)
-	}
-}
-
-// setupSubsystemTestServer creates a test server seeded with both base and subsystem schemas.
+// setupSubsystemTestServer creates a test server backed by Postgres.
 func setupSubsystemTestServer(t *testing.T) (omegav1connect.OrchestratorServiceClient, func()) {
 	t.Helper()
-	dir := t.TempDir()
-	stateDB := filepath.Join(dir, "state.db")
-	memDB := filepath.Join(dir, "memory.db")
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
+	}
+	t.Setenv("DATABASE_URL", dsn)
 
-	bootstrapStateSchema(t, stateDB)
-	bootstrapSubsystemSchema(t, stateDB)
-
-	// Seed memory DB with required tables
-	memSQLDB, _ := sql.Open("sqlite", memDB)
-	_, _ = memSQLDB.Exec(`
-		CREATE TABLE IF NOT EXISTS episodes (
-			episode_id TEXT PRIMARY KEY,
-			event_type TEXT NOT NULL DEFAULT '',
-			timestamp  REAL NOT NULL DEFAULT 0,
-			cycle      INTEGER NOT NULL DEFAULT 0,
-			importance REAL NOT NULL DEFAULT 0,
-			tags       TEXT NOT NULL DEFAULT '',
-			namespace  TEXT NOT NULL DEFAULT ''
-		);
-		CREATE TABLE IF NOT EXISTS semantic_memories (
-			concept_id     TEXT PRIMARY KEY,
-			namespace      TEXT NOT NULL DEFAULT '',
-			concept        TEXT NOT NULL DEFAULT '',
-			content        TEXT NOT NULL DEFAULT '',
-			confidence     REAL NOT NULL DEFAULT 0,
-			evidence_count INTEGER NOT NULL DEFAULT 0,
-			tags_json      TEXT NOT NULL DEFAULT '[]'
-		);
-	`) //nolint:errcheck
-	memSQLDB.Close() //nolint:errcheck,gosec
-
-	f, _ := os.Create(memDB) //nolint:gosec // ensure file exists (already created above)
-	f.Close()                //nolint:errcheck,gosec
-
-	database, err := db.New(stateDB, memDB)
+	database, err := db.New(context.Background())
 	if err != nil {
 		t.Fatalf("db.New: %v", err)
 	}

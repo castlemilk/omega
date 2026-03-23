@@ -2,24 +2,30 @@ package core
 
 import (
 	"context"
-	"database/sql"
+	"os"
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
+	"github.com/benebsworth/omega/internal/db"
 )
 
 func newTestKernel(t *testing.T) *MemoryKernel {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("open sqlite: %v", err)
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
 	}
-	k, err := NewMemoryKernel(db)
+	t.Setenv("DATABASE_URL", dsn)
+	database, err := db.New(context.Background())
 	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	k, err := NewMemoryKernel(database.StateDB())
+	if err != nil {
+		database.Close()
 		t.Fatalf("NewMemoryKernel: %v", err)
 	}
-	t.Cleanup(func() { _ = db.Close() })
+	t.Cleanup(func() { database.Close() })
 	return k
 }
 

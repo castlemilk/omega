@@ -2,15 +2,12 @@ package handler_test
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"connectrpc.com/connect"
-	_ "modernc.org/sqlite"
 
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
@@ -20,32 +17,15 @@ import (
 
 // ── test helpers ──────────────────────────────────────────────────────────────
 
-// bootstrapMemorySchema creates the SQLite tables that the memory kernel needs.
-func bootstrapMemorySchema(t *testing.T, path string) {
-	t.Helper()
-	sqlDB, err := sql.Open("sqlite", path)
-	if err != nil {
-		t.Fatalf("open mem db: %v", err)
-	}
-	defer sqlDB.Close() //nolint:errcheck
-	// Let MemoryKernel.createSchema() create its own tables on first use.
-	// We only need to ensure the file exists (already done by sql.Open above).
-	_, err = sqlDB.Exec(`SELECT 1`)
-	if err != nil {
-		t.Fatalf("bootstrap memory schema: %v", err)
-	}
-}
-
 func setupTestDB(t *testing.T) (*db.DB, func()) {
 	t.Helper()
-	dir := t.TempDir()
-	stateDB := filepath.Join(dir, "state.db")
-	memDB := filepath.Join(dir, "memory.db")
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
+	}
+	t.Setenv("DATABASE_URL", dsn)
 
-	bootstrapStateSchema(t, stateDB)
-	bootstrapMemorySchema(t, memDB)
-
-	database, err := db.New(stateDB, memDB)
+	database, err := db.New(context.Background())
 	if err != nil {
 		t.Fatalf("db.New: %v", err)
 	}

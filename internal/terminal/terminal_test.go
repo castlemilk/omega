@@ -3,7 +3,7 @@ package terminal_test
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -23,11 +23,12 @@ func newManager(t *testing.T) *terminal.Manager {
 
 func newManagerWithDB(t *testing.T) (*terminal.Manager, *db.DB) {
 	t.Helper()
-	dir := t.TempDir()
-	database, err := db.New(
-		filepath.Join(dir, "state.db"),
-		filepath.Join(dir, "memory.db"),
-	)
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
+	}
+	t.Setenv("DATABASE_URL", dsn)
+	database, err := db.New(context.Background())
 	require.NoError(t, err)
 	t.Cleanup(func() { database.Close() })
 	m := terminal.NewManager(terminal.WithDB(database))

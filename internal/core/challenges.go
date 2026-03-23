@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	_ "modernc.org/sqlite"
 )
 
 // ---------------------------------------------------------------------------
@@ -58,20 +57,6 @@ type Challenge struct {
 // ---------------------------------------------------------------------------
 // Schema and seed data
 // ---------------------------------------------------------------------------
-
-const challengeSchema = `
-CREATE TABLE IF NOT EXISTS challenges (
-    challenge_id      TEXT PRIMARY KEY,
-    target_subsystem  TEXT NOT NULL,
-    severity          TEXT NOT NULL,
-    description       TEXT NOT NULL,
-    evidence          TEXT NOT NULL DEFAULT '',
-    status            TEXT NOT NULL DEFAULT 'open',
-    resolution_notes  TEXT NOT NULL DEFAULT '',
-    created_at        REAL NOT NULL,
-    updated_at        REAL NOT NULL
-);
-`
 
 type seedChallenge struct {
 	targetSubsystem string
@@ -283,23 +268,14 @@ type ChallengeRegistry struct {
 	db *sql.DB
 }
 
-// NewChallengeRegistry opens (or creates) the SQLite database at dbPath.
-// Use ":memory:" for in-process testing.
-func NewChallengeRegistry(dbPath string) (*ChallengeRegistry, error) {
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		return nil, fmt.Errorf("open challenge db: %w", err)
-	}
-	if _, err := db.Exec(challengeSchema); err != nil {
-		return nil, fmt.Errorf("create challenges table: %w", err)
-	}
+// NewChallengeRegistry wraps the shared Postgres database.
+// Schema is managed by internal/db/db.go.
+func NewChallengeRegistry(db *sql.DB) (*ChallengeRegistry, error) {
 	return &ChallengeRegistry{db: db}, nil
 }
 
-// Close releases the database connection.
-func (cr *ChallengeRegistry) Close() error {
-	return cr.db.Close()
-}
+// Close is a no-op — the underlying db is shared and not owned by this registry.
+func (cr *ChallengeRegistry) Close() error { return nil }
 
 // ---------------------------------------------------------------------------
 // CRUD
@@ -316,7 +292,7 @@ func (cr *ChallengeRegistry) Add(targetSubsystem string, severity ChallengeSever
 		`INSERT INTO challenges
 		 (challenge_id, target_subsystem, severity, description, evidence,
 		  status, resolution_notes, created_at, updated_at)
-		 VALUES (?,?,?,?,?,?,?,?,?)`,
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 		cid, targetSubsystem, string(severity), description, evidence,
 		string(StatusOpen), "", now, now,
 	)
@@ -328,7 +304,7 @@ func (cr *ChallengeRegistry) Add(targetSubsystem string, severity ChallengeSever
 
 // Get retrieves a challenge by ID. Returns nil if not found.
 func (cr *ChallengeRegistry) Get(challengeID string) (*Challenge, error) {
-	row := cr.db.QueryRow("SELECT * FROM challenges WHERE challenge_id = ?", challengeID)
+	row := cr.db.QueryRow("SELECT * FROM challenges WHERE challenge_id = $1", challengeID)
 	return scanChallenge(row)
 }
 
@@ -337,7 +313,7 @@ func (cr *ChallengeRegistry) Get(challengeID string) (*Challenge, error) {
 func (cr *ChallengeRegistry) UpdateStatus(challengeID string, status ChallengeStatus, resolutionNotes string) (bool, error) {
 	now := float64(time.Now().UnixNano()) / 1e9
 	result, err := cr.db.Exec(
-		`UPDATE challenges SET status=?, resolution_notes=?, updated_at=? WHERE challenge_id=?`,
+		`UPDATE challenges SET status=$1, resolution_notes=$2, updated_at=$3 WHERE challenge_id=$4`,
 		string(status), resolutionNotes, now, challengeID,
 	)
 	if err != nil {
@@ -359,7 +335,7 @@ func (cr *ChallengeRegistry) AllChallenges(subsystem string) ([]Challenge, error
 	if subsystem == "" {
 		rows, err = cr.db.Query("SELECT * FROM challenges ORDER BY created_at")
 	} else {
-		rows, err = cr.db.Query("SELECT * FROM challenges WHERE target_subsystem LIKE ? ORDER BY created_at", "%"+subsystem+"%")
+		rows, err = cr.db.Query("SELECT * FROM challenges WHERE target_subsystem LIKE $1 ORDER BY created_at", "%"+subsystem+"%")
 	}
 	if err != nil {
 		return nil, fmt.Errorf("all challenges: %w", err)
@@ -377,7 +353,7 @@ func (cr *ChallengeRegistry) OpenChallenges(severity ChallengeSeverity) ([]Chall
 	if severity == "" {
 		rows, err = cr.db.Query("SELECT * FROM challenges WHERE status = 'open' ORDER BY created_at")
 	} else {
-		rows, err = cr.db.Query("SELECT * FROM challenges WHERE status = 'open' AND severity = ? ORDER BY created_at", string(severity))
+		rows, err = cr.db.Query("SELECT * FROM challenges WHERE status = 'open' AND severity = $1 ORDER BY created_at", string(severity))
 	}
 	if err != nil {
 		return nil, fmt.Errorf("open challenges: %w", err)

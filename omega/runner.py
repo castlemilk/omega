@@ -127,7 +127,7 @@ class OmegaRunner:
         from omega.core.logging import configure_logging
         from omega.core.metrics_exporter import MetricsExporter
         from omega.core.orchestrator import Orchestrator
-        from omega.core.state_store import StateStore
+        from omega.core.state_store import make_state_backend
 
         self._cfg = OmegaConfig.load(self.config_path)
 
@@ -143,12 +143,9 @@ class OmegaRunner:
 
         logger.info("Config loaded  symbols=%s", self._cfg.data.symbols)
 
-        self._store = StateStore(db_path=self._cfg.database.state_db_path)
+        self._store = make_state_backend()
 
-        self._orchestrator = Orchestrator(
-            name="omega",
-            db_path=self._cfg.database.orchestrator_db_path,
-        )
+        self._orchestrator = Orchestrator(name="omega")
 
         self._exporter = MetricsExporter(state_store=self._store)
         self._exporter.start()
