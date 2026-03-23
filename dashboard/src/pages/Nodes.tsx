@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { client } from "../client";
 import BrainConfigPanel from "../components/BrainConfigPanel";
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
@@ -55,6 +56,7 @@ function circuitBreakerBadge(cb?: CircuitBreakerState) {
 }
 
 export default function Nodes() {
+  const navigate = useNavigate();
   const [nodes, setNodes] = useState<Node[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Node | null>(null);
@@ -214,6 +216,50 @@ export default function Nodes() {
             <BrainConfigPanel nodeId={detail.nodeId} />
           </div>
 
+          {recentExecutions.length > 0 &&
+            (() => {
+              const filtered = recentExecutions.filter(
+                (e) => errorFilter === null || e.errorClass === errorFilter
+              );
+              const total = filtered.length;
+              const successes = filtered.filter((e) => e.success).length;
+              const avgDuration =
+                total > 0 ? filtered.reduce((s, e) => s + e.durationMs, 0) / total : 0;
+              const successRate = total > 0 ? (successes / total) * 100 : 0;
+              return (
+                <div className="flex gap-4 px-1">
+                  <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 flex items-center gap-3">
+                    <span className="text-xs text-gray-500 uppercase font-medium">
+                      Avg Duration
+                    </span>
+                    <span className="text-sm font-mono font-semibold text-gray-200">
+                      {avgDuration.toFixed(0)}ms
+                    </span>
+                  </div>
+                  <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 flex items-center gap-3">
+                    <span className="text-xs text-gray-500 uppercase font-medium">
+                      Success Rate
+                    </span>
+                    <span
+                      className={`text-sm font-mono font-semibold ${
+                        successRate >= 80
+                          ? "text-green-400"
+                          : successRate >= 50
+                            ? "text-yellow-400"
+                            : "text-red-400"
+                      }`}
+                    >
+                      {successRate.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 flex items-center gap-3">
+                    <span className="text-xs text-gray-500 uppercase font-medium">Shown</span>
+                    <span className="text-sm font-mono font-semibold text-gray-200">{total}</span>
+                  </div>
+                </div>
+              );
+            })()}
+
           <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
             <div className="px-4 py-3 bg-gray-900 border-b border-gray-700 flex items-center justify-between gap-2 flex-wrap">
               <h3 className="text-xs font-semibold text-gray-400 uppercase">Recent Executions</h3>
@@ -247,7 +293,16 @@ export default function Nodes() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-gray-400 uppercase bg-gray-900">
                   <tr>
-                    {["Time", "Action", "Duration", "Status", "Class", "Error"].map((h) => (
+                    {[
+                      "Time",
+                      "Action",
+                      "Duration",
+                      "Status",
+                      "Class",
+                      "Cycle",
+                      "Trace",
+                      "Error",
+                    ].map((h) => (
                       <th key={h} className="px-4 py-3 text-left font-medium">
                         {h}
                       </th>
@@ -277,6 +332,25 @@ export default function Nodes() {
                         </td>
                         <td className="px-4 py-3">
                           <ErrorClassBadge errorClass={e.errorClass} />
+                        </td>
+                        <td className="px-4 py-3 text-gray-400 font-mono text-xs">
+                          {e.cycle ? String(e.cycle) : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {e.traceId ? (
+                            <button
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                navigate(`/traces?traceId=${encodeURIComponent(e.traceId)}`);
+                              }}
+                              className="text-xs font-mono text-indigo-400 hover:text-indigo-300 hover:underline transition-colors truncate max-w-[6rem] block"
+                              title={e.traceId}
+                            >
+                              {e.traceId.slice(0, 8)}…
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-600">—</span>
+                          )}
                         </td>
                         <td
                           className="px-4 py-3 text-red-400 text-xs font-mono max-w-xs truncate"

@@ -1,19 +1,14 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { client } from "../client";
 import TraceWaterfall from "../components/TraceWaterfall";
 import type { TraceSummary, Span } from "../gen/omega/v1/types_pb";
 
 export default function Traces() {
+  const [searchParams] = useSearchParams();
   const [traces, setTraces] = useState<TraceSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [spans, setSpans] = useState<Span[]>([]);
-
-  useEffect(() => {
-    client
-      .listTraces({ limit: 30 })
-      .then((r) => setTraces(r.traces))
-      .catch(console.error);
-  }, []);
 
   function selectTrace(id: string) {
     setSelected(id);
@@ -22,6 +17,17 @@ export default function Traces() {
       .then((r) => setSpans(r.spans))
       .catch(console.error);
   }
+
+  useEffect(() => {
+    const targetId = searchParams.get("traceId");
+    client
+      .listTraces({ limit: 30 })
+      .then((r) => {
+        setTraces(r.traces);
+        if (targetId) selectTrace(targetId);
+      })
+      .catch(console.error);
+  }, [searchParams]);
 
   return (
     <div className="flex gap-4 h-full">
