@@ -104,8 +104,9 @@ no_implicit_optional = true
 strict_equality = true
 pretty = true
 
-# Third-party stubs are optional; don't fail on missing
+# Third-party stubs are optional; don't fail on missing or untyped
 ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 # Generated protobuf code — skip entirely
@@ -141,3 +142,8 @@ ignore_errors = true
 # Bridge clients return untyped dicts from JSON HTTP responses — no-any-return suppressed
 module = ["omega.bridge.*"]
 warn_return_any = false
+
+[[tool.mypy.overrides]]
+# PyYAML stubs detection varies by environment; suppress import-untyped for yaml
+module = ["yaml"]
+ignore_missing_imports = true
