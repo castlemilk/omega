@@ -143,6 +143,82 @@ class OmegaOrchestrator:
         logger.info("OmegaOrchestrator '%s' initialised", name)
 
     # ------------------------------------------------------------------
+    # Pipeline server integration (Go→Python bridge)
+    # ------------------------------------------------------------------
+
+    def start_pipeline_server(
+        self,
+        port: int = 9090,
+    ) -> tuple:
+        """Start the Connect-RPC pipeline server in a daemon background thread.
+
+        The server handles ``ExecuteStep`` calls from Go, routing each request
+        to the matching registered node via its capabilities.
+
+        Can be called before or after :meth:`run`. The server runs until the
+        Python process exits (daemon thread) or until the returned
+        ``server.shutdown()`` is called.
+
+        Returns:
+            ``(server, thread)`` — ``ThreadingHTTPServer`` and its daemon
+            thread.  Call ``server.shutdown()`` for a clean stop.
+        """
+        from omega.bridge.pipeline_server import StepHandlerRegistry
+        from omega.bridge.pipeline_server import start_pipeline_server as _start
+        from omega.bridge.pipeline_types import ExecuteStepRequest, ExecuteStepResponse
+        from omega.core.node import NodeInput
+
+        registry = StepHandlerRegistry()
+
+        # Register a handler for each active node keyed by its capabilities.
+        # Each capability string is normalised to UPPER_SNAKE_CASE to match
+        # the nodeType field in ExecuteStepRequest (e.g. "DATA_INGESTION").
+        for node in self._registry.all_nodes():
+            caps = [
+                c.upper().replace(" ", "_").replace("-", "_")
+                for c in (node.get_capabilities() or [])
+            ]
+            for cap in caps:
+                # Capture `node` and `cap` via default-argument binding.
+                def _make_handler(n: Any = node, capability: str = cap) -> Any:
+                    def _handler(req: ExecuteStepRequest) -> ExecuteStepResponse:
+                        import json as _json
+
+                        inp = NodeInput(
+                            action=req.step_name.lower() or capability.lower(),
+                            parameters=dict(req.parameters),
+                            context={
+                                "cycle": req.cycle,
+                                "trace_id": req.trace_id,
+                                "parent_span_id": req.parent_span_id,
+                                "input": _json.loads(req.input_payload)
+                                if req.input_payload
+                                else {},
+                            },
+                        )
+                        out = n.execute(inp)
+                        state = n.get_state()
+                        return ExecuteStepResponse(
+                            success=out.success,
+                            error_text="; ".join(out.errors) if out.errors else "",
+                            metrics={
+                                k: float(v)
+                                for k, v in out.metrics.items()
+                                if isinstance(v, (int, float))
+                            },
+                            node_id=state.node_id,
+                            node_name=state.name,
+                        )
+
+                    return _handler
+
+                registry.register(cap, _make_handler())
+
+        server, thread = _start(port=port, registry=registry)
+        logger.info("OmegaOrchestrator pipeline server started on port %d", port)
+        return server, thread
+
+    # ------------------------------------------------------------------
     # Node registry (pluggable — no domain knowledge here)
     # ------------------------------------------------------------------
 

@@ -18,6 +18,7 @@ import (
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/auth"
+	"github.com/benebsworth/omega/internal/bridge"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
 	"github.com/benebsworth/omega/internal/integrations"
@@ -150,6 +151,17 @@ func main() {
 
 	// ── Service handlers ──────────────────────────────────────────────────────
 	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry)
+
+	// Pipeline bridge — connects Go orchestrator to Python pipeline server.
+	// Set OMEGA_PYTHON_PIPELINE_ADDR (e.g. "http://localhost:9090") to enable.
+	// When unset, runCycle() skips Python step dispatch and runs observation-only.
+	if addr := os.Getenv("OMEGA_PYTHON_PIPELINE_ADDR"); addr != "" {
+		pipelineClient := bridge.NewPipelineClient(addr)
+		h = h.WithPipelineClient(pipelineClient)
+		log.Printf("Pipeline bridge: Go→Python connected at %s", addr) //nolint:gosec
+	} else {
+		log.Printf("Pipeline bridge: disabled (set OMEGA_PYTHON_PIPELINE_ADDR to enable)")
+	}
 	vh := handler.NewVictoria(vdb)
 	sh := handler.NewState(database)
 
@@ -279,6 +291,13 @@ func main() {
 
 	projPath, projSvcHandler := omegav1connect.NewProjectServiceHandler(projectH, withHandlerOpts()...)
 	mux.Handle(projPath, projSvcHandler)
+
+	// PipelineService — Python is the authoritative server; Go mounts an
+	// unimplemented stub so the service path is registered for discovery.
+	pipePath, pipeSvcHandler := omegav1connect.NewPipelineServiceHandler(
+		omegav1connect.UnimplementedPipelineServiceHandler{}, withHandlerOpts()...,
+	)
+	mux.Handle(pipePath, pipeSvcHandler)
 
 	// Observability endpoints.
 	observability.NewHealthHandler(composite).RegisterRoutes(mux)

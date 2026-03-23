@@ -1,6 +1,5 @@
 """Tests for omega.core.config — centralized configuration loading."""
 
-
 import pytest
 
 from omega.core.config import (
@@ -17,8 +16,8 @@ from omega.core.config import (
 class TestDefaults:
     def test_database_defaults(self):
         cfg = DatabaseConfig()
-        assert cfg.state_db_path == "/tmp/omega_victoria_state.db"
-        assert cfg.memory_db_path == "/tmp/omega_victoria_memory.db"
+        assert cfg.state_db_path == "./data/omega_victoria_state.db"
+        assert cfg.memory_db_path == "./data/omega_victoria_memory.db"
 
     def test_nodes_defaults(self):
         cfg = NodesConfig()
@@ -119,9 +118,7 @@ class TestFromYaml:
     def test_yaml_overrides_env(self, monkeypatch, tmp_path):
         monkeypatch.setenv("OMEGA_LOG_LEVEL", "DEBUG")
         yaml_file = tmp_path / "omega.yml"
-        yaml_file.write_text(
-            "monitoring:\n  log_level: WARNING\n"
-        )
+        yaml_file.write_text("monitoring:\n  log_level: WARNING\n")
         # Only run if PyYAML is installed
         try:
             import yaml  # noqa: F401
@@ -138,9 +135,7 @@ class TestFromYaml:
             pytest.skip("PyYAML not installed")
 
         yaml_file = tmp_path / "omega.yml"
-        yaml_file.write_text(
-            "monitoring:\n  unknown_future_key: blah\n"
-        )
+        yaml_file.write_text("monitoring:\n  unknown_future_key: blah\n")
         cfg = OmegaConfig.from_yaml(str(yaml_file))
         assert cfg.monitoring.log_level == "INFO"  # default preserved
 
@@ -152,9 +147,7 @@ class TestFromYaml:
 
         yaml_file = tmp_path / "omega.yml"
         yaml_file.write_text(
-            "database:\n"
-            "  state_db_path: /custom/state.db\n"
-            "  memory_db_path: /custom/memory.db\n"
+            "database:\n  state_db_path: /custom/state.db\n  memory_db_path: /custom/memory.db\n"
         )
         cfg = OmegaConfig.from_yaml(str(yaml_file))
         assert cfg.database.state_db_path == "/custom/state.db"
@@ -213,6 +206,7 @@ class TestDumpToLog:
 
     def test_dump_masks_api_keys(self, caplog):
         import logging
+
         cfg = OmegaConfig.from_env()
         cfg.nodes.anthropic_api_key = "real-secret-key"
         with caplog.at_level(logging.INFO, logger="omega.core.config"):

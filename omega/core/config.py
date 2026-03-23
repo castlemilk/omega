@@ -51,7 +51,7 @@ def _db_path(filename: str) -> str:
 # Optional YAML support — fail gracefully if PyYAML is not installed
 _YAML_AVAILABLE = False
 try:
-    import yaml  # type: ignore[import-untyped]
+    import yaml
 
     _YAML_AVAILABLE = True
 except ImportError:
