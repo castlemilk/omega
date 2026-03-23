@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// PipelineService is served by Python and called by Go.
+// It enables Go to drive pipeline step execution on the Python side.
+service PipelineService {
+  // ExecuteStep asks Python to run one named pipeline step and return results.
+  rpc ExecuteStep(ExecuteStepRequest) returns (ExecuteStepResponse);
+  // Ping checks that the Python pipeline server is alive.
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+message ExecuteStepRequest {
+  string step_id        = 1;  // e.g. "step_1"
+  string step_name      = 2;  // e.g. "DataIngestion"
+  string node_type      = 3;  // e.g. "DATA_INGESTION" — used to route to handler
+  int64  cycle          = 4;
+  string trace_id       = 5;  // W3C trace ID (hex, 32 chars) from Go span
+  string parent_span_id = 6;  // current Go span ID (hex, 16 chars)
+  map<string, string> parameters = 7;  // step config overrides
+  bytes  input_payload  = 8;  // JSON-encoded output from previous step (may be empty)
+}
+
+message ExecuteStepResponse {
+  bool   success        = 1;
+  string error_text     = 2;
+  bytes  output_payload = 3;  // JSON-encoded output for next step
+  map<string, double> metrics = 4;
+  double duration_ms    = 5;
+  string node_id        = 6;
+  string node_name      = 7;
+}
+
+message PingRequest {}
+
+message PingResponse {
+  bool   ok      = 1;
+  string version = 2;  // Python omega package version
+}
