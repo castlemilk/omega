@@ -31,6 +31,7 @@ type OrchestratorHandler struct {
 	cbRegistry     *observability.CircuitBreakerRegistry // may be nil
 	pipelineClient *bridge.PipelineClient                // may be nil
 	projectHandler *ProjectHandler                       // may be nil; provides pipeline configs
+	metrics        *observability.Metrics                // may be nil
 
 	mu     sync.Mutex
 	cancel context.CancelFunc // non-nil while orchestrator loop is running
@@ -63,6 +64,13 @@ func (h *OrchestratorHandler) WithPipelineClient(c *bridge.PipelineClient) *Orch
 // hardcoded step lists.
 func (h *OrchestratorHandler) WithProjectHandler(ph *ProjectHandler) *OrchestratorHandler {
 	h.projectHandler = ph
+	return h
+}
+
+// WithMetrics attaches the Prometheus metrics instance so runCycleWithResults()
+// can increment cycle/node counters on the same registry that /metrics serves.
+func (h *OrchestratorHandler) WithMetrics(m *observability.Metrics) *OrchestratorHandler {
+	h.metrics = m
 	return h
 }
 
@@ -708,6 +716,7 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 						attribute.Int64("cycle", cycle),
 					),
 				)
+				execID, _ := h.db.BeginExecution(step.NodeType, step.Name, step.NodeType, nil, nil, cycle)
 				t0 := time.Now()
 				resp, stepErr := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
 					StepId:   step.StepId,
@@ -737,6 +746,17 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 					elapsed = resp.DurationMs // prefer server-side measurement
 					sr.DurationMS = elapsed
 				}
+				if execID != "" {
+					_ = h.db.EndExecution(execID, sr.Success, sr.Error, 0, "", false, map[string]float64{"duration_ms": elapsed})
+				}
+				if h.metrics != nil {
+					status := "success"
+					if !sr.Success {
+						status = "error"
+					}
+					h.metrics.IncNodeExecution(step.Name, status)
+					h.metrics.ObserveNodeDuration(step.Name, elapsed/1000)
+				}
 				stepSpan.End()
 				results = append(results, sr)
 			}
@@ -746,6 +766,9 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 	_ = h.db.LogActivity("cycle_complete", "system", "orchestrator", map[string]any{
 		"cycle": cycle, "node_count": len(nodes),
 	}, cycle)
+	if h.metrics != nil {
+		h.metrics.IncCycles()
+	}
 	cycleSpan.SetStatus(codes.Ok, "")
 	return results, nil
 }
