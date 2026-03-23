@@ -11,6 +11,15 @@ alerting:
 rule_files: []
 
 scrape_configs:
+  # Go API — Connect-RPC server with Prometheus /metrics endpoint
+  - job_name: "omega-go-api"
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels:
+          layer: "go"
+    metrics_path: /metrics
+    scrape_interval: 15s
+
   # Python metrics exporter (omega node layer)
   - job_name: "omega-python"
     static_configs:

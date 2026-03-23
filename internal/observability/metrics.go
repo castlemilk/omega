@@ -50,6 +50,26 @@ type Metrics struct {
 
 	// Degradation events per node.
 	DegradationEventsTotal *prometheus.CounterVec
+
+	// ── P1-4: standard pipeline observability ────────────────────────────────
+
+	// CyclesTotal counts all completed orchestration cycles.
+	CyclesTotal prometheus.Counter
+
+	// NodeExecutionsTotal counts node executions by node name and status (success/error/skipped).
+	NodeExecutionsTotal *prometheus.CounterVec
+
+	// NodeExecutionDuration records per-node execution latency in seconds.
+	NodeExecutionDuration *prometheus.HistogramVec
+
+	// ErrorsTotal counts errors by node name and error class.
+	ErrorsTotal *prometheus.CounterVec
+
+	// IssuesTotal counts detected issues by severity and detector.
+	IssuesTotal *prometheus.CounterVec
+
+	// HealthScore is the current system health score (0–100).
+	HealthScore prometheus.Gauge
 }
 
 // NewMetrics creates and registers all instruments on a fresh isolated registry.
@@ -133,6 +153,43 @@ func NewMetrics() *Metrics {
 			Name:      "degradation_events_total",
 			Help:      "Total degradation events detected per node.",
 		}, []string{"node_id", "kind"}),
+
+		CyclesTotal: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "cycles_total",
+			Help:      "Total number of completed orchestration pipeline cycles.",
+		}),
+
+		NodeExecutionsTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "node_executions_total",
+			Help:      "Total node executions by node name and status (success/error/skipped).",
+		}, []string{"node_name", "status"}),
+
+		NodeExecutionDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Namespace: namespace,
+			Name:      "node_execution_duration_seconds",
+			Help:      "Per-node execution latency in seconds.",
+			Buckets:   prometheus.DefBuckets,
+		}, []string{"node_name"}),
+
+		ErrorsTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "errors_total",
+			Help:      "Total errors by node name and error class.",
+		}, []string{"node_name", "error_class"}),
+
+		IssuesTotal: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Namespace: namespace,
+			Name:      "issues_total",
+			Help:      "Total issues detected by severity and detector.",
+		}, []string{"severity", "detector"}),
+
+		HealthScore: prometheus.NewGauge(prometheus.GaugeOpts{
+			Namespace: namespace,
+			Name:      "health_score",
+			Help:      "Current system health score (0=unhealthy, 50=degraded, 100=healthy).",
+		}),
 	}
 
 	reg.MustRegister(
@@ -148,6 +205,12 @@ func NewMetrics() *Metrics {
 		m.CircuitBreakerState,
 		m.SubsystemErrorsTotal,
 		m.DegradationEventsTotal,
+		m.CyclesTotal,
+		m.NodeExecutionsTotal,
+		m.NodeExecutionDuration,
+		m.ErrorsTotal,
+		m.IssuesTotal,
+		m.HealthScore,
 		// Standard Go runtime collectors.
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
@@ -238,3 +301,36 @@ const (
 	CircuitStateValueOpen     float64 = 1
 	CircuitStateValueHalfOpen float64 = 2
 )
+
+// ── P1-4 helpers ──────────────────────────────────────────────────────────────
+
+// IncCycles increments the total completed pipeline cycles counter.
+func (m *Metrics) IncCycles() {
+	m.CyclesTotal.Inc()
+}
+
+// IncNodeExecution increments the per-node execution counter.
+// status should be "success", "error", or "skipped".
+func (m *Metrics) IncNodeExecution(nodeName, status string) {
+	m.NodeExecutionsTotal.WithLabelValues(nodeName, status).Inc()
+}
+
+// ObserveNodeDuration records execution latency for a node.
+func (m *Metrics) ObserveNodeDuration(nodeName string, secs float64) {
+	m.NodeExecutionDuration.WithLabelValues(nodeName).Observe(secs)
+}
+
+// IncError increments the error counter for a node and error class.
+func (m *Metrics) IncError(nodeName, errorClass string) {
+	m.ErrorsTotal.WithLabelValues(nodeName, errorClass).Inc()
+}
+
+// IncIssue increments the issue counter for a given severity and detector.
+func (m *Metrics) IncIssue(severity, detector string) {
+	m.IssuesTotal.WithLabelValues(severity, detector).Inc()
+}
+
+// SetHealthScore sets the current system health score (0–100).
+func (m *Metrics) SetHealthScore(score float64) {
+	m.HealthScore.Set(score)
+}
