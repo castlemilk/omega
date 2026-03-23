@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// StateTensorDimension describes one dimension of a state tensor.
+message StateTensorDimension {
+  string name        = 1;  // e.g. "signal_quality"
+  string description = 2;  // human-readable semantics
+  float  range_min   = 3;  // expected minimum value
+  float  range_max   = 4;  // expected maximum value
+  string unit        = 5;  // "fraction", "ms", "count", "score", "bool", "ordinal"
+  bool   is_health   = 6;  // true = this is a health/trust signal, not domain data
+}
+
+// StateTensorSchema declares the shape and semantics of a node's state tensor.
+// Versioned separately so the schema can evolve without changing node software.
+message StateTensorSchema {
+  string node_type      = 1;  // e.g. "victoria", "telesis"
+  string schema_version = 2;  // semver, e.g. "1.0.0"
+  repeated StateTensorDimension dimensions = 3;
+  // Names of dimensions that are health/trust signals.
+  // Used to compute aggregate health_score when detailed tensor unavailable.
+  repeated string health_dimension_names = 4;
+}
+
+// StateTensor is a snapshot of node state at a point in time.
+message StateTensor {
+  string node_id             = 1;
+  string schema_version      = 2;
+  google.protobuf.Timestamp captured_at = 3;
+  // float32 values in dimension order defined by StateTensorSchema.
+  // Stored as raw bytes (little-endian float32 array) for efficiency.
+  bytes  values              = 4;
+  // Convenience: named dimensions for sparse access without schema lookup.
+  map<string, float> named   = 5;
+  // Aggregate scalar health score derived from health_dimension_names.
+  float  health_score        = 6;
+}
+
+// StateTensorHistory is a ring buffer of recent state snapshots for one node.
+message StateTensorHistory {
+  string node_id             = 1;
+  int32  max_size            = 2;  // default 1000
+  repeated StateTensor snapshots = 3;
+}
