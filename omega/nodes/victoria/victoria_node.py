@@ -147,6 +147,15 @@ class VictoriaNode(Node):
             "construct_portfolio",
             "backtest_strategy",
             "rank_signals",
+            # Go pipeline step NodeType aliases (registered as DATA_INGESTION etc.)
+            "data_ingestion",
+            "signal_research",
+            "strategy",
+            "risk_management",
+            "verification",
+            "memory",
+            "improvement",
+            "adversarial",
         ]
 
     def describe(self) -> str:
@@ -165,11 +174,18 @@ class VictoriaNode(Node):
 
         try:
             result: Any
-            if action in ("poll", "fetch_data"):
+            if action in ("poll", "fetch_data", "data_ingestion", "dataingestion"):
                 result = self._do_poll(inp)
-            elif action == "compute_signals":
+            elif action in ("compute_signals", "signal_research", "signalresearch"):
                 result = self._do_compute_signals(inp)
-            elif action == "construct_portfolio":
+            elif action in (
+                "construct_portfolio",
+                "strategy",
+                "risk_management",
+                "riskmanagement",
+                "intelligencecoordination",
+                "dynamicweights",
+            ):
                 result = self._do_construct_portfolio(inp)
             elif action in ("backtest_strategy", "rank_signals"):
                 # Delegate to inner StrategyNode
@@ -177,6 +193,18 @@ class VictoriaNode(Node):
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._total_latency_ms += elapsed
                 return result_out
+            elif action in (
+                "verification",
+                "debategate",
+                "walkforward",
+                "memory",
+                "improvement",
+                "improvementengine",
+                "adversarial",
+                "ring3adversarial",
+            ):
+                # These are handled internally by Python orchestrator; return success no-op
+                result = {"status": "ok", "action": action}
             else:
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._total_latency_ms += elapsed
