@@ -7,7 +7,7 @@ import (
 
 // ── Alignment ─────────────────────────────────────────────────────────────────
 
-// AlignmentDecision is a single alignment layer decision from the state DB.
+// AlignmentDecision is a single alignment layer decision.
 type AlignmentDecision struct {
 	DecisionID      string
 	Cycle           int64
@@ -18,29 +18,25 @@ type AlignmentDecision struct {
 }
 
 // RecentAlignmentDecisions returns the most recent alignment decisions.
-// Returns an empty slice (not an error) if the table doesn't exist yet.
 func (d *DB) RecentAlignmentDecisions(limit int) ([]*AlignmentDecision, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT decision_id, cycle, approved,
-		       COALESCE(reasons,'[]'), COALESCE(target_subsystem,''),
+		       COALESCE(violations::text,'[]'), '',
 		       recorded_at
 		FROM alignment_decisions
-		ORDER BY recorded_at DESC LIMIT ?`, limit)
+		ORDER BY recorded_at DESC LIMIT $1`, limit)
 	if err != nil {
-		// Table may not exist yet — return empty rather than error
 		return []*AlignmentDecision{}, nil
 	}
 	defer rows.Close() //nolint:errcheck
 	var out []*AlignmentDecision
 	for rows.Next() {
 		a := &AlignmentDecision{}
-		var approved int
 		var reasonsJSON string
-		if err := rows.Scan(&a.DecisionID, &a.Cycle, &approved,
+		if err := rows.Scan(&a.DecisionID, &a.Cycle, &a.Approved,
 			&reasonsJSON, &a.TargetSubsystem, &a.RecordedAt); err != nil {
 			return nil, err
 		}
-		a.Approved = approved == 1
 		json.Unmarshal([]byte(reasonsJSON), &a.Reasons) //nolint:errcheck,gosec
 		if a.Reasons == nil {
 			a.Reasons = []string{}
@@ -55,7 +51,7 @@ func (d *DB) RecentAlignmentDecisions(limit int) ([]*AlignmentDecision, error) {
 
 // ── Adversarial ───────────────────────────────────────────────────────────────
 
-// AdversarialResult is a single adversarial pressure result from the state DB.
+// AdversarialResult is a single adversarial pressure result.
 type AdversarialResult struct {
 	ResultID   string
 	Cycle      int64
@@ -66,14 +62,13 @@ type AdversarialResult struct {
 }
 
 // RecentAdversarialResults returns the most recent adversarial results.
-// Returns an empty slice (not an error) if the table doesn't exist yet.
 func (d *DB) RecentAdversarialResults(limit int) ([]*AdversarialResult, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT result_id, cycle, ring,
-		       COALESCE(flags,'[]'), COALESCE(severity,'low'),
+		       COALESCE(failure_cases::text,'[]'), 'low',
 		       recorded_at
 		FROM adversarial_results
-		ORDER BY recorded_at DESC LIMIT ?`, limit)
+		ORDER BY recorded_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return []*AdversarialResult{}, nil
 	}
@@ -100,7 +95,7 @@ func (d *DB) RecentAdversarialResults(limit int) ([]*AdversarialResult, error) {
 
 // ── Goal tracking ─────────────────────────────────────────────────────────────
 
-// GoalState is the most recent goal_tracking snapshot from the state DB.
+// GoalState is the most recent goal_tracking snapshot.
 type GoalState struct {
 	Cycle                int64
 	ConstitutionalChecks map[string]bool
@@ -109,24 +104,20 @@ type GoalState struct {
 	RecordedAt           float64
 }
 
-// CurrentGoalState returns the most recent goal_tracking row, or nil if empty/absent.
+// CurrentGoalState returns the most recent goal_tracking row, or nil if empty.
 func (d *DB) CurrentGoalState() (*GoalState, error) {
-	row := d.state.QueryRow(`
+	row := d.db.QueryRow(`
 		SELECT cycle,
-		       COALESCE(constitutional_checks,'{}'),
-		       COALESCE(scorecard_values,'{}'),
-		       COALESCE(active_tasks,'[]'),
+		       COALESCE(scorecard::text,'{}'),
+		       COALESCE(scorecard::text,'{}'),
+		       COALESCE(subtasks::text,'[]'),
 		       recorded_at
 		FROM goal_tracking
 		ORDER BY recorded_at DESC LIMIT 1`)
 	gs := &GoalState{}
 	var checksJSON, scorecardJSON, tasksJSON string
 	err := row.Scan(&gs.Cycle, &checksJSON, &scorecardJSON, &tasksJSON, &gs.RecordedAt)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		// Table may not exist yet
+	if err == sql.ErrNoRows || err != nil {
 		return nil, nil //nolint
 	}
 	json.Unmarshal([]byte(checksJSON), &gs.ConstitutionalChecks)  //nolint:errcheck,gosec
@@ -146,35 +137,30 @@ func (d *DB) CurrentGoalState() (*GoalState, error) {
 
 // ── Challenges ────────────────────────────────────────────────────────────────
 
-// Challenge is a devil's advocate challenge from challenge_registry.db.
+// Challenge is a devil's advocate challenge.
 type Challenge struct {
 	ChallengeID     string
-	Status          string // open | acknowledged | resolved
-	Severity        string // low | medium | high | critical
+	Status          string
+	Severity        string
 	TargetSubsystem string
 	Description     string
 	CreatedAt       float64
 	UpdatedAt       float64
 }
 
-// ListChallenges returns challenges from challenge_registry.db.
-// statusFilter="" or "all" returns all statuses.
-// Returns empty slice if challenge DB is nil or table doesn't exist.
+// ListChallenges returns challenges from the challenges table.
 func (d *DB) ListChallenges(statusFilter string) ([]*Challenge, error) {
-	if d.challenge == nil {
-		return []*Challenge{}, nil
-	}
 	query := `SELECT challenge_id, status, COALESCE(severity,'medium'),
 	                 COALESCE(target_subsystem,''), COALESCE(description,''),
 	                 created_at, COALESCE(updated_at, created_at)
 	          FROM challenges`
 	args := []any{}
 	if statusFilter != "" && statusFilter != "all" {
-		query += " WHERE status = ?"
+		query += " WHERE status = $1"
 		args = append(args, statusFilter)
 	}
 	query += " ORDER BY created_at DESC"
-	rows, err := d.challenge.Query(query, args...)
+	rows, err := d.db.Query(query, args...)
 	if err != nil {
 		return []*Challenge{}, nil
 	}
@@ -196,7 +182,7 @@ func (d *DB) ListChallenges(statusFilter string) ([]*Challenge, error) {
 
 // ── Memory stats ──────────────────────────────────────────────────────────────
 
-// MemoryStats summarises the memory store sizes and contradiction events.
+// MemoryStats summarises the memory store sizes.
 type MemoryStats struct {
 	EpisodicCount      int64
 	SemanticCount      int64
@@ -204,18 +190,16 @@ type MemoryStats struct {
 	ContradictionCount int64
 }
 
-// GetMemoryStatsSummary returns aggregate counts and regime history from the memory DB.
+// GetMemoryStatsSummary returns aggregate counts and regime history.
 func (d *DB) GetMemoryStatsSummary() (*MemoryStats, error) {
 	ms := &MemoryStats{RegimeHistory: []string{}}
-	d.memory.QueryRow(`SELECT COUNT(*) FROM episodes`).Scan(&ms.EpisodicCount)          //nolint:errcheck,gosec
-	d.memory.QueryRow(`SELECT COUNT(*) FROM semantic_memories`).Scan(&ms.SemanticCount) //nolint:errcheck,gosec
-	_ = d.memory.QueryRow( //nolint:gosec
-		`SELECT COUNT(*) FROM episodes WHERE tags LIKE '%contradiction%'`,
-	).Scan(&ms.ContradictionCount)
+	d.db.QueryRow(`SELECT COUNT(*) FROM episodes`).Scan(&ms.EpisodicCount)          //nolint:errcheck,gosec
+	d.db.QueryRow(`SELECT COUNT(*) FROM semantic_memories`).Scan(&ms.SemanticCount) //nolint:errcheck,gosec
+	d.db.QueryRow(`SELECT COUNT(*) FROM episodes WHERE tags::text LIKE '%contradiction%'`).Scan(&ms.ContradictionCount) //nolint:errcheck,gosec
 
-	rows, err := d.memory.Query(`
+	rows, err := d.db.Query(`
 		SELECT DISTINCT event_type FROM episodes
-		ORDER BY timestamp DESC LIMIT 10`)
+		ORDER BY event_type DESC LIMIT 10`)
 	if err == nil {
 		defer rows.Close() //nolint:errcheck
 		for rows.Next() {
@@ -229,24 +213,23 @@ func (d *DB) GetMemoryStatsSummary() (*MemoryStats, error) {
 
 // ── Verification gates ────────────────────────────────────────────────────────
 
-// GateResult is a single verification gate check result from the state DB.
+// GateResult is a single verification gate check result.
 type GateResult struct {
 	GateID    string
 	Cycle     int64
 	GateName  string
-	Result    string // pass | fail | warning
+	Result    string
 	Details   string
 	CheckedAt float64
 }
 
 // RecentGateResults returns the most recent verification gate results.
-// Returns an empty slice if the table doesn't exist yet.
 func (d *DB) RecentGateResults(limit int) ([]*GateResult, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT gate_id, cycle, gate_name,
 		       result, COALESCE(details,''), checked_at
 		FROM verification_gates
-		ORDER BY checked_at DESC LIMIT ?`, limit)
+		ORDER BY checked_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return []*GateResult{}, nil
 	}
@@ -266,9 +249,9 @@ func (d *DB) RecentGateResults(limit int) ([]*GateResult, error) {
 	return out, nil
 }
 
-// ── Improvement history (with alignment context) ──────────────────────────────
+// ── Improvement history ───────────────────────────────────────────────────────
 
-// ImprovementDetail augments improvement_log with an alignment decision JOIN.
+// ImprovementDetail augments improvement_log with alignment decision context.
 type ImprovementDetail struct {
 	ImproveID         string
 	NodeID            string
@@ -286,16 +269,16 @@ type ImprovementDetail struct {
 
 // ImprovementHistory returns improvement records joined with alignment decisions.
 func (d *DB) ImprovementHistory(limit int) ([]*ImprovementDetail, error) {
-	rows, err := d.state.Query(`
+	rows, err := d.db.Query(`
 		SELECT i.improve_id, i.node_id, i.node_name,
 		       i.from_version, i.to_version, i.triggered_by,
 		       i.recorded_at, i.cycle,
-		       COALESCE(i.before_metrics,'{}'),
-		       COALESCE(i.after_metrics,'{}'),
-		       a.approved, COALESCE(a.reasons,'[]')
+		       COALESCE(i.before_metrics::text,'{}'),
+		       COALESCE(i.after_metrics::text,'{}'),
+		       a.approved, COALESCE(a.violations::text,'[]')
 		FROM improvement_log i
 		LEFT JOIN alignment_decisions a ON a.cycle = i.cycle
-		ORDER BY i.recorded_at DESC LIMIT ?`, limit)
+		ORDER BY i.recorded_at DESC LIMIT $1`, limit)
 	if err != nil {
 		return []*ImprovementDetail{}, nil
 	}
@@ -304,7 +287,7 @@ func (d *DB) ImprovementHistory(limit int) ([]*ImprovementDetail, error) {
 	for rows.Next() {
 		imp := &ImprovementDetail{}
 		var beforeJSON, afterJSON, reasonsJSON string
-		var approved sql.NullInt64
+		var approved sql.NullBool
 		if err := rows.Scan(
 			&imp.ImproveID, &imp.NodeID, &imp.NodeName,
 			&imp.FromVersion, &imp.ToVersion, &imp.TriggeredBy,
@@ -323,7 +306,7 @@ func (d *DB) ImprovementHistory(limit int) ([]*ImprovementDetail, error) {
 			imp.AfterMetrics = map[string]float64{}
 		}
 		if approved.Valid {
-			v := approved.Int64 == 1
+			v := approved.Bool
 			imp.AlignmentApproved = &v
 			json.Unmarshal([]byte(reasonsJSON), &imp.AlignmentReasons) //nolint:errcheck,gosec
 		}
@@ -340,7 +323,7 @@ func (d *DB) ImprovementHistory(limit int) ([]*ImprovementDetail, error) {
 
 // ── Terminal ──────────────────────────────────────────────────────────────────
 
-// TerminalSessionRecord is a persisted terminal session (flushed on close/timeout).
+// TerminalSessionRecord is a persisted terminal session.
 type TerminalSessionRecord struct {
 	ID            string
 	WorkDir       string
@@ -364,39 +347,11 @@ type TerminalCommandRecord struct {
 	ExecutedAt float64
 }
 
-// SaveTerminalSession upserts a terminal session record.
-func (d *DB) SaveTerminalSession(s *TerminalSessionRecord) error {
-	_, err := d.state.Exec(`
-		INSERT INTO terminal_sessions(id, work_dir, autonomy_level, status, created_at, closed_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
-			status=excluded.status, closed_at=excluded.closed_at`,
-		s.ID, s.WorkDir, s.AutonomyLevel, s.Status, s.CreatedAt, nullableFloat(s.ClosedAt),
-	)
-	return err
-}
-
-// SaveTerminalCommand inserts a single command record.
-func (d *DB) SaveTerminalCommand(c *TerminalCommandRecord) error {
-	truncated := 0
-	if c.Truncated {
-		truncated = 1
-	}
-	_, err := d.state.Exec(`
-		INSERT OR IGNORE INTO terminal_commands
-			(id, session_id, command, args, exit_code, stdout, stderr, duration_ms, truncated, executed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		c.ID, c.SessionID, c.Command, c.Args,
-		c.ExitCode, c.Stdout, c.Stderr, c.DurationMS, truncated, c.ExecutedAt,
-	)
-	return err
-}
-
 // GetTerminalSession retrieves a session by ID. Returns nil, nil if not found.
 func (d *DB) GetTerminalSession(id string) (*TerminalSessionRecord, error) {
-	row := d.state.QueryRow(`
+	row := d.db.QueryRow(`
 		SELECT id, work_dir, autonomy_level, status, created_at, COALESCE(closed_at, 0)
-		FROM terminal_sessions WHERE id = ?`, id)
+		FROM terminal_sessions WHERE id = $1`, id)
 	s := &TerminalSessionRecord{}
 	err := row.Scan(&s.ID, &s.WorkDir, &s.AutonomyLevel, &s.Status, &s.CreatedAt, &s.ClosedAt)
 	if err == sql.ErrNoRows {
@@ -407,10 +362,10 @@ func (d *DB) GetTerminalSession(id string) (*TerminalSessionRecord, error) {
 
 // GetTerminalCommands returns all commands for a session in execution order.
 func (d *DB) GetTerminalCommands(sessionID string) ([]*TerminalCommandRecord, error) {
-	rows, err := d.state.Query(`
-		SELECT id, session_id, command, args, exit_code, stdout, stderr,
+	rows, err := d.db.Query(`
+		SELECT id, session_id, command, args::text, exit_code, stdout, stderr,
 		       duration_ms, truncated, executed_at
-		FROM terminal_commands WHERE session_id = ?
+		FROM terminal_commands WHERE session_id = $1
 		ORDER BY executed_at ASC`, sessionID)
 	if err != nil {
 		return nil, err
@@ -419,12 +374,10 @@ func (d *DB) GetTerminalCommands(sessionID string) ([]*TerminalCommandRecord, er
 	var out []*TerminalCommandRecord
 	for rows.Next() {
 		c := &TerminalCommandRecord{}
-		var truncated int
 		if err := rows.Scan(&c.ID, &c.SessionID, &c.Command, &c.Args,
-			&c.ExitCode, &c.Stdout, &c.Stderr, &c.DurationMS, &truncated, &c.ExecutedAt); err != nil {
+			&c.ExitCode, &c.Stdout, &c.Stderr, &c.DurationMS, &c.Truncated, &c.ExecutedAt); err != nil {
 			return nil, err
 		}
-		c.Truncated = truncated == 1
 		out = append(out, c)
 	}
 	if out == nil {
@@ -432,12 +385,3 @@ func (d *DB) GetTerminalCommands(sessionID string) ([]*TerminalCommandRecord, er
 	}
 	return out, nil
 }
-
-// nullableFloat returns nil for zero values (used for closed_at).
-func nullableFloat(f float64) any {
-	if f == 0 {
-		return nil
-	}
-	return f
-}
-

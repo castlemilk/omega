@@ -18,37 +18,36 @@ package core
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"os"
 	"testing"
 
-	_ "modernc.org/sqlite"
+	"github.com/benebsworth/omega/internal/db"
 )
 
 // ---------------------------------------------------------------------------
 // Helpers shared by multiple benchmarks
 // ---------------------------------------------------------------------------
 
-// openInMemDB opens an ephemeral SQLite database for benchmarks.
-func openInMemDB(b *testing.B) *sql.DB {
-	b.Helper()
-	db, err := sql.Open("sqlite", "file::memory:?cache=shared")
-	if err != nil {
-		b.Fatalf("openInMemDB: %v", err)
-	}
-	db.SetMaxOpenConns(1)
-	b.Cleanup(func() { _ = db.Close() })
-	return db
-}
-
-// newBenchKernel returns a MemoryKernel backed by an in-memory SQLite DB.
+// newBenchKernel returns a MemoryKernel backed by a Postgres DB.
+// Benchmarks are skipped when TEST_DATABASE_URL is not set.
 func newBenchKernel(b *testing.B) *MemoryKernel {
 	b.Helper()
-	db := openInMemDB(b)
-	k, err := NewMemoryKernel(db)
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		b.Skip("TEST_DATABASE_URL not set — skipping Postgres benchmarks")
+	}
+	b.Setenv("DATABASE_URL", dsn)
+	database, err := db.New(context.Background())
 	if err != nil {
+		b.Fatalf("open db: %v", err)
+	}
+	k, err := NewMemoryKernel(database.StateDB())
+	if err != nil {
+		database.Close()
 		b.Fatalf("NewMemoryKernel: %v", err)
 	}
+	b.Cleanup(func() { database.Close() })
 	return k
 }
 

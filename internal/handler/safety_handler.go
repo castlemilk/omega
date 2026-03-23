@@ -27,10 +27,9 @@ type SafetyHandler struct {
 	db          *db.DB
 }
 
-// NewSafety creates a SafetyHandler.  The ChallengeRegistry uses the shared
-// challenge SQLite path so it is consistent with the orchestrator.
+// NewSafety creates a SafetyHandler backed by the shared Postgres database.
 func NewSafety(database *db.DB) (*SafetyHandler, error) {
-	cr, err := core.NewChallengeRegistry(db.ChallengeDBPath())
+	cr, err := core.NewChallengeRegistry(database.StateDB())
 	if err != nil {
 		return nil, fmt.Errorf("open challenge registry: %w", err)
 	}

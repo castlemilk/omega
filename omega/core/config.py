@@ -65,23 +65,10 @@ except ImportError:
 
 @dataclass
 class DatabaseConfig:
-    """SQLite database file paths."""
-
-    state_db_path: str = field(default_factory=lambda: _db_path("omega_victoria_state.db"))
-    """Node registry, executions, traces, issues, costs, improvements."""
-
-    memory_db_path: str = field(default_factory=lambda: _db_path("omega_victoria_memory.db"))
-    """Episodic + semantic memory (MemoryKernel)."""
-
-    orchestrator_db_path: str = field(default_factory=lambda: _db_path("omega_victoria.db"))
-    """Orchestrator internal state."""
+    """Database configuration.  Postgres URL is read from DATABASE_URL env var."""
 
     def ensure_dirs(self) -> None:
-        """Create parent directories for all configured DB paths."""
-        for path in (self.state_db_path, self.memory_db_path, self.orchestrator_db_path):
-            dir_ = os.path.dirname(path)
-            if dir_:
-                os.makedirs(dir_, exist_ok=True)
+        """No-op — Postgres needs no local directories."""
 
 
 @dataclass
@@ -208,11 +195,7 @@ class OmegaConfig:
         """Build config entirely from environment variables."""
         _e = os.environ.get
 
-        database = DatabaseConfig(
-            state_db_path=_e("OMEGA_STATE_DB_PATH") or _db_path("omega_victoria_state.db"),
-            memory_db_path=_e("OMEGA_MEMORY_DB_PATH") or _db_path("omega_victoria_memory.db"),
-            orchestrator_db_path=_e("OMEGA_DB_PATH") or _db_path("omega_victoria.db"),
-        )
+        database = DatabaseConfig()
 
         nodes = NodesConfig(
             brain_provider=_e("OMEGA_BRAIN_PROVIDER", "none"),
@@ -362,9 +345,8 @@ class OmegaConfig:
         """
         safe: dict[str, Any] = {
             "database": {
-                "state_db_path": self.database.state_db_path,
-                "memory_db_path": self.database.memory_db_path,
-                "orchestrator_db_path": self.database.orchestrator_db_path,
+                "backend": "postgres",
+                "url": "***" if os.environ.get("DATABASE_URL") else "(DATABASE_URL not set)",
             },
             "monitoring": {
                 "log_level": self.monitoring.log_level,

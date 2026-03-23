@@ -66,10 +66,10 @@ class Orchestrator:
         history = orch.run_convergence_loop("my_goal", parameters={...}, max_iterations=5)
     """
 
-    def __init__(self, name: str = "omega", db_path: str = ":memory:") -> None:
+    def __init__(self, name: str = "omega") -> None:
         self.name = name
         self.registry = NodeRegistry()
-        self.evaluator = Evaluator(db_path=db_path)
+        self.evaluator = Evaluator()
         self._iteration_history: list[IterationSummary] = []
         logger.info("Orchestrator '%s' initialised", name)
 

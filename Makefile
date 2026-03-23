@@ -2,7 +2,8 @@
         up down logs run api dashboard \
         fe-install fe-build fe-lint fe-typecheck fe-format \
         py-test py-lint \
-        test-db test-handler all \
+        test-db test-handler test-integration all \
+        db-up db-down \
         otel-up otel-down otel-logs
 
 # ---------------------------------------------------------------------------
@@ -20,6 +21,21 @@ test-db:
 
 test-handler:
 	go test ./internal/handler/... -v -timeout 30s
+
+## test-integration: run all Postgres integration tests (requires TEST_DATABASE_URL)
+test-integration:
+	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test ./... -v -timeout 120s
+
+## db-up: start Postgres via docker-compose (for local development)
+db-up:
+	docker compose up -d postgres
+	@echo "Postgres available at postgres://omega:omega@localhost:5432/omega"
+	@echo "Export: export DATABASE_URL=postgres://omega:omega@localhost:5432/omega?sslmode=disable"
+	@echo "Export: export TEST_DATABASE_URL=postgres://omega:omega@localhost:5432/omega?sslmode=disable"
+
+## db-down: stop Postgres container
+db-down:
+	docker compose stop postgres
 
 # ---------------------------------------------------------------------------
 # Proto generation

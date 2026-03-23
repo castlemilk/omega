@@ -14,7 +14,6 @@ Responsibilities
 
 import logging
 import math
-import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -73,41 +72,14 @@ class GoalSpec:
 
 
 class _Store:
-    """Thin SQLite wrapper.  Schema created on first use."""
+    """In-memory iteration store for session-scoped evaluation comparison."""
 
-    def __init__(self, db_path: str = ":memory:") -> None:
-        self._path = db_path
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._create_schema()
-
-    def _create_schema(self) -> None:
-        self._conn.executescript("""
-            CREATE TABLE IF NOT EXISTS iterations (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                goal        TEXT    NOT NULL,
-                iteration   INTEGER NOT NULL,
-                timestamp   TEXT    NOT NULL,
-                notes       TEXT
-            );
-
-            CREATE TABLE IF NOT EXISTS node_metrics (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                iteration_id INTEGER NOT NULL REFERENCES iterations(id),
-                node_id      TEXT    NOT NULL,
-                node_name    TEXT    NOT NULL,
-                metric_name  TEXT    NOT NULL,
-                metric_value REAL    NOT NULL
-            );
-
-            CREATE TABLE IF NOT EXISTS system_metrics (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                iteration_id INTEGER NOT NULL REFERENCES iterations(id),
-                metric_name  TEXT    NOT NULL,
-                metric_value REAL    NOT NULL
-            );
-        """)
-        self._conn.commit()
+    def __init__(self) -> None:
+        # iterations: list of dicts with keys: id, goal, iteration, timestamp, notes,
+        #             node_metrics: {node_id: {metric: value}},
+        #             system_metrics: {metric: value}
+        self._iterations: list[dict[str, Any]] = []
+        self._next_id = 1
 
     def record_iteration(
         self,
@@ -117,58 +89,45 @@ class _Store:
         system_metrics: dict[str, float],
         notes: str = "",
     ) -> int:
-        ts = datetime.now().isoformat()
-        cur = self._conn.execute(
-            "INSERT INTO iterations (goal, iteration, timestamp, notes) VALUES (?,?,?,?)",
-            (goal, iteration, ts, notes),
-        )
-        iter_id = cur.lastrowid
-
+        node_metrics: dict[str, dict[str, float]] = {}
         for snap in node_snapshots:
-            for metric_name, metric_value in snap.get("metrics", {}).items():
-                self._conn.execute(
-                    "INSERT INTO node_metrics (iteration_id, node_id, node_name, metric_name, metric_value) "
-                    "VALUES (?,?,?,?,?)",
-                    (iter_id, snap["node_id"], snap["node_name"], metric_name, metric_value),
-                )
-
-        for metric_name, metric_value in system_metrics.items():
-            self._conn.execute(
-                "INSERT INTO system_metrics (iteration_id, metric_name, metric_value) VALUES (?,?,?)",
-                (iter_id, metric_name, metric_value),
-            )
-
-        self._conn.commit()
-        return iter_id  # type: ignore[return-value]
+            node_metrics[snap["node_id"]] = {
+                "node_name": snap["node_name"],
+                **{k: float(v) for k, v in snap.get("metrics", {}).items()},
+            }
+        entry = {
+            "id": self._next_id,
+            "goal": goal,
+            "iteration": iteration,
+            "timestamp": datetime.now().isoformat(),
+            "notes": notes,
+            "node_metrics": node_metrics,
+            "system_metrics": {k: float(v) for k, v in system_metrics.items()},
+        }
+        self._iterations.append(entry)
+        iter_id = self._next_id
+        self._next_id += 1
+        return iter_id
 
     def get_system_metric_history(self, goal: str, metric_name: str) -> list[tuple[int, float]]:
         """Return [(iteration, value), …] ordered by iteration."""
-        rows = self._conn.execute(
-            """
-            SELECT i.iteration, sm.metric_value
-            FROM system_metrics sm
-            JOIN iterations i ON i.id = sm.iteration_id
-            WHERE i.goal = ? AND sm.metric_name = ?
-            ORDER BY i.iteration
-            """,
-            (goal, metric_name),
-        ).fetchall()
-        return [(r["iteration"], r["metric_value"]) for r in rows]
+        result = []
+        for entry in sorted(self._iterations, key=lambda e: e["iteration"]):
+            if entry["goal"] == goal and metric_name in entry["system_metrics"]:
+                result.append((entry["iteration"], entry["system_metrics"][metric_name]))
+        return result
 
     def get_node_metric_history(
         self, goal: str, node_id: str, metric_name: str
     ) -> list[tuple[int, float]]:
-        rows = self._conn.execute(
-            """
-            SELECT i.iteration, nm.metric_value
-            FROM node_metrics nm
-            JOIN iterations i ON i.id = nm.iteration_id
-            WHERE i.goal = ? AND nm.node_id = ? AND nm.metric_name = ?
-            ORDER BY i.iteration
-            """,
-            (goal, node_id, metric_name),
-        ).fetchall()
-        return [(r["iteration"], r["metric_value"]) for r in rows]
+        result = []
+        for entry in sorted(self._iterations, key=lambda e: e["iteration"]):
+            if entry["goal"] != goal:
+                continue
+            node = entry["node_metrics"].get(node_id, {})
+            if metric_name in node:
+                result.append((entry["iteration"], float(node[metric_name])))
+        return result
 
     def last_n_system_metrics(self, goal: str, metric_name: str, n: int = 2) -> list[float]:
         history = self.get_system_metric_history(goal, metric_name)
@@ -221,8 +180,8 @@ class Evaluator:
         improved = ev.has_improved(goal="fast_math")
     """
 
-    def __init__(self, db_path: str = ":memory:") -> None:
-        self._store = _Store(db_path)
+    def __init__(self) -> None:
+        self._store = _Store()
         self._goal_specs: dict[str, GoalSpec] = {}
 
     def register_goal(self, spec: GoalSpec) -> None:

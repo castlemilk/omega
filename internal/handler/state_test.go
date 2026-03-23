@@ -19,22 +19,13 @@ import (
 
 func setupStateServer(t *testing.T) (omegav1connect.StateServiceClient, *db.DB) {
 	t.Helper()
-	stateF, err := os.CreateTemp("", "omega-state-*.db")
-	if err != nil {
-		t.Fatal(err)
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
 	}
-	memF, err := os.CreateTemp("", "omega-memory-*.db")
-	if err != nil {
-		t.Fatal(err)
-	}
-	stateF.Close() //nolint:errcheck,gosec
-	memF.Close()   //nolint:errcheck,gosec
-	t.Cleanup(func() {
-		os.Remove(stateF.Name()) //nolint:errcheck,gosec
-		os.Remove(memF.Name())   //nolint:errcheck,gosec
-	})
+	t.Setenv("DATABASE_URL", dsn)
 
-	database, err := db.New(stateF.Name(), memF.Name())
+	database, err := db.New(context.Background())
 	if err != nil {
 		t.Fatalf("new db: %v", err)
 	}

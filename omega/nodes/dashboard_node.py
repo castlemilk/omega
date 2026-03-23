@@ -26,7 +26,7 @@ Self-improvement actions:
 """
 
 import logging
-import sqlite3
+import os
 import time
 import urllib.error
 import urllib.request
@@ -57,16 +57,9 @@ class DashboardNode:
         self,
         state_store: Any,
         api_url: str = "http://localhost:8080",
-        state_db_path: str | None = None,
     ) -> None:
-        import os
-
         self._store = state_store
         self._api_url = api_url.rstrip("/")
-        self._state_db_path = state_db_path or os.environ.get(
-            "OMEGA_STATE_DB_PATH",
-            os.path.join(os.environ.get("OMEGA_DATA_DIR", "./data"), "omega_victoria_state.db"),
-        )
 
         # Metrics tracking
         self._api_latencies_ms: list[float] = []
@@ -261,23 +254,24 @@ class DashboardNode:
             latency_ms = (time.time() - start) * 1000
             return False, latency_ms
 
+    def _pg_connect(self) -> Any:
+        import psycopg
+
+        return psycopg.connect(os.environ["DATABASE_URL"])
+
     def _compute_metric_coverage(self) -> float:
         """
         Fraction of registered nodes that have at least one execution record.
         """
         try:
-            conn = sqlite3.connect(self._state_db_path, timeout=3)
-            try:
-                cur = conn.execute("SELECT COUNT(*) FROM nodes")
-                total_nodes = cur.fetchone()[0]
+            with self._pg_connect() as conn:
+                total_nodes = conn.execute("SELECT COUNT(*) FROM nodes").fetchone()[0]
                 if total_nodes == 0:
                     return 1.0  # No nodes = nothing to cover
-
-                cur = conn.execute("SELECT COUNT(DISTINCT node_id) FROM node_executions")
-                covered = cur.fetchone()[0]
+                covered = conn.execute(
+                    "SELECT COUNT(DISTINCT node_id) FROM node_executions"
+                ).fetchone()[0]
                 return float(covered) / float(total_nodes)
-            finally:
-                conn.close()
         except Exception as e:
             logger.debug("DashboardNode coverage check failed: %s", e)
             return 1.0  # Optimistic default if DB unavailable
@@ -289,10 +283,8 @@ class DashboardNode:
           0.0 = most recent execution > FRESHNESS_STALE_SECS ago
         """
         try:
-            conn = sqlite3.connect(self._state_db_path, timeout=3)
-            try:
-                cur = conn.execute("SELECT MAX(started_at) FROM node_executions")
-                row = cur.fetchone()
+            with self._pg_connect() as conn:
+                row = conn.execute("SELECT MAX(started_at) FROM node_executions").fetchone()
                 if not row or row[0] is None:
                     return 0.5  # No data yet — neutral
                 last_ts = float(row[0])
@@ -305,8 +297,6 @@ class DashboardNode:
                 return 1.0 - (age_secs - self.FRESHNESS_FRESH_SECS) / (
                     self.FRESHNESS_STALE_SECS - self.FRESHNESS_FRESH_SECS
                 )
-            finally:
-                conn.close()
         except Exception as e:
             logger.debug("DashboardNode freshness check failed: %s", e)
             return 0.5
@@ -325,19 +315,16 @@ class DashboardNode:
     def _build_coverage_gap_report(self) -> list[str]:
         """Return names of nodes with zero execution records."""
         try:
-            conn = sqlite3.connect(self._state_db_path, timeout=3)
-            try:
-                cur = conn.execute(
+            with self._pg_connect() as conn:
+                rows = conn.execute(
                     """
                     SELECT n.name FROM nodes n
                     WHERE n.node_id NOT IN (
                         SELECT DISTINCT node_id FROM node_executions
                     )
                     """
-                )
-                return [row[0] for row in cur.fetchall()]
-            finally:
-                conn.close()
+                ).fetchall()
+                return [row[0] for row in rows]
         except Exception:
             return []
 

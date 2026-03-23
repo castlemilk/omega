@@ -8,6 +8,7 @@ Evaluator (goal scoring) without replacing them.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 import time
 import uuid
@@ -1225,6 +1226,807 @@ class SQLiteBackend(StateBackend):
         }
 
 
+# ── Postgres backend ────────────────────────────────────────────────────────────
+
+
+class PostgresBackend(StateBackend):
+    """Postgres-backed implementation of StateBackend.
+
+    Reads DATABASE_URL from the environment.  Schema is managed by the Go
+    db.New() bootstrap — this class never creates or alters tables.
+
+    All JSONB columns are read back as native Python dicts/lists (psycopg3
+    auto-deserialises them); writes pass dicts/lists via Jsonb() wrappers so
+    psycopg knows to serialise them as jsonb, not text.
+    """
+
+    def __init__(self) -> None:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        dsn = os.environ["DATABASE_URL"]
+        self._conn = psycopg.connect(dsn, row_factory=dict_row)
+
+    def close(self) -> None:
+        self._conn.close()
+
+    # ------------------------------------------------------------------
+    # Node registry
+    # ------------------------------------------------------------------
+
+    def upsert_node(
+        self,
+        node_id: str,
+        name: str,
+        version: str,
+        capabilities: list[str],
+        health: float,
+        status: str = "active",
+        brain_config: dict | None = None,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        now = time.time()
+        bc = Jsonb(brain_config or {"provider": "none"})
+        cap = Jsonb(capabilities)
+        self._conn.execute(
+            """INSERT INTO nodes
+               (node_id, name, version, capabilities, health, status,
+                brain_config, registered_at, last_updated)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               ON CONFLICT (node_id) DO UPDATE SET
+                   name=%s, version=%s, capabilities=%s, health=%s,
+                   status=%s, brain_config=%s, last_updated=%s""",
+            (
+                node_id,
+                name,
+                version,
+                cap,
+                health,
+                status,
+                bc,
+                now,
+                now,
+                name,
+                version,
+                cap,
+                health,
+                status,
+                bc,
+                now,
+            ),
+        )
+        self._conn.commit()
+        self._conn.execute("SELECT pg_notify('omega_node_state_changed', %s)", (node_id,))
+        self._conn.commit()
+
+    def get_node(self, node_id: str) -> dict | None:
+        cur = self._conn.execute("SELECT * FROM nodes WHERE node_id = %s", (node_id,))
+        return cur.fetchone()
+
+    def all_nodes(self) -> list[dict]:
+        cur = self._conn.execute("SELECT * FROM nodes ORDER BY registered_at")
+        return cur.fetchall()
+
+    # ------------------------------------------------------------------
+    # Executions (checkout pattern)
+    # ------------------------------------------------------------------
+
+    def begin_execution(
+        self,
+        node_id: str,
+        node_name: str,
+        action: str,
+        trace_id: str | None = None,
+        span_id: str | None = None,
+        cycle: int = 0,
+    ) -> str:
+        exec_id = str(uuid.uuid4())
+        now = time.time()
+        self._conn.execute(
+            """INSERT INTO node_executions
+               (exec_id, node_id, node_name, trace_id, span_id, action, started_at, success, cycle)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,TRUE,%s)""",
+            (exec_id, node_id, node_name, trace_id, span_id, action, now, cycle),
+        )
+        self._conn.commit()
+        return exec_id
+
+    def end_execution(
+        self,
+        exec_id: str,
+        success: bool,
+        error_text: str | None = None,
+        metrics: dict | None = None,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        now = time.time()
+        row = self._conn.execute(
+            "SELECT started_at FROM node_executions WHERE exec_id = %s", (exec_id,)
+        ).fetchone()
+        duration_ms = (now - row["started_at"]) * 1000 if row else 0
+        self._conn.execute(
+            """UPDATE node_executions
+               SET ended_at=%s, duration_ms=%s, success=%s, error_text=%s, metrics=%s
+               WHERE exec_id=%s""",
+            (now, duration_ms, success, error_text, Jsonb(metrics or {}), exec_id),
+        )
+        self._conn.commit()
+
+    def get_recent_executions(
+        self,
+        node_id: str | None = None,
+        limit: int = 20,
+        since_cycle: int | None = None,
+    ) -> list[dict]:
+        query = "SELECT * FROM node_executions WHERE 1=1"
+        params: list = []
+        if node_id is not None:
+            query += " AND node_id = %s"
+            params.append(node_id)
+        if since_cycle is not None:
+            query += " AND cycle >= %s"
+            params.append(since_cycle)
+        query += " ORDER BY started_at DESC LIMIT %s"
+        params.append(limit)
+        return self._conn.execute(query, params).fetchall()
+
+    # ------------------------------------------------------------------
+    # Traces
+    # ------------------------------------------------------------------
+
+    def begin_span(
+        self,
+        trace_id: str,
+        node_id: str,
+        node_name: str,
+        operation: str,
+        parent_span_id: str | None = None,
+        cycle: int = 0,
+    ) -> str:
+        span_id = uuid.uuid4().hex[:16]
+        now = time.time()
+        self._conn.execute(
+            """INSERT INTO traces
+               (span_id, trace_id, parent_span_id, node_id, node_name, operation, started_at, cycle)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (span_id, trace_id, parent_span_id, node_id, node_name, operation, now, cycle),
+        )
+        self._conn.commit()
+        return span_id
+
+    def end_span(
+        self,
+        span_id: str,
+        status: str = "ok",
+        metadata: dict | None = None,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        now = time.time()
+        row = self._conn.execute(
+            "SELECT started_at FROM traces WHERE span_id = %s", (span_id,)
+        ).fetchone()
+        duration_ms = (now - row["started_at"]) * 1000 if row else 0
+        self._conn.execute(
+            """UPDATE traces
+               SET ended_at=%s, duration_ms=%s, status=%s, metadata=%s
+               WHERE span_id=%s""",
+            (now, duration_ms, status, Jsonb(metadata or {}), span_id),
+        )
+        self._conn.commit()
+
+    def get_trace(self, trace_id: str) -> list[dict]:
+        return self._conn.execute(
+            "SELECT * FROM traces WHERE trace_id = %s ORDER BY started_at",
+            (trace_id,),
+        ).fetchall()
+
+    def get_recent_traces(self, limit: int = 10) -> list[dict]:
+        return self._conn.execute(
+            """SELECT trace_id,
+                      MIN(started_at) AS trace_started,
+                      MAX(ended_at)   AS trace_ended,
+                      MAX(ended_at) - MIN(started_at) AS total_duration_s,
+                      COUNT(*)        AS span_count,
+                      SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) AS error_spans,
+                      MAX(cycle)      AS cycle
+               FROM traces
+               GROUP BY trace_id
+               ORDER BY trace_started DESC
+               LIMIT %s""",
+            (limit,),
+        ).fetchall()
+
+    # ------------------------------------------------------------------
+    # Cost events
+    # ------------------------------------------------------------------
+
+    def record_cost(
+        self,
+        node_id: str,
+        provider: str,
+        call_type: str,
+        duration_ms: float,
+        exec_id: str | None = None,
+        estimated_cost_usd: float = 0.0,
+        metadata: dict | None = None,
+        cycle: int = 0,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        cost_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO cost_events
+               (cost_id, node_id, exec_id, provider, call_type, duration_ms,
+                estimated_cost_usd, metadata, recorded_at, cycle)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                cost_id,
+                node_id,
+                exec_id,
+                provider,
+                call_type,
+                duration_ms,
+                estimated_cost_usd,
+                Jsonb(metadata or {}),
+                time.time(),
+                cycle,
+            ),
+        )
+        self._conn.commit()
+
+    def get_cost_summary(self, since_cycle: int | None = None) -> dict:
+        query = (
+            "SELECT provider, COUNT(*) AS calls, SUM(duration_ms) AS total_ms,"
+            " SUM(estimated_cost_usd) AS total_cost FROM cost_events WHERE 1=1"
+        )
+        params: list = []
+        if since_cycle is not None:
+            query += " AND cycle >= %s"
+            params.append(since_cycle)
+        query += " GROUP BY provider"
+        rows = self._conn.execute(query, params).fetchall()
+        return {
+            row["provider"]: {
+                "calls": row["calls"],
+                "total_ms": row["total_ms"] or 0.0,
+                "total_cost": row["total_cost"] or 0.0,
+            }
+            for row in rows
+        }
+
+    # ------------------------------------------------------------------
+    # Issues
+    # ------------------------------------------------------------------
+
+    def open_issue(
+        self,
+        issue_id: str,
+        detector: str,
+        severity: str,
+        description: str,
+        context: dict | None = None,
+        cycle: int = 0,
+    ) -> bool:
+        from psycopg.types.json import Jsonb
+
+        existing = self._conn.execute(
+            "SELECT state FROM issues WHERE issue_id = %s", (issue_id,)
+        ).fetchone()
+        if existing:
+            if existing["state"] == "pending":
+                self.escalate_issue(issue_id)
+            return False
+        self._conn.execute(
+            """INSERT INTO issues
+               (issue_id, detector, severity, description, context, state, opened_at, cycle_opened)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                issue_id,
+                detector,
+                severity,
+                description,
+                Jsonb(context or {}),
+                "pending",
+                time.time(),
+                cycle,
+            ),
+        )
+        self._conn.commit()
+        self.log_activity(
+            "issue_opened", "issue", issue_id, {"severity": severity, "detector": detector}, cycle
+        )
+        return True
+
+    def escalate_issue(self, issue_id: str) -> bool:
+        cur = self._conn.execute(
+            "UPDATE issues SET state='active' WHERE issue_id=%s AND state='pending'", (issue_id,)
+        )
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    def resolve_issue(self, issue_id: str, cycle: int | None = None) -> bool:
+        now = time.time()
+        cur = self._conn.execute(
+            """UPDATE issues
+               SET state='resolved', resolved_at=%s, cycle_resolved=%s
+               WHERE issue_id=%s AND state != 'resolved'""",
+            (now, cycle, issue_id),
+        )
+        self._conn.commit()
+        if cur.rowcount > 0:
+            self.log_activity("issue_resolved", "issue", issue_id, {"cycle": cycle}, cycle or 0)
+            return True
+        return False
+
+    def get_open_issues(self) -> list[dict]:
+        return self._conn.execute(
+            "SELECT * FROM issues WHERE state != 'resolved' ORDER BY opened_at DESC"
+        ).fetchall()
+
+    def get_all_issues(self, limit: int = 50) -> list[dict]:
+        return self._conn.execute(
+            "SELECT * FROM issues ORDER BY opened_at DESC LIMIT %s", (limit,)
+        ).fetchall()
+
+    # ------------------------------------------------------------------
+    # Activity log
+    # ------------------------------------------------------------------
+
+    def log_activity(
+        self,
+        action_type: str,
+        entity_type: str,
+        entity_id: str,
+        data: dict | None = None,
+        cycle: int = 0,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        log_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO activity_log
+               (log_id, action_type, entity_type, entity_id, data, recorded_at, cycle)
+               VALUES (%s,%s,%s,%s,%s,%s,%s)""",
+            (log_id, action_type, entity_type, entity_id, Jsonb(data or {}), time.time(), cycle),
+        )
+        self._conn.commit()
+
+    # ------------------------------------------------------------------
+    # Improvement log
+    # ------------------------------------------------------------------
+
+    def record_improvement(
+        self,
+        node_id: str,
+        node_name: str,
+        from_version: str,
+        to_version: str,
+        before_metrics: dict | None = None,
+        after_metrics: dict | None = None,
+        triggered_by: str = "metrics",
+        cycle: int = 0,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        improve_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO improvement_log
+               (improve_id, node_id, node_name, from_version, to_version,
+                before_metrics, after_metrics, triggered_by, recorded_at, cycle)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                improve_id,
+                node_id,
+                node_name,
+                from_version,
+                to_version,
+                Jsonb(before_metrics or {}),
+                Jsonb(after_metrics or {}),
+                triggered_by,
+                time.time(),
+                cycle,
+            ),
+        )
+        self._conn.commit()
+        self.log_activity(
+            "node_improved",
+            "node",
+            node_id,
+            {"from_version": from_version, "to_version": to_version, "triggered_by": triggered_by},
+            cycle,
+        )
+
+    def get_improvement_history(self, node_id: str | None = None, limit: int = 20) -> list[dict]:
+        query = "SELECT * FROM improvement_log WHERE 1=1"
+        params: list = []
+        if node_id is not None:
+            query += " AND node_id = %s"
+            params.append(node_id)
+        query += " ORDER BY recorded_at DESC LIMIT %s"
+        params.append(limit)
+        return self._conn.execute(query, params).fetchall()
+
+    # ------------------------------------------------------------------
+    # Config revisions
+    # ------------------------------------------------------------------
+
+    def save_config_revision(self, node_id: str, version: str, config: dict) -> None:
+        from psycopg.types.json import Jsonb
+
+        revision_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO config_revisions
+               (revision_id, node_id, version, config, recorded_at)
+               VALUES (%s,%s,%s,%s,%s)""",
+            (revision_id, node_id, version, Jsonb(config), time.time()),
+        )
+        self._conn.commit()
+
+    def get_config_history(self, node_id: str) -> list[dict]:
+        return self._conn.execute(
+            "SELECT * FROM config_revisions WHERE node_id = %s ORDER BY recorded_at DESC",
+            (node_id,),
+        ).fetchall()
+
+    # ------------------------------------------------------------------
+    # DashboardNode helpers
+    # ------------------------------------------------------------------
+
+    def get_nodes_with_recent_metrics(self, minutes: int = 10) -> list[dict]:
+        cutoff = time.time() - minutes * 60
+        return self._conn.execute(
+            """SELECT DISTINCT n.node_id, n.name, n.version, n.health, n.status
+               FROM nodes n
+               INNER JOIN node_executions e ON e.node_id = n.node_id
+               WHERE e.started_at >= %s""",
+            (cutoff,),
+        ).fetchall()
+
+    def get_latest_execution_time(self) -> float | None:
+        row = self._conn.execute(
+            "SELECT MAX(started_at) AS latest FROM node_executions"
+        ).fetchone()
+        return row["latest"] if row and row["latest"] is not None else None
+
+    # ------------------------------------------------------------------
+    # Brain execution log
+    # ------------------------------------------------------------------
+
+    def record_brain_execution(
+        self,
+        node_id: str,
+        node_name: str,
+        provider: str,
+        model: str,
+        operation: str,
+        action_decided: str,
+        parameters: dict | None = None,
+        reasoning: str = "",
+        confidence: float = 0.0,
+        outcome: str = "pending",
+        latency_ms: float = 0.0,
+        trace_id: str = "",
+        cycle: int = 0,
+    ) -> str:
+        from psycopg.types.json import Jsonb
+
+        brain_exec_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO brain_executions
+               (brain_exec_id, node_id, node_name, provider, model, operation,
+                action_decided, parameters, reasoning, confidence,
+                outcome, latency_ms, trace_id, recorded_at, cycle)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                brain_exec_id,
+                node_id,
+                node_name,
+                provider,
+                model,
+                operation,
+                action_decided,
+                Jsonb(parameters or {}),
+                reasoning,
+                confidence,
+                outcome,
+                latency_ms,
+                trace_id,
+                time.time(),
+                cycle,
+            ),
+        )
+        self._conn.commit()
+        self.log_activity(
+            "brain_consulted",
+            "node",
+            node_id,
+            {
+                "provider": provider,
+                "model": model,
+                "operation": operation,
+                "action": action_decided,
+                "outcome": outcome,
+                "confidence": confidence,
+            },
+            cycle,
+        )
+        return brain_exec_id
+
+    def update_brain_outcome(self, brain_exec_id: str, outcome: str) -> None:
+        self._conn.execute(
+            "UPDATE brain_executions SET outcome=%s WHERE brain_exec_id=%s",
+            (outcome, brain_exec_id),
+        )
+        self._conn.commit()
+
+    def get_brain_executions(
+        self,
+        node_id: str | None = None,
+        provider: str | None = None,
+        operation: str | None = None,
+        since_cycle: int | None = None,
+        limit: int = 50,
+    ) -> list[dict]:
+        query = "SELECT * FROM brain_executions WHERE 1=1"
+        params: list = []
+        if node_id:
+            query += " AND node_id = %s"
+            params.append(node_id)
+        if provider:
+            query += " AND provider = %s"
+            params.append(provider)
+        if operation:
+            query += " AND operation = %s"
+            params.append(operation)
+        if since_cycle is not None:
+            query += " AND cycle >= %s"
+            params.append(since_cycle)
+        query += " ORDER BY recorded_at DESC LIMIT %s"
+        params.append(limit)
+        return self._conn.execute(query, params).fetchall()
+
+    def get_brain_summary(self, since_cycle: int | None = None) -> dict:
+        query = (
+            "SELECT provider, model, outcome, COUNT(*) AS count,"
+            " AVG(confidence) AS avg_confidence"
+            " FROM brain_executions WHERE 1=1"
+        )
+        params: list = []
+        if since_cycle is not None:
+            query += " AND cycle >= %s"
+            params.append(since_cycle)
+        query += " GROUP BY provider, model, outcome"
+        rows = self._conn.execute(query, params).fetchall()
+        return {"by_provider_outcome": rows}
+
+    # ------------------------------------------------------------------
+    # Alignment decisions
+    # ------------------------------------------------------------------
+
+    def record_alignment_decision(
+        self,
+        cycle: int,
+        approved: bool,
+        violations: list | None = None,
+        pareto_ranks: dict | None = None,
+        adjustments: dict | None = None,
+        vcg_payments: dict | None = None,
+        goodhart_warning: bool = False,
+    ) -> str:
+        from psycopg.types.json import Jsonb
+
+        decision_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO alignment_decisions
+               (decision_id, cycle, approved, violations, pareto_ranks,
+                adjustments, vcg_payments, goodhart_warning, recorded_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                decision_id,
+                cycle,
+                approved,
+                Jsonb(violations or []),
+                Jsonb(pareto_ranks or {}),
+                Jsonb(adjustments or {}),
+                Jsonb(vcg_payments or {}),
+                goodhart_warning,
+                time.time(),
+            ),
+        )
+        self._conn.commit()
+        return decision_id
+
+    def get_alignment_decisions(
+        self, since_cycle: int | None = None, limit: int = 20
+    ) -> list[dict]:
+        query = "SELECT * FROM alignment_decisions WHERE 1=1"
+        params: list = []
+        if since_cycle is not None:
+            query += " AND cycle >= %s"
+            params.append(since_cycle)
+        query += " ORDER BY recorded_at DESC LIMIT %s"
+        params.append(limit)
+        return self._conn.execute(query, params).fetchall()
+
+    # ------------------------------------------------------------------
+    # Adversarial results
+    # ------------------------------------------------------------------
+
+    def record_adversarial_result(
+        self,
+        cycle: int,
+        ring: int,
+        flagged: bool,
+        max_disagreement: float = 0.0,
+        scenario_count: int = 0,
+        failure_cases: list | None = None,
+        details: dict | None = None,
+    ) -> str:
+        from psycopg.types.json import Jsonb
+
+        result_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO adversarial_results
+               (result_id, cycle, ring, flagged, max_disagreement,
+                scenario_count, failure_cases, details, recorded_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                result_id,
+                cycle,
+                ring,
+                flagged,
+                max_disagreement,
+                scenario_count,
+                Jsonb(failure_cases or []),
+                Jsonb(details or {}),
+                time.time(),
+            ),
+        )
+        self._conn.commit()
+        return result_id
+
+    def get_adversarial_results(
+        self, since_cycle: int | None = None, ring: int | None = None, limit: int = 20
+    ) -> list[dict]:
+        query = "SELECT * FROM adversarial_results WHERE 1=1"
+        params: list = []
+        if since_cycle is not None:
+            query += " AND cycle >= %s"
+            params.append(since_cycle)
+        if ring is not None:
+            query += " AND ring = %s"
+            params.append(ring)
+        query += " ORDER BY recorded_at DESC LIMIT %s"
+        params.append(limit)
+        return self._conn.execute(query, params).fetchall()
+
+    # ------------------------------------------------------------------
+    # Goal tracking
+    # ------------------------------------------------------------------
+
+    def record_goal_tracking(
+        self,
+        cycle: int,
+        approved: bool,
+        composite_score: float,
+        scorecard: dict | None = None,
+        nash_weights: dict | None = None,
+        tracking_error: float = 0.0,
+        control_action: dict | None = None,
+        subtasks: list | None = None,
+        violations: list | None = None,
+    ) -> str:
+        from psycopg.types.json import Jsonb
+
+        tracking_id = str(uuid.uuid4())
+        self._conn.execute(
+            """INSERT INTO goal_tracking
+               (tracking_id, cycle, approved, composite_score, scorecard,
+                nash_weights, tracking_error, control_action,
+                subtasks, violations, recorded_at)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            (
+                tracking_id,
+                cycle,
+                approved,
+                composite_score,
+                Jsonb(scorecard or {}),
+                Jsonb(nash_weights or {}),
+                tracking_error,
+                Jsonb(control_action or {}),
+                Jsonb(subtasks or []),
+                Jsonb(violations or []),
+                time.time(),
+            ),
+        )
+        self._conn.commit()
+        return tracking_id
+
+    def get_goal_tracking(self, since_cycle: int | None = None, limit: int = 20) -> list[dict]:
+        query = "SELECT * FROM goal_tracking WHERE 1=1"
+        params: list = []
+        if since_cycle is not None:
+            query += " AND cycle >= %s"
+            params.append(since_cycle)
+        query += " ORDER BY recorded_at DESC LIMIT %s"
+        params.append(limit)
+        return self._conn.execute(query, params).fetchall()
+
+    def set_node_brain_config(self, node_id: str, brain_config: dict) -> None:
+        from psycopg.types.json import Jsonb
+
+        self._conn.execute(
+            "UPDATE nodes SET brain_config=%s, last_updated=%s WHERE node_id=%s",
+            (Jsonb(brain_config), time.time(), node_id),
+        )
+        self._conn.commit()
+        self.save_config_revision(
+            node_id,
+            brain_config.get("model", ""),
+            {"brain_config": brain_config},
+        )
+
+    # ------------------------------------------------------------------
+    # Dashboard data
+    # ------------------------------------------------------------------
+
+    def get_dashboard_data(self, since_cycle: int = 0) -> dict:
+        """Returns structured dict suitable for feeding a monitoring dashboard."""
+        nodes = self.all_nodes()
+        node_data = []
+        for n in nodes:
+            execs = self.get_recent_executions(
+                node_id=n["node_id"], limit=100, since_cycle=since_cycle
+            )
+            total_execs = len(execs)
+            failed_execs = sum(1 for e in execs if not e["success"])
+            latencies = [e["duration_ms"] for e in execs if e["duration_ms"] is not None]
+
+            improvements = self.get_improvement_history(node_id=n["node_id"], limit=10)
+
+            node_data.append(
+                {
+                    "id": n["node_id"],
+                    "name": n["name"],
+                    "version": n["version"],
+                    "health": n["health"],
+                    "status": n["status"],
+                    "executions_total": total_execs,
+                    "error_rate": failed_execs / max(1, total_execs),
+                    "avg_latency_ms": sum(latencies) / len(latencies) if latencies else 0,
+                    "p95_latency_ms": (
+                        sorted(latencies)[int(len(latencies) * 0.95)]
+                        if len(latencies) > 1
+                        else (latencies[0] if latencies else 0)
+                    ),
+                    "improvement_count": len(improvements),
+                    "last_improved_to": improvements[0]["to_version"]
+                    if improvements
+                    else n["version"],
+                }
+            )
+
+        cost_summary = self.get_cost_summary(since_cycle=since_cycle)
+        open_issues = self.get_open_issues()
+        recent_traces = self.get_recent_traces(limit=5)
+        brain_summary = self.get_brain_summary(since_cycle=since_cycle)
+
+        return {
+            "nodes": node_data,
+            "system": {
+                "total_nodes": len(nodes),
+                "open_issues": len(open_issues),
+                "cost_summary": cost_summary,
+                "brain_summary": brain_summary,
+            },
+            "issues": open_issues[:10],
+            "recent_traces": recent_traces,
+        }
+
+
 # ── Go bridge backend ──────────────────────────────────────────────────────────
 
 
@@ -1379,25 +2181,22 @@ class GoBackend(StateBackend):
         raise NotImplementedError("GoBackend is write-only")
 
 
-def make_state_backend(db_path: str = ":memory:") -> StateBackend:
-    """Factory: returns GoBackend when OMEGA_STATE_SERVICE_URL is set, else SQLiteBackend.
+def make_state_backend() -> StateBackend:
+    """Factory: returns GoBackend when OMEGA_STATE_SERVICE_URL is set, else PostgresBackend.
+
+    DATABASE_URL must be set in the environment for PostgresBackend.
 
     This is the preferred entry point — callers don't need to know which
     implementation is active.
-
-    Example:
-        store = make_state_backend("/tmp/omega_victoria_state.db")
     """
-    import os
-
     service_url = os.environ.get("OMEGA_STATE_SERVICE_URL", "")
     if service_url:
         import logging
 
         logging.getLogger(__name__).info("state_store: using GoBackend at %s", service_url)
         return GoBackend(service_url)
-    return SQLiteBackend(db_path)
+    return PostgresBackend()
 
 
-# Backward-compatible alias — existing code using StateStore continues to work.
-StateStore = SQLiteBackend
+# Backward-compatible alias.
+StateStore = PostgresBackend

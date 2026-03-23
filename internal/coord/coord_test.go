@@ -5,24 +5,43 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-// openTestDB opens an in-memory SQLite database for tests.
+// openTestDB opens a Postgres test database.
+// Tests are skipped if TEST_DATABASE_URL is not set.
 func openTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
+	}
+	// Use pgx driver via stdlib (registered by the pgx import in db package).
+	// We import it for the side effect via a blank import in the test binary.
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		t.Fatalf("open test db: %v", err)
 	}
-	db.SetMaxOpenConns(1) // SQLite in-memory needs single connection
-	t.Cleanup(func() { _ = db.Close() })
+	// Bootstrap leader_election table
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS leader_election (
+		singleton   INTEGER PRIMARY KEY DEFAULT 1 CHECK (singleton = 1),
+		leader_id   TEXT NOT NULL,
+		acquired_at BIGINT NOT NULL,
+		expires_at  BIGINT NOT NULL
+	)`); err != nil {
+		t.Fatalf("ensure leader table: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec("DELETE FROM leader_election")
+		_ = db.Close()
+	})
 	return db
 }
 

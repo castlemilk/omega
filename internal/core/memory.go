@@ -4,10 +4,10 @@
 // Architecture mirrors the Python memory.py design:
 //
 //	WorkingMemory  ≈ prefrontal cortex / active attention (in-process, ephemeral)
-//	EpisodicStore  ≈ hippocampus / autobiographical memory  (SQLite)
-//	SemanticStore  ≈ neocortex / general knowledge          (SQLite)
+//	EpisodicStore  ≈ hippocampus / autobiographical memory  (Postgres)
+//	SemanticStore  ≈ neocortex / general knowledge          (Postgres)
 //
-// Go owns all SQLite writes; Python BOCPD math is kept in Python and called
+// Go owns all Postgres writes; Python BOCPD math is kept in Python and called
 // via the ChangePointDetector bridge interface.
 package core
 
@@ -32,8 +32,8 @@ const (
 	memDecayRate          = 0.05  // per-cycle episodic importance decay factor
 	memSemanticDecayRate  = 0.02  // per-cycle semantic confidence decay (unreinforced)
 	memMinImportance      = 0.05  // prune episodes below this
-	memMaxEpisodes        = 500   // cap on total episodes in SQLite
-	memMaxSemantic        = 200   // cap on semantic memories in SQLite
+	memMaxEpisodes        = 500   // cap on total episodes in Postgres
+	memMaxSemantic        = 200   // cap on semantic memories in Postgres
 	memConsolidationEvery = 5     // consolidate every N cycles
 	memSemanticReinforceδ = 0.1   // how much new evidence bumps confidence
 )
@@ -84,7 +84,7 @@ func (e workingEntry) expired() bool {
 // MemoryKernel
 // ---------------------------------------------------------------------------
 
-// MemoryKernel is the central memory system.  It owns all SQLite writes for
+// MemoryKernel is the central memory system.  It owns all Postgres writes for
 // the memory subsystem.  The working-memory map is in-process only.
 type MemoryKernel struct {
 	mu           sync.Mutex
@@ -93,63 +93,15 @@ type MemoryKernel struct {
 	currentCycle int
 }
 
-// NewMemoryKernel opens (or creates) the memory SQLite database and returns a
-// ready-to-use MemoryKernel.
+// NewMemoryKernel wraps the shared Postgres database and returns a
+// ready-to-use MemoryKernel. Schema is managed by internal/db/db.go.
 func NewMemoryKernel(db *sql.DB) (*MemoryKernel, error) {
 	k := &MemoryKernel{
 		db:      db,
 		working: make(map[string]workingEntry),
 	}
-	if err := k.createSchema(); err != nil {
-		return nil, fmt.Errorf("memory kernel schema: %w", err)
-	}
 	slog.Info("MemoryKernel initialised")
 	return k, nil
-}
-
-// ---------------------------------------------------------------------------
-// Schema
-// ---------------------------------------------------------------------------
-
-func (k *MemoryKernel) createSchema() error {
-	_, err := k.db.Exec(`
-		CREATE TABLE IF NOT EXISTS episodes (
-			episode_id   TEXT    PRIMARY KEY,
-			timestamp    REAL    NOT NULL,
-			cycle        INTEGER NOT NULL,
-			event_type   TEXT    NOT NULL,
-			content_json TEXT    NOT NULL,
-			tags_json    TEXT    NOT NULL,
-			importance   REAL    NOT NULL DEFAULT 1.0,
-			namespace    TEXT    NOT NULL DEFAULT 'global'
-		);
-
-		CREATE TABLE IF NOT EXISTS semantic_memories (
-			memory_id       TEXT    PRIMARY KEY,
-			concept         TEXT    NOT NULL,
-			content         TEXT    NOT NULL,
-			confidence      REAL    NOT NULL DEFAULT 1.0,
-			evidence_count  INTEGER NOT NULL DEFAULT 1,
-			last_reinforced REAL    NOT NULL,
-			tags_json       TEXT    NOT NULL DEFAULT '[]',
-			namespace       TEXT    NOT NULL DEFAULT 'global'
-		);
-
-		CREATE TABLE IF NOT EXISTS memory_ratings (
-			rating_id   TEXT PRIMARY KEY,
-			memory_id   TEXT NOT NULL,
-			namespace   TEXT NOT NULL DEFAULT 'global',
-			quality     REAL NOT NULL,
-			rated_at    REAL NOT NULL
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_episodes_event_type ON episodes(event_type);
-		CREATE INDEX IF NOT EXISTS idx_episodes_cycle      ON episodes(cycle);
-		CREATE INDEX IF NOT EXISTS idx_episodes_namespace  ON episodes(namespace);
-		CREATE INDEX IF NOT EXISTS idx_semantic_concept    ON semantic_memories(concept);
-		CREATE INDEX IF NOT EXISTS idx_semantic_namespace  ON semantic_memories(namespace);
-	`)
-	return err
 }
 
 // ---------------------------------------------------------------------------
@@ -233,8 +185,8 @@ func (k *MemoryKernel) StoreEpisode(ctx context.Context, ep Episode) (string, er
 
 	_, err = k.db.ExecContext(ctx, `
 		INSERT INTO episodes
-		  (episode_id, timestamp, cycle, event_type, content_json, tags_json, importance, namespace)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		  (episode_id, timestamp, cycle, event_type, content, tags, importance, namespace)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		ep.EpisodeID,
 		ep.Timestamp.Unix(),
 		ep.Cycle,
@@ -257,23 +209,28 @@ func (k *MemoryKernel) RetrieveEpisodes(ctx context.Context, f EpisodeFilter) ([
 	}
 
 	qb := strings.Builder{}
-	qb.WriteString("SELECT episode_id, timestamp, cycle, event_type, content_json, tags_json, importance, namespace FROM episodes WHERE importance >= ?")
+	argN := 1
 	args := []any{f.MinImportance}
+	fmt.Fprintf(&qb, "SELECT episode_id, timestamp, cycle, event_type, content::text, tags::text, importance, namespace FROM episodes WHERE importance >= $%d", argN)
+	argN++
 
 	if f.EventType != "" {
-		qb.WriteString(" AND event_type = ?")
+		fmt.Fprintf(&qb, " AND event_type = $%d", argN)
 		args = append(args, f.EventType)
+		argN++
 	}
 	if f.SinceCycle > 0 {
-		qb.WriteString(" AND cycle >= ?")
+		fmt.Fprintf(&qb, " AND cycle >= $%d", argN)
 		args = append(args, f.SinceCycle)
+		argN++
 	}
 	if f.Namespace != "" {
-		qb.WriteString(" AND namespace = ?")
+		fmt.Fprintf(&qb, " AND namespace = $%d", argN)
 		args = append(args, f.Namespace)
+		argN++
 	}
 	// Fetch extra to allow tag post-filtering
-	qb.WriteString(" ORDER BY importance DESC, timestamp DESC LIMIT ?")
+	fmt.Fprintf(&qb, " ORDER BY importance DESC, timestamp DESC LIMIT $%d", argN)
 	args = append(args, f.Limit*3)
 
 	rows, err := k.db.QueryContext(ctx, qb.String(), args...)
@@ -341,7 +298,7 @@ func (k *MemoryKernel) StoreSemantic(ctx context.Context, sm SemanticMemory) (st
 	var existingConf float64
 	var existingCount int
 	err := k.db.QueryRowContext(ctx,
-		"SELECT memory_id, confidence, evidence_count FROM semantic_memories WHERE concept = ? AND namespace = ?",
+		"SELECT memory_id, confidence, evidence_count FROM semantic_memories WHERE concept = $1 AND namespace = $2",
 		sm.Concept, sm.Namespace,
 	).Scan(&existingID, &existingConf, &existingCount)
 
@@ -350,8 +307,8 @@ func (k *MemoryKernel) StoreSemantic(ctx context.Context, sm SemanticMemory) (st
 		newConf := clamp(existingConf+sm.Confidence*memSemanticReinforceδ, 0, 1)
 		_, err = k.db.ExecContext(ctx, `
 			UPDATE semantic_memories
-			SET content = ?, confidence = ?, evidence_count = ?, last_reinforced = ?, tags_json = ?
-			WHERE concept = ? AND namespace = ?`,
+			SET content = $1, confidence = $2, evidence_count = $3, last_reinforced = $4, tags = $5
+			WHERE concept = $6 AND namespace = $7`,
 			sm.Content, newConf, existingCount+1, now, string(tagsJSON),
 			sm.Concept, sm.Namespace,
 		)
@@ -364,8 +321,8 @@ func (k *MemoryKernel) StoreSemantic(ctx context.Context, sm SemanticMemory) (st
 	}
 	_, err = k.db.ExecContext(ctx, `
 		INSERT INTO semantic_memories
-		  (memory_id, concept, content, confidence, evidence_count, last_reinforced, tags_json, namespace)
-		VALUES (?, ?, ?, ?, 1, ?, ?, ?)`,
+		  (memory_id, concept, content, confidence, evidence_count, last_reinforced, tags, namespace)
+		VALUES ($1, $2, $3, $4, 1, $5, $6, $7)`,
 		sm.MemoryID, sm.Concept, sm.Content, clamp(sm.Confidence, 0, 1), now, string(tagsJSON), sm.Namespace,
 	)
 	return sm.MemoryID, err
@@ -381,14 +338,17 @@ func (k *MemoryKernel) RetrieveSemantic(ctx context.Context, f SemanticFilter) (
 	}
 
 	qb := strings.Builder{}
-	qb.WriteString("SELECT memory_id, concept, content, confidence, evidence_count, last_reinforced, tags_json, namespace FROM semantic_memories WHERE confidence >= ?")
+	argN := 1
 	args := []any{f.MinConfidence}
+	fmt.Fprintf(&qb, "SELECT memory_id, concept, content, confidence, evidence_count, last_reinforced, tags::text, namespace FROM semantic_memories WHERE confidence >= $%d", argN)
+	argN++
 
 	if f.Namespace != "" {
-		qb.WriteString(" AND namespace = ?")
+		fmt.Fprintf(&qb, " AND namespace = $%d", argN)
 		args = append(args, f.Namespace)
+		argN++
 	}
-	qb.WriteString(" ORDER BY confidence DESC LIMIT ?")
+	fmt.Fprintf(&qb, " ORDER BY confidence DESC LIMIT $%d", argN)
 	args = append(args, f.Limit*3)
 
 	rows, err := k.db.QueryContext(ctx, qb.String(), args...)
@@ -435,10 +395,10 @@ func (k *MemoryKernel) RetrieveSemantic(ctx context.Context, f SemanticFilter) (
 func (k *MemoryKernel) ReinforceSemantic(ctx context.Context, concept string, delta float64) (bool, error) {
 	res, err := k.db.ExecContext(ctx, `
 		UPDATE semantic_memories
-		SET confidence = MIN(1.0, confidence + ?),
-		    last_reinforced = ?,
+		SET confidence = MIN(1.0, confidence + $1),
+		    last_reinforced = $2,
 		    evidence_count = evidence_count + 1
-		WHERE concept = ?`,
+		WHERE concept = $3`,
 		delta, float64(time.Now().UnixMilli())/1000, concept,
 	)
 	if err != nil {
@@ -459,7 +419,7 @@ func (k *MemoryKernel) RateMemory(ctx context.Context, memoryID string, quality 
 	}
 	_, err := k.db.ExecContext(ctx, `
 		INSERT INTO memory_ratings (rating_id, memory_id, namespace, quality, rated_at)
-		VALUES (?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5)`,
 		uuid.New().String(), memoryID, namespace, clamp(quality, 0, 1), float64(time.Now().UnixMilli())/1000,
 	)
 	return err
@@ -660,12 +620,12 @@ func (k *MemoryKernel) Consolidate(ctx context.Context, namespace string) ([]str
 
 func (k *MemoryKernel) decayAndPrune(ctx context.Context) error {
 	// Decay episodic importance
-	if _, err := k.db.ExecContext(ctx, "UPDATE episodes SET importance = importance * ?", 1.0-memDecayRate); err != nil {
+	if _, err := k.db.ExecContext(ctx, "UPDATE episodes SET importance = importance * $1", 1.0-memDecayRate); err != nil {
 		return fmt.Errorf("decay episodes: %w", err)
 	}
 
 	// Prune low-importance episodes
-	if _, err := k.db.ExecContext(ctx, "DELETE FROM episodes WHERE importance < ?", memMinImportance); err != nil {
+	if _, err := k.db.ExecContext(ctx, "DELETE FROM episodes WHERE importance < $1", memMinImportance); err != nil {
 		return fmt.Errorf("prune episodes: %w", err)
 	}
 
@@ -675,7 +635,7 @@ func (k *MemoryKernel) decayAndPrune(ctx context.Context) error {
 		excess := total - memMaxEpisodes
 		_, err := k.db.ExecContext(ctx, `
 			DELETE FROM episodes WHERE episode_id IN (
-				SELECT episode_id FROM episodes ORDER BY importance ASC, timestamp ASC LIMIT ?
+				SELECT episode_id FROM episodes ORDER BY importance ASC, timestamp ASC LIMIT $1
 			)`, excess)
 		if err != nil {
 			return fmt.Errorf("cap episodes: %w", err)
@@ -688,7 +648,7 @@ func (k *MemoryKernel) decayAndPrune(ctx context.Context) error {
 	k.mu.Unlock()
 	ageThreshold := float64(time.Now().Unix()) - float64(cycle*30+60)
 	if _, err := k.db.ExecContext(ctx,
-		"UPDATE semantic_memories SET confidence = confidence * ? WHERE last_reinforced < ?",
+		"UPDATE semantic_memories SET confidence = confidence * $1 WHERE last_reinforced < $2",
 		1.0-memSemanticDecayRate, ageThreshold,
 	); err != nil {
 		return fmt.Errorf("decay semantic: %w", err)
@@ -699,7 +659,7 @@ func (k *MemoryKernel) decayAndPrune(ctx context.Context) error {
 	_ = k.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM semantic_memories").Scan(&semCount)
 	if semCount > 10 {
 		if _, err := k.db.ExecContext(ctx,
-			"DELETE FROM semantic_memories WHERE confidence < ? AND evidence_count < 3",
+			"DELETE FROM semantic_memories WHERE confidence < $1 AND evidence_count < 3",
 			memMinImportance,
 		); err != nil {
 			return fmt.Errorf("prune semantic: %w", err)

@@ -2,38 +2,42 @@ package eval
 
 import (
 	"context"
-	"database/sql"
+	"os"
 	"testing"
 
 	"github.com/benebsworth/omega/internal/core"
-	_ "modernc.org/sqlite"
+	"github.com/benebsworth/omega/internal/db"
 )
 
-// MemoryHarness wraps MemoryKernel backed by an in-memory SQLite database.
+// MemoryHarness wraps MemoryKernel backed by a Postgres database.
 type MemoryHarness struct {
 	Kernel *core.MemoryKernel
-	db     *sql.DB
+	database *db.DB
 }
 
-// NewMemoryHarness opens an in-memory SQLite DB and returns a ready MemoryHarness.
-// t.Cleanup automatically closes the DB when the test ends.
+// NewMemoryHarness opens a Postgres DB (via TEST_DATABASE_URL) and returns a ready MemoryHarness.
+// Test is skipped if TEST_DATABASE_URL is not set.
 func NewMemoryHarness(t *testing.T) *MemoryHarness {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("open in-memory sqlite: %v", err)
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
 	}
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
+	t.Setenv("DATABASE_URL", dsn)
 
-	kernel, err := core.NewMemoryKernel(db)
+	database, err := db.New(context.Background())
 	if err != nil {
-		_ = db.Close()
+		t.Fatalf("open db: %v", err)
+	}
+
+	kernel, err := core.NewMemoryKernel(database.StateDB())
+	if err != nil {
+		database.Close()
 		t.Fatalf("NewMemoryKernel: %v", err)
 	}
 
-	t.Cleanup(func() { _ = db.Close() })
-	return &MemoryHarness{Kernel: kernel, db: db}
+	t.Cleanup(func() { database.Close() })
+	return &MemoryHarness{Kernel: kernel, database: database}
 }
 
 // StoreFixedEpisodes stores n episodes with fixed content under the given namespace.

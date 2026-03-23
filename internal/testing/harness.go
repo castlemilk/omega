@@ -1,6 +1,7 @@
 // Package omegatest provides an in-process integration test harness for Omega services.
-// It spins up Connect-RPC handlers backed by ephemeral SQLite databases so that
+// It spins up Connect-RPC handlers backed by a real Postgres database so that
 // integration tests can exercise the full request path without mocking the DB layer.
+// Tests are skipped when TEST_DATABASE_URL is not set.
 package omegatest
 
 import (
@@ -9,7 +10,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -25,13 +25,12 @@ import (
 // TestHarness
 // ---------------------------------------------------------------------------
 
-// TestHarness spins up all Omega services in-process, backed by ephemeral SQLite
-// databases in a temp directory. Callers receive typed Connect clients pointing at
-// the test server. All resources are released when Cleanup is called (or
-// automatically via t.Cleanup when created with New).
+// TestHarness spins up all Omega services in-process, backed by a real Postgres
+// database. Callers receive typed Connect clients pointing at the test server.
+// All resources are released when Cleanup is called (or automatically via
+// t.Cleanup when created with New). Tests are skipped if TEST_DATABASE_URL is unset.
 type TestHarness struct {
 	t      testing.TB
-	dir    string
 	db     *db.DB
 	server *httptest.Server
 
@@ -45,15 +44,13 @@ type TestHarness struct {
 func New(t testing.TB) *TestHarness {
 	t.Helper()
 
-	dir := t.TempDir()
+	dsn := os.Getenv("TEST_DATABASE_URL")
+	if dsn == "" {
+		t.Skip("TEST_DATABASE_URL not set — skipping Postgres integration tests")
+	}
+	t.Setenv("DATABASE_URL", dsn)
 
-	stateDBPath := filepath.Join(dir, "state.db")
-	memDBPath := filepath.Join(dir, "memory.db")
-
-	// Touch the memory DB file so db.New can open it.
-	touchFile(t, memDBPath)
-
-	database, err := db.New(stateDBPath, memDBPath)
+	database, err := db.New(context.Background())
 	if err != nil {
 		t.Fatalf("omegatest.New: open db: %v", err)
 	}
@@ -71,9 +68,8 @@ func New(t testing.TB) *TestHarness {
 	srv := httptest.NewServer(mux)
 
 	h := &TestHarness{
-		t:   t,
-		dir: dir,
-		db:  database,
+		t:      t,
+		db:     database,
 		server: srv,
 		Orchestrator: omegav1connect.NewOrchestratorServiceClient(
 			http.DefaultClient,
@@ -258,17 +254,3 @@ func (h *TestHarness) AssertNodeExists(nodeID string) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Internal utilities
-// ---------------------------------------------------------------------------
-
-func touchFile(t testing.TB, path string) {
-	t.Helper()
-	f, err := os.Create(path) //nolint:gosec
-	if err != nil {
-		t.Fatalf("touchFile(%s): %v", path, err)
-	}
-	if err := f.Close(); err != nil {
-		t.Fatalf("touchFile(%s) close: %v", path, err)
-	}
-}

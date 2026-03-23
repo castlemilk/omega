@@ -12,7 +12,7 @@ Architecture
   Pruner          : removes memories that fall below importance threshold
   Retriever       : tag/keyword-based recall for node queries
 
-Storage: all persistence in SQLite (zero external dependencies).
+Storage: Postgres via psycopg3.  Schema is managed by the Go db.New() bootstrap.
 
 Design philosophy
 -----------------
@@ -30,9 +30,8 @@ Human-mind analogues:
   Pruning        ≈ forgetting curve / synaptic pruning
 """
 
-import json
 import logging
-import sqlite3
+import os
 import time
 import uuid
 from dataclasses import dataclass
@@ -111,71 +110,15 @@ class MemoryKernel:
     MAX_SEMANTIC = 200  # cap on semantic memories
     CONSOLIDATION_INTERVAL = 5  # consolidate every N cycles
 
-    def __init__(self, db_path: str = ":memory:") -> None:
-        self._db_path = db_path
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
+    def __init__(self) -> None:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        dsn = os.environ["DATABASE_URL"]
+        self._conn = psycopg.connect(dsn, row_factory=dict_row)
         self._working: dict[str, Any] = {}
         self._current_cycle = 0
-        self._create_schema()
-        logger.info("MemoryKernel initialised (db=%s)", db_path)
-
-    # ------------------------------------------------------------------ Schema
-
-    def _create_schema(self) -> None:
-        self._conn.executescript("""
-            CREATE TABLE IF NOT EXISTS episodes (
-                episode_id   TEXT    PRIMARY KEY,
-                timestamp    REAL    NOT NULL,
-                cycle        INTEGER NOT NULL,
-                event_type   TEXT    NOT NULL,
-                content_json TEXT    NOT NULL,
-                tags_json    TEXT    NOT NULL,
-                importance   REAL    NOT NULL DEFAULT 1.0,
-                namespace    TEXT    NOT NULL DEFAULT 'global'
-            );
-
-            CREATE TABLE IF NOT EXISTS semantic_memories (
-                memory_id       TEXT    PRIMARY KEY,
-                concept         TEXT    NOT NULL,
-                content         TEXT    NOT NULL,
-                confidence      REAL    NOT NULL DEFAULT 1.0,
-                evidence_count  INTEGER NOT NULL DEFAULT 1,
-                last_reinforced REAL    NOT NULL,
-                tags_json       TEXT    NOT NULL DEFAULT '[]',
-                namespace       TEXT    NOT NULL DEFAULT 'global'
-            );
-
-            CREATE TABLE IF NOT EXISTS memory_ratings (
-                rating_id   TEXT PRIMARY KEY,
-                memory_id   TEXT NOT NULL,
-                namespace   TEXT NOT NULL DEFAULT 'global',
-                quality     REAL NOT NULL,
-                rated_at    REAL NOT NULL
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_episodes_event_type ON episodes(event_type);
-            CREATE INDEX IF NOT EXISTS idx_episodes_cycle ON episodes(cycle);
-            CREATE INDEX IF NOT EXISTS idx_semantic_concept ON semantic_memories(concept);
-        """)
-        self._conn.commit()
-        # Migration: add namespace column if missing (existing DBs), then create namespace indexes
-        self._migrate_add_namespace()
-
-    def _migrate_add_namespace(self) -> None:
-        for table in ("episodes", "semantic_memories"):
-            cols = [r[1] for r in self._conn.execute(f"PRAGMA table_info({table})").fetchall()]
-            if "namespace" not in cols:
-                self._conn.execute(
-                    f"ALTER TABLE {table} ADD COLUMN namespace TEXT NOT NULL DEFAULT 'global'"
-                )
-        self._conn.commit()
-        # Create namespace indexes now that the columns are guaranteed to exist
-        self._conn.executescript("""
-            CREATE INDEX IF NOT EXISTS idx_episodes_namespace ON episodes(namespace);
-            CREATE INDEX IF NOT EXISTS idx_semantic_namespace ON semantic_memories(namespace);
-        """)
-        self._conn.commit()
+        logger.info("MemoryKernel initialised (postgres)")
 
     # ------------------------------------------------------------------ Working Memory
 
@@ -212,19 +155,21 @@ class MemoryKernel:
         cyc = cycle if cycle is not None else self._current_cycle
         tags = tags or []
 
+        from psycopg.types.json import Jsonb
+
         self._conn.execute(
             """
             INSERT INTO episodes
-            (episode_id, timestamp, cycle, event_type, content_json, tags_json, importance, namespace)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (episode_id, timestamp, cycle, event_type, content, tags, importance, namespace)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 episode_id,
                 ts,
                 cyc,
                 event_type,
-                json.dumps(content, default=str),
-                json.dumps(tags),
+                Jsonb(content),
+                Jsonb(tags),
                 min(1.0, max(0.0, importance)),
                 namespace,
             ),
@@ -242,28 +187,28 @@ class MemoryKernel:
         namespace: str | None = None,
     ) -> list[Episode]:
         """Retrieve episodes matching filters, ordered by importance desc."""
-        query = "SELECT * FROM episodes WHERE importance >= ?"
+        query = "SELECT * FROM episodes WHERE importance >= %s"
         params: list[Any] = [min_importance]
 
         if event_type:
-            query += " AND event_type = ?"
+            query += " AND event_type = %s"
             params.append(event_type)
         if since_cycle is not None:
-            query += " AND cycle >= ?"
+            query += " AND cycle >= %s"
             params.append(since_cycle)
         if namespace is not None:
-            query += " AND namespace = ?"
+            query += " AND namespace = %s"
             params.append(namespace)
 
-        query += " ORDER BY importance DESC, timestamp DESC LIMIT ?"
+        query += " ORDER BY importance DESC, timestamp DESC LIMIT %s"
         params.append(limit * 3)  # fetch extra for tag filtering
 
         rows = self._conn.execute(query, params).fetchall()
         episodes = []
 
         for row in rows:
-            content = json.loads(row["content_json"])
-            row_tags = json.loads(row["tags_json"])
+            # JSONB columns come back as Python objects via psycopg3
+            row_tags = row["tags"] or []
 
             # Tag filtering
             if tags and not any(t in row_tags for t in tags):
@@ -274,7 +219,7 @@ class MemoryKernel:
                     episode_id=row["episode_id"],
                     timestamp=row["timestamp"],
                     event_type=row["event_type"],
-                    content=content,
+                    content=row["content"] or {},
                     tags=row_tags,
                     importance=row["importance"],
                     cycle=row["cycle"],
@@ -302,9 +247,11 @@ class MemoryKernel:
         """Store or update a semantic memory. Returns memory_id."""
         tags = tags or []
 
+        from psycopg.types.json import Jsonb
+
         # Check if concept already exists within this namespace
         existing = self._conn.execute(
-            "SELECT memory_id, evidence_count, confidence FROM semantic_memories WHERE concept = ? AND namespace = ?",
+            "SELECT memory_id, evidence_count, confidence FROM semantic_memories WHERE concept = %s AND namespace = %s",
             (concept, namespace),
         ).fetchone()
 
@@ -315,15 +262,15 @@ class MemoryKernel:
             self._conn.execute(
                 """
                 UPDATE semantic_memories
-                SET content = ?, confidence = ?, evidence_count = ?, last_reinforced = ?, tags_json = ?
-                WHERE concept = ? AND namespace = ?
+                SET content = %s, confidence = %s, evidence_count = %s, last_reinforced = %s, tags = %s
+                WHERE concept = %s AND namespace = %s
                 """,
                 (
                     content,
                     new_confidence,
                     new_count,
                     time.time(),
-                    json.dumps(tags),
+                    Jsonb(tags),
                     concept,
                     namespace,
                 ),
@@ -335,8 +282,8 @@ class MemoryKernel:
             self._conn.execute(
                 """
                 INSERT INTO semantic_memories
-                (memory_id, concept, content, confidence, evidence_count, last_reinforced, tags_json, namespace)
-                VALUES (?, ?, ?, ?, 1, ?, ?, ?)
+                (memory_id, concept, content, confidence, evidence_count, last_reinforced, tags, namespace)
+                VALUES (%s, %s, %s, %s, 1, %s, %s, %s)
                 """,
                 (
                     memory_id,
@@ -344,7 +291,7 @@ class MemoryKernel:
                     content,
                     confidence,
                     time.time(),
-                    json.dumps(tags),
+                    Jsonb(tags),
                     namespace,
                 ),
             )
@@ -361,21 +308,21 @@ class MemoryKernel:
         namespace: str | None = None,
     ) -> list[SemanticMemory]:
         """Retrieve semantic memories by concept, tags, or keyword search."""
-        sql = "SELECT * FROM semantic_memories WHERE confidence >= ?"
+        sql = "SELECT * FROM semantic_memories WHERE confidence >= %s"
         params: list[Any] = [min_confidence]
 
         if namespace is not None:
-            sql += " AND namespace = ?"
+            sql += " AND namespace = %s"
             params.append(namespace)
 
-        sql += " ORDER BY confidence DESC LIMIT ?"
+        sql += " ORDER BY confidence DESC LIMIT %s"
         params.append(limit * 3)
 
         rows = self._conn.execute(sql, params).fetchall()
 
         results = []
         for row in rows:
-            row_tags = json.loads(row["tags_json"])
+            row_tags = row["tags"] or []
 
             if concept and concept.lower() not in row["concept"].lower():
                 continue
@@ -409,13 +356,13 @@ class MemoryKernel:
     def reinforce_semantic(self, concept: str, delta: float = 0.05) -> bool:
         """Strengthen confidence for an existing semantic memory. Returns True if found."""
         row = self._conn.execute(
-            "SELECT confidence FROM semantic_memories WHERE concept = ?", (concept,)
+            "SELECT confidence FROM semantic_memories WHERE concept = %s", (concept,)
         ).fetchone()
         if not row:
             return False
         new_conf = min(1.0, row["confidence"] + delta)
         self._conn.execute(
-            "UPDATE semantic_memories SET confidence = ?, last_reinforced = ?, evidence_count = evidence_count + 1 WHERE concept = ?",
+            "UPDATE semantic_memories SET confidence = %s, last_reinforced = %s, evidence_count = evidence_count + 1 WHERE concept = %s",
             (new_conf, time.time(), concept),
         )
         self._conn.commit()
@@ -426,7 +373,7 @@ class MemoryKernel:
     def rate_memory(self, memory_id: str, quality: float, namespace: str = "global") -> None:
         """Record a quality rating for a memory entry."""
         self._conn.execute(
-            "INSERT INTO memory_ratings (rating_id, memory_id, namespace, quality, rated_at) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO memory_ratings (rating_id, memory_id, namespace, quality, rated_at) VALUES (%s, %s, %s, %s, %s)",
             (str(uuid.uuid4()), memory_id, namespace, min(1.0, max(0.0, quality)), time.time()),
         )
         self._conn.commit()
@@ -542,14 +489,14 @@ class MemoryKernel:
         """
         # Decay episodic importance
         self._conn.execute(
-            "UPDATE episodes SET importance = importance * ?",
+            "UPDATE episodes SET importance = importance * %s",
             (1.0 - self.DECAY_RATE,),
         )
         self._conn.commit()
 
         # Prune low-importance episodes
         pruned = self._conn.execute(
-            "DELETE FROM episodes WHERE importance < ?",
+            "DELETE FROM episodes WHERE importance < %s",
             (self.MIN_IMPORTANCE,),
         ).rowcount
         self._conn.commit()
@@ -562,7 +509,7 @@ class MemoryKernel:
             self._conn.execute(
                 """
                 DELETE FROM episodes WHERE episode_id IN (
-                    SELECT episode_id FROM episodes ORDER BY importance ASC, timestamp ASC LIMIT ?
+                    SELECT episode_id FROM episodes ORDER BY importance ASC, timestamp ASC LIMIT %s
                 )
                 """,
                 (excess,),
@@ -573,19 +520,19 @@ class MemoryKernel:
         # Decay semantic confidence for unreinforced memories
         age_threshold = time.time() - (self._current_cycle * 30 + 60)  # approx cycle time
         self._conn.execute(
-            "UPDATE semantic_memories SET confidence = confidence * ? WHERE last_reinforced < ?",
+            "UPDATE semantic_memories SET confidence = confidence * %s WHERE last_reinforced < %s",
             (1.0 - self.SEMANTIC_DECAY_RATE, age_threshold),
         )
         self._conn.commit()
 
         # Prune weak semantic memories (keep at least 10)
-        sem_count = self._conn.execute("SELECT COUNT(*) as n FROM semantic_memories").fetchone()[
+        sem_count = self._conn.execute("SELECT COUNT(*) AS n FROM semantic_memories").fetchone()[
             "n"
         ]
         sem_pruned = 0
         if sem_count > 10:
             sem_pruned = self._conn.execute(
-                "DELETE FROM semantic_memories WHERE confidence < ? AND evidence_count < 3",
+                "DELETE FROM semantic_memories WHERE confidence < %s AND evidence_count < 3",
                 (self.MIN_IMPORTANCE,),
             ).rowcount
             self._conn.commit()
@@ -671,7 +618,7 @@ class MemoryKernel:
     def summary(self) -> dict[str, Any]:
         """Return a status summary of the memory kernel."""
         episode_count = self.get_episode_count()
-        sem_count = self._conn.execute("SELECT COUNT(*) as n FROM semantic_memories").fetchone()[
+        sem_count = self._conn.execute("SELECT COUNT(*) AS n FROM semantic_memories").fetchone()[
             "n"
         ]
         working_keys = list(self._working.keys())

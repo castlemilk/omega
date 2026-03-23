@@ -90,36 +90,13 @@ func main() {
 	// ---------------------------------------------------------------------------
 	// Database
 	// ---------------------------------------------------------------------------
-	stateDBPath := db.StateDBPath()
-	memoryDBPath := db.MemoryDBPath()
-	for _, p := range []string{stateDBPath, memoryDBPath} {
-		if _, err := os.Stat(p); os.IsNotExist(err) {
-			f, _ := os.Create(p) //nolint:gosec
-			if f != nil {
-				f.Close() //nolint:errcheck,gosec
-			}
-		}
-	}
-
-	database, err := db.New(stateDBPath, memoryDBPath)
+	database, err := db.New(ctx)
 	if err != nil {
 		log.Fatalf("open DB: %v", err) //nolint:gocritic
 	}
-
-	victoriaDBPath := db.VictoriaDBPath()
-	if _, err := os.Stat(victoriaDBPath); os.IsNotExist(err) {
-		f, _ := os.Create(victoriaDBPath) //nolint:gosec
-		if f != nil {
-			f.Close() //nolint:errcheck,gosec
-		}
-	}
-	vdb, err := db.NewVictoria(victoriaDBPath)
-	if err != nil {
-		database.Close() //nolint:errcheck,gosec
-		log.Fatalf("open Victoria DB: %v", err)
-	}
 	defer database.Close()
-	defer vdb.Close()
+
+	vdb := db.NewVictoria(database.StateDB())
 
 	// ---------------------------------------------------------------------------
 	// Prometheus observability layer (existing, coexists with OTel)
@@ -129,11 +106,8 @@ func main() {
 	metrics := observability.NewMetrics()
 
 	composite := observability.NewCompositeHealth(logger)
-	composite.Register(observability.NewDBHealthChecker("state-db", func(ctx context.Context) error {
+	composite.Register(observability.NewDBHealthChecker("postgres", func(ctx context.Context) error {
 		return database.StateDB().PingContext(ctx)
-	}, 2*time.Second))
-	composite.Register(observability.NewDBHealthChecker("memory-db", func(ctx context.Context) error {
-		return database.MemoryDB().PingContext(ctx)
 	}, 2*time.Second))
 
 	cbRegistry := observability.NewCircuitBreakerRegistry(

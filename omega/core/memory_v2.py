@@ -1010,11 +1010,10 @@ class MemoryKernelV2(MemoryKernel):
 
     def __init__(
         self,
-        db_path: str = ":memory:",
         ewc_enabled: bool = False,
         advanced_bocpd: bool = False,
     ) -> None:
-        super().__init__(db_path=db_path)
+        super().__init__()
         self.ewc_enabled = ewc_enabled
         # Regime detector: sliding window by default, BOCPD if advanced_bocpd=True
         if advanced_bocpd:
@@ -1026,8 +1025,7 @@ class MemoryKernelV2(MemoryKernel):
         self.resolver = ContradictionResolver(self.regime_detector)
         self._current_regime: RegimeState | None = None
         logger.info(
-            "MemoryKernelV2 initialised (db=%s, ewc=%s, bocpd=%s)",
-            db_path,
+            "MemoryKernelV2 initialised (postgres, ewc=%s, bocpd=%s)",
             ewc_enabled,
             advanced_bocpd,
         )
