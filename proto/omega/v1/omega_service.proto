@@ -69,7 +69,10 @@ message ListNodeExecutionsRequest {
 message ListNodeExecutionsResponse { repeated ExecutionRecord executions = 1; }
 
 // ── Traces ─────────────────────────────────────────────────────────────────
-message ListTracesRequest { int32 limit = 1; }
+message ListTracesRequest {
+  int32 limit = 1;
+  string node_filter = 2; // optional: filter by node_name
+}
 message ListTracesResponse { repeated TraceSummary traces = 1; }
 
 message GetTraceRequest { string trace_id = 1; }

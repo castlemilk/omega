@@ -834,19 +834,37 @@ func (d *DB) LatencyHistory(nodeID string, limit int) ([]*LatencyPoint, error) {
 	return points, nil
 }
 
-func (d *DB) RecentTraces(limit int) ([]*TraceSummary, error) {
-	rows, err := d.state.Query(`
-		SELECT trace_id,
-		       MIN(started_at) as trace_started,
-		       MAX(ended_at) as trace_ended,
-		       (MAX(ended_at) - MIN(started_at)) * 1000 as total_duration_ms,
-		       COUNT(*) as span_count,
-		       SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as error_spans,
-		       MAX(cycle) as cycle
-		FROM traces
-		GROUP BY trace_id
-		ORDER BY trace_started DESC
-		LIMIT ?`, limit)
+func (d *DB) RecentTraces(limit int, nodeFilter string) ([]*TraceSummary, error) {
+	var rows *sql.Rows
+	var err error
+	if nodeFilter != "" {
+		rows, err = d.state.Query(`
+			SELECT trace_id,
+			       MIN(started_at) as trace_started,
+			       MAX(ended_at) as trace_ended,
+			       (MAX(ended_at) - MIN(started_at)) * 1000 as total_duration_ms,
+			       COUNT(*) as span_count,
+			       SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as error_spans,
+			       MAX(cycle) as cycle
+			FROM traces
+			WHERE trace_id IN (SELECT DISTINCT trace_id FROM traces WHERE node_name = ?)
+			GROUP BY trace_id
+			ORDER BY trace_started DESC
+			LIMIT ?`, nodeFilter, limit)
+	} else {
+		rows, err = d.state.Query(`
+			SELECT trace_id,
+			       MIN(started_at) as trace_started,
+			       MAX(ended_at) as trace_ended,
+			       (MAX(ended_at) - MIN(started_at)) * 1000 as total_duration_ms,
+			       COUNT(*) as span_count,
+			       SUM(CASE WHEN status='error' THEN 1 ELSE 0 END) as error_spans,
+			       MAX(cycle) as cycle
+			FROM traces
+			GROUP BY trace_id
+			ORDER BY trace_started DESC
+			LIMIT ?`, limit)
+	}
 	if err != nil {
 		return nil, err
 	}

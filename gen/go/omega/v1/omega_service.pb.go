@@ -456,6 +456,7 @@ func (x *ListNodeExecutionsResponse) GetExecutions() []*ExecutionRecord {
 type ListTracesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Limit         int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	NodeFilter    string                 `protobuf:"bytes,2,opt,name=node_filter,json=nodeFilter,proto3" json:"node_filter,omitempty"` // optional: filter by node_name
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -495,6 +496,13 @@ func (x *ListTracesRequest) GetLimit() int32 {
 		return x.Limit
 	}
 	return 0
+}
+
+func (x *ListTracesRequest) GetNodeFilter() string {
+	if x != nil {
+		return x.NodeFilter
+	}
+	return ""
 }
 
 type ListTracesResponse struct {
@@ -2868,9 +2876,11 @@ const file_omega_v1_omega_service_proto_rawDesc = "" +
 	"\x1aListNodeExecutionsResponse\x129\n" +
 	"\n" +
 	"executions\x18\x01 \x03(\v2\x19.omega.v1.ExecutionRecordR\n" +
-	"executions\")\n" +
+	"executions\"J\n" +
 	"\x11ListTracesRequest\x12\x14\n" +
-	"\x05limit\x18\x01 \x01(\x05R\x05limit\"D\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12\x1f\n" +
+	"\vnode_filter\x18\x02 \x01(\tR\n" +
+	"nodeFilter\"D\n" +
 	"\x12ListTracesResponse\x12.\n" +
 	"\x06traces\x18\x01 \x03(\v2\x16.omega.v1.TraceSummaryR\x06traces\",\n" +
 	"\x0fGetTraceRequest\x12\x19\n" +
