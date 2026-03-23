@@ -48,6 +48,7 @@ from omega.nodes.victoria.signals_advanced import (
     SentimentSignal,
 )
 from omega.nodes.victoria.strategy import StrategyNode
+from omega.nodes.victoria.vrp_signal import VRPSignalNode
 
 logger = logging.getLogger("omega.nodes.victoria.victoria_node")
 
@@ -58,7 +59,15 @@ SIGNAL_NAMES = [
     "cross_asset",
     "microstructure",
     "sentiment",
+    "vrp",
 ]
+
+# Map VRP regime to DynamicWeightAllocator regime strings
+_VRP_REGIME_MAP = {
+    "FEAR": "high_vol",
+    "COMPLACENCY": "crisis",
+    "NEUTRAL": None,  # keep existing regime
+}
 
 
 class VictoriaNode(Node):
@@ -94,6 +103,7 @@ class VictoriaNode(Node):
         self._cross_asset = CrossAssetSignal()
         self._microstructure = MicrostructureSignal()
         self._sentiment = SentimentSignal()
+        self._vrp = VRPSignalNode()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -261,6 +271,7 @@ class VictoriaNode(Node):
             "cross_asset",
             "microstructure",
             "sentiment",
+            "vrp",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -382,6 +393,30 @@ class VictoriaNode(Node):
                 }
             except Exception as exc:
                 logger.debug("sentiment signal failed: %s", exc)
+
+            try:
+                vrp_out = self._vrp.execute(
+                    NodeInput(
+                        action="compute_vrp",
+                        parameters={"market_data": market_data},
+                        context=inp.context,
+                    )
+                )
+                if vrp_out.success and vrp_out.result:
+                    vr = vrp_out.result
+                    signals["vrp"] = {
+                        "value": vr.get("vrp_signal", 0.0),
+                        "confidence": vr.get("confidence", 0.0),
+                        "regime_tag": vr.get("vrp_regime", "NEUTRAL"),
+                        "raw": vr,
+                    }
+                    # VRP regime overrides weight-allocator regime when informative
+                    vrp_regime = vr.get("vrp_regime", "NEUTRAL")
+                    mapped = _VRP_REGIME_MAP.get(vrp_regime)
+                    if mapped is not None:
+                        regime = mapped
+            except Exception as exc:
+                logger.debug("vrp signal failed: %s", exc)
 
         # 2. Apply dynamic weighting
         raw_weights = {name: 1.0 for name in signals}
