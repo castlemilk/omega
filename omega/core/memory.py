@@ -527,7 +527,7 @@ class MemoryKernel:
 
         # Prune weak semantic memories (keep at least 10)
         _sem_row = self._conn.execute("SELECT COUNT(*) AS n FROM semantic_memories").fetchone()
-        sem_count = _sem_row["n"] if _sem_row else 0
+        sem_count = _sem_row["n"] if _sem_row is not None else 0
         sem_pruned = 0
         if sem_count > 10:
             sem_pruned = self._conn.execute(
@@ -618,7 +618,7 @@ class MemoryKernel:
         """Return a status summary of the memory kernel."""
         episode_count = self.get_episode_count()
         _sem_row = self._conn.execute("SELECT COUNT(*) AS n FROM semantic_memories").fetchone()
-        sem_count = _sem_row["n"] if _sem_row else 0
+        sem_count = _sem_row["n"] if _sem_row is not None else 0
         working_keys = list(self._working.keys())
 
         top_semantic = self._conn.execute(

@@ -19,6 +19,7 @@ import (
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/auth"
 	"github.com/benebsworth/omega/internal/bridge"
+	"github.com/benebsworth/omega/internal/coordination"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
 	"github.com/benebsworth/omega/internal/integrations"
@@ -205,6 +206,15 @@ func main() {
 	projectH := handler.NewProject()
 	projectH.SeedProject(victoriaProject())
 
+	// ── Coordination handler ───────────────────────────────────────────────────
+	var coordH *coordination.Handler
+	if outcomeStore, outcomeErr := coordination.NewOutcomeStore(database.StateDB()); outcomeErr != nil {
+		log.Printf("warn: coordination outcome store init failed (%v), using no-persistence mode", outcomeErr)
+		coordH = coordination.NewDefaultHandler(nil, logger)
+	} else {
+		coordH = coordination.NewDefaultHandler(outcomeStore, logger)
+	}
+
 	// ── Mux registration ──────────────────────────────────────────────────────
 	mux := http.NewServeMux()
 
@@ -265,6 +275,9 @@ func main() {
 
 	projPath, projSvcHandler := omegav1connect.NewProjectServiceHandler(projectH, withHandlerOpts()...)
 	mux.Handle(projPath, projSvcHandler)
+
+	coordPath, coordSvcHandler := omegav1connect.NewCoordinationServiceHandler(coordH, withHandlerOpts()...)
+	mux.Handle(coordPath, coordSvcHandler)
 
 	// PipelineService — Python is the authoritative server; Go mounts an
 	// unimplemented stub so the service path is registered for discovery.

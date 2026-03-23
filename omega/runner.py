@@ -126,7 +126,7 @@ class OmegaRunner:
         from omega.core.config import OmegaConfig
         from omega.core.logging import configure_logging
         from omega.core.metrics_exporter import MetricsExporter
-        from omega.core.orchestrator import Orchestrator
+        from omega.core.orchestrator_v2 import OmegaOrchestrator
         from omega.core.state_store import make_state_backend
 
         self._cfg = OmegaConfig.load(self.config_path)
@@ -145,8 +145,6 @@ class OmegaRunner:
 
         self._store = make_state_backend()
 
-        self._orchestrator = Orchestrator(name="omega")
-
         self._exporter = MetricsExporter(state_store=self._store)
         self._exporter.start()
         logger.info(
@@ -154,29 +152,18 @@ class OmegaRunner:
             self._cfg.monitoring.metrics_port,
         )
 
+        self._orchestrator = OmegaOrchestrator(name="omega", metrics_exporter=self._exporter)
+
         self._setup_nodes()
 
     def _setup_nodes(self) -> None:
-        """Register Victoria nodes with the orchestrator."""
-        from omega.nodes.victoria import (
-            DataIngestionNode,
-            ReportingNode,
-            RiskManagementNode,
-            SignalGenerationNode,
-            StrategyNode,
-        )
+        """Register VictoriaNode with the orchestrator."""
+        from omega.nodes.victoria.victoria_node import VictoriaNode
 
-        nodes = [
-            DataIngestionNode(),
-            SignalGenerationNode(),
-            StrategyNode(),
-            RiskManagementNode(),
-            ReportingNode(),
-        ]
-        for node in nodes:
-            self._orchestrator.register_node(node)
+        node = VictoriaNode()
+        self._orchestrator.register_node(node)
 
-        logger.info("Registered %d nodes.", len(nodes))
+        logger.info("Registered VictoriaNode.")
 
     def _teardown(self) -> None:
         if self._exporter:
@@ -188,32 +175,16 @@ class OmegaRunner:
     # ------------------------------------------------------------------
 
     def _heartbeat(self, iteration: int) -> None:
-        from omega.core.node import NodeInput
-
         logger.debug("Heartbeat %d start", iteration)
 
-        inp = NodeInput(
-            action="run_cycle",
-            parameters={
-                "iteration": iteration,
-                "mode": self.mode,
-                "dry_run": self.dry_run,
-                "symbols": self._cfg.data.symbols,
-            },
-        )
-        # Execute all registered nodes in order via orchestrator registry
-        results = []
-        for node_id, node in list(self._orchestrator.registry._nodes.items()):
-            try:
-                out = node.execute(inp)
-                results.append(out)
-            except Exception as exc:
-                logger.warning("Node %s failed: %s", node_id, exc)
+        result = self._orchestrator.run_one_cycle()
+
+        duration = getattr(result, "duration_seconds", 0.0)
 
         if self._exporter:
-            self._exporter.record_heartbeat(duration_s=0.0)
+            self._exporter.record_heartbeat(duration_s=duration)
 
-        logger.debug("Heartbeat %d complete  nodes_ran=%d", iteration, len(results))
+        logger.debug("Heartbeat %d complete", iteration)
 
     # ------------------------------------------------------------------
     # Helpers

@@ -156,42 +156,33 @@ class TestOmegaRunnerTeardown:
 
 class TestOmegaRunnerHeartbeat:
     def test_heartbeat_runs_all_nodes(self):
-        from omega.core.node import NodeOutput
         from omega.runner import OmegaRunner
 
         runner = OmegaRunner()
         runner._cfg = _make_cfg()
         runner._exporter = MagicMock()
 
-        node_a = MagicMock()
-        node_a.execute.return_value = NodeOutput(result={}, metrics={})
-        node_b = MagicMock()
-        node_b.execute.return_value = NodeOutput(result={}, metrics={})
+        cycle_result = MagicMock()
+        cycle_result.duration_seconds = 0.1
 
         runner._orchestrator = MagicMock()
-        runner._orchestrator.registry._nodes = {"a": node_a, "b": node_b}
+        runner._orchestrator.run_one_cycle.return_value = cycle_result
 
         runner._heartbeat(0)
 
-        node_a.execute.assert_called_once()
-        node_b.execute.assert_called_once()
-        runner._exporter.record_heartbeat.assert_called_once()
+        runner._orchestrator.run_one_cycle.assert_called_once()
+        runner._exporter.record_heartbeat.assert_called_once_with(duration_s=0.1)
 
     def test_heartbeat_continues_on_node_error(self):
-        from omega.core.node import NodeOutput
         from omega.runner import OmegaRunner
 
         runner = OmegaRunner()
         runner._cfg = _make_cfg()
         runner._exporter = MagicMock()
 
-        bad_node = MagicMock()
-        bad_node.execute.side_effect = RuntimeError("node failure")
-        good_node = MagicMock()
-        good_node.execute.return_value = NodeOutput(result={}, metrics={})
-
         runner._orchestrator = MagicMock()
-        runner._orchestrator.registry._nodes = {"bad": bad_node, "good": good_node}
+        # run_one_cycle raising should be caught by the outer run() loop, not _heartbeat
+        runner._orchestrator.run_one_cycle.return_value = MagicMock(duration_seconds=0.0)
 
         runner._heartbeat(0)  # must not raise
-        good_node.execute.assert_called_once()
+        runner._orchestrator.run_one_cycle.assert_called_once()
