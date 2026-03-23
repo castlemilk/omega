@@ -24,6 +24,10 @@ _DEFAULT_VAR_CONFIDENCE = 0.95
 _MAX_POSITION_SIZE = 0.25  # No single position > 25%
 _MAX_PORTFOLIO_VAR = 0.02  # Daily VaR limit: 2% of portfolio
 
+# VRP regime adjustments
+_VRP_FEAR_POSITION_SCALE = 0.75  # FEAR: reduce max position by 25%
+_VRP_CIRCUIT_BREAKER_ZSCORE = -2.0  # COMPLACENCY circuit breaker threshold
+
 
 class RiskManagementNode(Node):
     """
@@ -43,6 +47,8 @@ class RiskManagementNode(Node):
         self._use_correlation = False
         self._use_regime = False
         self._high_vol_regime = False
+        self._vrp_regime = "NEUTRAL"
+        self._vrp_zscore = 0.0
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
@@ -76,7 +82,7 @@ class RiskManagementNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["compute_var", "check_risk_limits", "compute_correlation"]
+        return ["compute_var", "check_risk_limits", "compute_correlation", "apply_vrp_constraints"]
 
     def describe(self) -> str:
         return (
@@ -100,10 +106,18 @@ class RiskManagementNode(Node):
             elif action == "check_risk_limits":
                 portfolio = params.get("portfolio", {})
                 market_data = params.get("market_data", {})
-                result = self._check_risk_limits(portfolio, market_data)
+                vrp_regime = params.get("vrp_regime", self._vrp_regime)
+                vrp_zscore = params.get("vrp_zscore", self._vrp_zscore)
+                result = self._check_risk_limits(portfolio, market_data, vrp_regime, vrp_zscore)
             elif action == "compute_correlation":
                 market_data = params.get("market_data", {})
                 result = self._compute_correlation_matrix(market_data)
+            elif action == "apply_vrp_constraints":
+                vrp_regime = params.get("vrp_regime", "NEUTRAL")
+                vrp_zscore = params.get("vrp_zscore", 0.0)
+                self._vrp_regime = vrp_regime
+                self._vrp_zscore = vrp_zscore
+                result = self._apply_vrp_constraints(vrp_regime, vrp_zscore)
             else:
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._execution_count += 1
@@ -236,20 +250,68 @@ class RiskManagementNode(Node):
 
         return result
 
+    def _apply_vrp_constraints(self, vrp_regime: str, vrp_zscore: float) -> dict[str, Any]:
+        """
+        Compute VRP-based position sizing adjustments.
+
+        FEAR        : IV >> RV — reduce max position by 25%, flag increased cash.
+        COMPLACENCY : IV << RV — if zscore < -2sigma, trigger circuit breaker.
+        NEUTRAL     : no adjustment.
+        """
+        adjustments: dict[str, Any] = {
+            "vrp_regime": vrp_regime,
+            "vrp_zscore": vrp_zscore,
+            "position_scale": 1.0,
+            "circuit_breaker": False,
+            "notes": [],
+        }
+
+        if vrp_regime == "FEAR":
+            adjustments["position_scale"] = _VRP_FEAR_POSITION_SCALE
+            adjustments["notes"].append(
+                f"FEAR regime (zscore={vrp_zscore:.2f}): max position scaled to "
+                f"{_VRP_FEAR_POSITION_SCALE * 100:.0f}%"
+            )
+        elif vrp_regime == "COMPLACENCY" and vrp_zscore < _VRP_CIRCUIT_BREAKER_ZSCORE:
+            adjustments["circuit_breaker"] = True
+            adjustments["notes"].append(
+                f"COMPLACENCY circuit breaker: vrp_zscore={vrp_zscore:.2f} < "
+                f"{_VRP_CIRCUIT_BREAKER_ZSCORE:.1f}sigma — flagged for manual review"
+            )
+            logger.warning(
+                "RiskManagementNode: VRP circuit breaker triggered (vrp_zscore=%.2f, regime=%s)",
+                vrp_zscore,
+                vrp_regime,
+            )
+
+        return adjustments
+
     def _check_risk_limits(
-        self, portfolio: dict[str, Any], market_data: dict[str, Any]
+        self,
+        portfolio: dict[str, Any],
+        market_data: dict[str, Any],
+        vrp_regime: str = "NEUTRAL",
+        vrp_zscore: float = 0.0,
     ) -> dict[str, Any]:
         weights = portfolio.get("weights", {})
         violations: list[str] = []
         adjusted_weights: dict[str, float] = dict(weights)
 
-        # Position size limit
+        # VRP-based position size adjustment
+        vrp_adj = self._apply_vrp_constraints(vrp_regime, vrp_zscore)
+        effective_max_position = self._max_position * vrp_adj["position_scale"]
+        if vrp_adj["notes"]:
+            violations.extend(f"VRP: {note}" for note in vrp_adj["notes"])
+        if vrp_adj["circuit_breaker"]:
+            violations.append("VRP circuit breaker active — manual review required")
+
+        # Position size limit (VRP-adjusted)
         for ticker, w in weights.items():
-            if w > self._max_position:
+            if w > effective_max_position:
                 violations.append(
-                    f"{ticker}: weight {w:.1%} exceeds limit {self._max_position:.1%}"
+                    f"{ticker}: weight {w:.1%} exceeds limit {effective_max_position:.1%}"
                 )
-                adjusted_weights[ticker] = self._max_position
+                adjusted_weights[ticker] = effective_max_position
 
         # Renormalize after capping
         total = sum(adjusted_weights.values())
@@ -279,7 +341,10 @@ class RiskManagementNode(Node):
             "violations": violations,
             "passed": len(violations) == 0,
             "portfolio_var_95": portfolio_var,
-            "max_position_limit": self._max_position,
+            "max_position_limit": effective_max_position,
+            "vrp_regime": vrp_regime,
+            "vrp_position_scale": vrp_adj["position_scale"],
+            "vrp_circuit_breaker": vrp_adj["circuit_breaker"],
         }
 
     def _compute_correlation_matrix(self, market_data: dict[str, Any]) -> dict[str, Any]:
