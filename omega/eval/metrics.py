@@ -158,7 +158,7 @@ def compute_calmar_ratio(
     r = [float(x) for x in returns]
     if not r or max_dd >= 0.0:
         return 0.0
-    ann_return = sum(r) / len(r) * periods_per_year
+    ann_return = compute_annualised_return(r, periods_per_year)
     return ann_return / abs(max_dd)
 
 
@@ -225,11 +225,17 @@ def build_equity_curve(returns: Sequence[float], initial: float = 1.0) -> list[f
 
 
 def compute_annualised_return(returns: Sequence[float], periods_per_year: int = 252) -> float:
-    """Annualised arithmetic mean return."""
+    """Annualised compound return (CAGR)."""
     r = [float(x) for x in returns]
-    if not r:
+    n = len(r)
+    if n == 0:
         return 0.0
-    return sum(r) / len(r) * periods_per_year
+    equity = build_equity_curve(r)  # already defined in this file
+    # Guard against zero or negative final equity (extreme edge case)
+    final: float = equity[-1]
+    if final <= 0.0:
+        return -1.0
+    return float(final ** (periods_per_year / n)) - 1.0
 
 
 def compute_annualised_volatility(returns: Sequence[float], periods_per_year: int = 252) -> float:
