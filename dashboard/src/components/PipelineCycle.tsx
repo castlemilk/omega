@@ -91,7 +91,7 @@ export default function PipelineCycle({
           .map((s) => ({
             key: s.name.toLowerCase().replace(/\s+/g, "_"),
             label: s.name,
-            short: s.name.length > 8 ? s.name.slice(0, 7).toUpperCase() : s.name.toUpperCase(),
+            short: s.name.toUpperCase(),
           }))
       : VICTORIA_STEPS.map((s) => ({ ...s }));
 
@@ -132,7 +132,7 @@ export default function PipelineCycle({
               <div key={step.key} className="flex items-start">
                 {/* Step card */}
                 <div
-                  className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg border ${colors.bg} ${colors.border} min-w-[90px] relative`}
+                  className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-lg border ${colors.bg} ${colors.border} min-w-[100px] max-w-[130px] relative`}
                 >
                   {/* Status dot — pulse animation when running */}
                   <span
@@ -144,11 +144,11 @@ export default function PipelineCycle({
                     {String(idx + 1).padStart(2, "0")}
                   </span>
 
-                  {/* Step short label */}
+                  {/* Step full label */}
                   <span
-                    className={`text-xs font-mono font-semibold tracking-tight leading-none text-center ${colors.text}`}
+                    className={`text-xs font-mono font-semibold tracking-tight leading-snug text-center break-words w-full ${colors.text}`}
                   >
-                    {step.short}
+                    {step.label}
                   </span>
 
                   {/* Status badge */}

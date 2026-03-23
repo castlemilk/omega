@@ -85,6 +85,9 @@ export default function Nodes() {
     ok: p.success,
   }));
 
+  // Only show Circuit Breaker column when at least one node has CB data
+  const hasCircuitBreakers = nodes.some((n) => n.circuitBreaker != null);
+
   return (
     <div className="space-y-4">
       <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
@@ -99,7 +102,7 @@ export default function Nodes() {
                 "Err Rate",
                 "Cycles",
                 "Status",
-                "Circuit Breaker",
+                ...(hasCircuitBreakers ? ["Circuit Breaker"] : []),
               ].map((h) => (
                 <th key={h} className="px-4 py-3 text-left font-medium">
                   {h}
@@ -139,26 +142,28 @@ export default function Nodes() {
                     {n.status}
                   </span>
                 </td>
-                <td className="px-4 py-3">
-                  {n.circuitBreaker ? (
-                    <div className="flex flex-col gap-1">
-                      {circuitBreakerBadge(n.circuitBreaker)}
-                      {n.circuitBreaker.failureCount > 0 && (
-                        <span className="text-xs text-gray-500 font-mono">
-                          {n.circuitBreaker.failureCount} fail
-                          {n.circuitBreaker.failureCount !== 1 ? "s" : ""}
-                        </span>
-                      )}
-                      {n.circuitBreaker.lastFailureTime && (
-                        <span className="text-xs text-gray-600 font-mono">
-                          last: {formatTs(n.circuitBreaker.lastFailureTime)}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-gray-600">—</span>
-                  )}
-                </td>
+                {hasCircuitBreakers && (
+                  <td className="px-4 py-3">
+                    {n.circuitBreaker ? (
+                      <div className="flex flex-col gap-1">
+                        {circuitBreakerBadge(n.circuitBreaker)}
+                        {n.circuitBreaker.failureCount > 0 && (
+                          <span className="text-xs text-gray-500 font-mono">
+                            {n.circuitBreaker.failureCount} fail
+                            {n.circuitBreaker.failureCount !== 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {n.circuitBreaker.lastFailureTime && (
+                          <span className="text-xs text-gray-600 font-mono">
+                            last: {formatTs(n.circuitBreaker.lastFailureTime)}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-600">—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

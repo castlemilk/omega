@@ -35,7 +35,9 @@ export default function Traces() {
             onClick={() => selectTrace(t.traceId)}
             className={`w-full text-left px-3 py-2.5 border-b border-gray-700 hover:bg-gray-700 transition-colors ${selected === t.traceId ? "bg-gray-700" : ""}`}
           >
-            <p className="text-xs font-mono text-indigo-400 truncate">{t.traceId.slice(0, 12)}…</p>
+            <p className="text-xs font-mono text-indigo-400 truncate" title={t.traceId}>
+              {t.traceId.slice(0, 20)}…
+            </p>
             <p className="text-xs text-gray-500 mt-0.5">
               {String(t.spanCount)} spans · {t.totalDurationMs.toFixed(0)}ms · cycle{" "}
               {String(t.cycle)}
@@ -52,7 +54,7 @@ export default function Traces() {
       <div className="flex-1 bg-gray-800 rounded-xl border border-gray-700 p-4 overflow-auto">
         {selected ? (
           <>
-            <p className="text-xs text-gray-500 mb-4 font-mono">trace: {selected}</p>
+            <p className="text-xs text-gray-500 mb-4 font-mono break-all">trace: {selected}</p>
             <TraceWaterfall spans={spans} />
           </>
         ) : (

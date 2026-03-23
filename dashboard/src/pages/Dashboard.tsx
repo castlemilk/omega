@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { client } from "../client";
-import NodeCard from "../components/NodeCard";
 import PipelineCycle from "../components/PipelineCycle";
 import { useProject } from "../context/ProjectContext";
 import type { SystemHealth, Node, ActivityEntry } from "../gen/omega/v1/types_pb";
@@ -86,8 +85,8 @@ export default function Dashboard({ health }: DashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* System stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Compact system facts strip */}
+      <div className="flex items-center gap-0 bg-gray-900 rounded-xl border border-gray-700 divide-x divide-gray-700 overflow-hidden text-sm">
         {[
           {
             label: "Status",
@@ -95,20 +94,24 @@ export default function Dashboard({ health }: DashboardProps) {
             cls: statusColor[health?.status ?? ""] ?? "text-white",
           },
           {
-            label: "Health Score",
+            label: "Health",
             value: health ? `${(health.compositeScore * 100).toFixed(1)}%` : "—",
             cls: "text-white",
           },
-          { label: "Total Cycles", value: String(health?.totalCycles ?? "—"), cls: "text-white" },
+          {
+            label: "Cycles",
+            value: String(health?.totalCycles ?? "—"),
+            cls: "text-white",
+          },
           {
             label: "Open Issues",
             value: String(health?.openIssues ?? "—"),
             cls: Number(health?.openIssues ?? 0) > 0 ? "text-red-400" : "text-white",
           },
         ].map(({ label, value, cls }) => (
-          <div key={label} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-bold mt-1 ${cls}`}>{value}</p>
+          <div key={label} className="flex items-center gap-2 px-5 py-3">
+            <span className="text-xs text-gray-500">{label}</span>
+            <span className={`font-semibold ${cls}`}>{value}</span>
           </div>
         ))}
       </div>
@@ -120,23 +123,6 @@ export default function Dashboard({ health }: DashboardProps) {
         projectName={selectedProject?.name}
         pipelineSteps={selectedProject?.pipelineConfig}
       />
-
-      {/* Node grid */}
-      <div>
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">
-          Nodes ({nodes.length})
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {nodes.map((n) => (
-            <NodeCard key={n.nodeId} node={n} />
-          ))}
-        </div>
-        {nodes.length === 0 && (
-          <p className="text-gray-600 text-sm py-8 text-center">
-            No nodes registered — run the orchestrator first.
-          </p>
-        )}
-      </div>
 
       {/* Activity feed */}
       <div>
