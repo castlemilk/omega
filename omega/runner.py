@@ -157,13 +157,21 @@ class OmegaRunner:
         self._setup_nodes()
 
     def _setup_nodes(self) -> None:
-        """Register VictoriaNode with the orchestrator."""
+        """Register VictoriaNode with the orchestrator and wire Victoria-specific engines."""
+        from omega.core.paper_trading import PaperTradingEngine
         from omega.nodes.victoria.victoria_node import VictoriaNode
 
         node = VictoriaNode()
         self._orchestrator.register_node(node)
-
         logger.info("Registered VictoriaNode.")
+
+        # Wire paper trading — Victoria-specific persistence layer.
+        # PaperTradingEngine reads DATABASE_URL from the environment.
+        paper_trading = PaperTradingEngine()
+        self._orchestrator.set_paper_trading(paper_trading)
+        logger.info(
+            "PaperTradingEngine wired (db_url configured: %s).", bool(paper_trading._db_url)
+        )
 
     def _teardown(self) -> None:
         if self._exporter:

@@ -284,3 +284,63 @@ class PaperTradingEngine:
                 conn.close()
         except Exception as exc:
             logger.warning("Failed to persist signals to DB: %s", exc)
+
+    def persist_signal_history_to_db(
+        self,
+        signal_data: dict[str, Any],
+        cycle: int,
+    ) -> None:
+        """
+        INSERT signal IC snapshots into victoria_signal_history.
+
+        Parameters
+        ----------
+        signal_data : Dict keyed by node_id → signal dict or list of signal dicts.
+                      Each signal dict should have ``ticker``/``symbol`` and
+                      ``composite_score`` (used as IC proxy).
+        cycle       : Current cycle number (used as the ``t`` column).
+        """
+        if not _PSYCOPG2_AVAILABLE or not self._db_url or not signal_data:
+            return
+
+        rows: list[dict[str, Any]] = []
+        for _node_id, signals in signal_data.items():
+            if isinstance(signals, dict):
+                # signals is a single signal dict or a dict of symbol→signal
+                inner = signals.get("signals") or signals.get("top_signals")
+                if isinstance(inner, list):
+                    for sig in inner:
+                        if isinstance(sig, dict):
+                            name = sig.get("ticker") or sig.get("symbol") or str(_node_id)
+                            ic = float(sig.get("composite_score", 0.0))
+                            rows.append({"signal_name": name, "t": cycle, "ic": ic})
+                else:
+                    # Flat signal dict: each key may be a symbol
+                    name = signals.get("ticker") or signals.get("symbol") or str(_node_id)
+                    ic = float(signals.get("composite_score", 0.0))
+                    rows.append({"signal_name": name, "t": cycle, "ic": ic})
+            elif isinstance(signals, list):
+                for sig in signals:
+                    if isinstance(sig, dict):
+                        name = sig.get("ticker") or sig.get("symbol") or str(_node_id)
+                        ic = float(sig.get("composite_score", 0.0))
+                        rows.append({"signal_name": name, "t": cycle, "ic": ic})
+
+        if not rows:
+            return
+
+        sql = """
+            INSERT INTO victoria_signal_history (signal_name, t, ic)
+            VALUES (%(signal_name)s, %(t)s, %(ic)s)
+        """
+        try:
+            conn = psycopg2.connect(self._db_url)
+            try:
+                with conn, conn.cursor() as cur:
+                    for row in rows:
+                        cur.execute(sql, row)
+                logger.debug("Persisted %d signal history row(s) for cycle %d", len(rows), cycle)
+            finally:
+                conn.close()
+        except Exception as exc:
+            logger.warning("Failed to persist signal history to DB: %s", exc)

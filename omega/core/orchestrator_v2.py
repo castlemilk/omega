@@ -245,6 +245,16 @@ class OmegaOrchestrator:
         logger.info("Registered node '%s' (id=%s, activate=%s)", state.name, node_id, activate)
         return node_id
 
+    def set_paper_trading(self, engine: Any) -> None:
+        """Wire in a PaperTradingEngine after construction.
+
+        Called by project-specific setup code (e.g. the Victoria runner).
+        Not part of the platform's core — only projects that need paper trading
+        should call this.
+        """
+        self._paper_trading = engine
+        logger.debug("PaperTradingEngine wired into orchestrator.")
+
     def deregister_node(self, node_id: str) -> None:
         """Remove a node from the registry and active set."""
         self._active_node_ids.discard(node_id)
@@ -512,6 +522,11 @@ class OmegaOrchestrator:
                     regime_label=node_signals["regime_label"],
                     changepoint_prob=float(node_signals.get("changepoint_prob", 0.0)),
                 )
+
+        # Persist signal IC history — Victoria-specific, only runs if paper trading is wired.
+        if self._paper_trading is not None and signal_data:
+            self._paper_trading.persist_signal_history_to_db(signal_data, ctx.cycle_number)
+
         return signal_data
 
     def _step_strategy(
