@@ -1,4 +1,7 @@
 """Unit tests for ChallengeRegistry."""
+
+import os
+
 import pytest
 
 from omega.core.challenge_registry import (
@@ -7,10 +10,15 @@ from omega.core.challenge_registry import (
     ChallengeStatus,
 )
 
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
+)
+
 
 class TestChallengeRegistry:
     def setup_method(self):
-        self.reg = ChallengeRegistry(db_path=":memory:")
+        self.reg = ChallengeRegistry()
 
     def test_add_and_get(self):
         cid = self.reg.add(

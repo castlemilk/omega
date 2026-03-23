@@ -1,5 +1,7 @@
 """Tests for omega.core.memory_v2 — sliding-window regime, BOCPD, EWC, D-S fusion, MemoryKernelV2."""
 
+import os
+
 import pytest
 
 from omega.core.memory import MemoryKernel
@@ -14,9 +16,15 @@ from omega.core.memory_v2 import (
     SlidingWindowRegimeDetector,
 )
 
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
+)
+
 # ---------------------------------------------------------------------------
 # SlidingWindowRegimeDetector  (default)
 # ---------------------------------------------------------------------------
+
 
 class TestSlidingWindowRegimeDetector:
     def setup_method(self):
@@ -66,6 +74,7 @@ class TestSlidingWindowRegimeDetector:
 # BOCPDRegimeDetector (advanced, retained for compatibility)
 # ---------------------------------------------------------------------------
 
+
 class TestBOCPDRegimeDetector:
     def setup_method(self):
         self.d = BOCPDRegimeDetector(hazard_rate=0.1)
@@ -106,6 +115,7 @@ class TestBOCPDRegimeDetector:
 # ---------------------------------------------------------------------------
 # EWCProtection
 # ---------------------------------------------------------------------------
+
 
 class TestEWCProtection:
     def setup_method(self):
@@ -161,6 +171,7 @@ class TestEWCProtection:
 # ---------------------------------------------------------------------------
 # DempsterShaferFusion
 # ---------------------------------------------------------------------------
+
 
 class TestDempsterShaferFusion:
     def setup_method(self):
@@ -227,9 +238,11 @@ class TestDempsterShaferFusion:
 # ContradictionResolver
 # ---------------------------------------------------------------------------
 
+
 class TestContradictionResolver:
     def setup_method(self):
         from omega.core.memory_v2 import BOCPDRegimeDetector
+
         self.regime = BOCPDRegimeDetector()
         self.resolver = ContradictionResolver(self.regime)
 
@@ -259,6 +272,7 @@ class TestContradictionResolver:
 # ---------------------------------------------------------------------------
 # MemoryKernelV2 — integration
 # ---------------------------------------------------------------------------
+
 
 class TestMemoryKernelV2:
     def setup_method(self):

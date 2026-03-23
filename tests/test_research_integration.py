@@ -7,15 +7,25 @@ work end-to-end as the spec describes:
   → improvement (if alignment-approved)
 """
 
+import os
+
+import pytest
+
 from omega.core.adversarial import AdversarialPressure, AdversarialReport
 from omega.core.alignment import AlignmentDecision, AlignmentLayer
 from omega.core.goals import GoalArchitecture, GoalDecision
 from omega.core.memory_v2 import MemoryKernelV2, RegimeState
 from omega.core.state_store import StateStore
 
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
+)
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_system_metrics(cycle: int) -> dict:
     """Generate plausible system metrics that improve slightly each cycle."""
@@ -33,15 +43,20 @@ def make_system_metrics(cycle: int) -> dict:
 
 def make_node_metrics_map(system_metrics: dict) -> dict:
     return {
-        "SignalNode":  {"accuracy": 0.8, "health": 0.9, "signal_coverage": system_metrics.get("signal_coverage", 0.7)},
+        "SignalNode": {
+            "accuracy": 0.8,
+            "health": 0.9,
+            "signal_coverage": system_metrics.get("signal_coverage", 0.7),
+        },
         "StrategyNode": {"accuracy": 0.75, "health": 0.85, "signal_coverage": 0.8},
-        "RiskNode":    {"accuracy": 0.9, "health": 0.95, "signal_coverage": 0.85},
+        "RiskNode": {"accuracy": 0.9, "health": 0.95, "signal_coverage": 0.85},
     }
 
 
 # ---------------------------------------------------------------------------
 # Full loop
 # ---------------------------------------------------------------------------
+
 
 class TestFullResearchLoop:
     def setup_method(self):
@@ -73,10 +88,12 @@ class TestFullResearchLoop:
         )
 
         # Step 4: Adversarial pressure
-        variant_outputs = {"primary": {
-            "BTC": system_metrics["signal_coverage"],
-            "ETH": system_metrics["signal_coverage"] * 0.9,
-        }}
+        variant_outputs = {
+            "primary": {
+                "BTC": system_metrics["signal_coverage"],
+                "ETH": system_metrics["signal_coverage"] * 0.9,
+            }
+        }
         adv_report = self.adversarial.run(
             cycle=cycle,
             variant_outputs=variant_outputs,
@@ -189,10 +206,12 @@ class TestFullResearchLoop:
 
     def test_goal_tracking_error_decreases_with_reference(self):
         """With a reference trajectory set, tracking error is measurable."""
-        self.goals.set_reference_trajectory({
-            "sharpe_ratio": [2.0] * 5,
-            "coverage_rate": [0.95] * 5,
-        })
+        self.goals.set_reference_trajectory(
+            {
+                "sharpe_ratio": [2.0] * 5,
+                "coverage_rate": [0.95] * 5,
+            }
+        )
         first = self._run_cycle(0)
         assert first["goal"].tracking_error >= 0.0
 

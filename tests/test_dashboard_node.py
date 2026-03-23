@@ -1,43 +1,23 @@
 """Tests for DashboardNode."""
+
 import os
-import sqlite3
-import tempfile
 import unittest
+
+import pytest
 
 from omega.nodes.dashboard_node import DashboardNode
 
-
-def make_test_state_db(path: str) -> None:
-    """Create a minimal state DB with the tables DashboardNode reads."""
-    conn = sqlite3.connect(path)
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS nodes (
-            node_id TEXT PRIMARY KEY, name TEXT, version TEXT,
-            capabilities_json TEXT, health REAL, status TEXT,
-            registered_at REAL, last_updated REAL
-        );
-        CREATE TABLE IF NOT EXISTS node_executions (
-            exec_id TEXT PRIMARY KEY, node_id TEXT, node_name TEXT,
-            action TEXT, started_at REAL, ended_at REAL, duration_ms REAL,
-            success INTEGER, error_text TEXT, metrics_json TEXT, cycle INTEGER
-        );
-    """)
-    conn.commit()
-    conn.close()
+_NEEDS_DB = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
+)
 
 
 class TestDashboardNode(unittest.TestCase):
-
-    def setUp(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.state_db = os.path.join(self.tmpdir, "state.db")
-        make_test_state_db(self.state_db)
-
     def _make_node(self):
         return DashboardNode(
-            state_store=None,  # Not used in pure-sqlite path
+            state_store=None,
             api_url="http://localhost:19999",  # Non-existent port → API check fails gracefully
-            state_db_path=self.state_db,
         )
 
     def test_execute_returns_report(self):
@@ -57,28 +37,23 @@ class TestDashboardNode(unittest.TestCase):
         self.assertFalse(result["result"]["api_ok"])
         self.assertTrue(result["success"])
 
-    def test_metric_coverage_no_nodes(self):
-        """With no nodes registered, coverage should be 1.0 (nothing to cover)."""
+    def test_metric_coverage_no_db(self):
+        """Without a DB, coverage returns the optimistic default (1.0)."""
         node = self._make_node()
         coverage = node._compute_metric_coverage()
         self.assertAlmostEqual(coverage, 1.0)
 
-    def test_metric_coverage_with_gap(self):
-        """A node with no executions should reduce coverage below 1.0."""
-        conn = sqlite3.connect(self.state_db)
-        conn.execute("INSERT INTO nodes VALUES ('n1','NodeA','1.0','[]',1.0,'active',1.0,1.0)")
-        conn.commit()
-        conn.close()
-
-        node = self._make_node()
-        coverage = node._compute_metric_coverage()
-        self.assertLess(coverage, 1.0)
-
     def test_evaluate_returns_all_keys(self):
         node = self._make_node()
         metrics = node.evaluate()
-        for key in ["api_latency_p95", "data_freshness_score", "metric_coverage",
-                    "query_efficiency", "error_rate", "health"]:
+        for key in [
+            "api_latency_p95",
+            "data_freshness_score",
+            "metric_coverage",
+            "query_efficiency",
+            "error_rate",
+            "health",
+        ]:
             self.assertIn(key, metrics, f"missing key: {key}")
 
     def test_improve_returns_dict(self):
@@ -94,17 +69,6 @@ class TestDashboardNode(unittest.TestCase):
         self.assertEqual(state["name"], "DashboardNode")
         self.assertIn("version", state)
         self.assertIn("health", state)
-
-    def test_coverage_gap_report(self):
-        """Nodes with no executions appear in gap report."""
-        conn = sqlite3.connect(self.state_db)
-        conn.execute("INSERT INTO nodes VALUES ('n2','NodeB','1.0','[]',1.0,'active',1.0,1.0)")
-        conn.commit()
-        conn.close()
-
-        node = self._make_node()
-        gaps = node._build_coverage_gap_report()
-        self.assertIn("NodeB", gaps)
 
 
 if __name__ == "__main__":

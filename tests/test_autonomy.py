@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from omega.core.autonomy import (
@@ -10,6 +12,11 @@ from omega.core.autonomy import (
     GraduatedAutonomyController,
     NodeAutonomyState,
     PerformanceMetric,
+)
+
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
 )
 
 # ---------------------------------------------------------------------------

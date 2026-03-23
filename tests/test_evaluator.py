@@ -1,9 +1,16 @@
 """Tests for the Evaluator harness."""
 
+import os
+
 import pytest
 
 from omega.core.evaluator import Evaluator, GoalSpec, MetricSpec, _mean, _pct_change, _stddev
 from omega.core.node import NodeState
+
+_needs_db = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
+)
 
 
 def _make_state(node_id="n1", metrics=None):
@@ -93,6 +100,7 @@ class TestGoalSpec:
 # ---------------------------------------------------------------------------
 
 
+@_needs_db
 class TestEvaluatorRecord:
     def setup_method(self):
         self.ev = Evaluator(db_path=":memory:")
@@ -148,6 +156,7 @@ class TestEvaluatorRecord:
 # ---------------------------------------------------------------------------
 
 
+@_needs_db
 class TestEvaluatorReport:
     def test_report_contains_goal(self):
         ev = Evaluator(":memory:")
@@ -178,6 +187,7 @@ class TestEvaluatorReport:
 # ---------------------------------------------------------------------------
 
 
+@_needs_db
 class TestNodeMetricHistory:
     def test_node_metric_stored_and_retrieved(self):
         ev = Evaluator(":memory:")

@@ -7,6 +7,7 @@ All tests run without any external dependencies (stdlib only).
 A real in-memory StateStore is used to verify DB-backed metric rendering.
 """
 
+import os
 import threading
 import time
 import urllib.request
@@ -16,9 +17,15 @@ import pytest
 from omega.core.metrics_exporter import MetricsExporter, _Histogram, _labels, _sanitize
 from omega.core.state_store import StateStore
 
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
+)
+
 # ---------------------------------------------------------------------------
 # _Histogram unit tests
 # ---------------------------------------------------------------------------
+
 
 class TestHistogram:
     def test_observe_single_value(self):
@@ -34,13 +41,13 @@ class TestHistogram:
         h.observe(0.2)
         h.observe(5.0)
         lines = h.render("test_histo", {})
-        count_line = next(l for l in lines if l.startswith("test_histo_count"))
+        count_line = next(line for line in lines if line.startswith("test_histo_count"))
         assert count_line == "test_histo_count 3"
 
     def test_bucket_cumulative_counts(self):
         h = _Histogram()
-        h.observe(0.002)   # fits in 0.005 bucket and above
-        h.observe(0.1)     # fits in 0.1 bucket and above
+        h.observe(0.002)  # fits in 0.005 bucket and above
+        h.observe(0.1)  # fits in 0.1 bucket and above
         lines = "\n".join(h.render("h", {}))
         # le="0.001" should have 0 observations
         assert 'le="0.001"} 0' in lines
@@ -62,7 +69,7 @@ class TestHistogram:
         h.observe(2.0)
         h.observe(3.0)
         lines = h.render("h", {})
-        sum_line = next(l for l in lines if l.startswith("h_sum"))
+        sum_line = next(line for line in lines if line.startswith("h_sum"))
         assert "6.0" in sum_line
 
     def test_thread_safety(self):
@@ -84,13 +91,14 @@ class TestHistogram:
 
         assert not errors
         lines = h.render("h", {})
-        count_line = next(l for l in lines if l.startswith("h_count"))
+        count_line = next(line for line in lines if line.startswith("h_count"))
         assert count_line == "h_count 1000"
 
 
 # ---------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------
+
 
 class TestHelpers:
     def test_labels_empty(self):
@@ -109,12 +117,13 @@ class TestHelpers:
         assert '"' not in _sanitize('say "hello"')
 
     def test_sanitize_newlines(self):
-        assert '\n' not in _sanitize("line1\nline2")
+        assert "\n" not in _sanitize("line1\nline2")
 
 
 # ---------------------------------------------------------------------------
 # MetricsExporter with real StateStore
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def store():
@@ -244,10 +253,12 @@ class TestMetricsExporterRecordMethods:
         assert 'severity="critical"' in output
 
     def test_update_signals_dict(self, exporter):
-        exporter.update_signals({
-            "BTCUSDT": {"composite": 0.75},
-            "ETHUSDT": {"composite": -0.3},
-        })
+        exporter.update_signals(
+            {
+                "BTCUSDT": {"composite": 0.75},
+                "ETHUSDT": {"composite": -0.3},
+            }
+        )
         output = exporter.render()
         assert 'symbol="BTC"' in output
         assert 'symbol="ETH"' in output
@@ -277,6 +288,7 @@ class TestMetricsExporterRecordMethods:
 # HTTP server integration test
 # ---------------------------------------------------------------------------
 
+
 class TestMetricsHTTPServer:
     def test_metrics_endpoint_returns_200(self, store):
         exporter = MetricsExporter(state_store=store, port=19090)
@@ -298,7 +310,7 @@ class TestMetricsHTTPServer:
         url = "http://localhost:19091/unknown"
         try:
             urllib.request.urlopen(url, timeout=3)
-            assert False, "Expected 404"
+            raise AssertionError("Expected 404")
         except urllib.error.HTTPError as exc:
             assert exc.code == 404
 

@@ -16,8 +16,8 @@ from omega.core.config import (
 class TestDefaults:
     def test_database_defaults(self):
         cfg = DatabaseConfig()
-        assert cfg.state_db_path == "./data/omega_victoria_state.db"
-        assert cfg.memory_db_path == "./data/omega_victoria_memory.db"
+        # DatabaseConfig is now Postgres-only; no file paths.
+        assert hasattr(cfg, "ensure_dirs")
 
     def test_nodes_defaults(self):
         cfg = NodesConfig()
@@ -47,12 +47,11 @@ class TestDefaults:
 
 
 class TestFromEnv:
-    def test_loads_db_paths_from_env(self, monkeypatch):
-        monkeypatch.setenv("OMEGA_STATE_DB_PATH", "/data/state.db")
-        monkeypatch.setenv("OMEGA_MEMORY_DB_PATH", "/data/memory.db")
+    def test_loads_database_config_from_env(self, monkeypatch):
+        monkeypatch.setenv("DATABASE_URL", "postgres://omega:omega@localhost/test")
         cfg = OmegaConfig.from_env()
-        assert cfg.database.state_db_path == "/data/state.db"
-        assert cfg.database.memory_db_path == "/data/memory.db"
+        # DatabaseConfig is Postgres-only; ensure ensure_dirs is callable
+        cfg.database.ensure_dirs()
 
     def test_loads_brain_provider_from_env(self, monkeypatch):
         monkeypatch.setenv("OMEGA_BRAIN_PROVIDER", "anthropic")
@@ -146,12 +145,9 @@ class TestFromYaml:
             pytest.skip("PyYAML not installed")
 
         yaml_file = tmp_path / "omega.yml"
-        yaml_file.write_text(
-            "database:\n  state_db_path: /custom/state.db\n  memory_db_path: /custom/memory.db\n"
-        )
+        yaml_file.write_text("monitoring:\n  log_level: DEBUG\n")
         cfg = OmegaConfig.from_yaml(str(yaml_file))
-        assert cfg.database.state_db_path == "/custom/state.db"
-        assert cfg.database.memory_db_path == "/custom/memory.db"
+        assert cfg.monitoring.log_level == "DEBUG"
 
 
 class TestLoad:

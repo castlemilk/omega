@@ -1,4 +1,9 @@
 """Unit + integration tests for DevilsAdvocateNode."""
+
+import os
+
+import pytest
+
 from omega.core.challenge_registry import ChallengeRegistry, ChallengeSeverity, ChallengeStatus
 from omega.core.node import NodeInput
 from omega.core.verification_gates import (
@@ -8,12 +13,18 @@ from omega.core.verification_gates import (
 )
 from omega.nodes.devils_advocate import DevilsAdvocateNode, ReviewMode
 
+pytestmark = pytest.mark.skipif(
+    not os.environ.get("DATABASE_URL"),
+    reason="DATABASE_URL not set — skipping Postgres integration tests",
+)
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_node(seed=False):
-    registry = ChallengeRegistry(db_path=":memory:")
+    registry = ChallengeRegistry()
     gates = VerificationGateSystem()
     if seed:
         registry.seed_initial_challenges()
@@ -28,6 +39,7 @@ def exec_node(node, action, **params):
 # ---------------------------------------------------------------------------
 # Node interface
 # ---------------------------------------------------------------------------
+
 
 class TestDevilsAdvocateInterface:
     def test_get_state_structure(self):
@@ -77,7 +89,6 @@ class TestDevilsAdvocateInterface:
 
     def test_execution_count_increments(self):
         node, _, _ = make_node()
-        state_before = node.get_state()
         exec_node(node, "architectural_review")
         exec_node(node, "complexity_audit")
         state_after = node.get_state()
@@ -87,6 +98,7 @@ class TestDevilsAdvocateInterface:
 # ---------------------------------------------------------------------------
 # Operating modes
 # ---------------------------------------------------------------------------
+
 
 class TestArchitecturalReview:
     def test_returns_report(self):
@@ -132,7 +144,7 @@ class TestArchitecturalReview:
 
 class TestImplementationAudit:
     def test_returns_report(self):
-        node, reg, _ = make_node()
+        node, _reg, _ = make_node()
         out = exec_node(node, "implementation_audit", subsystem="memory")
         assert out.success
         assert out.result["mode"] == "implementation_audit"
@@ -172,7 +184,7 @@ class TestAssumptionStressTest:
         assert out.result["verdict"] == "HOLDING"
 
     def test_seeded_challenges_are_broken(self):
-        node, reg, _ = make_node(seed=True)
+        node, _reg, _ = make_node(seed=True)
         out = exec_node(node, "assumption_stress_test")
         # With seeded challenges including CRITICAL ones, verdict must be BROKEN
         assert out.result["verdict"] == "BROKEN"
@@ -181,19 +193,21 @@ class TestAssumptionStressTest:
 
 class TestRegressionHunt:
     def test_clean_when_no_regression(self):
-        node, reg, gates = make_node()
-        gates.register(RegressionGate("sharpe", metric="sharpe", direction="maximize", threshold_pct=10.0))
-        out = exec_node(node, "regression_hunt",
-                        before={"sharpe": 1.0}, after={"sharpe": 1.1})
+        node, _reg, gates = make_node()
+        gates.register(
+            RegressionGate("sharpe", metric="sharpe", direction="maximize", threshold_pct=10.0)
+        )
+        out = exec_node(node, "regression_hunt", before={"sharpe": 1.0}, after={"sharpe": 1.1})
         assert out.success
         assert out.result["verdict"] == "CLEAN"
         assert out.result["regressions_found"] == 0
 
     def test_regression_detected_and_challenge_raised(self):
         node, reg, gates = make_node()
-        gates.register(RegressionGate("sharpe", metric="sharpe", direction="maximize", threshold_pct=10.0))
-        out = exec_node(node, "regression_hunt",
-                        before={"sharpe": 1.0}, after={"sharpe": 0.5})
+        gates.register(
+            RegressionGate("sharpe", metric="sharpe", direction="maximize", threshold_pct=10.0)
+        )
+        out = exec_node(node, "regression_hunt", before={"sharpe": 1.0}, after={"sharpe": 0.5})
         assert out.success
         assert out.result["verdict"] == "REGRESSION_DETECTED"
         assert out.result["regressions_found"] >= 1
@@ -202,12 +216,19 @@ class TestRegressionHunt:
         assert len(regression_chs) >= 1
 
     def test_multiple_regressions_all_raise_challenges(self):
-        node, reg, gates = make_node()
-        gates.register(RegressionGate("sharpe", metric="sharpe", direction="maximize", threshold_pct=5.0))
-        gates.register(RegressionGate("accuracy", metric="accuracy", direction="maximize", threshold_pct=5.0))
-        out = exec_node(node, "regression_hunt",
-                        before={"sharpe": 1.0, "accuracy": 0.9},
-                        after={"sharpe": 0.5, "accuracy": 0.5})
+        node, _reg, gates = make_node()
+        gates.register(
+            RegressionGate("sharpe", metric="sharpe", direction="maximize", threshold_pct=5.0)
+        )
+        gates.register(
+            RegressionGate("accuracy", metric="accuracy", direction="maximize", threshold_pct=5.0)
+        )
+        out = exec_node(
+            node,
+            "regression_hunt",
+            before={"sharpe": 1.0, "accuracy": 0.9},
+            after={"sharpe": 0.5, "accuracy": 0.5},
+        )
         assert out.result["regressions_found"] == 2
         assert len(out.result["new_challenges_raised"]) == 2
 
@@ -222,7 +243,7 @@ class TestComplexityAudit:
         assert "recommendation" in out.result
 
     def test_seeded_challenges_flag_complexity(self):
-        node, reg, _ = make_node(seed=True)
+        node, _reg, _ = make_node(seed=True)
         out = exec_node(node, "complexity_audit")
         # Seeded challenges include ones about O(5n) overhead, layers, etc.
         assert out.result["complexity_challenge_count"] >= 1
@@ -232,25 +253,32 @@ class TestComplexityAudit:
 # Integration test: DA catches a real regression
 # ---------------------------------------------------------------------------
 
+
 class TestIntegration:
     def test_catches_sharpe_regression_end_to_end(self):
         """Full flow: gate registered → regression occurs → challenge raised → report shows failure."""
-        registry = ChallengeRegistry(db_path=":memory:")
+        registry = ChallengeRegistry()
         gates = VerificationGateSystem()
-        gates.register(RegressionGate(
-            "sharpe_regression", metric="sharpe_ratio",
-            direction="maximize", threshold_pct=15.0,
-        ))
+        gates.register(
+            RegressionGate(
+                "sharpe_regression",
+                metric="sharpe_ratio",
+                direction="maximize",
+                threshold_pct=15.0,
+            )
+        )
         node = DevilsAdvocateNode(registry=registry, gate_system=gates)
 
         # Simulate improvement that regresses Sharpe by 33%
-        out = node.execute(NodeInput(
-            action="regression_hunt",
-            parameters={
-                "before": {"sharpe_ratio": 1.5},
-                "after":  {"sharpe_ratio": 1.0},
-            },
-        ))
+        out = node.execute(
+            NodeInput(
+                action="regression_hunt",
+                parameters={
+                    "before": {"sharpe_ratio": 1.5},
+                    "after": {"sharpe_ratio": 1.0},
+                },
+            )
+        )
 
         assert out.success
         assert out.result["gate_results"]["failed"] >= 1
@@ -263,7 +291,7 @@ class TestIntegration:
         assert "sharpe" in regression_chs[0].description.lower()
 
     def test_no_veto_when_gates_pass_and_no_critical(self):
-        registry = ChallengeRegistry(db_path=":memory:")
+        registry = ChallengeRegistry()
         gates = VerificationGateSystem()
         gates.register(PropertyGate("health_ok", lambda ctx: True, "health is fine"))
         node = DevilsAdvocateNode(registry=registry, gate_system=gates)
@@ -273,7 +301,7 @@ class TestIntegration:
         assert out.result["veto"] is False
 
     def test_evaluate_metrics_reflect_registry_state(self):
-        registry = ChallengeRegistry(db_path=":memory:")
+        registry = ChallengeRegistry()
         registry.seed_initial_challenges()
         node = DevilsAdvocateNode(registry=registry)
 

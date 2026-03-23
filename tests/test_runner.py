@@ -68,7 +68,7 @@ class TestOmegaRunnerSetup:
         with (
             patch("omega.core.config.OmegaConfig.load", return_value=cfg),
             patch("omega.core.logging.configure_logging"),
-            patch("omega.core.state_store.StateStore"),
+            patch("omega.core.state_store.make_state_backend", return_value=MagicMock()),
             patch("omega.core.metrics_exporter.MetricsExporter", return_value=mock_exporter_inst),
             patch("omega.core.orchestrator.Orchestrator"),
             patch.object(OmegaRunner, "_setup_nodes"),
@@ -86,7 +86,7 @@ class TestOmegaRunnerSetup:
         with (
             patch("omega.core.config.OmegaConfig.load", return_value=cfg),
             patch("omega.core.logging.configure_logging"),
-            patch("omega.core.state_store.StateStore"),
+            patch("omega.core.state_store.make_state_backend", return_value=MagicMock()),
             patch("omega.core.metrics_exporter.MetricsExporter", return_value=MagicMock()),
             patch("omega.core.orchestrator.Orchestrator"),
             patch.object(OmegaRunner, "_setup_nodes"),
