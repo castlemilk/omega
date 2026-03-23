@@ -137,6 +137,9 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 		hCtx, hCancel := context.WithTimeout(cycleCtx, o.cfg.HealthCheckTimeout)
 		healthReport := o.health.Check(hCtx)
 		hCancel()
+		if o.metrics != nil {
+			o.metrics.SetHealthScore(healthScoreFromState(healthReport.State))
+		}
 		if healthReport.State == observability.HealthStateUnhealthy {
 			o.logger.Warn("full_cycle: system unhealthy, aborting",
 				"cycle_id", cycleID, "state", healthReport.State.String())
@@ -188,6 +191,9 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 			nr.IsRetryable = true
 			o.logger.Info("full_cycle: node skipped (circuit open)", "node_id", nodeID)
 			o.updateNodeState(nodeID, "active", "skipped", "circuit open")
+			if o.metrics != nil {
+				o.metrics.IncNodeExecution(nodeID, "skipped")
+			}
 			if cfg.Autonomy != nil {
 				cfg.Autonomy.RecordCycleMetrics(nodeID, cycleID, nil, false)
 			}
@@ -207,6 +213,9 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 				for _, v := range violations {
 					report.SafetyViolations = append(report.SafetyViolations, fmt.Sprintf("[%s] %s", nodeID, v))
 					o.EmitSafetyViolation(nodeID, "safety_envelope", "high", v)
+					if o.metrics != nil {
+						o.metrics.IncIssue("high", "safety_envelope")
+					}
 				}
 			}
 		} else {
@@ -245,12 +254,17 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 				"error_class", cls.Class, "error_code", cls.Code, "retryable", cls.Retryable)
 			if o.metrics != nil {
 				o.metrics.RecordNodeExecution(nodeID, nr.Duration.Seconds(), false)
+				o.metrics.IncNodeExecution(nodeID, "error")
+				o.metrics.ObserveNodeDuration(nodeID, nr.Duration.Seconds())
+				o.metrics.IncError(nodeID, errorClassName(cls.Class))
 			}
 		} else {
 			nr.Executed = true
 			o.circuit.RecordSuccess(nodeID)
 			if o.metrics != nil {
 				o.metrics.RecordNodeExecution(nodeID, nr.Duration.Seconds(), true)
+				o.metrics.IncNodeExecution(nodeID, "success")
+				o.metrics.ObserveNodeDuration(nodeID, nr.Duration.Seconds())
 			}
 		}
 
@@ -300,6 +314,9 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 				nr.Ring2Triggered = len(adversarialReport.BaseReport.Ring2Scenarios) > 0
 				nr.Ring3Triggered = adversarialReport.BaseReport.Ring3Result != nil
 
+				if o.metrics != nil {
+					o.metrics.IncIssue("medium", "adversarial")
+				}
 				o.EmitAdversarialAlert(1, nodeID, nr.AdversarialScore,
 					cfg.AdversarialV2.Ring1().DisagreementThreshold)
 
@@ -459,6 +476,7 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 			status = "error"
 		}
 		o.metrics.RecordCycle(duration.Seconds(), status)
+		o.metrics.IncCycles()
 	}
 
 	o.logger.Info("full_cycle: completed",
@@ -472,4 +490,36 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 	)
 
 	return report, nil
+}
+
+// healthScoreFromState converts a HealthState to a numeric score (0–100).
+func healthScoreFromState(state observability.HealthState) float64 {
+	switch state {
+	case observability.HealthStateHealthy:
+		return 100
+	case observability.HealthStateDegraded:
+		return 50
+	default:
+		return 0
+	}
+}
+
+// errorClassName returns a readable string label for a given ErrorClass.
+func errorClassName(cls omegaerrs.ErrorClass) string {
+	switch cls {
+	case omegaerrs.ErrorClassTimeout:
+		return "timeout"
+	case omegaerrs.ErrorClassDataQuality:
+		return "data_quality"
+	case omegaerrs.ErrorClassDependencyFailure:
+		return "dependency_failure"
+	case omegaerrs.ErrorClassResourceExhaustion:
+		return "resource_exhaustion"
+	case omegaerrs.ErrorClassValidationError:
+		return "validation_error"
+	case omegaerrs.ErrorClassLLMError:
+		return "llm_error"
+	default:
+		return "unknown"
+	}
 }
