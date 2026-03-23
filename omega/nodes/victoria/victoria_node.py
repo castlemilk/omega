@@ -206,8 +206,25 @@ class VictoriaNode(Node):
             "execution_count": float(self._execution_count),
         }
 
+    def get_param_space(self) -> list:
+        """
+        Victoria's TPE hyperparameter space.
+
+        These are the parameters the improvement engine will optimise
+        across cycles.  All bounds are chosen to be safe for pico-mode
+        operation without live capital.
+        """
+        from omega.core.bayesian_optimizer import ContinuousParam, DiscreteParam
+
+        return [
+            ContinuousParam("signal_threshold", 0.0, 1.0),
+            DiscreteParam("lookback_days", 10, 90),
+            ContinuousParam("risk_scale", 0.5, 2.0),
+            DiscreteParam("top_n_signals", 3, 10),
+        ]
+
     def improve(self, feedback: dict[str, Any]) -> bool:
-        """Delegate improvement to inner nodes."""
+        """Delegate improvement feedback to inner nodes."""
         changed = False
         for node in (self._ingestion, self._signals, self._strategy):
             try:

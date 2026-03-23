@@ -242,6 +242,17 @@ class OmegaOrchestrator:
         self._node_health[node_id] = NodeHealth(node_id)
         if activate:
             self._active_node_ids.add(node_id)
+
+        # Auto-register with improvement engine if the node declares a param space.
+        param_space = node.get_param_space()
+        if param_space and not self._improvement_engine.is_registered(node_id):
+            self._improvement_engine.register_node(node_id, param_space)
+            logger.info(
+                "Registered node '%s' with ImprovementEngine (%d params)",
+                state.name,
+                len(param_space),
+            )
+
         logger.info("Registered node '%s' (id=%s, activate=%s)", state.name, node_id, activate)
         return node_id
 
@@ -864,20 +875,50 @@ class OmegaOrchestrator:
             except Exception:
                 pass  # scheduler optional
             try:
+                # Build context with real cycle metrics so TPE can use actual
+                # Sharpe ratio and error rate rather than synthetic scores.
+                health_rec = self._node_health.get(nid)
+                real_metrics = dict(result.metrics)
+                if health_rec:
+                    real_metrics.setdefault("error_rate", 1.0 - health_rec.avg_health)
+                # Sharpe from recent history
+                recent = self._history.recent(30)
+                if len(recent) >= 5:
+                    cycle_sharpes = [
+                        float(c.metrics.get("sharpe", 0.0))
+                        for c in recent
+                        if hasattr(c, "metrics")
+                    ]
+                    if cycle_sharpes:
+                        mean_s = sum(cycle_sharpes) / len(cycle_sharpes)
+                        real_metrics.setdefault("sharpe", mean_s)
+
                 params = self._improvement_engine.propose(nid)
                 trial = self._improvement_engine.evaluate_and_record(
                     nid,
                     params,
-                    context={"regime": ctx.regime, "cycle": ctx.cycle_number},
+                    context={
+                        "regime": ctx.regime,
+                        "cycle": ctx.cycle_number,
+                        **real_metrics,
+                    },
                     cycle=ctx.cycle_number,
                 )
                 result.improvement_proposed = True
                 log.info(
-                    "TPE improvement for node %s: score=%.4f accepted=%s",
+                    "TPE improvement for node %s: score=%.4f accepted=%s params=%s",
                     nid,
                     trial.score,
                     trial.accepted,
+                    params,
                 )
+                # Apply accepted params to the live node so improvements take effect.
+                if trial.accepted:
+                    try:
+                        node.improve(params)
+                        log.info("Applied improved params to node %s: %s", nid, params)
+                    except Exception as apply_exc:
+                        log.warning("apply_params via improve() failed for %s: %s", nid, apply_exc)
                 if self._metrics:
                     self._metrics.record_improvement(
                         result="improved" if trial.accepted else "unchanged"

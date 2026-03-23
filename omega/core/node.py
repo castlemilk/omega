@@ -305,6 +305,23 @@ class Node(ABC):
         """
 
     # ------------------------------------------------------------------
+    # TPE improvement (optional — override to participate in self-improvement)
+    # ------------------------------------------------------------------
+
+    def get_param_space(self) -> list:
+        """
+        Return the TPE parameter space for this node.
+
+        The default returns an empty list, which disables self-improvement
+        for this node.  Override in project-specific nodes to define the
+        hyperparameters that the improvement engine should optimise.
+
+        Returns a list of ``Param`` objects (``ContinuousParam``,
+        ``DiscreteParam``, or ``CategoricalParam`` from
+        ``omega.core.bayesian_optimizer``).
+        """
+        return []
+
     # State tensor (optional — override to participate in attention routing)
     # ------------------------------------------------------------------
 
