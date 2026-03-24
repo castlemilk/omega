@@ -41,6 +41,7 @@ from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
+from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
     CrossAssetSignal,
@@ -108,6 +109,9 @@ class VictoriaNode(Node):
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
+
+        # Risk management node (used for DebateGate)
+        self._risk_management = RiskManagementNode()
 
         # Runtime state
         self._last_market_data: dict[str, Any] = {}
@@ -205,9 +209,32 @@ class VictoriaNode(Node):
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._total_latency_ms += elapsed
                 return result_out
+            elif action == "debategate":
+                # Real risk debate — bull/bear scoring + risk-limit check.
+                portfolio_weights: dict[str, float] = {}
+                if "portfolio" in inp.parameters and isinstance(inp.parameters["portfolio"], dict):
+                    portfolio_weights = inp.parameters["portfolio"].get("weights", {})
+                elif "_weights" in self._last_signals:
+                    raw_w = self._last_signals["_weights"]
+                    portfolio_weights = {
+                        k: float(v)
+                        for k, v in raw_w.items()
+                        if not k.startswith("_") and isinstance(v, (int, float))
+                    }
+                result = self._risk_management.risk_debate(
+                    signals=self._last_signals,
+                    portfolio_weights=portfolio_weights,
+                    market_data=self._last_market_data,
+                )
+                logger.info(
+                    "DebateGate: bull=%.3f bear=%.3f recommendation=%s violations=%d",
+                    result["bull_score"],
+                    result["bear_score"],
+                    result["recommendation"],
+                    len(result["violations"]),
+                )
             elif action in (
                 "verification",
-                "debategate",
                 "walkforward",
                 "memory",
                 "adversarial",
@@ -230,11 +257,21 @@ class VictoriaNode(Node):
 
             elapsed = (time.perf_counter() - t0) * 1000
             self._total_latency_ms += elapsed
+
+            # Promote debate consensus metrics so Go can observe them via Prometheus.
+            extra_metrics: dict[str, float] = {}
+            if action == "debategate" and isinstance(result, dict):
+                extra_metrics = {
+                    k: float(v)
+                    for k, v in result.items()
+                    if k in ("bull_score", "bear_score", "edge") and isinstance(v, (int, float))
+                }
+
             return NodeOutput(
                 request_id=inp.request_id,
                 success=True,
                 result=result,
-                metrics={"latency_ms": elapsed},
+                metrics={"latency_ms": elapsed, **extra_metrics},
             )
 
         except Exception as exc:

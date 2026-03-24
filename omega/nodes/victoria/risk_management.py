@@ -752,6 +752,75 @@ class RiskManagementNode(Node):
                 continue
         return result
 
+    def risk_debate(
+        self,
+        signals: dict[str, Any],
+        portfolio_weights: dict[str, float] | None = None,
+        market_data: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Structured bull/bear debate on a proposed portfolio.
+
+        Aggregates positive-direction signals into a bull_score and risk /
+        negative-direction signals into a bear_score.  Optionally runs a
+        full risk-limit check when portfolio_weights are provided.
+
+        Returns a consensus dict with:
+            bull_score     : float 0..1
+            bear_score     : float 0..1
+            recommendation : "go" | "hold" | "abort"
+            violations     : list[str] — risk constraint breaches
+            edge           : float — bull_score minus bear_score
+        """
+        market_data = market_data or {}
+        portfolio_weights = portfolio_weights or {}
+
+        bull_contributions: list[float] = []
+        bear_contributions: list[float] = []
+
+        for name, sig in signals.items():
+            if name.startswith("_"):
+                continue
+            if not isinstance(sig, dict):
+                continue
+            value = float(sig.get("value", 0.0))
+            confidence = float(sig.get("confidence", 0.5))
+            weighted = abs(value) * confidence
+            if value > 0:
+                bull_contributions.append(weighted)
+            elif value < 0:
+                bear_contributions.append(weighted)
+
+        bull_score = min(1.0, sum(bull_contributions) / max(len(bull_contributions), 1))
+        bear_score = min(1.0, sum(bear_contributions) / max(len(bear_contributions), 1))
+
+        # Risk-limit check (uses existing _check_risk_limits machinery)
+        violations: list[str] = []
+        if portfolio_weights:
+            try:
+                risk_result = self._check_risk_limits(
+                    {"weights": portfolio_weights},
+                    market_data,
+                )
+                violations = risk_result.get("violations", [])
+            except Exception as exc:
+                logger.debug("risk_debate: risk-limit check failed: %s", exc)
+
+        edge = bull_score - bear_score
+        if violations or edge < -0.1:
+            recommendation = "abort"
+        elif edge >= 0.2:
+            recommendation = "go"
+        else:
+            recommendation = "hold"
+
+        return {
+            "bull_score": bull_score,
+            "bear_score": bear_score,
+            "recommendation": recommendation,
+            "violations": violations,
+            "edge": edge,
+        }
+
     # ------------------------------------------------------------------ helpers
 
     def _avg_latency_ms(self) -> float:

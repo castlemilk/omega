@@ -806,6 +806,14 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 				results = append(results, sr)
 				projectResults = append(projectResults, sr)
 
+				// Wire quality_score from SIGNAL_RESEARCH step into Prometheus health gauge.
+				// The Python pipeline computes quality_score (0..1) and returns it in Metrics.
+				if sr.NodeType == "SIGNAL_RESEARCH" && sr.Success && h.metrics != nil {
+					if qs, ok := sr.Metrics["quality_score"]; ok {
+						h.metrics.SetHealthScore(qs * 100.0)
+					}
+				}
+
 				// ── DARK signal: improvement log ────────────────────────────────────
 				if sr.NodeType == "IMPROVEMENT" && sr.NodeID != "" {
 					if err := h.db.RecordImprovement(
@@ -1204,11 +1212,8 @@ func (h *OrchestratorHandler) recordGoalTracking(projectID string, cycle int64, 
 			break
 		}
 	}
-	if evalConfig == nil || len(evalConfig.MetricTargets) == 0 {
-		return
-	}
-
-	// Gather any metrics from step results to compare against targets
+	// Gather any metrics from step results to compare against targets.
+	// Done before the evalConfig early-return so quality_score is always available.
 	stepMetrics := make(map[string]float64)
 	for _, r := range results {
 		for k, v := range r.Metrics {
@@ -1218,7 +1223,34 @@ func (h *OrchestratorHandler) recordGoalTracking(projectID string, cycle int64, 
 		}
 	}
 
-	// Compute composite score and scorecard
+	if evalConfig == nil || len(evalConfig.MetricTargets) == 0 {
+		// No eval config targets — still record when quality_score is available
+		// so goal tracking reflects Python pipeline reality even without a target spec.
+		qs, hasQS := stepMetrics["quality_score"]
+		if !hasQS {
+			return
+		}
+		avgConf := stepMetrics["avg_confidence"]
+		sigCount := stepMetrics["signal_count"]
+		_, _ = h.db.RecordGoalTracking(
+			cycle,
+			true,
+			qs,
+			map[string]any{
+				"quality_score":  map[string]any{"current": qs, "target": 0.0, "gap": 0.0},
+				"avg_confidence": map[string]any{"current": avgConf, "target": 0.0, "gap": 0.0},
+				"signal_count":   map[string]any{"current": sigCount, "target": 0.0, "gap": 0.0},
+			},
+			map[string]any{},
+			0.0,
+			map[string]any{"project_id": projectID, "source": "quality_score_fallback"},
+			[]string{},
+			[]string{},
+		)
+		return
+	}
+
+	// Compute composite score and scorecard against configured targets.
 	var compositeScore float64
 	scorecard := make(map[string]any, len(evalConfig.MetricTargets))
 	violations := make([]string, 0)
@@ -1242,6 +1274,12 @@ func (h *OrchestratorHandler) recordGoalTracking(projectID string, cycle int64, 
 	}
 	if len(evalConfig.MetricTargets) > 0 {
 		compositeScore /= float64(len(evalConfig.MetricTargets))
+	}
+
+	// Override with actual quality_score when available — prefer reality over
+	// the MetricTargets ratio which can be 0 if targets aren't calibrated yet.
+	if qs, ok := stepMetrics["quality_score"]; ok && compositeScore == 0 {
+		compositeScore = qs
 	}
 
 	_, _ = h.db.RecordGoalTracking(
