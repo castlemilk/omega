@@ -1639,4 +1639,75 @@ Full description scoped as **EPIC-028**. The deeper research question: can the d
 ---
 
 *Document authored: March 2026. Next review: June 2026 (Q2 retrospective).*
+
+---
+
+## Research-Driven Backlog Items (2026-03-24)
+
+### Victoria Project Enhancements (from research)
+
+**From TradingAgents (TauricResearch):**
+- V-TR1: Per-agent memory with LLM reflection — BM25 memory per node, post-trade reflection feeding lessons back *(HIGHEST PRIORITY from TradingAgents research)*
+- V-TR2: Two-tier LLM architecture — deep model for analysis, quick model for signal extraction in brain.py
+- V-TR3: 5-point conviction rating scale — Buy/Overweight/Hold/Underweight/Sell mapping to position sizing
+- V-TR4: Multi-perspective risk debate — 3 risk personas in RiskManagementNode
+- V-TR5: Bull/Bear formative debate — pre-strategy debate complementing post-hoc adversarial Rings
+- V-TR6: Specialist analyst decomposition — split DataIngestion into 4 concurrent sub-agents
+
+**From VRP/Volatility Research (Christensen & Prabhala):**
+- V-VRP1: VRP signal node — DONE (implemented, Deribit IV + funding rate proxy + Garman-Klass RV)
+- V-VRP2: VRP-adjusted risk management — DONE (position scaling by regime)
+- V-VRP3: Polymarket volatility harvester — sell both sides when IV >> RV on 15-min rounds
+
+**From Crypto Rating Research (@0xricker):**
+- V-CR1: LiquidationCascadeNode — Coinglass API monitoring for leverage clusters (~$29/mo)
+- V-CR2: OnChainDataNode — DefiLlama/CryptoQuant for TVL flows, whale movements, exchange reserves
+- V-CR3: Crowd reaction velocity estimator — model retail flow direction + magnitude from news events
+
+**From @browomo Analysis:**
+- V-BR1: Crowd reaction velocity signal — covered by V-CR3 above
+- V-BR2: Cross-market conditional logic — Event A implies Event B, bet on B before market updates
+
+---
+
+### Polymarket Project (NEW)
+
+**Core Infrastructure:**
+- P-01: PolymarketDataNode — Gamma API for markets/events, CLOB for prices/orderbooks *(Go client DONE at internal/polymarket/)*
+- P-02: PolymarketExecutionNode — py-clob-client, paper mode first, EIP-712 wallet auth for live
+- P-03: CrossMarketSignalNode — Binance ↔ Polymarket divergence, OB imbalance, funding extremes
+- P-04: SignalToBinaryNode — translate continuous signals to YES/NO decisions
+- P-05: IncubationManagerNode — gradual scaling $1 → $100 as strategy proves itself
+- P-06: projects/polymarket.yaml — project config with pipeline steps
+
+**Weather Trading (highest proven edge):**
+- P-W1: WeatherDataIngestionNode — Open-Meteo ensemble API (GEFS 31 + ECMWF 51), free, no key
+- P-W2: WeatherEnsembleNode — count members exceeding threshold → probability
+- P-W3: EdgeDetectionNode — model probability vs market price, bet when edge > 8%
+- P-W4: Temperature ladder strategy — buy adjacent buckets simultaneously
+- P-W5: Price-threshold baseline gate — YES < 15¢, NO > 45¢ as day-one fallback
+- P-W6: Model release cadence scheduler — align entries to GFS/ECMWF update times
+
+**Crypto 5-min Rounds:**
+- P-C1: MACD/RSI+VWAP/CVD strategies for BTC/ETH/SOL binary rounds
+- P-C2: Latency optimization — WebSocket order book monitoring
+- P-C3: BinaryResolverNode — track 5-min round outcomes for PnL
+
+---
+
+### Omega Platform Enhancements
+
+**Research Pipeline:**
+- O-R1: /research Cowork skill — structured idea → research → Omega comparison → verdict pipeline
+- O-R2: SN13/Gravity API integration for Twitter feed monitoring ($0-5/mo)
+- O-R3: RecentContextNode — shared platform capability aggregating recent events from multiple sources
+- O-R4: Scheduled research task — every 30 min poll curated account list, run through research pipeline
+
+**Platform Infrastructure:**
+- O-P1: YAML project loader — DONE
+- O-P2: Project schema isolation — DONE (per-project Postgres schemas)
+- O-P3: Project lifecycle management — DONE (start/stop)
+- O-P4: Multi-project heartbeat resilience — DONE (panic recovery per project)
+- O-P5: Attention router training pipeline — accumulate 1000+ outcomes, offline train, hot-swap weights
+- O-P6: Polymarket Go client — DONE (internal/polymarket/, 17 tests)
 *Owner: Ben Ebsworth. Classification: Internal.*
