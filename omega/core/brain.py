@@ -26,7 +26,57 @@ import urllib.error
 import urllib.request
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
+
+# ---------------------------------------------------------------------------
+# ModelTier — two-tier LLM selection
+# ---------------------------------------------------------------------------
+
+
+class ModelTier(Enum):
+    """
+    Selects which model class to use for a brain call.
+
+    QUICK — fast, cheap models for high-frequency calls (signal extraction, filters).
+             Default: claude-haiku-4-5 / gpt-4o-mini.  Override: OMEGA_BRAIN_QUICK_MODEL.
+    DEEP  — slow, smart models for complex reasoning (adversarial debate, planning).
+             Default: claude-opus-4-6 / gpt-4o.  Override: OMEGA_BRAIN_DEEP_MODEL.
+    """
+
+    QUICK = "quick"
+    DEEP = "deep"
+
+
+# Provider-specific tier defaults
+_TIER_DEFAULTS: dict[str, dict[ModelTier, str]] = {
+    "anthropic": {
+        ModelTier.QUICK: "claude-haiku-4-5-20251001",
+        ModelTier.DEEP: "claude-opus-4-6",
+    },
+    "openai": {
+        ModelTier.QUICK: "gpt-4o-mini",
+        ModelTier.DEEP: "gpt-4o",
+    },
+    "deepseek": {
+        ModelTier.QUICK: "deepseek-chat",
+        ModelTier.DEEP: "deepseek-reasoner",
+    },
+    "ollama": {
+        ModelTier.QUICK: "llama3",
+        ModelTier.DEEP: "llama3",
+    },
+    "google": {
+        ModelTier.QUICK: "gemini-1.5-flash",
+        ModelTier.DEEP: "gemini-1.5-pro",
+    },
+}
+
+_TIER_ENV: dict[ModelTier, str] = {
+    ModelTier.QUICK: "OMEGA_BRAIN_QUICK_MODEL",
+    ModelTier.DEEP: "OMEGA_BRAIN_DEEP_MODEL",
+}
+
 
 # ---------------------------------------------------------------------------
 # Data contracts
@@ -107,6 +157,32 @@ class BrainAdapter(ABC):
     def is_available(self) -> bool:
         """Return True if this provider is reachable (key configured, service up)."""
 
+    def consult(self, prompt: str, tier: ModelTier = ModelTier.QUICK) -> str:
+        """
+        Send a plain-text prompt; return the model's text response.
+
+        Lighter-weight than think() — no structured request/response wrapping.
+        Use ModelTier.QUICK for signal generation (fast, cheap).
+        Use ModelTier.DEEP for adversarial debate and complex reasoning (slow, smart).
+
+        Tier model selection precedence:
+          1. OMEGA_BRAIN_QUICK_MODEL / OMEGA_BRAIN_DEEP_MODEL env vars
+          2. Provider-specific defaults in _TIER_DEFAULTS
+          3. The adapter's configured model
+
+        Returns empty string if the provider is unavailable or on error.
+        Subclasses should override to make a real HTTP call.
+        """
+        return ""
+
+    def _tier_model(self, tier: ModelTier) -> str:
+        """Resolve the model name for the given tier, respecting env overrides."""
+        env_override = os.environ.get(_TIER_ENV.get(tier, ""), "")
+        if env_override:
+            return env_override
+        provider = self.provider_name()
+        return _TIER_DEFAULTS.get(provider, {}).get(tier, "")
+
     def provider_name(self) -> str:
         """Human-readable name for logging / StateStore records."""
         return type(self).__name__
@@ -135,6 +211,9 @@ class NoBrain(BrainAdapter):
             reasoning="No LLM brain configured — using rule-based logic",
             confidence=0.0,
         )
+
+    def consult(self, prompt: str, tier: ModelTier = ModelTier.QUICK) -> str:
+        return ""
 
     def is_available(self) -> bool:
         return True
@@ -230,6 +309,32 @@ class AnthropicBrain(BrainAdapter):
                 reasoning=f"AnthropicBrain error: {exc}",
                 confidence=0.0,
             )
+
+    def consult(self, prompt: str, tier: ModelTier = ModelTier.QUICK) -> str:
+        if not self._api_key:
+            return ""
+        model = self._tier_model(tier) or self._model
+        try:
+            payload = {
+                "model": model,
+                "max_tokens": self.config.max_tokens,
+                "messages": [{"role": "user", "content": prompt}],
+            }
+            req = urllib.request.Request(
+                self.API_URL,
+                data=json.dumps(payload).encode(),
+                headers={
+                    "Content-Type": "application/json",
+                    "x-api-key": self._api_key,
+                    "anthropic-version": self.ANTHROPIC_VERSION,
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = json.loads(resp.read())
+            return str(body["content"][0]["text"]).strip()
+        except Exception:
+            return ""
 
     def _build_prompt(self, request: BrainRequest) -> str:
         metrics_str = json.dumps(request.recent_metrics, indent=2)
@@ -354,6 +459,32 @@ class OpenAIBrain(BrainAdapter):
                 reasoning=f"OpenAIBrain error: {exc}",
                 confidence=0.0,
             )
+
+    def consult(self, prompt: str, tier: ModelTier = ModelTier.QUICK) -> str:
+        if not self._api_key:
+            return ""
+        model = self._tier_model(tier) or self._model
+        try:
+            payload = {
+                "model": model,
+                "max_tokens": self.config.max_tokens,
+                "temperature": self.config.temperature,
+                "messages": [{"role": "user", "content": prompt}],
+            }
+            req = urllib.request.Request(
+                self._api_url,
+                data=json.dumps(payload).encode(),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self._api_key}",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                body = json.loads(resp.read())
+            return str(body["choices"][0]["message"]["content"]).strip()
+        except Exception:
+            return ""
 
     def _build_prompt(self, request: BrainRequest) -> str:
         return (

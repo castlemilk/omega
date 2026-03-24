@@ -811,3 +811,120 @@ class NodeMemory:
             "episodic_count": episode_count,
             "semantic_count": len(semantic_list),
         }
+
+
+# ---------------------------------------------------------------------------
+# NodeReflectionStore — per-node cycle reflections with LLM-generated lessons
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class NodeReflection:
+    """A single per-node cycle reflection with an extracted lesson."""
+
+    memory_id: str
+    node_id: str
+    cycle: int
+    reflection_text: str
+    lesson_extracted: str
+    created_at: float
+
+
+class NodeReflectionStore:
+    """
+    Persistent store for per-node cycle reflections.
+
+    After each cycle a node can record a brief reflection on what happened
+    (signal quality, regime, notable outcomes) and a one-line lesson extracted
+    from that reflection.  The last N reflections are injected into the node's
+    context before the next cycle, giving the node a form of short-term
+    autobiographical memory.
+
+    Storage: ``node_memories`` table in Postgres (created by the Go bootstrap).
+
+    Usage::
+        store = NodeReflectionStore()
+
+        # After a cycle
+        store.store_reflection(
+            node_id="VictoriaNode",
+            cycle=7,
+            reflection_text="Signals were weak (avg_conf=0.31). High-vol regime ...",
+            lesson_extracted="Reduce position sizes in high-vol regime.",
+        )
+
+        # Before next cycle — inject into context
+        context_str = store.get_context_prompt("VictoriaNode", limit=5)
+    """
+
+    def __init__(self, dsn: str | None = None) -> None:
+        import psycopg
+        from psycopg.rows import dict_row
+
+        _dsn = dsn or os.environ.get("DATABASE_URL", "")
+        if not _dsn:
+            raise RuntimeError("NodeReflectionStore: DATABASE_URL not set")
+        self._conn = psycopg.connect(_dsn, row_factory=dict_row)
+        logger.debug("NodeReflectionStore connected")
+
+    def store_reflection(
+        self,
+        node_id: str,
+        cycle: int,
+        reflection_text: str,
+        lesson_extracted: str,
+    ) -> str:
+        """Persist a reflection. Returns the new memory_id."""
+        memory_id = str(uuid.uuid4())
+        self._conn.execute(
+            """
+            INSERT INTO node_memories
+                (memory_id, node_id, cycle, reflection_text, lesson_extracted, created_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (memory_id, node_id, cycle, reflection_text, lesson_extracted, time.time()),
+        )
+        self._conn.commit()
+        return memory_id
+
+    def get_recent_reflections(
+        self,
+        node_id: str,
+        limit: int = 5,
+    ) -> list[NodeReflection]:
+        """Return the most recent *limit* reflections for a node, newest first."""
+        rows = self._conn.execute(
+            """
+            SELECT memory_id, node_id, cycle, reflection_text, lesson_extracted, created_at
+            FROM node_memories
+            WHERE node_id = %s
+            ORDER BY cycle DESC, created_at DESC
+            LIMIT %s
+            """,
+            (node_id, limit),
+        ).fetchall()
+        return [
+            NodeReflection(
+                memory_id=r["memory_id"],
+                node_id=r["node_id"],
+                cycle=r["cycle"],
+                reflection_text=r["reflection_text"],
+                lesson_extracted=r["lesson_extracted"],
+                created_at=r["created_at"],
+            )
+            for r in rows
+        ]
+
+    def get_context_prompt(self, node_id: str, limit: int = 5) -> str:
+        """
+        Format recent reflections as a context block suitable for LLM injection.
+
+        Returns empty string if no reflections exist yet.
+        """
+        reflections = self.get_recent_reflections(node_id, limit=limit)
+        if not reflections:
+            return ""
+        lines = ["Recent cycle lessons (most recent first):"]
+        for r in reflections:
+            lines.append(f"  Cycle {r.cycle}: {r.lesson_extracted}")
+        return "\n".join(lines)
