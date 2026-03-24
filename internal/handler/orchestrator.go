@@ -778,6 +778,20 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 					h.metrics.ObserveNodeDuration(step.Name, elapsed/1000)
 				}
 				stepSpan.End()
+
+				// Record execution outcome and update Prometheus metrics.
+				if execID != "" {
+					_ = h.db.EndExecution(execID, sr.Success, sr.Error, 0, "", false, nil)
+				}
+				if h.metrics != nil {
+					statusStr := "success"
+					if !sr.Success {
+						statusStr = "error"
+					}
+					h.metrics.IncNodeExecution(step.Name, statusStr)
+					h.metrics.ObserveNodeDuration(step.Name, elapsed/1000.0)
+				}
+
 				results = append(results, sr)
 				projectResults = append(projectResults, sr)
 
