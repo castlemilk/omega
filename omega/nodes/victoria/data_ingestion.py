@@ -382,6 +382,32 @@ class DataIngestionNode(Node):
         except Exception as _exc:
             logger.debug("Binance funding rate fetch skipped: %s", _exc)
 
+        # ── Supplementary: Binance order book depth (BTCUSDT, free public API) ──
+        try:
+            import urllib.request as _ureq
+
+            _ourl = "https://api.binance.com/api/v3/depth?symbol=BTCUSDT&limit=20"
+            _oreq = _ureq.Request(_ourl, headers={"User-Agent": "Mozilla/5.0"})
+            with _ureq.urlopen(_oreq, timeout=5) as _oresp:
+                _odata = json.loads(_oresp.read().decode("utf-8"))
+            _bids = _odata.get("bids", [])
+            _asks = _odata.get("asks", [])
+            if _bids and _asks:
+                _bid_vol = sum(float(b[1]) for b in _bids)
+                _ask_vol = sum(float(a[1]) for a in _asks)
+                result["bid_sizes"] = [_bid_vol]
+                result["ask_sizes"] = [_ask_vol]
+                logger.debug(
+                    "Binance order book: bid_vol=%.4f ask_vol=%.4f imbalance=%.4f",
+                    _bid_vol,
+                    _ask_vol,
+                    (_bid_vol - _ask_vol) / (_bid_vol + _ask_vol)
+                    if (_bid_vol + _ask_vol) > 0
+                    else 0.0,
+                )
+        except Exception as _exc:
+            logger.debug("Binance order book fetch skipped: %s", _exc)
+
         return result
 
     def _fetch_24h_tickers(self) -> dict[str, Any]:
