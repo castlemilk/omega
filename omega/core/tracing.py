@@ -70,6 +70,29 @@ class TraceContext:
             cycle=self.cycle,
         )
 
+    @classmethod
+    def from_traceparent(cls, header: str, cycle: int = 0) -> "TraceContext | None":
+        """Parse a W3C traceparent header and return a TraceContext.
+
+        Returns None if the header is absent or malformed.  The resulting
+        context represents the *remote* span and can be passed as ``parent_ctx``
+        to :meth:`Tracer.start_span`, enabling Go→Python trace propagation so
+        both runtimes appear in the same trace tree.
+
+        Expected format: ``00-<trace_id>-<parent_id>-<flags>``
+          trace_id  : 32 lowercase hex chars (128-bit)
+          parent_id : 16 lowercase hex chars (64-bit)
+        """
+        if not header:
+            return None
+        parts = header.split("-")
+        if len(parts) < 4:
+            return None
+        trace_id, span_id = parts[1], parts[2]
+        if len(trace_id) != 32 or len(span_id) != 16:
+            return None
+        return cls(trace_id=trace_id, span_id=span_id, cycle=cycle)
+
 
 @dataclass
 class SpanData:
@@ -267,6 +290,26 @@ class Tracer:
                 f"{prefix}{status_icon} {s['node']} :: {s['operation']}  [{s['duration_ms']:.0f}ms]"
             )
         return "\n".join(lines)
+
+    def continue_trace(
+        self,
+        traceparent: str,
+        operation: str,
+        cycle: int = 0,
+        node_id: str | None = None,
+        node_name: str | None = None,
+    ) -> TraceContext | None:
+        """Start a child span continuing a remote trace from a W3C traceparent header.
+
+        Returns None if the header is absent or malformed — caller should fall
+        back to :meth:`start_trace`.  When successful, the returned context
+        belongs to the same trace as the remote span that sent the header,
+        allowing Go→Python spans to be joined in a single trace tree.
+        """
+        parent = TraceContext.from_traceparent(traceparent, cycle=cycle)
+        if parent is None:
+            return None
+        return self.start_span(parent, operation=operation, node_id=node_id, node_name=node_name)
 
     def active_span_count(self) -> int:
         return len(self._active_spans)
