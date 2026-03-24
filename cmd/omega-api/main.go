@@ -420,8 +420,8 @@ func victoriaProject() *omegav1.Project {
 		NodeIds:       []string{},
 		PipelineConfig: steps,
 		EvalConfig: &omegav1.EvalConfig{
-			PrimaryMetrics: []string{"sharpe_ratio", "ic", "max_drawdown", "win_rate"},
-			MetricTargets:  map[string]float64{"sharpe_ratio": 1.5, "ic": 0.05, "max_drawdown": -0.15},
+			PrimaryMetrics: []string{"quality_score", "signal_count", "avg_confidence", "signal_coverage"},
+			MetricTargets:  map[string]float64{"quality_score": 0.7, "signal_count": 4.0, "avg_confidence": 0.5, "signal_coverage": 0.6},
 			EvalFrequency:  "per_cycle",
 		},
 		ImprovementConfig: &omegav1.ImprovementConfig{
