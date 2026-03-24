@@ -217,7 +217,7 @@ class SignalGenerationNode(Node):
         signals: dict[str, Any] = {}
 
         for ticker, data in market_data.items():
-            if not data:
+            if not data or not isinstance(data, dict):
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
             if len(prices) < self._sma_long + 1:
@@ -339,7 +339,7 @@ class SignalGenerationNode(Node):
     def _compute_momentum_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
         for ticker, data in market_data.items():
-            if not data:
+            if not data or not isinstance(data, dict):
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
             if len(prices) < 6:
@@ -355,7 +355,7 @@ class SignalGenerationNode(Node):
     def _compute_mean_reversion_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
         for ticker, data in market_data.items():
-            if not data:
+            if not data or not isinstance(data, dict):
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
             if len(prices) < self._zscore_period + 1:

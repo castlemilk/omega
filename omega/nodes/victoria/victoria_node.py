@@ -615,7 +615,7 @@ class VictoriaNode(Node):
         """Fetch market data via DataIngestionNode."""
         out = self._ingestion.execute(
             NodeInput(
-                action="fetch_data",
+                action="fetch_market_data",
                 parameters=inp.parameters,
                 context=inp.context,
             )
