@@ -646,7 +646,23 @@ class VictoriaNode(Node):
             )
         )
         if basic_out.success and basic_out.result:
-            signals["basic_signals"] = basic_out.result
+            raw_basic = basic_out.result
+            # Derive top-level value/confidence so DB persistence sees non-zero.
+            # raw_basic is {ticker: {composite: float, rsi: float, ...}}
+            composites = [
+                float(td["composite"])
+                for td in raw_basic.values()
+                if isinstance(td, dict) and "composite" in td
+            ]
+            signals["basic_signals"] = dict(raw_basic)
+            if composites:
+                signals["basic_signals"]["value"] = sum(composites) / len(composites)
+                # confidence = fraction of tickers with non-zero composite
+                non_zero = sum(1 for c in composites if c != 0.0)
+                signals["basic_signals"]["confidence"] = non_zero / len(composites)
+            else:
+                signals["basic_signals"]["value"] = 0.0
+                signals["basic_signals"]["confidence"] = 0.0
 
         # Advanced signals are only computed outside PICO mode
         # (they may use more complex / probabilistic computations)
