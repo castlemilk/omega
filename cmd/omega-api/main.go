@@ -39,8 +39,19 @@ func main() {
 	// OpenTelemetry — initialise before anything else so all downstream code
 	// gets instrumented automatically.
 	// ---------------------------------------------------------------------------
+	otlpEndpoint := os.Getenv("OTLP_ENDPOINT")
+	if otlpEndpoint == "" {
+		// Auto-detect: if the OTel collector is reachable at localhost:4318, use it.
+		// This covers `make dev` runs where OTLP_ENDPOINT may not be explicitly set.
+		if otelCollectorReachable("http://localhost:4318") {
+			otlpEndpoint = "http://localhost:4318"
+			log.Printf("OTLP: auto-configured to %s (collector reachable)", otlpEndpoint) //nolint:gosec
+		} else {
+			log.Printf("warn: OTLP_ENDPOINT not set and collector not reachable at localhost:4318 — traces will not be exported")
+		}
+	}
 	telCfg := telemetry.Config{
-		OtlpEndpoint:         os.Getenv("OTLP_ENDPOINT"), // e.g. "http://otel-collector:4318"
+		OtlpEndpoint:         otlpEndpoint,
 		ServiceName:          "omega-api",
 		ServiceVersion:       "0.1.0",
 		SampleRate:           1.0,
@@ -376,6 +387,18 @@ func withPanicRecovery(h http.Handler) http.Handler {
 // withExecChain adapts the internal execution middleware chain to the HTTP handler.
 // Observability endpoints (/healthz, /readyz, /metrics, /debug/) bypass the chain
 // to avoid loop-detection false positives from polling.
+// otelCollectorReachable returns true if an HTTP GET to addr+"/health"
+// succeeds within 500ms. Used to auto-configure OTLP_ENDPOINT at startup.
+func otelCollectorReachable(addr string) bool {
+	client := &http.Client{Timeout: 500 * time.Millisecond}
+	resp, err := client.Get(addr + "/health") //nolint:gosec,noctx
+	if err != nil {
+		return false
+	}
+	_ = resp.Body.Close()
+	return resp.StatusCode < 500
+}
+
 func withExecChain(chain *mw.Chain, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := r.URL.Path
