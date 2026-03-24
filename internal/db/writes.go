@@ -318,6 +318,41 @@ func (d *DB) SaveTerminalSession(s *TerminalSessionRecord) error {
 	return err
 }
 
+// ── Coordination outcomes ──────────────────────────────────────────────────────
+
+// RecordCoordinationOutcome inserts a coordination outcome tuple.
+// routingJSON and stateJSON should be JSON-encoded strings.
+func (d *DB) RecordCoordinationOutcome(goalID string, outcomeQuality float64, routingJSON string, stateJSON string) error {
+	recordID := uuid.New().String()
+	now := unixNow()
+	// Use epoch timestamp as captured_at (TIMESTAMPTZ column accepts epoch seconds as text).
+	// We cast the stored value via a SQL expression to avoid driver confusion.
+	_, err := d.db.Exec(`
+		INSERT INTO coordination_outcomes
+			(record_id, goal_id, goal_type, goal_json, routing_json, outcome_quality, captured_at, state_snapshot)
+		VALUES ($1, $2, 0, '{}', $3, $4, to_timestamp($5), $6)
+		ON CONFLICT (record_id) DO NOTHING`,
+		recordID, goalID, routingJSON, outcomeQuality, now, stateJSON)
+	return err
+}
+
+// ── Verification gates ─────────────────────────────────────────────────────────
+
+// RecordVerificationGate inserts a verification gate result for a cycle.
+func (d *DB) RecordVerificationGate(cycle int64, gateName string, passed bool, details string) error {
+	gateID := uuid.New().String()
+	result := "pass"
+	if !passed {
+		result = "fail"
+	}
+	now := unixNow()
+	_, err := d.db.Exec(`
+		INSERT INTO verification_gates (gate_id, cycle, gate_name, result, details, checked_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		gateID, cycle, gateName, result, details, now)
+	return err
+}
+
 // SaveTerminalCommand inserts a single command record.
 func (d *DB) SaveTerminalCommand(c *TerminalCommandRecord) error {
 	_, err := d.db.Exec(`

@@ -3,6 +3,7 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -650,9 +651,12 @@ func (h *OrchestratorHandler) runLoop(ctx context.Context, interval time.Duratio
 // stepResult captures the outcome of one pipeline step execution.
 type stepResult struct {
 	Name       string
+	NodeType   string
+	NodeID     string
 	Success    bool
 	DurationMS float64
 	Error      string
+	Metrics    map[string]float64
 }
 
 // runCycleWithResults executes one orchestration cycle and returns per-step results.
@@ -698,6 +702,7 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 			}, cycle)
 		}
 		for projectID, steps := range projects {
+			var projectResults []stepResult
 			for _, step := range steps {
 				_, stepSpan := tracer.Start(cycleCtx, "orchestrator.pipeline.step",
 					trace.WithAttributes(
@@ -716,13 +721,15 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 					Cycle:    cycle,
 				})
 				elapsed := float64(time.Since(t0).Milliseconds())
-				sr := stepResult{Name: step.Name, DurationMS: elapsed}
+				sr := stepResult{Name: step.Name, NodeType: step.NodeType, DurationMS: elapsed}
 				if stepErr != nil {
 					sr.Success = false
 					sr.Error = stepErr.Error()
 					stepSpan.SetStatus(codes.Error, stepErr.Error())
 				} else {
 					sr.Success = resp.Success
+					sr.NodeID = resp.NodeId
+					sr.Metrics = resp.Metrics
 					if !resp.Success {
 						sr.Error = resp.ErrorText
 						stepSpan.SetStatus(codes.Error, resp.ErrorText)
@@ -739,7 +746,34 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 				}
 				stepSpan.End()
 				results = append(results, sr)
+				projectResults = append(projectResults, sr)
+
+				// ── DARK signal: improvement log ────────────────────────────────────
+				if sr.NodeType == "IMPROVEMENT" && sr.NodeID != "" {
+					if err := h.db.RecordImprovement(
+						sr.NodeID, sr.Name,
+						fmt.Sprintf("cycle-%d", cycle-1),
+						fmt.Sprintf("cycle-%d", cycle),
+						map[string]float64{}, sr.Metrics,
+						"tpe", cycle,
+					); err != nil {
+						_ = err // non-fatal
+					}
+				}
+
+				// ── DARK signal: verification gates ─────────────────────────────────
+				if sr.NodeType == "VERIFICATION" {
+					if err := h.db.RecordVerificationGate(cycle, sr.Name, sr.Success, sr.Error); err != nil {
+						_ = err // non-fatal
+					}
+				}
 			}
+
+			// ── DARK signal: coordination outcome (per project) ──────────────────
+			h.recordCoordinationOutcome(ctx, projectID, cycle, projectResults)
+
+			// ── DARK signal: goal tracking (per project) ─────────────────────────
+			h.recordGoalTracking(projectID, cycle, projectResults)
 		}
 	}
 
@@ -994,4 +1028,117 @@ func dbNodeConfigToProto(n *db.Node, brain *db.BrainConfig) *omegav1.NodeConfig 
 		UpdatedAt: tsFromUnix(brain.UpdatedAt),
 	}
 	return cfg
+}
+
+// ── DARK signal helpers ───────────────────────────────────────────────────────
+
+// recordCoordinationOutcome writes a per-cycle coordination outcome tuple.
+// outcome_quality is the fraction of steps that succeeded (0.0–1.0).
+func (h *OrchestratorHandler) recordCoordinationOutcome(ctx context.Context, projectID string, cycle int64, results []stepResult) {
+	if len(results) == 0 {
+		return
+	}
+	var successes int
+	for _, r := range results {
+		if r.Success {
+			successes++
+		}
+	}
+	quality := float64(successes) / float64(len(results))
+
+	// routing_json: ordered list of steps that ran
+	type routingStep struct {
+		Name       string  `json:"name"`
+		NodeType   string  `json:"node_type"`
+		Success    bool    `json:"success"`
+		DurationMS float64 `json:"duration_ms"`
+	}
+	rSteps := make([]routingStep, 0, len(results))
+	for _, r := range results {
+		rSteps = append(rSteps, routingStep{Name: r.Name, NodeType: r.NodeType, Success: r.Success, DurationMS: r.DurationMS})
+	}
+	rJSON, _ := json.Marshal(rSteps)
+
+	// state_snapshot: per-step success/duration keyed by step name
+	snapshot := make(map[string]any, len(results))
+	for _, r := range results {
+		snapshot[r.Name] = map[string]any{
+			"success":     r.Success,
+			"duration_ms": r.DurationMS,
+			"node_id":     r.NodeID,
+		}
+	}
+	sJSON, _ := json.Marshal(snapshot)
+
+	goalID := fmt.Sprintf("%s:cycle:%d", projectID, cycle)
+	if err := h.db.RecordCoordinationOutcome(goalID, quality, string(rJSON), string(sJSON)); err != nil {
+		_ = err // non-fatal
+	}
+}
+
+// recordGoalTracking writes per-cycle goal progress from the project's eval_config.
+// Uses the improvement_metrics from step results where available.
+func (h *OrchestratorHandler) recordGoalTracking(projectID string, cycle int64, results []stepResult) {
+	if h.projectHandler == nil {
+		return
+	}
+	// Find the project to read eval_config targets
+	var evalConfig *omegav1.EvalConfig
+	for _, p := range h.projectHandler.AllProjects() {
+		if p.ProjectId == projectID {
+			evalConfig = p.EvalConfig
+			break
+		}
+	}
+	if evalConfig == nil || len(evalConfig.MetricTargets) == 0 {
+		return
+	}
+
+	// Gather any metrics from step results to compare against targets
+	stepMetrics := make(map[string]float64)
+	for _, r := range results {
+		for k, v := range r.Metrics {
+			if _, exists := stepMetrics[k]; !exists {
+				stepMetrics[k] = v
+			}
+		}
+	}
+
+	// Compute composite score and scorecard
+	var compositeScore float64
+	scorecard := make(map[string]any, len(evalConfig.MetricTargets))
+	violations := make([]string, 0)
+	for metric, target := range evalConfig.MetricTargets {
+		current, ok := stepMetrics[metric]
+		if !ok {
+			current = 0
+		}
+		gap := current - target
+		scorecard[metric] = map[string]any{
+			"target":  target,
+			"current": current,
+			"gap":     gap,
+		}
+		if target != 0 {
+			compositeScore += current / target
+		}
+		if gap < 0 {
+			violations = append(violations, fmt.Sprintf("%s: %.4f < %.4f (gap %.4f)", metric, current, target, gap))
+		}
+	}
+	if len(evalConfig.MetricTargets) > 0 {
+		compositeScore /= float64(len(evalConfig.MetricTargets))
+	}
+
+	_, _ = h.db.RecordGoalTracking(
+		cycle,
+		len(violations) == 0,
+		compositeScore,
+		scorecard,
+		map[string]any{},
+		0.0,
+		map[string]any{"project_id": projectID},
+		[]string{},
+		violations,
+	)
 }
