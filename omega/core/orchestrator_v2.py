@@ -268,13 +268,24 @@ class OmegaOrchestrator:
                             and out.result
                         ):
                             try:
-                                proposals = (
-                                    out.result
-                                    if isinstance(out.result, list)
-                                    else [out.result]
-                                    if isinstance(out.result, dict)
-                                    else []
-                                )
+                                # Expand {weights: {sym: w}} portfolio dicts into
+                                # per-symbol proposal dicts that execute_proposals expects.
+                                raw_result = out.result
+                                proposals: list[dict] = []
+                                if isinstance(raw_result, list):
+                                    for item in raw_result:
+                                        if isinstance(item, dict) and "weights" in item:
+                                            for sym, w in item["weights"].items():
+                                                proposals.append(
+                                                    {"symbol": sym, "weight": float(w)}
+                                                )
+                                        elif isinstance(item, dict):
+                                            proposals.append(item)
+                                elif isinstance(raw_result, dict) and "weights" in raw_result:
+                                    for sym, w in raw_result["weights"].items():
+                                        proposals.append({"symbol": sym, "weight": float(w)})
+                                elif isinstance(raw_result, dict):
+                                    proposals = [raw_result]
                                 if proposals:
                                     market_data = getattr(n, "_last_market_data", {})
                                     executed = orch._paper_trading.execute_proposals(
