@@ -132,7 +132,7 @@ class WeatherEnsembleNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["probability", "ensemble_data", "list_cities"]
+        return ["probability", "ensemble_data", "list_cities", "weather_ensemble"]
 
     def describe(self) -> str:
         return (
@@ -148,7 +148,7 @@ class WeatherEnsembleNode(Node):
 
         result: Any = None
         try:
-            if action == "probability":
+            if action in ("probability", "weather_ensemble", "weatherdata"):
                 result = self._compute_probability(inp.parameters)
             elif action == "ensemble_data":
                 result = self._fetch_ensemble(inp.parameters)

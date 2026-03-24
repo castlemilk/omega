@@ -106,7 +106,7 @@ class EdgeDetectionNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["detect", "batch_detect"]
+        return ["detect", "batch_detect", "edge_detection"]
 
     def describe(self) -> str:
         return (
@@ -122,7 +122,7 @@ class EdgeDetectionNode(Node):
 
         result: Any = None
         try:
-            if action == "detect":
+            if action in ("detect", "edge_detection", "edgedetection"):
                 result = self._detect_single(inp.parameters)
             elif action == "batch_detect":
                 items = inp.parameters.get("items", [])

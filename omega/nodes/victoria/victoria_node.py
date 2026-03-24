@@ -190,6 +190,8 @@ class VictoriaNode(Node):
                 "strategy",
                 "risk_management",
                 "riskmanagement",
+                "riskcheck",
+                "risk_check",
                 "intelligencecoordination",
                 "dynamicweights",
             ):

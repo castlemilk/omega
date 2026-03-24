@@ -95,7 +95,7 @@ class PolymarketPricingNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["fetch_weather_markets", "fetch_market"]
+        return ["fetch_weather_markets", "fetch_market", "polymarket_pricing"]
 
     def describe(self) -> str:
         return (
@@ -111,7 +111,7 @@ class PolymarketPricingNode(Node):
 
         result: Any = None
         try:
-            if action == "fetch_weather_markets":
+            if action in ("fetch_weather_markets", "polymarket_pricing", "marketpricing"):
                 result = self._fetch_weather_markets(inp.parameters)
             elif action == "fetch_market":
                 market_id = inp.parameters.get("market_id", "")
