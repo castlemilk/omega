@@ -14,11 +14,66 @@ import logging
 import math
 import time
 import uuid
+from enum import IntEnum
 from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
+
+
+# ---------------------------------------------------------------------------
+# ConvictionLevel — 5-point rating scale
+# ---------------------------------------------------------------------------
+
+
+class ConvictionLevel(IntEnum):
+    """
+    5-point conviction rating mapped from composite signal score.
+
+    Score thresholds:
+      > 0.6  → STRONG_BUY
+      > 0.2  → BUY
+      > -0.2 → HOLD
+      > -0.6 → SELL
+      else   → STRONG_SELL
+    """
+
+    STRONG_BUY = 2
+    BUY = 1
+    HOLD = 0
+    SELL = -1
+    STRONG_SELL = -2
+
+
+# Position size multipliers relative to base position size.
+# Sell/STRONG_SELL multipliers apply to the *short* position.
+_CONVICTION_SIZE: dict[ConvictionLevel, float] = {
+    ConvictionLevel.STRONG_BUY: 1.5,
+    ConvictionLevel.BUY: 1.0,
+    ConvictionLevel.HOLD: 0.0,
+    ConvictionLevel.SELL: 0.5,
+    ConvictionLevel.STRONG_SELL: 1.0,
+}
+
+
+def score_to_conviction(score: float) -> ConvictionLevel:
+    """Map a composite signal score [-1, 1] to a ConvictionLevel."""
+    if score > 0.6:
+        return ConvictionLevel.STRONG_BUY
+    elif score > 0.2:
+        return ConvictionLevel.BUY
+    elif score > -0.2:
+        return ConvictionLevel.HOLD
+    elif score > -0.6:
+        return ConvictionLevel.SELL
+    else:
+        return ConvictionLevel.STRONG_SELL
+
+
+def conviction_size_multiplier(conviction: ConvictionLevel) -> float:
+    """Return the position size multiplier for a conviction level."""
+    return _CONVICTION_SIZE[conviction]
 
 
 class StrategyNode(Node):
@@ -109,16 +164,25 @@ class StrategyNode(Node):
             self._execution_count += 1
             self._total_latency_ms += elapsed
 
+            # Extract conviction distribution from result if available
+            conviction_dist = (
+                result.get("conviction_distribution", {}) if isinstance(result, dict) else {}
+            )
+            metrics: dict[str, Any] = {
+                "latency_ms": elapsed,
+                "sharpe_ratio": self._last_sharpe,
+                "max_drawdown": self._last_max_drawdown,
+                "hit_rate": self._last_hit_rate,
+            }
+            # Expose per-level conviction counts so Go can read them from step metrics
+            for level_name, count in conviction_dist.items():
+                metrics[f"conviction_{level_name.lower()}"] = float(count)
+
             return NodeOutput(
                 request_id=input.request_id,
                 success=True,
                 result=result,
-                metrics={
-                    "latency_ms": elapsed,
-                    "sharpe_ratio": self._last_sharpe,
-                    "max_drawdown": self._last_max_drawdown,
-                    "hit_rate": self._last_hit_rate,
-                },
+                metrics=metrics,
             )
 
         except Exception as exc:
@@ -179,53 +243,82 @@ class StrategyNode(Node):
     def _construct_portfolio(
         self, signals: dict[str, Any], market_data: dict[str, Any]
     ) -> dict[str, Any]:
-        """Build portfolio weights from signals."""
-        # Filter to buy-signal stocks
-        candidates = {
+        """Build portfolio weights from signals using conviction-scaled sizing."""
+        # Compute conviction for every ticker with a composite score
+        convictions: dict[str, ConvictionLevel] = {}
+        for ticker, sig in signals.items():
+            composite = sig.get("composite")
+            if composite is not None:
+                convictions[ticker] = score_to_conviction(float(composite))
+
+        # Long candidates: STRONG_BUY or BUY above signal threshold
+        long_candidates = {
             ticker: sig
             for ticker, sig in signals.items()
-            if sig.get("composite", 0.0) > self._signal_threshold
+            if convictions.get(ticker, ConvictionLevel.HOLD)
+            in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY)
+            and sig.get("composite", 0.0) > self._signal_threshold
         }
 
-        if not candidates:
+        if not long_candidates:
             # Fall back to all available if no clear buys
-            candidates = {
-                ticker: sig for ticker, sig in signals.items() if sig.get("composite") is not None
+            long_candidates = {
+                ticker: sig
+                for ticker, sig in signals.items()
+                if sig.get("composite") is not None
+                and convictions.get(ticker, ConvictionLevel.HOLD) != ConvictionLevel.HOLD
             }
 
-        if not candidates:
-            return {"weights": {}, "positions": 0, "method": self._weighting}
+        if not long_candidates:
+            return {
+                "weights": {},
+                "positions": 0,
+                "method": self._weighting,
+                "convictions": {t: c.name for t, c in convictions.items()},
+            }
 
-        weights: dict[str, float] = {}
+        base_weights: dict[str, float] = {}
 
         if self._weighting == "equal":
-            weight = 1.0 / len(candidates)
-            weights = {ticker: weight for ticker in candidates}
+            w = 1.0 / len(long_candidates)
+            base_weights = {ticker: w for ticker in long_candidates}
 
         elif self._weighting == "momentum":
-            # Weight proportional to positive composite signal strength
             raw = {
                 ticker: max(0.001, sig.get("composite", 0.001))
-                for ticker, sig in candidates.items()
+                for ticker, sig in long_candidates.items()
             }
             total = sum(raw.values())
-            weights = {ticker: v / total for ticker, v in raw.items()}
+            base_weights = {ticker: v / total for ticker, v in raw.items()}
 
         elif self._weighting == "risk_parity":
-            # Weight ∝ 1/volatility using recent price history
             vols: dict[str, float] = {}
-            for ticker, _sig in candidates.items():
+            for ticker, _sig in long_candidates.items():
                 data = market_data.get(ticker)
                 if data:
                     prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
                     vol = self._compute_volatility(prices, window=20)
-                    vols[ticker] = vol if vol > 0 else 0.3  # default 30% vol
+                    vols[ticker] = vol if vol > 0 else 0.3
                 else:
                     vols[ticker] = 0.3
-
             inv_vol = {ticker: 1.0 / v for ticker, v in vols.items()}
             total = sum(inv_vol.values())
-            weights = {ticker: v / total for ticker, v in inv_vol.items()}
+            base_weights = {ticker: v / total for ticker, v in inv_vol.items()}
+
+        # Apply conviction size multipliers and re-normalise
+        raw_weights = {
+            ticker: base_weights[ticker] * conviction_size_multiplier(convictions[ticker])
+            for ticker in base_weights
+        }
+        total_w = sum(raw_weights.values())
+        weights: dict[str, float] = (
+            {ticker: v / total_w for ticker, v in raw_weights.items()} if total_w > 0 else {}
+        )
+
+        # Conviction distribution summary for metrics
+        conviction_dist = {level.name: 0 for level in ConvictionLevel}
+        for c in convictions.values():
+            conviction_dist[c.name] += 1
 
         # Also run a quick backtest
         bt = self._backtest(signals, market_data)
@@ -235,20 +328,26 @@ class StrategyNode(Node):
             "positions": len(weights),
             "method": self._weighting,
             "signal_threshold": self._signal_threshold,
+            "convictions": {t: convictions[t].name for t in weights},
+            "conviction_distribution": conviction_dist,
             "top_picks": self._rank_signals(signals)[:5],
             "backtest": bt,
         }
 
     def _rank_signals(self, signals: dict[str, Any]) -> list[dict[str, Any]]:
-        """Rank tickers by composite signal strength."""
+        """Rank tickers by composite signal strength, including conviction."""
         ranked = []
         for ticker, sig in signals.items():
             composite = sig.get("composite")
             if composite is not None:
+                conviction = score_to_conviction(float(composite))
                 ranked.append(
                     {
                         "ticker": ticker,
                         "composite": composite,
+                        "conviction": conviction.name,
+                        "conviction_value": int(conviction),
+                        "size_multiplier": conviction_size_multiplier(conviction),
                         "price": sig.get("price"),
                         "rsi": sig.get("rsi"),
                         "return_1d": sig.get("return_1d"),
