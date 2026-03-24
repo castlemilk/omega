@@ -238,18 +238,40 @@ class PolymarketPricingNode(Node):
             return cached  # type: ignore[no-any-return]
 
         self._cache_misses += 1
-        # Fetch active markets — paginate up to 3 pages to find weather markets
         markets: list[dict[str, Any]] = []
         limit = int(params.get("limit", 100))
-        url = f"{GAMMA_API_BASE}/markets?active=true&limit={limit}&closed=false"
+        max_pages = 5  # paginate up to 500 markets to find weather markets
 
-        data = self._get_json(url)
-        raw_list = data if isinstance(data, list) else data.get("markets", [])
+        for page in range(max_pages):
+            offset = page * limit
+            url = (
+                f"{GAMMA_API_BASE}/markets?active=true&limit={limit}&closed=false&offset={offset}"
+            )
+            try:
+                data = self._get_json(url)
+            except Exception as exc:
+                logger.warning("Polymarket page %d fetch failed: %s", page, exc)
+                break
 
-        for raw in raw_list:
-            parsed = self._parse_market(raw)
-            if parsed:
-                markets.append(parsed)
+            raw_list = data if isinstance(data, list) else data.get("markets", [])
+            if not raw_list:
+                break  # no more pages
+
+            for raw in raw_list:
+                parsed = self._parse_market(raw)
+                if parsed:
+                    markets.append(parsed)
+
+            # Stop early once we have enough results
+            if markets and page >= 1:
+                break
+
+        if not markets:
+            logger.info(
+                "Polymarket: no weather markets matched keywords in %d pages; "
+                "returning empty list. Check WEATHER_KEYWORDS vs current market titles.",
+                max_pages,
+            )
 
         self._set_cache(cache_key, markets)
         return markets

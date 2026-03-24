@@ -881,21 +881,30 @@ class OmegaOrchestrator:
             return clean
 
         # --- Build variant_outputs for Ring 1 ---
-        # Each signal-producing node is a "variant"; outputs are its numeric signals.
+        # Each signal TYPE from each node is its own variant so that Ring 1 can
+        # detect disagreement between (e.g.) the VRP signal vs basic_signals.
+        # This ensures meaningful pairwise comparison even with a single node.
         variant_outputs: dict[str, dict[str, float]] = {}
         for node_id, signals in signal_data.items():
             if not isinstance(signals, dict):
                 continue
-            flat: dict[str, float] = {}
-            for k, v in signals.items():
-                if isinstance(v, (int, float)):
-                    flat[k] = float(v)
-                elif isinstance(v, dict):
-                    for sub_k, sub_v in v.items():
+            for sig_name, sig_val in signals.items():
+                if sig_name.startswith("_"):
+                    continue
+                if isinstance(sig_val, dict):
+                    # Per-signal-type variant: flatten its numeric sub-fields
+                    flat: dict[str, float] = {}
+                    for sub_k, sub_v in sig_val.items():
                         if isinstance(sub_v, (int, float)):
-                            flat[f"{k}_{sub_k}"] = float(sub_v)
-            if flat:
-                variant_outputs[node_id] = flat
+                            flat[sub_k] = float(sub_v)
+                        elif isinstance(sub_v, dict):
+                            for sk2, sv2 in sub_v.items():
+                                if isinstance(sv2, (int, float)):
+                                    flat[f"{sub_k}_{sk2}"] = float(sv2)
+                    if flat:
+                        variant_outputs[f"{node_id}:{sig_name}"] = flat
+                elif isinstance(sig_val, (int, float)):
+                    variant_outputs[f"{node_id}:{sig_name}"] = {sig_name: float(sig_val)}
 
         # Fallback: synthesise variant_outputs from proposal weights if no signal data
         if not variant_outputs:
