@@ -1,6 +1,6 @@
 # Omega — Bug Bash & System Validation
 
-**Last updated:** 2026-03-24
+**Last updated:** 2026-03-25
 **Purpose:** Living document. Captures every tracked bug, provides a runnable validation checklist, and defines regression baselines. Run the checklist after every major merge.
 
 ---

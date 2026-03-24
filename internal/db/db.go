@@ -534,6 +534,19 @@ var stateSchema = []string{
 		created_at       DOUBLE PRECISION NOT NULL DEFAULT 0
 	)`,
 	`CREATE INDEX IF NOT EXISTS idx_node_memories_node_cycle ON node_memories(node_id, cycle DESC)`,
+	// ── Polymarket weather trading edge detection ─────────────────────────────
+	`CREATE TABLE IF NOT EXISTS polymarket_edges (
+		id             BIGSERIAL PRIMARY KEY,
+		cycle          BIGINT NOT NULL,
+		city           TEXT NOT NULL,
+		market_slug    TEXT NOT NULL DEFAULT '',
+		model_prob     DOUBLE PRECISION NOT NULL,
+		market_price   DOUBLE PRECISION NOT NULL,
+		edge           DOUBLE PRECISION NOT NULL,
+		kelly_fraction DOUBLE PRECISION NOT NULL,
+		detected_at    TIMESTAMPTZ DEFAULT NOW()
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_polymarket_edges_cycle ON polymarket_edges(cycle)`,
 }
 
 func (d *DB) ensureSchema(ctx context.Context) error {

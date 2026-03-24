@@ -38,6 +38,7 @@ Usage::
 from __future__ import annotations
 
 import logging
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -50,6 +51,41 @@ logger = logging.getLogger("omega.nodes.polymarket.edge_detection")
 
 DEFAULT_EDGE_THRESHOLD = 0.08
 DEFAULT_MAX_KELLY = 0.25
+
+
+def _persist_edge(
+    cycle: int,
+    city: str,
+    market_slug: str,
+    model_prob: float,
+    market_price: float,
+    edge: float,
+    kelly_fraction: float,
+) -> None:
+    """Upsert a detected edge into the polymarket_edges table."""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if not db_url:
+        return
+    try:
+        import psycopg2
+
+        conn = psycopg2.connect(db_url)
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO polymarket_edges
+                        (cycle, city, market_slug, model_prob, market_price, edge, kelly_fraction)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT DO NOTHING
+                    """,
+                    (cycle, city, market_slug, model_prob, market_price, edge, kelly_fraction),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+    except Exception as exc:
+        logger.debug("polymarket_edges persist skipped: %s", exc)
 
 
 @dataclass
@@ -203,8 +239,10 @@ class EdgeDetectionNode(Node):
         market_price = float(params.get("market_price", 0.5))
         city = str(params.get("city", ""))
         market_id = str(params.get("market_id", ""))
+        market_slug = str(params.get("market_slug", market_id))
         question = str(params.get("question", ""))
         member_count = int(params.get("member_count", 31))
+        cycle = int(params.get("cycle", 0))
 
         edge = model_prob - market_price
         opportunity = abs(edge) >= self.edge_threshold
@@ -218,9 +256,15 @@ class EdgeDetectionNode(Node):
         if opportunity:
             self._opportunities_detected += 1
 
+        # Persist every detected edge (opportunity or not) for analysis.
+        _persist_edge(
+            cycle, city, market_slug, model_prob, market_price, round(edge, 4), round(kelly, 4)
+        )
+
         return {
             "city": city,
             "market_id": market_id,
+            "market_slug": market_slug,
             "question": question,
             "model_prob": round(model_prob, 4),
             "market_price": round(market_price, 4),

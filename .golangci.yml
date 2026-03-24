@@ -12,6 +12,8 @@ linters:
     - gocritic
     - nilerr
     - prealloc
+    - misspell
+    - unconvert
     # revive and gochecknoinits would add value but require:
     #   revive: doc-comments on every exported symbol in db/handler/core (100+ items)
     #   gochecknoinits: refactoring cobra init() registration in cmd/omega/

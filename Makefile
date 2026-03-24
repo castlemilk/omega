@@ -7,6 +7,8 @@
         dev dev-down \
         otel-up otel-down otel-logs
 
+GO_PACKAGES := $(shell go list ./... | rg -v '^github.com/benebsworth/omega/(web/)?dashboard/node_modules/' | sed 's|^github.com/benebsworth/omega|.|')
+
 # ---------------------------------------------------------------------------
 # Go build / test
 # ---------------------------------------------------------------------------
@@ -15,7 +17,7 @@ build:
 	go build ./...
 
 test:
-	go test ./... -v -timeout 30s
+	go test $(GO_PACKAGES) -v -timeout 30s
 
 test-db:
 	go test ./internal/db/... -v -timeout 30s
@@ -25,7 +27,7 @@ test-handler:
 
 ## test-integration: run all Postgres integration tests (requires TEST_DATABASE_URL)
 test-integration:
-	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test ./... -v -timeout 120s
+	TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test $(GO_PACKAGES) -v -timeout 120s
 
 ## db-up: start Postgres via docker-compose (for local development)
 db-up:
@@ -90,9 +92,11 @@ fe-build:
 
 fe-lint:
 	cd dashboard && npm run lint
+	cd web/dashboard && npm run lint
 
 fe-typecheck:
 	cd dashboard && npm run typecheck
+	cd web/dashboard && npm run typecheck
 
 fe-format:
 	cd dashboard && npx prettier --write 'src/**/*.{ts,tsx,css}'
@@ -116,10 +120,12 @@ lint:
 	@echo "── Python: ruff ──────────────────────────────"
 	python3 -m ruff check omega/ tests/
 	@echo "── Go: vet + golangci-lint ───────────────────"
-	go vet ./...
-	@which golangci-lint > /dev/null 2>&1 && golangci-lint run ./... || echo "golangci-lint not installed, skipping"
+	go vet $(GO_PACKAGES)
+	@which golangci-lint > /dev/null 2>&1 && golangci-lint run $(GO_PACKAGES) || echo "golangci-lint not installed, skipping"
 	@echo "── React: eslint ─────────────────────────────"
 	cd dashboard && npm run lint
+	@echo "── React (web/dashboard): eslint ─────────────"
+	cd web/dashboard && npm run lint
 
 ## format: auto-format all code (Python + Go + React)
 format:
@@ -137,6 +143,8 @@ typecheck:
 	python3 -m mypy omega/ tests/
 	@echo "── React: tsc ────────────────────────────────"
 	cd dashboard && npm run typecheck
+	@echo "── React (web/dashboard): tsc ────────────────"
+	cd web/dashboard && npm run typecheck
 
 ## coverage: run tests with coverage reports
 coverage:
@@ -147,7 +155,7 @@ coverage:
 		--cov-report=term-missing \
 		tests/
 	@echo "── Go coverage ───────────────────────────────"
-	go test -coverprofile=coverage-go.out -covermode=atomic ./...
+	go test -coverprofile=coverage-go.out -covermode=atomic $(GO_PACKAGES)
 	go tool cover -func=coverage-go.out | tail -1
 
 ## quality: full CI pipeline (lint + typecheck + test)

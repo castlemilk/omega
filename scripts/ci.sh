@@ -7,6 +7,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+GO_PACKAGES=($(go list ./... | rg -v '^github.com/benebsworth/omega/(web/)?dashboard/node_modules/' | sed 's#^github.com/benebsworth/omega#.#'))
+
 FAILED=0
 STEP=0
 
@@ -53,16 +55,16 @@ run_step "Python: pytest + coverage" \
 # ---------------------------------------------------------------------------
 
 run_step "Go: vet" \
-    go vet ./...
+    go vet "${GO_PACKAGES[@]}"
 
 run_step "Go: golangci-lint" \
-    golangci-lint run ./...
+    golangci-lint run "${GO_PACKAGES[@]}"
 
 run_step "Go: test + coverage" \
     go test \
         -coverprofile=coverage-go.out \
         -covermode=atomic \
-        ./... \
+        "${GO_PACKAGES[@]}" \
         -timeout 60s
 
 # Generate Go coverage report
@@ -77,8 +79,14 @@ fi
 run_step "React: tsc type check" \
     bash -c "cd dashboard && npm run typecheck"
 
+run_step "React (web/dashboard): tsc type check" \
+    bash -c "cd web/dashboard && npm run typecheck"
+
 run_step "React: ESLint" \
     bash -c "cd dashboard && npm run lint"
+
+run_step "React (web/dashboard): ESLint" \
+    bash -c "cd web/dashboard && npm run lint"
 
 run_step "React: Prettier check" \
     bash -c "cd dashboard && npx prettier --check 'src/**/*.{ts,tsx,css}'"

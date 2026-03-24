@@ -447,7 +447,7 @@ class TestRiskDebateUnit:
             "s1": {"value": 0.9, "confidence": 0.9},
             "s2": {"value": 0.7, "confidence": 0.8},
         }
-        result = node.risk_debate(signals=signals)
+        result = node.signal_debate(signals=signals)
         assert result["bull_score"] > result["bear_score"]
         assert result["recommendation"] == "go"
 
@@ -459,7 +459,7 @@ class TestRiskDebateUnit:
             "s1": {"value": -0.8, "confidence": 0.9},
             "s2": {"value": -0.6, "confidence": 0.85},
         }
-        result = node.risk_debate(signals=signals)
+        result = node.signal_debate(signals=signals)
         assert result["bear_score"] > result["bull_score"]
         assert result["recommendation"] == "abort"
 
@@ -471,7 +471,7 @@ class TestRiskDebateUnit:
             "_weights": {"s1": 0.5},  # must be ignored
             "s1": {"value": 0.5, "confidence": 0.7},
         }
-        result = node.risk_debate(signals=signals)
+        result = node.signal_debate(signals=signals)
         assert result["bull_score"] > 0
         assert 0.0 <= result["bull_score"] <= 1.0
 
@@ -479,7 +479,7 @@ class TestRiskDebateUnit:
         from omega.nodes.victoria.risk_management import RiskManagementNode
 
         node = RiskManagementNode()
-        result = node.risk_debate(signals={})
+        result = node.signal_debate(signals={})
         assert result["bull_score"] == 0.0
         assert result["bear_score"] == 0.0
         assert result["recommendation"] == "hold"
@@ -491,7 +491,7 @@ class TestRiskDebateUnit:
         # Positive signals but portfolio weight exceeds 25% limit
         signals = {"s1": {"value": 0.8, "confidence": 0.9}}
         weights = {"BTCUSDT": 0.9, "ETHUSDT": 0.1}  # 90% concentration → violation
-        result = node.risk_debate(signals=signals, portfolio_weights=weights)
+        result = node.signal_debate(signals=signals, portfolio_weights=weights)
         # Should abort due to position limit violation
         assert len(result["violations"]) > 0
         assert result["recommendation"] == "abort"
@@ -500,7 +500,7 @@ class TestRiskDebateUnit:
         from omega.nodes.victoria.risk_management import RiskManagementNode
 
         node = RiskManagementNode()
-        result = node.risk_debate(
+        result = node.signal_debate(
             signals={"s": {"value": 0.3, "confidence": 0.6}},
             portfolio_weights={"BTC": 0.2},
             market_data={},

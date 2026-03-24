@@ -1,6 +1,6 @@
 import React from 'react'
 import { Activity, CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, Tooltip, ResponsiveContainer } from 'recharts'
 import { useFetch } from '../hooks/useFetch'
 import { api, type ComponentHealth } from '../lib/api'
 
@@ -10,18 +10,19 @@ const statusConfig: Record<string, { icon: React.ElementType; color: string; bg:
   unhealthy: { icon: XCircle,       color: 'text-rose-400',    bg: 'bg-rose-900/20',     border: 'border-rose-700/50' },
 }
 
-// Fake latency history per component
-function makeLatencyHistory() {
+function makeLatencyHistory(component: ComponentHealth) {
+  const seed = component.name.split('').reduce((total, char) => total + char.charCodeAt(0), 0)
+
   return Array.from({ length: 20 }, (_, i) => ({
     t: i,
-    ms: 5 + Math.random() * 20,
+    ms: Math.max(1, component.latency_ms + ((seed + i * 7) % 12) - 6),
   }))
 }
 
 function HealthCard({ component }: { component: ComponentHealth }) {
   const cfg = statusConfig[component.status] ?? statusConfig.healthy
   const Icon = cfg.icon
-  const history = makeLatencyHistory()
+  const history = makeLatencyHistory(component)
 
   return (
     <div className={`bg-slate-800 rounded-xl border ${cfg.border} p-5 ${cfg.bg}`}>

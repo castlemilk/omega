@@ -8,11 +8,14 @@ import { api, type Node } from '../lib/api'
 type AutonomyFilter = 'ALL' | 'PICO' | 'SUPERVISED' | 'AUTONOMOUS'
 type StatusFilter = 'ALL' | 'active' | 'idle' | 'error'
 
+const SPARKLINE_DATA = [52, 58, 55, 63, 61, 68, 64, 72, 69, 75, 71, 78].map((value) => ({
+  v: value,
+}))
+
 function Sparkline({ color }: { color: string }) {
-  const data = Array.from({ length: 12 }, () => ({ v: 50 + Math.random() * 50 }))
   return (
     <ResponsiveContainer width="100%" height={40}>
-      <LineChart data={data}>
+      <LineChart data={SPARKLINE_DATA}>
         <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} dot={false} />
         <Tooltip
           contentStyle={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 6, fontSize: 11 }}

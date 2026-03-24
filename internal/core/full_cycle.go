@@ -120,7 +120,7 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 	// Create a parent span for the entire orchestration cycle.
 	tracer := telemetry.Tracer()
 	spanCtx, cycleSpan := tracer.Start(ctx, telemetry.SpanOrchestratorCycle,
-		trace.WithAttributes(telemetry.AttrCycleID.Int64(int64(cycleID))),
+		trace.WithAttributes(telemetry.AttrCycleID.Int64(cycleID)),
 	)
 	defer cycleSpan.End()
 
@@ -228,7 +228,7 @@ func (o *Orchestrator) RunFullCycle(ctx context.Context, cfg FullCycleConfig) (*
 		nodeCtx, nodeSpan := tracer.Start(nodeCtx, telemetry.SpanNodeExecution,
 			trace.WithAttributes(
 				telemetry.AttrNodeName.String(nodeID),
-				telemetry.AttrCycleID.Int64(int64(cycleID)),
+				telemetry.AttrCycleID.Int64(cycleID),
 			),
 		)
 		execErr := entry.executor.Execute(nodeCtx)

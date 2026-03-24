@@ -221,7 +221,7 @@ class VictoriaNode(Node):
                         for k, v in raw_w.items()
                         if not k.startswith("_") and isinstance(v, (int, float))
                     }
-                result = self._risk_management.risk_debate(
+                result = self._risk_management.signal_debate(
                     signals=self._last_signals,
                     portfolio_weights=portfolio_weights,
                     market_data=self._last_market_data,

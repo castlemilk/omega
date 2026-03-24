@@ -241,8 +241,8 @@ func TestSimulationGate_RunAndEvaluate(t *testing.T) {
 	scenarios := []Scenario{
 		{ScenarioID: "t1", Name: "T1", Severity: 0.5, VolMultiplier: 1.5, MarketShocks: map[string]float64{"BTC": -0.05}},
 	}
-	report := gate.RunAndEvaluate(context.Background(), "strat_v1", strategy, scenarios, baseSignals, 0.30, nil)
-	if report.StrategyID != "strat_v1" {
-		t.Errorf("expected strategy_id 'strat_v1', got '%s'", report.StrategyID)
+	report := gate.RunAndEvaluate(context.Background(), "strategy_v1", strategy, scenarios, baseSignals, 0.30, nil)
+	if report.StrategyID != "strategy_v1" {
+		t.Errorf("expected strategy_id 'strategy_v1', got '%s'", report.StrategyID)
 	}
 }

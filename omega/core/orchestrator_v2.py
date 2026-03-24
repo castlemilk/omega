@@ -323,6 +323,19 @@ class OmegaOrchestrator:
                                     # Strip leading underscore for the Go metric key
                                     resp_metrics[_k.lstrip("_")] = float(out.result[_k])
 
+                        # Surface Polymarket edge metrics so Go can see edge quality.
+                        if (
+                            out.success
+                            and isinstance(out.result, dict)
+                            and capability in ("EDGE_DETECTION", "EDGEDETECTION")
+                        ):
+                            for _ek in ("edge", "kelly_fraction", "model_prob", "market_price"):
+                                if _ek in out.result and isinstance(out.result[_ek], (int, float)):
+                                    resp_metrics[_ek] = float(out.result[_ek])
+                            resp_metrics["opportunity"] = (
+                                1.0 if out.result.get("opportunity") else 0.0
+                            )
+
                         return ExecuteStepResponse(
                             success=out.success,
                             error_text="; ".join(out.errors) if out.errors else "",

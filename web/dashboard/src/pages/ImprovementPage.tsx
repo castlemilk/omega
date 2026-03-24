@@ -2,7 +2,7 @@ import React from 'react'
 import { Zap, RotateCcw, TrendingUp } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 import { useFetch } from '../hooks/useFetch'
-import { api, type Improvement } from '../lib/api'
+import { api } from '../lib/api'
 
 export function ImprovementPage() {
   const { data: improvements, loading } = useFetch(api.getImprovements)

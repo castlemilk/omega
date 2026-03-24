@@ -3,7 +3,6 @@
 package boundary
 
 import (
-	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -124,7 +123,7 @@ func parseImports(path string) ([]string, error) {
 	for _, imp := range f.Imports {
 		if imp.Path != nil {
 			// Strip surrounding quotes.
-			p := ast.BasicLit(*imp.Path)
+			p := *imp.Path
 			val := p.Value
 			val = strings.Trim(val, `"`)
 			imports = append(imports, val)

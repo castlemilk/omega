@@ -1,0 +1,49 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "omega-dashboard",
+      "runtimeExecutable": "node_modules/.bin/vite",
+      "runtimeArgs": ["--port", "5174"],
+      "cwd": "dashboard",
+      "port": 5174,
+      "autoPort": false
+    },
+    {
+      "name": "dashboard-master",
+      "runtimeExecutable": "node_modules/.bin/vite",
+      "runtimeArgs": ["--port", "5175"],
+      "cwd": "dashboard",
+      "port": 5175,
+      "autoPort": false
+    },
+    {
+      "name": "omega-api",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./cmd/omega-api"],
+      "cwd": ".",
+      "port": 8080
+    },
+    {
+      "name": "omega-nodes",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "omega.examples.vectora_main"],
+      "cwd": ".",
+      "port": null
+    },
+    {
+      "name": "monitoring",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "monitoring/docker-compose.yml", "up", "-d"],
+      "cwd": ".",
+      "port": 3000
+    },
+    {
+      "name": "otel-stack",
+      "runtimeExecutable": "docker",
+      "runtimeArgs": ["compose", "-f", "deploy/docker-compose.otel.yaml", "up", "-d"],
+      "cwd": ".",
+      "port": 3001
+    }
+  ]
+}

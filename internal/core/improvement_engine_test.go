@@ -40,7 +40,7 @@ func mustKernel(t *testing.T) *MemoryKernel {
 // lowStrategy: fires long only when price > 200 (confidence 0.3) — rarely fires.
 func lowStrategy(nodeID string, version int) *DeterministicStrategy {
 	s := &DeterministicStrategy{
-		StrategyID:  "low-strat",
+		StrategyID:  "low-strategy",
 		NodeID:      nodeID,
 		NodeVersion: "v1",
 		Version:     version,
@@ -64,7 +64,7 @@ func lowStrategy(nodeID string, version int) *DeterministicStrategy {
 // highStrategy: fires long when price > 50 (confidence 0.9) — fires often.
 func highStrategy(nodeID string, version int) *DeterministicStrategy {
 	s := &DeterministicStrategy{
-		StrategyID:  "high-strat",
+		StrategyID:  "high-strategy",
 		NodeID:      nodeID,
 		NodeVersion: "v2",
 		Version:     version,

@@ -752,7 +752,7 @@ class RiskManagementNode(Node):
                 continue
         return result
 
-    def risk_debate(
+    def signal_debate(
         self,
         signals: dict[str, Any],
         portfolio_weights: dict[str, float] | None = None,
