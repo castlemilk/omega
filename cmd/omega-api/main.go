@@ -15,7 +15,6 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/auth"
 	"github.com/benebsworth/omega/internal/bridge"
@@ -26,11 +25,10 @@ import (
 	"github.com/benebsworth/omega/internal/integrations/connectors"
 	mw "github.com/benebsworth/omega/internal/middleware"
 	"github.com/benebsworth/omega/internal/observability"
+	"github.com/benebsworth/omega/internal/projectseed"
 	"github.com/benebsworth/omega/internal/registry"
 	"github.com/benebsworth/omega/internal/telemetry"
 	"github.com/benebsworth/omega/internal/terminal"
-
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func main() {
@@ -125,8 +123,11 @@ func main() {
 	diagCollector := observability.NewDiagnosticsCollector(nil, nil, cbRegistry, logger)
 
 	// ── Project handler — created first so the orchestrator can read pipeline configs ──
+	// Projects are loaded from YAML files in OMEGA_PROJECTS_DIR (default: ./projects/).
 	projectH := handler.NewProject()
-	projectH.SeedProject(victoriaProject())
+	if err := projectseed.LoadAndSeed(projectH, ""); err != nil {
+		log.Printf("warn: project loader: %v — no projects registered from YAML", err)
+	}
 
 	// ── Service handlers ──────────────────────────────────────────────────────
 	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry).WithProjectHandler(projectH)
@@ -395,44 +396,3 @@ func withExecChain(chain *mw.Chain, h http.Handler) http.Handler {
 	})
 }
 
-// victoriaProject returns the default "Victoria" crypto-quant project seed.
-// Victoria is the first configured instance running on the Omega platform.
-func victoriaProject() *omegav1.Project {
-	now := timestamppb.Now()
-	steps := []*omegav1.PipelineStep{
-		{StepId: "step_1", Name: "DataIngestion", NodeType: "DATA_INGESTION", Description: "Fetch and normalize market data from Binance/CoinGecko", Order: 1},
-		{StepId: "step_2", Name: "SignalResearch", NodeType: "SIGNAL_RESEARCH", Description: "Generate alpha signals from price, volume, and on-chain data", Order: 2},
-		{StepId: "step_3", Name: "IntelligenceCoordination", NodeType: "STRATEGY", Description: "Coordinate signals across timeframes into a coherent view", Order: 3},
-		{StepId: "step_4", Name: "DynamicWeights", NodeType: "RISK_MANAGEMENT", Description: "Compute dynamic portfolio weights based on conviction and risk", Order: 4},
-		{StepId: "step_5", Name: "DebateGate", NodeType: "VERIFICATION", Description: "Adversarial debate gate — bull/bear case adjudication", Order: 5},
-		{StepId: "step_6", Name: "WalkForward", NodeType: "VERIFICATION", Description: "Walk-forward backtest validation of proposed weights", Order: 6},
-		{StepId: "step_7", Name: "Memory", NodeType: "MEMORY", Description: "Store episode context, update semantic memory", Order: 7},
-		{StepId: "step_8", Name: "ImprovementEngine", NodeType: "IMPROVEMENT", Description: "TPE-driven hyperparameter optimisation across the pipeline", Order: 8},
-		{StepId: "step_9", Name: "Ring3Adversarial", NodeType: "ADVERSARIAL", Description: "Final adversarial red-team before execution", Order: 9},
-	}
-	return &omegav1.Project{
-		ProjectId:     "proj_victoria",
-		Name:          "Victoria",
-		Description:   "Autonomous crypto quantitative research and trading system",
-		Status:        "active",
-		Domain:        "crypto_quant",
-		AutonomyLevel: "supervised",
-		NodeIds:       []string{},
-		PipelineConfig: steps,
-		EvalConfig: &omegav1.EvalConfig{
-			PrimaryMetrics: []string{"sharpe_ratio", "ic", "max_drawdown", "win_rate"},
-			MetricTargets:  map[string]float64{"sharpe_ratio": 1.5, "ic": 0.05, "max_drawdown": -0.15},
-			EvalFrequency:  "per_cycle",
-		},
-		ImprovementConfig: &omegav1.ImprovementConfig{
-			TpeEnabled:         true,
-			TpeTrials:          50,
-			AdversarialEnabled: true,
-			AdversarialRounds:  3,
-			WalkForwardEnabled: true,
-		},
-		Metadata:  map[string]string{"color": "#00ff00"},
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-}
