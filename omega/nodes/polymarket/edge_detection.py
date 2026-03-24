@@ -155,11 +155,19 @@ class EdgeDetectionNode(Node):
         t0 = time.perf_counter()
         self._execution_count += 1
         action = inp.action.lower()
+        cycle = int(inp.context.get("cycle", 0))
 
         result: Any = None
         try:
             if action in ("detect", "edge_detection", "edgedetection"):
-                result = self._detect_single(inp.parameters)
+                # If no explicit model_prob/market_price params, auto-fetch from
+                # PolymarketPricingNode and WeatherEnsembleNode.
+                if not inp.parameters or "model_prob" not in inp.parameters:
+                    result = self._auto_detect(cycle)
+                else:
+                    params = dict(inp.parameters)
+                    params.setdefault("cycle", cycle)
+                    result = self._detect_single(params)
             elif action == "batch_detect":
                 items = inp.parameters.get("items", [])
                 result = self._batch_detect(items)
@@ -233,6 +241,79 @@ class EdgeDetectionNode(Node):
         edge_component = min(abs(edge) / 0.5, 1.0)  # saturates at 0.5 edge
         member_component = min(member_count / 50.0, 1.0)  # saturates at 50 members
         return round((edge_component + member_component) / 2.0, 4)
+
+    def _auto_detect(self, cycle: int) -> dict[str, Any]:
+        """Auto-fetch markets and weather probs, then detect best edge.
+
+        Instantiates PolymarketPricingNode and WeatherEnsembleNode internally,
+        fetches live data, runs batch detection across all pairs, persists every
+        edge to polymarket_edges, and returns the highest-|edge| result.
+        """
+        from omega.core.node import NodeInput as NodeInputLocal
+        from omega.nodes.polymarket.pricing import PolymarketPricingNode
+        from omega.nodes.polymarket.weather_ensemble import WeatherEnsembleNode
+
+        # Fetch active markets from Polymarket.
+        try:
+            pricing_out = PolymarketPricingNode().execute(
+                NodeInputLocal(action="fetch_weather_markets")
+            )
+            markets: list[dict[str, Any]] = (
+                pricing_out.result if isinstance(pricing_out.result, list) else []
+            )
+        except Exception as exc:
+            logger.warning("auto_detect: pricing fetch failed: %s", exc)
+            markets = []
+
+        # Fetch weather ensemble probabilities per city.
+        try:
+            weather_out = WeatherEnsembleNode().execute(NodeInputLocal(action="probability"))
+            weather_result = weather_out.result or {}
+        except Exception as exc:
+            logger.warning("auto_detect: weather fetch failed: %s", exc)
+            weather_result = {}
+
+        # Build city→prob lookup (WeatherEnsembleNode returns dict keyed by city name).
+        city_probs: dict[str, float] = {}
+        if isinstance(weather_result, dict):
+            for city, data in weather_result.items():
+                if isinstance(data, dict) and "probability" in data:
+                    city_probs[city.upper()] = float(data["probability"])
+                elif isinstance(data, (int, float)):
+                    city_probs[city.upper()] = float(data)
+
+        best: dict[str, Any] | None = None
+        for mkt in markets:
+            # Match market to a city using the city field or question text.
+            mkt_city = str(mkt.get("city", "")).upper()
+            model_prob = city_probs.get(mkt_city, 0.5)
+            market_price = float(mkt.get("yes_price", 0.5))
+            params = {
+                "model_prob": model_prob,
+                "market_price": market_price,
+                "city": mkt.get("city", mkt_city),
+                "market_id": mkt.get("market_id", ""),
+                "market_slug": mkt.get("market_slug", mkt.get("market_id", "")),
+                "question": mkt.get("question", ""),
+                "member_count": 31,
+                "cycle": cycle,
+            }
+            r = self._detect_single(params)
+            if best is None or abs(r["edge"]) > abs(best["edge"]):
+                best = r
+
+        if best is None:
+            # Fallback: no markets found, return a zero-edge placeholder.
+            best = self._detect_single({"model_prob": 0.5, "market_price": 0.5, "cycle": cycle})
+
+        logger.info(
+            "auto_detect: cycle=%d markets=%d best_edge=%.4f opportunity=%s",
+            cycle,
+            len(markets),
+            best["edge"],
+            best["opportunity"],
+        )
+        return best
 
     def _detect_single(self, params: dict[str, Any]) -> dict[str, Any]:
         model_prob = float(params.get("model_prob", 0.5))
