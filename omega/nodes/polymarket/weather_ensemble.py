@@ -10,7 +10,8 @@ probability estimate suitable for comparison against prediction-market prices.
 
 Supported cities
 ----------------
-NYC, LA, CHICAGO, MIAMI, DALLAS, SEATTLE, DENVER, BOSTON, PHOENIX, ATLANTA
+NYC, LA, CHICAGO, MIAMI, DALLAS, SEATTLE, DENVER, BOSTON, PHOENIX, ATLANTA,
+LONDON, ANKARA, TEL_AVIV
 
 Cache
 -----
@@ -61,6 +62,10 @@ CITIES: dict[str, tuple[float, float]] = {
     "BOSTON": (42.3601, -71.0589),
     "PHOENIX": (33.4484, -112.0740),
     "ATLANTA": (33.7490, -84.3880),
+    # International cities — active Polymarket weather markets
+    "LONDON": (51.5074, -0.1278),
+    "ANKARA": (39.9334, 32.8597),
+    "TEL_AVIV": (32.0853, 34.7818),
 }
 
 OPEN_METEO_ENSEMBLE_URL = (
