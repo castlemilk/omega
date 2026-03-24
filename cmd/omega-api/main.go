@@ -379,7 +379,14 @@ func withPanicRecovery(h http.Handler) http.Handler {
 func withExecChain(chain *mw.Chain, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := r.URL.Path
-		if p == "/healthz" || p == "/readyz" || p == "/metrics" || strings.HasPrefix(p, "/debug/") || strings.HasPrefix(p, "/omega.v1.") {
+		// REST API paths and observability endpoints bypass the execution chain.
+		// The autonomy gate operates on semantic action names (e.g. "run_cycle"),
+		// not on HTTP verbs — passing r.Method ("GET") would incorrectly block
+		// read-only REST consumers such as the dashboard (BUG-005).
+		if p == "/healthz" || p == "/readyz" || p == "/metrics" ||
+			strings.HasPrefix(p, "/debug/") ||
+			strings.HasPrefix(p, "/omega.v1.") ||
+			strings.HasPrefix(p, "/api/v1/") {
 			h.ServeHTTP(w, r)
 			return
 		}
