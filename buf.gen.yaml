@@ -18,3 +18,8 @@ plugins:
     out: dashboard/src/gen
     opt:
       - target=ts
+# Python bindings (betterproto) are NOT generated via buf because the
+# betterproto plugin is not available as a buf remote plugin.
+# Run:  make proto-python
+# Requires:  uv pip install "betterproto[compiler]"
+# Output:    gen/python/omega/v1.py  (betterproto dataclasses)
