@@ -40,6 +40,7 @@ func init() {
 	rootCmd.AddCommand(challengesCmd)
 	rootCmd.AddCommand(nodesCmd)
 	rootCmd.AddCommand(projectsCmd)
+	rootCmd.AddCommand(marketsCmd)
 }
 
 func initConfig() {
