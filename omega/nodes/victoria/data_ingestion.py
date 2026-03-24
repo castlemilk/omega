@@ -21,6 +21,7 @@ Improvement arc:
   v1.4 — Bybit fallback enabled for failed pairs
 """
 
+import json
 import logging
 import time
 import uuid
@@ -359,6 +360,26 @@ class DataIngestionNode(Node):
                 defi_tvl = defi_data.get("defi_tvl", {})
                 result["_defi_tvl"] = defi_tvl
             # If unreachable, just skip — no key added
+
+        # ── Supplementary: Binance funding rates (BTCUSDT, free public API) ──
+        try:
+            import urllib.request as _ureq
+
+            _furl = "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=8"
+            _freq = _ureq.Request(_furl, headers={"User-Agent": "Mozilla/5.0"})
+            with _ureq.urlopen(_freq, timeout=5) as _fresp:
+                _fdata = json.loads(_fresp.read().decode("utf-8"))
+            if isinstance(_fdata, list) and _fdata:
+                result["funding_rates"] = [
+                    float(e["fundingRate"]) for e in _fdata if "fundingRate" in e
+                ]
+                logger.debug(
+                    "Binance funding rates fetched: %d periods, latest=%.6f",
+                    len(result["funding_rates"]),
+                    result["funding_rates"][-1] if result["funding_rates"] else 0.0,
+                )
+        except Exception as _exc:
+            logger.debug("Binance funding rate fetch skipped: %s", _exc)
 
         return result
 
