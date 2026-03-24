@@ -100,7 +100,7 @@ class PolymarketPricingNode(Node):
             "fetch_weather_markets",
             "fetch_market",
             NodeAction.MARKET_PRICING.value,
-            "polymarket_pricing",  # uppercases to POLYMARKET_PRICING for Go→Python dispatch
+            NodeAction.POLYMARKET_PRICING.value,  # registers "POLYMARKET_PRICING" handler for Go routing
         ]
 
     def describe(self) -> str:

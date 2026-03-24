@@ -48,6 +48,13 @@ Go orchestrator → ExecuteStepRequest.node_type (StepType string)
 If a node_type is unknown, `resolve_action` returns `None` and the server
 returns an error — do not add ad-hoc `.lower()` fallbacks.
 
+### Platform vs Project
+
+- **Omega is the PLATFORM** — `omega/core/`, `omega/bridge/`, `omega/nodes/` base classes are project-agnostic
+- **Victoria, Polymarket are PROJECTS** — project-specific code lives in `omega/nodes/{project}/`
+- Never import project code from platform code
+- Projects register via YAML in `projects/`
+
 ### Legacy aliases
 
 A small set of legacy aliases (`"riskcheck"`, `"signalresearch"`,

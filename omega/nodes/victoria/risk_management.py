@@ -178,7 +178,7 @@ class RiskManagementNode(Node):
             NodeAction.CHECK_RISK_LIMITS.value,
             "compute_correlation",
             "apply_vrp_constraints",
-            "risk_debate",
+            NodeAction.RISK_DEBATE.value,
         ]
 
     def describe(self) -> str:
@@ -215,7 +215,7 @@ class RiskManagementNode(Node):
                 self._vrp_regime = vrp_regime
                 self._vrp_zscore = vrp_zscore
                 result = self._apply_vrp_constraints(vrp_regime, vrp_zscore)
-            elif action == "risk_debate":
+            elif action == NodeAction.RISK_DEBATE.value:
                 portfolio = params.get("portfolio", {})
                 market_data = params.get("market_data", {})
                 vrp_regime = params.get("vrp_regime", self._vrp_regime)

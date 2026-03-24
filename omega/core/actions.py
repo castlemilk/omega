@@ -42,6 +42,7 @@ class NodeAction(StrEnum):
     WALK_FORWARD = "walkforward"
     MONITOR_LIQUIDATIONS = "monitor_liquidations"
     ARCHITECTURAL_REVIEW = "architectural_review"
+    RISK_DEBATE = "risk_debate"
     IMPROVEMENT = "improvement"
 
     # Go step-type aliases registered as capabilities on VictoriaNode
@@ -58,6 +59,9 @@ class NodeAction(StrEnum):
     WEATHER_ENSEMBLE = "weather_ensemble"
     PROBABILITY = "probability"
     MARKET_PRICING = "market_pricing"
+    # Capability alias: uppercases to "POLYMARKET_PRICING" for Go→Python handler routing.
+    # resolve_action maps StepType.POLYMARKET_PRICING → NodeAction.MARKET_PRICING for execution.
+    POLYMARKET_PRICING = "polymarket_pricing"
     EDGE_DETECTION = "edge_detection"
     DETECT = "detect"
 
