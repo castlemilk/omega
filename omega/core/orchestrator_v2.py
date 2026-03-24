@@ -254,6 +254,51 @@ class OmegaOrchestrator:
                             except Exception as _exc:
                                 logger.debug("signal history persistence failed: %s", _exc)
 
+                        # After a portfolio-construction step, execute paper trades so that
+                        # signal → paper trade pathway is live, not just persisted as signals.
+                        if (
+                            out.success
+                            and orch._paper_trading is not None
+                            and capability
+                            in (
+                                "STRATEGY",
+                                "INTELLIGENCECOORDINATION",
+                                "CONSTRUCT_PORTFOLIO",
+                            )
+                            and out.result
+                        ):
+                            try:
+                                proposals = (
+                                    out.result
+                                    if isinstance(out.result, list)
+                                    else [out.result]
+                                    if isinstance(out.result, dict)
+                                    else []
+                                )
+                                if proposals:
+                                    market_data = getattr(n, "_last_market_data", {})
+                                    executed = orch._paper_trading.execute_proposals(
+                                        proposals,
+                                        market_data=market_data,
+                                        cycle_id=str(req.cycle),
+                                    )
+                                    logger.info(
+                                        "Paper trades executed: %d (cycle=%d)",
+                                        len(executed),
+                                        req.cycle,
+                                    )
+                                    # Surface trade counts and PnL into metrics for Go.
+                                    if executed:
+                                        out.metrics["paper_trades_executed"] = float(len(executed))
+                                        out.metrics["paper_trade_total_size"] = sum(
+                                            float(t.get("size", 0.0)) for t in executed
+                                        )
+                                        out.metrics["paper_realised_pnl"] = float(
+                                            orch._paper_trading.realised_pnl
+                                        )
+                            except Exception as _exc:
+                                logger.debug("paper trading execution failed: %s", _exc)
+
                         # Base metrics from node execution (latency_ms etc.)
                         resp_metrics: dict[str, float] = {
                             k: float(v)
