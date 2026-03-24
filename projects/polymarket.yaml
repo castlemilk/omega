@@ -1,0 +1,21 @@
+id: polymarket
+name: Polymarket
+domain: prediction_markets
+status: active
+autonomy_level: pico
+
+pipeline_config:
+  steps:
+    - name: weather_data
+      node_type: WEATHER_ENSEMBLE
+    - name: market_pricing
+      node_type: POLYMARKET_PRICING
+    - name: edge_detection
+      node_type: EDGE_DETECTION
+    - name: risk_check
+      node_type: RISK_MANAGEMENT
+
+eval_config:
+  metrics:
+    edge_accuracy: 0.6
+    avg_edge: 0.08

@@ -30,6 +30,36 @@ logging.basicConfig(
 logger = logging.getLogger("omega.bridge.server_main")
 
 
+def _register_polymarket_nodes(orch: object) -> None:
+    """Register Polymarket weather pipeline nodes if the project config exists."""
+    import pathlib
+
+    project_config = pathlib.Path(__file__).parents[2] / "projects" / "polymarket.yaml"
+    if not project_config.exists():
+        return
+
+    try:
+        from omega.nodes.polymarket.edge_detection import EdgeDetectionNode
+        from omega.nodes.polymarket.pricing import PolymarketPricingNode
+        from omega.nodes.polymarket.weather_ensemble import WeatherEnsembleNode
+
+        weather_node = WeatherEnsembleNode()
+        pricing_node = PolymarketPricingNode()
+        edge_node = EdgeDetectionNode()
+
+        for n in (weather_node, pricing_node, edge_node):
+            orch.register_node(n)  # type: ignore[attr-defined]
+
+        logger.info(
+            "Polymarket nodes registered: %s, %s, %s",
+            weather_node.get_state().name,
+            pricing_node.get_state().name,
+            edge_node.get_state().name,
+        )
+    except Exception as exc:
+        logger.warning("Failed to register Polymarket nodes: %s — continuing without them", exc)
+
+
 def main() -> None:
     port = int(os.getenv("OMEGA_PIPELINE_PORT", "9090"))
 
@@ -39,6 +69,9 @@ def main() -> None:
     orch = OmegaOrchestrator(name="victoria-pipeline-server")
     node = VictoriaNode()
     orch.register_node(node)
+
+    # Register Polymarket nodes when projects/polymarket.yaml is present.
+    _register_polymarket_nodes(orch)
 
     # Wire state store for cycle-result persistence and history seeding.
     # Wire tracer for Go→Python distributed trace propagation.
