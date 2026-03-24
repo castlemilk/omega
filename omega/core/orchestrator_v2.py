@@ -142,6 +142,8 @@ class OmegaOrchestrator:
         self._history = CycleHistory(max_size=history_size)
         self._cycle_number: int = 0
         self._running: bool = False
+        self._tracer: Any = None
+        self._store: Any = None
 
         logger.info("OmegaOrchestrator '%s' initialised", name)
 
@@ -187,6 +189,21 @@ class OmegaOrchestrator:
                     def _handler(req: ExecuteStepRequest) -> ExecuteStepResponse:
                         import json as _json
 
+                        # ── Distributed trace propagation (Go→Python) ──────────
+                        # When Go sends a traceparent header, continue the trace
+                        # so Python spans appear in the same tree in the viewer.
+                        child_ctx = None
+                        if orch._tracer is not None and req.trace_id and req.parent_span_id:
+                            traceparent = f"00-{req.trace_id}-{req.parent_span_id}-01"
+                            try:
+                                child_ctx = orch._tracer.continue_trace(
+                                    traceparent,
+                                    operation=f"{capability}.{req.step_name}",
+                                    cycle=req.cycle,
+                                )
+                            except Exception:
+                                child_ctx = None
+
                         inp = NodeInput(
                             action=req.step_name.lower() or capability.lower(),
                             parameters=dict(req.parameters),
@@ -201,6 +218,16 @@ class OmegaOrchestrator:
                         )
                         out = n.execute(inp)
                         state = n.get_state()
+
+                        # End the distributed trace span.
+                        if child_ctx is not None and orch._tracer is not None:
+                            import contextlib
+
+                            with contextlib.suppress(Exception):
+                                orch._tracer.end_span(
+                                    child_ctx.span_id,
+                                    status="ok" if out.success else "error",
+                                )
 
                         # Persist signal IC history when a signal-research step completes.
                         if (
@@ -312,6 +339,64 @@ class OmegaOrchestrator:
         """
         self._paper_trading = engine
         logger.debug("PaperTradingEngine wired into orchestrator.")
+
+    def set_tracer(self, tracer: Any) -> None:
+        """Wire a Tracer for distributed trace propagation (Go→Python bridge).
+
+        When set, the pipeline server handler creates a child span under the
+        incoming W3C traceparent header so Go and Python spans appear in the
+        same trace tree.
+        """
+        self._tracer = tracer
+        logger.debug("Tracer wired into orchestrator.")
+
+    def set_state_store(self, store: Any) -> None:
+        """Wire a StateBackend for cycle-result persistence.
+
+        Persists CycleResult to the ``cycle_results`` table after each cycle
+        and seeds CycleHistory from the DB on startup.
+        """
+        self._store = store
+        self._seed_history_from_store()
+        logger.debug("StateStore wired into orchestrator; history seeded from DB.")
+
+    def _seed_history_from_store(self) -> None:
+        """Load recent cycle results from the state store into CycleHistory."""
+        if self._store is None:
+            return
+        try:
+            rows = self._store.get_recent_cycle_results(limit=self._history._window.maxlen or 200)
+            for row in reversed(rows):  # oldest first
+                ctx = CycleContext(
+                    cycle_id=row["cycle_id"],
+                    cycle_number=row["cycle_number"],
+                    timestamp=row["started_at"],
+                    regime=row.get("regime", "normal"),
+                    active_node_ids=(),
+                    autonomy_levels={},
+                    metadata={},
+                )
+                result = CycleResult(
+                    context=ctx,
+                    duration_seconds=row.get("duration_seconds", 0.0),
+                    signals_generated=row.get("signals_generated", 0),
+                    actions_proposed=row.get("actions_proposed", 0),
+                    actions_executed=row.get("actions_executed", 0),
+                    error_count=row.get("error_count", 0),
+                    improvement_proposed=bool(row.get("improvement_proposed", 0)),
+                    regime_transition=bool(row.get("regime_transition", 0)),
+                    metrics=row.get("metrics", {}),
+                )
+                self._history.append(result)
+            if rows:
+                self._cycle_number = max(r["cycle_number"] for r in rows) + 1
+            logger.info(
+                "Seeded CycleHistory with %d results from DB (next cycle=%d)",
+                len(rows),
+                self._cycle_number,
+            )
+        except Exception as exc:
+            logger.warning("Could not seed CycleHistory from DB: %s", exc)
 
     def deregister_node(self, node_id: str) -> None:
         """Remove a node from the registry and active set."""
@@ -533,6 +618,28 @@ class OmegaOrchestrator:
         self._post_cycle(ctx, result, log)
 
         self._history.append(result)
+
+        # Persist cycle result to the state store for crash-safe history.
+        if self._store is not None:
+            try:
+                self._store.record_cycle_result(
+                    cycle_id=result.cycle_id,
+                    cycle_number=result.cycle_number,
+                    started_at=ctx.timestamp,
+                    duration_seconds=result.duration_seconds,
+                    signals_generated=result.signals_generated,
+                    actions_proposed=result.actions_proposed,
+                    actions_executed=result.actions_executed,
+                    error_count=result.error_count,
+                    regime=ctx.regime,
+                    improvement_proposed=result.improvement_proposed,
+                    regime_transition=result.regime_transition,
+                    adversarial_flags=result.adversarial_flags,
+                    metrics=result.metrics,
+                )
+            except Exception as exc:
+                logger.warning("cycle_result persistence failed: %s", exc)
+
         log.info(
             "Cycle %d done: signals=%d actions_exec=%d flags=%d dur=%.3fs",
             cycle_num,
