@@ -273,28 +273,43 @@ class EdgeDetectionNode(Node):
             logger.warning("auto_detect: weather fetch failed: %s", exc)
             weather_result = {}
 
-        # Build city→prob lookup (WeatherEnsembleNode returns dict keyed by city name).
+        # Build city→prob lookup from WeatherEnsembleNode result.
+        # The node returns either a per-city dict {city: {probability: float, ...}}
+        # or a single-city dict {city: str, probability: float, ...}.
         city_probs: dict[str, float] = {}
         if isinstance(weather_result, dict):
-            for city, data in weather_result.items():
-                if isinstance(data, dict) and "probability" in data:
-                    city_probs[city.upper()] = float(data["probability"])
-                elif isinstance(data, (int, float)):
-                    city_probs[city.upper()] = float(data)
+            if "city" in weather_result and "probability" in weather_result:
+                # Single-city result
+                city_probs[str(weather_result["city"]).upper()] = float(
+                    weather_result["probability"]
+                )
+            else:
+                for city, data in weather_result.items():
+                    if isinstance(data, dict) and "probability" in data:
+                        city_probs[city.upper()] = float(data["probability"])
+                    elif isinstance(data, (int, float)):
+                        city_probs[city.upper()] = float(data)
 
         best: dict[str, Any] | None = None
         for mkt in markets:
-            # Match market to a city using the city field or question text.
+            # Match market to a city: check city field first, then scan question text.
             mkt_city = str(mkt.get("city", "")).upper()
-            model_prob = city_probs.get(mkt_city, 0.5)
+            question = str(mkt.get("question", ""))
+            if not mkt_city and question:
+                # Try to find a known city name in the question text.
+                for known_city in city_probs:
+                    if known_city.title() in question or known_city.lower() in question.lower():
+                        mkt_city = known_city
+                        break
+            model_prob = city_probs.get(mkt_city, 0.5) if mkt_city else 0.5
             market_price = float(mkt.get("yes_price", 0.5))
             params = {
                 "model_prob": model_prob,
                 "market_price": market_price,
-                "city": mkt.get("city", mkt_city),
+                "city": mkt_city or mkt.get("city", ""),
                 "market_id": mkt.get("market_id", ""),
                 "market_slug": mkt.get("market_slug", mkt.get("market_id", "")),
-                "question": mkt.get("question", ""),
+                "question": question,
                 "member_count": 31,
                 "cycle": cycle,
             }
