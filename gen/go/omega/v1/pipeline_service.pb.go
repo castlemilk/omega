@@ -31,6 +31,7 @@ type ExecuteStepRequest struct {
 	ParentSpanId  string                 `protobuf:"bytes,6,opt,name=parent_span_id,json=parentSpanId,proto3" json:"parent_span_id,omitempty"`                                                 // current Go span ID (hex, 16 chars)
 	Parameters    map[string]string      `protobuf:"bytes,7,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // step config overrides
 	InputPayload  []byte                 `protobuf:"bytes,8,opt,name=input_payload,json=inputPayload,proto3" json:"input_payload,omitempty"`                                                   // JSON-encoded output from previous step (may be empty)
+	ProjectId     string                 `protobuf:"bytes,9,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`                                                            // scopes handler lookup to this project
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,6 +120,13 @@ func (x *ExecuteStepRequest) GetInputPayload() []byte {
 		return x.InputPayload
 	}
 	return nil
+}
+
+func (x *ExecuteStepRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
 }
 
 type ExecuteStepResponse struct {
@@ -305,7 +313,7 @@ var File_omega_v1_pipeline_service_proto protoreflect.FileDescriptor
 
 const file_omega_v1_pipeline_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1fomega/v1/pipeline_service.proto\x12\bomega.v1\"\xf0\x02\n" +
+	"\x1fomega/v1/pipeline_service.proto\x12\bomega.v1\"\x8f\x03\n" +
 	"\x12ExecuteStepRequest\x12\x17\n" +
 	"\astep_id\x18\x01 \x01(\tR\x06stepId\x12\x1b\n" +
 	"\tstep_name\x18\x02 \x01(\tR\bstepName\x12\x1b\n" +
@@ -316,7 +324,9 @@ const file_omega_v1_pipeline_service_proto_rawDesc = "" +
 	"\n" +
 	"parameters\x18\a \x03(\v2,.omega.v1.ExecuteStepRequest.ParametersEntryR\n" +
 	"parameters\x12#\n" +
-	"\rinput_payload\x18\b \x01(\fR\finputPayload\x1a=\n" +
+	"\rinput_payload\x18\b \x01(\fR\finputPayload\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\t \x01(\tR\tprojectId\x1a=\n" +
 	"\x0fParametersEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xce\x02\n" +

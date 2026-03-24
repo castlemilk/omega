@@ -63,11 +63,17 @@ func printStatus() error {
 		return fmt.Errorf("GetAlignmentDecisions: %w", err)
 	}
 
+	cycleResp, _ := client.GetLastCycleResult(ctx, connect.NewRequest(&omegav1.GetLastCycleResultRequest{}))
+
 	if statusJSON {
 		out := map[string]any{
-			"health":    healthResp.Msg.Health,
-			"nodes":     nodesResp.Msg.Nodes,
-			"alignment": alignResp.Msg.Decisions,
+			"health":     healthResp.Msg.Health,
+			"nodes":      nodesResp.Msg.Nodes,
+			"alignment":  alignResp.Msg.Decisions,
+			"last_cycle": nil,
+		}
+		if cycleResp != nil {
+			out["last_cycle"] = cycleResp.Msg
 		}
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -106,6 +112,20 @@ func printStatus() error {
 			for _, r := range d.Reasons {
 				fmt.Printf("               - %s\n", r)
 			}
+		}
+	}
+
+	if cycleResp != nil && cycleResp.Msg.HasResult {
+		fmt.Printf("\n=== Last Cycle (cycle %d, %.0fms) ===\n",
+			cycleResp.Msg.Cycle, cycleResp.Msg.TotalDurationMs)
+		for _, s := range cycleResp.Msg.StepResults {
+			status := "ok"
+			detail := fmt.Sprintf("%.0fms", s.DurationMs)
+			if !s.Success {
+				status = "FAIL"
+				detail = s.Error
+			}
+			fmt.Printf("  %-30s  %s  (%s)\n", s.Name, status, detail)
 		}
 	}
 

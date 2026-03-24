@@ -2,6 +2,7 @@ name: omega
 
 volumes:
   omega-pgdata:
+  grafana-data:
 
 services:
 
@@ -10,15 +11,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: omega
-      POSTGRES_USER: omega
-      POSTGRES_PASSWORD: omega
+      POSTGRES_DB:       ${POSTGRES_DB:-omega}
+      POSTGRES_USER:     ${POSTGRES_USER:-omega}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omega}
     volumes:
       - omega-pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U omega -d omega"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-omega} -d ${POSTGRES_DB:-omega}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,9 +33,12 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://omega:omega@omega-postgres:5432/omega?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-omega}:${POSTGRES_PASSWORD:-omega}@omega-postgres:5432/${POSTGRES_DB:-omega}?sslmode=disable
       OMEGA_API_BASE_URL: http://omega-api:8080
       OMEGA_JSON_LOGS: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: omega-nodes
+      OTEL_TRACES_EXPORTER: otlp
     depends_on:
       omega-postgres:
         condition: service_healthy
@@ -55,7 +59,10 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://omega:omega@omega-postgres:5432/omega?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-omega}:${POSTGRES_PASSWORD:-omega}@omega-postgres:5432/${POSTGRES_DB:-omega}?sslmode=disable
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: omega-api
+      OTEL_TRACES_EXPORTER: otlp
     ports:
       - "8080:8080"
     depends_on:
@@ -88,3 +95,55 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # ── OpenTelemetry Collector ──────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    restart: unless-stopped
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml:ro
+    command: ["--config=/etc/otel-collector-config.yml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - tempo
+      - prometheus
+
+  # ── Grafana Tempo (distributed tracing backend) ──────────────────────────────
+  tempo:
+    image: grafana/tempo:2.4.1
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./tempo.yml:/etc/tempo.yml:ro
+    ports:
+      - "3200:3200"   # Tempo HTTP API
+      - "9095:9095"   # Tempo gRPC
+
+  # ── Prometheus ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-remote-write-receiver"
+
+  # ── Grafana ──────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.3.3
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - tempo
+      - prometheus

@@ -32,6 +32,7 @@ Capabilities exposed to orchestrator
 from __future__ import annotations
 
 import logging
+import os
 import time
 import uuid
 from typing import Any, ClassVar
@@ -325,6 +326,72 @@ class VictoriaNode(Node):
 
         return VictoriaStateTensorBuilder.build(self._node_id, values)
 
+    def persist_signals(
+        self,
+        signals: dict[str, Any],
+        db_url: str | None = None,
+    ) -> None:
+        """Write computed signals to the victoria_signals table via UPSERT.
+
+        Parameters
+        ----------
+        signals : dict
+            Output of _do_compute_signals (may include _weights / _regime keys).
+        db_url : str | None
+            Postgres connection URL. Falls back to DATABASE_URL env var.
+        """
+        import psycopg
+
+        url = db_url or os.getenv("DATABASE_URL")
+        if not url:
+            logger.warning("persist_signals: DATABASE_URL not set — signal persistence skipped")
+            return
+
+        weights: dict[str, float] = signals.get("_weights", {})
+
+        rows = []
+        for name, sig in signals.items():
+            if name.startswith("_"):
+                continue
+            if not isinstance(sig, dict):
+                continue
+            value = float(sig.get("value", 0.0))
+            confidence = float(sig.get("confidence", 0.0))
+            weight = float(weights.get(name, 1.0))
+            trend = str(sig.get("regime_tag", "unknown"))
+
+            if value > 0.1:
+                color = "#22c55e"  # green
+            elif value < -0.1:
+                color = "#ef4444"  # red
+            else:
+                color = "#6b7280"  # gray
+
+            rows.append((name, confidence, weight, 20, color, confidence, 0.0, value, trend))
+
+        if not rows:
+            return
+
+        sql = """
+            INSERT INTO victoria_signals
+                (name, avg_ic, weight, half_life, color, conviction, brier_score, current_value, trend)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (name)
+            DO UPDATE SET
+                avg_ic        = EXCLUDED.avg_ic,
+                weight        = EXCLUDED.weight,
+                conviction    = EXCLUDED.conviction,
+                current_value = EXCLUDED.current_value,
+                trend         = EXCLUDED.trend,
+                color         = EXCLUDED.color
+        """
+        try:
+            with psycopg.connect(url) as conn, conn.cursor() as cur:
+                for row in rows:
+                    cur.execute(sql, row)
+        except Exception as exc:
+            logger.warning("persist_signals: DB write failed: %s", exc)
+
     def _derive_signal_quality(self) -> float:
         """Estimate signal quality from last computed signals."""
         if not self._last_signals:
@@ -459,6 +526,7 @@ class VictoriaNode(Node):
         signals["_weights"] = raw_weights
         signals["_regime"] = regime
         self._last_signals = signals
+        self.persist_signals(signals)
         return signals
 
     def _do_construct_portfolio(self, inp: NodeInput) -> list[dict[str, Any]]:

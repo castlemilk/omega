@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: omega-api
+    static_configs:
+      - targets: ['omega-api:9090']

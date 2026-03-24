@@ -26,6 +26,14 @@ import (
 // Ensure interface satisfaction at compile time.
 var _ omegav1connect.OrchestratorServiceHandler = (*OrchestratorHandler)(nil)
 
+// lastCycleResult holds the most recent cycle's outcome for GetLastCycleResult.
+type lastCycleResult struct {
+	Cycle      int64
+	Steps      []stepResult
+	TotalMS    float64
+	ErrorCount int32
+}
+
 // OrchestratorHandler implements OrchestratorService.
 type OrchestratorHandler struct {
 	db             *db.DB
@@ -36,6 +44,9 @@ type OrchestratorHandler struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc // non-nil while orchestrator loop is running
 	cycleN atomic.Int64       // total cycles completed
+
+	lastCycleMu    sync.RWMutex
+	lastCycleCache *lastCycleResult
 }
 
 // New creates an OrchestratorHandler backed by the given DB.
@@ -663,6 +674,7 @@ type stepResult struct {
 // It is called synchronously by TriggerHeartbeat so the caller can surface step
 // success/failure and latency directly in the response.
 func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepResult, error) {
+	t0Cycle := time.Now()
 	cycle := h.cycleN.Add(1)
 
 	tracer := telemetry.Tracer()
@@ -715,10 +727,11 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 				)
 				t0 := time.Now()
 				resp, stepErr := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
-					StepId:   step.StepId,
-					StepName: step.Name,
-					NodeType: step.NodeType,
-					Cycle:    cycle,
+					StepId:    step.StepId,
+					StepName:  step.Name,
+					NodeType:  step.NodeType,
+					Cycle:     cycle,
+					ProjectId: projectID,
 				})
 				elapsed := float64(time.Since(t0).Milliseconds())
 				sr := stepResult{Name: step.Name, NodeType: step.NodeType, DurationMS: elapsed}
@@ -781,6 +794,23 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 		"cycle": cycle, "node_count": len(nodes),
 	}, cycle)
 	cycleSpan.SetStatus(codes.Ok, "")
+
+	// Cache last cycle result for GetLastCycleResult.
+	var errCount int32
+	for _, r := range results {
+		if !r.Success {
+			errCount++
+		}
+	}
+	h.lastCycleMu.Lock()
+	h.lastCycleCache = &lastCycleResult{
+		Cycle:      cycle,
+		Steps:      results,
+		TotalMS:    float64(time.Since(t0Cycle).Milliseconds()),
+		ErrorCount: errCount,
+	}
+	h.lastCycleMu.Unlock()
+
 	return results, nil
 }
 
@@ -1010,6 +1040,41 @@ func (h *OrchestratorHandler) GetBrainExecutionHistory(
 		})
 	}
 	return connect.NewResponse(&omegav1.GetBrainExecutionHistoryResponse{Entries: protoEntries}), nil
+}
+
+// ── GetLastCycleResult ────────────────────────────────────────────────────────
+
+func (h *OrchestratorHandler) GetLastCycleResult(
+	ctx context.Context,
+	req *connect.Request[omegav1.GetLastCycleResultRequest],
+) (*connect.Response[omegav1.GetLastCycleResultResponse], error) {
+	_ = ctx
+	_ = req
+	h.lastCycleMu.RLock()
+	cached := h.lastCycleCache
+	h.lastCycleMu.RUnlock()
+
+	if cached == nil {
+		return connect.NewResponse(&omegav1.GetLastCycleResultResponse{
+			HasResult: false,
+		}), nil
+	}
+
+	resp := &omegav1.GetLastCycleResultResponse{
+		Cycle:           cached.Cycle,
+		TotalDurationMs: cached.TotalMS,
+		ErrorCount:      cached.ErrorCount,
+		HasResult:       true,
+	}
+	for _, s := range cached.Steps {
+		resp.StepResults = append(resp.StepResults, &omegav1.CycleStepResult{
+			Name:       s.Name,
+			Success:    s.Success,
+			DurationMs: s.DurationMS,
+			Error:      s.Error,
+		})
+	}
+	return connect.NewResponse(resp), nil
 }
 
 func dbNodeConfigToProto(n *db.Node, brain *db.BrainConfig) *omegav1.NodeConfig {

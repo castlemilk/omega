@@ -38,6 +38,7 @@ service OrchestratorService {
   rpc GetMemoryStats(GetMemoryStatsRequest) returns (GetMemoryStatsResponse);
   rpc GetVerificationGates(GetVerificationGatesRequest) returns (GetVerificationGatesResponse);
   rpc GetImprovementHistory(GetImprovementHistoryRequest) returns (GetImprovementHistoryResponse);
+  rpc GetLastCycleResult(GetLastCycleResultRequest) returns (GetLastCycleResultResponse);
 }
 
 // ── Health ─────────────────────────────────────────────────────────────────
@@ -197,3 +198,21 @@ message GetVerificationGatesResponse { repeated GateResult gates = 1; }
 // ── Improvement history ────────────────────────────────────────────────────
 message GetImprovementHistoryRequest { int32 limit = 1; }
 message GetImprovementHistoryResponse { repeated ImprovementDetail records = 1; }
+
+// ── Last cycle result ──────────────────────────────────────────────────────
+message GetLastCycleResultRequest {}
+
+message CycleStepResult {
+  string name        = 1;
+  bool   success     = 2;
+  double duration_ms = 3;
+  string error       = 4;
+}
+
+message GetLastCycleResultResponse {
+  int64                    cycle             = 1;
+  repeated CycleStepResult step_results      = 2;
+  double                   total_duration_ms = 3;
+  int32                    error_count       = 4;
+  bool                     has_result        = 5;
+}
