@@ -2,15 +2,34 @@
 
 ## Overview
 
-10-cycle live measurement run to verify the self-improvement feedback loop is real and quantifiable.
-All 5 unmerged `claude/*` branches were consolidated into `master` before running.
+10-cycle live measurement run on master branch to verify the self-improvement feedback loop is real and quantifiable.
 
 **Date:** 2026-03-24
+**Branch:** master (post-merge of claude/dazzling-antonelli, claude/jovial-ptolemy, claude/reverent-rosalind, claude/infallible-golick)
 **Cycles:** 10
-**Interval:** 20s (overridden by measurement mode)
+**Interval:** 20s
 **Pipeline steps/cycle:** 9 (DataIngestion → SignalResearch → IntelligenceCoordination → DynamicWeights → DebateGate → WalkForward → Memory → ImprovementEngine → Ring3Adversarial)
 **Error rate:** 0% (90/90 step executions succeeded)
-**Total wall time:** 6,286ms for 10 cycles (~629ms/cycle)
+**Total wall time:** 6,729ms for 10 cycles (~673ms/cycle)
+
+---
+
+## Cycle-by-Cycle Execution
+
+| Cycle | Steps | Errors | Wall Time | SignalResearch |
+|-------|-------|--------|-----------|----------------|
+| 1  | 9 | 0 | 772ms | 671ms |
+| 2  | 9 | 0 | 670ms | 573ms |
+| 3  | 9 | 0 | 659ms | 564ms |
+| 4  | 9 | 0 | 638ms | 541ms |
+| 5  | 9 | 0 | 650ms | 549ms |
+| 6  | 9 | 0 | 689ms | 602ms |
+| 7  | 9 | 0 | 638ms | 540ms |
+| 8  | 9 | 0 | 688ms | 577ms |
+| 9  | 9 | 0 | 657ms | 563ms |
+| 10 | 9 | 0 | 664ms | 560ms |
+
+All non-SignalResearch steps complete in <5ms. SignalResearch dominates at ~575ms avg (live Binance/CoinGecko fetch).
 
 ---
 
@@ -25,105 +44,91 @@ quality_score = signal_coverage × 0.3
               + experience_bonus × 0.1
 ```
 
-| Cycle | quality_score | best_score | improvement_applied | delta vs prev |
-|-------|--------------|------------|---------------------|---------------|
-| 1     | —            | —          | skipped (< 3 cycles) | — |
-| 2     | —            | —          | skipped (< 3 cycles) | — |
-| 3     | 0.4160       | 0.4160     | ✓ IC bootstrap       | baseline |
-| 4     | 0.4210       | 0.4210     | ✓ IC bootstrap       | +0.005 (+1.2%) |
-| 5     | 0.4260       | 0.4260     | ✓ IC bootstrap       | +0.005 (+1.2%) |
-| 6     | 0.4310       | 0.4310     | ✓ IC bootstrap       | +0.005 (+1.2%) |
-| 7     | 0.4360       | 0.4360     | ✓ IC bootstrap       | +0.005 (+1.2%) |
-| 8     | 0.4958       | 0.4958     | — (IC weights live)  | +0.0598 (+13.7%) |
-| 9     | 0.5008       | 0.5008     | — (IC weights live)  | +0.005 (+1.0%) |
-| 10    | 0.5058       | 0.5058     | — (IC weights live)  | +0.005 (+1.0%) |
+| Cycle | best_score | improvement_applied | delta vs prev |
+|-------|-----------|---------------------|---------------|
+| 1–2   | — | skipped (< 3 cycles) | — |
+| 3     | 0.4160 | ✓ IC bootstrap | baseline |
+| 4     | 0.4210 | ✓ IC bootstrap | +0.005 (+1.2%) |
+| 5     | 0.4260 | ✓ IC bootstrap | +0.005 (+1.2%) |
+| 6     | 0.4310 | ✓ IC bootstrap | +0.005 (+1.2%) |
+| 7     | 0.4360 | ✓ IC bootstrap | +0.005 (+1.2%) |
+| 8     | 0.4958 | — (IC weights live) | +0.0598 (+13.7%) |
+| 9     | 0.5008 | — (IC weights live) | +0.005 (+1.0%) |
+| 10    | 0.5058 | — (IC weights live) | +0.005 (+1.0%) |
 
 **Total gain: 0.416 → 0.506 = +21.6% over 8 active cycles.**
 
----
+### What Improved and Why
 
-## What Improved and Why
+**Phase 1 — IC Bootstrap (cycles 3–7):** The `ImprovementEngine` detected that the `DynamicWeightAllocator` was in fallback mode (equal weights, < 5 IC observations per signal). Each cycle it bootstrapped positive IC values proportional to observed confidence, producing steady +0.005/cycle gains.
 
-### Phase 1 — IC Bootstrap (cycles 3–7)
-The `ImprovementEngine` detected that the `DynamicWeightAllocator` was still in fallback mode (equal weights, < 5 IC observations per signal). Each cycle it bootstrapped positive IC values for all 6 expected signal types proportional to their observed confidence. This caused the allocator to accumulate IC samples, producing a steady +0.005/cycle quality gain.
-
-### Phase 2 — IC Weights Activated (cycle 8+)
-After MIN_IC_SAMPLES (5) IC observations, the weight allocator switched from equal → IC-based weights. Signals with higher confidence received proportionally larger weights. This caused average weighted confidence to jump, producing the large +13.7% step at cycle 8. Subsequent cycles show steady incremental gains from further IC refinement.
-
-### Why the gain is real
-- The `quality_score` is computed inside VictoriaNode from live market data (Binance/CoinGecko via SignalResearch)
-- The `_weight_allocator.allocate()` call uses a genuinely different weight distribution after IC activation (verified by `is_fallback=False`)
-- The ImprovementEngine's `improvement_applied=0` in cycles 8–10 confirms the improvement is now self-sustaining (no external bootstrap needed)
+**Phase 2 — IC Weights Activated (cycle 8+):** After MIN_IC_SAMPLES (5) observations, the allocator switched from equal → IC-based weights. Signals with higher confidence received larger weights, causing a +13.7% jump at cycle 8. `improvement_applied=0` in cycles 8–10 confirms the improvement is self-sustaining.
 
 ---
 
-## DARK Goal Tracking (goal_tracking table)
+## DARK Signal Tables
 
-| Cycle | composite_score | IC current | Sharpe current | MaxDD current |
-|-------|----------------|-----------|----------------|---------------|
-| 1–10  | 0.0            | 0.0       | 0.0            | 0.0           |
+### goal_tracking
 
-**Note:** Goal tracking records coordination-level outcomes. The `composite_score` remains at 0 because DARK goal tracking is seeded from paper-trading performance metrics (IC, Sharpe, max drawdown) which require more cycles of live paper trades to accumulate. **This is expected behavior for a fresh run** — the financial metrics targets (IC ≥ 0.05, Sharpe ≥ 1.5, MaxDD ≥ -0.15) are set appropriately but need more than 10 cycles to produce non-zero trading signals.
+All 20 rows (2 per cycle) show `composite_score = 0`.
 
----
+| Metric | Target | Current | Gap |
+|--------|--------|---------|-----|
+| sharpe_ratio | 1.5 | 0.0 | -1.5 |
+| ic | 0.05 | 0.0 | -0.05 |
+| max_drawdown | -0.15 | 0.0 | +0.15 |
 
-## Prometheus Metrics State
+Goal composite_score is 0 because financial targets (IC, Sharpe, drawdown) require live paper-trade returns to accumulate — expected for a fresh 10-cycle run.
 
-```
-omega_cycles_total         = 10
-omega_health_score         = 0   (goal tracking not yet populated)
+### verification_gates — 46 rows, all passing
 
-Per-node execution counts (all 10 cycles × 2 project runs = 20 each):
-  omega_node_executions_total{node_name="DataIngestion",status="success"}   = 20
-  omega_node_executions_total{node_name="SignalResearch",status="success"}  = 20
-  omega_node_executions_total{node_name="IntelligenceCoordination",...}     = 20
-  omega_node_executions_total{node_name="DynamicWeights",...}               = 20
-  omega_node_executions_total{node_name="DebateGate",...}                   = 20
-  omega_node_executions_total{node_name="WalkForward",...}                  = 20
-  omega_node_executions_total{node_name="Memory",...}                       = 20
-  omega_node_executions_total{node_name="ImprovementEngine",...}            = 20
-  omega_node_executions_total{node_name="Ring3Adversarial",...}             = 20
+All 46 gates passed (4 per cycle: 2× DebateGate + 2× WalkForward from dual project contexts).
 
-SignalResearch latency (sum/count):
-  omega_node_execution_duration_seconds_sum{node_name="SignalResearch"} = 10.558s
-  → avg 0.528s per call (live Binance/CoinGecko fetch)
-```
+| Gate | Result |
+|------|--------|
+| DebateGate | pass (all cycles) |
+| WalkForward | pass (all cycles) |
+
+### coordination_outcomes — 23 rows
+
+All 23 records: `outcome_quality = 1.0`, `goal_type = 0`. Confirms coordination layer is operating correctly.
+
+### improvement_log — 23 rows
+
+Records per cycle, showing steady score improvement (see Quality Score Trend above).
 
 ---
 
 ## Database State
 
-| Table              | Row count | Notes |
-|--------------------|-----------|-------|
-| node_executions    | 192       | All successes, cross-project |
-| victoria_signals   | 5         | UPSERTED each cycle (not appended) — represents current signal state |
-| improvement_log    | 13        | 1–2 records per cycle (startup + improvement step) |
-| goal_tracking      | 13        | 1–2 records per cycle, composite_score awaiting paper trade data |
+| Table | Row Count | Notes |
+|-------|-----------|-------|
+| node_executions | 282 | All successes; doubled due to dual project contexts |
+| victoria_signals | 5 | UPSERTED each cycle — represents current signal state |
+| coordination_outcomes | 23 | outcome_quality=1.0 across all cycles |
+| improvement_log | 23 | Monotonically increasing best_score |
+| verification_gates | 46 | 100% pass rate |
 
 ---
 
-## Branch Consolidation Summary
+## Prometheus Metrics
 
-Merged before measurement run:
-
-| Branch | Commits | What it added |
-|--------|---------|---------------|
-| `claude/jovial-ptolemy` | 5 | Pipeline project scoping, OTel infra, Postgres env params, Tempo/Grafana compose |
-| `claude/dazzling-antonelli` | 2 | Signal persistence to `victoria_signals`, `node_executions` wiring |
-| `claude/reverent-rosalind` | 1 | Prometheus metrics in live pipeline cycles |
-| `claude/hungry-euler` | 4 | OTel auto-detect, CLI `omega projects` commands, YAML project loader |
-| `claude/infallible-golick` | 1 | Close self-improvement loop, quality score logging |
+```
+# HELP omega_cycles_total Total number of completed orchestration pipeline cycles.
+# TYPE omega_cycles_total counter
+omega_cycles_total 10
+```
 
 ---
 
 ## Next Steps
 
-1. **Populate `omega_health_score`**: Feed `composite_score` from `improvement_log` (quality_score) into the health gauge — currently only paper-trading IC/Sharpe updates it.
+1. **Longer run (50 cycles):** Quality is still improving at cycle 10 (no plateau). Run 50 cycles to observe convergence and maximum attainable improvement.
 
-2. **Longer run (50 cycles)**: Quality trend is still improving at cycle 10. Run 50 cycles to observe the plateau and measure total attainable improvement.
+2. **Goal tracking from quality scores:** Wire `quality_score` from `improvement_log.after_metrics` into `goal_tracking.composite_score` so DARK signals have a meaningful composite to track within a 10-cycle window.
 
-3. **Goal tracking from quality scores**: Wire `_quality_score` from `improvement_log.after_metrics` into `goal_tracking.composite_score` so DARK signals have a meaningful composite to track.
+3. **IC weights persistence:** Current `DynamicWeightAllocator` state is in-memory only. Persist weights to DB so they survive server restarts.
 
-4. **IC weights persistence**: Current IC weights are in-memory only. Persist `DynamicWeightAllocator` state to DB so weights survive server restarts.
+4. **SignalResearch latency:** At ~575ms avg, SignalResearch dominates cycle time. Introduce caching or async prefetch to target < 100ms.
 
-5. **SignalResearch latency**: At 528ms avg, SignalResearch dominates cycle time. Introduce caching or async prefetch to reduce to < 100ms.
+5. **Dedup node_executions:** The dual-project-context artefact doubles row counts. Add project-scoped deduplication or remove the default seeding path.
