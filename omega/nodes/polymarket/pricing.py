@@ -238,10 +238,13 @@ class PolymarketPricingNode(Node):
             return cached  # type: ignore[no-any-return]
 
         self._cache_misses += 1
-        # Fetch active markets — paginate up to 3 pages to find weather markets
+        # Fetch active markets sorted by volume (descending) to surface recent markets
         markets: list[dict[str, Any]] = []
-        limit = int(params.get("limit", 100))
-        url = f"{GAMMA_API_BASE}/markets?active=true&limit={limit}&closed=false"
+        limit = int(params.get("limit", 200))
+        url = (
+            f"{GAMMA_API_BASE}/markets?active=true&limit={limit}&closed=false"
+            f"&order=volume&ascending=false"
+        )
 
         data = self._get_json(url)
         raw_list = data if isinstance(data, list) else data.get("markets", [])
