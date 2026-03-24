@@ -122,6 +122,9 @@ class VictoriaNode(Node):
         self._signal_counts_history: list[int] = []
         self._total_cycles_run: int = 0
 
+        # Lazy-initialised reflection store (requires DATABASE_URL at runtime)
+        self._reflection_store: Any = None
+
     # ------------------------------------------------------------------
     # Node interface
     # ------------------------------------------------------------------
@@ -415,6 +418,120 @@ class VictoriaNode(Node):
         return sum(confidences) / len(confidences)
 
     # ------------------------------------------------------------------
+    # Reflection helpers (V-TR1)
+    # ------------------------------------------------------------------
+
+    def _get_reflection_store(self) -> Any:
+        """Lazy-init the NodeReflectionStore; returns None if DB unavailable."""
+        if self._reflection_store is not None:
+            return self._reflection_store
+        if not os.getenv("DATABASE_URL"):
+            return None
+        try:
+            from omega.core.memory import NodeReflectionStore
+
+            self._reflection_store = NodeReflectionStore()
+        except Exception as exc:
+            logger.debug("NodeReflectionStore init failed: %s", exc)
+        return self._reflection_store
+
+    def get_reflection_context(self) -> str:
+        """Return a context block of recent cycle lessons for LLM injection."""
+        store = self._get_reflection_store()
+        if store is None:
+            return ""
+        try:
+            return str(store.get_context_prompt(self._node_id, limit=5))
+        except Exception as exc:
+            logger.debug("get_reflection_context failed: %s", exc)
+            return ""
+
+    def reflect_on_cycle(self, cycle: int, signals: dict[str, Any]) -> str:
+        """
+        Generate a brief reflection on the just-completed signal cycle and persist it.
+
+        Uses ModelTier.QUICK (cheap/fast).  If no brain is configured or the
+        brain call fails, a rule-based fallback reflection is stored instead.
+
+        Returns the lesson_extracted string.
+        """
+        from omega.core.brain import ModelTier
+
+        quality = float(signals.get("_quality_score", 0.0))
+        avg_conf = float(signals.get("_avg_confidence", 0.0))
+        coverage = float(signals.get("_signal_coverage", 0.0))
+        regime = str(signals.get("_regime", "default"))
+        n_signals = int(signals.get("_signal_count", 0))
+
+        # Try LLM reflection if brain is available
+        lesson = ""
+        reflection_text = ""
+        brain = self.brain  # from Node base class (NoBrain by default)
+
+        if brain is not None and brain.is_available() and not isinstance(brain, type):
+            prompt = (
+                f"You are reviewing a completed crypto signal cycle.\n"
+                f"Node: {self._node_id}\n"
+                f"Cycle: {cycle}\n"
+                f"Quality score: {quality:.3f}\n"
+                f"Avg signal confidence: {avg_conf:.3f}\n"
+                f"Signal coverage: {coverage:.0%} ({n_signals} signals)\n"
+                f"Market regime: {regime}\n\n"
+                f"In 1-2 sentences, reflect on signal quality and what the market regime implies.\n"
+                f"Then on a new line starting with 'LESSON:', state one actionable lesson in ≤15 words."
+            )
+            try:
+                raw = brain.consult(prompt, tier=ModelTier.QUICK)
+                if raw:
+                    reflection_text = raw.strip()
+                    # Extract the lesson line
+                    for line in raw.splitlines():
+                        if line.upper().startswith("LESSON:"):
+                            lesson = line.split(":", 1)[-1].strip()
+                            break
+            except Exception as exc:
+                logger.debug("reflect_on_cycle LLM call failed: %s", exc)
+
+        # Fallback: rule-based reflection
+        if not reflection_text:
+            if quality >= 0.7:
+                reflection_text = (
+                    f"Cycle {cycle}: strong signals (quality={quality:.2f}, "
+                    f"conf={avg_conf:.2f}, regime={regime})."
+                )
+                lesson = f"High quality cycle — maintain current regime weighting ({regime})."
+            elif quality >= 0.4:
+                reflection_text = (
+                    f"Cycle {cycle}: moderate signals (quality={quality:.2f}, "
+                    f"conf={avg_conf:.2f}, regime={regime})."
+                )
+                lesson = "Moderate quality — review signal weights if trend continues."
+            else:
+                reflection_text = (
+                    f"Cycle {cycle}: weak signals (quality={quality:.2f}, "
+                    f"conf={avg_conf:.2f}, coverage={coverage:.0%}, regime={regime})."
+                )
+                lesson = "Weak signals — consider tighter risk limits or skip cycle."
+
+        if not lesson:
+            lesson = reflection_text[:80]
+
+        store = self._get_reflection_store()
+        if store is not None:
+            try:
+                store.store_reflection(
+                    node_id=self._node_id,
+                    cycle=cycle,
+                    reflection_text=reflection_text,
+                    lesson_extracted=lesson,
+                )
+                logger.debug("cycle=%d reflection stored: %s", cycle, lesson)
+            except Exception as exc:
+                logger.debug("reflect_on_cycle persist failed: %s", exc)
+
+        return lesson
+
+    # ------------------------------------------------------------------
     # Action implementations
     # ------------------------------------------------------------------
 
@@ -436,6 +553,11 @@ class VictoriaNode(Node):
         market_data: dict[str, Any] = inp.parameters.get("market_data") or self._last_market_data
         regime: str = inp.context.get("regime", "default")
         pico_mode: bool = inp.parameters.get("pico_mode", False)
+
+        # Inject past cycle lessons into context (V-TR1)
+        reflection_ctx = self.get_reflection_context()
+        if reflection_ctx:
+            inp.context["past_lessons"] = reflection_ctx
 
         signals: dict[str, Any] = {}
 
@@ -602,6 +724,10 @@ class VictoriaNode(Node):
 
         self._last_signals = signals
         self.persist_signals(signals)
+
+        # Generate and store per-cycle reflection (V-TR1)
+        self.reflect_on_cycle(self._total_cycles_run, signals)
+
         logger.info(
             "cycle=%d quality=%.3f coverage=%.2f avg_conf=%.3f signals=%d (IC-weights=%s)",
             self._total_cycles_run,

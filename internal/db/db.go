@@ -525,6 +525,15 @@ var stateSchema = []string{
 		metrics                JSONB NOT NULL DEFAULT '{}'
 	)`,
 	`CREATE INDEX IF NOT EXISTS idx_cycle_results_number ON cycle_results(cycle_number)`,
+	`CREATE TABLE IF NOT EXISTS node_memories (
+		memory_id        TEXT PRIMARY KEY,
+		node_id          TEXT NOT NULL,
+		cycle            BIGINT NOT NULL,
+		reflection_text  TEXT NOT NULL DEFAULT '',
+		lesson_extracted TEXT NOT NULL DEFAULT '',
+		created_at       DOUBLE PRECISION NOT NULL DEFAULT 0
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_node_memories_node_cycle ON node_memories(node_id, cycle DESC)`,
 }
 
 func (d *DB) ensureSchema(ctx context.Context) error {
