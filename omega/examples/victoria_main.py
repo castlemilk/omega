@@ -122,9 +122,7 @@ _MAX_SIGNAL_HISTORY = 50  # cycles of signal history to retain
 # ─── Constants ─────────────────────────────────────────────────────────────────
 
 GOAL = "victoria_crypto_research"
-DB_PATH = _cfg.database.orchestrator_db_path
-MEMORY_DB_PATH = _cfg.database.memory_db_path
-STATE_DB_PATH = _cfg.database.state_db_path
+# DB paths removed: system now uses DATABASE_URL env var (Postgres)
 HEALTH_THRESHOLD = _cfg.alignment.health_threshold
 
 # ─── Shutdown flag ─────────────────────────────────────────────────────────────
@@ -154,7 +152,7 @@ class VictoriaSystem:
 
     def __init__(self) -> None:
         # ── Core infrastructure ──────────────────────────────────────────────
-        self.memory = MemoryKernelV2(db_path=MEMORY_DB_PATH)
+        self.memory = MemoryKernelV2()
         self.feedback = FeedbackEngine(memory=self.memory)
 
         # ── Research subsystems (alignment, adversarial pressure, goals) ─────
@@ -163,7 +161,7 @@ class VictoriaSystem:
         self.goals = GoalArchitecture()
 
         # ── Observability infrastructure ─────────────────────────────────────
-        self.state_store = StateStore(db_path=STATE_DB_PATH)
+        self.state_store = StateStore()
         self.tracer = create_tracer(self.state_store)
         self.metrics = MetricsCollector(self.state_store)
         self.analyzer = SystemAnalyzer(self.state_store, self.metrics)
@@ -187,7 +185,7 @@ class VictoriaSystem:
         )
 
         # ── Orchestrator (health tracking, evaluation) ───────────────────────
-        self.orchestrator = Orchestrator(name="victoria", db_path=DB_PATH)
+        self.orchestrator = Orchestrator(name="victoria")
         for node in [
             self.ingestion,
             self.signals,
@@ -252,7 +250,7 @@ class VictoriaSystem:
         )
 
         # ── Devil's Advocate layer ────────────────────────────────────────────
-        self.challenge_registry = ChallengeRegistry(db_path=STATE_DB_PATH)
+        self.challenge_registry = ChallengeRegistry()
         seeded = self.challenge_registry.seed_initial_challenges()
         if seeded:
             logger.info("[DA] Seeded %d initial challenges into registry", seeded)

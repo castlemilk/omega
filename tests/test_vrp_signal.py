@@ -246,6 +246,29 @@ class TestVRPSignalNode:
         assert r["vrp_regime"] == "NEUTRAL"
         assert r["confidence"] < 0.5
 
+    def test_rv_only_fallback_produces_nonzero_vrp(self):
+        """When Deribit is unreachable but OHLCV is present, VRP should be non-zero.
+
+        The fallback: iv = rv * 1.15 → vrp = iv - rv = 0.15 * rv > 0.
+        """
+        node = VRPSignalNode()
+        ohlcv = _make_ohlcv(n=60, vol=0.02)
+        market_data = {"BTCUSDT": ohlcv}
+
+        # No iv_override → Deribit fetch will fail in test environment
+        out = node.execute(
+            NodeInput(
+                action="compute_vrp",
+                parameters={"market_data": market_data},
+            )
+        )
+        assert out.success
+        r = out.result
+        # With RV fallback active, implied_vol = rv * 1.15 → vrp = 0.15 * rv > 0
+        assert r["implied_vol"] is not None, "IV should be set via RV fallback"
+        assert r["realized_vol"] is not None, "RV should be computable from OHLCV"
+        assert r["vrp_raw"] > 0.0, "VRP should be non-zero when using RV fallback"
+
     def test_vrp_regime_action(self):
         """vrp_regime action returns cached state."""
         node = VRPSignalNode()

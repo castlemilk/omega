@@ -782,8 +782,24 @@ class RiskManagementNode(Node):
                 continue
             if not isinstance(sig, dict):
                 continue
-            value = float(sig.get("value", 0.0))
-            confidence = float(sig.get("confidence", 0.5))
+
+            # Direct format: {"value": float, "confidence": float}  (order_flow, vrp, etc.)
+            if "value" in sig:
+                value = float(sig["value"])
+                confidence = float(sig.get("confidence", 0.5))
+            else:
+                # Nested format: basic_signals = {ticker: {"composite": float, "confidence": float}}
+                composites = []
+                confs = []
+                for sub_v in sig.values():
+                    if isinstance(sub_v, dict) and "composite" in sub_v:
+                        composites.append(float(sub_v["composite"]))
+                        confs.append(float(sub_v.get("confidence", 0.5)))
+                if not composites:
+                    continue
+                value = sum(composites) / len(composites)
+                confidence = sum(confs) / len(confs)
+
             weighted = abs(value) * confidence
             if value > 0:
                 bull_contributions.append(weighted)
