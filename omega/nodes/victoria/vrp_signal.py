@@ -221,7 +221,7 @@ class VRPSignalNode(Node):
 
         # ── 5. Regime and signal ──────────────────────────────────────────────
         regime = self._classify(vrp_zscore)
-        vrp_signal = self._signal_value(vrp_zscore, regime)
+        vrp_signal = self._signal_value(vrp_zscore, regime, vrp)
 
         # ── 6. Confidence ─────────────────────────────────────────────────────
         signal_strength = min(1.0, abs(vrp_zscore) / 3.0)
@@ -347,20 +347,28 @@ class VRPSignalNode(Node):
             return "COMPLACENCY"
         return "NEUTRAL"
 
-    def _signal_value(self, zscore: float, regime: str) -> float:
+    def _signal_value(self, zscore: float, regime: str, vrp_raw: float = 0.0) -> float:
         """
         Map VRP z-score to directional signal [-1, +1].
 
         FEAR         → positive (sell vol / mean revert)
         COMPLACENCY  → negative (reduce longs / trend follow)
-        NEUTRAL      → mild proportional tilt
+        NEUTRAL      → blend zscore tilt with raw VRP level so the signal is
+                        non-zero even when zscore ≈ 0 (stable VRP regime).
+
+        Level interpretation: positive VRP (IV > RV) is the normal crypto
+        premium — mildly bullish for spot. Negative VRP (IV < RV) is a danger
+        signal. We scale by 0.20 (20% VRP = full signal), capped at ±0.5.
         """
         if regime == "FEAR":
             return min(1.0, zscore / 3.0)
         elif regime == "COMPLACENCY":
             return max(-1.0, zscore / 3.0)
         else:
-            return max(-1.0, min(1.0, zscore / 4.0))
+            # In NEUTRAL, blend zscore direction with raw VRP level
+            zscore_component = max(-0.5, min(0.5, zscore / 4.0))
+            level_component = max(-0.5, min(0.5, vrp_raw / 0.20))
+            return max(-1.0, min(1.0, zscore_component * 0.6 + level_component * 0.4))
 
     def _make_result(
         self,
@@ -376,7 +384,7 @@ class VRPSignalNode(Node):
             "vrp_raw": vrp_raw,
             "vrp_zscore": vrp_zscore,
             "vrp_regime": regime,
-            "vrp_signal": self._signal_value(vrp_zscore, regime),
+            "vrp_signal": self._signal_value(vrp_zscore, regime, vrp_raw),
             "confidence": confidence,
             "implied_vol": iv,
             "realized_vol": rv,

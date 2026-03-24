@@ -99,8 +99,8 @@ class OrderFlowSignal:
         _btc = market_data.get("BTCUSDT") or {}
         prices = _btc.get("close") or market_data.get("close", [])
         volumes = _btc.get("volume") or market_data.get("volume", [])
-        bid_sizes = market_data.get("bid_sizes", [])
-        ask_sizes = market_data.get("ask_sizes", [])
+        bid_sizes = market_data.get("_bid_sizes") or market_data.get("bid_sizes", [])
+        ask_sizes = market_data.get("_ask_sizes") or market_data.get("ask_sizes", [])
 
         raw: dict[str, float] = {}
 
@@ -297,11 +297,20 @@ class MicrostructureSignal:
     """
 
     def compute(self, market_data: dict[str, Any]) -> SignalValue:
-        prices = market_data.get("close", [])
-        highs = market_data.get("high", [])
-        lows = market_data.get("low", [])
-        volumes = market_data.get("volume", [])
-        spreads = market_data.get("spreads", [])  # bid-ask spread time series
+        # Pull OHLCV from BTCUSDT sub-dict (same pattern as OrderFlowSignal)
+        _btc = market_data.get("BTCUSDT") or market_data.get("BTC/USDT") or {}
+        prices = _btc.get("close") or market_data.get("close", [])
+        highs = _btc.get("high") or market_data.get("high", [])
+        lows = _btc.get("low") or market_data.get("low", [])
+        volumes = _btc.get("volume") or market_data.get("volume", [])
+        # Compute instantaneous bid-ask spread from order book depth if available
+        _best_bid = market_data.get("_best_bid")
+        _best_ask = market_data.get("_best_ask")
+        _ob_spread: list[float] = []
+        if _best_bid and _best_ask and _best_bid > 0:
+            mid = (_best_bid + _best_ask) / 2.0
+            _ob_spread = [(_best_ask - _best_bid) / mid] if mid > 0 else []
+        spreads = market_data.get("spreads", _ob_spread)
         quote_updates = market_data.get("quote_updates", [])
 
         raw: dict[str, float] = {}

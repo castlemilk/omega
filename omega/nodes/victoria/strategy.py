@@ -376,7 +376,7 @@ class StrategyNode(Node):
         total_trades = 0
 
         for _ticker, data in market_data.items():
-            if not data:
+            if not isinstance(data, dict) or not data:
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
             if len(prices) < 22:

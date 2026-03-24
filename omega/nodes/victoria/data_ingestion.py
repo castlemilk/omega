@@ -395,14 +395,22 @@ class DataIngestionNode(Node):
             if _bids and _asks:
                 _bid_vol = sum(float(b[1]) for b in _bids)
                 _ask_vol = sum(float(a[1]) for a in _asks)
-                result["bid_sizes"] = [_bid_vol]
-                result["ask_sizes"] = [_ask_vol]
+                result["_bid_sizes"] = [_bid_vol]
+                result["_ask_sizes"] = [_ask_vol]
+                # Best bid/ask prices for spread computation (MicrostructureSignal)
+                _best_bid = float(_bids[0][0])  # highest bid price
+                _best_ask = float(_asks[0][0])  # lowest ask price
+                result["_best_bid"] = _best_bid
+                result["_best_ask"] = _best_ask
                 logger.debug(
-                    "Binance order book: bid_vol=%.4f ask_vol=%.4f imbalance=%.4f",
+                    "Binance order book: bid_vol=%.4f ask_vol=%.4f imbalance=%.4f spread_bps=%.2f",
                     _bid_vol,
                     _ask_vol,
                     (_bid_vol - _ask_vol) / (_bid_vol + _ask_vol)
                     if (_bid_vol + _ask_vol) > 0
+                    else 0.0,
+                    (_best_ask - _best_bid) / ((_best_bid + _best_ask) / 2) * 10000
+                    if (_best_bid + _best_ask) > 0
                     else 0.0,
                 )
         except Exception as _exc:

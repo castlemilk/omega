@@ -203,7 +203,7 @@ class PaperTradingEngine:
                 (ts, sym, side, size, entry, exit_price, pnl, slippage, duration, recorded_at)
             VALUES
                 (%(ts)s, %(sym)s, %(side)s, %(size)s, %(entry)s,
-                 %(exit_price)s, %(pnl)s, %(slippage)s, %(duration)s, NOW())
+                 %(exit_price)s, %(pnl)s, %(slippage)s, %(duration)s, %(recorded_at)s)
         """
         try:
             conn = psycopg2.connect(self._db_url)
@@ -218,10 +218,13 @@ class PaperTradingEngine:
                                 "side": trade.get("side"),
                                 "size": float(trade.get("size", 0.0)),
                                 "entry": float(trade.get("entry", 0.0)),
-                                "exit_price": trade.get("exit_price"),
+                                "exit_price": float(
+                                    trade.get("exit_price") or trade.get("entry", 0.0)
+                                ),
                                 "pnl": float(trade.get("pnl", 0.0)),
                                 "slippage": float(trade.get("slippage", 0.0)),
                                 "duration": int(trade.get("duration", 0)),
+                                "recorded_at": float(__import__("time").time()),
                             },
                         )
                 logger.debug("Persisted %d trade(s) to DB", len(trades))
