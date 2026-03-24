@@ -530,48 +530,63 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("reflect_on_cycle LLM call failed: %s", exc)
 
-        # Fallback: rule-based reflection — must vary per cycle so store unique lessons
+        # Fallback: rule-based reflection with cycle-specific data
         if not reflection_text:
-            # Find the top signal by confidence to make each lesson unique
-            top_name = "none"
+            # Extract top signal by confidence and composite direction
+            top_signal = "none"
             top_conf = 0.0
-            direction = "neutral"
-            for sname, sval in signals.items():
-                if sname.startswith("_") or not isinstance(sval, dict):
+            vrp_regime = "NEUTRAL"
+            signal_values: list[float] = []
+
+            for sig_name, sig_val in signals.items():
+                if sig_name.startswith("_") or not isinstance(sig_val, dict):
                     continue
-                conf = float(sval.get("confidence", 0.0))
+                if sig_name == "vrp":
+                    vrp_regime = sig_val.get("regime_tag", "NEUTRAL")
+                conf = float(sig_val.get("confidence", 0.0))
                 if conf > top_conf:
                     top_conf = conf
-                    top_name = sname
-                    val = float(sval.get("value", 0.0))
-                    direction = "bullish" if val > 0 else ("bearish" if val < 0 else "neutral")
+                    top_signal = sig_name
+                if "value" in sig_val:
+                    signal_values.append(float(sig_val["value"]))
+
+            avg_signal_val = sum(signal_values) / len(signal_values) if signal_values else 0.0
+            if avg_signal_val > 0.05:
+                composite_direction = "bullish"
+            elif avg_signal_val < -0.05:
+                composite_direction = "bearish"
+            else:
+                composite_direction = "neutral"
 
             if quality >= 0.7:
                 reflection_text = (
-                    f"Cycle {cycle}: strong signals (quality={quality:.2f}, "
-                    f"conf={avg_conf:.2f}, regime={regime})."
+                    f"Cycle {cycle}: {n_signals} signals computed, strongest={top_signal} "
+                    f"(conf={top_conf:.2f}), vrp_regime={vrp_regime}, "
+                    f"direction={composite_direction}, quality={quality:.2f}."
                 )
                 lesson = (
-                    f"Cycle {cycle}: {n_signals} signals, top={top_name}(conf={top_conf:.2f}), "
-                    f"regime={regime}, direction={direction}"
+                    f"High quality ({n_signals} signals) — {composite_direction} "
+                    f"bias with {vrp_regime} VRP."
                 )
             elif quality >= 0.4:
                 reflection_text = (
-                    f"Cycle {cycle}: moderate signals (quality={quality:.2f}, "
-                    f"conf={avg_conf:.2f}, regime={regime})."
+                    f"Cycle {cycle}: {n_signals} signals, top={top_signal} "
+                    f"(conf={top_conf:.2f}), vrp={vrp_regime}, "
+                    f"direction={composite_direction}, quality={quality:.2f}."
                 )
                 lesson = (
-                    f"Cycle {cycle}: {n_signals} signals, top={top_name}(conf={top_conf:.2f}), "
-                    f"regime={regime}, direction={direction}"
+                    f"Moderate quality — {composite_direction} tilt in {vrp_regime} regime, "
+                    "review weights if trend continues."
                 )
             else:
                 reflection_text = (
-                    f"Cycle {cycle}: weak signals (quality={quality:.2f}, "
-                    f"conf={avg_conf:.2f}, coverage={coverage:.0%}, regime={regime})."
+                    f"Cycle {cycle}: weak — {n_signals}/{len(SIGNAL_NAMES)} signals, "
+                    f"top={top_signal} (conf={top_conf:.2f}), "
+                    f"vrp={vrp_regime}, direction={composite_direction}, quality={quality:.2f}."
                 )
                 lesson = (
-                    f"Cycle {cycle}: {n_signals} signals, top={top_name}(conf={top_conf:.2f}), "
-                    f"regime={regime}, direction={direction}"
+                    f"Weak cycle ({n_signals} signals, {composite_direction}) — "
+                    f"tighten {vrp_regime} limits or skip."
                 )
 
         if not lesson:
