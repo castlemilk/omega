@@ -1,0 +1,75 @@
+id: proj_victoria
+name: Victoria
+description: Autonomous crypto quantitative research and trading system
+status: active
+domain: crypto_quant
+autonomy_level: supervised
+
+pipeline_config:
+  - step_id: step_1
+    name: DataIngestion
+    node_type: DATA_INGESTION
+    description: Fetch and normalize market data from Binance/CoinGecko
+    order: 1
+  - step_id: step_2
+    name: SignalResearch
+    node_type: SIGNAL_RESEARCH
+    description: Generate alpha signals from price, volume, and on-chain data
+    order: 2
+  - step_id: step_3
+    name: IntelligenceCoordination
+    node_type: STRATEGY
+    description: Coordinate signals across timeframes into a coherent view
+    order: 3
+  - step_id: step_4
+    name: DynamicWeights
+    node_type: RISK_MANAGEMENT
+    description: Compute dynamic portfolio weights based on conviction and risk
+    order: 4
+  - step_id: step_5
+    name: DebateGate
+    node_type: VERIFICATION
+    description: Adversarial debate gate — bull/bear case adjudication
+    order: 5
+  - step_id: step_6
+    name: WalkForward
+    node_type: VERIFICATION
+    description: Walk-forward backtest validation of proposed weights
+    order: 6
+  - step_id: step_7
+    name: Memory
+    node_type: MEMORY
+    description: Store episode context, update semantic memory
+    order: 7
+  - step_id: step_8
+    name: ImprovementEngine
+    node_type: IMPROVEMENT
+    description: TPE-driven hyperparameter optimisation across the pipeline
+    order: 8
+  - step_id: step_9
+    name: Ring3Adversarial
+    node_type: ADVERSARIAL
+    description: Final adversarial red-team before execution
+    order: 9
+
+eval_config:
+  primary_metrics:
+    - sharpe_ratio
+    - ic
+    - max_drawdown
+    - win_rate
+  metric_targets:
+    sharpe_ratio: 1.5
+    ic: 0.05
+    max_drawdown: -0.15
+  eval_frequency: per_cycle
+
+improvement_config:
+  tpe_enabled: true
+  tpe_trials: 50
+  adversarial_enabled: true
+  adversarial_rounds: 3
+  walk_forward_enabled: true
+
+metadata:
+  color: "#00ff00"
