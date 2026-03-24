@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.autonomy import AutonomyLevel
 from omega.eval.baselines import BaselineResult, buy_and_hold, sma_crossover
 from omega.eval.metrics import EvalReport, TradeRecord, build_eval_report
@@ -239,7 +240,7 @@ class OmegaBacktestBridge:
                     from omega.core.node import NodeInput
 
                     port_inp = NodeInput(
-                        action="construct_portfolio",
+                        action=NodeAction.CONSTRUCT_PORTFOLIO.value,
                         parameters={
                             "signals": self._node._last_signals,
                             "market_data": market_data,

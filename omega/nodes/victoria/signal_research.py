@@ -21,6 +21,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.signal_research")
@@ -139,7 +140,7 @@ class SignalResearchNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["analyze_ic", "analyze_regime_ic", "rank_signals", "report_noise"]
+        return ["analyze_ic", "analyze_regime_ic", NodeAction.RANK_SIGNALS.value, "report_noise"]
 
     def describe(self) -> str:
         return (
@@ -166,7 +167,7 @@ class SignalResearchNode(Node):
                     price_history=params.get("price_history", {}),
                     regime_history=params.get("regime_history", []),
                 )
-            elif action == "rank_signals":
+            elif action == NodeAction.RANK_SIGNALS.value:
                 result = self._rank_signals(
                     ic_results=params.get("ic_results", []),
                 )

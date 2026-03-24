@@ -96,7 +96,12 @@ class PolymarketPricingNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["fetch_weather_markets", "fetch_market", NodeAction.MARKET_PRICING.value]
+        return [
+            "fetch_weather_markets",
+            "fetch_market",
+            NodeAction.MARKET_PRICING.value,
+            "polymarket_pricing",  # uppercases to POLYMARKET_PRICING for Go→Python dispatch
+        ]
 
     def describe(self) -> str:
         return (

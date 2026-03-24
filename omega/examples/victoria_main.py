@@ -52,6 +52,7 @@ from omega.adversarial.debate_gate import DebateGate, SignalContext
 from omega.bridge.adversarial_client import AdversarialServiceClient, AdversarialServiceError
 from omega.bridge.improvement_client import ImprovementServiceClient, ImprovementServiceError
 from omega.bridge.memory_client import MemoryServiceClient, MemoryServiceError
+from omega.core.actions import NodeAction
 from omega.core.adversarial import AdversarialPressure
 from omega.core.alignment import AlignmentLayer
 from omega.core.analyzer import SystemAnalyzer
@@ -382,7 +383,7 @@ class VictoriaSystem:
         ingest_out, _ingest_ctx = self.tracer.execute_with_tracing(
             self.ingestion,
             NodeInput(
-                action="fetch_market_data",
+                action=NodeAction.FETCH_MARKET_DATA.value,
                 parameters={"interval": "1d", "limit": 90},
                 context={"goal": GOAL, "iteration": cycle},
             ),
@@ -556,7 +557,7 @@ class VictoriaSystem:
         sig_out, _ = self.tracer.execute_with_tracing(
             self.signals,
             NodeInput(
-                action="compute_signals",
+                action=NodeAction.COMPUTE_SIGNALS.value,
                 parameters={"market_data": market_data},
                 context={"goal": GOAL, "iteration": cycle},
             ),
@@ -721,7 +722,7 @@ class VictoriaSystem:
         strat_out, _ = self.tracer.execute_with_tracing(
             self.strategy,
             NodeInput(
-                action="construct_portfolio",
+                action=NodeAction.CONSTRUCT_PORTFOLIO.value,
                 parameters={"signals": signals, "market_data": market_data},
                 context={"goal": GOAL, "iteration": cycle},
             ),
@@ -768,7 +769,7 @@ class VictoriaSystem:
         risk_out, _ = self.tracer.execute_with_tracing(
             self.risk,
             NodeInput(
-                action="check_risk_limits",
+                action=NodeAction.CHECK_RISK_LIMITS.value,
                 parameters={"portfolio": portfolio, "market_data": market_data},
                 context={"goal": GOAL, "iteration": cycle},
             ),

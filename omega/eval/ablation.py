@@ -28,6 +28,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.autonomy import GraduatedAutonomyController
 from omega.core.cycle import CycleHistory, CycleResult
 from omega.core.improvement_engine import ImprovementEngine
@@ -119,7 +120,11 @@ class _AblationNode(Node):
             name=self._name,
             version="1.0",
             health=self._health,
-            capabilities=["poll", "compute_signals", "construct_portfolio"],
+            capabilities=[
+                NodeAction.POLL.value,
+                NodeAction.COMPUTE_SIGNALS.value,
+                NodeAction.CONSTRUCT_PORTFOLIO.value,
+            ],
             metrics={
                 "exec_count": float(self._exec_count),
                 "sharpe": self._current_sharpe(),
@@ -127,7 +132,11 @@ class _AblationNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["poll", "compute_signals", "construct_portfolio"]
+        return [
+            NodeAction.POLL.value,
+            NodeAction.COMPUTE_SIGNALS.value,
+            NodeAction.CONSTRUCT_PORTFOLIO.value,
+        ]
 
     def describe(self) -> str:
         return f"AblationNode({self._name}, sharpe≈{self._base_sharpe})"
@@ -137,9 +146,9 @@ class _AblationNode(Node):
 
         if inp.action == "poll" or inp.action == "fetch_data":
             return self._do_poll(inp)
-        if inp.action == "compute_signals":
+        if inp.action == NodeAction.COMPUTE_SIGNALS.value:
             return self._do_signals(inp)
-        if inp.action == "construct_portfolio":
+        if inp.action == NodeAction.CONSTRUCT_PORTFOLIO.value:
             return self._do_portfolio(inp)
 
         return NodeOutput(request_id=inp.request_id, success=True, result={})

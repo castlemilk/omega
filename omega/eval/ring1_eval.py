@@ -35,6 +35,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.orchestrator_v2 import OmegaOrchestrator
 
@@ -125,12 +126,20 @@ class _Ring1InstrumentedNode(Node):
             name="ring1_instrumented",
             version="1.0",
             health=1.0,
-            capabilities=["poll", "compute_signals", "construct_portfolio"],
+            capabilities=[
+                NodeAction.POLL.value,
+                NodeAction.COMPUTE_SIGNALS.value,
+                NodeAction.CONSTRUCT_PORTFOLIO.value,
+            ],
             metrics={},
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["poll", "compute_signals", "construct_portfolio"]
+        return [
+            NodeAction.POLL.value,
+            NodeAction.COMPUTE_SIGNALS.value,
+            NodeAction.CONSTRUCT_PORTFOLIO.value,
+        ]
 
     def describe(self) -> str:
         return "Ring1InstrumentedNode"
@@ -139,7 +148,7 @@ class _Ring1InstrumentedNode(Node):
         if inp.action in ("poll", "fetch_data"):
             return NodeOutput(request_id=inp.request_id, success=True, result={"price": 50000.0})
 
-        if inp.action == "compute_signals":
+        if inp.action == NodeAction.COMPUTE_SIGNALS.value:
             signal = self._rng.gauss(0.01, 0.05)
             return NodeOutput(
                 request_id=inp.request_id,
@@ -147,7 +156,7 @@ class _Ring1InstrumentedNode(Node):
                 result={"composite_signal": signal, "regime_label": "normal"},
             )
 
-        if inp.action == "construct_portfolio":
+        if inp.action == NodeAction.CONSTRUCT_PORTFOLIO.value:
             # Generate a trade with known counterfactual PnL
             if self._rng.random() < self._loss_rate:
                 pnl = self._rng.gauss(self._avg_loss, abs(self._avg_loss) * 0.5)

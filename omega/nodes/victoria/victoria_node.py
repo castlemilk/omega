@@ -207,6 +207,7 @@ class VictoriaNode(Node):
                 NodeAction.CONSTRUCT_PORTFOLIO.value,
                 NodeAction.STRATEGY.value,
                 NodeAction.RISK_MANAGEMENT.value,
+                NodeAction.CHECK_RISK_LIMITS.value,
                 "riskmanagement",
                 "riskcheck",
                 "risk_check",
@@ -271,7 +272,7 @@ class VictoriaNode(Node):
 
             # Promote debate consensus metrics so Go can observe them via Prometheus.
             extra_metrics: dict[str, float] = {}
-            if action == "debategate" and isinstance(result, dict):
+            if action == NodeAction.DEBATE_GATE.value and isinstance(result, dict):
                 extra_metrics = {
                     k: float(v)
                     for k, v in result.items()
