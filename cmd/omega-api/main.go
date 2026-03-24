@@ -139,6 +139,14 @@ func main() {
 	if err := projectseed.LoadAndSeed(projectH, ""); err != nil {
 		log.Printf("warn: project loader: %v — no projects registered from YAML", err)
 	}
+	// Ensure each project has its own Postgres schema namespace.
+	for _, p := range projectH.AllProjects() {
+		if err := database.EnsureProjectSchema(ctx, p.ProjectId); err != nil {
+			log.Printf("warn: ensure schema for project %q: %v", p.ProjectId, err)
+		} else {
+			log.Printf("Project schema ready: %s", db.ProjectSchemaName(p.ProjectId))
+		}
+	}
 
 	// ── Service handlers ──────────────────────────────────────────────────────
 	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry).WithProjectHandler(projectH).WithMetrics(metrics)
@@ -150,6 +158,23 @@ func main() {
 		pipelineClient := bridge.NewPipelineClient(addr)
 		h = h.WithPipelineClient(pipelineClient)
 		log.Printf("Pipeline bridge: Go→Python connected at %s", addr) //nolint:gosec
+		// Register bridge as a platform health checker (DEGRADED, not UNHEALTHY, when unreachable).
+		bridgeAddr := addr
+		composite.Register(observability.NewHealthCheckerFunc("bridge", func(hctx context.Context) observability.HealthStatus {
+			req, err := http.NewRequestWithContext(hctx, http.MethodGet, bridgeAddr+"/health", nil)
+			if err != nil {
+				return observability.HealthStatus{State: observability.HealthStateDegraded, Details: map[string]any{"error": err.Error()}}
+			}
+			bridgeClient := &http.Client{Timeout: 2 * time.Second}
+			resp, err := bridgeClient.Do(req) //nolint:gosec // bridgeAddr is the operator-configured OMEGA_PYTHON_PIPELINE_ADDR
+			if err != nil {
+				return observability.HealthStatus{State: observability.HealthStateDegraded, Details: map[string]any{"error": err.Error()}}
+			}
+			if err := resp.Body.Close(); err != nil {
+				_ = err // non-fatal; body already read
+			}
+			return observability.HealthStatus{State: observability.HealthStateHealthy, Details: map[string]any{"addr": bridgeAddr}}
+		}))
 	} else {
 		log.Printf("Pipeline bridge: disabled (set OMEGA_PYTHON_PIPELINE_ADDR to enable)")
 	}
