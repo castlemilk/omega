@@ -8,12 +8,14 @@ Improvement arc:
   v1.1 — CVaR (Expected Shortfall) added
   v1.2 — Correlation-adjusted position sizing (reduce concentration)
   v1.3 — Volatility-regime detection (tighten limits in high-vol regimes)
+  v1.4 — Multi-persona risk debate (V-TR4): Aggressive / Conservative / Neutral consensus
 """
 
 import logging
 import math
 import time
 import uuid
+from dataclasses import dataclass
 from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
@@ -27,6 +29,94 @@ _MAX_PORTFOLIO_VAR = 0.02  # Daily VaR limit: 2% of portfolio
 # VRP regime adjustments
 _VRP_FEAR_POSITION_SCALE = 0.75  # FEAR: reduce max position by 25%
 _VRP_CIRCUIT_BREAKER_ZSCORE = -2.0  # COMPLACENCY circuit breaker threshold
+
+# ---------------------------------------------------------------------------
+# V-TR4 — Multi-persona risk debate
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RiskPersona:
+    """
+    Parameter bundle for one risk evaluation persona.
+
+    Each persona applies independent thresholds to the same portfolio and
+    produces a recommendation.  The three built-in personas are:
+
+    Aggressive   — tolerates larger drawdowns and higher concentration.
+    Conservative — tighter stops, smaller positions, more cash.
+    Neutral      — balanced view (mirrors the original single-persona logic).
+    """
+
+    name: str
+    max_position: float  # largest allowed single-asset weight
+    max_portfolio_var: float  # largest allowed daily VaR (fractional)
+    max_correlation_threshold: float  # flag pairwise correlation above this
+    vrp_fear_scale: float  # position-size multiplier in FEAR VRP regime
+    var_confidence: float = 0.95  # historical VaR confidence level
+    weight: float = 1.0 / 3  # consensus weight (sum across personas should = 1)
+
+
+@dataclass
+class PersonaDebateResult:
+    """Result of running one persona's risk check on the portfolio."""
+
+    persona_name: str
+    recommendation: str  # "approve" | "reduce" | "reject"
+    adjusted_weights: dict[str, float]
+    violations: list[str]
+    portfolio_var: float
+    max_position_limit: float
+
+
+@dataclass
+class RiskDebateConsensus:
+    """
+    Aggregated outcome of the 3-persona risk debate.
+
+    ``consensus_weights``  : weighted average of each persona's adjusted weights.
+    ``persona_results``    : individual results for inspection / logging.
+    ``recommendation``     : majority vote across personas.
+    ``final_violations``   : violations flagged by at least 2 of 3 personas.
+    ``position_scale``     : blended VRP position scale (weighted average).
+    """
+
+    consensus_weights: dict[str, float]
+    persona_results: list[PersonaDebateResult]
+    recommendation: str  # "approve" | "reduce" | "reject"
+    final_violations: list[str]
+    position_scale: float = 1.0
+
+
+# Built-in personas (module-level constants so tests can import them directly)
+PERSONA_AGGRESSIVE = RiskPersona(
+    name="aggressive",
+    max_position=0.35,  # allows up to 35% in one asset
+    max_portfolio_var=0.04,  # tolerates up to 4% daily VaR
+    max_correlation_threshold=0.95,  # only flags very high correlation
+    vrp_fear_scale=0.85,  # mild reduction in FEAR regime
+    weight=1.0 / 3,
+)
+
+PERSONA_CONSERVATIVE = RiskPersona(
+    name="conservative",
+    max_position=0.15,  # at most 15% in one asset
+    max_portfolio_var=0.01,  # very tight 1% daily VaR limit
+    max_correlation_threshold=0.75,  # flags moderate correlation
+    vrp_fear_scale=0.50,  # halve positions in FEAR regime
+    weight=1.0 / 3,
+)
+
+PERSONA_NEUTRAL = RiskPersona(
+    name="neutral",
+    max_position=_MAX_POSITION_SIZE,  # 25% — matches original logic
+    max_portfolio_var=_MAX_PORTFOLIO_VAR,  # 2% — matches original logic
+    max_correlation_threshold=0.90,
+    vrp_fear_scale=_VRP_FEAR_POSITION_SCALE,
+    weight=1.0 / 3,
+)
+
+_DEFAULT_PERSONAS = (PERSONA_AGGRESSIVE, PERSONA_CONSERVATIVE, PERSONA_NEUTRAL)
 
 
 class RiskManagementNode(Node):
@@ -82,7 +172,13 @@ class RiskManagementNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["compute_var", "check_risk_limits", "compute_correlation", "apply_vrp_constraints"]
+        return [
+            "compute_var",
+            "check_risk_limits",
+            "compute_correlation",
+            "apply_vrp_constraints",
+            "risk_debate",
+        ]
 
     def describe(self) -> str:
         return (
@@ -118,6 +214,27 @@ class RiskManagementNode(Node):
                 self._vrp_regime = vrp_regime
                 self._vrp_zscore = vrp_zscore
                 result = self._apply_vrp_constraints(vrp_regime, vrp_zscore)
+            elif action == "risk_debate":
+                portfolio = params.get("portfolio", {})
+                market_data = params.get("market_data", {})
+                vrp_regime = params.get("vrp_regime", self._vrp_regime)
+                vrp_zscore = params.get("vrp_zscore", self._vrp_zscore)
+                debate = self.risk_debate(portfolio, market_data, vrp_regime, vrp_zscore)
+                result = {
+                    "consensus_weights": debate.consensus_weights,
+                    "recommendation": debate.recommendation,
+                    "final_violations": debate.final_violations,
+                    "position_scale": debate.position_scale,
+                    "personas": [
+                        {
+                            "name": pr.persona_name,
+                            "recommendation": pr.recommendation,
+                            "violations": pr.violations,
+                            "portfolio_var": pr.portfolio_var,
+                        }
+                        for pr in debate.persona_results
+                    ],
+                }
             else:
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._execution_count += 1
@@ -387,6 +504,161 @@ class RiskManagementNode(Node):
 
         self._last_max_correlation = max_corr
         return {"correlations": correlations, "max_correlation": max_corr}
+
+    # ------------------------------------------------------------------ V-TR4 multi-persona debate
+
+    def risk_debate(
+        self,
+        portfolio: dict[str, Any],
+        market_data: dict[str, Any],
+        vrp_regime: str = "NEUTRAL",
+        vrp_zscore: float = 0.0,
+        personas: tuple[RiskPersona, ...] | None = None,
+    ) -> RiskDebateConsensus:
+        """
+        Run the portfolio through 3 independent risk personas and return a consensus.
+
+        Each persona applies its own thresholds to ``_check_persona()``.
+        The consensus weights are a weighted average of each persona's adjusted weights.
+        The final recommendation is determined by majority vote.
+        Violations flagged by ≥2 personas are surfaced as ``final_violations``.
+
+        Parameters
+        ----------
+        portfolio    : dict with ``weights`` key mapping ticker → float.
+        market_data  : OHLCV data keyed by ticker (for VaR / correlation).
+        vrp_regime   : "NEUTRAL" | "FEAR" | "COMPLACENCY"
+        vrp_zscore   : Z-score of the current VRP signal.
+        personas     : override the default 3-persona set (useful for tests).
+        """
+        active_personas = personas if personas is not None else _DEFAULT_PERSONAS
+        persona_results: list[PersonaDebateResult] = []
+
+        for persona in active_personas:
+            result = self._check_persona(persona, portfolio, market_data, vrp_regime, vrp_zscore)
+            persona_results.append(result)
+
+        # Consensus weights: weighted average of each persona's adjusted_weights
+        all_tickers: set[str] = set()
+        for pr in persona_results:
+            all_tickers.update(pr.adjusted_weights.keys())
+
+        total_persona_weight = sum(p.weight for p in active_personas)
+        consensus_weights: dict[str, float] = {}
+        for ticker in all_tickers:
+            blended = 0.0
+            for persona, pr in zip(active_personas, persona_results, strict=True):
+                w = pr.adjusted_weights.get(ticker, 0.0)
+                blended += w * (persona.weight / total_persona_weight)
+            consensus_weights[ticker] = blended
+
+        # Renormalise
+        total_w = sum(consensus_weights.values())
+        if total_w > 0:
+            consensus_weights = {k: v / total_w for k, v in consensus_weights.items()}
+
+        # Majority vote on recommendation
+        rec_counts: dict[str, float] = {}
+        for persona, pr in zip(active_personas, persona_results, strict=True):
+            rec_counts[pr.recommendation] = rec_counts.get(pr.recommendation, 0.0) + persona.weight
+        recommendation = max(rec_counts, key=lambda r: rec_counts[r])
+
+        # Violations flagged by ≥2 personas (compare after stripping persona prefix)
+        def _bare(v: str) -> str:
+            """Strip [persona_name] prefix for cross-persona deduplication."""
+            if v.startswith("[") and "] " in v:
+                return v.split("] ", 1)[1]
+            return v
+
+        bare_counts: dict[str, int] = {}
+        bare_to_full: dict[str, str] = {}
+        for pr in persona_results:
+            seen_bare: set[str] = set()
+            for v in pr.violations:
+                b = _bare(v)
+                if b not in seen_bare:
+                    seen_bare.add(b)
+                    bare_counts[b] = bare_counts.get(b, 0) + 1
+                    bare_to_full.setdefault(b, v)
+        final_violations = [bare_to_full[b] for b, cnt in bare_counts.items() if cnt >= 2]
+
+        # Blended position scale (weighted average of per-persona effective scales)
+        blended_scale = 0.0
+        for persona in active_personas:
+            vrp_scale = persona.vrp_fear_scale if vrp_regime == "FEAR" else 1.0
+            blended_scale += vrp_scale * (persona.weight / total_persona_weight)
+
+        return RiskDebateConsensus(
+            consensus_weights=consensus_weights,
+            persona_results=persona_results,
+            recommendation=recommendation,
+            final_violations=final_violations,
+            position_scale=blended_scale,
+        )
+
+    def _check_persona(
+        self,
+        persona: RiskPersona,
+        portfolio: dict[str, Any],
+        market_data: dict[str, Any],
+        vrp_regime: str,
+        vrp_zscore: float,
+    ) -> PersonaDebateResult:
+        """Run a single persona's risk check and return its result."""
+        weights = portfolio.get("weights", {})
+        violations: list[str] = []
+        adjusted_weights: dict[str, float] = dict(weights)
+
+        # VRP position scaling for this persona
+        position_scale = persona.vrp_fear_scale if vrp_regime == "FEAR" else 1.0
+        if vrp_regime == "COMPLACENCY" and vrp_zscore < _VRP_CIRCUIT_BREAKER_ZSCORE:
+            violations.append(f"[{persona.name}] VRP circuit breaker: vrp_zscore={vrp_zscore:.2f}")
+
+        effective_max = persona.max_position * position_scale
+
+        # Position size cap — use a normalised message so dedup works across personas
+        for ticker, w in weights.items():
+            if w > effective_max:
+                # Format: "[persona] TICKER: N% exceeds position limit (persona limit: M%)"
+                violations.append(f"[{persona.name}] {ticker}: {w:.1%} exceeds position limit")
+                adjusted_weights[ticker] = effective_max
+
+        # Renormalise
+        total = sum(adjusted_weights.values())
+        if total > 0:
+            adjusted_weights = {k: v / total for k, v in adjusted_weights.items()}
+
+        # Portfolio VaR — normalised message
+        portfolio_returns = self._compute_portfolio_returns(adjusted_weights, market_data)
+        portfolio_var = (
+            self._historical_var(portfolio_returns, persona.var_confidence)
+            if portfolio_returns
+            else 0.0
+        )
+        if portfolio_var > persona.max_portfolio_var:
+            violations.append(f"[{persona.name}] Portfolio VaR {portfolio_var:.2%} exceeds limit")
+
+        # Correlation check
+        if self._use_correlation and len(weights) >= 2:
+            corr_matrix = self._compute_correlation_matrix(market_data)
+            max_corr = corr_matrix.get("max_correlation", 0.0)
+            if max_corr > persona.max_correlation_threshold:
+                violations.append(f"[{persona.name}] High pairwise correlation: {max_corr:.2f}")
+
+        # Recommendation
+        if violations:
+            recommendation = "reject" if len(violations) >= 3 else "reduce"
+        else:
+            recommendation = "approve"
+
+        return PersonaDebateResult(
+            persona_name=persona.name,
+            recommendation=recommendation,
+            adjusted_weights=adjusted_weights,
+            violations=violations,
+            portfolio_var=portfolio_var,
+            max_position_limit=effective_max,
+        )
 
     # ------------------------------------------------------------------ statistics
 
