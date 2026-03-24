@@ -26,6 +26,10 @@ _DERIBIT_URL = (
     "https://www.deribit.com/api/v2/public/get_book_summary_by_currency"
     "?currency={currency}&kind=option"
 )
+_DERIBIT_DVOL_URL = (
+    "https://www.deribit.com/api/v2/public/get_volatility_index_data"
+    "?currency={currency}&start_timestamp={start_ms}&end_timestamp={end_ms}&resolution=3600"
+)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DeribitVolFetcher
@@ -50,9 +54,10 @@ class DeribitVolFetcher:
 
     def fetch_iv(self, currency: str = "BTC") -> float | None:
         """
-        Return the ~30-day ATM implied vol (annualised) for *currency*.
+        Return implied vol (annualised) for *currency*.
 
-        Returns None if the fetch fails or no suitable options are found.
+        Priority: DVOL index → options book summary ATM IV.
+        Returns None if all sources fail.
         """
         currency = currency.upper()
         cached = self._cache.get(currency)
@@ -61,13 +66,20 @@ class DeribitVolFetcher:
             if time.time() - ts < self._CACHE_TTL:
                 return iv
 
+        # 1. DVOL index (most reliable — single published index value)
+        dvol = self.fetch_dvol(currency)
+        if dvol is not None:
+            self._cache[currency] = (dvol, time.time())
+            return dvol
+
+        # 2. Options book summary (fallback — requires expiration_timestamp field)
         try:
             url = _DERIBIT_URL.format(currency=currency)
             req = urllib.request.Request(url, headers={"User-Agent": "omega-vrp/1.0"})
             with urllib.request.urlopen(req, timeout=self._timeout) as resp:
                 data = json.loads(resp.read().decode())
         except Exception as exc:
-            logger.debug("Deribit fetch failed for %s: %s", currency, exc)
+            logger.debug("Deribit options fetch failed for %s: %s", currency, exc)
             return None
 
         try:
@@ -79,6 +91,34 @@ class DeribitVolFetcher:
         if extracted is not None:
             self._cache[currency] = (extracted, time.time())
         return extracted
+
+    def fetch_dvol(self, currency: str = "BTC") -> float | None:
+        """
+        Fetch the Deribit DVOL index (annualised IV) via get_volatility_index_data.
+
+        Returns annualised IV as a decimal (e.g. 0.53 = 53%), or None on failure.
+        DVOL is published as a percentage (e.g. 53.0), so we divide by 100.
+        """
+        try:
+            now_ms = int(time.time() * 1000)
+            start_ms = now_ms - 2 * 3600 * 1000  # 2 hours ago for recent data
+            url = _DERIBIT_DVOL_URL.format(
+                currency=currency.upper(),
+                start_ms=start_ms,
+                end_ms=now_ms,
+            )
+            req = urllib.request.Request(url, headers={"User-Agent": "omega-vrp/1.0"})
+            with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                data = json.loads(resp.read().decode())
+            rows = data.get("result", {}).get("data", [])
+            if not rows:
+                return None
+            # Each row: [timestamp_ms, open, high, low, close]
+            close_val = float(rows[-1][4])
+            return close_val / 100.0  # percent → decimal
+        except Exception as exc:
+            logger.debug("Deribit DVOL fetch failed for %s: %s", currency, exc)
+            return None
 
     def _extract_atm_iv(self, summaries: list[dict[str, Any]]) -> float | None:
         """
