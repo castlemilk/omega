@@ -262,8 +262,8 @@ class PolymarketPricingNode(Node):
                 if parsed:
                     markets.append(parsed)
 
-            # Stop early once we have enough results
-            if markets and page >= 1:
+            # Stop as soon as we have weather markets
+            if markets:
                 break
 
         if not markets:
