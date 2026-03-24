@@ -45,6 +45,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.polymarket.edge_detection")
@@ -142,7 +143,7 @@ class EdgeDetectionNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["detect", "batch_detect", "edge_detection"]
+        return [NodeAction.DETECT.value, "batch_detect", NodeAction.EDGE_DETECTION.value]
 
     def describe(self) -> str:
         return (
@@ -159,7 +160,11 @@ class EdgeDetectionNode(Node):
 
         result: Any = None
         try:
-            if action in ("detect", "edge_detection", "edgedetection"):
+            if action in (
+                NodeAction.DETECT.value,
+                NodeAction.EDGE_DETECTION.value,
+                "edgedetection",
+            ):
                 # If no explicit model_prob/market_price params, auto-fetch from
                 # PolymarketPricingNode and WeatherEnsembleNode.
                 if not inp.parameters or "model_prob" not in inp.parameters:
@@ -267,7 +272,9 @@ class EdgeDetectionNode(Node):
 
         # Fetch weather ensemble probabilities per city.
         try:
-            weather_out = WeatherEnsembleNode().execute(NodeInputLocal(action="probability"))
+            weather_out = WeatherEnsembleNode().execute(
+                NodeInputLocal(action=NodeAction.PROBABILITY.value)
+            )
             weather_result = weather_out.result or {}
         except Exception as exc:
             logger.warning("auto_detect: weather fetch failed: %s", exc)

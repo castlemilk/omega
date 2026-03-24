@@ -22,6 +22,7 @@ import time
 import uuid
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
@@ -89,7 +90,7 @@ class SignalGenerationNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["compute_signals", "compute_momentum", "compute_mean_reversion"]
+        return [NodeAction.COMPUTE_SIGNALS.value, "compute_momentum", "compute_mean_reversion"]
 
     def describe(self) -> str:
         return (
@@ -106,7 +107,7 @@ class SignalGenerationNode(Node):
         market_data = params.get("market_data", {})
 
         try:
-            if action == "compute_signals":
+            if action == NodeAction.COMPUTE_SIGNALS.value:
                 result = self._compute_all_signals(market_data)
             elif action == "compute_momentum":
                 result = self._compute_momentum_signals(market_data)

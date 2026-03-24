@@ -18,6 +18,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.risk_management")
@@ -174,7 +175,7 @@ class RiskManagementNode(Node):
     def get_capabilities(self) -> list[str]:
         return [
             "compute_var",
-            "check_risk_limits",
+            NodeAction.CHECK_RISK_LIMITS.value,
             "compute_correlation",
             "apply_vrp_constraints",
             "risk_debate",
@@ -199,7 +200,7 @@ class RiskManagementNode(Node):
                 portfolio = params.get("portfolio", {})
                 market_data = params.get("market_data", {})
                 result = self._compute_portfolio_var(portfolio, market_data)
-            elif action == "check_risk_limits":
+            elif action == NodeAction.CHECK_RISK_LIMITS.value:
                 portfolio = params.get("portfolio", {})
                 market_data = params.get("market_data", {})
                 vrp_regime = params.get("vrp_regime", self._vrp_regime)

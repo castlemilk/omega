@@ -38,6 +38,12 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
+from omega.core.actions import (
+    POLL_CAPABILITIES,
+    SIGNAL_CAPABILITIES,
+    STRATEGY_CAPABILITIES,
+    NodeAction,
+)
 from omega.core.adversarial_v2 import AdversarialPressureV2
 from omega.core.autonomy import AutonomyLevel, GraduatedAutonomyController
 from omega.core.cycle import CycleContext, CycleHistory, CycleResult
@@ -171,6 +177,7 @@ class OmegaOrchestrator:
         from omega.bridge.pipeline_server import StepHandlerRegistry
         from omega.bridge.pipeline_server import start_pipeline_server as _start
         from omega.bridge.pipeline_types import ExecuteStepRequest, ExecuteStepResponse
+        from omega.core.actions import resolve_action
         from omega.core.node import NodeInput
 
         registry = StepHandlerRegistry()
@@ -204,8 +211,17 @@ class OmegaOrchestrator:
                             except Exception:
                                 child_ctx = None
 
+                        # Resolve typed action: prefer STEP_TO_ACTION mapping from
+                        # node_type (e.g. "DATA_INGESTION" → "fetch_market_data"),
+                        # then fall back to step_name, then raw capability string.
+                        _resolved = resolve_action(req.node_type)
+                        _action = (
+                            _resolved.value
+                            if _resolved is not None
+                            else (req.step_name.lower() or capability.lower())
+                        )
                         inp = NodeInput(
-                            action=req.step_name.lower() or capability.lower(),
+                            action=_action,
                             parameters=dict(req.parameters),
                             context={
                                 "cycle": req.cycle,
@@ -234,7 +250,13 @@ class OmegaOrchestrator:
                             out.success
                             and out.result
                             and orch._paper_trading is not None
-                            and capability in ("SIGNAL_RESEARCH", "COMPUTE_SIGNALS")
+                            and capability
+                            in (
+                                NodeAction.SIGNAL_RESEARCH.value.upper(),
+                                NodeAction.COMPUTE_SIGNALS.value.upper(),
+                                "SIGNAL_RESEARCH",
+                                "COMPUTE_SIGNALS",
+                            )
                         ):
                             try:
                                 # Transform {signal_name: {value, confidence, ...}} →
@@ -264,6 +286,8 @@ class OmegaOrchestrator:
                                 "STRATEGY",
                                 "INTELLIGENCECOORDINATION",
                                 "CONSTRUCT_PORTFOLIO",
+                                NodeAction.STRATEGY.value.upper(),
+                                NodeAction.CONSTRUCT_PORTFOLIO.value.upper(),
                             )
                             and out.result
                         ):
@@ -733,12 +757,14 @@ class OmegaOrchestrator:
         outputs: dict[str, NodeOutput] = {}
         for node in self.active_nodes:
             state = node.get_state()
-            if (
-                "poll" not in node.get_capabilities()
-                and "fetch_data" not in node.get_capabilities()
-            ):
+            caps = node.get_capabilities()
+            if not POLL_CAPABILITIES.intersection(caps):
                 continue
-            action = "poll" if "poll" in node.get_capabilities() else "fetch_data"
+            action = (
+                NodeAction.POLL.value
+                if NodeAction.POLL.value in caps
+                else NodeAction.FETCH_MARKET_DATA.value
+            )
             inp = NodeInput(
                 action=action,
                 parameters={},
@@ -775,12 +801,12 @@ class OmegaOrchestrator:
         signal_data: dict[str, Any] = {}
         for node in self.active_nodes:
             state = node.get_state()
-            if "compute_signals" not in node.get_capabilities():
+            if not SIGNAL_CAPABILITIES.intersection(node.get_capabilities()):
                 continue
             poll_out = poll_outputs.get(state.node_id)
             market_data = poll_out.result if poll_out and poll_out.success else {}
             inp = NodeInput(
-                action="compute_signals",
+                action=NodeAction.COMPUTE_SIGNALS.value,
                 parameters={"market_data": market_data or {}},
                 context={"cycle_id": ctx.cycle_id, "regime": ctx.regime},
             )
@@ -822,13 +848,13 @@ class OmegaOrchestrator:
         proposals: list[dict[str, Any]] = []
         for node in self.active_nodes:
             state = node.get_state()
-            if "construct_portfolio" not in node.get_capabilities():
+            if not STRATEGY_CAPABILITIES.intersection(node.get_capabilities()):
                 continue
 
             # Check autonomy: PICO mode = deterministic strategy only
             autonomy_level = self._autonomy.get_level(state.node_id)
             inp = NodeInput(
-                action="construct_portfolio",
+                action=NodeAction.CONSTRUCT_PORTFOLIO.value,
                 parameters={
                     "signals": signal_data,
                     "regime": ctx.regime,

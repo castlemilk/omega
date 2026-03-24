@@ -37,6 +37,7 @@ import time
 import uuid
 from typing import Any, ClassVar
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
@@ -155,21 +156,21 @@ class VictoriaNode(Node):
 
     def get_capabilities(self) -> list[str]:
         return [
-            "poll",
-            "fetch_data",
-            "compute_signals",
-            "construct_portfolio",
-            "backtest_strategy",
-            "rank_signals",
+            NodeAction.POLL.value,
+            NodeAction.FETCH_MARKET_DATA.value,
+            NodeAction.COMPUTE_SIGNALS.value,
+            NodeAction.CONSTRUCT_PORTFOLIO.value,
+            NodeAction.BACKTEST_STRATEGY.value,
+            NodeAction.RANK_SIGNALS.value,
             # Go pipeline step NodeType aliases (registered as DATA_INGESTION etc.)
-            "data_ingestion",
-            "signal_research",
-            "strategy",
-            "risk_management",
-            "verification",
-            "memory",
-            "improvement",
-            "adversarial",
+            NodeAction.DATA_INGESTION.value,
+            NodeAction.SIGNAL_RESEARCH.value,
+            NodeAction.STRATEGY.value,
+            NodeAction.RISK_MANAGEMENT.value,
+            NodeAction.VERIFICATION.value,
+            NodeAction.MEMORY.value,
+            NodeAction.IMPROVEMENT.value,
+            NodeAction.ADVERSARIAL.value,
         ]
 
     def describe(self) -> str:
@@ -188,14 +189,24 @@ class VictoriaNode(Node):
 
         try:
             result: Any
-            if action in ("poll", "fetch_data", "data_ingestion", "dataingestion"):
+            if action in (
+                NodeAction.POLL.value,
+                NodeAction.FETCH_MARKET_DATA.value,
+                NodeAction.DATA_INGESTION.value,
+                "fetch_data",
+                "dataingestion",
+            ):
                 result = self._do_poll(inp)
-            elif action in ("compute_signals", "signal_research", "signalresearch"):
+            elif action in (
+                NodeAction.COMPUTE_SIGNALS.value,
+                NodeAction.SIGNAL_RESEARCH.value,
+                "signalresearch",
+            ):
                 result = self._do_compute_signals(inp)
             elif action in (
-                "construct_portfolio",
-                "strategy",
-                "risk_management",
+                NodeAction.CONSTRUCT_PORTFOLIO.value,
+                NodeAction.STRATEGY.value,
+                NodeAction.RISK_MANAGEMENT.value,
                 "riskmanagement",
                 "riskcheck",
                 "risk_check",
@@ -203,13 +214,13 @@ class VictoriaNode(Node):
                 "dynamicweights",
             ):
                 result = self._do_construct_portfolio(inp)
-            elif action in ("backtest_strategy", "rank_signals"):
+            elif action in (NodeAction.BACKTEST_STRATEGY.value, NodeAction.RANK_SIGNALS.value):
                 # Delegate to inner StrategyNode
                 result_out = self._strategy.execute(inp)
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._total_latency_ms += elapsed
                 return result_out
-            elif action == "debategate":
+            elif action == NodeAction.DEBATE_GATE.value:
                 # Real risk debate — bull/bear scoring + risk-limit check.
                 portfolio_weights: dict[str, float] = {}
                 if "portfolio" in inp.parameters and isinstance(inp.parameters["portfolio"], dict):
@@ -234,15 +245,15 @@ class VictoriaNode(Node):
                     len(result["violations"]),
                 )
             elif action in (
-                "verification",
-                "walkforward",
-                "memory",
-                "adversarial",
+                NodeAction.VERIFICATION.value,
+                NodeAction.WALK_FORWARD.value,
+                NodeAction.MEMORY.value,
+                NodeAction.ADVERSARIAL.value,
                 "ring3adversarial",
             ):
                 # These are handled internally by Python orchestrator; return success no-op
                 result = {"status": "ok", "action": action}
-            elif action in ("improvement", "improvementengine"):
+            elif action in (NodeAction.IMPROVEMENT.value, NodeAction.IMPROVEMENT_ENGINE.value):
                 result = self._do_improvement(inp)
             else:
                 elapsed = (time.perf_counter() - t0) * 1000
@@ -615,7 +626,7 @@ class VictoriaNode(Node):
         """Fetch market data via DataIngestionNode."""
         out = self._ingestion.execute(
             NodeInput(
-                action="fetch_market_data",
+                action=NodeAction.FETCH_MARKET_DATA.value,
                 parameters=inp.parameters,
                 context=inp.context,
             )
@@ -640,7 +651,7 @@ class VictoriaNode(Node):
         # 1. Basic technical signals (SMA/RSI/MACD/BB)
         basic_out = self._signals.execute(
             NodeInput(
-                action="compute_signals",
+                action=NodeAction.COMPUTE_SIGNALS.value,
                 parameters={"market_data": market_data},
                 context=inp.context,
             )
@@ -905,7 +916,7 @@ class VictoriaNode(Node):
         flat_signals: dict[str, Any] = adapt_signals(signals) if isinstance(signals, dict) else {}
 
         strategy_inp = NodeInput(
-            action="construct_portfolio",
+            action=NodeAction.CONSTRUCT_PORTFOLIO.value,
             parameters={
                 "signals": flat_signals,
                 "market_data": self._last_market_data,

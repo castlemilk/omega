@@ -28,6 +28,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 from .data_providers import (
@@ -137,7 +138,7 @@ class DataIngestionNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["fetch_market_data", "fetch_ohlcv", "fetch_ticker_info"]
+        return [NodeAction.FETCH_MARKET_DATA.value, "fetch_ohlcv", "fetch_ticker_info"]
 
     def describe(self) -> str:
         return (
@@ -154,7 +155,7 @@ class DataIngestionNode(Node):
         params = input.parameters
 
         try:
-            if action == "fetch_market_data":
+            if action == NodeAction.FETCH_MARKET_DATA.value:
                 result = self._fetch_all_pairs(
                     interval=params.get("interval", "1d"),
                     limit=int(params.get("limit", 90)),

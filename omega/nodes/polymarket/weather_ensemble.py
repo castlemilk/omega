@@ -43,6 +43,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, ClassVar
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.polymarket.weather_ensemble")
@@ -137,7 +138,12 @@ class WeatherEnsembleNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["probability", "ensemble_data", "list_cities", "weather_ensemble"]
+        return [
+            NodeAction.PROBABILITY.value,
+            "ensemble_data",
+            "list_cities",
+            NodeAction.WEATHER_ENSEMBLE.value,
+        ]
 
     def describe(self) -> str:
         return (
@@ -153,7 +159,11 @@ class WeatherEnsembleNode(Node):
 
         result: Any = None
         try:
-            if action in ("probability", "weather_ensemble", "weatherdata"):
+            if action in (
+                NodeAction.PROBABILITY.value,
+                NodeAction.WEATHER_ENSEMBLE.value,
+                "weatherdata",
+            ):
                 result = self._compute_probability(inp.parameters)
             elif action == "ensemble_data":
                 result = self._fetch_ensemble(inp.parameters)

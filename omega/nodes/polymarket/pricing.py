@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.polymarket.pricing")
@@ -95,7 +96,7 @@ class PolymarketPricingNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["fetch_weather_markets", "fetch_market", "polymarket_pricing"]
+        return ["fetch_weather_markets", "fetch_market", NodeAction.MARKET_PRICING.value]
 
     def describe(self) -> str:
         return (
@@ -111,7 +112,11 @@ class PolymarketPricingNode(Node):
 
         result: Any = None
         try:
-            if action in ("fetch_weather_markets", "polymarket_pricing", "marketpricing"):
+            if action in (
+                "fetch_weather_markets",
+                NodeAction.MARKET_PRICING.value,
+                "marketpricing",
+            ):
                 result = self._fetch_weather_markets(inp.parameters)
             elif action == "fetch_market":
                 market_id = inp.parameters.get("market_id", "")

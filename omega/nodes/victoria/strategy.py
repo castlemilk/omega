@@ -17,6 +17,7 @@ import uuid
 from enum import IntEnum
 from typing import Any
 
+from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
@@ -121,7 +122,11 @@ class StrategyNode(Node):
         )
 
     def get_capabilities(self) -> list[str]:
-        return ["construct_portfolio", "backtest_strategy", "rank_signals"]
+        return [
+            NodeAction.CONSTRUCT_PORTFOLIO.value,
+            NodeAction.BACKTEST_STRATEGY.value,
+            NodeAction.RANK_SIGNALS.value,
+        ]
 
     def describe(self) -> str:
         return (
@@ -137,15 +142,15 @@ class StrategyNode(Node):
         params = input.parameters
 
         try:
-            if action == "construct_portfolio":
+            if action == NodeAction.CONSTRUCT_PORTFOLIO.value:
                 signals = params.get("signals", {})
                 market_data = params.get("market_data", {})
                 result = self._construct_portfolio(signals, market_data)
-            elif action == "backtest_strategy":
+            elif action == NodeAction.BACKTEST_STRATEGY.value:
                 signals = params.get("signals", {})
                 market_data = params.get("market_data", {})
                 result = self._backtest(signals, market_data)
-            elif action == "rank_signals":
+            elif action == NodeAction.RANK_SIGNALS.value:
                 signals = params.get("signals", {})
                 result = self._rank_signals(signals)  # type: ignore[assignment]
             else:
