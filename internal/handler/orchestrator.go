@@ -1155,7 +1155,8 @@ func dbNodeConfigToProto(n *db.Node, brain *db.BrainConfig) *omegav1.NodeConfig 
 // ── DARK signal helpers ───────────────────────────────────────────────────────
 
 // recordCoordinationOutcome writes a per-cycle coordination outcome tuple.
-// outcome_quality is the fraction of steps that succeeded (0.0–1.0).
+// quality = 0.5*(successful_steps/total_steps) + 0.5*(quality_score from SIGNAL_RESEARCH)
+// Falls back to pure success-rate when no SIGNAL_RESEARCH quality_score is present.
 func (h *OrchestratorHandler) recordCoordinationOutcome(ctx context.Context, projectID string, cycle int64, results []stepResult) {
 	if len(results) == 0 {
 		return
@@ -1166,7 +1167,27 @@ func (h *OrchestratorHandler) recordCoordinationOutcome(ctx context.Context, pro
 			successes++
 		}
 	}
-	quality := float64(successes) / float64(len(results))
+	successRate := float64(successes) / float64(len(results))
+
+	// Extract quality_score from the SIGNAL_RESEARCH step if present.
+	var signalQuality float64
+	hasSignalQuality := false
+	for _, r := range results {
+		if r.NodeType == "SIGNAL_RESEARCH" && r.Success {
+			if qs, ok := r.Metrics["quality_score"]; ok {
+				signalQuality = qs
+				hasSignalQuality = true
+				break
+			}
+		}
+	}
+
+	var quality float64
+	if hasSignalQuality {
+		quality = 0.5*successRate + 0.5*signalQuality
+	} else {
+		quality = successRate
+	}
 
 	// routing_json: ordered list of steps that ran
 	type routingStep struct {
