@@ -721,7 +721,18 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 				"cycle": cycle, "warning": "no projects registered — pipeline dispatch skipped",
 			}, cycle)
 		}
+		// Each project runs independently — a panic or failure in one project
+		// must not prevent other projects from executing their cycle.
 		for projectID, steps := range projects {
+			projectID, steps := projectID, steps // capture for closure
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						_ = h.db.LogActivity("cycle_panic", "system", "orchestrator", map[string]any{
+							"cycle": cycle, "project_id": projectID, "panic": fmt.Sprintf("%v", r),
+						}, cycle)
+					}
+				}()
 			var projectResults []stepResult
 			for _, step := range steps {
 				_, stepSpan := tracer.Start(cycleCtx, "orchestrator.pipeline.step",
@@ -821,6 +832,7 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 
 			// ── DARK signal: goal tracking (per project) ─────────────────────────
 			h.recordGoalTracking(projectID, cycle, projectResults)
+			}()
 		}
 	}
 
