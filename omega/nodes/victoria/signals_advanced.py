@@ -95,8 +95,10 @@ class OrderFlowSignal:
     """
 
     def compute(self, market_data: dict[str, Any]) -> SignalValue:
-        prices = market_data.get("close", [])
-        volumes = market_data.get("volume", [])
+        # OHLCV is stored under ticker keys; fall back to top-level for tests
+        _btc = market_data.get("BTCUSDT") or {}
+        prices = _btc.get("close") or market_data.get("close", [])
+        volumes = _btc.get("volume") or market_data.get("volume", [])
         bid_sizes = market_data.get("bid_sizes", [])
         ask_sizes = market_data.get("ask_sizes", [])
 
@@ -444,7 +446,10 @@ class SentimentSignal:
     def compute(self, market_data: dict[str, Any]) -> SignalValue:
         funding_rates = market_data.get("funding_rates", [])  # list of floats (8h rate)
         open_interest = market_data.get("open_interest", [])  # list of OI values
-        prices = market_data.get("close", [])
+        _btc = market_data.get("BTCUSDT") or {}
+        prices = _btc.get("close") or market_data.get("close", [])
+        _fg = market_data.get("_fear_greed", {})
+        fear_greed_value: int | None = _fg.get("current_value") if isinstance(_fg, dict) else None
 
         raw: dict[str, float] = {}
 
@@ -491,39 +496,63 @@ class SentimentSignal:
                 oi_signal = 0.0  # unwinding — uncertain
                 raw["oi_regime"] = -1.0
 
+        # Fear & Greed Index (Alternative.me): score 0-100
+        fg_signal = 0.0
+        has_fg = fear_greed_value is not None
+        if fear_greed_value is not None:
+            fg_int: int = fear_greed_value
+            raw["fear_greed_value"] = float(fg_int)
+            if fg_int >= 70:
+                # Extreme greed → contrarian bearish (crowd too euphoric)
+                fg_signal = -min(1.0, (fg_int - 70) / 30.0)
+            elif fg_int <= 30:
+                # Extreme fear → contrarian bullish (crowd too fearful)
+                fg_signal = min(1.0, (30 - fg_int) / 30.0)
+            # 31-69: neutral, fg_signal stays 0.0
+
         # Combined signal
         has_funding = bool(funding_rates)
         has_oi = bool(open_interest and len(open_interest) > 1)
 
-        if not has_funding and not has_oi:
+        if not has_funding and not has_oi and not has_fg:
             return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
 
         weights = []
         signals = []
         if has_funding:
             signals.append(funding_signal)
-            weights.append(0.6)
+            weights.append(0.5)
         if has_oi:
             signals.append(oi_signal)
-            weights.append(0.4)
+            weights.append(0.3)
+        if has_fg:
+            signals.append(fg_signal)
+            weights.append(0.2)
 
         total_w = sum(weights)
         value = sum(s * w for s, w in zip(signals, weights, strict=False)) / total_w
 
-        # Confidence: higher when funding is extreme (clearer signal)
+        # Confidence: higher when funding is extreme or fear/greed is at extremes
         funding_extremity = abs(raw.get("avg_funding_8p", 0)) / (self.FUNDING_THRESHOLD * 3)
-        confidence = min(1.0, 0.4 + funding_extremity * 0.6)
+        fg_extremity = abs(raw.get("fear_greed_value", 50.0) - 50.0) / 50.0 if has_fg else 0.0
+        confidence = min(1.0, 0.4 + max(funding_extremity, fg_extremity) * 0.6)
 
-        # Regime tag
-        fr = raw.get("funding_regime", 0.0)
-        if fr > 0.5:
-            regime_tag = "extreme_greed"
-        elif fr < -0.5:
+        # Regime tag — fear/greed extreme overrides funding regime when present
+        fg_val = raw.get("fear_greed_value", 50.0)
+        if has_fg and fg_val <= 20:
             regime_tag = "extreme_fear"
-        elif abs(fr) > 0:
-            regime_tag = "mild_sentiment"
+        elif has_fg and fg_val >= 80:
+            regime_tag = "extreme_greed"
         else:
-            regime_tag = "neutral_sentiment"
+            fr = raw.get("funding_regime", 0.0)
+            if fr > 0.5:
+                regime_tag = "extreme_greed"
+            elif fr < -0.5:
+                regime_tag = "extreme_fear"
+            elif abs(fr) > 0:
+                regime_tag = "mild_sentiment"
+            else:
+                regime_tag = "neutral_sentiment"
 
         return SignalValue(
             value=max(-1.0, min(1.0, value)),
