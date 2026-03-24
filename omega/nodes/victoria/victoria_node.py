@@ -266,6 +266,7 @@ class VictoriaNode(Node):
                     for k, v in result.items()
                     if k in ("bull_score", "bear_score", "edge") and isinstance(v, (int, float))
                 }
+                extra_metrics["violation_count"] = float(len(result.get("violations", [])))
 
             return NodeOutput(
                 request_id=inp.request_id,
@@ -529,26 +530,49 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("reflect_on_cycle LLM call failed: %s", exc)
 
-        # Fallback: rule-based reflection
+        # Fallback: rule-based reflection — must vary per cycle so store unique lessons
         if not reflection_text:
+            # Find the top signal by confidence to make each lesson unique
+            top_name = "none"
+            top_conf = 0.0
+            direction = "neutral"
+            for sname, sval in signals.items():
+                if sname.startswith("_") or not isinstance(sval, dict):
+                    continue
+                conf = float(sval.get("confidence", 0.0))
+                if conf > top_conf:
+                    top_conf = conf
+                    top_name = sname
+                    val = float(sval.get("value", 0.0))
+                    direction = "bullish" if val > 0 else ("bearish" if val < 0 else "neutral")
+
             if quality >= 0.7:
                 reflection_text = (
                     f"Cycle {cycle}: strong signals (quality={quality:.2f}, "
                     f"conf={avg_conf:.2f}, regime={regime})."
                 )
-                lesson = f"High quality cycle — maintain current regime weighting ({regime})."
+                lesson = (
+                    f"Cycle {cycle}: {n_signals} signals, top={top_name}(conf={top_conf:.2f}), "
+                    f"regime={regime}, direction={direction}"
+                )
             elif quality >= 0.4:
                 reflection_text = (
                     f"Cycle {cycle}: moderate signals (quality={quality:.2f}, "
                     f"conf={avg_conf:.2f}, regime={regime})."
                 )
-                lesson = "Moderate quality — review signal weights if trend continues."
+                lesson = (
+                    f"Cycle {cycle}: {n_signals} signals, top={top_name}(conf={top_conf:.2f}), "
+                    f"regime={regime}, direction={direction}"
+                )
             else:
                 reflection_text = (
                     f"Cycle {cycle}: weak signals (quality={quality:.2f}, "
                     f"conf={avg_conf:.2f}, coverage={coverage:.0%}, regime={regime})."
                 )
-                lesson = "Weak signals — consider tighter risk limits or skip cycle."
+                lesson = (
+                    f"Cycle {cycle}: {n_signals} signals, top={top_name}(conf={top_conf:.2f}), "
+                    f"regime={regime}, direction={direction}"
+                )
 
         if not lesson:
             lesson = reflection_text[:80]
