@@ -46,7 +46,7 @@ func (h *ProjectHandler) CreateProject(
 		Description:       req.Msg.Description,
 		Domain:            req.Msg.Domain,
 		AutonomyLevel:     req.Msg.AutonomyLevel,
-		Status:            "active",
+		Status:            "inactive",
 		NodeIds:           req.Msg.NodeIds,
 		PipelineConfig:    req.Msg.PipelineConfig,
 		EvalConfig:        req.Msg.EvalConfig,
@@ -186,4 +186,32 @@ func (h *ProjectHandler) RemoveNodeFromProject(
 	p.NodeIds = filtered
 	p.UpdatedAt = timestamppb.Now()
 	return connect.NewResponse(&omegav1.RemoveNodeFromProjectResponse{Project: p}), nil
+}
+
+// StartProject marks the project as active so it participates in the heartbeat cycle.
+// Returns an error if the project is not found.
+func (h *ProjectHandler) StartProject(id string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	p, ok := h.projects[id]
+	if !ok {
+		return fmt.Errorf("project %q not found", id)
+	}
+	p.Status = "active"
+	p.UpdatedAt = timestamppb.Now()
+	return nil
+}
+
+// StopProject marks the project as inactive so it is skipped in the heartbeat cycle.
+// Returns an error if the project is not found.
+func (h *ProjectHandler) StopProject(id string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	p, ok := h.projects[id]
+	if !ok {
+		return fmt.Errorf("project %q not found", id)
+	}
+	p.Status = "inactive"
+	p.UpdatedAt = timestamppb.Now()
+	return nil
 }

@@ -114,7 +114,7 @@ func parseFile(path string) (*omegav1.Project, error) {
 		ProjectId:     y.ID,
 		Name:          y.Name,
 		Description:   y.Description,
-		Status:        coalesce(y.Status, "active"),
+		Status:        coalesce(y.Status, "inactive"),
 		Domain:        y.Domain,
 		AutonomyLevel: y.AutonomyLevel,
 		NodeIds:       y.NodeIDs,
