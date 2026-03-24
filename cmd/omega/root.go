@@ -39,6 +39,7 @@ func init() {
 	rootCmd.AddCommand(backtestCmd)
 	rootCmd.AddCommand(challengesCmd)
 	rootCmd.AddCommand(nodesCmd)
+	rootCmd.AddCommand(projectsCmd)
 }
 
 func initConfig() {
