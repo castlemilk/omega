@@ -4,6 +4,64 @@
 
 10-cycle live measurement run on master branch to verify the self-improvement feedback loop is real and quantifiable.
 
+---
+
+## Clean Run — 2026-03-24 (nifty-keller)
+
+### Build Status
+```
+go build ./cmd/omega-api/...  → OK
+go build ./cmd/omega/...      → OK
+```
+
+### Server Health
+| Service | Status |
+|---------|--------|
+| Python pipeline (9090) | Healthy — 14 capabilities registered |
+| Go API (8080) | HEALTHY — postgres latency 1-2ms |
+
+### 10-Cycle Results (0 errors)
+
+| Cycle | Wall Time | Errors |
+|-------|-----------|--------|
+| 1 | 763ms | 0 |
+| 2 | 642ms | 0 |
+| 3 | 651ms | 0 |
+| 4 | 619ms | 0 |
+| 5 | 616ms | 0 |
+| 6 | 660ms | 0 |
+| 7 | 631ms | 0 |
+| 8 | 924ms | 0 |
+| 9 | 626ms | 0 |
+| 10 | 619ms | 0 |
+
+**Total: 10 cycles in 6754ms** (avg 675ms/cycle)
+Cycle 8 outlier at 924ms (SignalResearch 822ms — API latency spike).
+
+### Observability Tables (post-run)
+```
+ activity_log          | 49
+ node_executions       | 372
+ victoria_signals      | 5
+ coordination_outcomes | 33
+ goal_tracking         | 33
+ improvement_log       | 33
+ verification_gates    | 66
+```
+
+### Prometheus: `omega_cycles_total 10`
+
+### Cycle Score Trend
+`composite_score` = 0 for all cycles — signal quality not yet wired into goal_tracking.
+Scoring feedback loop gap: data persists correctly but aggregation step is missing.
+
+### Key Observations
+1. Pipeline stable — 10/10 cycles, zero errors
+2. Performance consistent — 615–924ms, median ~630ms
+3. All observability tables populated correctly
+4. composite_score=0 gap: improvement engine runs but score rollup needs implementation
+5. 372 node_executions / 10 cycles = 37/cycle (9 steps × ~4 nodes each)
+
 **Date:** 2026-03-24
 **Branch:** master (post-merge of claude/dazzling-antonelli, claude/jovial-ptolemy, claude/reverent-rosalind, claude/infallible-golick)
 **Cycles:** 10
