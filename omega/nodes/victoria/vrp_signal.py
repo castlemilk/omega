@@ -287,6 +287,17 @@ class VRPSignalNode(Node):
                 if iv is not None:
                     return iv, "funding_proxy_btc"
 
+        # 4. RV-based estimate: IV ~= RV * 1.15 (typical crypto VRP premium).
+        # Fires only when Deribit is unreachable AND no funding data exists.
+        # Keeps the VRP signal alive (non-zero) rather than returning 0.
+        rv_estimate, _ = self._get_realized_vol(market_data, f"{currency}USDT")
+        if rv_estimate is not None:
+            iv = rv_estimate * 1.15
+            logger.debug(
+                "VRP IV fallback: rv_estimate=%.3f -> iv_estimate=%.3f (rv*1.15)", rv_estimate, iv
+            )
+            return iv, "rv_estimate"
+
         return None, "none"
 
     def _get_realized_vol(
