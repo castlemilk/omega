@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from omega.core.node import Node, NodeInput, NodeOutput
-from omega.core.state_store import StateStore
+from omega.core.state_store import StateBackend as StateStore
 
 logger = logging.getLogger("omega.core.tracing")
 

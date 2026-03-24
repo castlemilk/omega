@@ -40,6 +40,19 @@ def main() -> None:
     node = VictoriaNode()
     orch.register_node(node)
 
+    # Wire state store for cycle-result persistence and history seeding.
+    # Wire tracer for Go→Python distributed trace propagation.
+    try:
+        from omega.core.state_store import make_state_backend
+        from omega.core.tracing import Tracer
+
+        store = make_state_backend()
+        orch.set_state_store(store)
+        orch.set_tracer(Tracer(store))
+        logger.info("StateStore and Tracer wired into pipeline server")
+    except Exception as exc:
+        logger.warning("StateStore/Tracer wiring failed: %s — continuing without persistence", exc)
+
     # Wire PaperTradingEngine so signal values are persisted to victoria_signals
     # and victoria_signal_history on every SignalResearch cycle.
     db_url = os.getenv("DATABASE_URL")

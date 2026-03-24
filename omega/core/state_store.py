@@ -170,6 +170,23 @@ CREATE TABLE IF NOT EXISTS goal_tracking (
     violations_json     TEXT NOT NULL DEFAULT '[]',
     recorded_at         REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS cycle_results (
+    cycle_id                TEXT PRIMARY KEY,
+    cycle_number            INTEGER NOT NULL,
+    started_at              REAL NOT NULL,
+    duration_seconds        REAL NOT NULL DEFAULT 0.0,
+    signals_generated       INTEGER NOT NULL DEFAULT 0,
+    actions_proposed        INTEGER NOT NULL DEFAULT 0,
+    actions_executed        INTEGER NOT NULL DEFAULT 0,
+    error_count             INTEGER NOT NULL DEFAULT 0,
+    regime                  TEXT NOT NULL DEFAULT 'normal',
+    improvement_proposed    INTEGER NOT NULL DEFAULT 0,
+    regime_transition       INTEGER NOT NULL DEFAULT 0,
+    adversarial_flags_json  TEXT NOT NULL DEFAULT '[]',
+    metrics_json            TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_cycle_results_number ON cycle_results(cycle_number);
 """
 
 
@@ -262,6 +279,9 @@ class StateBackend(ABC):
         metadata: dict | None = None,
     ) -> None: ...
 
+    @abstractmethod
+    def get_trace(self, trace_id: str) -> list[dict]: ...
+
     # ------------------------------------------------------------------
     # Issues
     # ------------------------------------------------------------------
@@ -306,6 +326,31 @@ class StateBackend(ABC):
         node_id: str | None = None,
         limit: int = 20,
     ) -> list[dict]: ...
+
+    # ------------------------------------------------------------------
+    # Cycle results
+    # ------------------------------------------------------------------
+
+    @abstractmethod
+    def record_cycle_result(
+        self,
+        cycle_id: str,
+        cycle_number: int,
+        started_at: float,
+        duration_seconds: float,
+        signals_generated: int,
+        actions_proposed: int,
+        actions_executed: int,
+        error_count: int,
+        regime: str,
+        improvement_proposed: bool,
+        regime_transition: bool,
+        adversarial_flags: list,
+        metrics: dict,
+    ) -> None: ...
+
+    @abstractmethod
+    def get_recent_cycle_results(self, limit: int = 200) -> list[dict]: ...
 
 
 class SQLiteBackend(StateBackend):
@@ -794,6 +839,62 @@ class SQLiteBackend(StateBackend):
             d = dict(row)
             d["before_metrics"] = json.loads(d.pop("before_metrics_json", "{}"))
             d["after_metrics"] = json.loads(d.pop("after_metrics_json", "{}"))
+            result.append(d)
+        return result
+
+    # ------------------------------------------------------------------
+    # Cycle results
+    # ------------------------------------------------------------------
+
+    def record_cycle_result(
+        self,
+        cycle_id: str,
+        cycle_number: int,
+        started_at: float,
+        duration_seconds: float,
+        signals_generated: int,
+        actions_proposed: int,
+        actions_executed: int,
+        error_count: int,
+        regime: str,
+        improvement_proposed: bool,
+        regime_transition: bool,
+        adversarial_flags: list,
+        metrics: dict,
+    ) -> None:
+        self._conn.execute(
+            """INSERT OR REPLACE INTO cycle_results
+               (cycle_id, cycle_number, started_at, duration_seconds, signals_generated,
+                actions_proposed, actions_executed, error_count, regime, improvement_proposed,
+                regime_transition, adversarial_flags_json, metrics_json)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                cycle_id,
+                cycle_number,
+                started_at,
+                duration_seconds,
+                signals_generated,
+                actions_proposed,
+                actions_executed,
+                error_count,
+                regime,
+                1 if improvement_proposed else 0,
+                1 if regime_transition else 0,
+                json.dumps(adversarial_flags),
+                json.dumps(metrics),
+            ),
+        )
+        self._conn.commit()
+
+    def get_recent_cycle_results(self, limit: int = 200) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT * FROM cycle_results ORDER BY cycle_number DESC LIMIT ?", (limit,)
+        ).fetchall()
+        result = []
+        for row in rows:
+            d = dict(row)
+            d["adversarial_flags"] = json.loads(d.pop("adversarial_flags_json", "[]"))
+            d["metrics"] = json.loads(d.pop("metrics_json", "{}"))
             result.append(d)
         return result
 
@@ -1650,6 +1751,74 @@ class PostgresBackend(StateBackend):
         return self._conn.execute(query, params).fetchall()
 
     # ------------------------------------------------------------------
+    # Cycle results
+    # ------------------------------------------------------------------
+
+    def record_cycle_result(
+        self,
+        cycle_id: str,
+        cycle_number: int,
+        started_at: float,
+        duration_seconds: float,
+        signals_generated: int,
+        actions_proposed: int,
+        actions_executed: int,
+        error_count: int,
+        regime: str,
+        improvement_proposed: bool,
+        regime_transition: bool,
+        adversarial_flags: list,
+        metrics: dict,
+    ) -> None:
+        from psycopg.types.json import Jsonb
+
+        self._conn.execute(
+            """INSERT INTO cycle_results
+               (cycle_id, cycle_number, started_at, duration_seconds, signals_generated,
+                actions_proposed, actions_executed, error_count, regime, improvement_proposed,
+                regime_transition, adversarial_flags, metrics)
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+               ON CONFLICT (cycle_id) DO UPDATE SET
+                 duration_seconds=EXCLUDED.duration_seconds,
+                 metrics=EXCLUDED.metrics""",
+            (
+                cycle_id,
+                cycle_number,
+                started_at,
+                duration_seconds,
+                signals_generated,
+                actions_proposed,
+                actions_executed,
+                error_count,
+                regime,
+                improvement_proposed,
+                regime_transition,
+                Jsonb(adversarial_flags),
+                Jsonb(metrics),
+            ),
+        )
+        self._conn.commit()
+
+    def get_recent_cycle_results(self, limit: int = 200) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT * FROM cycle_results ORDER BY cycle_number DESC LIMIT %s", (limit,)
+        ).fetchall()
+        result = []
+        for row in rows:
+            d = dict(row)
+            # psycopg returns JSONB as dicts already
+            if isinstance(d.get("adversarial_flags"), str):
+                import json as _json
+
+                d["adversarial_flags"] = _json.loads(d["adversarial_flags"])
+            if isinstance(d.get("metrics"), str):
+                import json as _json
+
+                d["metrics"] = _json.loads(d["metrics"])
+            result.append(d)
+        return result
+
+    # ------------------------------------------------------------------
     # Config revisions
     # ------------------------------------------------------------------
 
@@ -2126,6 +2295,9 @@ class GoBackend(StateBackend):
     ) -> None:
         self._client.end_span(span_id, status, metadata)
 
+    def get_trace(self, trace_id: str) -> list[dict]:
+        raise NotImplementedError("GoBackend is write-only")
+
     # ------------------------------------------------------------------
     # Issues
     # ------------------------------------------------------------------
@@ -2179,6 +2351,12 @@ class GoBackend(StateBackend):
         limit: int = 20,
     ) -> list[dict]:
         raise NotImplementedError("GoBackend is write-only")
+
+    def record_cycle_result(self, *args: object, **kwargs: object) -> None:
+        pass  # GoBackend delegates persistence to the Go state service
+
+    def get_recent_cycle_results(self, limit: int = 200) -> list[dict]:
+        return []  # GoBackend does not expose read-back of cycle results
 
 
 def make_state_backend() -> StateBackend:
