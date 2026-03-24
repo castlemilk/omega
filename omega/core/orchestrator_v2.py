@@ -183,7 +183,7 @@ class OmegaOrchestrator:
             ]
             for cap in caps:
                 # Capture `node` and `cap` via default-argument binding.
-                def _make_handler(n: Any = node, capability: str = cap) -> Any:
+                def _make_handler(n: Any = node, capability: str = cap, orch: Any = self) -> Any:
                     def _handler(req: ExecuteStepRequest) -> ExecuteStepResponse:
                         import json as _json
 
@@ -201,6 +201,32 @@ class OmegaOrchestrator:
                         )
                         out = n.execute(inp)
                         state = n.get_state()
+
+                        # Persist signal IC history when a signal-research step completes.
+                        if (
+                            out.success
+                            and out.result
+                            and orch._paper_trading is not None
+                            and capability in ("SIGNAL_RESEARCH", "COMPUTE_SIGNALS")
+                        ):
+                            try:
+                                # Transform {signal_name: {value, confidence, ...}} →
+                                # [{symbol: name, composite_score: value}] for the DB writer.
+                                signals_list = [
+                                    {
+                                        "symbol": sig_name,
+                                        "composite_score": float(sig_val.get("value", 0.0)),
+                                    }
+                                    for sig_name, sig_val in out.result.items()
+                                    if isinstance(sig_val, dict) and "value" in sig_val
+                                ]
+                                if signals_list:
+                                    orch._paper_trading.persist_signal_history_to_db(
+                                        {state.node_id: signals_list}, req.cycle
+                                    )
+                            except Exception as _exc:
+                                logger.debug("signal history persistence failed: %s", _exc)
+
                         return ExecuteStepResponse(
                             success=out.success,
                             error_text="; ".join(out.errors) if out.errors else "",

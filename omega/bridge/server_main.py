@@ -40,6 +40,21 @@ def main() -> None:
     node = VictoriaNode()
     orch.register_node(node)
 
+    # Wire PaperTradingEngine so signal values are persisted to victoria_signals
+    # and victoria_signal_history on every SignalResearch cycle.
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        try:
+            from omega.core.paper_trading import PaperTradingEngine
+
+            paper_trading = PaperTradingEngine(db_url=db_url)
+            orch.set_paper_trading(paper_trading)
+            logger.info("PaperTradingEngine wired (db_url configured: True)")
+        except Exception as exc:
+            logger.warning("PaperTradingEngine not wired: %s", exc)
+    else:
+        logger.info("DATABASE_URL not set — signal history persistence disabled")
+
     server, thread = orch.start_pipeline_server(port=port)
     logger.info("Victoria pipeline server ready on port %d", port)
     logger.info("Registered capabilities: %s", node.get_capabilities())
