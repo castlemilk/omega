@@ -37,21 +37,16 @@ import time
 import uuid
 from typing import Any, ClassVar
 
-from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
-from omega.nodes.victoria.derivatives_signals import DerivativesSignal
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
-from omega.nodes.victoria.market_data_signals import MarketDataSignal
+from omega.nodes.victoria.liquidation_cascade import LiquidationCascadeNode
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
-    BTCDominanceSignal,
     CrossAssetSignal,
-    LongShortRatioSignal,
     MicrostructureSignal,
-    OnChainSignal,
     OrderFlowSignal,
     SentimentSignal,
 )
@@ -68,29 +63,8 @@ SIGNAL_NAMES = [
     "microstructure",
     "sentiment",
     "vrp",
-    "market_data",
-    "derivatives",
-    "onchain",
-    "long_short_ratio",
-    "btc_dominance",
+    "liquidation_cascade",
 ]
-
-# Prior IC values seeded into DynamicWeightAllocator from day 1.
-# Based on historical predictive power for BTC cycle analysis.
-# These values will be overwritten as real IC observations accumulate.
-_SIGNAL_IC_PRIORS: dict[str, float] = {
-    "market_data": 0.15,  # MVRV Z-Score + Puell + exchange flows — historically best
-    "derivatives": 0.13,  # Funding rate + OI from Binance — strong contrarian/trend
-    "long_short_ratio": 0.10,  # Crowded positioning — strong contrarian
-    "sentiment": 0.09,  # Fear/Greed + funding (contrarian extremes)
-    "btc_dominance": 0.08,  # Cycle macro indicator
-    "vrp": 0.08,  # Volatility regime premium
-    "basic_signals": 0.07,  # Technical (SMA/RSI/MACD) — reliable but lagging
-    "order_flow": 0.07,  # VPIN / order book — useful in liquid markets
-    "onchain": 0.06,  # DeFi TVL — slower signal
-    "cross_asset": 0.05,  # BTC/ETH/SOL correlations
-    "microstructure": 0.04,  # Spread/tick patterns — noisiest at 15m TTL
-}
 
 # Map VRP regime to DynamicWeightAllocator regime strings
 _VRP_REGIME_MAP = {
@@ -134,15 +108,12 @@ class VictoriaNode(Node):
         self._microstructure = MicrostructureSignal()
         self._sentiment = SentimentSignal()
         self._vrp = VRPSignalNode()
-        self._market_data_signal = MarketDataSignal()
-        self._derivatives = DerivativesSignal()
-        self._onchain = OnChainSignal()
-        self._long_short_ratio = LongShortRatioSignal()
-        self._btc_dominance = BTCDominanceSignal()
 
-        # Dynamic weight allocator — seeded with prior IC knowledge from day 1
+        # Additional signal nodes
+        self._liquidation_cascade = LiquidationCascadeNode()
+
+        # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
-        self._weight_allocator.seed_priors(_SIGNAL_IC_PRIORS)
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -189,21 +160,23 @@ class VictoriaNode(Node):
 
     def get_capabilities(self) -> list[str]:
         return [
-            NodeAction.POLL.value,
-            NodeAction.FETCH_MARKET_DATA.value,
-            NodeAction.COMPUTE_SIGNALS.value,
-            NodeAction.CONSTRUCT_PORTFOLIO.value,
-            NodeAction.BACKTEST_STRATEGY.value,
-            NodeAction.RANK_SIGNALS.value,
+            "poll",
+            "fetch_data",
+            "compute_signals",
+            "construct_portfolio",
+            "backtest_strategy",
+            "rank_signals",
             # Go pipeline step NodeType aliases (registered as DATA_INGESTION etc.)
-            NodeAction.DATA_INGESTION.value,
-            NodeAction.SIGNAL_RESEARCH.value,
-            NodeAction.STRATEGY.value,
-            NodeAction.RISK_MANAGEMENT.value,
-            NodeAction.VERIFICATION.value,
-            NodeAction.MEMORY.value,
-            NodeAction.IMPROVEMENT.value,
-            NodeAction.ADVERSARIAL.value,
+            "data_ingestion",
+            "signal_research",
+            "strategy",
+            "risk_management",
+            "verification",
+            "memory",
+            "improvement",
+            "adversarial",
+            # New signal capabilities
+            "LIQUIDATION_CASCADE",
         ]
 
     def describe(self) -> str:
@@ -222,25 +195,14 @@ class VictoriaNode(Node):
 
         try:
             result: Any
-            if action in (
-                NodeAction.POLL.value,
-                NodeAction.FETCH_MARKET_DATA.value,
-                NodeAction.DATA_INGESTION.value,
-                "fetch_data",
-                "dataingestion",
-            ):
+            if action in ("poll", "fetch_data", "data_ingestion", "dataingestion"):
                 result = self._do_poll(inp)
-            elif action in (
-                NodeAction.COMPUTE_SIGNALS.value,
-                NodeAction.SIGNAL_RESEARCH.value,
-                "signalresearch",
-            ):
+            elif action in ("compute_signals", "signal_research", "signalresearch"):
                 result = self._do_compute_signals(inp)
             elif action in (
-                NodeAction.CONSTRUCT_PORTFOLIO.value,
-                NodeAction.STRATEGY.value,
-                NodeAction.RISK_MANAGEMENT.value,
-                NodeAction.CHECK_RISK_LIMITS.value,
+                "construct_portfolio",
+                "strategy",
+                "risk_management",
                 "riskmanagement",
                 "riskcheck",
                 "risk_check",
@@ -248,13 +210,13 @@ class VictoriaNode(Node):
                 "dynamicweights",
             ):
                 result = self._do_construct_portfolio(inp)
-            elif action in (NodeAction.BACKTEST_STRATEGY.value, NodeAction.RANK_SIGNALS.value):
+            elif action in ("backtest_strategy", "rank_signals"):
                 # Delegate to inner StrategyNode
                 result_out = self._strategy.execute(inp)
                 elapsed = (time.perf_counter() - t0) * 1000
                 self._total_latency_ms += elapsed
                 return result_out
-            elif action == NodeAction.DEBATE_GATE.value:
+            elif action == "debategate":
                 # Real risk debate — bull/bear scoring + risk-limit check.
                 portfolio_weights: dict[str, float] = {}
                 if "portfolio" in inp.parameters and isinstance(inp.parameters["portfolio"], dict):
@@ -279,15 +241,15 @@ class VictoriaNode(Node):
                     len(result["violations"]),
                 )
             elif action in (
-                NodeAction.VERIFICATION.value,
-                NodeAction.WALK_FORWARD.value,
-                NodeAction.MEMORY.value,
-                NodeAction.ADVERSARIAL.value,
+                "verification",
+                "walkforward",
+                "memory",
+                "adversarial",
                 "ring3adversarial",
             ):
                 # These are handled internally by Python orchestrator; return success no-op
                 result = {"status": "ok", "action": action}
-            elif action in (NodeAction.IMPROVEMENT.value, NodeAction.IMPROVEMENT_ENGINE.value):
+            elif action in ("improvement", "improvementengine"):
                 result = self._do_improvement(inp)
             else:
                 elapsed = (time.perf_counter() - t0) * 1000
@@ -305,13 +267,12 @@ class VictoriaNode(Node):
 
             # Promote debate consensus metrics so Go can observe them via Prometheus.
             extra_metrics: dict[str, float] = {}
-            if action == NodeAction.DEBATE_GATE.value and isinstance(result, dict):
+            if action == "debategate" and isinstance(result, dict):
                 extra_metrics = {
                     k: float(v)
                     for k, v in result.items()
                     if k in ("bull_score", "bear_score", "edge") and isinstance(v, (int, float))
                 }
-                extra_metrics["violation_count"] = float(len(result.get("violations", [])))
 
             return NodeOutput(
                 request_id=inp.request_id,
@@ -393,13 +354,9 @@ class VictoriaNode(Node):
             "order_flow",
             "cross_asset",
             "microstructure",
+            "liquidation_cascade",
             "sentiment",
             "vrp",
-            "market_data",
-            "derivatives",
-            "onchain",
-            "long_short_ratio",
-            "btc_dominance",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -580,64 +537,26 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("reflect_on_cycle LLM call failed: %s", exc)
 
-        # Fallback: rule-based reflection with cycle-specific data
+        # Fallback: rule-based reflection
         if not reflection_text:
-            # Extract top signal by confidence and composite direction
-            top_signal = "none"
-            top_conf = 0.0
-            vrp_regime = "NEUTRAL"
-            signal_values: list[float] = []
-
-            for sig_name, sig_val in signals.items():
-                if sig_name.startswith("_") or not isinstance(sig_val, dict):
-                    continue
-                if sig_name == "vrp":
-                    vrp_regime = sig_val.get("regime_tag", "NEUTRAL")
-                conf = float(sig_val.get("confidence", 0.0))
-                if conf > top_conf:
-                    top_conf = conf
-                    top_signal = sig_name
-                if "value" in sig_val:
-                    signal_values.append(float(sig_val["value"]))
-
-            avg_signal_val = sum(signal_values) / len(signal_values) if signal_values else 0.0
-            if avg_signal_val > 0.05:
-                composite_direction = "bullish"
-            elif avg_signal_val < -0.05:
-                composite_direction = "bearish"
-            else:
-                composite_direction = "neutral"
-
             if quality >= 0.7:
                 reflection_text = (
-                    f"Cycle {cycle}: {n_signals} signals computed, strongest={top_signal} "
-                    f"(conf={top_conf:.2f}), vrp_regime={vrp_regime}, "
-                    f"direction={composite_direction}, quality={quality:.2f}."
+                    f"Cycle {cycle}: strong signals (quality={quality:.2f}, "
+                    f"conf={avg_conf:.2f}, regime={regime})."
                 )
-                lesson = (
-                    f"High quality ({n_signals} signals) — {composite_direction} "
-                    f"bias with {vrp_regime} VRP."
-                )
+                lesson = f"High quality cycle — maintain current regime weighting ({regime})."
             elif quality >= 0.4:
                 reflection_text = (
-                    f"Cycle {cycle}: {n_signals} signals, top={top_signal} "
-                    f"(conf={top_conf:.2f}), vrp={vrp_regime}, "
-                    f"direction={composite_direction}, quality={quality:.2f}."
+                    f"Cycle {cycle}: moderate signals (quality={quality:.2f}, "
+                    f"conf={avg_conf:.2f}, regime={regime})."
                 )
-                lesson = (
-                    f"Moderate quality — {composite_direction} tilt in {vrp_regime} regime, "
-                    "review weights if trend continues."
-                )
+                lesson = "Moderate quality — review signal weights if trend continues."
             else:
                 reflection_text = (
-                    f"Cycle {cycle}: weak — {n_signals}/{len(SIGNAL_NAMES)} signals, "
-                    f"top={top_signal} (conf={top_conf:.2f}), "
-                    f"vrp={vrp_regime}, direction={composite_direction}, quality={quality:.2f}."
+                    f"Cycle {cycle}: weak signals (quality={quality:.2f}, "
+                    f"conf={avg_conf:.2f}, coverage={coverage:.0%}, regime={regime})."
                 )
-                lesson = (
-                    f"Weak cycle ({n_signals} signals, {composite_direction}) — "
-                    f"tighten {vrp_regime} limits or skip."
-                )
+                lesson = "Weak signals — consider tighter risk limits or skip cycle."
 
         if not lesson:
             lesson = reflection_text[:80]
@@ -665,7 +584,7 @@ class VictoriaNode(Node):
         """Fetch market data via DataIngestionNode."""
         out = self._ingestion.execute(
             NodeInput(
-                action=NodeAction.FETCH_MARKET_DATA.value,
+                action="fetch_data",
                 parameters=inp.parameters,
                 context=inp.context,
             )
@@ -690,29 +609,13 @@ class VictoriaNode(Node):
         # 1. Basic technical signals (SMA/RSI/MACD/BB)
         basic_out = self._signals.execute(
             NodeInput(
-                action=NodeAction.COMPUTE_SIGNALS.value,
+                action="compute_signals",
                 parameters={"market_data": market_data},
                 context=inp.context,
             )
         )
         if basic_out.success and basic_out.result:
-            raw_basic = basic_out.result
-            # Derive top-level value/confidence so DB persistence sees non-zero.
-            # raw_basic is {ticker: {composite: float, rsi: float, ...}}
-            composites = [
-                float(td["composite"])
-                for td in raw_basic.values()
-                if isinstance(td, dict) and "composite" in td
-            ]
-            signals["basic_signals"] = dict(raw_basic)
-            if composites:
-                signals["basic_signals"]["value"] = sum(composites) / len(composites)
-                # confidence = fraction of tickers with non-zero composite
-                non_zero = sum(1 for c in composites if c != 0.0)
-                signals["basic_signals"]["confidence"] = non_zero / len(composites)
-            else:
-                signals["basic_signals"]["value"] = 0.0
-                signals["basic_signals"]["confidence"] = 0.0
+            signals["basic_signals"] = basic_out.result
 
         # Advanced signals are only computed outside PICO mode
         # (they may use more complex / probabilistic computations)
@@ -786,59 +689,34 @@ class VictoriaNode(Node):
                 logger.debug("vrp signal failed: %s", exc)
 
             try:
-                md_val = self._market_data_signal.compute(market_data)
-                signals["market_data"] = {
-                    "value": md_val.value,
-                    "confidence": md_val.confidence,
-                    "regime_tag": md_val.regime_tag,
-                    "raw": md_val.raw,
-                }
+                lc_out = self._liquidation_cascade.execute(
+                    NodeInput(
+                        action="monitor_liquidations",
+                        parameters={"market_data": market_data},
+                        context=inp.context,
+                    )
+                )
+                if lc_out.success and lc_out.result:
+                    lc = lc_out.result
+                    # Convert cascade_probability to a directional signal:
+                    # HIGH_LONG cascade → bearish (forced long unwind)
+                    # HIGH_SHORT cascade → bullish (short squeeze)
+                    risk_label = lc.get("funding_rate_signal", "LOW")
+                    prob = float(lc.get("cascade_probability", 0.0))
+                    if risk_label == "HIGH_LONG":
+                        sig_val = -prob  # long cascade → downward pressure
+                    elif risk_label == "HIGH_SHORT":
+                        sig_val = prob  # short squeeze → upward pressure
+                    else:
+                        sig_val = 0.0
+                    signals["liquidation_cascade"] = {
+                        "value": sig_val,
+                        "confidence": float(lc.get("confidence", 0.0)),
+                        "regime_tag": risk_label,
+                        "raw": lc,
+                    }
             except Exception as exc:
-                logger.debug("market_data signal failed: %s", exc)
-
-            try:
-                deriv_val = self._derivatives.compute(market_data)
-                signals["derivatives"] = {
-                    "value": deriv_val.value,
-                    "confidence": deriv_val.confidence,
-                    "regime_tag": deriv_val.regime_tag,
-                    "raw": deriv_val.raw,
-                }
-            except Exception as exc:
-                logger.debug("derivatives signal failed: %s", exc)
-
-            try:
-                oc_val = self._onchain.compute(market_data)
-                signals["onchain"] = {
-                    "value": oc_val.value,
-                    "confidence": oc_val.confidence,
-                    "regime_tag": oc_val.regime_tag,
-                    "raw": oc_val.raw,
-                }
-            except Exception as exc:
-                logger.debug("onchain signal failed: %s", exc)
-
-            try:
-                ls_val = self._long_short_ratio.compute(market_data)
-                signals["long_short_ratio"] = {
-                    "value": ls_val.value,
-                    "confidence": ls_val.confidence,
-                    "regime_tag": ls_val.regime_tag,
-                    "raw": ls_val.raw,
-                }
-            except Exception as exc:
-                logger.debug("long_short_ratio signal failed: %s", exc)
-
-            try:
-                dom_val = self._btc_dominance.compute(market_data)
-                signals["btc_dominance"] = {
-                    "value": dom_val.value,
-                    "confidence": dom_val.confidence,
-                    "regime_tag": dom_val.regime_tag,
-                    "raw": dom_val.raw,
-                }
-            except Exception as exc:
-                logger.debug("btc_dominance signal failed: %s", exc)
+                logger.debug("liquidation_cascade signal failed: %s", exc)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
@@ -873,17 +751,12 @@ class VictoriaNode(Node):
                     continue
                 if name in alloc.weights:
                     raw_weights[name] = alloc.weights[name]
-            # Embed IC EMA per signal so downstream persistence can write real IC values
-            for name in signals:
-                if name.startswith("_") or not isinstance(signals[name], dict):
-                    continue
-                signals[name]["ic"] = round(alloc.ic_ema.get(name, 0.0), 6)
         except Exception as exc:
             logger.debug("weight allocation failed, using equal weights: %s", exc)
 
         # 4. Compute quality metrics for this cycle
         signal_names = [k for k in signals if not k.startswith("_")]
-        expected_count = len(SIGNAL_NAMES)  # 7 expected signal types
+        expected_count = len(SIGNAL_NAMES)  # 6 expected signal types
         signal_coverage = len(signal_names) / max(expected_count, 1)
 
         weighted_confidences = []
@@ -1015,7 +888,7 @@ class VictoriaNode(Node):
         flat_signals: dict[str, Any] = adapt_signals(signals) if isinstance(signals, dict) else {}
 
         strategy_inp = NodeInput(
-            action=NodeAction.CONSTRUCT_PORTFOLIO.value,
+            action="construct_portfolio",
             parameters={
                 "signals": flat_signals,
                 "market_data": self._last_market_data,
