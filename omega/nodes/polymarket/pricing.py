@@ -29,7 +29,14 @@ from datetime import datetime
 from typing import Any
 
 from omega.core.actions import NodeAction
+from omega.core.credentials import credentials
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+
+credentials.register(
+    "POLYMARKET_PRIVATE_KEY",
+    required=False,
+    description="Polymarket CLOB trading (EIP-712 signed orders)",
+)
 
 logger = logging.getLogger("omega.nodes.polymarket.pricing")
 

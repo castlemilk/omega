@@ -38,6 +38,7 @@ import uuid
 from typing import Any, ClassVar
 
 from omega.core.actions import NodeAction
+from omega.core.credentials import credentials
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.alt_data_signals import AltDataSignalProvider
@@ -57,6 +58,10 @@ from omega.nodes.victoria.signals_advanced import (
 )
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
+
+credentials.register(
+    "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
+)
 
 logger = logging.getLogger("omega.nodes.victoria.victoria_node")
 

@@ -20,6 +20,14 @@ import time
 import urllib.request
 from typing import Any
 
+from omega.core.credentials import credentials
+
+credentials.register(
+    "DERIBIT_CLIENT_ID",
+    required=False,
+    description="Deribit authenticated endpoints (optional, public API works without)",
+)
+
 logger = logging.getLogger("omega.nodes.victoria.vrp_data")
 
 _DERIBIT_URL = (

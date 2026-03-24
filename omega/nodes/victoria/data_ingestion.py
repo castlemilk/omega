@@ -29,15 +29,21 @@ from datetime import datetime
 from typing import Any
 
 from omega.core.actions import NodeAction
+from omega.core.credentials import credentials
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-
-from .data_providers import (
+from omega.nodes.victoria.data_providers import (
     BinanceProvider,
     BybitProvider,
     CoinGeckoProvider,
     DefiLlamaProvider,
     FearGreedProvider,
     ProviderRegistry,
+)
+
+credentials.register(
+    "BINANCE_API_KEY",
+    required=False,
+    description="Binance authenticated endpoints (optional, public API works without)",
 )
 
 logger = logging.getLogger("omega.nodes.victoria.data_ingestion")

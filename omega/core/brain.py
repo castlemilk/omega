@@ -29,6 +29,18 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from omega.core.credentials import credentials
+
+# Register LLM API keys
+credentials.register(
+    "ANTHROPIC_API_KEY", required=False, description="Anthropic Claude LLM (recommended)"
+)
+credentials.register("OPENAI_API_KEY", required=False, description="OpenAI GPT LLM")
+credentials.register(
+    "DEEPSEEK_API_KEY", required=False, description="DeepSeek LLM (cost-effective)"
+)
+credentials.register("GOOGLE_API_KEY", required=False, description="Google Gemini LLM")
+
 # ---------------------------------------------------------------------------
 # ModelTier — two-tier LLM selection
 # ---------------------------------------------------------------------------
@@ -260,8 +272,8 @@ class AnthropicBrain(BrainAdapter):
 
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
-        self._api_key = config.extra_config.get("api_key") or os.environ.get(
-            "ANTHROPIC_API_KEY", ""
+        self._api_key = (
+            config.extra_config.get("api_key") or credentials.get("ANTHROPIC_API_KEY") or ""
         )
         self._model = config.model or "claude-sonnet-4-6"
         self._system = config.system_prompt or _ANTHROPIC_SYSTEM
@@ -405,7 +417,9 @@ class OpenAIBrain(BrainAdapter):
 
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
-        self._api_key = config.extra_config.get("api_key") or os.environ.get("OPENAI_API_KEY", "")
+        self._api_key = (
+            config.extra_config.get("api_key") or credentials.get("OPENAI_API_KEY") or ""
+        )
         self._model = config.model or "gpt-4o"
         self._api_url = config.extra_config.get("base_url", self.DEFAULT_API_URL)
         self._system = config.system_prompt or _OPENAI_SYSTEM
@@ -524,8 +538,9 @@ class DeepSeekBrain(OpenAIBrain):
         # Override API key env var
         self._api_key = (
             config.extra_config.get("api_key")
-            or os.environ.get("DEEPSEEK_API_KEY", "")
-            or os.environ.get("OPENAI_API_KEY", "")
+            or credentials.get("DEEPSEEK_API_KEY")
+            or credentials.get("OPENAI_API_KEY")
+            or ""
         )
 
     def provider_name(self) -> str:
@@ -633,7 +648,9 @@ class GoogleBrain(BrainAdapter):
 
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
-        self._api_key = config.extra_config.get("api_key") or os.environ.get("GOOGLE_API_KEY", "")
+        self._api_key = (
+            config.extra_config.get("api_key") or credentials.get("GOOGLE_API_KEY") or ""
+        )
         self._model = config.model or "gemini-1.5-pro"
 
     def is_available(self) -> bool:
