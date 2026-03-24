@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -829,7 +830,25 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 
 				// ── DARK signal: verification gates ─────────────────────────────────
 				if sr.NodeType == "VERIFICATION" {
-					if err := h.db.RecordVerificationGate(cycle, sr.Name, sr.Success, sr.Error); err != nil {
+					details := sr.Error
+					if details == "" {
+						// Build details from metrics when step succeeded
+						var parts []string
+						if bull, ok := sr.Metrics["bull_score"]; ok {
+							parts = append(parts, fmt.Sprintf("bull=%.3f", bull))
+						}
+						if bear, ok := sr.Metrics["bear_score"]; ok {
+							parts = append(parts, fmt.Sprintf("bear=%.3f", bear))
+						}
+						if edge, ok := sr.Metrics["edge"]; ok {
+							parts = append(parts, fmt.Sprintf("edge=%.3f", edge))
+						}
+						if vc, ok := sr.Metrics["violation_count"]; ok {
+							parts = append(parts, fmt.Sprintf("violations=%d", int(vc)))
+						}
+						details = strings.Join(parts, ", ")
+					}
+					if err := h.db.RecordVerificationGate(cycle, sr.Name, sr.Success, details); err != nil {
 						_ = err // non-fatal
 					}
 				}
