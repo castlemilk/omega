@@ -227,14 +227,34 @@ class OmegaOrchestrator:
                             except Exception as _exc:
                                 logger.debug("signal history persistence failed: %s", _exc)
 
+                        # Base metrics from node execution (latency_ms etc.)
+                        resp_metrics: dict[str, float] = {
+                            k: float(v)
+                            for k, v in out.metrics.items()
+                            if isinstance(v, (int, float))
+                        }
+
+                        # Surface financial quality metrics from result dict.
+                        # VictoriaNode embeds these as _quality_score, _signal_count etc.
+                        # in the result for signal-research and improvement steps.
+                        _quality_keys = (
+                            "_quality_score",
+                            "_signal_count",
+                            "_avg_confidence",
+                            "_signal_coverage",
+                            "_best_score",
+                            "_improvement_applied",
+                        )
+                        if out.success and isinstance(out.result, dict):
+                            for _k in _quality_keys:
+                                if _k in out.result and isinstance(out.result[_k], (int, float)):
+                                    # Strip leading underscore for the Go metric key
+                                    resp_metrics[_k.lstrip("_")] = float(out.result[_k])
+
                         return ExecuteStepResponse(
                             success=out.success,
                             error_text="; ".join(out.errors) if out.errors else "",
-                            metrics={
-                                k: float(v)
-                                for k, v in out.metrics.items()
-                                if isinstance(v, (int, float))
-                            },
+                            metrics=resp_metrics,
                             node_id=state.node_id,
                             node_name=state.name,
                         )
