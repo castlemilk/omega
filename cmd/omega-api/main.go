@@ -129,7 +129,7 @@ func main() {
 	projectH.SeedProject(victoriaProject())
 
 	// ── Service handlers ──────────────────────────────────────────────────────
-	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry).WithProjectHandler(projectH)
+	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry).WithProjectHandler(projectH).WithMetrics(metrics)
 
 	// Pipeline bridge — connects Go orchestrator to Python pipeline server.
 	// Set OMEGA_PYTHON_PIPELINE_ADDR (e.g. "http://localhost:9090") to enable.

@@ -31,6 +31,7 @@ type OrchestratorHandler struct {
 	cbRegistry     *observability.CircuitBreakerRegistry // may be nil
 	pipelineClient *bridge.PipelineClient                // may be nil
 	projectHandler *ProjectHandler                       // may be nil; provides pipeline configs
+	metrics        *observability.Metrics                // may be nil
 
 	mu     sync.Mutex
 	cancel context.CancelFunc // non-nil while orchestrator loop is running
@@ -63,6 +64,13 @@ func (h *OrchestratorHandler) WithPipelineClient(c *bridge.PipelineClient) *Orch
 // hardcoded step lists.
 func (h *OrchestratorHandler) WithProjectHandler(ph *ProjectHandler) *OrchestratorHandler {
 	h.projectHandler = ph
+	return h
+}
+
+// WithMetrics attaches a Prometheus metrics registry so runCycleWithResults
+// increments omega_cycles_total and updates omega_health_score.
+func (h *OrchestratorHandler) WithMetrics(m *observability.Metrics) *OrchestratorHandler {
+	h.metrics = m
 	return h
 }
 
@@ -708,6 +716,9 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 						attribute.Int64("cycle", cycle),
 					),
 				)
+				// Record execution start for per-step observability.
+				execID, _ := h.db.BeginExecution(step.StepId, step.Name, step.NodeType, nil, nil, cycle)
+
 				t0 := time.Now()
 				resp, stepErr := h.pipelineClient.ExecuteStep(cycleCtx, &omegav1.ExecuteStepRequest{
 					StepId:   step.StepId,
@@ -738,6 +749,20 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 					sr.DurationMS = elapsed
 				}
 				stepSpan.End()
+
+				// Record execution outcome and update Prometheus metrics.
+				if execID != "" {
+					_ = h.db.EndExecution(execID, sr.Success, sr.Error, 0, "", false, nil)
+				}
+				if h.metrics != nil {
+					statusStr := "success"
+					if !sr.Success {
+						statusStr = "error"
+					}
+					h.metrics.IncNodeExecution(step.Name, statusStr)
+					h.metrics.ObserveNodeDuration(step.Name, elapsed/1000.0)
+				}
+
 				results = append(results, sr)
 			}
 		}
@@ -747,6 +772,15 @@ func (h *OrchestratorHandler) runCycleWithResults(ctx context.Context) ([]stepRe
 		"cycle": cycle, "node_count": len(nodes),
 	}, cycle)
 	cycleSpan.SetStatus(codes.Ok, "")
+
+	// Increment Prometheus cycle counter and update health score.
+	if h.metrics != nil {
+		h.metrics.IncCycles()
+		if health, err := h.db.SystemHealth(); err == nil {
+			h.metrics.SetHealthScore(health.CompositeScore)
+		}
+	}
+
 	return results, nil
 }
 
