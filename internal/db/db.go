@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
@@ -63,6 +64,38 @@ func New(ctx context.Context) (*DB, error) {
 func (d *DB) Close() {
 	d.db.Close()  //nolint:errcheck,gosec
 	d.pool.Close()
+}
+
+// LogPoolStats emits pgxpool connection-pool statistics at INFO level.
+// Call this periodically to detect pool exhaustion before it causes hangs.
+func (d *DB) LogPoolStats(ctx context.Context, log *slog.Logger) {
+	s := d.pool.Stat()
+	log.InfoContext(ctx, "pgxpool stats",
+		"total_conns", s.TotalConns(),
+		"idle_conns", s.IdleConns(),
+		"acquired_conns", s.AcquiredConns(),
+		"constructing_conns", s.ConstructingConns(),
+		"max_conns", s.MaxConns(),
+		"new_conns_count", s.NewConnsCount(),
+		"empty_acquire_count", s.EmptyAcquireCount(),
+	)
+}
+
+// StartPoolStatsLogger starts a goroutine that calls LogPoolStats every interval.
+// The goroutine exits when ctx is cancelled (e.g. on shutdown).
+func (d *DB) StartPoolStatsLogger(ctx context.Context, interval time.Duration, log *slog.Logger) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				d.LogPoolStats(ctx, log)
+			}
+		}
+	}()
 }
 
 // ── LISTEN/NOTIFY ─────────────────────────────────────────────────────────────
@@ -476,6 +509,22 @@ var stateSchema = []string{
 		tpe_series        JSONB NOT NULL DEFAULT '[]',
 		updated_at        DOUBLE PRECISION NOT NULL DEFAULT 0
 	)`,
+	`CREATE TABLE IF NOT EXISTS cycle_results (
+		cycle_id               TEXT PRIMARY KEY,
+		cycle_number           BIGINT NOT NULL,
+		started_at             DOUBLE PRECISION NOT NULL,
+		duration_seconds       DOUBLE PRECISION NOT NULL DEFAULT 0,
+		signals_generated      INTEGER NOT NULL DEFAULT 0,
+		actions_proposed       INTEGER NOT NULL DEFAULT 0,
+		actions_executed       INTEGER NOT NULL DEFAULT 0,
+		error_count            INTEGER NOT NULL DEFAULT 0,
+		regime                 TEXT NOT NULL DEFAULT 'normal',
+		improvement_proposed   BOOLEAN NOT NULL DEFAULT FALSE,
+		regime_transition      BOOLEAN NOT NULL DEFAULT FALSE,
+		adversarial_flags      JSONB NOT NULL DEFAULT '[]',
+		metrics                JSONB NOT NULL DEFAULT '{}'
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_cycle_results_number ON cycle_results(cycle_number)`,
 }
 
 func (d *DB) ensureSchema(ctx context.Context) error {

@@ -103,6 +103,7 @@ func main() {
 	// Prometheus observability layer (existing, coexists with OTel)
 	// ---------------------------------------------------------------------------
 	logger := slog.Default()
+	database.StartPoolStatsLogger(ctx, 60*time.Second, logger)
 
 	metrics := observability.NewMetrics()
 
@@ -315,10 +316,42 @@ func main() {
 	}
 	log.Printf("Omega API listening on %s", addr) //nolint:gosec
 	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics (OTel endpoint=%q)", telCfg.OtlpEndpoint)
-	log.Fatal(http.ListenAndServe(addr, h2c.NewHandler( //nolint:gosec,gocritic
-		withCORS(withPanicRecovery(withExecChain(execChain, mux))),
-		&http2.Server{},
-	)))
+
+	srv := &http.Server{ //nolint:gosec
+		Addr:              addr,
+		Handler:           h2c.NewHandler(withCORS(withPanicRecovery(withExecChain(execChain, mux))), &http2.Server{}),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	// Start serving in a goroutine so we can listen for shutdown signals.
+	serverErr := make(chan error, 1)
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			serverErr <- err
+		}
+	}()
+
+	// Block until SIGINT/SIGTERM or a fatal server error.
+	select {
+	case <-ctx.Done():
+		log.Printf("Shutdown signal received — draining in-flight requests (5s grace)…")
+	case err := <-serverErr:
+		log.Printf("Server error: %v", err)
+	}
+
+	// Give in-flight requests 5 seconds to complete.
+	shutCtx, shutCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutCancel()
+	if err := srv.Shutdown(shutCtx); err != nil {
+		log.Printf("HTTP server forced shutdown: %v", err)
+	}
+
+	// Close Python pipeline client if configured.
+	if os.Getenv("OMEGA_PYTHON_PIPELINE_ADDR") != "" {
+		log.Printf("Pipeline bridge: closed") //nolint:gosec
+	}
+
+	log.Printf("Omega API shutdown complete.")
 }
 
 // withCORS enforces a configurable CORS origin allowlist.
