@@ -1,0 +1,134 @@
+{
+  "trained_at": "2026-03-25T07:23:21.019642+00:00",
+  "n_outcomes": 1146,
+  "node_weights": {
+    "DataIngestion": 0.908586,
+    "DebateGate": 0.908586,
+    "DynamicWeights": 0.908586,
+    "EdgeDetection": 1.0,
+    "ImprovementEngine": 0.908586,
+    "IntelligenceCoordination": 0.908586,
+    "MarketPricing": 1.0,
+    "Memory": 0.908586,
+    "Ring3Adversarial": 0.908586,
+    "RiskCheck": 1.0,
+    "SignalResearch": 0.908586,
+    "WalkForward": 0.908586,
+    "WeatherData": 1.0
+  },
+  "goal_type_bias": [
+    0.951255,
+    0.5,
+    0.5,
+    0.5,
+    0.5
+  ],
+  "meta": {
+    "n_outcomes": 1146,
+    "n_failures": 11,
+    "mean_quality": 0.94079,
+    "median_quality": 1.0,
+    "n_nodes": 13,
+    "ema_decay": 0.95,
+    "goal_type_bias": [
+      0.951255,
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ]
+  },
+  "node_stats": {
+    "DataIngestion": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.911345,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "DebateGate": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.904352,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "DynamicWeights": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.904756,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "EdgeDetection": {
+      "ema": 1.0,
+      "n": 547,
+      "mean": 0.972121,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "ImprovementEngine": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.911345,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "IntelligenceCoordination": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.911345,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "MarketPricing": {
+      "ema": 1.0,
+      "n": 547,
+      "mean": 0.957495,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "Memory": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.911345,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "Ring3Adversarial": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.911345,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "RiskCheck": {
+      "ema": 1.0,
+      "n": 547,
+      "mean": 0.96755,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "SignalResearch": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.911345,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "WalkForward": {
+      "ema": 0.908586,
+      "n": 599,
+      "mean": 0.911345,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "WeatherData": {
+      "ema": 1.0,
+      "n": 547,
+      "mean": 0.952468,
+      "min": 0.0,
+      "max": 1.0
+    }
+  }
+}

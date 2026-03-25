@@ -171,6 +171,11 @@ coverage:
 	go test -coverprofile=coverage-go.out -covermode=atomic $(GO_PACKAGES)
 	go tool cover -func=coverage-go.out | tail -1
 
+## train-router: offline train AttentionRouter from coordination_outcomes DB
+train-router:
+	DATABASE_URL=$${DATABASE_URL:-postgresql://omega:omega@localhost:5432/omega} \
+		python3 scripts/train_router.py
+
 ## quality: full CI pipeline (lint + typecheck + test)
 quality:
 	@echo "Running full quality pipeline..."
