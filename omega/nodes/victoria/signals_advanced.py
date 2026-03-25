@@ -569,3 +569,210 @@ class SentimentSignal:
             regime_tag=regime_tag,
             raw=raw,
         )
+
+
+# ---------------------------------------------------------------------------
+# OnChainSignal — DefiLlama TVL trend
+# ---------------------------------------------------------------------------
+
+
+class OnChainSignal:
+    """
+    On-chain signal from DefiLlama total DeFi TVL.
+
+    TVL trend:
+      - Rising TVL  → capital flowing into DeFi → risk-on (bullish)
+      - Falling TVL → capital fleeing DeFi     → risk-off (bearish)
+    """
+
+    def compute(self, market_data: dict[str, Any]) -> SignalValue:
+        defi_tvl = market_data.get("_defi_tvl", {})
+        raw: dict[str, float] = {}
+
+        if not isinstance(defi_tvl, dict):
+            return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+
+        total_tvl = defi_tvl.get("total_tvl", 0.0)
+        protocols = defi_tvl.get("protocols", [])
+        raw["total_tvl"] = float(total_tvl)
+        raw["protocol_count"] = float(len(protocols))
+
+        if protocols and len(protocols) >= 3:
+            top3_tvl = sum(p.get("tvl", 0) for p in protocols[:3])
+            raw["top3_tvl"] = float(top3_tvl)
+
+        value = 0.0
+        confidence = 0.3
+        if total_tvl > 80_000_000_000:  # > $80B
+            value = 0.4
+            regime_tag = "defi_rich"
+        elif total_tvl > 50_000_000_000:  # > $50B
+            value = 0.2
+            regime_tag = "defi_healthy"
+        elif total_tvl > 20_000_000_000:  # > $20B
+            value = 0.0
+            regime_tag = "defi_moderate"
+        elif total_tvl > 0:
+            value = -0.3
+            regime_tag = "defi_low"
+            confidence = 0.4
+        else:
+            return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+
+        return SignalValue(
+            value=max(-1.0, min(1.0, value)),
+            confidence=confidence,
+            regime_tag=regime_tag,
+            raw=raw,
+        )
+
+
+# ---------------------------------------------------------------------------
+# LongShortRatioSignal — Binance futures long/short account ratio
+# ---------------------------------------------------------------------------
+
+
+class LongShortRatioSignal:
+    """
+    Contrarian signal from Binance futures global long/short account ratio.
+
+    Interpretation (contrarian):
+      - ratio > 1.5 → crowded long  → bearish (fade the crowd)
+      - ratio < 0.67 → crowded short → bullish (fade the crowd)
+      - 0.67-1.5 → neutral positioning
+    """
+
+    _LONG_THRESHOLD = 1.5
+    _SHORT_THRESHOLD = 0.67
+    _EXTREME_LONG = 2.0
+    _EXTREME_SHORT = 0.5
+
+    def compute(self, market_data: dict[str, Any]) -> SignalValue:
+        ls_ratio = market_data.get("_long_short_ratio")
+        raw: dict[str, float] = {}
+
+        if ls_ratio is None:
+            try:
+                import json
+                import urllib.request
+
+                url = "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                ls_ratio = float(data[0]["longShortRatio"])
+            except Exception:
+                return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+
+        ls_ratio = float(ls_ratio)
+        raw["long_short_ratio"] = ls_ratio
+
+        if ls_ratio >= self._EXTREME_LONG:
+            value = -0.8
+            regime_tag = "extreme_crowded_long"
+            confidence = 0.7
+        elif ls_ratio >= self._LONG_THRESHOLD:
+            value = -0.4
+            regime_tag = "crowded_long"
+            confidence = 0.55
+        elif ls_ratio <= self._EXTREME_SHORT:
+            value = 0.8
+            regime_tag = "extreme_crowded_short"
+            confidence = 0.7
+        elif ls_ratio <= self._SHORT_THRESHOLD:
+            value = 0.4
+            regime_tag = "crowded_short"
+            confidence = 0.55
+        else:
+            value = 0.0
+            regime_tag = "balanced_positioning"
+            confidence = 0.3
+
+        raw["positioning_skew"] = (ls_ratio - 1.0) / max(ls_ratio, 1.0)
+        return SignalValue(
+            value=max(-1.0, min(1.0, value)),
+            confidence=confidence,
+            regime_tag=regime_tag,
+            raw=raw,
+        )
+
+
+# ---------------------------------------------------------------------------
+# BTCDominanceSignal — CoinGecko BTC market cap dominance
+# ---------------------------------------------------------------------------
+
+
+class BTCDominanceSignal:
+    """
+    Signal from BTC dominance (% of total crypto market cap).
+
+    BTC dominance rising  → capital rotating to BTC (risk-off for alts).
+    BTC dominance falling → capital rotating to alts (risk-on).
+
+    From a BTC perspective:
+      - Dominance > 60%  → BTC extremely dominant (bullish BTC)
+      - Dominance 50-60% → BTC leading (mildly bullish)
+      - Dominance 40-50% → balanced market
+      - Dominance < 40%  → alt-season, BTC losing share (bearish BTC)
+    """
+
+    _HIGH_DOM = 60.0
+    _MID_HIGH_DOM = 50.0
+    _MID_LOW_DOM = 40.0
+
+    def compute(self, market_data: dict[str, Any]) -> SignalValue:
+        btc_dom = market_data.get("_btc_dominance")
+        raw: dict[str, float] = {}
+
+        if btc_dom is None:
+            # Fallback: inline fetch if data_ingestion didn't supply it
+            try:
+                import json
+                import urllib.request
+
+                url = "https://api.coingecko.com/api/v3/global"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                btc_dom = float(data["data"]["market_cap_percentage"]["btc"])
+                market_cap_change = float(
+                    data["data"].get("market_cap_change_percentage_24h_usd", 0.0)
+                )
+                raw["market_cap_change_24h"] = market_cap_change
+            except Exception:
+                return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+        else:
+            mc_change = market_data.get("_market_cap_change_24h", 0.0)
+            if mc_change:
+                raw["market_cap_change_24h"] = float(mc_change)
+
+        btc_dom = float(btc_dom)
+        raw["btc_dominance_pct"] = btc_dom
+
+        if btc_dom >= self._HIGH_DOM:
+            value = 0.6
+            regime_tag = "btc_dominant"
+            confidence = 0.65
+        elif btc_dom >= self._MID_HIGH_DOM:
+            value = 0.3
+            regime_tag = "btc_leading"
+            confidence = 0.5
+        elif btc_dom >= self._MID_LOW_DOM:
+            value = 0.0
+            regime_tag = "balanced_market"
+            confidence = 0.35
+        else:
+            value = -0.4
+            regime_tag = "alt_season"
+            confidence = 0.5
+
+        mc_change = raw.get("market_cap_change_24h", 0.0)
+        if abs(mc_change) > 3.0:
+            value += 0.2 * (1 if mc_change > 0 else -1)
+
+        return SignalValue(
+            value=max(-1.0, min(1.0, value)),
+            confidence=confidence,
+            regime_tag=regime_tag,
+            raw=raw,
+        )
