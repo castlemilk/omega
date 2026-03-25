@@ -265,6 +265,7 @@ class OmegaOrchestrator:
                                     {
                                         "symbol": sig_name,
                                         "composite_score": float(sig_val.get("value", 0.0)),
+                                        "ic": float(sig_val.get("ic", 0.0)),
                                     }
                                     for sig_name, sig_val in out.result.items()
                                     if isinstance(sig_val, dict) and "value" in sig_val
@@ -1310,6 +1311,22 @@ class OmegaOrchestrator:
                     try:
                         node.improve(params)
                         log.info("Applied improved params to node %s: %s", nid, params)
+                        # Persist improvement_applied=1 so it's queryable
+                        if self._store is not None and hasattr(self._store, "record_improvement"):
+                            self._store.record_improvement(
+                                node_id=nid,
+                                node_name=state.name,
+                                from_version="pre-tpe",
+                                to_version=f"tpe-{trial.trial_id[:8]}",
+                                before_metrics={},
+                                after_metrics={
+                                    "params": str(params),
+                                    "score": round(trial.score or 0.0, 6),
+                                    "improvement_applied": 1,
+                                },
+                                triggered_by="tpe",
+                                cycle=ctx.cycle_number,
+                            )
                     except Exception as apply_exc:
                         log.warning("apply_params via improve() failed for %s: %s", nid, apply_exc)
                 if self._metrics:

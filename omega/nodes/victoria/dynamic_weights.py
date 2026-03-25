@@ -42,6 +42,7 @@ class AllocationResult:
     is_fallback: bool  # True if fell back to equal weights
     dominant_signal: str  # signal with highest weight
     capped_signals: list[str]  # signals that hit the 40% cap
+    ic_ema: dict[str, float] = None  # type: ignore[assignment]  # IC EMA per signal
 
 
 class DynamicWeightAllocator:
@@ -145,6 +146,7 @@ class DynamicWeightAllocator:
             is_fallback=is_fallback,
             dominant_signal=dominant,
             capped_signals=capped,
+            ic_ema=dict(profile.ic_ema),
         )
 
     def blend_signals(

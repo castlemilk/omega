@@ -37,8 +37,10 @@ Usage::
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -52,6 +54,12 @@ logger = logging.getLogger("omega.nodes.polymarket.edge_detection")
 
 DEFAULT_EDGE_THRESHOLD = 0.08
 DEFAULT_MAX_KELLY = 0.25
+
+# File-based cache for _auto_detect results — avoids 5-6s cold starts on each cycle
+_AUTO_DETECT_CACHE_PATH = os.path.join(
+    os.environ.get("TMPDIR", "/tmp"), "omega_edge_detect_cache.json"
+)
+_AUTO_DETECT_CACHE_TTL_S = 300  # 5 minutes
 
 
 def _persist_edge(
@@ -247,16 +255,77 @@ class EdgeDetectionNode(Node):
         member_component = min(member_count / 50.0, 1.0)  # saturates at 50 members
         return round((edge_component + member_component) / 2.0, 4)
 
+    @staticmethod
+    def _load_cache() -> dict[str, Any] | None:
+        """Return cached auto_detect result if fresh, else None."""
+        try:
+            with open(_AUTO_DETECT_CACHE_PATH) as f:
+                entry: dict[str, Any] = json.load(f)
+            age = time.time() - float(entry.get("_cached_at", 0))
+            if age < _AUTO_DETECT_CACHE_TTL_S:
+                logger.debug("edge_detect cache hit (age=%.0fs)", age)
+                return entry
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _save_cache(result: dict[str, Any]) -> None:
+        """Write auto_detect result to file cache."""
+        try:
+            entry = {**result, "_cached_at": time.time()}
+            with open(_AUTO_DETECT_CACHE_PATH, "w") as f:
+                json.dump(entry, f)
+        except Exception as exc:
+            logger.debug("edge_detect cache write failed: %s", exc)
+
+    @staticmethod
+    def _extract_threshold_c(question: str) -> float:
+        """Extract temperature threshold in Celsius from a market question string.
+
+        Handles patterns like '35°C', '95°F', '35 degrees Celsius', '95 degrees F'.
+        Returns 25.0 as a conservative seasonal default if no threshold is found.
+        """
+        # Celsius explicit
+        m = re.search(r"(\d+(?:\.\d+)?)\s*°?\s*C\b", question, re.IGNORECASE)
+        if m:
+            return float(m.group(1))
+        # Fahrenheit → convert
+        m = re.search(r"(\d+(?:\.\d+)?)\s*°?\s*F\b", question, re.IGNORECASE)
+        if m:
+            return (float(m.group(1)) - 32.0) * 5.0 / 9.0
+        # "X degrees Celsius/Fahrenheit"
+        m = re.search(r"(\d+(?:\.\d+)?)\s+degrees?\s+celsius", question, re.IGNORECASE)
+        if m:
+            return float(m.group(1))
+        m = re.search(r"(\d+(?:\.\d+)?)\s+degrees?\s+fahrenheit", question, re.IGNORECASE)
+        if m:
+            return (float(m.group(1)) - 32.0) * 5.0 / 9.0
+        # Bare "above/exceed N" — assume Celsius if ≤ 50, Fahrenheit if > 50
+        m = re.search(r"(?:above|exceed|over)\s+(\d+(?:\.\d+)?)", question, re.IGNORECASE)
+        if m:
+            v = float(m.group(1))
+            return v if v <= 50 else (v - 32.0) * 5.0 / 9.0
+        return 25.0  # conservative seasonal default
+
     def _auto_detect(self, cycle: int) -> dict[str, Any]:
         """Auto-fetch markets and weather probs, then detect best edge.
 
         Instantiates PolymarketPricingNode and WeatherEnsembleNode internally,
-        fetches live data, runs batch detection across all pairs, persists every
+        fetches live data per-city with threshold extracted from each market's
+        question text, runs batch detection across all pairs, persists every
         edge to polymarket_edges, and returns the highest-|edge| result.
+
+        Results are cached to disk for _AUTO_DETECT_CACHE_TTL_S seconds to
+        avoid 5-6s API round-trips on every cycle.
         """
+        cached = self._load_cache()
+        if cached is not None:
+            return {k: v for k, v in cached.items() if k != "_cached_at"}
+
         from omega.core.node import NodeInput as NodeInputLocal
         from omega.nodes.polymarket.pricing import PolymarketPricingNode
-        from omega.nodes.polymarket.weather_ensemble import WeatherEnsembleNode
+        from omega.nodes.polymarket.weather_ensemble import CITIES, WeatherEnsembleNode
 
         # Fetch active markets from Polymarket.
         try:
@@ -270,45 +339,65 @@ class EdgeDetectionNode(Node):
             logger.warning("auto_detect: pricing fetch failed: %s", exc)
             markets = []
 
-        # Fetch weather ensemble probabilities per city.
-        try:
-            weather_out = WeatherEnsembleNode().execute(
-                NodeInputLocal(action=NodeAction.PROBABILITY.value)
-            )
-            weather_result = weather_out.result or {}
-        except Exception as exc:
-            logger.warning("auto_detect: weather fetch failed: %s", exc)
-            weather_result = {}
+        # Resolve city and threshold for each market, then fetch probabilities
+        # per-city so every market gets a meaningful model probability.
+        weather_node = WeatherEnsembleNode()
 
-        # Build city→prob lookup from WeatherEnsembleNode result.
-        # The node returns either a per-city dict {city: {probability: float, ...}}
-        # or a single-city dict {city: str, probability: float, ...}.
-        city_probs: dict[str, float] = {}
-        if isinstance(weather_result, dict):
-            if "city" in weather_result and "probability" in weather_result:
-                # Single-city result
-                city_probs[str(weather_result["city"]).upper()] = float(
-                    weather_result["probability"]
-                )
-            else:
-                for city, data in weather_result.items():
-                    if isinstance(data, dict) and "probability" in data:
-                        city_probs[city.upper()] = float(data["probability"])
-                    elif isinstance(data, (int, float)):
-                        city_probs[city.upper()] = float(data)
-
-        best: dict[str, Any] | None = None
+        # Pass 1: assign city + threshold to each market entry.
         for mkt in markets:
-            # Match market to a city: check city field first, then scan question text.
             mkt_city = str(mkt.get("city", "")).upper()
             question = str(mkt.get("question", ""))
             if not mkt_city and question:
-                # Try to find a known city name in the question text.
-                for known_city in city_probs:
+                for known_city in CITIES:
                     if known_city.title() in question or known_city.lower() in question.lower():
                         mkt_city = known_city
                         break
-            model_prob = city_probs.get(mkt_city, 0.5) if mkt_city else 0.5
+            mkt["_resolved_city"] = mkt_city
+            mkt["_threshold_c"] = self._extract_threshold_c(question)
+
+        # Pass 2: fetch probabilities for each unique (city, threshold) pair.
+        city_probs: dict[tuple[str, float], float] = {}
+        seen: set[tuple[str, float]] = set()
+        for mkt in markets:
+            city = mkt["_resolved_city"]
+            threshold_c = mkt["_threshold_c"]
+            key = (city, threshold_c)
+            if not city or city not in CITIES or key in seen:
+                continue
+            seen.add(key)
+            try:
+                w_out = weather_node.execute(
+                    NodeInputLocal(
+                        action=NodeAction.PROBABILITY.value,
+                        parameters={"city": city, "threshold_c": threshold_c},
+                    )
+                )
+                if w_out.success and isinstance(w_out.result, dict):
+                    city_probs[key] = float(w_out.result.get("probability", 0.5))
+                    logger.debug(
+                        "auto_detect: %s @%.1f°C → prob=%.4f",
+                        city,
+                        threshold_c,
+                        city_probs[key],
+                    )
+            except Exception as exc:
+                logger.warning("auto_detect: weather fetch failed for %s: %s", city, exc)
+
+        best: dict[str, Any] | None = None
+        for mkt in markets:
+            mkt_city = mkt["_resolved_city"]
+            threshold_c = mkt["_threshold_c"]
+            question = str(mkt.get("question", ""))
+            key = (mkt_city, threshold_c)
+            # Prefer exact (city, threshold) lookup; fall back to any prob for city.
+            if key in city_probs:
+                model_prob = city_probs[key]
+            elif mkt_city:
+                # Try any threshold for this city as last resort
+                city_matches = [v for (c, _), v in city_probs.items() if c == mkt_city]
+                model_prob = city_matches[0] if city_matches else 0.5
+            else:
+                model_prob = 0.5
             market_price = float(mkt.get("yes_price", 0.5))
             params = {
                 "model_prob": model_prob,
@@ -316,7 +405,7 @@ class EdgeDetectionNode(Node):
                 "city": mkt_city or mkt.get("city", ""),
                 "market_id": mkt.get("market_id", ""),
                 "market_slug": mkt.get("market_slug", mkt.get("market_id", "")),
-                "question": question,
+                "question": mkt.get("question", ""),
                 "member_count": 31,
                 "cycle": cycle,
             }
@@ -335,6 +424,7 @@ class EdgeDetectionNode(Node):
             best["edge"],
             best["opportunity"],
         )
+        self._save_cache(best)
         return best
 
     def _detect_single(self, params: dict[str, Any]) -> dict[str, Any]:

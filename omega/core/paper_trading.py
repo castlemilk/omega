@@ -68,6 +68,25 @@ class PaperTradingEngine:
         self._realised_pnl: float = 0.0
 
     # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_price(sym_market: dict) -> float:
+        """Extract a scalar price from a market data dict.
+
+        DataIngestionNode returns ``close`` as a list of OHLCV prices.
+        This helper handles both list and scalar values.
+        """
+        c = sym_market.get("close") or sym_market.get("price") or 0.0
+        if isinstance(c, list):
+            return float(c[-1]) if c else 0.0
+        try:
+            return float(c)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
@@ -107,6 +126,21 @@ class PaperTradingEngine:
         """
         market_data = market_data or {}
         executed: list[dict[str, Any]] = []
+        # Also collect mark-to-market closings for positions whose direction flipped
+        closed_positions: list[dict[str, Any]] = []
+
+        # Mark-to-market all open positions at current prices first
+        for sym, pos in list(self._positions.items()):
+            sym_market = market_data.get(sym) or {}
+            current_price = (
+                self._extract_price(sym_market) if isinstance(sym_market, dict) else 0.0
+            )
+            if current_price > 0 and pos.get("entry", 0.0) > 0:
+                direction = 1.0 if pos["side"] == "long" else -1.0
+                unrealized = (
+                    direction * pos["size"] * (current_price - pos["entry"]) / pos["entry"]
+                )
+                pos["unrealized_pnl"] = round(unrealized, 6)
 
         for proposal in proposals:
             if not isinstance(proposal, dict):
@@ -117,6 +151,11 @@ class PaperTradingEngine:
                 logger.debug("Skipping proposal with no symbol: %s", proposal)
                 continue
 
+            # Skip synthetic signal-aggregate tickers — they are not real tradeable assets
+            if symbol.startswith("adv_"):
+                logger.debug("Skipping synthetic adv_ ticker: %s", symbol)
+                continue
+
             weight: float = float(proposal.get("weight", 0.0))
             if abs(weight) < _WEIGHT_THRESHOLD:
                 logger.debug("Skipping low-weight proposal for %s (weight=%.4f)", symbol, weight)
@@ -125,15 +164,45 @@ class PaperTradingEngine:
             side = "long" if weight > 0 else "short"
             size = abs(weight) * self.initial_capital
 
-            # Resolve entry price
+            # Resolve current market price for this ticker
             sym_market = market_data.get(symbol) or {}
-            if isinstance(sym_market, dict):
-                entry_price = float(sym_market.get("close", 1.0))
-            else:
-                entry_price = 1.0
+            current_price = (
+                self._extract_price(sym_market) if isinstance(sym_market, dict) else 0.0
+            )
+            entry_price = current_price if current_price > 0 else 1.0
 
             ts_now = datetime.now(UTC)
             trade_id = str(uuid.uuid4())
+
+            # Close existing position if direction flips → realise PnL
+            existing = self._positions.get(symbol)
+            if existing and existing.get("side") != side and existing.get("entry", 0.0) > 0:
+                exit_p = entry_price
+                direction = 1.0 if existing["side"] == "long" else -1.0
+                realized = (
+                    direction * existing["size"] * (exit_p - existing["entry"]) / existing["entry"]
+                )
+                self._realised_pnl += realized
+                closed = {
+                    "symbol": symbol,
+                    "side": existing["side"],
+                    "size": existing["size"],
+                    "entry_price": existing["entry"],
+                    "exit_price": exit_p,
+                    "realized_pnl": round(realized, 6),
+                    "unrealized_pnl": 0.0,
+                    "status": "closed",
+                    "cycle_id": cycle_id or "",
+                    "opened_at": existing.get("opened_at", ts_now.isoformat()),
+                    "closed_at": ts_now.isoformat(),
+                }
+                closed_positions.append(closed)
+                logger.debug(
+                    "Closed %s %s pnl=%.4f (direction flip)",
+                    existing["side"].upper(),
+                    symbol,
+                    realized,
+                )
 
             trade: dict[str, Any] = {
                 "trade_id": trade_id,
@@ -150,6 +219,13 @@ class PaperTradingEngine:
                 "node_id": proposal.get("node_id"),
                 "autonomy_level": proposal.get("autonomy_level"),
                 "weight": weight,
+                # paper_trades fields
+                "symbol": symbol,
+                "entry_price": entry_price,
+                "unrealized_pnl": 0.0,
+                "realized_pnl": 0.0,
+                "status": "open",
+                "opened_at": ts_now.isoformat(),
             }
 
             # Track open position (last writer wins per symbol)
@@ -159,6 +235,7 @@ class PaperTradingEngine:
                 "entry": entry_price,
                 "trade_id": trade_id,
                 "opened_at": ts_now.isoformat(),
+                "unrealized_pnl": 0.0,
             }
 
             self._closed_trades.append(trade)
@@ -175,6 +252,26 @@ class PaperTradingEngine:
         if executed:
             self.persist_trades_to_db(executed)
             self.persist_signals_to_db(proposals)
+        if closed_positions:
+            self.persist_paper_trades_to_db(closed_positions)
+        if executed:
+            open_records = [
+                {
+                    "symbol": t["symbol"],
+                    "side": t["side"],
+                    "size": t["size"],
+                    "entry_price": t["entry_price"],
+                    "exit_price": None,
+                    "unrealized_pnl": 0.0,
+                    "realized_pnl": 0.0,
+                    "status": "open",
+                    "opened_at": t["opened_at"],
+                    "closed_at": None,
+                    "cycle_id": cycle_id or "",
+                }
+                for t in executed
+            ]
+            self.persist_paper_trades_to_db(open_records)
 
         return executed
 
@@ -232,6 +329,49 @@ class PaperTradingEngine:
                 conn.close()
         except Exception as exc:
             logger.warning("Failed to persist trades to DB: %s", exc)
+
+    def persist_paper_trades_to_db(self, records: list[dict[str, Any]]) -> None:
+        """
+        INSERT records into the paper_trades table (open positions and closings).
+        Silently logs a warning on any failure.
+        """
+        if not _PSYCOPG2_AVAILABLE or not self._db_url or not records:
+            return
+        sql = """
+            INSERT INTO paper_trades
+                (symbol, side, size, entry_price, exit_price, unrealized_pnl,
+                 realized_pnl, status, opened_at, closed_at, cycle_id)
+            VALUES
+                (%(symbol)s, %(side)s, %(size)s, %(entry_price)s, %(exit_price)s,
+                 %(unrealized_pnl)s, %(realized_pnl)s, %(status)s,
+                 %(opened_at)s, %(closed_at)s, %(cycle_id)s)
+        """
+        try:
+            conn = psycopg2.connect(self._db_url)
+            try:
+                with conn, conn.cursor() as cur:
+                    for rec in records:
+                        cur.execute(
+                            sql,
+                            {
+                                "symbol": rec.get("symbol", ""),
+                                "side": rec.get("side", "long"),
+                                "size": float(rec.get("size", 0.0)),
+                                "entry_price": float(rec.get("entry_price", 0.0)),
+                                "exit_price": rec.get("exit_price"),
+                                "unrealized_pnl": float(rec.get("unrealized_pnl", 0.0)),
+                                "realized_pnl": float(rec.get("realized_pnl", 0.0)),
+                                "status": rec.get("status", "open"),
+                                "opened_at": rec.get("opened_at"),
+                                "closed_at": rec.get("closed_at"),
+                                "cycle_id": rec.get("cycle_id", ""),
+                            },
+                        )
+                logger.debug("Persisted %d paper_trade record(s) to DB", len(records))
+            finally:
+                conn.close()
+        except Exception as exc:
+            logger.warning("Failed to persist paper_trades to DB: %s", exc)
 
     def persist_signals_to_db(self, proposals: list[dict[str, Any]]) -> None:
         """
@@ -315,18 +455,19 @@ class PaperTradingEngine:
                     for sig in inner:
                         if isinstance(sig, dict):
                             name = sig.get("ticker") or sig.get("symbol") or str(_node_id)
-                            ic = float(sig.get("composite_score", 0.0))
+                            # Prefer explicit ic field; fall back to composite_score proxy
+                            ic = float(sig.get("ic") or sig.get("composite_score") or 0.0)
                             rows.append({"signal_name": name, "t": cycle, "ic": ic})
                 else:
                     # Flat signal dict: each key may be a symbol
                     name = signals.get("ticker") or signals.get("symbol") or str(_node_id)
-                    ic = float(signals.get("composite_score", 0.0))
+                    ic = float(signals.get("ic") or signals.get("composite_score") or 0.0)
                     rows.append({"signal_name": name, "t": cycle, "ic": ic})
             elif isinstance(signals, list):
                 for sig in signals:
                     if isinstance(sig, dict):
                         name = sig.get("ticker") or sig.get("symbol") or str(_node_id)
-                        ic = float(sig.get("composite_score", 0.0))
+                        ic = float(sig.get("ic") or sig.get("composite_score") or 0.0)
                         rows.append({"signal_name": name, "t": cycle, "ic": ic})
 
         if not rows:
