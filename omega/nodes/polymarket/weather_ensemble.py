@@ -10,8 +10,9 @@ probability estimate suitable for comparison against prediction-market prices.
 
 Supported cities
 ----------------
-NYC, LA, CHICAGO, MIAMI, DALLAS, SEATTLE, DENVER, BOSTON, PHOENIX, ATLANTA,
-LONDON, ANKARA, TEL_AVIV
+NYC, LA, LOS_ANGELES, CHICAGO, MIAMI, DALLAS, HOUSTON, SEATTLE, DENVER, BOSTON,
+PHOENIX, ATLANTA, LONDON, ANKARA, TEL_AVIV, PARIS, SEOUL, HONG_KONG,
+BUENOS_AIRES, SAO_PAULO, MADRID, TOKYO, SINGAPORE, SYDNEY
 
 Cache
 -----
@@ -55,9 +56,11 @@ logger = logging.getLogger("omega.nodes.polymarket.weather_ensemble")
 CITIES: dict[str, tuple[float, float]] = {
     "NYC": (40.7128, -74.0060),
     "LA": (34.0522, -118.2437),
+    "LOS_ANGELES": (34.0522, -118.2437),
     "CHICAGO": (41.8781, -87.6298),
     "MIAMI": (25.7617, -80.1918),
     "DALLAS": (32.7767, -96.7970),
+    "HOUSTON": (29.7604, -95.3698),
     "SEATTLE": (47.6062, -122.3321),
     "DENVER": (39.7392, -104.9903),
     "BOSTON": (42.3601, -71.0589),
@@ -67,6 +70,15 @@ CITIES: dict[str, tuple[float, float]] = {
     "LONDON": (51.5074, -0.1278),
     "ANKARA": (39.9334, 32.8597),
     "TEL_AVIV": (32.0853, 34.7818),
+    "PARIS": (48.8566, 2.3522),
+    "SEOUL": (37.5665, 126.9780),
+    "HONG_KONG": (22.3193, 114.1694),
+    "BUENOS_AIRES": (-34.6037, -58.3816),
+    "SAO_PAULO": (-23.5505, -46.6333),
+    "MADRID": (40.4168, -3.7038),
+    "TOKYO": (35.6762, 139.6503),
+    "SINGAPORE": (1.3521, 103.8198),
+    "SYDNEY": (-33.8688, 151.2093),
 }
 
 OPEN_METEO_ENSEMBLE_URL = (
