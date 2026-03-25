@@ -205,7 +205,7 @@ export function TradingPage() {
         </p>
       </div>
 
-      {projectId === 'victoria' ? (
+      {(projectId === 'victoria' || projectId === 'proj_victoria') ? (
         <>
           <PnLStats />
           <EquityCurve />

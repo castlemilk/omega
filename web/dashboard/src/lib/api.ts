@@ -241,31 +241,86 @@ export const api = {
   getHealth: () => get<ComponentHealth[]>('/health'),
 
   // ── ProjectService ────────────────────────────────────────────────────────
-  listProjects: () =>
-    rpc<{ projects: Project[] }>('ProjectService', 'ListProjects'),
+  listProjects: async () => {
+    // Connect-RPC returns camelCase; normalize to snake_case for the frontend.
+    type RawProject = {
+      projectId: string; name: string; description: string; status: string
+      domain: string; autonomyLevel: string; nodeIds: string[]
+      pipelineConfig: Array<{ stepId: string; name: string; nodeType: string; description: string; order: number }>
+    }
+    const res = await rpc<{ projects: RawProject[] }>('ProjectService', 'ListProjects')
+    const projects: Project[] = (res.projects ?? []).map(p => ({
+      project_id:    p.projectId,
+      name:          p.name,
+      description:   p.description ?? '',
+      status:        p.status,
+      domain:        p.domain,
+      autonomy_level: p.autonomyLevel,
+      node_ids:      p.nodeIds ?? [],
+      pipeline_config: (p.pipelineConfig ?? []).map(s => ({
+        step_id:     s.stepId,
+        name:        s.name,
+        node_type:   s.nodeType,
+        description: s.description,
+        order:       s.order,
+      })),
+    }))
+    return { projects }
+  },
 
   getProject: (project_id: string) =>
     rpc<{ project: Project }>('ProjectService', 'GetProject', { project_id }),
 
   // ── VictoriaService ───────────────────────────────────────────────────────
+  // Connect-RPC returns camelCase; normalise all responses to snake_case.
   victoria: {
-    getPortfolio: () =>
-      rpc<Portfolio>('VictoriaService', 'GetPortfolio'),
+    getPortfolio: async () => {
+      type R = { portfolioValue: number; unrealisedPnl: number; realisedPnl: number; totalPnl: number; totalReturn: number; annReturn: number; winRate: number; profitFactor: number; sharpe: number; annVol: number; allocation: Array<{ name: string; value: number; color: string }> }
+      const r = await rpc<R>('VictoriaService', 'GetPortfolio')
+      const p: Portfolio = { portfolio_value: r.portfolioValue ?? 0, unrealised_pnl: r.unrealisedPnl ?? 0, realised_pnl: r.realisedPnl ?? 0, total_pnl: r.totalPnl ?? 0, total_return: r.totalReturn ?? 0, ann_return: r.annReturn ?? 0, win_rate: r.winRate ?? 0, profit_factor: r.profitFactor ?? 0, sharpe: r.sharpe ?? 0, ann_vol: r.annVol ?? 0, allocation: r.allocation ?? [] }
+      return p
+    },
 
-    getPositions: () =>
-      rpc<{ positions: Position[] }>('VictoriaService', 'GetPositions'),
+    getPositions: async () => {
+      type RPos = { sym: string; side: string; size: number; entry: number; mark: number; upnl: number; pct: number; notional: number; leverage: number; var95: number }
+      const r = await rpc<{ positions: RPos[] }>('VictoriaService', 'GetPositions')
+      return { positions: (r.positions ?? []) as Position[] }
+    },
 
-    getPnL: () =>
-      rpc<PnLMetrics>('VictoriaService', 'GetPnL'),
+    getPnL: async () => {
+      type R = { unrealisedPnl: number; realisedPnl: number; totalPnl: number; totalReturn: number; annReturn: number; winRate: number; profitFactor: number; sharpe: number; annVol: number; maxDd: number; var95: number; cvar95: number; sortino: number; calmar: number }
+      const r = await rpc<R>('VictoriaService', 'GetPnL')
+      const p: PnLMetrics = { unrealised_pnl: r.unrealisedPnl ?? 0, realised_pnl: r.realisedPnl ?? 0, total_pnl: r.totalPnl ?? 0, total_return: r.totalReturn ?? 0, ann_return: r.annReturn ?? 0, win_rate: r.winRate ?? 0, profit_factor: r.profitFactor ?? 0, sharpe: r.sharpe ?? 0, ann_vol: r.annVol ?? 0, max_dd: r.maxDd ?? 0, var95: r.var95 ?? 0, cvar95: r.cvar95 ?? 0, sortino: r.sortino ?? 0, calmar: r.calmar ?? 0 }
+      return p
+    },
 
-    getSignals: () =>
-      rpc<SignalsResponse>('VictoriaService', 'GetSignals'),
+    getSignals: async () => {
+      type RSig = { name: string; avgIc: number; weight: number; halfLife: number; color: string; conviction: number; brierScore: number; currentValue: number; trend: string }
+      type R = { signals: RSig[]; compositeScore: number; compositeDirection: string; oosSharpe: number }
+      const r = await rpc<R>('VictoriaService', 'GetSignals')
+      const sr: SignalsResponse = {
+        signals: (r.signals ?? []).map(s => ({ name: s.name, avg_ic: s.avgIc ?? 0, weight: s.weight ?? 0, half_life: s.halfLife ?? 0, color: s.color ?? '', conviction: s.conviction ?? 0, brier_score: s.brierScore ?? 0, current_value: s.currentValue ?? 0, trend: s.trend ?? '' })),
+        composite_score: r.compositeScore ?? 0,
+        composite_direction: r.compositeDirection ?? 'NEUTRAL',
+        oos_sharpe: r.oosSharpe ?? 0,
+      }
+      return sr
+    },
 
-    getTrades: (params: { sym_filter?: string; side_filter?: string; limit?: number } = {}) =>
-      rpc<{ trades: Trade[] }>('VictoriaService', 'GetTrades', params),
+    getTrades: async (params: { sym_filter?: string; side_filter?: string; limit?: number } = {}) => {
+      type RTrade = { ts: string; sym: string; side: string; size: number; entry: number; exitPrice: number; pnl: number; slippage: number; duration: string }
+      const r = await rpc<{ trades: RTrade[] }>('VictoriaService', 'GetTrades', params)
+      const trades: Trade[] = (r.trades ?? []).map(t => ({ ts: t.ts, sym: t.sym, side: t.side, size: t.size ?? 0, entry: t.entry ?? 0, exit_price: t.exitPrice ?? 0, pnl: t.pnl ?? 0, slippage: t.slippage ?? 0, duration: t.duration ?? '' }))
+      return { trades }
+    },
 
-    getEquityCurve: (limit = 200) =>
-      rpc<EquityCurveResponse>('VictoriaService', 'GetEquityCurve', { limit }),
+    getEquityCurve: async (limit = 200) => {
+      type RPoint = { date: string; i: number; omega: number; btc: number; dd: number }
+      type R = { points: RPoint[]; trainEnd: number }
+      const r = await rpc<R>('VictoriaService', 'GetEquityCurve', { limit })
+      const ec: EquityCurveResponse = { points: (r.points ?? []).map(p => ({ date: p.date, i: p.i ?? 0, omega: p.omega ?? 0, btc: p.btc ?? 0, dd: p.dd ?? 0 })), train_end: r.trainEnd ?? 0 }
+      return ec
+    },
   },
 
   // ── OrchestratorService (Connect-RPC) ─────────────────────────────────────

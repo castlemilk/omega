@@ -44,7 +44,7 @@ function KpiCard({
 function SignalHeatmap({ projectId }: { projectId: string }) {
   const { data, loading } = useFetch(() => api.victoria.getSignals())
 
-  if (!['victoria'].includes(projectId)) return null
+  if (!['victoria', 'proj_victoria'].includes(projectId)) return null
 
   return (
     <div className="bg-slate-800 rounded-xl border border-slate-700/50 p-5">
@@ -104,7 +104,7 @@ function SignalHeatmap({ projectId }: { projectId: string }) {
 function PositionsSummary({ projectId }: { projectId: string }) {
   const { data, loading } = useFetch(() => api.victoria.getPositions())
 
-  if (!['victoria'].includes(projectId)) return null
+  if (!['victoria', 'proj_victoria'].includes(projectId)) return null
   const positions = data?.positions ?? []
 
   return (
@@ -154,7 +154,7 @@ function PositionsSummary({ projectId }: { projectId: string }) {
 
 export function ProjectOverview() {
   const { projectId = '' } = useParams<{ projectId: string }>()
-  const isVictoria = projectId === 'victoria'
+  const isVictoria = projectId === 'victoria' || projectId === 'proj_victoria'
 
   const { data: portfolio, loading: pLoading } = useFetch(
     () => isVictoria ? api.victoria.getPortfolio() : Promise.resolve(null)
