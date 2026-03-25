@@ -1,0 +1,325 @@
+{
+  "timestamp": "2026-03-25T10:11:15Z",
+  "providers": [
+    {
+      "name": "anthropic-haiku",
+      "type": "anthropic",
+      "model": "claude-haiku-4-5-20251001",
+      "evals": [
+        {
+          "prompt_id": "signal_analysis",
+          "score": 1.0,
+          "latency_ms": 1302,
+          "response_preview": "FLAT.\n\nConflicting signals (bullish order flow vs. bearish correlation and extreme fear) create too much uncertainty to warrant a directional position."
+        },
+        {
+          "prompt_id": "market_regime",
+          "score": 1.0,
+          "latency_ms": 1966,
+          "response_preview": "**ACCUMULATION**\n\nExchange netflow of -365 BTC indicates strong accumulation, the Puell Multiple below 1.0 suggests miners are not overextended, and the MVRV ratio of 1.59 remains reasonable, all poin"
+        },
+        {
+          "prompt_id": "risk_assessment",
+          "score": 1.0,
+          "latency_ms": 1360,
+          "response_preview": "NO. Your portfolio is overweight in BTC/ETH (75% combined) while BTC dominance is already elevated at 56.5%, creating excessive concentration risk in correlated assets during a potentially peak domina"
+        },
+        {
+          "prompt_id": "cycle_reflection",
+          "score": 1.0,
+          "latency_ms": 1330,
+          "response_preview": "# Key Lesson\n\nThe highest-quality signal (cross_asset, IC=0.93) contradicts the composite bearish direction, signaling that regime-neutral conditions demand careful position sizing and multi-timeframe"
+        },
+        {
+          "prompt_id": "weather_edge",
+          "score": 1.0,
+          "latency_ms": 2253,
+          "response_preview": "BET. The 15.6% edge with 80% Kelly fraction sizing offers attractive risk-adjusted returns when your model probability (80.6%) significantly exceeds the implied probability (35%), despite the ensemble"
+        }
+      ],
+      "avg_score": 1.0,
+      "avg_latency_ms": 1642
+    },
+    {
+      "name": "anthropic-sonnet",
+      "type": "anthropic",
+      "model": "claude-sonnet-4-6",
+      "evals": [
+        {
+          "prompt_id": "signal_analysis",
+          "score": 1.0,
+          "latency_ms": 2632,
+          "response_preview": "**FLAT**\n\nThe extremely bullish order flow and extremely bearish cross-asset correlation create a direct contradiction that cancels conviction in either direction, making neutral positioning the only "
+        },
+        {
+          "prompt_id": "market_regime",
+          "score": 1.0,
+          "latency_ms": 3381,
+          "response_preview": "**ACCUMULATION**\n\nCoins are quietly leaving exchanges (negative netflow), sell-side pressure dominates short-term trading (taker ratio below 1), miner revenue is suppressed (Puell below 1), and MVRV n"
+        },
+        {
+          "prompt_id": "risk_assessment",
+          "score": 1.0,
+          "latency_ms": 3175,
+          "response_preview": "**NO** \u2014 Rising BTC dominance typically signals capital rotating out of altcoins like ETH, making your 35% ETH long vulnerable and your combined 75% crypto long concentration excessively risky in this"
+        },
+        {
+          "prompt_id": "cycle_reflection",
+          "score": 1.0,
+          "latency_ms": 3481,
+          "response_preview": "**When multi-signal consensus is strong (11 signals, high quality 0.896) but the top driver is cross-asset contagion (IC=0.93) in a neutral volatility regime, the bearish composite direction is more l"
+        },
+        {
+          "prompt_id": "weather_edge",
+          "score": 1.0,
+          "latency_ms": 2453,
+          "response_preview": "**BET**\n\nHowever, the 80% Kelly fraction is aggressive\u2014consider half-Kelly given ensemble model overconfidence risks and the relatively thin edge on a weather derivative."
+        }
+      ],
+      "avg_score": 1.0,
+      "avg_latency_ms": 3024
+    },
+    {
+      "name": "openrouter-gpt4o-mini",
+      "type": "openrouter",
+      "model": "openai/gpt-4o-mini",
+      "evals": [
+        {
+          "prompt_id": "signal_analysis",
+          "score": 1.0,
+          "latency_ms": 2888,
+          "response_preview": "FLAT. Although the BTC order flow is bullish, the strong bearish cross-asset correlation and extreme fear sentiment suggest a potentially adverse market environment for taking a position."
+        },
+        {
+          "prompt_id": "market_regime",
+          "score": 1.0,
+          "latency_ms": 2226,
+          "response_preview": "ACCUMULATION. The indicators suggest a market environment where participants are buying in at relatively lower prices amid a negative netflow, indicating a trend towards accumulating rather than selli"
+        },
+        {
+          "prompt_id": "risk_assessment",
+          "score": 1.0,
+          "latency_ms": 940,
+          "response_preview": "NO, because the high concentration in two assets increases portfolio risk, especially with BTC dominance rising."
+        },
+        {
+          "prompt_id": "cycle_reflection",
+          "score": 1.0,
+          "latency_ms": 2807,
+          "response_preview": "In a neutral volatility regime, a strong predictive signal (IC=0.93) alongside a bearish composite direction suggests a potential for market downturns, emphasizing the importance of market context in "
+        },
+        {
+          "prompt_id": "weather_edge",
+          "score": 1.0,
+          "latency_ms": 2063,
+          "response_preview": "BET. The edge indicates a favorable betting opportunity based on the discrepancy between model probability and market price."
+        }
+      ],
+      "avg_score": 1.0,
+      "avg_latency_ms": 2185
+    },
+    {
+      "name": "openrouter-gpt4o",
+      "type": "openrouter",
+      "model": "openai/gpt-4o",
+      "evals": [
+        {
+          "prompt_id": "signal_analysis",
+          "score": 1.0,
+          "latency_ms": 1262,
+          "response_preview": "FLAT. The conflicting signals between bullish order flow and bearish cross-asset correlation, along with extreme fear sentiment, suggest uncertainty and advise caution."
+        },
+        {
+          "prompt_id": "market_regime",
+          "score": 1.0,
+          "latency_ms": 1221,
+          "response_preview": "ACCUMULATION. The MVRV ratio suggests potential undervaluation, the low Puell Multiple indicates less miner selling pressure, and the negative exchange netflow signals accumulation, despite a bearish "
+        },
+        {
+          "prompt_id": "risk_assessment",
+          "score": 1.0,
+          "latency_ms": 1023,
+          "response_preview": "NO. A rising BTC dominance suggests increasing risk, so the portfolio's concentration may benefit from more diversification."
+        },
+        {
+          "prompt_id": "cycle_reflection",
+          "score": 1.0,
+          "latency_ms": 1036,
+          "response_preview": "The key lesson is that despite having a high-quality score and strong top signal, the composite bearish direction indicates that signal alignment with market regimes remains crucial for effective deci"
+        },
+        {
+          "prompt_id": "weather_edge",
+          "score": 1.0,
+          "latency_ms": 799,
+          "response_preview": "BET. The substantial edge and favorable Kelly fraction suggest it's a positive expected value decision."
+        }
+      ],
+      "avg_score": 1.0,
+      "avg_latency_ms": 1068
+    },
+    {
+      "name": "openrouter-deepseek-chat",
+      "type": "openrouter",
+      "model": "deepseek/deepseek-chat",
+      "evals": [
+        {
+          "prompt_id": "signal_analysis",
+          "score": 1.0,
+          "latency_ms": 2653,
+          "response_preview": "LONG. Bullish order flow outweighs bearish cross-asset correlation and extreme fear sentiment often signals contrarian opportunities."
+        },
+        {
+          "prompt_id": "market_regime",
+          "score": 1.0,
+          "latency_ms": 3095,
+          "response_preview": "CAPITULATION. The negative netflow, low Puell Multiple, and taker sell dominance suggest panic selling and exhaustion."
+        },
+        {
+          "prompt_id": "risk_assessment",
+          "score": 1.0,
+          "latency_ms": 2462,
+          "response_preview": "NO. The portfolio is overly concentrated in BTC and ETH with high BTC dominance, increasing risk if BTC dominance continues to rise."
+        },
+        {
+          "prompt_id": "cycle_reflection",
+          "score": 1.0,
+          "latency_ms": 1806,
+          "response_preview": "The key lesson is that despite a strong cross-asset signal (IC=0.93), the bearish composite direction and neutral VRP regime suggest cautious positioning."
+        },
+        {
+          "prompt_id": "weather_edge",
+          "score": 1.0,
+          "latency_ms": 3120,
+          "response_preview": "BET. The model probability (0.806) is significantly higher than the implied market probability (0.65), offering a 15.6% edge, and the Kelly fraction (0.80) suggests a substantial optimal bet size."
+        }
+      ],
+      "avg_score": 1.0,
+      "avg_latency_ms": 2627
+    },
+    {
+      "name": "kimi-moonshot-v1-8k",
+      "type": "openai_compat",
+      "model": "moonshot-v1-8k",
+      "evals": [
+        {
+          "prompt_id": "signal_analysis",
+          "score": 0.0,
+          "latency_ms": 0,
+          "error": "HTTP Error 401: Unauthorized"
+        },
+        {
+          "prompt_id": "market_regime",
+          "score": 0.0,
+          "latency_ms": 0,
+          "error": "HTTP Error 401: Unauthorized"
+        },
+        {
+          "prompt_id": "risk_assessment",
+          "score": 0.0,
+          "latency_ms": 0,
+          "error": "HTTP Error 401: Unauthorized"
+        },
+        {
+          "prompt_id": "cycle_reflection",
+          "score": 0.0,
+          "latency_ms": 0,
+          "error": "HTTP Error 401: Unauthorized"
+        },
+        {
+          "prompt_id": "weather_edge",
+          "score": 0.0,
+          "latency_ms": 0,
+          "error": "HTTP Error 401: Unauthorized"
+        }
+      ],
+      "avg_score": 0.0,
+      "avg_latency_ms": 0
+    },
+    {
+      "name": "claude-cli-haiku",
+      "type": "claude_cli",
+      "model": "claude-haiku-4-5-20251001",
+      "evals": [
+        {
+          "prompt_id": "signal_analysis",
+          "score": 0.0,
+          "latency_ms": 17643,
+          "response_preview": ""
+        },
+        {
+          "prompt_id": "market_regime",
+          "score": 0.0,
+          "latency_ms": 11321,
+          "response_preview": ""
+        },
+        {
+          "prompt_id": "risk_assessment",
+          "score": 0.0,
+          "latency_ms": 7929,
+          "response_preview": ""
+        },
+        {
+          "prompt_id": "cycle_reflection",
+          "score": 0.0,
+          "latency_ms": 8808,
+          "response_preview": ""
+        },
+        {
+          "prompt_id": "weather_edge",
+          "score": 0.0,
+          "latency_ms": 6571,
+          "response_preview": ""
+        }
+      ],
+      "avg_score": 0.0,
+      "avg_latency_ms": 10454
+    }
+  ],
+  "prompts": [
+    {
+      "id": "signal_analysis",
+      "prompt": "BTC order flow is bullish (+0.94), cross-asset correlation is bearish (-0.93), sentiment is extreme fear (+0.15), VRP is neutral. Should we go LONG, SHORT, or FLAT? Answer with one word then a one-sentence reason.",
+      "expected_contains": [
+        "LONG",
+        "SHORT",
+        "FLAT"
+      ],
+      "tier": "DEEP"
+    },
+    {
+      "id": "market_regime",
+      "prompt": "MVRV ratio is 1.59, Puell Multiple is 0.83, exchange netflow is -365 BTC, taker buy/sell ratio is 0.89. What market regime are we in? Answer: ACCUMULATION, DISTRIBUTION, EUPHORIA, or CAPITULATION. One word then one sentence.",
+      "expected_contains": [
+        "ACCUMULATION",
+        "DISTRIBUTION",
+        "EUPHORIA",
+        "CAPITULATION"
+      ],
+      "tier": "QUICK"
+    },
+    {
+      "id": "risk_assessment",
+      "prompt": "Portfolio has 40% in BTCUSDT long and 35% in ETHUSDT long. BTC dominance is 56.5% and rising. Is this concentration acceptable? Answer YES or NO then one sentence.",
+      "expected_contains": [
+        "YES",
+        "NO"
+      ],
+      "tier": "QUICK"
+    },
+    {
+      "id": "cycle_reflection",
+      "prompt": "Cycle 50: 11 signals computed, quality score 0.896, top signal cross_asset (IC=0.93), VRP regime NEUTRAL, composite direction bearish. What is the key lesson? One sentence.",
+      "expected_contains": [],
+      "tier": "QUICK"
+    },
+    {
+      "id": "weather_edge",
+      "prompt": "GEFS ensemble: 25 of 31 members predict NYC temperature above 30C tomorrow. Polymarket YES price is 0.65. Model probability is 0.806. Edge is 15.6%. Kelly fraction is 0.80. Should we bet? Answer BET or SKIP then one sentence.",
+      "expected_contains": [
+        "BET",
+        "SKIP"
+      ],
+      "tier": "DEEP"
+    }
+  ]
+}
