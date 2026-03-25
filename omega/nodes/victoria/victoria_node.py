@@ -43,6 +43,7 @@ from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
+from omega.nodes.victoria.news_signals import NewsSignalProvider
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
@@ -71,6 +72,7 @@ SIGNAL_NAMES = [
     "onchain",
     "long_short_ratio",
     "btc_dominance",
+    "news_sentiment",
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -119,6 +121,7 @@ class VictoriaNode(Node):
         self._onchain = OnChainSignal()
         self._long_short_ratio = LongShortRatioSignal()
         self._btc_dominance = BTCDominanceSignal()
+        self._news_signal = NewsSignalProvider()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -377,6 +380,7 @@ class VictoriaNode(Node):
             "onchain",
             "long_short_ratio",
             "btc_dominance",
+            "news_sentiment",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -805,6 +809,17 @@ class VictoriaNode(Node):
                 }
             except Exception as exc:
                 logger.debug("btc_dominance signal failed: %s", exc)
+
+            try:
+                news_val = self._news_signal.compute(market_data)
+                signals["news_sentiment"] = {
+                    "value": news_val.value,
+                    "confidence": news_val.confidence,
+                    "regime_tag": news_val.regime_tag,
+                    "raw": news_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("news_sentiment signal failed: %s", exc)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
