@@ -42,6 +42,7 @@ from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
+from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
@@ -63,6 +64,7 @@ SIGNAL_NAMES = [
     "microstructure",
     "sentiment",
     "vrp",
+    "market_data",
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -107,6 +109,7 @@ class VictoriaNode(Node):
         self._microstructure = MicrostructureSignal()
         self._sentiment = SentimentSignal()
         self._vrp = VRPSignalNode()
+        self._market_data_signal = MarketDataSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -747,6 +750,17 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("vrp signal failed: %s", exc)
 
+            try:
+                md_val = self._market_data_signal.compute(market_data)
+                signals["market_data"] = {
+                    "value": md_val.value,
+                    "confidence": md_val.confidence,
+                    "regime_tag": md_val.regime_tag,
+                    "raw": md_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("market_data signal failed: %s", exc)
+
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
         for name, sig in signals.items():
@@ -785,7 +799,7 @@ class VictoriaNode(Node):
 
         # 4. Compute quality metrics for this cycle
         signal_names = [k for k in signals if not k.startswith("_")]
-        expected_count = len(SIGNAL_NAMES)  # 6 expected signal types
+        expected_count = len(SIGNAL_NAMES)  # 7 expected signal types
         signal_coverage = len(signal_names) / max(expected_count, 1)
 
         weighted_confidences = []
