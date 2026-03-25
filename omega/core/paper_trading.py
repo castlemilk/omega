@@ -437,18 +437,19 @@ class PaperTradingEngine:
                     for sig in inner:
                         if isinstance(sig, dict):
                             name = sig.get("ticker") or sig.get("symbol") or str(_node_id)
-                            ic = float(sig.get("composite_score", 0.0))
+                            # Prefer explicit ic field; fall back to composite_score proxy
+                            ic = float(sig.get("ic") or sig.get("composite_score") or 0.0)
                             rows.append({"signal_name": name, "t": cycle, "ic": ic})
                 else:
                     # Flat signal dict: each key may be a symbol
                     name = signals.get("ticker") or signals.get("symbol") or str(_node_id)
-                    ic = float(signals.get("composite_score", 0.0))
+                    ic = float(signals.get("ic") or signals.get("composite_score") or 0.0)
                     rows.append({"signal_name": name, "t": cycle, "ic": ic})
             elif isinstance(signals, list):
                 for sig in signals:
                     if isinstance(sig, dict):
                         name = sig.get("ticker") or sig.get("symbol") or str(_node_id)
-                        ic = float(sig.get("composite_score", 0.0))
+                        ic = float(sig.get("ic") or sig.get("composite_score") or 0.0)
                         rows.append({"signal_name": name, "t": cycle, "ic": ic})
 
         if not rows:

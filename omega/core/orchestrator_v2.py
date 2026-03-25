@@ -265,6 +265,7 @@ class OmegaOrchestrator:
                                     {
                                         "symbol": sig_name,
                                         "composite_score": float(sig_val.get("value", 0.0)),
+                                        "ic": float(sig_val.get("ic", 0.0)),
                                     }
                                     for sig_name, sig_val in out.result.items()
                                     if isinstance(sig_val, dict) and "value" in sig_val

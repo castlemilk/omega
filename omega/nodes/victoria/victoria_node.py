@@ -780,6 +780,11 @@ class VictoriaNode(Node):
                     continue
                 if name in alloc.weights:
                     raw_weights[name] = alloc.weights[name]
+            # Embed IC EMA per signal so downstream persistence can write real IC values
+            for name in signals:
+                if name.startswith("_") or not isinstance(signals[name], dict):
+                    continue
+                signals[name]["ic"] = round(alloc.ic_ema.get(name, 0.0), 6)
         except Exception as exc:
             logger.debug("weight allocation failed, using equal weights: %s", exc)
 
