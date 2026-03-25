@@ -37,6 +37,7 @@ Usage::
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -53,6 +54,12 @@ logger = logging.getLogger("omega.nodes.polymarket.edge_detection")
 
 DEFAULT_EDGE_THRESHOLD = 0.08
 DEFAULT_MAX_KELLY = 0.25
+
+# File-based cache for _auto_detect results — avoids 5-6s cold starts on each cycle
+_AUTO_DETECT_CACHE_PATH = os.path.join(
+    os.environ.get("TMPDIR", "/tmp"), "omega_edge_detect_cache.json"
+)
+_AUTO_DETECT_CACHE_TTL_S = 300  # 5 minutes
 
 
 def _persist_edge(
@@ -249,6 +256,30 @@ class EdgeDetectionNode(Node):
         return round((edge_component + member_component) / 2.0, 4)
 
     @staticmethod
+    def _load_cache() -> dict[str, Any] | None:
+        """Return cached auto_detect result if fresh, else None."""
+        try:
+            with open(_AUTO_DETECT_CACHE_PATH) as f:
+                entry: dict[str, Any] = json.load(f)
+            age = time.time() - float(entry.get("_cached_at", 0))
+            if age < _AUTO_DETECT_CACHE_TTL_S:
+                logger.debug("edge_detect cache hit (age=%.0fs)", age)
+                return entry
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _save_cache(result: dict[str, Any]) -> None:
+        """Write auto_detect result to file cache."""
+        try:
+            entry = {**result, "_cached_at": time.time()}
+            with open(_AUTO_DETECT_CACHE_PATH, "w") as f:
+                json.dump(entry, f)
+        except Exception as exc:
+            logger.debug("edge_detect cache write failed: %s", exc)
+
+    @staticmethod
     def _extract_threshold_c(question: str) -> float:
         """Extract temperature threshold in Celsius from a market question string.
 
@@ -284,7 +315,14 @@ class EdgeDetectionNode(Node):
         fetches live data per-city with threshold extracted from each market's
         question text, runs batch detection across all pairs, persists every
         edge to polymarket_edges, and returns the highest-|edge| result.
+
+        Results are cached to disk for _AUTO_DETECT_CACHE_TTL_S seconds to
+        avoid 5-6s API round-trips on every cycle.
         """
+        cached = self._load_cache()
+        if cached is not None:
+            return {k: v for k, v in cached.items() if k != "_cached_at"}
+
         from omega.core.node import NodeInput as NodeInputLocal
         from omega.nodes.polymarket.pricing import PolymarketPricingNode
         from omega.nodes.polymarket.weather_ensemble import CITIES, WeatherEnsembleNode
@@ -386,6 +424,7 @@ class EdgeDetectionNode(Node):
             best["edge"],
             best["opportunity"],
         )
+        self._save_cache(best)
         return best
 
     def _detect_single(self, params: dict[str, Any]) -> dict[str, Any]:
