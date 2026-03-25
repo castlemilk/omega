@@ -291,7 +291,9 @@ class MicrostructureSignal:
     """
     Analyzes spread dynamics, quote stuffing detection, and tick patterns.
 
-    Spread dynamics: bid-ask spread relative to its rolling mean.
+    Spread dynamics: relative bid-ask spread z-score vs 20-period rolling mean.
+    Weighted mid-price: (best_bid * ask_size + best_ask * bid_size) / (bid_size + ask_size)
+    Order book imbalance: multi-level bid vs ask volume at top-of-book.
     Quote stuffing: abnormally high update rate with low volume fill rate.
     Tick patterns: consecutive up/down ticks, run lengths.
     """
@@ -303,26 +305,57 @@ class MicrostructureSignal:
         highs = _btc.get("high") or market_data.get("high", [])
         lows = _btc.get("low") or market_data.get("low", [])
         volumes = _btc.get("volume") or market_data.get("volume", [])
-        # Compute instantaneous bid-ask spread from order book depth if available
+
+        # Pull order book data
         _best_bid = market_data.get("_best_bid")
         _best_ask = market_data.get("_best_ask")
+        _bid_sizes = market_data.get("_bid_sizes", [])
+        _ask_sizes = market_data.get("_ask_sizes", [])
         _ob_spread: list[float] = []
+
+        # ── Weighted mid-price and relative spread ──────────────────────────
+        ob_imbalance_signal = 0.0
+        weighted_mid_signal = 0.0
         if _best_bid and _best_ask and _best_bid > 0:
             mid = (_best_bid + _best_ask) / 2.0
-            _ob_spread = [(_best_ask - _best_bid) / mid] if mid > 0 else []
+            rel_spread = (_best_ask - _best_bid) / mid if mid > 0 else 0.0
+            _ob_spread = [rel_spread]
+
+            # Multi-level order book imbalance
+            bid_vol = _bid_sizes[0] if _bid_sizes else 0.0
+            ask_vol = _ask_sizes[0] if _ask_sizes else 0.0
+            if bid_vol + ask_vol > 0:
+                ob_imbalance = (bid_vol - ask_vol) / (bid_vol + ask_vol)
+                ob_imbalance_signal = ob_imbalance  # +1 = all bids, -1 = all asks
+            else:
+                ob_imbalance = 0.0
+
+            # Weighted mid-price: price closer to side with more depth
+            if bid_vol + ask_vol > 0:
+                wmid = (_best_bid * ask_vol + _best_ask * bid_vol) / (bid_vol + ask_vol)
+                # wmid above simple mid → ask side dominant → slight bearish
+                wmid_bias = (wmid - mid) / mid if mid > 0 else 0.0
+                weighted_mid_signal = -wmid_bias * 50.0  # scale: 2bps deviation → 1.0 signal
+
         spreads = market_data.get("spreads", _ob_spread)
         quote_updates = market_data.get("quote_updates", [])
 
         raw: dict[str, float] = {}
 
-        # Spread dynamics
+        # ── Spread z-score: current spread vs rolling 20-period ───────────
         spread_signal = 0.0
         if spreads and len(spreads) > 5:
             spread_z = _zscore(spreads, min(20, len(spreads) - 1))
             if spread_z is not None:
                 raw["spread_zscore"] = spread_z
-                # Wide spread (high z) = illiquid = signal dampener
-                spread_signal = -abs(spread_z) / 4.0  # max -0.5 dampening
+                # Tight spread (low z) = liquid = slight bullish; wide = dampener
+                spread_signal = -spread_z / 4.0  # negative z (tighter) → positive signal
+
+        # Store multi-level imbalance
+        if ob_imbalance_signal != 0.0:
+            raw["ob_imbalance"] = ob_imbalance_signal
+        if weighted_mid_signal != 0.0:
+            raw["weighted_mid_signal"] = weighted_mid_signal
 
         # Quote stuffing detection
         stuffing_detected = False
@@ -345,25 +378,25 @@ class MicrostructureSignal:
             efficiency = self._range_efficiency(prices, highs, lows, window=10)
             raw["range_efficiency"] = efficiency
 
-        # Composite
+        # Composite — combine tick, OB imbalance, weighted mid, spread
         if stuffing_detected:
             regime_tag = "quote_stuffing"
             value = 0.0
             confidence = 0.1
         elif raw.get("spread_zscore", 0) > 2.0:
             regime_tag = "wide_spread"
-            value = tick_signal * 0.3
-            confidence = 0.2
+            value = tick_signal * 0.3 + ob_imbalance_signal * 0.2
+            confidence = 0.25
         elif efficiency > 0.7:
             regime_tag = "trending_candles"
-            value = tick_signal
+            value = tick_signal * 0.5 + ob_imbalance_signal * 0.3 + weighted_mid_signal * 0.2
             confidence = efficiency
         else:
             regime_tag = "choppy"
-            value = tick_signal * 0.5
-            confidence = 0.3
+            value = tick_signal * 0.3 + ob_imbalance_signal * 0.4 + weighted_mid_signal * 0.3
+            confidence = 0.4
 
-        value += spread_signal
+        value += spread_signal * 0.2
         return SignalValue(
             value=max(-1.0, min(1.0, value)),
             confidence=max(0.0, min(1.0, confidence)),
@@ -566,6 +599,208 @@ class SentimentSignal:
         return SignalValue(
             value=max(-1.0, min(1.0, value)),
             confidence=max(0.0, min(1.0, confidence)),
+            regime_tag=regime_tag,
+            raw=raw,
+        )
+
+
+# ---------------------------------------------------------------------------
+# OnChainSignal — DefiLlama TVL trend
+# ---------------------------------------------------------------------------
+
+
+class OnChainSignal:
+    """
+    On-chain signal from DefiLlama total DeFi TVL.
+
+    TVL trend:
+      - Rising TVL  → capital flowing into DeFi → risk-on (bullish)
+      - Falling TVL → capital fleeing DeFi     → risk-off (bearish)
+    """
+
+    def compute(self, market_data: dict[str, Any]) -> SignalValue:
+        defi_tvl = market_data.get("_defi_tvl", {})
+        raw: dict[str, float] = {}
+
+        if not isinstance(defi_tvl, dict):
+            return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+
+        total_tvl = defi_tvl.get("total_tvl", 0.0)
+        protocols = defi_tvl.get("protocols", [])
+        raw["total_tvl"] = float(total_tvl)
+        raw["protocol_count"] = float(len(protocols))
+
+        if protocols and len(protocols) >= 3:
+            top3_tvl = sum(p.get("tvl", 0) for p in protocols[:3])
+            raw["top3_tvl"] = float(top3_tvl)
+
+        value = 0.0
+        confidence = 0.3
+        if total_tvl > 80_000_000_000:  # > $80B
+            value = 0.4
+            regime_tag = "defi_rich"
+        elif total_tvl > 50_000_000_000:  # > $50B
+            value = 0.2
+            regime_tag = "defi_healthy"
+        elif total_tvl > 20_000_000_000:  # > $20B
+            value = 0.0
+            regime_tag = "defi_moderate"
+        elif total_tvl > 0:
+            value = -0.3
+            regime_tag = "defi_low"
+            confidence = 0.4
+        else:
+            return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+
+        return SignalValue(
+            value=max(-1.0, min(1.0, value)),
+            confidence=confidence,
+            regime_tag=regime_tag,
+            raw=raw,
+        )
+
+
+# ---------------------------------------------------------------------------
+# LongShortRatioSignal — Binance futures long/short account ratio
+# ---------------------------------------------------------------------------
+
+
+class LongShortRatioSignal:
+    """
+    Contrarian signal from Binance futures global long/short account ratio.
+
+    Interpretation (contrarian):
+      - ratio > 1.5 → crowded long  → bearish (fade the crowd)
+      - ratio < 0.67 → crowded short → bullish (fade the crowd)
+      - 0.67-1.5 → neutral positioning
+    """
+
+    _LONG_THRESHOLD = 1.5
+    _SHORT_THRESHOLD = 0.67
+    _EXTREME_LONG = 2.0
+    _EXTREME_SHORT = 0.5
+
+    def compute(self, market_data: dict[str, Any]) -> SignalValue:
+        ls_ratio = market_data.get("_long_short_ratio")
+        raw: dict[str, float] = {}
+
+        if ls_ratio is None:
+            try:
+                import json
+                import urllib.request
+
+                url = "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                ls_ratio = float(data[0]["longShortRatio"])
+            except Exception:
+                return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+
+        ls_ratio = float(ls_ratio)
+        raw["long_short_ratio"] = ls_ratio
+
+        if ls_ratio >= self._EXTREME_LONG:
+            value = -0.8
+            regime_tag = "extreme_crowded_long"
+            confidence = 0.7
+        elif ls_ratio >= self._LONG_THRESHOLD:
+            value = -0.4
+            regime_tag = "crowded_long"
+            confidence = 0.55
+        elif ls_ratio <= self._EXTREME_SHORT:
+            value = 0.8
+            regime_tag = "extreme_crowded_short"
+            confidence = 0.7
+        elif ls_ratio <= self._SHORT_THRESHOLD:
+            value = 0.4
+            regime_tag = "crowded_short"
+            confidence = 0.55
+        else:
+            value = 0.0
+            regime_tag = "balanced_positioning"
+            confidence = 0.3
+
+        raw["positioning_skew"] = (ls_ratio - 1.0) / max(ls_ratio, 1.0)
+        return SignalValue(
+            value=max(-1.0, min(1.0, value)),
+            confidence=confidence,
+            regime_tag=regime_tag,
+            raw=raw,
+        )
+
+
+# ---------------------------------------------------------------------------
+# BTCDominanceSignal — CoinGecko BTC market cap dominance
+# ---------------------------------------------------------------------------
+
+
+class BTCDominanceSignal:
+    """
+    Signal from BTC dominance (% of total crypto market cap).
+
+    BTC dominance rising  → capital rotating to BTC (risk-off for alts).
+    BTC dominance falling → capital rotating to alts (risk-on).
+
+    From a BTC perspective:
+      - Dominance > 60%  → BTC extremely dominant (bullish BTC)
+      - Dominance 50-60% → BTC leading (mildly bullish)
+      - Dominance 40-50% → balanced market
+      - Dominance < 40%  → alt-season, BTC losing share (bearish BTC)
+    """
+
+    _HIGH_DOM = 60.0
+    _MID_HIGH_DOM = 50.0
+    _MID_LOW_DOM = 40.0
+
+    def compute(self, market_data: dict[str, Any]) -> SignalValue:
+        btc_dom = market_data.get("_btc_dominance")
+        raw: dict[str, float] = {}
+
+        if btc_dom is None:
+            try:
+                import json
+                import urllib.request
+
+                url = "https://api.coingecko.com/api/v3/global"
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                btc_dom = float(data["data"]["market_cap_percentage"]["btc"])
+                market_cap_change = float(
+                    data["data"].get("market_cap_change_percentage_24h_usd", 0.0)
+                )
+                raw["market_cap_change_24h"] = market_cap_change
+            except Exception:
+                return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+
+        btc_dom = float(btc_dom)
+        raw["btc_dominance_pct"] = btc_dom
+
+        if btc_dom >= self._HIGH_DOM:
+            value = 0.6
+            regime_tag = "btc_dominant"
+            confidence = 0.65
+        elif btc_dom >= self._MID_HIGH_DOM:
+            value = 0.3
+            regime_tag = "btc_leading"
+            confidence = 0.5
+        elif btc_dom >= self._MID_LOW_DOM:
+            value = 0.0
+            regime_tag = "balanced_market"
+            confidence = 0.35
+        else:
+            value = -0.4
+            regime_tag = "alt_season"
+            confidence = 0.5
+
+        mc_change = raw.get("market_cap_change_24h", 0.0)
+        if abs(mc_change) > 3.0:
+            value += 0.2 * (1 if mc_change > 0 else -1)
+
+        return SignalValue(
+            value=max(-1.0, min(1.0, value)),
+            confidence=confidence,
             regime_tag=regime_tag,
             raw=raw,
         )
