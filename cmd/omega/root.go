@@ -34,7 +34,8 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 
-	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(runCmd)    // omega run  — start full stack
+	rootCmd.AddCommand(cycleCmd)  // omega cycle — orchestrator heartbeat loop
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(backtestCmd)
 	rootCmd.AddCommand(challengesCmd)

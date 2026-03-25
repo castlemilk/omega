@@ -21,18 +21,18 @@ var (
 	runCycles   int
 )
 
-var runCmd = &cobra.Command{
-	Use:   "run",
+var cycleCmd = &cobra.Command{
+	Use:   "cycle",
 	Short: "Start the Omega orchestrator and poll cycle results",
 	RunE:  runOrchestrator,
 }
 
 func init() {
-	runCmd.Flags().StringVar(&runMode, "mode", "supervised", "Orchestrator mode: pico, supervised, autonomous")
-	runCmd.Flags().StringVar(&runSymbols, "symbols", "BTC/USDT,ETH/USDT", "Comma-separated trading symbols")
-	runCmd.Flags().BoolVar(&runDryRun, "dry-run", false, "Dry run — start but do not trade")
-	runCmd.Flags().IntVar(&runInterval, "interval", 60, "Cycle poll interval in seconds")
-	runCmd.Flags().IntVar(&runCycles, "cycles", 0, "Run N cycles synchronously and print per-step results, then exit")
+	cycleCmd.Flags().StringVar(&runMode, "mode", "supervised", "Orchestrator mode: pico, supervised, autonomous")
+	cycleCmd.Flags().StringVar(&runSymbols, "symbols", "BTC/USDT,ETH/USDT", "Comma-separated trading symbols")
+	cycleCmd.Flags().BoolVar(&runDryRun, "dry-run", false, "Dry run — start but do not trade")
+	cycleCmd.Flags().IntVar(&runInterval, "interval", 60, "Cycle poll interval in seconds")
+	cycleCmd.Flags().IntVar(&runCycles, "cycles", 0, "Run N cycles synchronously and print per-step results, then exit")
 }
 
 func runOrchestrator(cmd *cobra.Command, args []string) error {

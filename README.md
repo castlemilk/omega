@@ -6,7 +6,43 @@ Omega validates a core hypothesis: can we define node contracts, compose them vi
 
 ---
 
-## Quick Start
+## Quick Start — Full Stack
+
+The easiest way to get everything running with real data:
+
+```bash
+# 1. Start Postgres (required for trading data)
+make db-up
+
+# 2. Set the database URL
+export DATABASE_URL=postgres://omega:omega@localhost:5432/omega?sslmode=disable
+
+# 3. Start the full stack: Python bridge + Go API + React dashboard
+omega run
+```
+
+This starts:
+| Layer | URL | Label |
+|---|---|---|
+| Python pipeline bridge | http://localhost:9090 | `[bridge]` |
+| Go Connect-RPC API | http://localhost:8080 | `[api]` |
+| React dev server | http://localhost:5173 | `[frontend]` |
+
+Output from each process is prefixed with its label. `Ctrl+C` shuts everything down cleanly.
+
+**Options:**
+```bash
+omega run --no-frontend   # API + bridge only (if the frontend is already running)
+```
+
+**Install the CLI first:**
+```bash
+go install ./cmd/omega
+```
+
+---
+
+### Legacy Python-only quick start
 
 ```bash
 cd omega
