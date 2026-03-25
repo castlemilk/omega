@@ -1,94 +1,66 @@
-import React, { useState } from 'react'
-import { LayoutDashboard, Server, RefreshCw, Shield, TrendingUp, Activity, ChevronLeft, ChevronRight } from 'lucide-react'
-import { OverviewPage } from './pages/OverviewPage'
-import { NodesPage } from './pages/NodesPage'
-import { CyclesPage } from './pages/CyclesPage'
-import { AdversarialPage } from './pages/AdversarialPage'
-import { ImprovementPage } from './pages/ImprovementPage'
-import { HealthPage } from './pages/HealthPage'
+import React, { Suspense, lazy } from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { ProjectProvider } from './context/ProjectContext'
+import { AppShell } from './components/AppShell'
 
-type Page = 'overview' | 'nodes' | 'cycles' | 'adversarial' | 'improvement' | 'health'
+// ─── Lazy page imports ────────────────────────────────────────────────────────
 
-const nav: { id: Page; label: string; icon: React.ElementType }[] = [
-  { id: 'overview',    label: 'Overview',    icon: LayoutDashboard },
-  { id: 'nodes',       label: 'Nodes',       icon: Server },
-  { id: 'cycles',      label: 'Cycles',      icon: RefreshCw },
-  { id: 'adversarial', label: 'Adversarial', icon: Shield },
-  { id: 'improvement', label: 'Improvement', icon: TrendingUp },
-  { id: 'health',      label: 'Health',      icon: Activity },
-]
+const GlobalOverview    = lazy(() => import('./pages/GlobalOverview').then(m => ({ default: m.GlobalOverview })))
+const CoordinationPage  = lazy(() => import('./pages/CoordinationPage').then(m => ({ default: m.CoordinationPage })))
+const SettingsPage      = lazy(() => import('./pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
 
-const pages: Record<Page, React.ComponentType> = {
-  overview:    OverviewPage,
-  nodes:       NodesPage,
-  cycles:      CyclesPage,
-  adversarial: AdversarialPage,
-  improvement: ImprovementPage,
-  health:      HealthPage,
+// Per-project pages
+const ProjectOverview   = lazy(() => import('./pages/ProjectOverview').then(m => ({ default: m.ProjectOverview })))
+const TradingPage       = lazy(() => import('./pages/TradingPage').then(m => ({ default: m.TradingPage })))
+const SignalsPage       = lazy(() => import('./pages/SignalsPage').then(m => ({ default: m.SignalsPage })))
+const PositionsPage     = lazy(() => import('./pages/PositionsPage').then(m => ({ default: m.PositionsPage })))
+const NodesPage         = lazy(() => import('./pages/NodesPage').then(m => ({ default: m.NodesPage })))
+const CyclesPage        = lazy(() => import('./pages/CyclesPage').then(m => ({ default: m.CyclesPage })))
+const AdversarialPage   = lazy(() => import('./pages/AdversarialPage').then(m => ({ default: m.AdversarialPage })))
+const HealthPage        = lazy(() => import('./pages/HealthPage').then(m => ({ default: m.HealthPage })))
+const ImprovementPage   = lazy(() => import('./pages/ImprovementPage').then(m => ({ default: m.ImprovementPage })))
+
+// ─── Fallback ────────────────────────────────────────────────────────────────
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 }
 
+// ─── App ─────────────────────────────────────────────────────────────────────
+
 export default function App() {
-  const [page, setPage] = useState<Page>('overview')
-  const [collapsed, setCollapsed] = useState(false)
-  const Page = pages[page]
-
   return (
-    <div className="flex h-screen bg-slate-900 overflow-hidden">
-      {/* Sidebar */}
-      <aside
-        className={`flex flex-col bg-slate-950 border-r border-slate-800 transition-all duration-200 shrink-0 ${
-          collapsed ? 'w-16' : 'w-56'
-        }`}
-      >
-        {/* Logo */}
-        <div className={`flex items-center gap-3 px-4 py-5 border-b border-slate-800 ${collapsed ? 'justify-center' : ''}`}>
-          <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center shrink-0">
-            <span className="text-slate-900 font-black text-xs">Ω</span>
-          </div>
-          {!collapsed && (
-            <div>
-              <p className="text-slate-100 font-bold text-sm leading-tight">Omega</p>
-              <p className="text-slate-500 text-xs">Dashboard</p>
-            </div>
-          )}
-        </div>
+    <BrowserRouter>
+      <ProjectProvider>
+        <AppShell>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Global platform routes */}
+              <Route path="/" element={<GlobalOverview />} />
+              <Route path="/coordination" element={<CoordinationPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
 
-        {/* Nav */}
-        <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-          {nav.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setPage(id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                page === id
-                  ? 'bg-emerald-500/15 text-emerald-300'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
-              } ${collapsed ? 'justify-center' : ''}`}
-              title={collapsed ? label : undefined}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              {!collapsed && label}
-            </button>
-          ))}
-        </nav>
+              {/* Per-project routes */}
+              <Route path="/projects/:projectId" element={<ProjectOverview />} />
+              <Route path="/projects/:projectId/trading"     element={<TradingPage />} />
+              <Route path="/projects/:projectId/signals"     element={<SignalsPage />} />
+              <Route path="/projects/:projectId/positions"   element={<PositionsPage />} />
+              <Route path="/projects/:projectId/nodes"       element={<NodesPage />} />
+              <Route path="/projects/:projectId/cycles"      element={<CyclesPage />} />
+              <Route path="/projects/:projectId/adversarial" element={<AdversarialPage />} />
+              <Route path="/projects/:projectId/health"      element={<HealthPage />} />
+              <Route path="/projects/:projectId/improvement" element={<ImprovementPage />} />
 
-        {/* Collapse toggle */}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className={`flex items-center gap-2 px-4 py-3 text-slate-500 hover:text-slate-300 border-t border-slate-800 transition-colors text-xs ${
-            collapsed ? 'justify-center' : ''
-          }`}
-        >
-          {collapsed ? <ChevronRight className="w-4 h-4" /> : <><ChevronLeft className="w-4 h-4" /><span>Collapse</span></>}
-        </button>
-      </aside>
-
-      {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-6xl mx-auto px-6 py-8">
-          <Page />
-        </div>
-      </main>
-    </div>
+              {/* Fallback */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Suspense>
+        </AppShell>
+      </ProjectProvider>
+    </BrowserRouter>
   )
 }
