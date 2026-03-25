@@ -56,6 +56,7 @@ from omega.nodes.victoria.signals_advanced import (
     SentimentSignal,
 )
 from omega.nodes.victoria.strategy import StrategyNode
+from omega.nodes.victoria.twitter_signals import TwitterSentimentSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 
 logger = logging.getLogger("omega.nodes.victoria.victoria_node")
@@ -73,6 +74,7 @@ SIGNAL_NAMES = [
     "long_short_ratio",
     "btc_dominance",
     "news_sentiment",
+    "twitter_sentiment",
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -122,6 +124,7 @@ class VictoriaNode(Node):
         self._long_short_ratio = LongShortRatioSignal()
         self._btc_dominance = BTCDominanceSignal()
         self._news_signal = NewsSignalProvider()
+        self._twitter_sentiment = TwitterSentimentSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -381,6 +384,7 @@ class VictoriaNode(Node):
             "long_short_ratio",
             "btc_dominance",
             "news_sentiment",
+            "twitter_sentiment",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -820,6 +824,17 @@ class VictoriaNode(Node):
                 }
             except Exception as exc:
                 logger.debug("news_sentiment signal failed: %s", exc)
+
+            try:
+                tw_val = self._twitter_sentiment.compute(market_data)
+                signals["twitter_sentiment"] = {
+                    "value": tw_val.value,
+                    "confidence": tw_val.confidence,
+                    "regime_tag": tw_val.regime_tag,
+                    "raw": tw_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("twitter_sentiment signal failed: %s", exc)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
