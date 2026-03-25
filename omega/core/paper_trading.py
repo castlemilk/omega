@@ -68,6 +68,25 @@ class PaperTradingEngine:
         self._realised_pnl: float = 0.0
 
     # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_price(sym_market: dict) -> float:
+        """Extract a scalar price from a market data dict.
+
+        DataIngestionNode returns ``close`` as a list of OHLCV prices.
+        This helper handles both list and scalar values.
+        """
+        c = sym_market.get("close") or sym_market.get("price") or 0.0
+        if isinstance(c, list):
+            return float(c[-1]) if c else 0.0
+        try:
+            return float(c)
+        except (TypeError, ValueError):
+            return 0.0
+
+    # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
@@ -114,7 +133,7 @@ class PaperTradingEngine:
         for sym, pos in list(self._positions.items()):
             sym_market = market_data.get(sym) or {}
             current_price = (
-                float(sym_market.get("close", 0.0)) if isinstance(sym_market, dict) else 0.0
+                self._extract_price(sym_market) if isinstance(sym_market, dict) else 0.0
             )
             if current_price > 0 and pos.get("entry", 0.0) > 0:
                 direction = 1.0 if pos["side"] == "long" else -1.0
@@ -147,10 +166,9 @@ class PaperTradingEngine:
 
             # Resolve current market price for this ticker
             sym_market = market_data.get(symbol) or {}
-            if isinstance(sym_market, dict):
-                current_price = float(sym_market.get("close", 0.0))
-            else:
-                current_price = 0.0
+            current_price = (
+                self._extract_price(sym_market) if isinstance(sym_market, dict) else 0.0
+            )
             entry_price = current_price if current_price > 0 else 1.0
 
             ts_now = datetime.now(UTC)
