@@ -118,35 +118,43 @@ class DynamicWeightAllocator:
         for signal_name, ic_value in ic_updates.items():
             self.update_ic(signal_name, ic_value, regime)
 
-    def seed_initial_ic(
+    def seed_priors(
         self,
-        initial_ics: dict[str, float],
+        priors: dict[str, float],
         n_samples: int = MIN_IC_SAMPLES,
     ) -> None:
         """
-        Seed initial IC EMA values to establish a prior weight distribution.
+        Seed initial IC EMA values based on prior knowledge of signal quality.
 
-        Directly sets ic_ema and sample_counts (bypassing EMA smoothing) so
-        the allocator starts with informed weights rather than equal fallback.
-        Applies to all known regimes.
+        Bypasses the MIN_IC_SAMPLES warmup so the allocator starts with
+        informed weights rather than equal weights from cycle 1.
 
-        Parameters
-        ----------
-        initial_ics : dict
-            {signal_name: desired_ic_ema_value}  — values ∈ [-1, 1].
-        n_samples : int
-            Sample count to assign (must be >= MIN_IC_SAMPLES to bypass fallback).
+        Args:
+            priors  : {signal_name: ic_value} — higher value = better predictor.
+                      Typical range 0.04-0.20 (crypto IC values).
+            n_samples: Fake sample count assigned per signal; must be >= MIN_IC_SAMPLES
+                       to satisfy the eligibility check in _compute_weights().
         """
-        n_samples = max(n_samples, MIN_IC_SAMPLES)
-        for regime in list(self._profiles.keys()):
+        n = max(n_samples, MIN_IC_SAMPLES)
+        for regime in KNOWN_REGIMES:
             profile = self._profiles[regime]
-            for signal_name, ic_value in initial_ics.items():
+            updated = False
+            for signal_name, ic_value in priors.items():
                 if signal_name not in self._signals:
-                    logger.warning("seed_initial_ic: unknown signal '%s'", signal_name)
+                    logger.debug("seed_priors: unknown signal '%s', skipping", signal_name)
                     continue
                 profile.ic_ema[signal_name] = float(ic_value)
-                profile.sample_counts[signal_name] = n_samples
-            profile.weights = self._compute_weights(profile)
+                # Only seed if the signal hasn't accumulated real observations yet
+                if profile.sample_counts.get(signal_name, 0) < n:
+                    profile.sample_counts[signal_name] = n
+                updated = True
+            if updated:
+                profile.weights = self._compute_weights(profile)
+        logger.debug(
+            "seed_priors: seeded %d signals across %d regimes",
+            len(priors),
+            len(KNOWN_REGIMES),
+        )
 
     def allocate(self, regime: str = "default") -> AllocationResult:
         """

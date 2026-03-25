@@ -35,41 +35,27 @@ import logging
 import os
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, ClassVar
 
 from omega.core.actions import NodeAction
-from omega.core.cross_node_memory import CrossNodeMemory
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-from omega.core.signal_bus import get_signal_bus
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
-from omega.nodes.victoria.disagreement_signal import DisagreementSignalComputer
+from omega.nodes.victoria.derivatives_signals import DerivativesSignal
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
-from omega.nodes.victoria.factor_model import SignalFactorModel
-from omega.nodes.victoria.information_flow import TransferEntropyAnalyzer
-from omega.nodes.victoria.liquidation_signals import LiquidationCascadeSignal, LiquidationRisk
-from omega.nodes.victoria.macro_signals import MacroSignalProvider
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
-from omega.nodes.victoria.meta_model import MetaModel
-from omega.nodes.victoria.news_signals import NewsSignalProvider
-from omega.nodes.victoria.options_signals import OptionsSignalProvider
-from omega.nodes.victoria.position_sizing import KellyPositionSizer
-from omega.nodes.victoria.regime_detector import HMMRegimeDetector
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
     BTCDominanceSignal,
     CrossAssetSignal,
-    DerivativesSignal,
     LongShortRatioSignal,
     MicrostructureSignal,
+    OnChainSignal,
     OrderFlowSignal,
     SentimentSignal,
 )
-from omega.nodes.victoria.stablecoin_signals import StablecoinFlowSignal
 from omega.nodes.victoria.strategy import StrategyNode
-from omega.nodes.victoria.twitter_signals import TwitterSentimentSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 
 logger = logging.getLogger("omega.nodes.victoria.victoria_node")
@@ -83,142 +69,35 @@ SIGNAL_NAMES = [
     "sentiment",
     "vrp",
     "market_data",
+    "derivatives",
+    "onchain",
     "long_short_ratio",
     "btc_dominance",
-    "news_sentiment",
-    "twitter_sentiment",
-    "stablecoin_flow",
-    "options_microstructure",  # Jim Simons GEX/PCR/skew/max-pain/term-structure
-    "derivatives",
-    "macro_signals",
 ]
+
+# Prior IC values seeded into DynamicWeightAllocator from day 1.
+# Based on historical predictive power for BTC cycle analysis.
+# These values will be overwritten as real IC observations accumulate.
+_SIGNAL_IC_PRIORS: dict[str, float] = {
+    "market_data": 0.15,  # MVRV Z-Score + Puell + exchange flows — historically best
+    "derivatives": 0.13,  # Funding rate + OI from Binance — strong contrarian/trend
+    "long_short_ratio": 0.10,  # Crowded positioning — strong contrarian
+    "sentiment": 0.09,  # Fear/Greed + funding (contrarian extremes)
+    "btc_dominance": 0.08,  # Cycle macro indicator
+    "vrp": 0.08,  # Volatility regime premium
+    "basic_signals": 0.07,  # Technical (SMA/RSI/MACD) — reliable but lagging
+    "order_flow": 0.07,  # VPIN / order book — useful in liquid markets
+    "onchain": 0.06,  # DeFi TVL — slower signal
+    "cross_asset": 0.05,  # BTC/ETH/SOL correlations
+    "microstructure": 0.04,  # Spread/tick patterns — noisiest at 15m TTL
+}
+
 # Map VRP regime to DynamicWeightAllocator regime strings
 _VRP_REGIME_MAP = {
     "FEAR": "high_vol",
     "COMPLACENCY": "crisis",
     "NEUTRAL": None,  # keep existing regime
 }
-
-
-# ---------------------------------------------------------------------------
-# SignalAttentionFusion — mini-transformer over the signal set
-# ---------------------------------------------------------------------------
-
-
-class SignalAttentionFusion:
-    """
-    8-dimensional scaled dot-product attention over signal vectors.
-
-    Each signal computes:
-      Q (query)  — "what regime are we in?" (from shared regime context)
-      K (key)    — "what regime am I good at?" (from signal's IC history)
-      V (value)  — my conviction (signal value * confidence)
-
-    Attention score = softmax(Q·K^T / √d) · V
-
-    The resulting attention weights are blended 50/50 with IC-based weights
-    so the system retains the learned IC signal while adding regime sensitivity.
-
-    Pure Python implementation — no numpy dependency.
-    """
-
-    DIM = 8  # attention dimension (small for speed)
-
-    def __init__(self, signal_names: list[str]) -> None:
-        import math
-        import random
-
-        self._signal_names = list(signal_names)
-        scale = math.sqrt(2.0 / (self.DIM * 2))
-
-        # Global query projection: regime context → DIM
-        self._W_q: list[list[float]] = self._xavier(self.DIM, self.DIM, scale, random)
-        # Per-signal key projections: signal state → DIM
-        self._W_k: dict[str, list[list[float]]] = {
-            name: self._xavier(self.DIM, self.DIM, scale, random) for name in signal_names
-        }
-
-    def fuse(
-        self,
-        signals: dict[str, Any],
-        ic_weights: dict[str, float],
-        regime_vec: list[float] | None = None,
-    ) -> dict[str, float]:
-        """
-        Compute attention-blended weights for all present signals.
-
-        Parameters
-        ----------
-        signals    : current signal dict (non-_ keys)
-        ic_weights : IC-based weights from DynamicWeightAllocator
-        regime_vec : optional 16-dim regime context vector; zeros if absent
-
-        Returns
-        -------
-        Normalised weight dict: signal_name → weight (sum ≈ 1)
-        """
-        import math
-
-        present = [n for n in self._signal_names if n in signals]
-        if not present:
-            return ic_weights
-
-        # Build query from regime vector (first DIM dims; pad if short)
-        rv = list(regime_vec or [])
-        rv = rv[: self.DIM] if len(rv) >= self.DIM else rv + [0.0] * (self.DIM - len(rv))
-        q = self._matmul_vec(self._W_q, rv)
-
-        # Compute keys and scalar values for each signal
-        keys: dict[str, list[float]] = {}
-        scalar_vals: dict[str, float] = {}
-        for name in present:
-            sig = signals[name]
-            val = float(sig.get("value", 0.0))
-            conf = float(sig.get("confidence", 0.5))
-            ic = float(sig.get("ic", 0.0))
-            w = float(ic_weights.get(name, 1.0))
-            # Key input: [val, conf, ic, weight, zeros…]
-            k_in = [val, conf, ic, w] + [0.0] * (self.DIM - 4)
-            keys[name] = self._matmul_vec(self._W_k[name], k_in)
-            scalar_vals[name] = val * conf
-
-        # Scaled dot-product attention
-        d_k = float(self.DIM) ** 0.5
-        raw_scores = {name: self._dot(q, keys[name]) / d_k for name in present}
-        max_s = max(raw_scores.values())
-        exp_s = {name: math.exp(s - max_s) for name, s in raw_scores.items()}
-        total_exp = sum(exp_s.values()) or 1.0
-        attn_weights = {name: exp_s[name] / total_exp for name in present}
-
-        # Blend 50/50 with IC weights (retain IC learning, add regime sensitivity)
-        blended: dict[str, float] = {}
-        for name in present:
-            blended[name] = 0.5 * ic_weights.get(name, 1.0) + 0.5 * attn_weights[name]
-
-        # Normalise to sum ≈ 1
-        total = sum(blended.values()) or 1.0
-        return {name: v / total for name, v in blended.items()}
-
-    # ------------------------------------------------------------------
-    # Static helpers — pure Python linear algebra
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _xavier(
-        rows: int,
-        cols: int,
-        scale: float,
-        rng: Any,
-    ) -> list[list[float]]:
-        return [[rng.gauss(0.0, scale) for _ in range(cols)] for _ in range(rows)]
-
-    @staticmethod
-    def _matmul_vec(w: list[list[float]], v: list[float]) -> list[float]:
-        return [sum(w[i][j] * v[j] for j in range(len(v))) for i in range(len(w))]
-
-    @staticmethod
-    def _dot(a: list[float], b: list[float]) -> float:
-        return sum(ai * bi for ai, bi in zip(a, b, strict=False))
 
 
 class VictoriaNode(Node):
@@ -256,74 +135,21 @@ class VictoriaNode(Node):
         self._sentiment = SentimentSignal()
         self._vrp = VRPSignalNode()
         self._market_data_signal = MarketDataSignal()
+        self._derivatives = DerivativesSignal()
+        self._onchain = OnChainSignal()
         self._long_short_ratio = LongShortRatioSignal()
         self._btc_dominance = BTCDominanceSignal()
-        self._news_signal = NewsSignalProvider()
-        self._twitter_sentiment = TwitterSentimentSignal()
-        self._stablecoin_flow = StablecoinFlowSignal()
-        self._liquidation_cascade = LiquidationCascadeSignal()
-        self._options = OptionsSignalProvider()  # GEX/PCR/skew/max-pain/term-structure
-        self._derivatives = DerivativesSignal()
-        self._macro_signals = MacroSignalProvider()
 
-        # Dynamic weight allocator — includes "disagreement" meta-signal
-        self._weight_allocator = DynamicWeightAllocator(
-            signal_names=[*SIGNAL_NAMES, "disagreement"]
-        )
-
-        # Seed prior weights: options_microstructure starts at ~20% (alpha-edge #1).
-        # All others seeded at 0.10 IC; options at 0.25 → 0.25/1.25 = 20%.
-        self._weight_allocator.seed_initial_ic(
-            initial_ics={
-                "basic_signals": 0.10,
-                "order_flow": 0.10,
-                "cross_asset": 0.10,
-                "microstructure": 0.10,
-                "sentiment": 0.10,
-                "vrp": 0.10,
-                "market_data": 0.10,
-                "onchain": 0.10,
-                "long_short_ratio": 0.10,
-                "btc_dominance": 0.10,
-                "options_microstructure": 0.25,
-            },
-        )
-
-        # ── V3 Quant Pipeline ────────────────────────────────────────────────
-        self._regime_detector = HMMRegimeDetector()
-        self._factor_model = SignalFactorModel(n_components=3)
-        self._te_analyzer = TransferEntropyAnalyzer()
-        self._meta_model = MetaModel()
-        self._kelly_sizer = KellyPositionSizer(initial_capital=100_000.0)
-        # ── End V3 ──────────────────────────────────────────────────────────
-
-        # macro_signals starts at equal weight (1/11 ≈ 9%) during the cold-start
-        # period.  Once all signals accumulate MIN_IC_SAMPLES IC observations the
-        # allocator switches to IC-proportional weights; the target allocation for
-        # macro_signals at steady state is ~15% (IC seed = _MACRO_INITIAL_IC).
+        # Dynamic weight allocator — seeded with prior IC knowledge from day 1
+        self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
+        self._weight_allocator.seed_priors(_SIGNAL_IC_PRIORS)
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
 
-        # ── New inter-node reasoning subsystems ──────────────────────────
-        # Signal bus: broadcast own state; read peer states before computing
-        self._signal_bus = get_signal_bus()
-
-        # Disagreement signal: exposes the *structure* of disagreement
-        self._disagreement_computer = DisagreementSignalComputer()
-
-        # Attention-weighted signal fusion (8-dim mini-transformer over signals)
-        self._attention_fusion = SignalAttentionFusion(
-            signal_names=[*SIGNAL_NAMES, "disagreement"]
-        )
-
-        # Cross-node memory: learns which signal combinations are predictive
-        self._cross_node_memory = CrossNodeMemory()
-
         # Runtime state
         self._last_market_data: dict[str, Any] = {}
         self._last_signals: dict[str, Any] = {}
-        self._last_liquidation_risk: LiquidationRisk | None = None
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
@@ -336,10 +162,6 @@ class VictoriaNode(Node):
 
         # Lazy-initialised reflection store (requires DATABASE_URL at runtime)
         self._reflection_store: Any = None
-
-        # Lazy-initialised memory kernel and memory bus
-        self._mem_kernel: Any = None
-        self._mem_bus: Any = None
 
     # ------------------------------------------------------------------
     # Node interface
@@ -380,7 +202,6 @@ class VictoriaNode(Node):
             NodeAction.RISK_MANAGEMENT.value,
             NodeAction.VERIFICATION.value,
             NodeAction.MEMORY.value,
-            NodeAction.REFLECT.value,
             NodeAction.IMPROVEMENT.value,
             NodeAction.ADVERSARIAL.value,
         ]
@@ -460,12 +281,12 @@ class VictoriaNode(Node):
             elif action in (
                 NodeAction.VERIFICATION.value,
                 NodeAction.WALK_FORWARD.value,
-            ) or action in (NodeAction.ADVERSARIAL.value, "ring3adversarial"):
+                NodeAction.MEMORY.value,
+                NodeAction.ADVERSARIAL.value,
+                "ring3adversarial",
+            ):
+                # These are handled internally by Python orchestrator; return success no-op
                 result = {"status": "ok", "action": action}
-            elif action == NodeAction.MEMORY.value:
-                result = self._do_memory(inp)
-            elif action in (NodeAction.REFLECT.value, "reflect", "memory_reflect"):
-                result = self._do_reflect_action(inp)
             elif action in (NodeAction.IMPROVEMENT.value, NodeAction.IMPROVEMENT_ENGINE.value):
                 result = self._do_improvement(inp)
             else:
@@ -575,14 +396,10 @@ class VictoriaNode(Node):
             "sentiment",
             "vrp",
             "market_data",
+            "derivatives",
+            "onchain",
             "long_short_ratio",
             "btc_dominance",
-            "news_sentiment",
-            "twitter_sentiment",
-            "stablecoin_flow",
-            "options_microstructure",
-            "derivatives",
-            "macro_signals",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -622,15 +439,11 @@ class VictoriaNode(Node):
         db_url : str | None
             Postgres connection URL. Falls back to DATABASE_URL env var.
         """
-        try:
-            import psycopg
-        except ImportError:
-            logger.debug("psycopg not available — skipping signal persistence")
-            return
+        import psycopg
 
         url = db_url or os.getenv("DATABASE_URL")
         if not url:
-            logger.debug("persist_signals: DATABASE_URL not set — signal persistence skipped")
+            logger.warning("persist_signals: DATABASE_URL not set — signal persistence skipped")
             return
 
         weights: dict[str, float] = signals.get("_weights", {})
@@ -691,202 +504,6 @@ class VictoriaNode(Node):
         if not confidences:
             return 0.5  # signals present but no confidence data
         return sum(confidences) / len(confidences)
-
-    # ------------------------------------------------------------------
-    # Memory action (episodic store + consolidation trigger)
-    # ------------------------------------------------------------------
-
-    def _do_memory(self, inp: NodeInput) -> dict[str, Any]:
-        """
-        Store the current cycle as an episodic memory and trigger semantic
-        consolidation every 50 cycles.  Also queries relevant memories and
-        injects them into working context for the next cycle.
-        """
-        cycle = int(inp.context.get("cycle", self._total_cycles_run))
-        signals = self._last_signals
-        regime = str(signals.get("_regime", "default"))
-        conviction = float(signals.get("_quality_score", 0.0))
-
-        result: dict[str, Any] = {"status": "ok", "cycle": cycle}
-
-        # 1. Store episodic memory via MemoryKernel
-        mem_kernel = self._get_mem_kernel()
-        if mem_kernel is not None:
-            try:
-                mem_kernel.begin_cycle(cycle)
-                episode_id = mem_kernel.store_episode(
-                    event_type="signal_cycle",
-                    content={
-                        "cycle": cycle,
-                        "regime": regime,
-                        "conviction": conviction,
-                        "signal_count": int(signals.get("_signal_count", 0)),
-                        "avg_confidence": float(signals.get("_avg_confidence", 0.0)),
-                        "signal_coverage": float(signals.get("_signal_coverage", 0.0)),
-                        "quality_score": conviction,
-                    },
-                    tags=["signal_cycle", regime, f"cycle_{cycle}"],
-                    importance=min(1.0, 0.3 + conviction * 0.7),
-                    cycle=cycle,
-                    namespace="victoria",
-                )
-                result["episode_id"] = episode_id
-
-                # Trigger semantic consolidation every 50 cycles
-                if cycle > 0 and cycle % 50 == 0:
-                    concepts = mem_kernel.consolidate(namespace="victoria")
-                    result["concepts_updated"] = len(concepts)
-                    logger.info(
-                        "Memory consolidation at cycle=%d: %d semantic concepts updated",
-                        cycle,
-                        len(concepts),
-                    )
-
-                # Query relevant memories for context injection
-                relevant = mem_kernel.retrieve_episodes(
-                    tags=[regime], limit=3, min_importance=0.2, namespace="victoria"
-                )
-                if relevant:
-                    result["memory_context"] = [
-                        {"lesson": ep.content.get("lesson", ""), "cycle": ep.cycle}
-                        for ep in relevant
-                        if ep.content.get("lesson")
-                    ]
-            except Exception as exc:
-                logger.debug("_do_memory MemoryKernel step failed: %s", exc)
-
-        # 2. Write regime insight to cross-project memory bus
-        mem_bus = self._get_mem_bus()
-        if mem_bus is not None and conviction > 0.4:
-            try:
-                from omega.core.memory_bus import MemoryType
-
-                vrp_regime = ""
-                if isinstance(signals.get("vrp"), dict):
-                    vrp_regime = str(signals["vrp"].get("regime_tag", ""))
-                content = (
-                    f"Cycle {cycle}: {regime} regime (VRP={vrp_regime or 'N/A'}), "
-                    f"conviction={conviction:.2f}, signals={int(signals.get('_signal_count', 0))}"
-                )
-                mem_bus.write(
-                    project_source="victoria",
-                    memory_type=MemoryType.REGIME_INSIGHT,
-                    content=content,
-                    relevance_score=conviction,
-                    cycle=cycle,
-                    ttl_seconds=86400 * 3,
-                )
-            except Exception as exc:
-                logger.debug("_do_memory MemoryBus write failed: %s", exc)
-
-        return result
-
-    def _do_reflect_action(self, inp: NodeInput) -> dict[str, Any]:
-        """
-        Delegate to ReflectionNode: LLM-driven reflection after a cycle.
-
-        Uses the last computed signals + optional trade result from context.
-        """
-        from omega.nodes.shared.reflection_node import ReflectionNode
-
-        if not hasattr(self, "_reflection_node"):
-            self._reflection_node = ReflectionNode()
-            # Share the same brain so we reuse the configured LLM adapter
-            self._reflection_node.brain = self.brain
-
-        cycle = int(inp.context.get("cycle", self._total_cycles_run))
-        reflect_inp = NodeInput(
-            action="reflect",
-            parameters={
-                "cycle": cycle,
-                "signals": self._last_signals,
-                "trade_result": str(inp.parameters.get("trade_result", "hold")),
-                "regime": str(self._last_signals.get("_regime", "default")),
-                "conviction": float(self._last_signals.get("_quality_score", 0.0)),
-            },
-            context=inp.context,
-        )
-        out = self._reflection_node.execute(reflect_inp)
-        return out.result or {"status": "ok", "lesson": ""}
-
-    def _get_mem_kernel(self) -> Any:
-        """Lazy-init MemoryKernel; returns None if DATABASE_URL not set."""
-        if self._mem_kernel is not None:
-            return self._mem_kernel
-        if not os.getenv("DATABASE_URL"):
-            return None
-        try:
-            from omega.core.memory import MemoryKernel
-
-            self._mem_kernel = MemoryKernel()
-        except Exception as exc:
-            logger.debug("MemoryKernel init failed: %s", exc)
-        return self._mem_kernel
-
-    def _get_mem_bus(self) -> Any:
-        """Lazy-init MemoryBus; returns None if DATABASE_URL not set."""
-        if self._mem_bus is not None:
-            return self._mem_bus
-        if not os.getenv("DATABASE_URL"):
-            return None
-        try:
-            from omega.core.memory_bus import MemoryBus
-
-            self._mem_bus = MemoryBus()
-        except Exception as exc:
-            logger.debug("MemoryBus init failed: %s", exc)
-        return self._mem_bus
-
-    def get_memory_context_for_proposals(self) -> str:
-        """
-        Query MemoryKernel + MemoryBus for insights relevant to the current
-        regime and return a formatted context block for LLM prompts.
-        """
-        parts: list[str] = []
-        signals = self._last_signals
-        regime = str(signals.get("_regime", "default"))
-
-        mem_kernel = self._get_mem_kernel()
-        if mem_kernel is not None:
-            try:
-                episodes = mem_kernel.retrieve_episodes(
-                    tags=[regime], limit=3, min_importance=0.2, namespace="victoria"
-                )
-                for ep in episodes:
-                    lesson = ep.content.get("lesson", "")
-                    if lesson:
-                        parts.append(f"  Past lesson (cycle {ep.cycle}): {lesson}")
-
-                semantic = mem_kernel.retrieve_semantic(
-                    tags=[regime], limit=2, min_confidence=0.3, namespace="victoria"
-                )
-                for sm in semantic:
-                    parts.append(
-                        f"  Pattern ({sm.concept}, conf={sm.confidence:.2f}): {sm.content}"
-                    )
-            except Exception as exc:
-                logger.debug("get_memory_context_for_proposals kernel failed: %s", exc)
-
-        mem_bus = self._get_mem_bus()
-        if mem_bus is not None:
-            try:
-                from omega.core.memory_bus import MemoryType
-
-                bus_mems = mem_bus.read(
-                    memory_types=[MemoryType.REGIME_INSIGHT, MemoryType.RISK_WARNING],
-                    min_relevance=0.4,
-                    limit=3,
-                )
-                for m in bus_mems:
-                    src = m.get("project_source", "")
-                    content = m.get("content", "")
-                    parts.append(f"  Shared memory [{src}]: {content}")
-            except Exception as exc:
-                logger.debug("get_memory_context_for_proposals bus failed: %s", exc)
-
-        if not parts:
-            return ""
-        return "Memory context for current regime:\n" + "\n".join(parts)
 
     # ------------------------------------------------------------------
     # Reflection helpers (V-TR1)
@@ -1068,18 +685,6 @@ class VictoriaNode(Node):
         if reflection_ctx:
             inp.context["past_lessons"] = reflection_ctx
 
-        # ── Read peer states from the signal bus BEFORE computing ─────────
-        # This lets us condition on other nodes' latest published signals:
-        # e.g. "derivatives signal is bearish AND news is bearish → higher conviction"
-        peer_consensus = self._signal_bus.compute_peer_consensus(self._node_id)
-        if peer_consensus["peer_count"] > 0:
-            logger.debug(
-                "signal_bus peers=%d consensus_direction=%d strength=%.2f",
-                peer_consensus["peer_count"],
-                peer_consensus["consensus_direction"],
-                peer_consensus["consensus_strength"],
-            )
-
         signals: dict[str, Any] = {}
 
         # 1. Basic technical signals (SMA/RSI/MACD/BB)
@@ -1109,128 +714,133 @@ class VictoriaNode(Node):
                 signals["basic_signals"]["value"] = 0.0
                 signals["basic_signals"]["confidence"] = 0.0
 
-        # Advanced signals are only computed outside PICO mode.
-        # DAG parallel pipeline: all 13 advanced signals are independent
-        # and computed concurrently via a ThreadPoolExecutor (≈30% faster).
+        # Advanced signals are only computed outside PICO mode
+        # (they may use more complex / probabilistic computations)
         if not pico_mode:
-            vrp_regime_override: str | None = None
+            try:
+                of_val = self._order_flow.compute(market_data)
+                signals["order_flow"] = {
+                    "value": of_val.value,
+                    "confidence": of_val.confidence,
+                    "regime_tag": of_val.regime_tag,
+                    "raw": of_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("order_flow signal failed: %s", exc)
 
-            def _compute_order_flow() -> tuple[str, dict[str, Any]]:
-                val = self._order_flow.compute(market_data)
-                return "order_flow", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                ca_val = self._cross_asset.compute(market_data)
+                signals["cross_asset"] = {
+                    "value": ca_val.value,
+                    "confidence": ca_val.confidence,
+                    "regime_tag": ca_val.regime_tag,
+                    "raw": ca_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("cross_asset signal failed: %s", exc)
 
-            def _compute_cross_asset() -> tuple[str, dict[str, Any]]:
-                val = self._cross_asset.compute(market_data)
-                return "cross_asset", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                ms_val = self._microstructure.compute(market_data)
+                signals["microstructure"] = {
+                    "value": ms_val.value,
+                    "confidence": ms_val.confidence,
+                    "regime_tag": ms_val.regime_tag,
+                    "raw": ms_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("microstructure signal failed: %s", exc)
 
-            def _compute_microstructure() -> tuple[str, dict[str, Any]]:
-                val = self._microstructure.compute(market_data)
-                return "microstructure", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                sent_val = self._sentiment.compute(market_data)
+                signals["sentiment"] = {
+                    "value": sent_val.value,
+                    "confidence": sent_val.confidence,
+                    "regime_tag": sent_val.regime_tag,
+                    "raw": sent_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("sentiment signal failed: %s", exc)
 
-            def _compute_sentiment() -> tuple[str, dict[str, Any]]:
-                val = self._sentiment.compute(market_data)
-                return "sentiment", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
-
-            def _compute_vrp() -> tuple[str, dict[str, Any]]:
-                vrp_out = self._vrp.execute(NodeInput(action="compute_vrp", parameters={"market_data": market_data}, context=inp.context))
+            try:
+                vrp_out = self._vrp.execute(
+                    NodeInput(
+                        action="compute_vrp",
+                        parameters={"market_data": market_data},
+                        context=inp.context,
+                    )
+                )
                 if vrp_out.success and vrp_out.result:
                     vr = vrp_out.result
-                    return "vrp", {"value": vr.get("vrp_signal", 0.0), "confidence": vr.get("confidence", 0.0), "regime_tag": vr.get("vrp_regime", "NEUTRAL"), "raw": vr, "_vrp_regime": vr.get("vrp_regime", "NEUTRAL")}
-                return "vrp", {}
+                    signals["vrp"] = {
+                        "value": vr.get("vrp_signal", 0.0),
+                        "confidence": vr.get("confidence", 0.0),
+                        "regime_tag": vr.get("vrp_regime", "NEUTRAL"),
+                        "raw": vr,
+                    }
+                    # VRP regime overrides weight-allocator regime when informative
+                    vrp_regime = vr.get("vrp_regime", "NEUTRAL")
+                    mapped = _VRP_REGIME_MAP.get(vrp_regime)
+                    if mapped is not None:
+                        regime = mapped
+            except Exception as exc:
+                logger.debug("vrp signal failed: %s", exc)
 
-            def _compute_market_data() -> tuple[str, dict[str, Any]]:
-                val = self._market_data_signal.compute(market_data)
-                return "market_data", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                md_val = self._market_data_signal.compute(market_data)
+                signals["market_data"] = {
+                    "value": md_val.value,
+                    "confidence": md_val.confidence,
+                    "regime_tag": md_val.regime_tag,
+                    "raw": md_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("market_data signal failed: %s", exc)
 
-            def _compute_long_short_ratio() -> tuple[str, dict[str, Any]]:
-                val = self._long_short_ratio.compute(market_data)
-                return "long_short_ratio", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                deriv_val = self._derivatives.compute(market_data)
+                signals["derivatives"] = {
+                    "value": deriv_val.value,
+                    "confidence": deriv_val.confidence,
+                    "regime_tag": deriv_val.regime_tag,
+                    "raw": deriv_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("derivatives signal failed: %s", exc)
 
-            def _compute_btc_dominance() -> tuple[str, dict[str, Any]]:
-                val = self._btc_dominance.compute(market_data)
-                return "btc_dominance", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                oc_val = self._onchain.compute(market_data)
+                signals["onchain"] = {
+                    "value": oc_val.value,
+                    "confidence": oc_val.confidence,
+                    "regime_tag": oc_val.regime_tag,
+                    "raw": oc_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("onchain signal failed: %s", exc)
 
-            def _compute_news() -> tuple[str, dict[str, Any]]:
-                val = self._news_signal.compute(market_data)
-                return "news_sentiment", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                ls_val = self._long_short_ratio.compute(market_data)
+                signals["long_short_ratio"] = {
+                    "value": ls_val.value,
+                    "confidence": ls_val.confidence,
+                    "regime_tag": ls_val.regime_tag,
+                    "raw": ls_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("long_short_ratio signal failed: %s", exc)
 
-            def _compute_twitter() -> tuple[str, dict[str, Any]]:
-                val = self._twitter_sentiment.compute(market_data)
-                return "twitter_sentiment", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
+            try:
+                dom_val = self._btc_dominance.compute(market_data)
+                signals["btc_dominance"] = {
+                    "value": dom_val.value,
+                    "confidence": dom_val.confidence,
+                    "regime_tag": dom_val.regime_tag,
+                    "raw": dom_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("btc_dominance signal failed: %s", exc)
 
-            def _compute_stablecoin() -> tuple[str, dict[str, Any]]:
-                val = self._stablecoin_flow.compute(market_data)
-                return "stablecoin_flow", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
-
-            def _compute_liquidation() -> tuple[str, dict[str, Any]]:
-                liq_risk = self._liquidation_cascade.compute(market_data)
-                self._last_liquidation_risk = liq_risk
-                logger.debug("liquidation_cascade: risk=%.3f scale=%.1f regime=%s", liq_risk.risk_score, liq_risk.position_scale, liq_risk.regime_tag)
-                return "_liquidation_risk", {"risk_score": liq_risk.risk_score, "position_scale": liq_risk.position_scale, "regime_tag": liq_risk.regime_tag, "raw": liq_risk.raw}
-
-            def _compute_options() -> tuple[str, dict[str, Any]]:
-                val = self._options.compute(market_data)
-                return "options_microstructure", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
-
-            def _compute_macro() -> tuple[str, dict[str, Any]]:
-                val = self._macro_signals.compute(market_data)
-                return "macro_signals", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
-
-            def _compute_derivatives() -> tuple[str, dict[str, Any]]:
-                val = self._derivatives.compute(market_data)
-                return "derivatives", {"value": val.value, "confidence": val.confidence, "regime_tag": val.regime_tag, "raw": val.raw}
-
-            _dag_tasks = [
-                _compute_order_flow, _compute_cross_asset, _compute_microstructure,
-                _compute_sentiment, _compute_vrp, _compute_market_data,
-                _compute_long_short_ratio, _compute_btc_dominance, _compute_news,
-                _compute_twitter, _compute_stablecoin, _compute_liquidation,
-                _compute_options, _compute_macro, _compute_derivatives,
-            ]
-
-            with ThreadPoolExecutor(max_workers=len(_dag_tasks)) as _pool:
-                _futures = {_pool.submit(fn): fn.__name__ for fn in _dag_tasks}
-                for _fut in as_completed(_futures):
-                    _fn_name = _futures[_fut]
-                    try:
-                        _key, _val = _fut.result()
-                        if _val:
-                            signals[_key] = _val
-                            # VRP regime override — applied after all signals collected
-                            if _key == "vrp":
-                                _vrp_r = _val.pop("_vrp_regime", None)
-                                if _vrp_r:
-                                    vrp_regime_override = _vrp_r
-                    except Exception as exc:
-                        logger.debug("%s signal failed: %s", _fn_name, exc)
-
-            # Apply VRP regime override (was computed in parallel; safe to apply now)
-            if vrp_regime_override is not None:
-                mapped = _VRP_REGIME_MAP.get(vrp_regime_override)
-                if mapped is not None:
-                    regime = mapped
-
-        # 2. Disagreement signal — exposes the *structure* of signal disagreement
-        # Computed before weighting so it sees raw unweighted signal values.
-        # Key insight: the PATTERN of disagreement is predictive.
-        # When all signals except one agree → outlier is usually wrong.
-        # When signals split 50/50 → stay out.
-        try:
-            disagreement_features = self._disagreement_computer.compute(signals)
-            signals["disagreement"] = self._disagreement_computer.to_signal_dict(
-                disagreement_features
-            )
-            logger.debug(
-                "disagreement: split=%.2f clusters=%d outliers=%d consensus=%.2f",
-                disagreement_features.split_score,
-                disagreement_features.cluster_count,
-                disagreement_features.outlier_count,
-                disagreement_features.consensus_direction,
-            )
-        except Exception as exc:
-            logger.debug("disagreement signal failed: %s", exc)
-
-        # 3. Compute IC proxies and update weight allocator with direction consistency
+        # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
         for name, sig in signals.items():
             if name.startswith("_"):
@@ -1254,7 +864,7 @@ class VictoriaNode(Node):
         except Exception as exc:
             logger.debug("IC update failed: %s", exc)
 
-        # 4. Apply dynamic weighting (IC-based after MIN_IC_SAMPLES)
+        # 3. Apply dynamic weighting (uses IC-based weights after MIN_IC_SAMPLES)
         raw_weights = {name: 1.0 for name in signals if not name.startswith("_")}
         try:
             alloc = self._weight_allocator.allocate(regime=regime)
@@ -1270,107 +880,6 @@ class VictoriaNode(Node):
                 signals[name]["ic"] = round(alloc.ic_ema.get(name, 0.0), 6)
         except Exception as exc:
             logger.debug("weight allocation failed, using equal weights: %s", exc)
-
-        # ── V3 Quant Pipeline ────────────────────────────────────────────────
-        # 4a. Regime detection (HMM)
-        regime_result: dict[str, Any] = {}
-        try:
-            regime_result = self._regime_detector.update(market_data)
-            regime_probs: list[float] = regime_result.get("probs", [1 / 3, 1 / 3, 1 / 3])
-            # Apply regime-dependent signal multipliers on top of IC weights
-            multipliers = regime_result.get("signal_multipliers", {})
-            if multipliers:
-                for name in list(raw_weights.keys()):
-                    m = multipliers.get(name, 1.0)
-                    raw_weights[name] = raw_weights.get(name, 0.0) * m
-                # Renormalise
-                total_rw = sum(raw_weights.values()) or 1.0
-                raw_weights = {k: v / total_rw for k, v in raw_weights.items()}
-        except Exception as exc:
-            logger.debug("Regime detection failed: %s", exc)
-            regime_probs = [1 / 3, 1 / 3, 1 / 3]
-
-        # 4b. Factor model (PCA)
-        factor_result: dict[str, Any] = {}
-        factor_factors: list[float] = [0.0, 0.0, 0.0]
-        signal_vals_for_factors: dict[str, float] = {}
-        try:
-            signal_vals_for_factors = {
-                name: float(signals[name].get("value", 0.0))
-                for name in signals
-                if not name.startswith("_") and isinstance(signals[name], dict)
-            }
-            factor_result = self._factor_model.update(signal_vals_for_factors)
-            factor_factors = factor_result.get("factors", [0.0, 0.0, 0.0])
-        except Exception as exc:
-            logger.debug("Factor model failed: %s", exc)
-
-        # 4c. Transfer entropy (causal weights)
-        try:
-            self._te_analyzer.update(signal_vals_for_factors)
-            raw_weights = self._te_analyzer.apply_causal_weights(raw_weights)
-        except Exception as exc:
-            logger.debug("Transfer entropy failed: %s", exc)
-
-        # 4d. Meta-model conviction
-        meta_result: dict[str, Any] = {}
-        try:
-            meta_result = self._meta_model.predict(
-                regime_probs=regime_probs,
-                factors=factor_factors,
-                signal_values=signal_vals_for_factors,
-                ic_weights=raw_weights,
-            )
-            # Embed meta-conviction into each signal's "value" when model is active
-            if meta_result.get("use_meta"):
-                conviction_val = float(meta_result.get("conviction", 0.0))
-                confidence_val = float(meta_result.get("confidence", 0.5))
-                signals["_meta_conviction"] = conviction_val
-                signals["_meta_confidence"] = confidence_val
-                signals["_meta_win_prob"] = float(meta_result.get("win_probability", 0.5))
-                signals["_meta_source"] = meta_result.get("source", "meta_model")
-        except Exception as exc:
-            logger.debug("Meta-model prediction failed: %s", exc)
-
-        # Embed quant metadata for downstream consumers
-        signals["_regime_hmm"] = regime_result.get("regime", "unknown")
-        signals["_regime_probs"] = regime_probs
-        signals["_factors"] = factor_factors
-        signals["_factor_composite"] = factor_result.get("composite", 0.0)
-        signals["_meta_fitted"] = self._meta_model.is_fitted
-        signals["_meta_outcomes"] = self._meta_model.outcome_count
-        signals["_kelly_win_rate"] = self._kelly_sizer.compute_kelly_fraction()
-
-        # 4e. Attention-weighted fusion — replace simple IC-weighted average
-        # with a mini-transformer that weights signals by regime relevance.
-        # Blend 50/50 with IC weights to retain learned IC signal quality.
-        try:
-            _regime_codes = {
-                "trending": [1, 0, 0, 0, 0, 0, 0, 0],
-                "ranging": [0, 1, 0, 0, 0, 0, 0, 0],
-                "high_vol": [0, 0, 1, 0, 0, 0, 0, 0],
-                "low_vol": [0, 0, 0, 1, 0, 0, 0, 0],
-                "crisis": [0, 0, 0, 0, 1, 0, 0, 0],
-                "default": [0, 0, 0, 0, 0, 1, 0, 0],
-            }
-            regime_vec: list[float] = [float(x) for x in _regime_codes.get(regime, [0] * 8)]
-            # Append peer consensus as extra context dims
-            if peer_consensus["peer_count"] > 0:
-                regime_vec += [
-                    float(peer_consensus["consensus_direction"]),
-                    float(peer_consensus["consensus_strength"]),
-                ]
-            attn_weights = self._attention_fusion.fuse(
-                signals=signals,
-                ic_weights=raw_weights,
-                regime_vec=regime_vec,
-            )
-            if attn_weights:
-                raw_weights = attn_weights
-                logger.debug("attention_fusion applied for regime '%s'", regime)
-        except Exception as exc:
-            logger.debug("attention_fusion failed, keeping IC weights: %s", exc)
-        # ── End V3 ──────────────────────────────────────────────────────────
 
         # 4. Compute quality metrics for this cycle
         signal_names = [k for k in signals if not k.startswith("_")]
@@ -1415,52 +924,11 @@ class VictoriaNode(Node):
         signals["_signal_coverage"] = signal_coverage
         signals["_cycle"] = float(self._total_cycles_run)
 
-        # ── Cross-node memory feature vector ──────────────────────────────
-        # After 100+ trades the co-occurrence matrix provides a reliable
-        # expected_win_rate feature that the meta-model can use to scale
-        # position conviction.
-        try:
-            co_features = self._cross_node_memory.get_feature_vector(signals)
-            signals["_co_occurrence"] = co_features
-        except Exception as exc:
-            logger.debug("cross_node_memory feature vector failed: %s", exc)
-
-        # ── Publish own state to the signal bus ───────────────────────────
-        # Other nodes will read this before their own compute_signals call
-        # so they can condition on our latest state.
-        try:
-            # Build a compact 16-dim tensor for the Go attention router
-            # StateTensor.values is already a list[float]
-            tensor_list = self.get_state_tensor().values
-            self._signal_bus.publish(
-                node_id=self._node_id,
-                signals=signals,
-                tensor=tensor_list if isinstance(tensor_list, list) else list(tensor_list),
-            )
-        except Exception as exc:
-            logger.debug("signal_bus publish failed: %s", exc)
-
-        # ── Peer consensus summary in metadata ────────────────────────────
-        if peer_consensus["peer_count"] > 0:
-            signals["_peer_consensus"] = peer_consensus
-
         self._last_signals = signals
         self.persist_signals(signals)
 
         # Generate and store per-cycle reflection (V-TR1)
         self.reflect_on_cycle(self._total_cycles_run, signals)
-
-        # Store episodic memory and write to shared memory bus (V-MEM1)
-        try:
-            self._do_memory(
-                NodeInput(
-                    action=NodeAction.MEMORY.value,
-                    parameters={},
-                    context={"cycle": self._total_cycles_run},
-                )
-            )
-        except Exception as _mem_exc:
-            logger.debug("_do_memory inline call failed: %s", _mem_exc)
 
         logger.info(
             "cycle=%d quality=%.3f coverage=%.2f avg_conf=%.3f signals=%d (IC-weights=%s)",
@@ -1539,34 +1007,6 @@ class VictoriaNode(Node):
         regime: str = inp.parameters.get("regime", "default")
         pico_mode: bool = inp.parameters.get("pico_mode", False)
 
-        # ── Liquidation cascade risk gate ─────────────────────────────────────
-        # Read the most recent liquidation risk (computed during _do_compute_signals).
-        # Extreme risk (>0.9) blocks all new positions; high risk (>0.7) halves sizes.
-        liq_scale = 1.0
-        if self._last_liquidation_risk is not None:
-            liq_scale = self._last_liquidation_risk.position_scale
-            if liq_scale == 0.0:
-                logger.warning(
-                    "liquidation_cascade: EXTREME risk (%.3f) — blocking all new positions",
-                    self._last_liquidation_risk.risk_score,
-                )
-                return []
-            if liq_scale < 1.0:
-                logger.info(
-                    "liquidation_cascade: HIGH risk (%.3f) — reducing positions to %.0f%%",
-                    self._last_liquidation_risk.risk_score,
-                    liq_scale * 100,
-                )
-
-        # Inject memory context so the strategy / debate gate can reference past lessons
-        enriched_context = dict(inp.context)
-        try:
-            mem_ctx = self.get_memory_context_for_proposals()
-            if mem_ctx:
-                enriched_context["memory_context"] = mem_ctx
-        except Exception as _exc:
-            logger.debug("memory context fetch failed: %s", _exc)
-
         # Normalise signals to {ticker: {"composite": float, ...}} regardless of
         # whether they arrive as raw VictoriaNode output or the orchestrator-wrapped
         # {node_id: compute_signals_result} format.
@@ -1582,7 +1022,7 @@ class VictoriaNode(Node):
                 "pico_mode": pico_mode,
                 "regime": regime,
             },
-            context=enriched_context,
+            context=inp.context,
         )
         out = self._strategy.execute(strategy_inp)
         if out.success and out.result:
@@ -1590,6 +1030,8 @@ class VictoriaNode(Node):
             if isinstance(result, dict):
                 # Inject composite signal direction so the backtest bridge's
                 # _proposals_to_position can determine long vs short.
+                # Without this, _proposals_to_position always sees weight=1.0
+                # (always long) and no trades ever change direction.
                 composites = [
                     sig.get("composite", 0.0)
                     for sig in flat_signals.values()
@@ -1597,82 +1039,10 @@ class VictoriaNode(Node):
                 ]
                 if composites:
                     result.setdefault("composite", sum(composites) / len(composites))
-                # Apply liquidation cascade position scale
-                if liq_scale < 1.0 and "weight" in result:
-                    result["weight"] = float(result["weight"]) * liq_scale
-                    result["_liquidation_scale"] = liq_scale
-
-                # ── V3: apply Kelly + Risk Parity sizing to each weight ──────
-                try:
-                    raw_proposals = [
-                        {"symbol": sym, "weight": float(w)}
-                        for sym, w in result.get("weights", {}).items()
-                        if abs(float(w)) >= 0.005
-                    ]
-                    if raw_proposals:
-                        sized = self._kelly_sizer.size_proposals(
-                            raw_proposals,
-                            market_data=self._last_market_data,
-                            method="kelly_risk_parity",
-                        )
-                        result["weights"] = {p["symbol"]: p["weight"] for p in sized}
-                        result["kelly_sizing"] = {
-                            p["symbol"]: {
-                                "kelly_fraction": p.get("kelly_fraction"),
-                                "volatility": p.get("volatility"),
-                                "original_weight": p.get("original_weight"),
-                            }
-                            for p in sized
-                        }
-                except Exception as exc:
-                    logger.debug("Kelly sizing failed: %s", exc)
-                # ── End V3 ──────────────────────────────────────────────────
                 return [result]
             if isinstance(result, list):
-                # Apply liquidation cascade position scale to each proposal
-                if liq_scale < 1.0:
-                    for proposal in result:
-                        if isinstance(proposal, dict) and "weight" in proposal:
-                            proposal["weight"] = float(proposal["weight"]) * liq_scale
-                            proposal["_liquidation_scale"] = liq_scale
                 return result
         return []
-
-    def record_trade_outcome(
-        self,
-        symbol: str = "",
-        pnl: float = 0.0,
-        size: float = 1.0,
-        cycle_id: str | None = None,
-        signals: dict[str, Any] | None = None,
-    ) -> None:
-        """
-        Feed a closed trade result back into the V3 quant pipeline and cross-node memory.
-
-        Updates MetaModel training buffer, KellyPositionSizer win-rate estimator,
-        and CrossNodeMemory co-occurrence matrix.
-        """
-        try:
-            self._meta_model.record_outcome(pnl)
-        except Exception as exc:
-            logger.debug("meta_model.record_outcome failed: %s", exc)
-        if symbol:
-            try:
-                self._kelly_sizer.record_trade_outcome(symbol, pnl, size)
-            except Exception as exc:
-                logger.debug("kelly_sizer.record_trade_outcome failed: %s", exc)
-        sig = signals if signals is not None else self._last_signals
-        if sig:
-            try:
-                self._cross_node_memory.record_outcome(sig, pnl=pnl, cycle_id=cycle_id)
-                logger.debug(
-                    "record_trade_outcome: pnl=%.2f cycle=%s total_trades=%d",
-                    pnl,
-                    cycle_id,
-                    self._cross_node_memory.total_trades,
-                )
-            except Exception as exc:
-                logger.debug("record_trade_outcome cross_node failed: %s", exc)
 
     def _do_improvement(self, inp: NodeInput) -> dict[str, Any]:
         """

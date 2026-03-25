@@ -12,10 +12,17 @@ Signal classes:
 Each signal returns a SignalValue with value, confidence, and regime_tag.
 """
 
+import json
 import math
 import statistics
+import time
+import urllib.request
 from dataclasses import dataclass
 from typing import Any
+
+# Module-level cache for rate-limited endpoints (keyed by URL)
+_FETCH_CACHE: dict[str, tuple[float, Any]] = {}
+_DOM_CACHE_TTL = 3600  # BTC dominance rarely changes minute-to-minute; 1h cache
 
 
 @dataclass
@@ -758,27 +765,12 @@ class BTCDominanceSignal:
         raw: dict[str, float] = {}
 
         if btc_dom is None:
-            # Fallback: inline fetch if data_ingestion didn't supply it
-            try:
-                import json
-                import os
-                import urllib.request
-
-                url = "https://api.coingecko.com/api/v3/global"
-                _cg_headers: dict = {"User-Agent": "Mozilla/5.0"}
-                _cg_key = os.getenv("CG_API_KEY", "")
-                if _cg_key:
-                    _cg_headers["x-cg-demo-api-key"] = _cg_key
-                req = urllib.request.Request(url, headers=_cg_headers)
-                with urllib.request.urlopen(req, timeout=8) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                btc_dom = float(data["data"]["market_cap_percentage"]["btc"])
-                market_cap_change = float(
-                    data["data"].get("market_cap_change_percentage_24h_usd", 0.0)
-                )
-                raw["market_cap_change_24h"] = market_cap_change
-            except Exception:
+            # Fallback: inline fetch; tries CoinGecko then CoinPaprika (both free)
+            btc_dom, market_cap_change = self._fetch_dominance()
+            if btc_dom is None:
                 return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+            if market_cap_change is not None:
+                raw["market_cap_change_24h"] = market_cap_change
         else:
             mc_change = market_data.get("_market_cap_change_24h", 0.0)
             if mc_change:
@@ -815,320 +807,53 @@ class BTCDominanceSignal:
             raw=raw,
         )
 
-
-# ---------------------------------------------------------------------------
-# NewsSignal — CryptoPanic + RSS headline sentiment
-# ---------------------------------------------------------------------------
-
-
-class NewsSignal:
-    """
-    News sentiment signal from CryptoPanic public API and RSS headline scanning.
-
-    Keyword scoring:
-      - Bullish keywords (rally, adoption, ETF approval…) → positive signal
-      - Bearish keywords (crash, ban, hack, crackdown…)   → negative signal
-
-    Confidence scales with the number of recent headlines processed.
-    Falls back to zero-confidence neutral if all fetches fail.
-    """
-
-    _CRYPTOPANIC_URL = (
-        "https://cryptopanic.com/api/free/v1/posts/"
-        "?auth_token=Anon&public=true&kind=news&filter=hot"
-    )
-    _DECRYPT_RSS = "https://decrypt.co/feed"
-
-    _BULLISH_KW = frozenset(
-        [
-            "surge",
-            "rally",
-            "breakout",
-            "adoption",
-            "institutional",
-            "etf",
-            "approval",
-            "record",
-            "bull",
-            "gains",
-            "buy",
-            "accumulate",
-            "partnership",
-            "launch",
-            "upgrade",
-            "milestone",
-        ]
-    )
-    _BEARISH_KW = frozenset(
-        [
-            "crash",
-            "plunge",
-            "hack",
-            "scam",
-            "ban",
-            "regulation",
-            "crackdown",
-            "fud",
-            "dump",
-            "liquidation",
-            "bear",
-            "fall",
-            "correction",
-            "lawsuit",
-            "fraud",
-            "collapse",
-            "warning",
-            "sell",
-        ]
-    )
-
-    def _fetch_cryptopanic(self) -> list[str]:
-        """Return list of recent headline strings from CryptoPanic."""
-        import json
-        import urllib.request
-
-        try:
-            req = urllib.request.Request(
-                self._CRYPTOPANIC_URL,
-                headers={"User-Agent": "OmegaVictoria/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=6) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-            results = data.get("results", [])
-            return [r.get("title", "") for r in results[:20] if r.get("title")]
-        except Exception:
-            return []
-
-    def _fetch_rss(self) -> list[str]:
-        """Parse an RSS feed and return headline strings (stdlib xml only)."""
-        import urllib.request
-        import xml.etree.ElementTree as ET
-
-        try:
-            req = urllib.request.Request(
-                self._DECRYPT_RSS,
-                headers={"User-Agent": "OmegaVictoria/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=6) as resp:
-                xml_bytes = resp.read()
-            root = ET.fromstring(xml_bytes)
-            ns = {"atom": "http://www.w3.org/2005/Atom"}
-            titles: list[str] = []
-            # RSS 2.0
-            for item in root.findall(".//item"):
-                t = item.findtext("title")
-                if t:
-                    titles.append(t)
-            # Atom
-            for entry in root.findall(".//atom:entry", ns):
-                t = entry.findtext("atom:title", namespaces=ns)
-                if t:
-                    titles.append(t)
-            return titles[:20]
-        except Exception:
-            return []
-
     @staticmethod
-    def _score_headlines(headlines: list[str]) -> tuple[float, int]:
-        """Return (sentiment_score, headline_count). Score in [-1, +1]."""
-        if not headlines:
-            return 0.0, 0
-        bull_hits = 0
-        bear_hits = 0
-        for h in headlines:
-            low = h.lower()
-            for kw in NewsSignal._BULLISH_KW:
-                if kw in low:
-                    bull_hits += 1
+    def _fetch_dominance() -> tuple[float | None, float | None]:
+        """
+        Fetch BTC dominance from CoinGecko (primary) or CoinPaprika (fallback).
+        Uses a module-level 1-hour cache to avoid rate limits.
+
+        Returns (btc_dominance_pct, market_cap_change_24h_pct) or (None, None).
+        """
+        now = time.time()
+
+        # Check cache first (either source)
+        cached_result: tuple[float | None, float | None] | None = None
+        for cache_key in ("coingecko_global", "coinpaprika_global"):
+            if cache_key in _FETCH_CACHE:
+                ts, cached_val = _FETCH_CACHE[cache_key]
+                if now - ts < _DOM_CACHE_TTL:
+                    cached_result = cached_val
                     break
-            else:
-                for kw in NewsSignal._BEARISH_KW:
-                    if kw in low:
-                        bear_hits += 1
-                        break
-        total = bull_hits + bear_hits
-        if total == 0:
-            return 0.0, len(headlines)
-        score = (bull_hits - bear_hits) / total
-        return score, len(headlines)
+        if cached_result is not None:
+            return cached_result
 
-    def compute(self, market_data: dict[str, Any]) -> SignalValue:
-        raw: dict[str, float] = {}
-
-        # Prefer pre-fetched news injected into market_data
-        cached_news: Any = market_data.get("_news_headlines")
-        if isinstance(cached_news, list):
-            headlines = [str(h) for h in cached_news]
-        else:
-            headlines = self._fetch_cryptopanic()
-            if not headlines:
-                headlines = self._fetch_rss()
-
-        score, n = self._score_headlines(headlines)
-        raw["headline_count"] = float(n)
-        raw["sentiment_score"] = score
-
-        if n == 0:
-            return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
-
-        # Confidence scales with coverage (capped at 20 articles)
-        confidence = min(1.0, 0.3 + (n / 20.0) * 0.5)
-
-        if score > 0.3:
-            regime_tag = "bullish_news"
-        elif score < -0.3:
-            regime_tag = "bearish_news"
-        else:
-            regime_tag = "neutral_news"
-
-        return SignalValue(
-            value=max(-1.0, min(1.0, score)),
-            confidence=confidence,
-            regime_tag=regime_tag,
-            raw=raw,
-        )
-
-
-# ---------------------------------------------------------------------------
-# DerivativesSignal — Binance futures funding rates + open interest
-# ---------------------------------------------------------------------------
-
-
-class DerivativesSignal:
-    """
-    Dedicated derivatives signal fetched live from Binance Futures.
-
-    Separate from SentimentSignal so the weight allocator can independently
-    learn the IC of derivatives data vs crowd-sentiment data.
-
-    Funding rate:
-      - Positive (>0.01%/8h): longs paying → crowd long → contrarian bearish
-      - Negative (<-0.01%/8h): shorts paying → crowd short → contrarian bullish
-
-    Open interest change:
-      - Rising OI + rising price  → trend confirmation (bullish)
-      - Rising OI + falling price → trend confirmation (bearish)
-      - Falling OI                → de-leveraging / neutral
-    """
-
-    _FUNDING_URL = "https://fapi.binance.com/fapi/v1/fundingRate?symbol=BTCUSDT&limit=8"
-    _OI_URL = "https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT"
-    _OI_HIST_URL = (
-        "https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=4"
-    )
-    _FUNDING_THRESHOLD = 0.0001  # 0.01% per 8h
-
-    def _fetch_funding(self) -> list[float]:
-        import json
-        import urllib.request
-
+        # Try CoinGecko
         try:
-            req = urllib.request.Request(
-                self._FUNDING_URL,
-                headers={"User-Agent": "OmegaVictoria/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=6) as resp:
+            url = "https://api.coingecko.com/api/v3/global"
+            req = urllib.request.Request(url, headers={"User-Agent": "omega-signal/1.0"})
+            with urllib.request.urlopen(req, timeout=8) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-            return [float(r["fundingRate"]) for r in data if "fundingRate" in r]
-        except Exception:
-            return []
-
-    def _fetch_oi_change(self) -> float | None:
-        """Return recent OI percentage change (latest vs previous bar)."""
-        import json
-        import urllib.request
-
-        try:
-            req = urllib.request.Request(
-                self._OI_HIST_URL,
-                headers={"User-Agent": "OmegaVictoria/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=6) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-            if len(data) >= 2:
-                oi_new = float(data[-1]["sumOpenInterest"])
-                oi_old = float(data[-2]["sumOpenInterest"])
-                if oi_old > 0:
-                    return (oi_new - oi_old) / oi_old
+            btc_dom = float(data["data"]["market_cap_percentage"]["btc"])
+            mc_change = float(data["data"].get("market_cap_change_percentage_24h_usd", 0.0))
+            result = (btc_dom, mc_change)
+            _FETCH_CACHE["coingecko_global"] = (now, result)
+            return result
         except Exception:
             pass
-        return None
 
-    def compute(self, market_data: dict[str, Any]) -> SignalValue:
-        raw: dict[str, float] = {}
+        # Fallback: CoinPaprika (no API key required, higher rate limits)
+        try:
+            url2 = "https://api.coinpaprika.com/v1/global"
+            req2 = urllib.request.Request(url2, headers={"User-Agent": "omega-signal/1.0"})
+            with urllib.request.urlopen(req2, timeout=8) as resp2:
+                data2 = json.loads(resp2.read().decode("utf-8"))
+            btc_dom2 = float(data2.get("bitcoin_dominance_percentage", 0.0))
+            if btc_dom2 > 0:
+                result2: tuple[float | None, float | None] = (btc_dom2, None)
+                _FETCH_CACHE["coinpaprika_global"] = (now, result2)
+                return result2
+        except Exception:
+            pass
 
-        # Try cached derivatives data first (populated by DataIngestionNode)
-        funding_rates: list[float] = market_data.get("funding_rates") or self._fetch_funding()
-        oi_change: float | None = market_data.get("_oi_change_pct")
-        if oi_change is None:
-            oi_change = self._fetch_oi_change()
-
-        has_funding = bool(funding_rates)
-        has_oi = oi_change is not None
-
-        if not has_funding and not has_oi:
-            return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
-
-        funding_signal = 0.0
-        if has_funding:
-            avg_funding = sum(funding_rates[-8:]) / min(8, len(funding_rates))
-            raw["avg_funding_8p"] = avg_funding
-            if avg_funding > self._FUNDING_THRESHOLD * 3:
-                funding_signal = -0.8
-                raw["funding_regime"] = 1.0
-            elif avg_funding > self._FUNDING_THRESHOLD:
-                funding_signal = -0.3
-                raw["funding_regime"] = 0.5
-            elif avg_funding < -self._FUNDING_THRESHOLD * 3:
-                funding_signal = 0.8
-                raw["funding_regime"] = -1.0
-            elif avg_funding < -self._FUNDING_THRESHOLD:
-                funding_signal = 0.3
-                raw["funding_regime"] = -0.5
-            else:
-                raw["funding_regime"] = 0.0
-
-        oi_signal = 0.0
-        if has_oi:
-            assert oi_change is not None  # narrowing
-            raw["oi_change_pct"] = oi_change
-            _btc = market_data.get("BTCUSDT") or {}
-            prices = _btc.get("close") or []
-            price_change = 0.0
-            if isinstance(prices, list) and len(prices) >= 2 and prices[-2]:
-                price_change = (prices[-1] - prices[-2]) / prices[-2]
-                raw["price_change_1p"] = price_change
-            if oi_change > 0.02 and price_change > 0:
-                oi_signal = 0.6
-            elif oi_change > 0.02 and price_change < 0:
-                oi_signal = -0.6
-
-        weights = []
-        signals_list = []
-        if has_funding:
-            signals_list.append(funding_signal)
-            weights.append(0.6)
-        if has_oi:
-            signals_list.append(oi_signal)
-            weights.append(0.4)
-
-        total_w = sum(weights)
-        value = sum(s * w for s, w in zip(signals_list, weights, strict=False)) / total_w
-
-        funding_extremity = abs(raw.get("avg_funding_8p", 0)) / (self._FUNDING_THRESHOLD * 3)
-        confidence = min(1.0, 0.35 + funding_extremity * 0.55)
-
-        fr = raw.get("funding_regime", 0.0)
-        if fr > 0.5:
-            regime_tag = "overheated_longs"
-        elif fr < -0.5:
-            regime_tag = "overheated_shorts"
-        else:
-            regime_tag = "balanced_derivatives"
-
-        return SignalValue(
-            value=max(-1.0, min(1.0, value)),
-            confidence=confidence,
-            regime_tag=regime_tag,
-            raw=raw,
-        )
+        return None, None
