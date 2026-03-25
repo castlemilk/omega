@@ -126,22 +126,24 @@ class PaperTradingEngine:
         """
         market_data = market_data or {}
         executed: list[dict[str, Any]] = []
-        # Also collect mark-to-market closings for positions whose direction flipped
-        closed_positions: list[dict[str, Any]] = []
+        ts_now = datetime.now(UTC)
 
-        # Mark-to-market all open positions at current prices first
-        for sym, pos in list(self._positions.items()):
-            sym_market = market_data.get(sym) or {}
+        # Mark-to-market existing open positions and close those that flip direction
+        closed_from_flip: list[dict[str, Any]] = []
+        for open_sym, pos in list(self._positions.items()):
+            sym_market = market_data.get(open_sym) or {}
             current_price = (
-                self._extract_price(sym_market) if isinstance(sym_market, dict) else 0.0
+                float(sym_market.get("close", 0.0)) if isinstance(sym_market, dict) else 0.0
             )
-            if current_price > 0 and pos.get("entry", 0.0) > 0:
-                direction = 1.0 if pos["side"] == "long" else -1.0
-                unrealized = (
-                    direction * pos["size"] * (current_price - pos["entry"]) / pos["entry"]
-                )
-                pos["unrealized_pnl"] = round(unrealized, 6)
+            if current_price <= 0:
+                continue
+            entry = float(pos.get("entry", current_price))
+            size = float(pos.get("size", 0.0))
+            direction = 1.0 if pos.get("side") == "long" else -1.0
+            quantity = size / entry if entry > 0 else 0.0
+            pos["unrealized_pnl"] = (current_price - entry) * quantity * direction
 
+        # Process new proposals
         for proposal in proposals:
             if not isinstance(proposal, dict):
                 continue
@@ -161,55 +163,55 @@ class PaperTradingEngine:
                 logger.debug("Skipping low-weight proposal for %s (weight=%.4f)", symbol, weight)
                 continue
 
-            side = "long" if weight > 0 else "short"
+            new_side = "long" if weight > 0 else "short"
             size = abs(weight) * self.initial_capital
 
-            # Resolve current market price for this ticker
+            # Resolve current price for entry
             sym_market = market_data.get(symbol) or {}
-            current_price = (
-                self._extract_price(sym_market) if isinstance(sym_market, dict) else 0.0
-            )
-            entry_price = current_price if current_price > 0 else 1.0
+            if isinstance(sym_market, dict):
+                entry_price = float(sym_market.get("close") or sym_market.get("price") or 1.0)
+            else:
+                entry_price = 1.0
 
-            ts_now = datetime.now(UTC)
-            trade_id = str(uuid.uuid4())
-
-            # Close existing position if direction flips → realise PnL
+            # Close existing position if direction flips — realise PnL
             existing = self._positions.get(symbol)
-            if existing and existing.get("side") != side and existing.get("entry", 0.0) > 0:
-                exit_p = entry_price
-                direction = 1.0 if existing["side"] == "long" else -1.0
-                realized = (
-                    direction * existing["size"] * (exit_p - existing["entry"]) / existing["entry"]
-                )
-                self._realised_pnl += realized
-                closed = {
-                    "symbol": symbol,
+            if existing and existing.get("side") != new_side and entry_price > 0:
+                old_entry = float(existing.get("entry", entry_price))
+                old_size = float(existing.get("size", 0.0))
+                old_dir = 1.0 if existing["side"] == "long" else -1.0
+                old_qty = old_size / old_entry if old_entry > 0 else 0.0
+                realised = (entry_price - old_entry) * old_qty * old_dir
+                self._realised_pnl += realised
+                close_trade: dict[str, Any] = {
+                    "trade_id": existing.get("trade_id"),
+                    "cycle_id": cycle_id,
+                    "ts": ts_now.isoformat(),
+                    "sym": symbol,
                     "side": existing["side"],
-                    "size": existing["size"],
-                    "entry_price": existing["entry"],
-                    "exit_price": exit_p,
-                    "realized_pnl": round(realized, 6),
-                    "unrealized_pnl": 0.0,
-                    "status": "closed",
-                    "cycle_id": cycle_id or "",
-                    "opened_at": existing.get("opened_at", ts_now.isoformat()),
-                    "closed_at": ts_now.isoformat(),
+                    "size": old_size,
+                    "entry": old_entry,
+                    "exit_price": entry_price,
+                    "pnl": realised,
+                    "slippage": 0.0,
+                    "duration": 0,
                 }
-                closed_positions.append(closed)
-                logger.debug(
-                    "Closed %s %s pnl=%.4f (direction flip)",
-                    existing["side"].upper(),
+                closed_from_flip.append(close_trade)
+                logger.info(
+                    "Closed position on flip: %s %s→%s pnl=%.4f",
                     symbol,
-                    realized,
+                    existing["side"],
+                    new_side,
+                    realised,
                 )
+                del self._positions[symbol]
 
+            trade_id = str(uuid.uuid4())
             trade: dict[str, Any] = {
                 "trade_id": trade_id,
                 "cycle_id": cycle_id,
                 "ts": ts_now.isoformat(),
                 "sym": symbol,
-                "side": side,
+                "side": new_side,
                 "size": size,
                 "entry": entry_price,
                 "exit_price": None,
@@ -230,7 +232,7 @@ class PaperTradingEngine:
 
             # Track open position (last writer wins per symbol)
             self._positions[symbol] = {
-                "side": side,
+                "side": new_side,
                 "size": size,
                 "entry": entry_price,
                 "trade_id": trade_id,
@@ -242,37 +244,18 @@ class PaperTradingEngine:
             executed.append(trade)
             logger.debug(
                 "Paper trade: %s %s size=%.2f entry=%.4f (cycle=%s)",
-                side.upper(),
+                new_side.upper(),
                 symbol,
                 size,
                 entry_price,
                 cycle_id,
             )
 
+        if closed_from_flip:
+            self.persist_trades_to_db(closed_from_flip)
         if executed:
             self.persist_trades_to_db(executed)
             self.persist_signals_to_db(proposals)
-        if closed_positions:
-            self.persist_paper_trades_to_db(closed_positions)
-        if executed:
-            open_records = [
-                {
-                    "symbol": t["symbol"],
-                    "side": t["side"],
-                    "size": t["size"],
-                    "entry_price": t["entry_price"],
-                    "exit_price": None,
-                    "unrealized_pnl": 0.0,
-                    "realized_pnl": 0.0,
-                    "status": "open",
-                    "opened_at": t["opened_at"],
-                    "closed_at": None,
-                    "cycle_id": cycle_id or "",
-                }
-                for t in executed
-            ]
-            self.persist_paper_trades_to_db(open_records)
-
         return executed
 
     # ------------------------------------------------------------------

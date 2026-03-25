@@ -705,7 +705,12 @@ class OmegaOrchestrator:
         signal_data = self._step_signals(ctx, result, poll_outputs, log)
         proposals = self._step_strategy(ctx, result, signal_data, log)
         clean_proposals = self._step_adversarial(ctx, result, proposals, signal_data, log)
-        self._step_execute(ctx, result, clean_proposals, log)
+        # Collect latest market_data from poll outputs for entry price resolution
+        cycle_market_data: dict[str, Any] = {}
+        for _po in poll_outputs.values():
+            if _po and _po.success and isinstance(_po.result, dict):
+                cycle_market_data.update(_po.result)
+        self._step_execute(ctx, result, clean_proposals, log, cycle_market_data)
 
         # 8. Post-cycle
         result.duration_seconds = time.perf_counter() - t_start
@@ -867,12 +872,25 @@ class OmegaOrchestrator:
                 out = node.execute(inp)
                 self._node_health[state.node_id].record(state.health, out.success)
                 if out.success and out.result:
-                    node_proposals = out.result if isinstance(out.result, list) else [out.result]
-                    for prop in node_proposals:
-                        if isinstance(prop, dict):
-                            prop.setdefault("node_id", state.node_id)
-                            prop.setdefault("autonomy_level", autonomy_level.value)
-                    proposals.extend(p for p in node_proposals if isinstance(p, dict))
+                    raw_list = out.result if isinstance(out.result, list) else [out.result]
+                    # Expand portfolio-dict proposals: {weights: {sym: w}} → per-symbol dicts
+                    node_proposals: list[dict] = []
+                    for item in raw_list:
+                        if isinstance(item, dict) and "weights" in item and item["weights"]:
+                            for sym, w in item["weights"].items():
+                                node_proposals.append(
+                                    {
+                                        "symbol": sym,
+                                        "weight": float(w),
+                                        "node_id": state.node_id,
+                                        "autonomy_level": autonomy_level.value,
+                                    }
+                                )
+                        elif isinstance(item, dict):
+                            item.setdefault("node_id", state.node_id)
+                            item.setdefault("autonomy_level", autonomy_level.value)
+                            node_proposals.append(item)
+                    proposals.extend(node_proposals)
                     result.actions_proposed += len(node_proposals)
                 if not out.success:
                     result.error_count += 1
@@ -1166,6 +1184,7 @@ class OmegaOrchestrator:
         result: CycleResult,
         proposals: list[dict[str, Any]],
         log: Any,
+        market_data: dict[str, Any] | None = None,
     ) -> None:
         """Execute approved trade proposals via PaperTradingEngine (if wired in)."""
         if not proposals:
@@ -1175,8 +1194,14 @@ class OmegaOrchestrator:
 
         if self._paper_trading is not None:
             try:
+                # Also check node._last_market_data as a fallback for real prices
+                node_market_data: dict[str, Any] = {}
+                for node in self.active_nodes:
+                    node_market_data.update(getattr(node, "_last_market_data", {}))
+                combined_market_data = {**(market_data or {}), **node_market_data}
                 executed = self._paper_trading.execute_proposals(
                     proposals,
+                    market_data=combined_market_data,
                     cycle_id=ctx.cycle_id,
                 )
                 log.info(
