@@ -468,6 +468,22 @@ var stateSchema = []string{
 		duration    TEXT NOT NULL DEFAULT '',
 		recorded_at DOUBLE PRECISION NOT NULL DEFAULT 0
 	)`,
+	`CREATE TABLE IF NOT EXISTS paper_trades (
+		id             BIGSERIAL PRIMARY KEY,
+		symbol         TEXT NOT NULL DEFAULT '',
+		side           TEXT NOT NULL DEFAULT '',
+		size           DOUBLE PRECISION NOT NULL DEFAULT 0,
+		entry_price    DOUBLE PRECISION NOT NULL DEFAULT 0,
+		exit_price     DOUBLE PRECISION,
+		unrealized_pnl DOUBLE PRECISION NOT NULL DEFAULT 0,
+		realized_pnl   DOUBLE PRECISION NOT NULL DEFAULT 0,
+		status         TEXT NOT NULL DEFAULT 'open',
+		opened_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		closed_at      TIMESTAMPTZ,
+		cycle_id       TEXT NOT NULL DEFAULT ''
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_paper_trades_symbol ON paper_trades(symbol)`,
+	`CREATE INDEX IF NOT EXISTS idx_paper_trades_status ON paper_trades(status)`,
 	`CREATE TABLE IF NOT EXISTS victoria_backtest (
 		id             BIGSERIAL PRIMARY KEY,
 		sharpe_ann     DOUBLE PRECISION NOT NULL DEFAULT 0,

@@ -116,14 +116,25 @@ def flatten_to_ticker_signals(raw_signals: dict[str, Any]) -> dict[str, Any]:
             continue
 
         if "value" in val:
-            # Scalar signal category → synthetic ticker entry
+            # Scalar signal category → synthetic ticker entry for signal aggregates
             import contextlib
 
             with contextlib.suppress(TypeError, ValueError):
                 flat[f"adv_{key}"] = {"composite": float(val["value"])}
+            # Also extract per-ticker signals that may coexist with the "value" key
+            # (e.g. basic_signals adds a top-level "value" but still contains ticker dicts)
+            for ticker, sig in val.items():
+                if ticker in ("value", "confidence", "regime_tag", "raw"):
+                    continue
+                if not isinstance(sig, dict):
+                    continue
+                if "composite" in sig:
+                    flat[ticker] = sig
+                elif "composite_signal" in sig:
+                    flat[ticker] = {**sig, "composite": sig["composite_signal"]}
             continue
 
-        # Per-ticker signal dict (e.g. basic_signals → {ticker: {composite: ...}})
+        # Pure per-ticker signal dict (e.g. basic_signals without value key)
         for ticker, sig in val.items():
             if not isinstance(sig, dict):
                 continue
