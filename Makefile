@@ -1,4 +1,4 @@
-.PHONY: build test lint typecheck format coverage quality clean proto \
+.PHONY: build test lint typecheck format coverage quality clean proto proto-python \
         up down logs run api dashboard \
         fe-install fe-build fe-lint fe-typecheck fe-format \
         py-test py-lint \
@@ -79,6 +79,19 @@ dev-down:
 
 proto:
 	buf generate
+
+## proto-python: generate Python protobuf bindings from proto/omega/v1/ into gen/python/
+##   Requires betterproto[compiler] in the active venv:  uv pip install "betterproto[compiler]"
+proto-python:
+	mkdir -p gen/python
+	PATH="$$(pwd)/.venv/bin:$$PATH" protoc \
+	  --plugin=protoc-gen-python_betterproto=.venv/bin/protoc-gen-python_betterproto \
+	  --python_betterproto_out=gen/python \
+	  -I proto \
+	  $$(find proto/omega/v1 -name "*.proto" | sort)
+	touch gen/python/__init__.py gen/python/omega/__init__.py
+	@# Suppress ruff + mypy on generated file (explicit file paths bypass pyproject.toml exclude)
+	sed -i '' '1s/^/# mypy: ignore-errors\n# ruff: noqa\n/' gen/python/omega/v1.py
 
 # ---------------------------------------------------------------------------
 # Frontend
