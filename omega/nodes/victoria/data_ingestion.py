@@ -416,6 +416,23 @@ class DataIngestionNode(Node):
         except Exception as _exc:
             logger.debug("Binance order book fetch skipped: %s", _exc)
 
+        # ── Supplementary: CoinGecko /global — BTC dominance (fetched ONCE here) ──
+        try:
+            import urllib.request as _ureq
+
+            _gurl = "https://api.coingecko.com/api/v3/global"
+            _greq = _ureq.Request(_gurl, headers={"User-Agent": "Mozilla/5.0"})
+            with _ureq.urlopen(_greq, timeout=8) as _gresp:
+                _gdata = json.loads(_gresp.read().decode("utf-8"))
+            _btc_dom = float(_gdata["data"]["market_cap_percentage"]["btc"])
+            result["_btc_dominance"] = _btc_dom
+            result["_market_cap_change_24h"] = float(
+                _gdata["data"].get("market_cap_change_percentage_24h_usd", 0.0)
+            )
+            logger.debug("CoinGecko global: btc_dominance=%.2f%%", _btc_dom)
+        except Exception as _exc:
+            logger.debug("CoinGecko global fetch skipped: %s", _exc)
+
         return result
 
     def _fetch_24h_tickers(self) -> dict[str, Any]:

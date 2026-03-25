@@ -45,8 +45,11 @@ from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
+    BTCDominanceSignal,
     CrossAssetSignal,
+    LongShortRatioSignal,
     MicrostructureSignal,
+    OnChainSignal,
     OrderFlowSignal,
     SentimentSignal,
 )
@@ -63,6 +66,9 @@ SIGNAL_NAMES = [
     "microstructure",
     "sentiment",
     "vrp",
+    "onchain",
+    "long_short_ratio",
+    "btc_dominance",
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -107,6 +113,9 @@ class VictoriaNode(Node):
         self._microstructure = MicrostructureSignal()
         self._sentiment = SentimentSignal()
         self._vrp = VRPSignalNode()
+        self._onchain = OnChainSignal()
+        self._long_short_ratio = LongShortRatioSignal()
+        self._btc_dominance = BTCDominanceSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -362,6 +371,9 @@ class VictoriaNode(Node):
             "microstructure",
             "sentiment",
             "vrp",
+            "onchain",
+            "long_short_ratio",
+            "btc_dominance",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -746,6 +758,39 @@ class VictoriaNode(Node):
                         regime = mapped
             except Exception as exc:
                 logger.debug("vrp signal failed: %s", exc)
+
+            try:
+                oc_val = self._onchain.compute(market_data)
+                signals["onchain"] = {
+                    "value": oc_val.value,
+                    "confidence": oc_val.confidence,
+                    "regime_tag": oc_val.regime_tag,
+                    "raw": oc_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("onchain signal failed: %s", exc)
+
+            try:
+                ls_val = self._long_short_ratio.compute(market_data)
+                signals["long_short_ratio"] = {
+                    "value": ls_val.value,
+                    "confidence": ls_val.confidence,
+                    "regime_tag": ls_val.regime_tag,
+                    "raw": ls_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("long_short_ratio signal failed: %s", exc)
+
+            try:
+                dom_val = self._btc_dominance.compute(market_data)
+                signals["btc_dominance"] = {
+                    "value": dom_val.value,
+                    "confidence": dom_val.confidence,
+                    "regime_tag": dom_val.regime_tag,
+                    "raw": dom_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("btc_dominance signal failed: %s", exc)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
