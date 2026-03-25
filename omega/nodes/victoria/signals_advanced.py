@@ -291,7 +291,9 @@ class MicrostructureSignal:
     """
     Analyzes spread dynamics, quote stuffing detection, and tick patterns.
 
-    Spread dynamics: bid-ask spread relative to its rolling mean.
+    Spread dynamics: relative bid-ask spread z-score vs 20-period rolling mean.
+    Weighted mid-price: (best_bid * ask_size + best_ask * bid_size) / (bid_size + ask_size)
+    Order book imbalance: multi-level bid vs ask volume at top-of-book.
     Quote stuffing: abnormally high update rate with low volume fill rate.
     Tick patterns: consecutive up/down ticks, run lengths.
     """
@@ -303,26 +305,57 @@ class MicrostructureSignal:
         highs = _btc.get("high") or market_data.get("high", [])
         lows = _btc.get("low") or market_data.get("low", [])
         volumes = _btc.get("volume") or market_data.get("volume", [])
-        # Compute instantaneous bid-ask spread from order book depth if available
+
+        # Pull order book data
         _best_bid = market_data.get("_best_bid")
         _best_ask = market_data.get("_best_ask")
+        _bid_sizes = market_data.get("_bid_sizes", [])
+        _ask_sizes = market_data.get("_ask_sizes", [])
         _ob_spread: list[float] = []
+
+        # ── Weighted mid-price and relative spread ──────────────────────────
+        ob_imbalance_signal = 0.0
+        weighted_mid_signal = 0.0
         if _best_bid and _best_ask and _best_bid > 0:
             mid = (_best_bid + _best_ask) / 2.0
-            _ob_spread = [(_best_ask - _best_bid) / mid] if mid > 0 else []
+            rel_spread = (_best_ask - _best_bid) / mid if mid > 0 else 0.0
+            _ob_spread = [rel_spread]
+
+            # Multi-level order book imbalance
+            bid_vol = _bid_sizes[0] if _bid_sizes else 0.0
+            ask_vol = _ask_sizes[0] if _ask_sizes else 0.0
+            if bid_vol + ask_vol > 0:
+                ob_imbalance = (bid_vol - ask_vol) / (bid_vol + ask_vol)
+                ob_imbalance_signal = ob_imbalance  # +1 = all bids, -1 = all asks
+            else:
+                ob_imbalance = 0.0
+
+            # Weighted mid-price: price closer to side with more depth
+            if bid_vol + ask_vol > 0:
+                wmid = (_best_bid * ask_vol + _best_ask * bid_vol) / (bid_vol + ask_vol)
+                # wmid above simple mid → ask side dominant → slight bearish
+                wmid_bias = (wmid - mid) / mid if mid > 0 else 0.0
+                weighted_mid_signal = -wmid_bias * 50.0  # scale: 2bps deviation → 1.0 signal
+
         spreads = market_data.get("spreads", _ob_spread)
         quote_updates = market_data.get("quote_updates", [])
 
         raw: dict[str, float] = {}
 
-        # Spread dynamics
+        # ── Spread z-score: current spread vs rolling 20-period ───────────
         spread_signal = 0.0
         if spreads and len(spreads) > 5:
             spread_z = _zscore(spreads, min(20, len(spreads) - 1))
             if spread_z is not None:
                 raw["spread_zscore"] = spread_z
-                # Wide spread (high z) = illiquid = signal dampener
-                spread_signal = -abs(spread_z) / 4.0  # max -0.5 dampening
+                # Tight spread (low z) = liquid = slight bullish; wide = dampener
+                spread_signal = -spread_z / 4.0  # negative z (tighter) → positive signal
+
+        # Store multi-level imbalance
+        if ob_imbalance_signal != 0.0:
+            raw["ob_imbalance"] = ob_imbalance_signal
+        if weighted_mid_signal != 0.0:
+            raw["weighted_mid_signal"] = weighted_mid_signal
 
         # Quote stuffing detection
         stuffing_detected = False
@@ -345,25 +378,25 @@ class MicrostructureSignal:
             efficiency = self._range_efficiency(prices, highs, lows, window=10)
             raw["range_efficiency"] = efficiency
 
-        # Composite
+        # Composite — combine tick, OB imbalance, weighted mid, spread
         if stuffing_detected:
             regime_tag = "quote_stuffing"
             value = 0.0
             confidence = 0.1
         elif raw.get("spread_zscore", 0) > 2.0:
             regime_tag = "wide_spread"
-            value = tick_signal * 0.3
-            confidence = 0.2
+            value = tick_signal * 0.3 + ob_imbalance_signal * 0.2
+            confidence = 0.25
         elif efficiency > 0.7:
             regime_tag = "trending_candles"
-            value = tick_signal
+            value = tick_signal * 0.5 + ob_imbalance_signal * 0.3 + weighted_mid_signal * 0.2
             confidence = efficiency
         else:
             regime_tag = "choppy"
-            value = tick_signal * 0.5
-            confidence = 0.3
+            value = tick_signal * 0.3 + ob_imbalance_signal * 0.4 + weighted_mid_signal * 0.3
+            confidence = 0.4
 
-        value += spread_signal
+        value += spread_signal * 0.2
         return SignalValue(
             value=max(-1.0, min(1.0, value)),
             confidence=max(0.0, min(1.0, confidence)),
