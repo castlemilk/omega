@@ -1698,10 +1698,10 @@ Full description scoped as **EPIC-028**. The deeper research question: can the d
 ### Omega Platform Enhancements
 
 **Research Pipeline:**
-- O-R1: /research Cowork skill — structured idea → research → Omega comparison → verdict pipeline
-- O-R2: SN13/Gravity API integration for Twitter feed monitoring ($0-5/mo)
+- O-R1: /research Cowork skill — DONE (omega/skills/omega-research/SKILL.md — structured idea → search → Omega overlap check → verdict → log pipeline)
+- O-R2: SN13/Gravity API integration for Twitter feed monitoring — DONE (omega/integrations/twitter_feed.py — SDK + HTTP fallback, 6 accounts, keyword filter)
 - O-R3: RecentContextNode — shared platform capability aggregating recent events from multiple sources
-- O-R4: Scheduled research task — every 30 min poll curated account list, run through research pipeline
+- O-R4: Scheduled research task — DONE (daily 8am cron via Claude Code scheduled tasks, logs to docs/ideas/feed.jsonl)
 
 **Platform Infrastructure:**
 - O-P1: YAML project loader — DONE
