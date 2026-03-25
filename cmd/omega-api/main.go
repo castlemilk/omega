@@ -324,6 +324,9 @@ func main() {
 	)
 	mux.Handle(pipePath, pipeSvcHandler)
 
+	// Dashboard REST API — consumed by web/dashboard frontend.
+	handler.NewDashboard(database, composite).RegisterRoutes(mux)
+
 	// Observability endpoints.
 	observability.NewHealthHandler(composite).RegisterRoutes(mux)
 	observability.NewDiagnosticsHandler(diagCollector).RegisterRoutes(mux)
