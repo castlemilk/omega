@@ -22,12 +22,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
+import subprocess
 import urllib.error
 import urllib.request
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
 
 from omega.core.credentials import credentials
 
@@ -670,6 +672,139 @@ class GoogleBrain(BrainAdapter):
 
 
 # ---------------------------------------------------------------------------
+# CLIBrain — generic subprocess LLM adapter
+# ---------------------------------------------------------------------------
+
+
+class CLIBrain(BrainAdapter):
+    """
+    Subprocess-based brain adapter that wraps any CLI LLM tool.
+
+    The prompt is written to the subprocess's stdin; the response is read
+    from stdout.  A 30-second timeout is applied.
+
+    Named presets (configured via OMEGA_BRAIN_CLI_PRESET):
+      claude   — claude -p "<prompt>" --model <model>
+      codex    — codex --model <model> --quiet  (stdin)
+      ollama   — ollama run <model>             (stdin)
+      kimi     — kimi-cli ...                   (stdin)
+
+    Or configure directly:
+      OMEGA_BRAIN_CLI_COMMAND    binary name / path
+      OMEGA_BRAIN_CLI_QUICK_ARGS args for QUICK tier (space-separated)
+      OMEGA_BRAIN_CLI_DEEP_ARGS  args for DEEP tier  (space-separated)
+
+    Example (claude preset):
+      OMEGA_BRAIN_PROVIDER=cli OMEGA_BRAIN_CLI_PRESET=claude
+    """
+
+    # Built-in presets: (command, quick_args, deep_args, prompt_as_arg)
+    # prompt_as_arg=True  → pass prompt as CLI arg (e.g. claude -p "…")
+    # prompt_as_arg=False → pipe prompt via stdin
+    _PRESETS: ClassVar[dict[str, tuple[str, str, str, bool]]] = {
+        "claude": ("claude", "--model claude-haiku-4-5", "--model claude-sonnet-4-6", True),
+        "codex": ("codex", "--model o4-mini --quiet", "--model o3 --quiet", False),
+        "ollama": ("ollama run llama3", "", "ollama run mixtral", False),
+        "kimi": ("kimi-cli", "", "", False),
+    }
+
+    def __init__(self, config: BrainConfig) -> None:
+        self.config = config
+        preset_name = config.extra_config.get("preset") or os.environ.get(
+            "OMEGA_BRAIN_CLI_PRESET", ""
+        )
+        if preset_name and preset_name in self._PRESETS:
+            preset = self._PRESETS[preset_name]
+            self._command = preset[0]
+            self._quick_args = preset[1]
+            self._deep_args = preset[2]
+            self._prompt_as_arg = preset[3]
+        else:
+            self._command = config.extra_config.get("command") or os.environ.get(
+                "OMEGA_BRAIN_CLI_COMMAND", ""
+            )
+            self._quick_args = config.extra_config.get("quick_args") or os.environ.get(
+                "OMEGA_BRAIN_CLI_QUICK_ARGS", ""
+            )
+            self._deep_args = config.extra_config.get("deep_args") or os.environ.get(
+                "OMEGA_BRAIN_CLI_DEEP_ARGS", ""
+            )
+            self._prompt_as_arg = False
+
+    def is_available(self) -> bool:
+        if not self._command:
+            return False
+        # Check first token of command is findable
+        binary = self._command.split()[0]
+        return shutil.which(binary) is not None
+
+    def think(self, request: BrainRequest) -> BrainResponse:
+        prompt = (
+            f"Node: {request.node_id}\nOp: {request.operation}\n"
+            f"State: {json.dumps(request.current_state)}\n"
+            f"Metrics: {json.dumps(request.recent_metrics)}\n"
+            f"Actions: {request.available_actions}\n"
+            f"Context: {request.domain_context}\n\n"
+            "Respond with JSON only: "
+            '{"action":"<action>","parameters":{},"reasoning":"<why>","confidence":<0-1>}'
+        )
+        text = self.consult(prompt, ModelTier.QUICK)
+        if not text:
+            return BrainResponse(
+                action="pass",
+                reasoning="CLIBrain: empty response",
+                confidence=0.0,
+            )
+        try:
+            data = json.loads(text)
+            return BrainResponse(
+                action=str(data.get("action", "pass")),
+                parameters=data.get("parameters") or {},
+                reasoning=str(data.get("reasoning", "")),
+                confidence=float(data.get("confidence", 0.0)),
+            )
+        except json.JSONDecodeError:
+            return BrainResponse(
+                action="pass",
+                reasoning=f"CLIBrain: non-JSON response: {text[:200]}",
+                confidence=0.0,
+            )
+
+    def consult(self, prompt: str, tier: ModelTier = ModelTier.QUICK) -> str:
+        if not self._command:
+            return ""
+        args_str = self._quick_args if tier == ModelTier.QUICK else self._deep_args
+        cmd_parts = self._command.split() + (args_str.split() if args_str else [])
+
+        if self._prompt_as_arg:
+            # Insert prompt after the binary (e.g. claude -p "<prompt>" --model …)
+            # Convention: insert after binary, before other args
+            cmd_parts = [cmd_parts[0], "-p", prompt, *cmd_parts[1:]]
+            stdin_data = None
+        else:
+            stdin_data = prompt
+
+        try:
+            result = subprocess.run(
+                cmd_parts,
+                input=stdin_data,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                return ""
+            return result.stdout.strip()
+        except subprocess.TimeoutExpired:
+            return ""
+        except Exception:
+            return ""
+
+    def provider_name(self) -> str:
+        return f"cli:{self._command.split()[0]}" if self._command else "cli"
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -680,6 +815,7 @@ BRAIN_REGISTRY: dict[str, type] = {
     "deepseek": DeepSeekBrain,
     "ollama": OllamaBrain,
     "google": GoogleBrain,
+    "cli": CLIBrain,
 }
 
 
@@ -687,8 +823,36 @@ def create_brain(config: BrainConfig | None = None) -> BrainAdapter:
     """
     Factory: create the appropriate BrainAdapter from a BrainConfig.
 
+    Supports provider="cli" with OMEGA_BRAIN_CLI_COMMAND / OMEGA_BRAIN_CLI_PRESET.
     Falls back to NoBrain if provider is unknown or config is None.
     """
     cfg = config or BrainConfig()
+    provider = cfg.provider
+
+    # Auto-detect: if no provider set, check env for API keys
+    if provider == "none" or provider == "":
+        provider = _auto_detect_provider()
+        cfg = BrainConfig(
+            provider=provider,
+            model=cfg.model,
+            temperature=cfg.temperature,
+            max_tokens=cfg.max_tokens,
+            system_prompt=cfg.system_prompt,
+            extra_config=cfg.extra_config,
+        )
+
     cls = BRAIN_REGISTRY.get(cfg.provider, NoBrain)
     return cls(cfg)  # type: ignore[no-any-return]
+
+
+def _auto_detect_provider() -> str:
+    """Return the best available provider based on env vars."""
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return "anthropic"
+    if os.environ.get("OPENAI_API_KEY"):
+        return "openai"
+    if os.environ.get("DEEPSEEK_API_KEY"):
+        return "deepseek"
+    if os.environ.get("OMEGA_BRAIN_CLI_COMMAND") or os.environ.get("OMEGA_BRAIN_CLI_PRESET"):
+        return "cli"
+    return "none"
