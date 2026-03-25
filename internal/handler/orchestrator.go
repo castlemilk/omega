@@ -18,6 +18,7 @@ import (
 
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
+	"github.com/benebsworth/omega/internal/brain"
 	"github.com/benebsworth/omega/internal/bridge"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/observability"
@@ -42,6 +43,7 @@ type OrchestratorHandler struct {
 	pipelineClient *bridge.PipelineClient                // may be nil
 	projectHandler *ProjectHandler                       // may be nil; provides pipeline configs
 	metrics        *observability.Metrics                // may be nil
+	brain          *brain.Client                         // may be nil; Go-side LLM client
 
 	mu     sync.Mutex
 	cancel context.CancelFunc // non-nil while orchestrator loop is running
@@ -84,6 +86,13 @@ func (h *OrchestratorHandler) WithProjectHandler(ph *ProjectHandler) *Orchestrat
 // can increment cycle/node counters on the same registry that /metrics serves.
 func (h *OrchestratorHandler) WithMetrics(m *observability.Metrics) *OrchestratorHandler {
 	h.metrics = m
+	return h
+}
+
+// WithBrain attaches the Go-side LLM brain client. When set, the handler can
+// use LLM reasoning for health analysis and other Go-side intelligence tasks.
+func (h *OrchestratorHandler) WithBrain(b *brain.Client) *OrchestratorHandler {
+	h.brain = b
 	return h
 }
 

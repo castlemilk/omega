@@ -17,6 +17,7 @@ import (
 
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/benebsworth/omega/internal/auth"
+	"github.com/benebsworth/omega/internal/brain"
 	"github.com/benebsworth/omega/internal/bridge"
 	"github.com/benebsworth/omega/internal/coordination"
 	"github.com/benebsworth/omega/internal/db"
@@ -149,8 +150,16 @@ func main() {
 		}
 	}
 
+	// ── Brain (Go-side LLM client) ─────────────────────────────────────────────
+	brainClient := brain.New()
+	if brainClient.IsAvailable() {
+		log.Printf("Brain: LLM client ready (ANTHROPIC_API_KEY set)")
+	} else {
+		log.Printf("Brain: LLM client inactive (set ANTHROPIC_API_KEY to enable)")
+	}
+
 	// ── Service handlers ──────────────────────────────────────────────────────
-	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry).WithProjectHandler(projectH).WithMetrics(metrics)
+	h := handler.New(database).WithCircuitBreakerRegistry(cbRegistry).WithProjectHandler(projectH).WithMetrics(metrics).WithBrain(brainClient)
 
 	// Pipeline bridge — connects Go orchestrator to Python pipeline server.
 	// Set OMEGA_PYTHON_PIPELINE_ADDR (e.g. "http://localhost:9090") to enable.

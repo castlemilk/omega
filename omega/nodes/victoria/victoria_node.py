@@ -31,6 +31,7 @@ Capabilities exposed to orchestrator
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import time
@@ -265,6 +266,58 @@ class VictoriaNode(Node):
                     result["recommendation"],
                     len(result["violations"]),
                 )
+
+                # ── LLM override layer ────────────────────────────────────────
+                # When a brain is wired in, ask the LLM to review the debate and
+                # optionally override the parameterized recommendation.
+                brain = self.brain  # NoBrain by default
+                if brain is not None and brain.is_available() and not isinstance(brain, type):
+                    try:
+                        from omega.core.brain import ModelTier
+
+                        regime = str(self._last_signals.get("_regime", "default"))
+                        clean_signals = {
+                            k: v for k, v in self._last_signals.items() if not k.startswith("_")
+                        }
+                        debate_prompt = (
+                            "You are a crypto market analyst reviewing a bull/bear debate.\n\n"
+                            f"Signals:\n{json.dumps(clean_signals, indent=2)}\n\n"
+                            f"Bull score: {result['bull_score']:.3f}\n"
+                            f"Bear score: {result['bear_score']:.3f}\n"
+                            f"Edge (bull-bear): {result['edge']:.3f}\n"
+                            f"Parameterized recommendation: {result['recommendation']}\n"
+                            f"Risk violations: {result['violations']}\n"
+                            f"Current regime: {regime}\n\n"
+                            "Should we go long, short, or stay flat?\n"
+                            "Respond with ONE word on the first line: LONG, SHORT, or FLAT.\n"
+                            "Then on the next line, one sentence explaining your reasoning."
+                        )
+                        raw = brain.consult(debate_prompt, tier=ModelTier.DEEP)
+                        if raw:
+                            lines = [ln.strip() for ln in raw.strip().splitlines() if ln.strip()]
+                            llm_verdict = lines[0].upper() if lines else ""
+                            llm_reason = lines[1] if len(lines) > 1 else ""
+
+                            # Map LONG/SHORT/FLAT → recommendation override
+                            llm_map = {"LONG": "go", "SHORT": "abort", "FLAT": "hold"}
+                            if llm_verdict in llm_map:
+                                orig = result["recommendation"]
+                                result["recommendation"] = llm_map[llm_verdict]
+                                result["llm_verdict"] = llm_verdict
+                                result["llm_reason"] = llm_reason
+                                logger.info(
+                                    "DebateGate LLM: verdict=%s reason=%s (override %s→%s)",
+                                    llm_verdict,
+                                    llm_reason,
+                                    orig,
+                                    result["recommendation"],
+                                )
+                            else:
+                                logger.debug(
+                                    "DebateGate LLM: unrecognised verdict %r", llm_verdict
+                                )
+                    except Exception as _llm_exc:
+                        logger.debug("DebateGate LLM call failed: %s", _llm_exc)
             elif action in (
                 NodeAction.VERIFICATION.value,
                 NodeAction.WALK_FORWARD.value,
@@ -542,16 +595,39 @@ class VictoriaNode(Node):
         brain = self.brain  # from Node base class (NoBrain by default)
 
         if brain is not None and brain.is_available() and not isinstance(brain, type):
+            # Extract top signal for richer prompt
+            top_signal = "none"
+            top_conf = 0.0
+            vrp_regime = (
+                str(signals.get("vrp", {}).get("regime_tag", regime))
+                if isinstance(signals.get("vrp"), dict)
+                else regime
+            )
+            signal_values: list[float] = []
+            for sig_name, sig_val in signals.items():
+                if sig_name.startswith("_") or not isinstance(sig_val, dict):
+                    continue
+                conf = float(sig_val.get("confidence", 0.0))
+                if conf > top_conf:
+                    top_conf = conf
+                    top_signal = sig_name
+                if "value" in sig_val:
+                    signal_values.append(float(sig_val["value"]))
+            avg_val = sum(signal_values) / len(signal_values) if signal_values else 0.0
+            direction = (
+                "bullish" if avg_val > 0.05 else ("bearish" if avg_val < -0.05 else "neutral")
+            )
+
             prompt = (
-                f"You are reviewing a completed crypto signal cycle.\n"
-                f"Node: {self._node_id}\n"
-                f"Cycle: {cycle}\n"
+                f"Cycle {cycle}: {n_signals} signals computed.\n"
+                f"Top signal: {top_signal} (confidence {top_conf:.2f})\n"
+                f"Composite direction: {direction}\n"
+                f"VRP regime: {vrp_regime}\n"
                 f"Quality score: {quality:.3f}\n"
-                f"Avg signal confidence: {avg_conf:.3f}\n"
-                f"Signal coverage: {coverage:.0%} ({n_signals} signals)\n"
-                f"Market regime: {regime}\n\n"
-                f"In 1-2 sentences, reflect on signal quality and what the market regime implies.\n"
-                f"Then on a new line starting with 'LESSON:', state one actionable lesson in ≤15 words."
+                f"Avg confidence: {avg_conf:.3f}\n"
+                f"Coverage: {coverage:.0%}\n\n"
+                f"What is the key lesson from this cycle? One sentence.\n"
+                f"Then on a new line starting with 'LESSON:', restate the lesson in ≤15 words."
             )
             try:
                 raw = brain.consult(prompt, tier=ModelTier.QUICK)
@@ -571,7 +647,7 @@ class VictoriaNode(Node):
             top_signal = "none"
             top_conf = 0.0
             vrp_regime = "NEUTRAL"
-            signal_values: list[float] = []
+            fb_signal_values: list[float] = []
 
             for sig_name, sig_val in signals.items():
                 if sig_name.startswith("_") or not isinstance(sig_val, dict):
@@ -583,9 +659,11 @@ class VictoriaNode(Node):
                     top_conf = conf
                     top_signal = sig_name
                 if "value" in sig_val:
-                    signal_values.append(float(sig_val["value"]))
+                    fb_signal_values.append(float(sig_val["value"]))
 
-            avg_signal_val = sum(signal_values) / len(signal_values) if signal_values else 0.0
+            avg_signal_val = (
+                sum(fb_signal_values) / len(fb_signal_values) if fb_signal_values else 0.0
+            )
             if avg_signal_val > 0.05:
                 composite_direction = "bullish"
             elif avg_signal_val < -0.05:
