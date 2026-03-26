@@ -761,10 +761,15 @@ class BTCDominanceSignal:
             # Fallback: inline fetch if data_ingestion didn't supply it
             try:
                 import json
+                import os
                 import urllib.request
 
                 url = "https://api.coingecko.com/api/v3/global"
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                _cg_headers: dict = {"User-Agent": "Mozilla/5.0"}
+                _cg_key = os.getenv("CG_API_KEY", "")
+                if _cg_key:
+                    _cg_headers["x-cg-demo-api-key"] = _cg_key
+                req = urllib.request.Request(url, headers=_cg_headers)
                 with urllib.request.urlopen(req, timeout=8) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                 btc_dom = float(data["data"]["market_cap_percentage"]["btc"])

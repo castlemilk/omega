@@ -263,7 +263,13 @@ class PaperTradingEngine:
 
     def persist_trades_to_db(self, trades: list[dict[str, Any]]) -> None:
         """
-        INSERT trade records into the victoria_trades table.
+        INSERT or UPDATE trade records in the victoria_trades table.
+
+        Open trades (exit_price=None) are INSERTed with NULL exit_price so the
+        column accurately represents an open position.  Closed trades (exit_price
+        is a real float) trigger an UPDATE on any existing open row for the same
+        trade_id, populating exit_price, pnl, and a closed_at timestamp; if no
+        prior row exists they are INSERTed directly.
 
         Silently logs a warning and returns if psycopg2 is unavailable or the
         DB cannot be reached.
@@ -277,29 +283,59 @@ class PaperTradingEngine:
         if not trades:
             return
 
-        sql = """
+        insert_sql = """
             INSERT INTO victoria_trades
                 (ts, sym, side, size, entry, exit_price, pnl, slippage, duration, recorded_at)
             VALUES
                 (%(ts)s, %(sym)s, %(side)s, %(size)s, %(entry)s,
                  %(exit_price)s, %(pnl)s, %(slippage)s, %(duration)s, %(recorded_at)s)
         """
+        # UPDATE existing open row when a trade is being closed (exit_price populated)
+        update_sql = """
+            UPDATE victoria_trades
+               SET exit_price = %(exit_price)s,
+                   pnl        = %(pnl)s,
+                   closed_at  = NOW()
+             WHERE trade_id = %(trade_id)s
+               AND exit_price IS NULL
+        """
         try:
             conn = psycopg2.connect(self._db_url)
             try:
                 with conn, conn.cursor() as cur:
                     for trade in trades:
+                        raw_exit = trade.get("exit_price")
+                        is_closed = raw_exit is not None
+                        trade_id = trade.get("trade_id")
+
+                        if is_closed and trade_id:
+                            # Attempt UPDATE first — closes an existing open row.
+                            cur.execute(
+                                update_sql,
+                                {
+                                    "exit_price": float(raw_exit) if raw_exit is not None else 0.0,
+                                    "pnl": float(trade.get("pnl", 0.0)),
+                                    "trade_id": trade_id,
+                                },
+                            )
+                            if cur.rowcount > 0:
+                                # Successfully updated an existing open row — done.
+                                continue
+
+                        # INSERT: either an open trade (exit_price=NULL) or a closed
+                        # trade with no pre-existing open row (full record insert).
                         cur.execute(
-                            sql,
+                            insert_sql,
                             {
                                 "ts": trade.get("ts"),
                                 "sym": trade.get("sym"),
                                 "side": trade.get("side"),
                                 "size": float(trade.get("size", 0.0)),
                                 "entry": float(trade.get("entry", 0.0)),
-                                "exit_price": float(
-                                    trade.get("exit_price") or trade.get("entry", 0.0)
-                                ),
+                                # NULL for open trades; actual price for closed trades.
+                                "exit_price": (float(raw_exit) if raw_exit is not None else None)
+                                if is_closed
+                                else None,
                                 "pnl": float(trade.get("pnl", 0.0)),
                                 "slippage": float(trade.get("slippage", 0.0)),
                                 "duration": int(trade.get("duration", 0)),

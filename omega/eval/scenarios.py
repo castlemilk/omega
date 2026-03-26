@@ -11,6 +11,7 @@ AutonomyService and MemoryService may fall back to stubs in some builds.
 
 from __future__ import annotations
 
+import random
 import time
 import uuid
 from collections.abc import Callable
@@ -416,13 +417,26 @@ def scenario_adversarial_pressure(clients: RpcClients) -> ScenarioResult:
     # 1. Record an adversarial result via StateService (Ring 1 — ensemble disagreement)
     t0 = time.monotonic()
     try:
+        # Expanded scenario pool — randomly select 2-3 scenarios each run so that
+        # the adversarial pressure eval never always tests the same two cases.
+        scenario_pool = [
+            "momentum_crash",
+            "volatility_spike",
+            "liquidity_crisis",
+            "flash_crash",
+            "correlation_breakdown",
+            "regime_change",
+            "black_swan",
+            "mean_reversion_failure",
+        ]
+        _selected_scenarios = random.sample(scenario_pool, k=random.randint(2, 3))
         result_id = clients.state.record_adversarial_result(
             cycle=cycle,
             ring=1,
             flagged=True,
             max_disagreement=0.38,  # above 0.25 alert threshold
             scenario_count=5,
-            failure_cases=["momentum_crash", "volatility_spike"],
+            failure_cases=_selected_scenarios,
             details={"z_score": "3.2", "outlier_node": "node-variant-3"},
         )
         b.record_rpc("StateService", "RecordAdversarialResult", (time.monotonic() - t0) * 1000)

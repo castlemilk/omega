@@ -83,8 +83,8 @@ class TestCheckPersona:
         self.node = RiskManagementNode()
 
     def test_neutral_approves_equal_portfolio(self) -> None:
-        # 4 equal assets → 25% each; neutral max_position = 0.25, not strictly exceeded
-        tickers = ["BTC", "ETH", "SOL", "BNB"]
+        # 5 equal assets → 20% each; neutral max_position = 0.20, not strictly exceeded
+        tickers = ["BTC", "ETH", "SOL", "BNB", "ADA"]
         portfolio = _equal_portfolio(tickers)
         market_data = _market_data(tickers)
         result = self.node._check_persona(PERSONA_NEUTRAL, portfolio, market_data, "NEUTRAL", 0.0)

@@ -24,7 +24,7 @@ from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 logger = logging.getLogger("omega.nodes.victoria.risk_management")
 
 _DEFAULT_VAR_CONFIDENCE = 0.95
-_MAX_POSITION_SIZE = 0.25  # No single position > 25%
+_MAX_POSITION_SIZE = 0.20  # No single position > 20% of portfolio value
 _MAX_PORTFOLIO_VAR = 0.02  # Daily VaR limit: 2% of portfolio
 
 # VRP regime adjustments

@@ -48,6 +48,7 @@ logger = logging.getLogger("omega.core.alignment")
 # Layer 1: SafetyEnvelope
 # ---------------------------------------------------------------------------
 
+
 class SafetyEnvelope:
     """Hard constraints enforced unconditionally — cannot be optimised away.
 
@@ -60,7 +61,7 @@ class SafetyEnvelope:
 
     def __init__(
         self,
-        max_position_pct: float = 0.25,
+        max_position_pct: float = 0.20,
         max_drawdown_pct: float = 0.15,
         max_correlation: float = 0.85,
         max_improvement_magnitude: float = 0.5,
@@ -80,7 +81,7 @@ class SafetyEnvelope:
 
         Args:
             portfolio: asset → weight mapping. Weights need not sum to 1.
-            drawdown: Current portfolio drawdown as a fraction (0–1).
+            drawdown: Current portfolio drawdown as a fraction (0-1).
             correlation_matrix: asset_i → {asset_j → correlation} mapping.
 
         Returns:
@@ -99,15 +100,13 @@ class SafetyEnvelope:
 
         # 2. Drawdown check.
         if drawdown > self.max_drawdown_pct:
-            violations.append(
-                f"drawdown: {drawdown:.4f} > {self.max_drawdown_pct}"
-            )
+            violations.append(f"drawdown: {drawdown:.4f} > {self.max_drawdown_pct}")
 
         # 3. Correlation check.
         if correlation_matrix:
             assets = list(portfolio.keys())
             seen: set = set()
-            for i, asset_i in enumerate(assets):
+            for _i, asset_i in enumerate(assets):
                 if asset_i not in correlation_matrix:
                     continue
                 for asset_j, corr in correlation_matrix[asset_i].items():
@@ -201,9 +200,7 @@ class SafetyEnvelope:
 
             # Redistribute surplus proportionally among free positions.
             free_total = sum(abs(v) for v in free.values()) or 1.0
-            redistributed = {
-                a: v + (v / free_total) * surplus for a, v in free.items()
-            }
+            redistributed = {a: v + (v / free_total) * surplus for a, v in free.items()}
             fractions = {**clipped, **redistributed}
 
         # Re-scale back to original magnitude.
@@ -213,6 +210,7 @@ class SafetyEnvelope:
 # ---------------------------------------------------------------------------
 # Layer 2: ParetoEvaluator (NSGA-II)
 # ---------------------------------------------------------------------------
+
 
 class ParetoEvaluator:
     """Multi-objective NSGA-II ranking for node populations.
@@ -373,9 +371,7 @@ class ParetoEvaluator:
                 continue
 
             for k in range(1, n - 1):
-                distances[sorted_idx[k]] += (
-                    (obj_values[k + 1] - obj_values[k - 1]) / obj_range
-                )
+                distances[sorted_idx[k]] += (obj_values[k + 1] - obj_values[k - 1]) / obj_range
 
         return distances
 
@@ -428,6 +424,7 @@ class ParetoEvaluator:
 # Layer 3: OutcomeBasedScorer
 # ---------------------------------------------------------------------------
 
+
 class OutcomeBasedScorer:
     """Score nodes by actual prediction accuracy and risk-adjusted returns.
 
@@ -464,17 +461,14 @@ class OutcomeBasedScorer:
         history = self._history.setdefault(node_id, [])
         history.append((predicted, actual, return_contribution))
         if len(history) > self._MAX_HISTORY:
-            self._history[node_id] = history[-self._MAX_HISTORY:]
+            self._history[node_id] = history[-self._MAX_HISTORY :]
 
     def _accuracy(self, node_id: str) -> float:
         """Rolling accuracy for a node: 1 - mean(|pred - actual| / max(|actual|, 1e-6))."""
         history = self._history.get(node_id, [])
         if not history:
             return 0.0
-        errors = [
-            abs(pred - actual) / max(abs(actual), 1e-6)
-            for pred, actual, _ in history
-        ]
+        errors = [abs(pred - actual) / max(abs(actual), 1e-6) for pred, actual, _ in history]
         return 1.0 - (sum(errors) / len(errors))
 
     def _sharpe_contribution(self, node_id: str) -> float:
@@ -520,6 +514,7 @@ class OutcomeBasedScorer:
 # AlignmentDecision dataclass
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class AlignmentDecision:
     """Result of one alignment evaluation cycle.
@@ -533,6 +528,7 @@ class AlignmentDecision:
         magnitude_warning: True if any improvement exceeded the magnitude limit.
         cycle: Monotonic improvement cycle index.
     """
+
     approved: bool
     violations: list[str]
     pareto_ranks: dict[str, int]
@@ -545,6 +541,7 @@ class AlignmentDecision:
 # ---------------------------------------------------------------------------
 # AlignmentLayer — orchestrator
 # ---------------------------------------------------------------------------
+
 
 class AlignmentLayer:
     """Orchestrates all 3 alignment layers for the Omega improvement loop.
@@ -563,7 +560,7 @@ class AlignmentLayer:
     def __init__(self, safety_config: dict | None = None) -> None:
         cfg = safety_config or {}
         self._safety_envelope = SafetyEnvelope(
-            max_position_pct=cfg.get("max_position_pct", 0.25),
+            max_position_pct=cfg.get("max_position_pct", 0.20),
             max_drawdown_pct=cfg.get("max_drawdown_pct", 0.15),
             max_correlation=cfg.get("max_correlation", 0.85),
             max_improvement_magnitude=cfg.get("max_improvement_magnitude", 0.5),
@@ -604,14 +601,14 @@ class AlignmentLayer:
             portfolio,
             drawdown=drawdown,
         )
-        logger.info(
-            "cycle=%d SafetyEnvelope ok=%s violations=%d", cycle, safe_ok, len(violations)
-        )
+        logger.info("cycle=%d SafetyEnvelope ok=%s violations=%d", cycle, safe_ok, len(violations))
 
         # ---- Layer 2: ParetoEvaluator ----------------------------------------
         node_ids = list(node_metrics_map.keys())
         population = [node_metrics_map[nid] for nid in node_ids]
-        objectives = [k for k in (population[0].keys() if population else []) if k not in ("node_id",)]
+        objectives = [
+            k for k in (population[0].keys() if population else []) if k not in ("node_id",)
+        ]
         directions: dict[str, str] = {}
         for obj in objectives:
             # Convention: metrics ending in "_latency" or "_error" are minimised.
@@ -623,7 +620,7 @@ class AlignmentLayer:
         pareto_ranks: dict[str, int] = {}
         if population and objectives:
             ranks_list = self._pareto_evaluator.assign_ranks(population, objectives, directions)
-            for nid, rank in zip(node_ids, ranks_list):
+            for nid, rank in zip(node_ids, ranks_list, strict=False):
                 pareto_ranks[nid] = rank
         else:
             pareto_ranks = {nid: 0 for nid in node_ids}
@@ -677,7 +674,10 @@ class AlignmentLayer:
 
         logger.debug(
             "record_improvement_attempt node=%s ok=%s delta=%.6f reason=%s",
-            node_id, ok, delta, reason,
+            node_id,
+            ok,
+            delta,
+            reason,
         )
         return ok, reason
 
@@ -701,5 +701,8 @@ class AlignmentLayer:
         self._scorer.record_outcome(node_id, predicted, actual, return_contribution)
         logger.debug(
             "record_outcome node=%s predicted=%.6f actual=%.6f return_contribution=%.6f",
-            node_id, predicted, actual, return_contribution,
+            node_id,
+            predicted,
+            actual,
+            return_contribution,
         )

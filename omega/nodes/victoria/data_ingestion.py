@@ -418,10 +418,15 @@ class DataIngestionNode(Node):
 
         # ── Supplementary: CoinGecko /global — BTC dominance (fetched ONCE here) ──
         try:
+            import os as _os
             import urllib.request as _ureq
 
             _gurl = "https://api.coingecko.com/api/v3/global"
-            _greq = _ureq.Request(_gurl, headers={"User-Agent": "Mozilla/5.0"})
+            _cg_headers: dict = {"User-Agent": "Mozilla/5.0"}
+            _cg_key = _os.getenv("CG_API_KEY", "")
+            if _cg_key:
+                _cg_headers["x-cg-demo-api-key"] = _cg_key
+            _greq = _ureq.Request(_gurl, headers=_cg_headers)
             with _ureq.urlopen(_greq, timeout=8) as _gresp:
                 _gdata = json.loads(_gresp.read().decode("utf-8"))
             _btc_dom = float(_gdata["data"]["market_cap_percentage"]["btc"])
