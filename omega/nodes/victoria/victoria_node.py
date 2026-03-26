@@ -48,6 +48,7 @@ from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.factor_model import SignalFactorModel
 from omega.nodes.victoria.information_flow import TransferEntropyAnalyzer
 from omega.nodes.victoria.liquidation_signals import LiquidationCascadeSignal, LiquidationRisk
+from omega.nodes.victoria.macro_signals import MacroSignalProvider
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.meta_model import MetaModel
 from omega.nodes.victoria.news_signals import NewsSignalProvider
@@ -88,8 +89,8 @@ SIGNAL_NAMES = [
     "stablecoin_flow",
     "options_microstructure",  # Jim Simons GEX/PCR/skew/max-pain/term-structure
     "derivatives",
+    "macro_signals",
 ]
-
 # Map VRP regime to DynamicWeightAllocator regime strings
 _VRP_REGIME_MAP = {
     "FEAR": "high_vol",
@@ -262,6 +263,7 @@ class VictoriaNode(Node):
         self._liquidation_cascade = LiquidationCascadeSignal()
         self._options = OptionsSignalProvider()  # GEX/PCR/skew/max-pain/term-structure
         self._derivatives = DerivativesSignal()
+        self._macro_signals = MacroSignalProvider()
 
         # Dynamic weight allocator — includes "disagreement" meta-signal
         self._weight_allocator = DynamicWeightAllocator(
@@ -293,6 +295,11 @@ class VictoriaNode(Node):
         self._meta_model = MetaModel()
         self._kelly_sizer = KellyPositionSizer(initial_capital=100_000.0)
         # ── End V3 ──────────────────────────────────────────────────────────
+
+        # macro_signals starts at equal weight (1/11 ≈ 9%) during the cold-start
+        # period.  Once all signals accumulate MIN_IC_SAMPLES IC observations the
+        # allocator switches to IC-proportional weights; the target allocation for
+        # macro_signals at steady state is ~15% (IC seed = _MACRO_INITIAL_IC).
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -574,6 +581,7 @@ class VictoriaNode(Node):
             "stablecoin_flow",
             "options_microstructure",
             "derivatives",
+            "macro_signals",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -1269,6 +1277,17 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("options_microstructure signal failed: %s", exc)
 
+            try:
+                macro_val = self._macro_signals.compute(market_data)
+                signals["macro_signals"] = {
+                    "value": macro_val.value,
+                    "confidence": macro_val.confidence,
+                    "regime_tag": macro_val.regime_tag,
+                    "raw": macro_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("macro_signals signal failed: %s", exc)
+
         # 2. Disagreement signal — exposes the *structure* of signal disagreement
         # Computed before weighting so it sees raw unweighted signal values.
         # Key insight: the PATTERN of disagreement is predictive.
@@ -1288,17 +1307,6 @@ class VictoriaNode(Node):
             )
         except Exception as exc:
             logger.debug("disagreement signal failed: %s", exc)
-
-            try:
-                deriv_val = self._derivatives.compute(market_data)
-                signals["derivatives"] = {
-                    "value": deriv_val.value,
-                    "confidence": deriv_val.confidence,
-                    "regime_tag": deriv_val.regime_tag,
-                    "raw": deriv_val.raw,
-                }
-            except Exception as exc:
-                logger.debug("derivatives signal failed: %s", exc)
 
         # 3. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}

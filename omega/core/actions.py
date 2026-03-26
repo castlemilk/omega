@@ -47,6 +47,7 @@ class NodeAction(StrEnum):
     RISK_DEBATE = "risk_debate"
     IMPROVEMENT = "improvement"
     REFLECT = "reflect"
+    MACRO_SIGNALS = "macro_signals"
 
     # Go step-type aliases registered as capabilities on VictoriaNode
     DATA_INGESTION = "data_ingestion"
