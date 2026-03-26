@@ -46,6 +46,7 @@ class NodeAction(StrEnum):
     ARCHITECTURAL_REVIEW = "architectural_review"
     RISK_DEBATE = "risk_debate"
     IMPROVEMENT = "improvement"
+    REFLECT = "reflect"
 
     # Go step-type aliases registered as capabilities on VictoriaNode
     DATA_INGESTION = "data_ingestion"
@@ -94,6 +95,7 @@ class StepType(StrEnum):
     # Extended / future step types
     LIQUIDATION_CASCADE = "LIQUIDATION_CASCADE"
     ONCHAIN_DATA = "ONCHAIN_DATA"
+    REFLECT = "REFLECT"
 
 
 # Capability alias groups — each group routes to the same action.
@@ -125,6 +127,7 @@ STEP_TO_ACTION: dict[StepType, NodeAction] = {
     StepType.EDGE_DETECTION: NodeAction.EDGE_DETECTION,
     StepType.LIQUIDATION_CASCADE: NodeAction.MONITOR_LIQUIDATIONS,
     StepType.ONCHAIN_DATA: NodeAction.FETCH_MARKET_DATA,
+    StepType.REFLECT: NodeAction.REFLECT,
 }
 
 

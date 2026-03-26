@@ -329,6 +329,10 @@ class VictoriaNode(Node):
         # Lazy-initialised reflection store (requires DATABASE_URL at runtime)
         self._reflection_store: Any = None
 
+        # Lazy-initialised memory kernel and memory bus
+        self._mem_kernel: Any = None
+        self._mem_bus: Any = None
+
     # ------------------------------------------------------------------
     # Node interface
     # ------------------------------------------------------------------
@@ -368,6 +372,7 @@ class VictoriaNode(Node):
             NodeAction.RISK_MANAGEMENT.value,
             NodeAction.VERIFICATION.value,
             NodeAction.MEMORY.value,
+            NodeAction.REFLECT.value,
             NodeAction.IMPROVEMENT.value,
             NodeAction.ADVERSARIAL.value,
         ]
@@ -447,12 +452,12 @@ class VictoriaNode(Node):
             elif action in (
                 NodeAction.VERIFICATION.value,
                 NodeAction.WALK_FORWARD.value,
-                NodeAction.MEMORY.value,
-                NodeAction.ADVERSARIAL.value,
-                "ring3adversarial",
-            ):
-                # These are handled internally by Python orchestrator; return success no-op
+            ) or action in (NodeAction.ADVERSARIAL.value, "ring3adversarial"):
                 result = {"status": "ok", "action": action}
+            elif action == NodeAction.MEMORY.value:
+                result = self._do_memory(inp)
+            elif action in (NodeAction.REFLECT.value, "reflect", "memory_reflect"):
+                result = self._do_reflect_action(inp)
             elif action in (NodeAction.IMPROVEMENT.value, NodeAction.IMPROVEMENT_ENGINE.value):
                 result = self._do_improvement(inp)
             else:
@@ -677,6 +682,202 @@ class VictoriaNode(Node):
         if not confidences:
             return 0.5  # signals present but no confidence data
         return sum(confidences) / len(confidences)
+
+    # ------------------------------------------------------------------
+    # Memory action (episodic store + consolidation trigger)
+    # ------------------------------------------------------------------
+
+    def _do_memory(self, inp: NodeInput) -> dict[str, Any]:
+        """
+        Store the current cycle as an episodic memory and trigger semantic
+        consolidation every 50 cycles.  Also queries relevant memories and
+        injects them into working context for the next cycle.
+        """
+        cycle = int(inp.context.get("cycle", self._total_cycles_run))
+        signals = self._last_signals
+        regime = str(signals.get("_regime", "default"))
+        conviction = float(signals.get("_quality_score", 0.0))
+
+        result: dict[str, Any] = {"status": "ok", "cycle": cycle}
+
+        # 1. Store episodic memory via MemoryKernel
+        mem_kernel = self._get_mem_kernel()
+        if mem_kernel is not None:
+            try:
+                mem_kernel.begin_cycle(cycle)
+                episode_id = mem_kernel.store_episode(
+                    event_type="signal_cycle",
+                    content={
+                        "cycle": cycle,
+                        "regime": regime,
+                        "conviction": conviction,
+                        "signal_count": int(signals.get("_signal_count", 0)),
+                        "avg_confidence": float(signals.get("_avg_confidence", 0.0)),
+                        "signal_coverage": float(signals.get("_signal_coverage", 0.0)),
+                        "quality_score": conviction,
+                    },
+                    tags=["signal_cycle", regime, f"cycle_{cycle}"],
+                    importance=min(1.0, 0.3 + conviction * 0.7),
+                    cycle=cycle,
+                    namespace="victoria",
+                )
+                result["episode_id"] = episode_id
+
+                # Trigger semantic consolidation every 50 cycles
+                if cycle > 0 and cycle % 50 == 0:
+                    concepts = mem_kernel.consolidate(namespace="victoria")
+                    result["concepts_updated"] = len(concepts)
+                    logger.info(
+                        "Memory consolidation at cycle=%d: %d semantic concepts updated",
+                        cycle,
+                        len(concepts),
+                    )
+
+                # Query relevant memories for context injection
+                relevant = mem_kernel.retrieve_episodes(
+                    tags=[regime], limit=3, min_importance=0.2, namespace="victoria"
+                )
+                if relevant:
+                    result["memory_context"] = [
+                        {"lesson": ep.content.get("lesson", ""), "cycle": ep.cycle}
+                        for ep in relevant
+                        if ep.content.get("lesson")
+                    ]
+            except Exception as exc:
+                logger.debug("_do_memory MemoryKernel step failed: %s", exc)
+
+        # 2. Write regime insight to cross-project memory bus
+        mem_bus = self._get_mem_bus()
+        if mem_bus is not None and conviction > 0.4:
+            try:
+                from omega.core.memory_bus import MemoryType
+
+                vrp_regime = ""
+                if isinstance(signals.get("vrp"), dict):
+                    vrp_regime = str(signals["vrp"].get("regime_tag", ""))
+                content = (
+                    f"Cycle {cycle}: {regime} regime (VRP={vrp_regime or 'N/A'}), "
+                    f"conviction={conviction:.2f}, signals={int(signals.get('_signal_count', 0))}"
+                )
+                mem_bus.write(
+                    project_source="victoria",
+                    memory_type=MemoryType.REGIME_INSIGHT,
+                    content=content,
+                    relevance_score=conviction,
+                    cycle=cycle,
+                    ttl_seconds=86400 * 3,
+                )
+            except Exception as exc:
+                logger.debug("_do_memory MemoryBus write failed: %s", exc)
+
+        return result
+
+    def _do_reflect_action(self, inp: NodeInput) -> dict[str, Any]:
+        """
+        Delegate to ReflectionNode: LLM-driven reflection after a cycle.
+
+        Uses the last computed signals + optional trade result from context.
+        """
+        from omega.nodes.shared.reflection_node import ReflectionNode
+
+        if not hasattr(self, "_reflection_node"):
+            self._reflection_node = ReflectionNode()
+            # Share the same brain so we reuse the configured LLM adapter
+            self._reflection_node.brain = self.brain
+
+        cycle = int(inp.context.get("cycle", self._total_cycles_run))
+        reflect_inp = NodeInput(
+            action="reflect",
+            parameters={
+                "cycle": cycle,
+                "signals": self._last_signals,
+                "trade_result": str(inp.parameters.get("trade_result", "hold")),
+                "regime": str(self._last_signals.get("_regime", "default")),
+                "conviction": float(self._last_signals.get("_quality_score", 0.0)),
+            },
+            context=inp.context,
+        )
+        out = self._reflection_node.execute(reflect_inp)
+        return out.result or {"status": "ok", "lesson": ""}
+
+    def _get_mem_kernel(self) -> Any:
+        """Lazy-init MemoryKernel; returns None if DATABASE_URL not set."""
+        if self._mem_kernel is not None:
+            return self._mem_kernel
+        if not os.getenv("DATABASE_URL"):
+            return None
+        try:
+            from omega.core.memory import MemoryKernel
+
+            self._mem_kernel = MemoryKernel()
+        except Exception as exc:
+            logger.debug("MemoryKernel init failed: %s", exc)
+        return self._mem_kernel
+
+    def _get_mem_bus(self) -> Any:
+        """Lazy-init MemoryBus; returns None if DATABASE_URL not set."""
+        if self._mem_bus is not None:
+            return self._mem_bus
+        if not os.getenv("DATABASE_URL"):
+            return None
+        try:
+            from omega.core.memory_bus import MemoryBus
+
+            self._mem_bus = MemoryBus()
+        except Exception as exc:
+            logger.debug("MemoryBus init failed: %s", exc)
+        return self._mem_bus
+
+    def get_memory_context_for_proposals(self) -> str:
+        """
+        Query MemoryKernel + MemoryBus for insights relevant to the current
+        regime and return a formatted context block for LLM prompts.
+        """
+        parts: list[str] = []
+        signals = self._last_signals
+        regime = str(signals.get("_regime", "default"))
+
+        mem_kernel = self._get_mem_kernel()
+        if mem_kernel is not None:
+            try:
+                episodes = mem_kernel.retrieve_episodes(
+                    tags=[regime], limit=3, min_importance=0.2, namespace="victoria"
+                )
+                for ep in episodes:
+                    lesson = ep.content.get("lesson", "")
+                    if lesson:
+                        parts.append(f"  Past lesson (cycle {ep.cycle}): {lesson}")
+
+                semantic = mem_kernel.retrieve_semantic(
+                    tags=[regime], limit=2, min_confidence=0.3, namespace="victoria"
+                )
+                for sm in semantic:
+                    parts.append(
+                        f"  Pattern ({sm.concept}, conf={sm.confidence:.2f}): {sm.content}"
+                    )
+            except Exception as exc:
+                logger.debug("get_memory_context_for_proposals kernel failed: %s", exc)
+
+        mem_bus = self._get_mem_bus()
+        if mem_bus is not None:
+            try:
+                from omega.core.memory_bus import MemoryType
+
+                bus_mems = mem_bus.read(
+                    memory_types=[MemoryType.REGIME_INSIGHT, MemoryType.RISK_WARNING],
+                    min_relevance=0.4,
+                    limit=3,
+                )
+                for m in bus_mems:
+                    src = m.get("project_source", "")
+                    content = m.get("content", "")
+                    parts.append(f"  Shared memory [{src}]: {content}")
+            except Exception as exc:
+                logger.debug("get_memory_context_for_proposals bus failed: %s", exc)
+
+        if not parts:
+            return ""
+        return "Memory context for current regime:\n" + "\n".join(parts)
 
     # ------------------------------------------------------------------
     # Reflection helpers (V-TR1)
@@ -1319,6 +1520,18 @@ class VictoriaNode(Node):
         # Generate and store per-cycle reflection (V-TR1)
         self.reflect_on_cycle(self._total_cycles_run, signals)
 
+        # Store episodic memory and write to shared memory bus (V-MEM1)
+        try:
+            self._do_memory(
+                NodeInput(
+                    action=NodeAction.MEMORY.value,
+                    parameters={},
+                    context={"cycle": self._total_cycles_run},
+                )
+            )
+        except Exception as _mem_exc:
+            logger.debug("_do_memory inline call failed: %s", _mem_exc)
+
         logger.info(
             "cycle=%d quality=%.3f coverage=%.2f avg_conf=%.3f signals=%d (IC-weights=%s)",
             self._total_cycles_run,
@@ -1415,6 +1628,15 @@ class VictoriaNode(Node):
                     liq_scale * 100,
                 )
 
+        # Inject memory context so the strategy / debate gate can reference past lessons
+        enriched_context = dict(inp.context)
+        try:
+            mem_ctx = self.get_memory_context_for_proposals()
+            if mem_ctx:
+                enriched_context["memory_context"] = mem_ctx
+        except Exception as _exc:
+            logger.debug("memory context fetch failed: %s", _exc)
+
         # Normalise signals to {ticker: {"composite": float, ...}} regardless of
         # whether they arrive as raw VictoriaNode output or the orchestrator-wrapped
         # {node_id: compute_signals_result} format.
@@ -1430,7 +1652,7 @@ class VictoriaNode(Node):
                 "pico_mode": pico_mode,
                 "regime": regime,
             },
-            context=inp.context,
+            context=enriched_context,
         )
         out = self._strategy.execute(strategy_inp)
         if out.success and out.result:

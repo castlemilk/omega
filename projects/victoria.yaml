@@ -39,7 +39,12 @@ pipeline_config:
   - step_id: step_7
     name: Memory
     node_type: MEMORY
-    description: Store episode context, update semantic memory
+    description: Store episodic memory, trigger consolidation every 50 cycles, write to memory bus
+    order: 7
+  - step_id: step_7b
+    name: Reflect
+    node_type: REFLECT
+    description: LLM reflection on cycle outcome — stores episodic insight + rates memory 1-5
     order: 7
   - step_id: step_8
     name: ImprovementEngine

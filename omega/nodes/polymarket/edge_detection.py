@@ -134,6 +134,7 @@ class EdgeDetectionNode(Node):
         self._opportunities_detected = 0
         self.edge_threshold = edge_threshold
         self.max_kelly_fraction = max_kelly_fraction
+        self._mem_bus: Any = None
 
     def get_state(self) -> NodeState:
         return NodeState(
@@ -226,6 +227,76 @@ class EdgeDetectionNode(Node):
                 self._version = "1.1"
                 changed = True
         return changed
+
+    def _get_memory_adjustment(self) -> float:
+        """
+        Read shared MemoryBus for Victoria's regime insights.
+
+        Returns a confidence adjustment factor (+/- 0.1 max) to apply to
+        edge confidence based on what Victoria has observed.
+
+        Examples:
+          • "extreme fear" regime from Victoria → nudge up probability of
+            recovery (market underprices it) → +0.05 to model_prob adjustment
+          • "high_vol" with recent losses → reduce kelly fraction → -0.05
+        """
+        bus = self._get_mem_bus()
+        if bus is None:
+            return 0.0
+        try:
+            from omega.core.memory_bus import MemoryType
+
+            memories = bus.read(
+                memory_types=[MemoryType.REGIME_INSIGHT, MemoryType.RISK_WARNING],
+                exclude_source="polymarket",
+                min_relevance=0.4,
+                limit=5,
+            )
+            if not memories:
+                return 0.0
+
+            adjustment = 0.0
+            for m in memories:
+                content = m.get("content", "").lower()
+                relevance = float(m.get("relevance_score", 0.5))
+                # High-fear / extreme regime from Victoria → market likely underpricing recovery
+                if any(w in content for w in ("fear", "extreme", "crisis", "high_vol")):
+                    adjustment += 0.02 * relevance
+                # Risk warning → reduce confidence
+                if m.get("memory_type") == MemoryType.RISK_WARNING:
+                    adjustment -= 0.03 * relevance
+                # Positive conviction → slightly increase confidence
+                if "result=win" in content or "successful" in content:
+                    adjustment += 0.01 * relevance
+
+            # Cap adjustment at ±0.10
+            adjustment = max(-0.10, min(0.10, adjustment))
+            if abs(adjustment) > 0.01:
+                logger.debug(
+                    "Memory adjustment from Victoria: %+.3f (from %d memories)",
+                    adjustment,
+                    len(memories),
+                )
+            return adjustment
+        except Exception as exc:
+            logger.debug("_get_memory_adjustment failed: %s", exc)
+            return 0.0
+
+    def _get_mem_bus(self) -> Any:
+        """Lazy-init MemoryBus; returns None if DATABASE_URL not set."""
+        if self._mem_bus is not None:
+            return self._mem_bus
+        import os
+
+        if not os.environ.get("DATABASE_URL"):
+            return None
+        try:
+            from omega.core.memory_bus import MemoryBus
+
+            self._mem_bus = MemoryBus()
+        except Exception as exc:
+            logger.debug("MemoryBus init failed: %s", exc)
+        return self._mem_bus
 
     # ------------------------------------------------------------------
     # Internal logic
@@ -417,12 +488,21 @@ class EdgeDetectionNode(Node):
             # Fallback: no markets found, return a zero-edge placeholder.
             best = self._detect_single({"model_prob": 0.5, "market_price": 0.5, "cycle": cycle})
 
+        # Apply cross-project memory adjustment to confidence
+        mem_adj = self._get_memory_adjustment()
+        if mem_adj != 0.0:
+            best["confidence"] = round(
+                max(0.0, min(1.0, float(best.get("confidence", 0.5)) + mem_adj)), 4
+            )
+            best["memory_adjustment"] = round(mem_adj, 4)
+
         logger.info(
-            "auto_detect: cycle=%d markets=%d best_edge=%.4f opportunity=%s",
+            "auto_detect: cycle=%d markets=%d best_edge=%.4f opportunity=%s mem_adj=%+.3f",
             cycle,
             len(markets),
             best["edge"],
             best["opportunity"],
+            mem_adj,
         )
         self._save_cache(best)
         return best

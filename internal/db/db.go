@@ -563,6 +563,20 @@ var stateSchema = []string{
 		detected_at    TIMESTAMPTZ DEFAULT NOW()
 	)`,
 	`CREATE INDEX IF NOT EXISTS idx_polymarket_edges_cycle ON polymarket_edges(cycle)`,
+	// ── Cross-project shared memory bus ─────────────────────────────────────────
+	`CREATE TABLE IF NOT EXISTS shared_memory (
+		id              TEXT PRIMARY KEY,
+		project_source  TEXT NOT NULL,
+		memory_type     TEXT NOT NULL,
+		content         TEXT NOT NULL,
+		relevance_score DOUBLE PRECISION NOT NULL DEFAULT 0.5,
+		cycle           BIGINT NOT NULL DEFAULT 0,
+		created_at      DOUBLE PRECISION NOT NULL,
+		expires_at      DOUBLE PRECISION
+	)`,
+	`CREATE INDEX IF NOT EXISTS idx_shared_memory_type ON shared_memory(memory_type)`,
+	`CREATE INDEX IF NOT EXISTS idx_shared_memory_source ON shared_memory(project_source)`,
+	`CREATE INDEX IF NOT EXISTS idx_shared_memory_relevance ON shared_memory(relevance_score DESC)`,
 }
 
 func (d *DB) ensureSchema(ctx context.Context) error {
