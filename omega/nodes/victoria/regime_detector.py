@@ -1,17 +1,35 @@
 """
 omega.nodes.victoria.regime_detector
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-3-state Hidden Markov Model for market regime detection.
+Regime-aware signal weight multipliers derived from backtest IC analysis.
 
-States:
-  - bull     (0): trending up, momentum regime
-  - bear     (1): trending down, fear regime
-  - sideways (2): ranging, mean-reversion regime
+Three market regimes are supported:
+  - BULL     : trending upward  (e.g. Oct 2023 - Mar 2024)
+  - BEAR     : sustained decline (e.g. May 2022 - Nov 2022)
+  - SIDEWAYS : range-bound / mean-reverting (e.g. Jul 2024 - Oct 2024)
 
-Features: [price_return, log_volatility, volume_ratio]
+Design
+------
+IC findings from historical backtest (signal Information Coefficients by regime):
+  BULL     : momentum works when trending; vol_regime harmful
+  BEAR     : rsi strongest (+0.144); momentum harmful
+  SIDEWAYS : vol_regime strongest (-0.389, high-vol = bearish); rsi works (+0.140)
 
-Signal weights are regime-dependent — momentum signals get higher weight in
-trending regimes; mean-reversion signals get higher weight in sideways regimes.
+The multiplier table is applied ON TOP of base IC weights from DynamicWeightAllocator.
+After multiplier application:
+  1. BULL regime enforces a momentum floor (min weight 0.3) to prevent the
+     meta-model from fading momentum in up-trends.
+  2. Trend strength is assessed to decide whether momentum signal is trusted.
+  3. Per-regime conviction thresholds gate trade entry.
+
+Signal name mapping (used throughout this file)
+-----------------------------------------------
+  "momentum"   - SMA crossover signal (trend-following)
+  "rsi"        - RSI mean-reversion signal
+  "vol_regime" - Volatility regime signal (low-vol bullish, high-vol bearish)
+  "bb"         - Bollinger Band mean-reversion signal
+  "macd"       - MACD histogram crossover signal
+  "vwm"        - Volume-weighted momentum signal
 """
 
 from __future__ import annotations
@@ -25,60 +43,306 @@ import numpy as np
 logger = logging.getLogger("omega.nodes.victoria.regime_detector")
 
 try:
-    from hmmlearn import hmm as _hmm_lib
+    import hmmlearn.hmm as _hmm_lib
 
     _HMM_AVAILABLE = True
 except ImportError:
     _HMM_AVAILABLE = False
-    logger.warning("hmmlearn not installed — using rule-based regime fallback")
 
-# Regime state indices
-REGIME_BULL = "bull"
-REGIME_BEAR = "bear"
-REGIME_SIDEWAYS = "sideways"
-REGIMES = [REGIME_BULL, REGIME_BEAR, REGIME_SIDEWAYS]
+# ---------------------------------------------------------------------------
+# Regime labels
+# ---------------------------------------------------------------------------
 
-# Per-regime signal weight multipliers.
-# Values > 1.0 boost the signal; < 1.0 attenuate it.
-# These are applied multiplicatively to the IC-based weights before renormalization.
+BULL = "bull"
+BEAR = "bear"
+SIDEWAYS = "sideways"
+
+KNOWN_REGIMES: frozenset[str] = frozenset({BULL, BEAR, SIDEWAYS})
+
+# ---------------------------------------------------------------------------
+# Signal multiplier lookup table (regime -> signal_name -> multiplier)
+# Applied on top of base IC weights.  Signals not listed default to 1.0.
+# ---------------------------------------------------------------------------
+
 REGIME_SIGNAL_MULTIPLIERS: dict[str, dict[str, float]] = {
-    REGIME_BULL: {
-        "basic_signals": 1.4,  # momentum signals excel in trending up
-        "cross_asset": 1.2,
-        "market_data": 1.1,
-        "order_flow": 1.3,  # order flow confirms breakouts
-        "sentiment": 0.8,  # sentiment less predictive in full bull
-        "microstructure": 0.7,  # mean-reversion signals misleading in trending
-        "vrp": 1.0,
-        "onchain": 1.1,
-        "long_short_ratio": 1.2,
-        "btc_dominance": 0.9,
+    BULL: {
+        "momentum": 1.5,  # Trend-following works well in up-trends
+        "rsi": 0.5,  # Mean-reversion unreliable during sustained rally
+        "vol_regime": 0.3,  # Vol regime signal hurts in bull (mostly low-vol, ignore)
+        "bb": 1.0,
+        "macd": 1.2,  # MACD confirms momentum in bull
+        "vwm": 1.1,
     },
-    REGIME_BEAR: {
-        "basic_signals": 1.2,
-        "cross_asset": 1.2,
-        "market_data": 1.1,
-        "order_flow": 1.0,
-        "sentiment": 1.3,  # sentiment leads in fear regimes
-        "microstructure": 0.9,
-        "vrp": 1.4,  # vol regime signal most predictive in bear
-        "onchain": 1.2,  # on-chain selling patterns matter
-        "long_short_ratio": 1.3,
-        "btc_dominance": 1.0,
+    BEAR: {
+        "momentum": 0.3,  # Momentum fades in bear; dangerous to chase
+        "rsi": 1.5,  # RSI oversold bounces are the primary trade
+        "vol_regime": 0.8,  # Elevated vol is a warning signal, moderate weight
+        "bb": 1.3,  # BB oversold signals work well in bear bounces
+        "macd": 0.8,
+        "vwm": 0.9,
     },
-    REGIME_SIDEWAYS: {
-        "basic_signals": 0.7,  # momentum useless in ranging
-        "cross_asset": 0.9,
-        "market_data": 0.9,
-        "order_flow": 1.4,  # order flow / microstructure lead in ranging
-        "sentiment": 1.1,
-        "microstructure": 1.5,  # mean-reversion signals most relevant
-        "vrp": 0.9,
-        "onchain": 1.0,
-        "long_short_ratio": 1.0,
-        "btc_dominance": 1.1,
+    SIDEWAYS: {
+        "momentum": 0.2,  # Momentum is actively harmful in range-bound markets
+        "rsi": 1.4,  # RSI extremes reliably mean-revert
+        "vol_regime": 1.5,  # Vol regime is the strongest predictor (IC -0.389)
+        "bb": 1.2,  # BB extremes mean-revert in sideways
+        "macd": 0.7,  # MACD whipsaws in sideways
+        "vwm": 0.8,
     },
 }
+
+# ---------------------------------------------------------------------------
+# Per-regime conviction thresholds
+# ---------------------------------------------------------------------------
+
+# agreement_ratio: fraction of signals that agree on direction (bullish or bearish)
+# min_weighted_conviction: |composite_prob - 0.5| * 2, only used in SIDEWAYS
+REGIME_CONVICTION_THRESHOLDS: dict[str, dict[str, float]] = {
+    BULL: {"agreement_ratio": 0.5, "min_weighted_conviction": 0.0},
+    BEAR: {"agreement_ratio": 0.7, "min_weighted_conviction": 0.0},
+    SIDEWAYS: {"agreement_ratio": 0.6, "min_weighted_conviction": 0.4},
+}
+
+# BULL momentum floor: after multiplier scaling, momentum weight must be >= this
+# fraction of the total weight allocated to any single signal.  Prevents the
+# meta-model from assigning negative (fade) weight to momentum in up-trends.
+BULL_MOMENTUM_MIN_WEIGHT = 0.3
+
+
+# ---------------------------------------------------------------------------
+# RegimeAwareSignalModifier
+# ---------------------------------------------------------------------------
+
+
+class RegimeAwareSignalModifier:
+    """
+    Applies regime-specific multipliers to raw signal weights and enforces
+    conviction filters before allowing a trade signal to pass.
+
+    Usage::
+
+        modifier = RegimeAwareSignalModifier()
+
+        # Adjust base weights for regime
+        adjusted = modifier.apply_regime_weights(
+            base_weights={"momentum": 0.25, "rsi": 0.25, "vol_regime": 0.25, "bb": 0.25},
+            regime="bull",
+            closes=price_array,
+        )
+
+        # Check whether conviction is sufficient to trade
+        allowed = modifier.check_conviction_threshold(
+            agreement_ratio=0.6,
+            weighted_conviction=0.5,
+            regime="bull",
+        )
+    """
+
+    def __init__(
+        self,
+        multiplier_overrides: dict[str, dict[str, float]] | None = None,
+        threshold_overrides: dict[str, dict[str, float]] | None = None,
+    ) -> None:
+        self._multipliers = {k: dict(v) for k, v in REGIME_SIGNAL_MULTIPLIERS.items()}
+        if multiplier_overrides:
+            for regime, overrides in multiplier_overrides.items():
+                if regime not in self._multipliers:
+                    self._multipliers[regime] = {}
+                self._multipliers[regime].update(overrides)
+
+        self._thresholds = {k: dict(v) for k, v in REGIME_CONVICTION_THRESHOLDS.items()}
+        if threshold_overrides:
+            for regime, overrides in threshold_overrides.items():
+                if regime not in self._thresholds:
+                    self._thresholds[regime] = {}
+                self._thresholds[regime].update(overrides)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def apply_regime_weights(
+        self,
+        base_weights: dict[str, float],
+        regime: str,
+        closes: list[float] | None = None,
+    ) -> dict[str, float]:
+        """
+        Scale base signal weights by regime-specific multipliers.
+
+        Parameters
+        ----------
+        base_weights:
+            {signal_name: weight} — e.g. Brier-score or IC-derived weights.
+            Need not sum to 1; the result is normalised.
+        regime:
+            One of "bull", "bear", "sideways".  Unknown regimes return
+            base_weights unchanged.
+        closes:
+            Optional price series used for the BULL trend-strength check.
+            If provided and regime is "bull", the trend strength gate decides
+            whether to trust momentum or fall back to the floor.
+
+        Returns
+        -------
+        Normalised weight dict with regime multipliers applied and, for BULL,
+        the momentum floor enforced.
+        """
+        regime = regime.lower()
+        if regime not in self._multipliers:
+            return dict(base_weights)
+
+        table = self._multipliers[regime]
+        scaled: dict[str, float] = {}
+        for name, w in base_weights.items():
+            mult = table.get(name, 1.0)
+            scaled[name] = max(0.0, w * mult)
+
+        # BULL regime: enforce momentum floor and apply trend-strength gate
+        if regime == BULL:
+            scaled = self._apply_bull_momentum_floor(scaled, closes)
+
+        return self._normalise(scaled)
+
+    def check_conviction_threshold(
+        self,
+        agreement_ratio: float,
+        weighted_conviction: float,
+        regime: str,
+    ) -> bool:
+        """
+        Return True if the signal meets the regime's conviction requirements.
+
+        Parameters
+        ----------
+        agreement_ratio:
+            Fraction of active signals pointing in the same direction [0, 1].
+        weighted_conviction:
+            |composite_probability - 0.5| * 2, representing signal strength [0, 1].
+        regime:
+            "bull", "bear", or "sideways".
+        """
+        regime = regime.lower()
+        thresholds = self._thresholds.get(regime, {})
+        min_agreement = thresholds.get("agreement_ratio", 0.5)
+        min_conviction = thresholds.get("min_weighted_conviction", 0.0)
+
+        if agreement_ratio < min_agreement:
+            return False
+        return not (min_conviction > 0.0 and weighted_conviction < min_conviction)
+
+    def trend_strength(self, closes: list[float]) -> dict[str, Any]:
+        """
+        Compute trend-strength metrics from a closing price series.
+
+        Returns
+        -------
+        {
+            "momentum_20d": float,      # 20-day return
+            "momentum_60d": float,      # 60-day return
+            "above_sma50":  bool,       # price > 50-day SMA
+            "trend_strong": bool,       # 20d & 60d positive AND price > SMA50
+            "momentum_agreement": bool, # 20d and 60d agree in direction
+        }
+        """
+        result: dict[str, Any] = {
+            "momentum_20d": 0.0,
+            "momentum_60d": 0.0,
+            "above_sma50": False,
+            "trend_strong": False,
+            "momentum_agreement": False,
+        }
+        if len(closes) < 61:
+            return result
+
+        price = closes[-1]
+        result["momentum_20d"] = (price - closes[-21]) / closes[-21] if closes[-21] != 0 else 0.0
+        result["momentum_60d"] = (price - closes[-61]) / closes[-61] if closes[-61] != 0 else 0.0
+
+        sma50 = sum(closes[-50:]) / 50
+        result["above_sma50"] = price > sma50
+
+        m20 = result["momentum_20d"]
+        m60 = result["momentum_60d"]
+        result["momentum_agreement"] = (m20 > 0) == (m60 > 0)
+        result["trend_strong"] = (m20 > 0) and (m60 > 0) and result["above_sma50"]
+
+        return result
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _apply_bull_momentum_floor(
+        self,
+        weights: dict[str, float],
+        closes: list[float] | None,
+    ) -> dict[str, float]:
+        """
+        Enforce minimum momentum weight in BULL regime.
+
+        If trend strength metrics are available and trend is NOT strong
+        (20d and 60d momentum disagree), we still apply the floor but
+        at half strength to reflect reduced confidence.
+        """
+        weights = dict(weights)
+
+        # Determine effective floor based on trend strength
+        floor = BULL_MOMENTUM_MIN_WEIGHT
+        if closes is not None:
+            ts = self.trend_strength(closes)
+            if not ts["momentum_agreement"]:
+                # Disagreement: use a softer floor (still positive, but smaller)
+                floor = BULL_MOMENTUM_MIN_WEIGHT * 0.5
+            # If trend_strong is True, use the full floor as-is
+
+        total = sum(weights.values())
+        if total == 0:
+            return weights
+
+        # Current normalised momentum weight
+        mom_raw = weights.get("momentum", 0.0)
+        mom_norm = mom_raw / total if total > 0 else 0.0
+
+        if mom_norm < floor:
+            # Lift momentum to floor, deduct proportionally from others
+            deficit = (floor - mom_norm) * total
+            others = {k: v for k, v in weights.items() if k != "momentum"}
+            others_total = sum(others.values())
+
+            if others_total > deficit:
+                # Scale others down proportionally
+                scale = (others_total - deficit) / others_total
+                for k in others:
+                    weights[k] = max(0.0, others[k] * scale)
+            else:
+                # Zero out others to meet floor
+                for k in others:
+                    weights[k] = 0.0
+
+            weights["momentum"] = floor * total
+
+        return weights
+
+    @staticmethod
+    def _normalise(weights: dict[str, float]) -> dict[str, float]:
+        total = sum(weights.values())
+        if total <= 0:
+            n = len(weights)
+            return {k: 1.0 / n for k in weights} if n > 0 else {}
+        return {k: v / total for k, v in weights.items()}
+
+
+# ---------------------------------------------------------------------------
+# Module-level default instance
+# ---------------------------------------------------------------------------
+
+default_modifier = RegimeAwareSignalModifier()
+
+
+# ---------------------------------------------------------------------------
+# HMMRegimeDetector — 3-state HMM regime detector
+# ---------------------------------------------------------------------------
 
 
 class HMMRegimeDetector:
@@ -88,66 +352,22 @@ class HMMRegimeDetector:
     Trains on rolling window of (return, volatility, volume_ratio) features.
     Retrains every 20 observations. Falls back to rule-based detection when
     hmmlearn is unavailable or insufficient data.
-
-    Usage::
-        detector = HMMRegimeDetector()
-        result = detector.update(market_data)
-        # {"regime": "bull", "probs": [0.7, 0.1, 0.2], "signal_multipliers": {...}}
     """
 
     MIN_TRAIN_SAMPLES = 30
-    FEATURE_WINDOW = 120  # rolling history for training
-    RETRAIN_EVERY = 20  # retrain every N new observations
+    FEATURE_WINDOW = 120
+    RETRAIN_EVERY = 20
 
     def __init__(self) -> None:
         self._model: Any = None
         self._hmm_state_to_regime: dict[int, str] = {}
         self._is_trained = False
-
         self._returns: deque[float] = deque(maxlen=self.FEATURE_WINDOW)
         self._vols: deque[float] = deque(maxlen=self.FEATURE_WINDOW)
         self._vol_ratios: deque[float] = deque(maxlen=self.FEATURE_WINDOW)
-
         self._regime_probs: list[float] = [1 / 3, 1 / 3, 1 / 3]
-        self._current_regime: str = REGIME_SIDEWAYS
+        self._current_regime: str = SIDEWAYS
         self._obs_count = 0
-
-    # ------------------------------------------------------------------ public
-
-    def update(self, market_data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Ingest new market data, update HMM, return regime result.
-
-        Returns
-        -------
-        dict with keys: regime, probs, signal_multipliers, confidence
-        """
-        features = self._extract_features(market_data)
-        if features is None:
-            return self._fallback_result()
-
-        ret, vol, vol_ratio = features
-        self._returns.append(ret)
-        self._vols.append(vol)
-        self._vol_ratios.append(vol_ratio)
-        self._obs_count += 1
-
-        n = len(self._returns)
-        if n < self.MIN_TRAIN_SAMPLES:
-            return self._fallback_result()
-
-        # Retrain periodically
-        if _HMM_AVAILABLE and (not self._is_trained or self._obs_count % self.RETRAIN_EVERY == 0):
-            self._train_hmm()
-
-        if self._is_trained and _HMM_AVAILABLE:
-            result = self._predict_hmm()
-        else:
-            result = self._rule_based(ret, vol)
-
-        self._current_regime = result["regime"]
-        self._regime_probs = result["probs"]
-        return result
 
     @property
     def current_regime(self) -> str:
@@ -157,11 +377,29 @@ class HMMRegimeDetector:
     def regime_probs(self) -> list[float]:
         return self._regime_probs
 
-    # ------------------------------------------------------------------ private
+    def update(self, market_data: dict[str, Any]) -> dict[str, Any]:
+        features = self._extract_features(market_data)
+        if features is None:
+            return self._fallback_result()
+        ret, vol, vol_ratio = features
+        self._returns.append(ret)
+        self._vols.append(vol)
+        self._vol_ratios.append(vol_ratio)
+        self._obs_count += 1
+        n = len(self._returns)
+        if n < self.MIN_TRAIN_SAMPLES:
+            return self._fallback_result()
+        if _HMM_AVAILABLE and (not self._is_trained or self._obs_count % self.RETRAIN_EVERY == 0):
+            self._train_hmm()
+        if self._is_trained and _HMM_AVAILABLE:
+            result = self._predict_hmm()
+        else:
+            result = self._rule_based(ret, vol)
+        self._current_regime = result["regime"]
+        self._regime_probs = result["probs"]
+        return result
 
     def _extract_features(self, market_data: dict[str, Any]) -> tuple[float, float, float] | None:
-        """Extract (return, annualised_vol, volume_ratio) from market_data."""
-        # Prefer BTC as representative asset
         btc_data: dict[str, Any] | None = None
         for key in ("BTCUSDT", "BTC-USDT", "btcusdt", "BTC/USDT", "BTCUSD"):
             if key in market_data:
@@ -171,32 +409,25 @@ class HMMRegimeDetector:
             btc_data = next(iter(market_data.values()))
         if btc_data is None or not isinstance(btc_data, dict):
             return None
-
         try:
             close = btc_data.get("close", [])
             volume = btc_data.get("volume", [])
-
-            # 1-bar return
             if isinstance(close, list) and len(close) >= 2:
                 c1, c0 = float(close[-1]), float(close[-2])
                 ret = (c1 - c0) / c0 if c0 != 0 else 0.0
             else:
                 ret = 0.0
-
-            # Rolling 20-bar annualised vol
             if isinstance(close, list) and len(close) >= 10:
                 prices = np.array(close[-20:], dtype=float)
                 prices = prices[prices > 0]
                 if len(prices) >= 2:
                     rets = np.diff(np.log(prices))
-                    vol = float(np.std(rets)) * np.sqrt(252 * 24)  # hourly bars
+                    vol = float(np.std(rets)) * np.sqrt(252 * 24)
                     vol = max(0.01, min(vol, 10.0))
                 else:
                     vol = float(self._vols[-1]) if self._vols else 0.5
             else:
                 vol = float(self._vols[-1]) if self._vols else 0.5
-
-            # Volume ratio: latest vs 20-bar average
             if isinstance(volume, list) and len(volume) >= 5:
                 arr = np.array(volume[-20:], dtype=float)
                 arr = arr[arr > 0]
@@ -204,14 +435,12 @@ class HMMRegimeDetector:
                 vol_ratio = max(0.1, min(vol_ratio, 10.0))
             else:
                 vol_ratio = 1.0
-
             return float(ret), float(vol), float(vol_ratio)
         except Exception as exc:
             logger.debug("Feature extraction failed: %s", exc)
             return None
 
     def _train_hmm(self) -> None:
-        """Fit GaussianHMM on collected feature history."""
         n = len(self._returns)
         if n < self.MIN_TRAIN_SAMPLES:
             return
@@ -220,49 +449,34 @@ class HMMRegimeDetector:
                 [list(self._returns), list(self._vols), list(self._vol_ratios)]
             )
             model = _hmm_lib.GaussianHMM(
-                n_components=3,
-                covariance_type="diag",
-                n_iter=100,
-                random_state=42,
-                min_covar=1e-4,
+                n_components=3, covariance_type="diag", n_iter=100, random_state=42, min_covar=1e-4
             )
             model.fit(feat_mat)
-
-            # Map HMM state indices to regime labels by return mean
-            means = model.means_  # shape (3, 3); col 0 = return
-            ret_order = np.argsort(means[:, 0])  # ascending by return
+            means = model.means_
+            ret_order = np.argsort(means[:, 0])
             self._hmm_state_to_regime = {
-                int(ret_order[0]): REGIME_BEAR,  # lowest return
-                int(ret_order[1]): REGIME_SIDEWAYS,  # middle return
-                int(ret_order[2]): REGIME_BULL,  # highest return
+                int(ret_order[0]): BEAR,
+                int(ret_order[1]): SIDEWAYS,
+                int(ret_order[2]): BULL,
             }
             self._model = model
             self._is_trained = True
-            logger.debug("HMM trained on %d samples", n)
         except Exception as exc:
             logger.debug("HMM training failed: %s", exc)
 
     def _predict_hmm(self) -> dict[str, Any]:
-        """Predict regime using trained HMM."""
         try:
             feat_mat = np.column_stack(
                 [list(self._returns), list(self._vols), list(self._vol_ratios)]
             )
-            proba = self._model.predict_proba(feat_mat)  # (n, 3)
+            proba = self._model.predict_proba(feat_mat)
             current_probs = proba[-1]
-
-            regime_probs: dict[str, float] = {r: 0.0 for r in REGIMES}
+            regime_probs: dict[str, float] = {BULL: 0.0, BEAR: 0.0, SIDEWAYS: 0.0}
             for state_idx, p in enumerate(current_probs):
-                regime_name = self._hmm_state_to_regime.get(state_idx, REGIME_SIDEWAYS)
+                regime_name = self._hmm_state_to_regime.get(state_idx, SIDEWAYS)
                 regime_probs[regime_name] = float(p)
-
             best = max(regime_probs, key=lambda k: regime_probs[k])
-            probs_list = [
-                regime_probs[REGIME_BULL],
-                regime_probs[REGIME_BEAR],
-                regime_probs[REGIME_SIDEWAYS],
-            ]
-
+            probs_list = [regime_probs[BULL], regime_probs[BEAR], regime_probs[SIDEWAYS]]
             return {
                 "regime": best,
                 "probs": probs_list,
@@ -277,34 +491,33 @@ class HMMRegimeDetector:
             return self._rule_based(ret, vol)
 
     def _rule_based(self, ret: float, vol: float) -> dict[str, Any]:
-        """Simple rule-based regime classification as fallback."""
         if len(self._returns) >= 10:
             recent_rets = list(self._returns)[-10:]
             avg_ret = float(np.mean(recent_rets))
-            avg_vol = float(np.mean(list(self._vols)[-10:])) if len(self._vols) >= 10 else vol
         else:
-            avg_ret, avg_vol = ret, vol
-
-        if avg_ret > 0.003 and avg_vol < 0.8:
-            regime, probs = REGIME_BULL, [0.7, 0.1, 0.2]
-        elif avg_ret < -0.003 or avg_vol > 1.2:
-            regime, probs = REGIME_BEAR, [0.1, 0.7, 0.2]
+            avg_ret = ret
+        if avg_ret > 0.001 and vol < 1.0:
+            regime = BULL
+            probs = [0.7, 0.1, 0.2]
+        elif avg_ret < -0.001 or vol > 1.5:
+            regime = BEAR
+            probs = [0.1, 0.7, 0.2]
         else:
-            regime, probs = REGIME_SIDEWAYS, [0.2, 0.2, 0.6]
-
+            regime = SIDEWAYS
+            probs = [0.2, 0.2, 0.6]
         return {
             "regime": regime,
             "probs": probs,
             "signal_multipliers": REGIME_SIGNAL_MULTIPLIERS.get(regime, {}),
-            "confidence": max(probs),
+            "confidence": probs[0] if regime == BULL else probs[1] if regime == BEAR else probs[2],
             "source": "rule_based",
         }
 
     def _fallback_result(self) -> dict[str, Any]:
         return {
-            "regime": REGIME_SIDEWAYS,
-            "probs": [1 / 3, 1 / 3, 1 / 3],
-            "signal_multipliers": {},
+            "regime": self._current_regime,
+            "probs": self._regime_probs,
+            "signal_multipliers": REGIME_SIGNAL_MULTIPLIERS.get(self._current_regime, {}),
             "confidence": 0.33,
-            "source": "insufficient_data",
+            "source": "fallback",
         }

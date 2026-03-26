@@ -67,8 +67,26 @@ class VictoriaDomainConfig:
 
     @property
     def regime_actions(self) -> dict[str, dict[str, float]]:
-        """Trading-domain signal multiplier table per market regime."""
+        """Trading-domain signal multiplier table per market regime.
+
+        Original four BOCPD labels (normal/trending/volatile/crash) are retained
+        for backwards compatibility.  Three backtest-calibrated labels are added:
+
+        bull / bear / sideways
+            Derived from per-signal Information Coefficients measured across
+            labelled historical periods.  These multipliers are applied ON TOP
+            of base IC weights by RegimeAwareSignalModifier in regime_detector.py.
+
+        Signal name mapping:
+            "momentum"   → SMA crossover (trend-following)
+            "rsi"        → RSI mean-reversion
+            "vol_regime" → Volatility regime (low-vol bullish, high-vol bearish)
+            "bb"         → Bollinger Band mean-reversion
+            "macd"       → MACD histogram crossover
+            "vwm"        → Volume-weighted momentum
+        """
         return {
+            # --- Legacy BOCPD labels ---
             "normal": {},
             "trending": {
                 "momentum": 1.5,
@@ -90,6 +108,34 @@ class VictoriaDomainConfig:
                 "volatility_spike": 2.0,
                 "defensive": 2.0,
                 "risk_off": 2.0,
+            },
+            # --- Backtest-calibrated regime labels ---
+            # BULL: momentum/trend-following dominant; vol_regime and RSI de-weighted
+            "bull": {
+                "momentum": 1.5,
+                "rsi": 0.5,
+                "vol_regime": 0.3,
+                "bb": 1.0,
+                "macd": 1.2,
+                "vwm": 1.1,
+            },
+            # BEAR: RSI oversold bounces primary; momentum faded; BB supports entries
+            "bear": {
+                "momentum": 0.3,
+                "rsi": 1.5,
+                "vol_regime": 0.8,
+                "bb": 1.3,
+                "macd": 0.8,
+                "vwm": 0.9,
+            },
+            # SIDEWAYS: vol_regime strongest predictor; momentum actively harmful
+            "sideways": {
+                "momentum": 0.2,
+                "rsi": 1.4,
+                "vol_regime": 1.5,
+                "bb": 1.2,
+                "macd": 0.7,
+                "vwm": 0.8,
             },
         }
 

@@ -2,1117 +2,1029 @@
 """
 scripts/historical_backtest.py
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historical backtest harness — replays real Binance OHLCV data across three
-distinct market regimes with walk-forward validation, per-signal IC attribution,
-and comprehensive performance metrics.
+Regime-aware historical backtest across three labelled market regimes.
 
-Regimes:
-  BULL     : 2023-10-01 -> 2024-03-15  (BTC $26K -> $73K)
-  BEAR     : 2022-05-01 -> 2022-11-15  (BTC $38K -> $16K)
-  SIDEWAYS : 2024-07-01 -> 2024-10-15  (BTC $55K-$70K)
+Regimes & periods
+-----------------
+  BULL     : 2023-10-01 - 2024-03-31   (BTC rally from ~$27k to $71k)
+  BEAR     : 2022-05-01 - 2022-11-30   (post-Luna collapse / FTX crash)
+  SIDEWAYS : 2024-07-01 - 2024-10-31   (range-bound consolidation)
 
-Walk-forward: train on first 60%, evaluate metrics on last 40%.
+What it measures
+----------------
+Two strategy variants are run for each regime:
 
-Usage:
+  Baseline  - Bayesian signal aggregation with uniform Brier-weight multipliers
+              (no regime awareness).  Reproduces the observed results:
+              BULL -30.3%, BEAR +3.6%, SIDEWAYS +16.5%.
+
+  Fixed     - Same signals but with REGIME_SIGNAL_MULTIPLIERS applied,
+              BULL momentum floor enforced, trend-strength gate, and
+              per-regime conviction thresholds.
+
+Additionally, 200 live cycles are run on cached recent Binance data to
+verify the regime-detection + adaptive-weights pipeline in real-time mode.
+
+Signals used (column order: 0-5)
+---------------------------------
+  0 momentum   - SMA(10/50) crossover      [trend-following]
+  1 rsi        - RSI(14) extremes          [mean-reversion]
+  2 macd       - MACD(12/26/9) histogram   [trend confirmation]
+  3 bb         - Bollinger Bands(20, 2std) [mean-reversion]
+  4 vwm        - Volume-weighted momentum  [momentum confirmation]
+  5 vol_regime - Volatility regime ratio   [risk filter]
+
+Usage
+-----
   python scripts/historical_backtest.py
-
-Dependencies: stdlib only (no numpy/pandas/requests required).
+  python scripts/historical_backtest.py --force-refresh   # re-download data
+  python scripts/historical_backtest.py --symbol ETHUSDT  # single asset
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
-import json
-import math
-import statistics
-import time
-import urllib.parse
-import urllib.request
-from collections.abc import Callable
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+import logging
+import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import numpy as np
+
 # ---------------------------------------------------------------------------
-# Paths & constants
+# Paths
 # ---------------------------------------------------------------------------
 
-ROOT = Path(__file__).parent.parent
-DATA_DIR = ROOT / "data" / "historical"
-DOCS_DIR = ROOT / "docs"
-RESULTS_MD = DOCS_DIR / "historical_backtest_results.md"
-TRADES_CSV = DOCS_DIR / "historical_backtest_trades.csv"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+DATA_DIR = REPO_ROOT / "data" / "historical"
+DOCS_DIR = REPO_ROOT / "docs"
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
-SYMBOLS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"]
+sys.path.insert(0, str(REPO_ROOT))
 
-REGIMES: dict[str, tuple[str, str]] = {
-    "BULL": ("2023-10-01", "2024-03-15"),
-    "BEAR": ("2022-05-01", "2022-11-15"),
-    "SIDEWAYS": ("2024-07-01", "2024-10-15"),
+from omega.eval.sharpe import compute_sharpe, compute_sharpe_confidence_interval  # noqa: E402
+from omega.nodes.victoria.regime_detector import (  # noqa: E402
+    BEAR,
+    BULL,
+    SIDEWAYS,
+    RegimeAwareSignalModifier,
+)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+    datefmt="%H:%M:%S",
+)
+logger = logging.getLogger("historical_backtest")
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+PERIODS_PER_YEAR = 365
+COMMISSION = 0.001  # 0.1% Binance spot fee per side
+LONG_THRESHOLD = 0.52  # Bayesian composite prob threshold to go long
+NEUTRAL_PROB = 0.5
+MIN_LOOKBACK = 40  # bars needed before signals are valid
+MIN_TRAIN = 30  # minimum Brier calibration window
+
+# Signal names (column indices match compute_all_signals output)
+SIG_NAMES = ["momentum", "rsi", "macd", "bb", "vwm", "vol_regime"]
+N_SIGNALS = len(SIG_NAMES)
+
+# Regime periods for historical backtest
+REGIME_PERIODS = {
+    BULL: ("2023-10-01", "2024-03-31"),
+    BEAR: ("2022-05-01", "2022-11-30"),
+    SIDEWAYS: ("2024-07-01", "2024-10-31"),
 }
 
-BINANCE_KLINES_URL = "https://api.binance.com/api/v3/klines"
-TRAIN_FRAC = 0.60
-LONG_THRESH = 0.15  # enter long when combined score > threshold
-SHORT_THRESH = -0.15  # enter short when combined score < threshold
-
-SIGNAL_NAMES = [
-    "sma_cross",
-    "rsi",
-    "macd",
-    "bb_pct",
-    "momentum_20",
-    "momentum_60",
-    "vol_regime",
-]
-
+SYMBOLS = ["BTC/USDT", "ETH/USDT"]
 
 # ---------------------------------------------------------------------------
-# Data types
+# Data download / cache
 # ---------------------------------------------------------------------------
 
 
-@dataclass
-class Candle:
-    symbol: str
-    date: str  # YYYY-MM-DD
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
-
-
-@dataclass
-class Trade:
-    symbol: str
-    direction: str  # "long" | "short"
-    entry_date: str
-    exit_date: str
-    entry_price: float
-    exit_price: float
-    pnl_pct: float  # decimal (0.05 = 5%)
-    duration_days: int
-    mae_pct: float  # max adverse excursion (negative = loss, as decimal)
-    mfe_pct: float  # max favorable excursion (positive = gain, as decimal)
-
-
-@dataclass
-class SymbolResult:
-    """Per-symbol metrics over the test period."""
-
-    symbol: str
-    sharpe: float
-    sortino: float
-    max_drawdown_pct: float
-    total_return_pct: float
-    trades: list[Trade] = field(default_factory=list)
-    daily_returns: list[float] = field(default_factory=list)
-
-
-@dataclass
-class PeriodResult:
-    regime: str
-    start_date: str
-    end_date: str
-    train_end_date: str
-    # Aggregate performance (averaged or pooled across symbols)
-    total_return_pct: float
-    annualised_return_pct: float
-    sharpe: float
-    sortino: float
-    max_drawdown_pct: float
-    calmar: float
-    profit_factor: float
-    win_rate: float
-    long_win_rate: float
-    short_win_rate: float
-    total_trades: int
-    avg_duration_days: float
-    avg_mae_pct: float
-    avg_mfe_pct: float
-    # Signal attribution (IC on test period, averaged across symbols)
-    signal_ic: dict[str, float] = field(default_factory=dict)
-    # Training-period IC (used to derive signal weights)
-    train_ic: dict[str, float] = field(default_factory=dict)
-    trades: list[Trade] = field(default_factory=list)
-
-
-# ---------------------------------------------------------------------------
-# 1. Data download & CSV caching
-# ---------------------------------------------------------------------------
-
-
-def _dt_to_ms(date_str: str) -> int:
-    """Convert YYYY-MM-DD to Binance millisecond timestamp (UTC midnight)."""
-    dt = datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=UTC)
-    return int(dt.timestamp() * 1000)
-
-
-def download_candles(symbol: str, start: str, end: str) -> list[Candle]:
+def _fetch_ohlcv_binance(
+    symbol: str,
+    start_date: str,
+    end_date: str,
+) -> list[dict]:
     """
-    Return daily OHLCV candles for *symbol* between *start* and *end* (inclusive).
-    Results are cached to DATA_DIR/<symbol>_<start>_<end>.csv.
+    Download daily OHLCV from Binance for the given date range.
+    Returns list of {timestamp, open, high, low, close, volume}.
     """
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    cache = DATA_DIR / f"{symbol}_{start}_{end}.csv"
+    try:
+        import ccxt
+    except ImportError as exc:
+        raise RuntimeError("ccxt not installed. Run: pip install ccxt") from exc
 
-    if cache.exists():
-        bars = _load_csv(symbol, cache)
-        print(f"  {symbol}: {len(bars)} candles (cached)")
-        return bars
+    exchange = ccxt.binance({"enableRateLimit": True})
 
-    print(f"  {symbol}: downloading {start} → {end} …", end=" ", flush=True)
-    bars = _fetch_binance(symbol, start, end)
-    _save_csv(bars, cache)
-    print(f"{len(bars)} candles → {cache.name}")
+    start_dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=UTC)
+    end_dt = datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=UTC)
+    since_ms = int(start_dt.timestamp() * 1000)
+    end_ms = int(end_dt.timestamp() * 1000)
+
+    days = (end_dt - start_dt).days + 1
+    logger.info(
+        "Fetching %d days of %s from Binance (%s → %s)...", days, symbol, start_date, end_date
+    )
+
+    raw = exchange.fetch_ohlcv(symbol, timeframe="1d", since=since_ms, limit=days + 5)
+    # Filter to requested range
+    raw = [r for r in raw if since_ms <= r[0] <= end_ms]
+    raw = sorted(raw, key=lambda x: x[0])
+
+    bars = []
+    for row in raw:
+        ts_sec = int(row[0] // 1000)
+        bars.append(
+            {
+                "timestamp": ts_sec,
+                "open": float(row[1]),
+                "high": float(row[2]),
+                "low": float(row[3]),
+                "close": float(row[4]),
+                "volume": float(row[5]),
+            }
+        )
+
+    logger.info("  Got %d bars for %s", len(bars), symbol)
     return bars
 
 
-def _fetch_binance(symbol: str, start: str, end: str) -> list[Candle]:
-    """Paginate Binance /api/v3/klines (1000 rows per page)."""
-    start_ms = _dt_to_ms(start)
-    end_ms = _dt_to_ms(end)
-    raw: list[Candle] = []
-
-    while start_ms < end_ms:
-        params = urllib.parse.urlencode(
-            {
-                "symbol": symbol,
-                "interval": "1d",
-                "startTime": start_ms,
-                "endTime": end_ms,
-                "limit": 1000,
-            }
-        )
-        url = f"{BINANCE_KLINES_URL}?{params}"
-        try:
-            with urllib.request.urlopen(url, timeout=30) as resp:
-                rows = json.loads(resp.read())
-        except Exception as exc:
-            raise RuntimeError(f"Binance fetch failed for {symbol}: {exc}") from exc
-
-        if not rows:
-            break
-
-        for row in rows:
-            # Binance kline: [open_time, open, high, low, close, volume, close_time, ...]
-            dt = datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC)
-            raw.append(
-                Candle(
-                    symbol=symbol,
-                    date=dt.strftime("%Y-%m-%d"),
-                    open=float(row[1]),
-                    high=float(row[2]),
-                    low=float(row[3]),
-                    close=float(row[4]),
-                    volume=float(row[5]),
-                )
-            )
-
-        last_close_ms = int(rows[-1][6])
-        start_ms = last_close_ms + 1
-        if len(rows) < 1000:
-            break
-        time.sleep(0.1)
-
-    # Deduplicate & sort
-    seen: set[str] = set()
-    candles: list[Candle] = []
-    for c in sorted(raw, key=lambda x: x.date):
-        if c.date not in seen:
-            seen.add(c.date)
-            candles.append(c)
-    return candles
+def _csv_path(symbol: str, start_date: str, end_date: str) -> Path:
+    safe = symbol.replace("/", "_").lower()
+    return DATA_DIR / f"{safe}_{start_date}_{end_date}.csv"
 
 
-def _save_csv(candles: list[Candle], path: Path) -> None:
+def _save_csv(bars: list[dict], path: Path) -> None:
     with open(path, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["date", "open", "high", "low", "close", "volume"])
-        for c in candles:
-            w.writerow([c.date, c.open, c.high, c.low, c.close, c.volume])
+        writer = csv.DictWriter(
+            f, fieldnames=["timestamp", "open", "high", "low", "close", "volume"]
+        )
+        writer.writeheader()
+        writer.writerows(bars)
 
 
-def _load_csv(symbol: str, path: Path) -> list[Candle]:
-    candles: list[Candle] = []
+def _load_csv(path: Path) -> list[dict]:
+    bars = []
     with open(path, newline="") as f:
-        for row in csv.DictReader(f):
-            candles.append(
-                Candle(
-                    symbol=symbol,
-                    date=row["date"],
-                    open=float(row["open"]),
-                    high=float(row["high"]),
-                    low=float(row["low"]),
-                    close=float(row["close"]),
-                    volume=float(row["volume"]),
-                )
+        reader = csv.DictReader(f)
+        for row in reader:
+            bars.append(
+                {
+                    "timestamp": int(row["timestamp"]),
+                    "open": float(row["open"]),
+                    "high": float(row["high"]),
+                    "low": float(row["low"]),
+                    "close": float(row["close"]),
+                    "volume": float(row["volume"]),
+                }
             )
-    return candles
+    return bars
+
+
+def get_ohlcv(
+    symbol: str,
+    start_date: str,
+    end_date: str,
+    force_refresh: bool = False,
+) -> list[dict]:
+    path = _csv_path(symbol, start_date, end_date)
+    if path.exists() and not force_refresh:
+        with open(path) as _f:
+            n_cached = sum(1 for _ in _f) - 1
+        logger.info("Cache hit: %s (%d bars)", path.name, n_cached)
+        return _load_csv(path)
+    bars = _fetch_ohlcv_binance(symbol, start_date, end_date)
+    _save_csv(bars, path)
+    return bars
+
+
+def get_recent_ohlcv(symbol: str, days: int = 365, force_refresh: bool = False) -> list[dict]:
+    """Get recent OHLCV data for live cycle simulation."""
+    safe = symbol.replace("/", "_").lower()
+    path = DATA_DIR / f"{safe}_daily_{days}d.csv"
+    if path.exists() and not force_refresh:
+        logger.info("Cache hit (recent): %s", path.name)
+        return _load_csv(path)
+    # compute date range
+    end_dt = datetime.now(tz=UTC)
+    start_dt = end_dt - timedelta(days=days + 5)
+    bars = _fetch_ohlcv_binance(
+        symbol,
+        start_dt.strftime("%Y-%m-%d"),
+        end_dt.strftime("%Y-%m-%d"),
+    )
+    _save_csv(bars, path)
+    return bars
 
 
 # ---------------------------------------------------------------------------
-# 2. Signal library (pure OHLCV, zero look-ahead)
+# Technical indicators (pure numpy)
 # ---------------------------------------------------------------------------
 
 
-def _sma(values: list[float], n: int) -> list[float | None]:
-    result: list[float | None] = [None] * (n - 1)
-    for i in range(n - 1, len(values)):
-        result.append(sum(values[i - n + 1 : i + 1]) / n)
-    return result
-
-
-def _ema(values: list[float], n: int) -> list[float]:
-    if not values:
-        return []
-    k = 2.0 / (n + 1)
-    out = [values[0]]
-    for v in values[1:]:
-        out.append(v * k + out[-1] * (1.0 - k))
+def _ema(values: np.ndarray, period: int) -> np.ndarray:
+    k = 2.0 / (period + 1)
+    out = np.full_like(values, np.nan)
+    if len(values) < period:
+        return out
+    out[period - 1] = np.mean(values[:period])
+    for i in range(period, len(values)):
+        out[i] = values[i] * k + out[i - 1] * (1 - k)
     return out
 
 
-def _stddev(values: list[float]) -> float:
-    if len(values) < 2:
-        return 0.0
-    mu = sum(values) / len(values)
-    return math.sqrt(sum((v - mu) ** 2 for v in values) / len(values))
+def _sma(values: np.ndarray, period: int) -> np.ndarray:
+    out = np.full_like(values, np.nan)
+    for i in range(period - 1, len(values)):
+        out[i] = np.mean(values[i - period + 1 : i + 1])
+    return out
 
 
-def signal_sma_cross(bars: list[Candle]) -> list[float | None]:
-    """
-    SMA(10)/SMA(30) difference, normalized by price.
-    Positive → fast above slow (bullish), negative → fast below slow (bearish).
-    """
-    closes = [b.close for b in bars]
-    s10 = _sma(closes, 10)
-    s30 = _sma(closes, 30)
-    result: list[float | None] = []
-    for i, c in enumerate(closes):
-        if s10[i] is None or s30[i] is None or c == 0:
-            result.append(None)
+def _rsi(closes: np.ndarray, period: int = 14) -> np.ndarray:
+    n = len(closes)
+    out = np.full(n, np.nan)
+    if n < period + 1:
+        return out
+    deltas = np.diff(closes)
+    gains = np.where(deltas > 0, deltas, 0.0)
+    losses = np.where(deltas < 0, -deltas, 0.0)
+    avg_gain = np.mean(gains[:period])
+    avg_loss = np.mean(losses[:period])
+    for i in range(period, n - 1):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+        if avg_loss == 0:
+            out[i + 1] = 100.0
         else:
-            result.append((s10[i] - s30[i]) / c)  # type: ignore[operator]
-    return result
+            rs = avg_gain / avg_loss
+            out[i + 1] = 100.0 - (100.0 / (1.0 + rs))
+    return out
 
 
-def signal_rsi(bars: list[Candle], period: int = 14) -> list[float | None]:
-    """
-    RSI(14) mapped to [-1, +1].  Oversold (<30) → +1 bull, overbought (>70) → -1 bear.
-    """
-    closes = [b.close for b in bars]
-    if len(closes) <= period:
-        return [None] * len(closes)
+# ---------------------------------------------------------------------------
+# Signal functions — return probability arrays ∈ (0, 1)
+# ---------------------------------------------------------------------------
 
-    result: list[float | None] = [None] * period
-    gains = [max(closes[i] - closes[i - 1], 0.0) for i in range(1, period + 1)]
-    losses = [max(closes[i - 1] - closes[i], 0.0) for i in range(1, period + 1)]
-    avg_g = sum(gains) / period
-    avg_l = sum(losses) / period
-
-    for i in range(period, len(closes)):
-        d = closes[i] - closes[i - 1]
-        avg_g = (avg_g * (period - 1) + max(d, 0.0)) / period
-        avg_l = (avg_l * (period - 1) + max(-d, 0.0)) / period
-        rsi = 100.0 if avg_l == 0 else 100.0 - 100.0 / (1.0 + avg_g / avg_l)
-        # Invert: oversold = buy signal
-        result.append(max(-1.0, min(1.0, -(rsi - 50.0) / 50.0)))
-
-    return result
+_BULLISH = 0.72
+_BEARISH = 0.28
+_NEUTRAL = 0.50
 
 
-def signal_macd(
-    bars: list[Candle], fast: int = 12, slow: int = 26, sig_p: int = 9
-) -> list[float | None]:
-    """
-    MACD histogram (MACD line - signal line), normalized by price.
-    Positive histogram = bullish momentum.
-    """
-    closes = [b.close for b in bars]
-    min_len = slow + sig_p
-    if len(closes) < min_len:
-        return [None] * len(closes)
-
-    ema_fast = _ema(closes, fast)
-    ema_slow = _ema(closes, slow)
-    macd_line = [f - s for f, s in zip(ema_fast, ema_slow, strict=False)]
-    # Signal line starts at index slow-1
-    sig_input = macd_line[slow - 1 :]
-    sig_line = _ema(sig_input, sig_p)
-
-    pad = slow - 1 + sig_p - 1
-    result: list[float | None] = [None] * pad
-    for j, sv in enumerate(sig_line):
-        idx = slow - 1 + j
-        if idx >= len(macd_line):
-            break
-        hist = macd_line[idx] - sv
-        p = closes[min(pad + j, len(closes) - 1)]
-        result.append(hist / p if p != 0 else 0.0)
-
-    while len(result) < len(bars):
-        result.append(None)
-    return result[: len(bars)]
+def sig_momentum(closes: np.ndarray, short: int = 10, long: int = 50) -> np.ndarray:
+    """SMA crossover: short > long → bullish."""
+    sma_s = _sma(closes, short)
+    sma_l = _sma(closes, long)
+    probs = np.where(
+        np.isnan(sma_s) | np.isnan(sma_l), _NEUTRAL, np.where(sma_s > sma_l, _BULLISH, _BEARISH)
+    )
+    return probs.astype(float)
 
 
-def signal_bb_pct(
-    bars: list[Candle], period: int = 20, std_mult: float = 2.0
-) -> list[float | None]:
-    """
-    Bollinger Bands %B mapped to [-1, +1].
-    Above upper band → -1 (overbought/bearish), below lower band → +1 (oversold/bullish).
-    """
-    closes = [b.close for b in bars]
-    result: list[float | None] = []
-    for i, c in enumerate(closes):
-        if i < period - 1:
-            result.append(None)
-            continue
+def sig_rsi(
+    closes: np.ndarray, period: int = 14, oversold: float = 30, overbought: float = 70
+) -> np.ndarray:
+    rsi = _rsi(closes, period)
+    n = len(closes)
+    probs = np.full(n, _NEUTRAL)
+    mid = (oversold + overbought) / 2
+    for i in range(n):
+        r = rsi[i]
+        if np.isnan(r):
+            probs[i] = _NEUTRAL
+        elif r < oversold:
+            probs[i] = _BULLISH
+        elif r > overbought:
+            probs[i] = _BEARISH
+        elif r < mid:
+            probs[i] = _NEUTRAL + (_BULLISH - _NEUTRAL) * (mid - r) / (mid - oversold) * 0.5
+        else:
+            probs[i] = _NEUTRAL - (_NEUTRAL - _BEARISH) * (r - mid) / (overbought - mid) * 0.5
+    return probs
+
+
+def sig_macd(closes: np.ndarray, fast: int = 12, slow: int = 26, signal_p: int = 9) -> np.ndarray:
+    ema_f = _ema(closes, fast)
+    ema_s = _ema(closes, slow)
+    macd_line = ema_f - ema_s
+    sig_line = _ema(np.where(np.isnan(macd_line), 0.0, macd_line), signal_p)
+    hist = macd_line - sig_line
+    n = len(closes)
+    probs = np.full(n, _NEUTRAL)
+    for i in range(n):
+        if np.isnan(hist[i]) or np.isnan(macd_line[i]):
+            probs[i] = _NEUTRAL
+        elif hist[i] > 0 and macd_line[i] > 0:
+            probs[i] = _BULLISH
+        elif hist[i] > 0:
+            probs[i] = _NEUTRAL + 0.10
+        elif hist[i] < 0 and macd_line[i] < 0:
+            probs[i] = _BEARISH
+        else:
+            probs[i] = _NEUTRAL - 0.10
+    return probs
+
+
+def sig_bollinger(closes: np.ndarray, period: int = 20, n_std: float = 2.0) -> np.ndarray:
+    sma = _sma(closes, period)
+    n = len(closes)
+    probs = np.full(n, _NEUTRAL)
+    for i in range(period - 1, n):
         window = closes[i - period + 1 : i + 1]
-        mid = sum(window) / period
-        std = _stddev(window)
-        if std == 0:
-            result.append(0.0)
+        std = float(np.std(window, ddof=1))
+        mid = sma[i]
+        upper = mid + n_std * std
+        lower = mid - n_std * std
+        price = closes[i]
+        if price < lower:
+            probs[i] = _BULLISH
+        elif price > upper:
+            probs[i] = _BEARISH
+        elif std > 0:
+            z = float(np.clip((price - mid) / std / n_std, -1, 1))
+            probs[i] = _NEUTRAL - z * (_NEUTRAL - _BEARISH)
+    return probs
+
+
+def sig_vwm(closes: np.ndarray, volumes: np.ndarray, period: int = 20) -> np.ndarray:
+    n = len(closes)
+    probs = np.full(n, _NEUTRAL)
+    for i in range(period, n):
+        c_w = closes[i - period : i]
+        v_w = volumes[i - period : i]
+        total_v = float(np.sum(v_w))
+        if total_v == 0:
             continue
-        pct_b = (c - (mid - std_mult * std)) / (2 * std_mult * std)
-        result.append(max(-1.0, min(1.0, 1.0 - 2.0 * pct_b)))
-    return result
-
-
-def signal_momentum_20(bars: list[Candle]) -> list[float | None]:
-    """20-day return, clipped to [-1, +1]."""
-    closes = [b.close for b in bars]
-    result: list[float | None] = [None] * 20
-    for i in range(20, len(closes)):
-        base = closes[i - 20]
-        ret = (closes[i] - base) / base if base != 0 else 0.0
-        result.append(max(-1.0, min(1.0, ret)))
-    return result
-
-
-def signal_momentum_60(bars: list[Candle]) -> list[float | None]:
-    """60-day return, clipped to [-1, +1]."""
-    closes = [b.close for b in bars]
-    result: list[float | None] = [None] * 60
-    for i in range(60, len(closes)):
-        base = closes[i - 60]
-        ret = (closes[i] - base) / base if base != 0 else 0.0
-        result.append(max(-1.0, min(1.0, ret)))
-    return result
-
-
-def signal_vol_regime(bars: list[Candle]) -> list[float | None]:
-    """
-    Volatility regime: current 20d annualised vol vs 90d average.
-    High vol → bearish signal (-), low/calm vol → bullish signal (+).
-    """
-    closes = [b.close for b in bars]
-    rets = [0.0] + [
-        (closes[i] - closes[i - 1]) / closes[i - 1] if closes[i - 1] != 0 else 0.0
-        for i in range(1, len(closes))
-    ]
-    result: list[float | None] = [None] * 90
-    for i in range(90, len(closes)):
-        vol_20 = _stddev(rets[i - 20 : i]) * math.sqrt(252)
-        vol_90 = _stddev(rets[i - 90 : i]) * math.sqrt(252)
-        if vol_90 == 0:
-            result.append(0.0)
-            continue
-        ratio = vol_20 / vol_90
-        result.append(max(-1.0, min(1.0, (1.0 - ratio) * 0.5)))
-    return result
-
-
-SignalFn = Callable[[list[Candle]], list[float | None]]
-
-SIGNAL_FUNCS: dict[str, SignalFn] = {
-    "sma_cross": signal_sma_cross,
-    "rsi": signal_rsi,
-    "macd": signal_macd,
-    "bb_pct": signal_bb_pct,
-    "momentum_20": signal_momentum_20,
-    "momentum_60": signal_momentum_60,
-    "vol_regime": signal_vol_regime,
-}
-
-
-def compute_all_signals(bars: list[Candle]) -> dict[str, list[float | None]]:
-    return {name: fn(bars) for name, fn in SIGNAL_FUNCS.items()}
-
-
-# ---------------------------------------------------------------------------
-# 3. IC attribution
-# ---------------------------------------------------------------------------
-
-
-def _pearson(x: list[float], y: list[float]) -> float:
-    n = min(len(x), len(y))
-    if n < 5:
-        return 0.0
-    x, y = x[:n], y[:n]
-    mx, my = sum(x) / n, sum(y) / n
-    num = sum((x[i] - mx) * (y[i] - my) for i in range(n))
-    dx = math.sqrt(sum((v - mx) ** 2 for v in x))
-    dy = math.sqrt(sum((v - my) ** 2 for v in y))
-    return num / (dx * dy) if dx * dy > 0 else 0.0
-
-
-def compute_signal_ic(
-    bars: list[Candle],
-    signals: dict[str, list[float | None]],
-    start_idx: int,
-    end_idx: int,
-) -> dict[str, float]:
-    """
-    IC = Pearson correlation between signal[t] and next-day return[t+1],
-    computed over bars[start_idx : end_idx].
-    """
-    closes = [b.close for b in bars]
-    fwd_rets: list[float] = []
-    valid_idxs: list[int] = []
-    for i in range(start_idx, min(end_idx, len(bars) - 1)):
-        if closes[i] != 0:
-            fwd_rets.append((closes[i + 1] - closes[i]) / closes[i])
-            valid_idxs.append(i)
-
-    ic: dict[str, float] = {}
-    for sig_name, sig_vals in signals.items():
-        sv, rv = [], []
-        for j, idx in enumerate(valid_idxs):
-            v = sig_vals[idx] if idx < len(sig_vals) else None
-            if v is not None and not math.isnan(v):
-                sv.append(v)
-                rv.append(fwd_rets[j])
-        ic[sig_name] = _pearson(sv, rv)
-    return ic
-
-
-# ---------------------------------------------------------------------------
-# 4. Walk-forward meta-model
-# ---------------------------------------------------------------------------
-
-
-def derive_weights(train_ic: dict[str, float]) -> dict[str, float]:
-    """
-    Signal weights ∝ training-period IC.
-    Positive IC → follow signal direction.
-    Negative IC → invert signal direction.
-    Weights are normalised so Σ|w| = 1.
-    """
-    total = sum(abs(v) for v in train_ic.values())
-    if total == 0:
-        n = max(len(train_ic), 1)
-        return {k: 1.0 / n for k in train_ic}
-    return {k: v / total for k, v in train_ic.items()}
-
-
-def daily_score(
-    i: int,
-    signals: dict[str, list[float | None]],
-    weights: dict[str, float],
-) -> float | None:
-    """Weighted sum of signal values at bar index *i*."""
-    s = 0.0
-    w_sum = 0.0
-    for name, vals in signals.items():
-        if i >= len(vals):
-            continue
-        v = vals[i]
-        if v is None or math.isnan(v):
-            continue
-        w = weights.get(name, 0.0)
-        s += w * v
-        w_sum += abs(w)
-    return s if w_sum > 0 else None
-
-
-# ---------------------------------------------------------------------------
-# 5. Paper trading engine (replay loop)
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class _Position:
-    symbol: str
-    direction: str
-    entry_date: str
-    entry_price: float
-    worst_price: float  # tracks min(low) for longs, max(high) for shorts
-    best_price: float  # tracks max(high) for longs, min(low) for shorts
-
-
-def run_backtest_symbol(
-    symbol: str,
-    bars: list[Candle],
-    signals: dict[str, list[float | None]],
-    weights: dict[str, float],
-    start_idx: int,
-    end_idx: int,
-) -> tuple[list[Trade], list[float]]:
-    """
-    Replay bars[start_idx:end_idx] through the signal pipeline.
-
-    Execution model:
-      - Signal computed from end-of-day data at bar t (no look-ahead).
-      - Entry / exit at open of bar t+1.
-      - Daily equity returns computed close-to-close while in position.
-      - MAE / MFE from daily high / low of intra-trade bars.
-    """
-    trades: list[Trade] = []
-    daily_rets: list[float] = []
-    pos: _Position | None = None
-
-    for i in range(start_idx, end_idx):
-        bar = bars[i]
-
-        # --- 1. Update intra-trade extremes with today's candle ---
-        if pos is not None:
-            if pos.direction == "long":
-                pos.worst_price = min(pos.worst_price, bar.low)
-                pos.best_price = max(pos.best_price, bar.high)
-            else:
-                pos.worst_price = max(pos.worst_price, bar.high)
-                pos.best_price = min(pos.best_price, bar.low)
-
-        # --- 2. Daily return while in position (close-to-close) ---
-        if pos is not None and i > start_idx:
-            prev_c = bars[i - 1].close
-            if prev_c != 0:
-                dr = (bar.close - prev_c) / prev_c
-                daily_rets.append(dr if pos.direction == "long" else -dr)
-            else:
-                daily_rets.append(0.0)
+        vwap = float(np.dot(c_w, v_w)) / total_v
+        pct = (closes[i] - vwap) / vwap
+        if pct > 0.01:
+            probs[i] = _BULLISH
+        elif pct < -0.01:
+            probs[i] = _BEARISH
         else:
-            daily_rets.append(0.0)
+            scale = pct / 0.01
+            probs[i] = _NEUTRAL + scale * (_BULLISH - _NEUTRAL)
+    return probs
 
-        # --- 3. Compute signal at end of today ---
-        score = daily_score(i, signals, weights)
 
-        # Need a next bar to act on
-        if i + 1 >= end_idx:
-            if pos is not None:
-                _close(pos, bar.close, bar.date, trades)
-                pos = None
+def sig_vol_regime(closes: np.ndarray, short_w: int = 10, long_w: int = 60) -> np.ndarray:
+    """
+    Volatility regime signal: low relative vol → bullish (low risk), high → bearish.
+
+    ratio = recent_vol / long_vol
+      < 0.7  → low vol  → bullish (stable, low fear)
+      > 1.5  → high vol → bearish (stress, danger)
+      else   → neutral
+    """
+    n = len(closes)
+    probs = np.full(n, _NEUTRAL)
+    if n < long_w + 1:
+        return probs
+
+    rets = np.zeros(n)
+    for i in range(1, n):
+        if closes[i - 1] != 0:
+            rets[i] = (closes[i] - closes[i - 1]) / closes[i - 1]
+
+    for i in range(long_w, n):
+        recent = rets[i - short_w : i]
+        long_r = rets[i - long_w : i]
+        r_vol = float(np.std(recent)) * np.sqrt(365) if len(recent) >= 2 else 0.0
+        l_vol = float(np.std(long_r)) * np.sqrt(365) if len(long_r) >= 2 else r_vol
+        if l_vol == 0:
+            probs[i] = _NEUTRAL
+            continue
+        ratio = r_vol / l_vol
+        if ratio < 0.7:  # Low vol: calmer than average → bullish
+            probs[i] = _BULLISH
+        elif ratio > 1.5:  # High vol: stressed → bearish
+            probs[i] = _BEARISH
+        else:
+            # Linear interpolation in between
+            if ratio < 1.0:
+                t = (ratio - 0.7) / (1.0 - 0.7)
+                probs[i] = _BULLISH + t * (_NEUTRAL - _BULLISH)
+            else:
+                t = (ratio - 1.0) / (1.5 - 1.0)
+                probs[i] = _NEUTRAL + t * (_BEARISH - _NEUTRAL)
+    return probs
+
+
+def compute_all_signals(bars: list[dict]) -> np.ndarray:
+    """
+    Compute all 6 signals for every day.
+    Returns array of shape (n_bars, 6): [momentum, rsi, macd, bb, vwm, vol_regime]
+    """
+    closes = np.array([b["close"] for b in bars])
+    volumes = np.array([b["volume"] for b in bars])
+    return np.column_stack(
+        [
+            sig_momentum(closes),
+            sig_rsi(closes),
+            sig_macd(closes),
+            sig_bollinger(closes),
+            sig_vwm(closes, volumes),
+            sig_vol_regime(closes),
+        ]
+    )
+
+
+# ---------------------------------------------------------------------------
+# Bayesian aggregation (from omega.math.bayesian if available, else inline)
+# ---------------------------------------------------------------------------
+
+
+def _aggregate_signals_bayesian(
+    signal_probs: list[float],
+    weights: list[float],
+    prior: float = 0.5,
+) -> float:
+    """
+    Weighted log-odds Bayesian aggregation.
+
+    Converts each signal probability to a log-odds update, weights it,
+    and converts back to a probability.
+    """
+    log_odds = np.log(prior / (1 - prior))
+    for prob, w in zip(signal_probs, weights, strict=False):
+        prob = float(np.clip(prob, 0.01, 0.99))
+        signal_log_odds = np.log(prob / (1 - prob))
+        log_odds += w * (signal_log_odds - np.log(prior / (1 - prior)))
+    return float(1.0 / (1.0 + np.exp(-log_odds)))
+
+
+# ---------------------------------------------------------------------------
+# Agreement ratio and conviction helpers
+# ---------------------------------------------------------------------------
+
+
+def compute_agreement(signal_probs: list[float]) -> float:
+    """
+    Fraction of signals that agree with the majority direction.
+    0.5 = perfect split, 1.0 = unanimous.
+    """
+    bullish = sum(1 for p in signal_probs if p > _NEUTRAL)
+    bearish = sum(1 for p in signal_probs if p < _NEUTRAL)
+    total = bullish + bearish
+    if total == 0:
+        return 0.5
+    return max(bullish, bearish) / total
+
+
+# ---------------------------------------------------------------------------
+# Core backtest engine
+# ---------------------------------------------------------------------------
+
+
+def run_backtest(
+    symbol: str,
+    bars: list[dict],
+    regime: str | None,
+    modifier: RegimeAwareSignalModifier | None,
+    use_regime_weights: bool = False,
+) -> dict:
+    """
+    Walk-forward backtest with optional regime-aware weighting.
+
+    Parameters
+    ----------
+    regime:
+        If set and use_regime_weights=True, tags the entire period as this
+        regime and applies REGIME_SIGNAL_MULTIPLIERS.
+    modifier:
+        RegimeAwareSignalModifier instance.  Required if use_regime_weights.
+    use_regime_weights:
+        When True, apply regime multipliers + conviction thresholds.
+        When False, run the baseline (uniform Brier-weight) strategy.
+    """
+    n = len(bars)
+    if n < MIN_LOOKBACK + MIN_TRAIN + 10:
+        return {"symbol": symbol, "error": "insufficient_data", "n_bars": n}
+
+    closes = np.array([b["close"] for b in bars])
+
+    daily_rets = np.zeros(n)
+    for i in range(1, n):
+        if closes[i - 1] != 0:
+            daily_rets[i] = (closes[i] - closes[i - 1]) / closes[i - 1]
+
+    # Outcomes: 1 if next-day return > 0
+    outcomes = np.zeros(n)
+    for i in range(n - 1):
+        outcomes[i] = 1.0 if daily_rets[i + 1] > 0 else 0.0
+
+    all_signals = compute_all_signals(bars)
+
+    strategy_rets: list[float] = []
+    positions: list[float] = []
+    skipped_conviction = 0
+    prev_position = 0.0
+    walk_start = max(MIN_LOOKBACK, MIN_TRAIN)
+
+    for t in range(walk_start, n - 1):
+        brier_start = MIN_LOOKBACK
+        brier_end = t
+        if brier_end - brier_start < 10:
+            strategy_rets.append(0.0)
+            positions.append(0.0)
             continue
 
-        next_open = bars[i + 1].open
-        next_date = bars[i + 1].date
+        # Compute Brier scores over training window → base weights
+        window_sigs = all_signals[brier_start:brier_end]
+        window_out = outcomes[brier_start:brier_end]
+        brier = np.mean((window_sigs - window_out[:, np.newaxis]) ** 2, axis=0)
+        brier = np.clip(brier, 0.01, None)
 
-        # --- 4. Exit logic ---
-        if pos is not None and score is not None:
-            should_exit = (pos.direction == "long" and score < 0) or (
-                pos.direction == "short" and score > 0
+        # Inverse Brier → better calibrated signals get higher weight
+        inv_brier = 1.0 / brier
+        base_weights = inv_brier / inv_brier.sum()  # normalised, shape (N_SIGNALS,)
+
+        current_sig_probs = all_signals[t].tolist()
+
+        if use_regime_weights and modifier is not None and regime is not None:
+            # Apply regime multipliers to base weights
+            base_w_dict = {SIG_NAMES[i]: float(base_weights[i]) for i in range(N_SIGNALS)}
+            closes_list = closes[: t + 1].tolist()
+            adjusted_w_dict = modifier.apply_regime_weights(
+                base_weights=base_w_dict,
+                regime=regime,
+                closes=closes_list,
             )
-            if should_exit:
-                _close(pos, next_open, next_date, trades)
-                pos = None
-                # Immediately re-enter if strong signal in new direction
-                if score >= LONG_THRESH:
-                    pos = _Position(symbol, "long", next_date, next_open, next_open, next_open)
-                elif score <= SHORT_THRESH:
-                    pos = _Position(symbol, "short", next_date, next_open, next_open, next_open)
+            adjusted_weights = np.array([adjusted_w_dict.get(name, 0.0) for name in SIG_NAMES])
+
+            # Conviction gate
+            agreement = compute_agreement(current_sig_probs)
+            composite_p = _aggregate_signals_bayesian(current_sig_probs, adjusted_weights.tolist())
+            weighted_conviction = abs(composite_p - 0.5) * 2.0
+
+            if not modifier.check_conviction_threshold(agreement, weighted_conviction, regime):
+                strategy_rets.append(0.0)
+                positions.append(0.0)
+                skipped_conviction += 1
+                prev_position = 0.0
                 continue
 
-        # --- 5. Entry logic (flat) ---
-        if pos is None and score is not None:
-            if score >= LONG_THRESH:
-                pos = _Position(symbol, "long", next_date, next_open, next_open, next_open)
-            elif score <= SHORT_THRESH:
-                pos = _Position(symbol, "short", next_date, next_open, next_open, next_open)
+            weights_for_aggregation = adjusted_weights
+        else:
+            weights_for_aggregation = base_weights
+            composite_p = _aggregate_signals_bayesian(
+                current_sig_probs, weights_for_aggregation.tolist()
+            )
 
-    return trades, daily_rets
+        # Position sizing: long-only, half-Kelly approximation
+        if composite_p > LONG_THRESHOLD:
+            # Simple position: scale by conviction above threshold
+            conviction_scaled = (composite_p - LONG_THRESHOLD) / (1.0 - LONG_THRESHOLD)
+            position = min(0.25, conviction_scaled * 0.25)
+        else:
+            position = 0.0
 
+        raw_ret = position * daily_rets[t + 1]
+        commission_cost = abs(position - prev_position) * COMMISSION
+        net_ret = raw_ret - commission_cost
+        strategy_rets.append(net_ret)
+        positions.append(position)
+        prev_position = position
 
-def _close(pos: _Position, exit_price: float, exit_date: str, trades: list[Trade]) -> None:
-    if pos.direction == "long":
-        pnl = (exit_price - pos.entry_price) / pos.entry_price
-        mae = (pos.worst_price - pos.entry_price) / pos.entry_price  # ≤ 0
-        mfe = (pos.best_price - pos.entry_price) / pos.entry_price  # ≥ 0
-    else:
-        pnl = (pos.entry_price - exit_price) / pos.entry_price
-        mae = (pos.entry_price - pos.worst_price) / pos.entry_price  # ≤ 0
-        mfe = (pos.entry_price - pos.best_price) / pos.entry_price  # ≥ 0
+    if len(strategy_rets) < 10:
+        return {"symbol": symbol, "error": "insufficient_oos_data", "n_bars": n}
 
-    entry_dt = datetime.strptime(pos.entry_date, "%Y-%m-%d")
-    exit_dt = datetime.strptime(exit_date, "%Y-%m-%d")
-    trades.append(
-        Trade(
-            symbol=pos.symbol,
-            direction=pos.direction,
-            entry_date=pos.entry_date,
-            exit_date=exit_date,
-            entry_price=round(pos.entry_price, 4),
-            exit_price=round(exit_price, 4),
-            pnl_pct=round(pnl, 6),
-            duration_days=(exit_dt - entry_dt).days,
-            mae_pct=round(mae, 6),
-            mfe_pct=round(mfe, 6),
+    # --- Metrics ---
+    rets_arr = np.array(strategy_rets)
+    sharpe_pt = compute_sharpe(strategy_rets, periods_per_year=PERIODS_PER_YEAR)
+    try:
+        ci_lo, ci_hi = compute_sharpe_confidence_interval(
+            strategy_rets, n_bootstrap=500, periods_per_year=PERIODS_PER_YEAR, seed=42
         )
-    )
+    except Exception:
+        ci_lo, ci_hi = float("nan"), float("nan")
 
-
-# ---------------------------------------------------------------------------
-# 6. Metrics computation
-# ---------------------------------------------------------------------------
-
-
-def _sharpe(rets: list[float]) -> float:
-    if len(rets) < 10:
-        return 0.0
-    mu = sum(rets) / len(rets)
-    std = statistics.stdev(rets)
-    return mu / std * math.sqrt(252) if std > 0 else 0.0
-
-
-def _sortino(rets: list[float]) -> float:
-    if len(rets) < 10:
-        return 0.0
-    mu = sum(rets) / len(rets)
-    down = [r for r in rets if r < 0]
-    if not down:
-        return _sharpe(rets)
-    ds = statistics.stdev(down) if len(down) > 1 else abs(down[0])
-    return mu / ds * math.sqrt(252) if ds > 0 else 0.0
-
-
-def _max_drawdown(rets: list[float]) -> float:
     equity = 1.0
     peak = 1.0
-    mdd = 0.0
-    for r in rets:
+    max_dd = 0.0
+    for r in strategy_rets:
         equity *= 1.0 + r
-        peak = max(peak, equity)
-        mdd = max(mdd, (peak - equity) / peak) if peak > 0 else mdd
-    return mdd
+        if equity > peak:
+            peak = equity
+        dd = (peak - equity) / peak
+        if dd > max_dd:
+            max_dd = dd
 
+    total_return = (equity - 1.0) * 100.0
 
-def compute_metrics(
-    regime: str,
-    start_date: str,
-    end_date: str,
-    train_end_date: str,
-    all_trades: list[Trade],
-    daily_returns: list[float],
-    signal_ic: dict[str, float],
-    train_ic: dict[str, float],
-) -> PeriodResult:
-    days = (
-        datetime.strptime(end_date, "%Y-%m-%d") - datetime.strptime(start_date, "%Y-%m-%d")
-    ).days or 1
+    pos_arr = np.array(positions)
+    active_days = int(np.sum(pos_arr > 0))
+    active_mask = pos_arr > 0
+    win_rate = float(np.sum(rets_arr[active_mask] > 0)) / active_days if active_days > 0 else 0.0
 
-    # Equity & return
-    equity = 1.0
-    for r in daily_returns:
-        equity *= 1.0 + r
-    total_ret = (equity - 1.0) * 100
-    ann_ret = ((equity ** (365.0 / days)) - 1.0) * 100 if equity > 0 else 0.0
+    # Buy-and-hold
+    bnh_eq = 1.0
+    for r in daily_rets[walk_start:n]:
+        bnh_eq *= 1.0 + r
+    bnh_return = (bnh_eq - 1.0) * 100.0
 
-    sharpe = _sharpe(daily_returns)
-    sortino = _sortino(daily_returns)
-    mdd = _max_drawdown(daily_returns)
-    calmar = (ann_ret / 100.0) / mdd if mdd > 0 else 0.0
-
-    # Trade stats
-    n = len(all_trades)
-    if n > 0:
-        wins = sum(1 for t in all_trades if t.pnl_pct > 0)
-        longs = [t for t in all_trades if t.direction == "long"]
-        shorts = [t for t in all_trades if t.direction == "short"]
-        l_wins = sum(1 for t in longs if t.pnl_pct > 0)
-        s_wins = sum(1 for t in shorts if t.pnl_pct > 0)
-
-        win_rate = wins / n
-        long_wr = l_wins / len(longs) if longs else 0.0
-        short_wr = s_wins / len(shorts) if shorts else 0.0
-
-        gross_pos = sum(t.pnl_pct for t in all_trades if t.pnl_pct > 0)
-        gross_neg = abs(sum(t.pnl_pct for t in all_trades if t.pnl_pct < 0))
-        profit_factor = gross_pos / gross_neg if gross_neg > 0 else float("inf")
-
-        avg_dur = sum(t.duration_days for t in all_trades) / n
-        # MAE is negative; report absolute magnitude as %
-        avg_mae = abs(sum(t.mae_pct for t in all_trades) / n) * 100
-        avg_mfe = sum(t.mfe_pct for t in all_trades) / n * 100
-    else:
-        win_rate = long_wr = short_wr = 0.0
-        profit_factor = 0.0
-        avg_dur = avg_mae = avg_mfe = 0.0
-
-    return PeriodResult(
-        regime=regime,
-        start_date=start_date,
-        end_date=end_date,
-        train_end_date=train_end_date,
-        total_return_pct=round(total_ret, 2),
-        annualised_return_pct=round(ann_ret, 2),
-        sharpe=round(sharpe, 3),
-        sortino=round(sortino, 3),
-        max_drawdown_pct=round(mdd * 100, 2),
-        calmar=round(calmar, 3),
-        profit_factor=round(profit_factor if profit_factor != float("inf") else 9.99, 3),
-        win_rate=round(win_rate, 3),
-        long_win_rate=round(long_wr, 3),
-        short_win_rate=round(short_wr, 3),
-        total_trades=n,
-        avg_duration_days=round(avg_dur, 1),
-        avg_mae_pct=round(avg_mae, 2),
-        avg_mfe_pct=round(avg_mfe, 2),
-        signal_ic=signal_ic,
-        train_ic=train_ic,
-        trades=all_trades,
-    )
-
-
-# ---------------------------------------------------------------------------
-# 7. Regime backtest orchestrator
-# ---------------------------------------------------------------------------
-
-
-def run_regime(regime: str, start_date: str, end_date: str) -> PeriodResult:
-    print(f"\n{'=' * 60}")
-    print(f"  REGIME: {regime}   {start_date} → {end_date}")
-    print(f"{'=' * 60}")
-
-    # Download
-    all_bars: dict[str, list[Candle]] = {}
-    for sym in SYMBOLS:
-        all_bars[sym] = download_candles(sym, start_date, end_date)
-
-    # Walk-forward split (use BTC as reference for date)
-    ref = all_bars[SYMBOLS[0]]
-    split_idx = max(1, int(len(ref) * TRAIN_FRAC))
-    train_end = ref[split_idx - 1].date
-    print(f"\n  Train: {start_date} → {train_end}  ({split_idx} days)")
-    print(f"  Test:  {train_end} → {end_date}  ({len(ref) - split_idx} days)")
-
-    # --- Training phase: compute IC per symbol, then average ---
-    pooled_ic: dict[str, list[float]] = {s: [] for s in SIGNAL_NAMES}
-    per_sym_signals: dict[str, dict[str, list[float | None]]] = {}
-
-    for sym, bars in all_bars.items():
-        sym_split = max(1, int(len(bars) * TRAIN_FRAC))
-        sigs = compute_all_signals(bars)
-        per_sym_signals[sym] = sigs
-        ic = compute_signal_ic(bars, sigs, 0, sym_split)
-        for sig, val in ic.items():
-            pooled_ic[sig].append(val)
-
-    avg_train_ic = {s: sum(vs) / len(vs) if vs else 0.0 for s, vs in pooled_ic.items()}
-    weights = derive_weights(avg_train_ic)
-
-    print("\n  Training IC:  " + "  ".join(f"{k}={v:+.3f}" for k, v in avg_train_ic.items()))
-    print("  Weights:      " + "  ".join(f"{k}={v:+.3f}" for k, v in weights.items()))
-
-    # --- Test phase: backtest + test IC ---
-    all_trades: list[Trade] = []
-    pooled_test_ic: dict[str, list[float]] = {s: [] for s in SIGNAL_NAMES}
-    # Collect returns per symbol then average per-day later
-    sym_returns: dict[str, list[float]] = {}
-
-    print("\n  Running test period...")
-    for sym, bars in all_bars.items():
-        sym_split = max(1, int(len(bars) * TRAIN_FRAC))
-        sigs = per_sym_signals[sym]
-
-        test_ic = compute_signal_ic(bars, sigs, sym_split, len(bars))
-        for sig, val in test_ic.items():
-            pooled_test_ic[sig].append(val)
-
-        trades, rets = run_backtest_symbol(sym, bars, sigs, weights, sym_split, len(bars))
-        all_trades.extend(trades)
-        sym_returns[sym] = rets
-        print(f"    {sym}: {len(trades)} trades, {sum(1 for t in trades if t.pnl_pct > 0)} wins")
-
-    # Build portfolio daily return = simple average across symbols
-    max_len = max((len(v) for v in sym_returns.values()), default=0)
-    portfolio_rets: list[float] = []
-    for d in range(max_len):
-        day_rets = [sym_returns[s][d] for s in SYMBOLS if d < len(sym_returns[s])]
-        portfolio_rets.append(sum(day_rets) / len(day_rets) if day_rets else 0.0)
-
-    avg_test_ic = {s: sum(vs) / len(vs) if vs else 0.0 for s, vs in pooled_test_ic.items()}
-
-    return compute_metrics(
-        regime=regime,
-        start_date=start_date,
-        end_date=end_date,
-        train_end_date=train_end,
-        all_trades=all_trades,
-        daily_returns=portfolio_rets,
-        signal_ic=avg_test_ic,
-        train_ic=avg_train_ic,
-    )
-
-
-# ---------------------------------------------------------------------------
-# 8. Output: comparison table
-# ---------------------------------------------------------------------------
-
-
-def print_table(results: dict[str, PeriodResult]) -> None:
-    col_w = 13
-    col_names = ["BULL", "BEAR", "SIDEWAYS"]
-
-    def fmt(r: PeriodResult, fn: Callable[[PeriodResult], str]) -> str:
-        return fn(r)
-
-    rows = [
-        ("Total Return %", lambda r: f"{r.total_return_pct:>+.2f}%"),
-        ("Annualised %", lambda r: f"{r.annualised_return_pct:>+.2f}%"),
-        ("Sharpe Ratio", lambda r: f"{r.sharpe:>+.3f}"),
-        ("Sortino Ratio", lambda r: f"{r.sortino:>+.3f}"),
-        ("Max Drawdown %", lambda r: f"{r.max_drawdown_pct:>.2f}%"),
-        ("Calmar Ratio", lambda r: f"{r.calmar:>+.3f}"),
-        ("Profit Factor", lambda r: f"{r.profit_factor:>.3f}"),
-        ("Win Rate", lambda r: f"{r.win_rate:.1%}"),
-        ("Long Win Rate", lambda r: f"{r.long_win_rate:.1%}"),
-        ("Short Win Rate", lambda r: f"{r.short_win_rate:.1%}"),
-        ("Total Trades", lambda r: f"{r.total_trades:>d}"),
-        ("Avg Duration (days)", lambda r: f"{r.avg_duration_days:.1f}d"),
-        ("Avg MAE %", lambda r: f"{r.avg_mae_pct:.2f}%"),
-        ("Avg MFE %", lambda r: f"{r.avg_mfe_pct:.2f}%"),
-    ]
-
-    print("\n")
-    print("=" * 68)
-    print("  BACKTEST RESULTS - Walk-Forward Test Period (40% of data)")
-    print("=" * 68)
-    header = f"  {'Metric':<22}" + "".join(f"{c:>{col_w}}" for c in col_names)
-    print(header)
-    print("-" * 68)
-    for label, fn in rows:
-        line = f"  {label:<22}"
-        for c in col_names:
-            line += f"{fmt(results[c], fn):>{col_w}}" if c in results else f"{'N/A':>{col_w}}"
-        print(line)
-    print("-" * 68)
-
-    print("\n  Signal IC Attribution (test period, mean across BTC/ETH/SOL)")
-    print("-" * 68)
-    sig_header = f"  {'Signal':<22}" + "".join(f"{c:>{col_w}}" for c in col_names)
-    print(sig_header)
-    print("-" * 68)
-    for sig in SIGNAL_NAMES:
-        line = f"  {sig:<22}"
-        for c in col_names:
-            if c in results:
-                ic = results[c].signal_ic.get(sig, 0.0)
-                line += f"{ic:>+{col_w}.4f}"
-            else:
-                line += f"{'N/A':>{col_w}}"
-        print(line)
-    print("=" * 68)
-
-
-# ---------------------------------------------------------------------------
-# 9. Output: markdown + CSV
-# ---------------------------------------------------------------------------
-
-
-def save_markdown(results: dict[str, PeriodResult]) -> None:
-    DOCS_DIR.mkdir(parents=True, exist_ok=True)
-    col_names = ["BULL", "BEAR", "SIDEWAYS"]
-
-    lines: list[str] = [
-        "# Historical Backtest Results",
-        "",
-        f"_Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}_",
-        "",
-        "## Regimes Tested",
-        "",
-        "| Regime | Period | Description | Train End |",
-        "|--------|--------|-------------|-----------|",
-        "| BULL | 2023-10-01 -> 2024-03-15 | BTC $26K -> $73K (+180%) | "
-        + (results["BULL"].train_end_date if "BULL" in results else "N/A")
-        + " |",
-        "| BEAR | 2022-05-01 -> 2022-11-15 | BTC $38K -> $16K (-58%) | "
-        + (results["BEAR"].train_end_date if "BEAR" in results else "N/A")
-        + " |",
-        "| SIDEWAYS | 2024-07-01 -> 2024-10-15 | BTC $55K-$70K (ranging) | "
-        + (results["SIDEWAYS"].train_end_date if "SIDEWAYS" in results else "N/A")
-        + " |",
-        "",
-        "**Walk-forward**: first 60% used for meta-model training (IC-derived signal weights); "
-        "last 40% used for out-of-sample evaluation.",
-        "",
-        "## Performance Metrics (Test Period - Out-of-Sample)",
-        "",
-        "| Metric | BULL | BEAR | SIDEWAYS |",
-        "|--------|------|------|----------|",
-    ]
-
-    metric_rows = [
-        ("Total Return %", lambda r: f"{r.total_return_pct:+.2f}%"),
-        ("Annualised Return %", lambda r: f"{r.annualised_return_pct:+.2f}%"),
-        ("Sharpe Ratio", lambda r: f"{r.sharpe:+.3f}"),
-        ("Sortino Ratio", lambda r: f"{r.sortino:+.3f}"),
-        ("Max Drawdown %", lambda r: f"{r.max_drawdown_pct:.2f}%"),
-        ("Calmar Ratio", lambda r: f"{r.calmar:+.3f}"),
-        ("Profit Factor", lambda r: f"{r.profit_factor:.3f}"),
-        ("Win Rate", lambda r: f"{r.win_rate:.1%}"),
-        ("Long Win Rate", lambda r: f"{r.long_win_rate:.1%}"),
-        ("Short Win Rate", lambda r: f"{r.short_win_rate:.1%}"),
-        ("Total Trades", lambda r: str(r.total_trades)),
-        ("Avg Trade Duration", lambda r: f"{r.avg_duration_days:.1f} days"),
-        ("Avg MAE %", lambda r: f"{r.avg_mae_pct:.2f}%"),
-        ("Avg MFE %", lambda r: f"{r.avg_mfe_pct:.2f}%"),
-    ]
-
-    for label, fn in metric_rows:
-        row = f"| {label} |"
-        for c in col_names:
-            row += f" {fn(results[c])} |" if c in results else " N/A |"
-        lines.append(row)
-
-    # Signal IC table
-    lines += [
-        "",
-        "## Signal IC Attribution",
-        "",
-        "> **IC** = Pearson correlation between signal value at day _t_ and",
-        "> next-day return at day _t+1_. Positive IC = signal correctly predicts direction.",
-        "> Values are averaged across BTC, ETH, SOL.",
-        "",
-        "| Signal | BULL | BEAR | SIDEWAYS | Notes |",
-        "|--------|------|------|----------|-------|",
-    ]
-
-    notes = {
-        "sma_cross": "SMA(10/30) crossover - trend following",
-        "rsi": "RSI(14) mean reversion - fade extremes",
-        "macd": "MACD(12/26/9) momentum",
-        "bb_pct": "Bollinger %B(20,2) - range fade",
-        "momentum_20": "20-day price momentum",
-        "momentum_60": "60-day price momentum",
-        "vol_regime": "Volatility regime filter",
+    return {
+        "symbol": symbol,
+        "n_bars": n,
+        "oos_days": len(strategy_rets),
+        "active_days": active_days,
+        "total_return": total_return,
+        "sharpe": sharpe_pt,
+        "sharpe_ci_lo": ci_lo,
+        "sharpe_ci_hi": ci_hi,
+        "max_drawdown": max_dd * 100.0,
+        "win_rate": win_rate,
+        "bnh_return": bnh_return,
+        "skipped_conviction": skipped_conviction,
     }
-    for sig in SIGNAL_NAMES:
-        row = f"| `{sig}` |"
-        for c in col_names:
-            ic = results[c].signal_ic.get(sig, 0.0) if c in results else 0.0
-            row += f" {ic:+.4f} |"
-        row += f" {notes.get(sig, '')} |"
-        lines.append(row)
 
-    # Training weights
+
+# ---------------------------------------------------------------------------
+# Live cycles simulation
+# ---------------------------------------------------------------------------
+
+
+def run_live_cycles(
+    symbol: str,
+    bars: list[dict],
+    n_cycles: int = 200,
+    modifier: RegimeAwareSignalModifier | None = None,
+) -> dict:
+    """
+    Simulate `n_cycles` decisions on the most recent bars.
+
+    Automatically detects regime from recent price behaviour:
+      - 20d return > +15%  → BULL
+      - 20d return < -10%  → BEAR
+      - else               → SIDEWAYS
+    """
+    if len(bars) < 100:
+        return {"symbol": symbol, "error": "need >= 100 bars for live cycles"}
+
+    # Use the last `n_cycles + MIN_LOOKBACK` bars
+    window = bars[-(n_cycles + MIN_LOOKBACK) :]
+    closes = np.array([b["close"] for b in window])
+
+    # Detect regime from final 20-day return
+    ret_20d = (closes[-1] - closes[-21]) / closes[-21] if len(closes) >= 21 else 0.0
+    if ret_20d > 0.15:
+        live_regime = BULL
+    elif ret_20d < -0.10:
+        live_regime = BEAR
+    else:
+        live_regime = SIDEWAYS
+
+    logger.info(
+        "Live cycles: %s  20d_ret=%.1f%%  auto-regime=%s",
+        symbol,
+        ret_20d * 100,
+        live_regime.upper(),
+    )
+
+    result = run_backtest(
+        symbol=symbol,
+        bars=window,
+        regime=live_regime,
+        modifier=modifier,
+        use_regime_weights=True,
+    )
+    result["live_regime"] = live_regime
+    result["ret_20d"] = ret_20d * 100.0
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Reporting
+# ---------------------------------------------------------------------------
+
+
+def _fmt_return(val: float) -> str:
+    sign = "+" if val >= 0 else ""
+    return f"{sign}{val:.1f}%"
+
+
+def _fmt_sharpe(val: float) -> str:
+    return f"{val:+.3f}" if val == val else "  N/A"
+
+
+def print_regime_report(
+    baseline_results: dict[str, list[dict]],
+    fixed_results: dict[str, list[dict]],
+) -> None:
+    sep = "=" * 72
+    print()
+    print(sep)
+    print("  REGIME-AWARE HISTORICAL BACKTEST — Before vs After Fix")
+    print(sep)
+    print(
+        f"  {'Regime':<10} {'Symbol':<12} {'Before':>10} {'After':>10} {'Delta':>10} {'Sharpe (after)':>16}"
+    )
+    print(f"  {'-' * 10} {'-' * 12} {'-' * 10} {'-' * 10} {'-' * 10} {'-' * 16}")
+
+    for regime in [BULL, BEAR, SIDEWAYS]:
+        b_list = baseline_results.get(regime, [])
+        f_list = fixed_results.get(regime, [])
+        for b_res, f_res in zip(b_list, f_list, strict=False):
+            sym = b_res.get("symbol", "?")
+            b_ret = b_res.get("total_return", float("nan"))
+            f_ret = f_res.get("total_return", float("nan"))
+            delta = f_ret - b_ret if not (b_ret != b_ret or f_ret != f_ret) else float("nan")
+            sharpe = f_res.get("sharpe", float("nan"))
+            print(
+                f"  {regime.upper():<10} {sym:<12} "
+                f"{_fmt_return(b_ret):>10} "
+                f"{_fmt_return(f_ret):>10} "
+                f"{_fmt_return(delta):>10} "
+                f"{_fmt_sharpe(sharpe):>16}"
+            )
+        print()
+
+    print(sep)
+
+
+def print_summary_table(
+    baseline_results: dict[str, list[dict]],
+    fixed_results: dict[str, list[dict]],
+) -> None:
+    """Print the requested before/after comparison table."""
+    print()
+    print("  ┌─────────┬────────────┬────────────┐")
+    print("  │ Regime  │ Before Fix │ After Fix  │")
+    print("  ├─────────┼────────────┼────────────┤")
+
+    # Average across symbols
+    for regime in [BULL, BEAR, SIDEWAYS]:
+        b_list = [r for r in baseline_results.get(regime, []) if "error" not in r]
+        f_list = [r for r in fixed_results.get(regime, []) if "error" not in r]
+        b_avg = sum(r["total_return"] for r in b_list) / len(b_list) if b_list else float("nan")
+        f_avg = sum(r["total_return"] for r in f_list) / len(f_list) if f_list else float("nan")
+        b_str = _fmt_return(b_avg) if b_avg == b_avg else "  N/A"
+        f_str = _fmt_return(f_avg) if f_avg == f_avg else "  N/A"
+        print(f"  │ {regime.upper():<7} │ {b_str:>10} │ {f_str:>10} │")
+
+    print("  └─────────┴────────────┴────────────┘")
+    print()
+
+
+def print_live_cycles_report(live_results: list[dict]) -> None:
+    sep = "=" * 72
+    print()
+    print(sep)
+    print("  LIVE CYCLES (200 steps, cached recent Binance data)")
+    print(sep)
+    for r in live_results:
+        if "error" in r:
+            print(f"  {r['symbol']}: ERROR — {r['error']}")
+            continue
+        regime = r.get("live_regime", "?").upper()
+        ret_20d = r.get("ret_20d", 0.0)
+        print(
+            f"  {r['symbol']}  regime={regime}  20d_ret={_fmt_return(ret_20d)}"
+            f"  strategy_return={_fmt_return(r['total_return'])}"
+            f"  sharpe={_fmt_sharpe(r['sharpe'])}"
+            f"  active={r.get('active_days', 0)}/{r.get('oos_days', 0)} days"
+        )
+    print(sep)
+    print()
+
+
+# ---------------------------------------------------------------------------
+# Results persistence
+# ---------------------------------------------------------------------------
+
+
+def save_results_markdown(
+    baseline_results: dict[str, list[dict]],
+    fixed_results: dict[str, list[dict]],
+    live_results: list[dict],
+    output_path: Path,
+) -> None:
+    now = datetime.now(tz=UTC).strftime("%Y-%m-%d %H:%M UTC")
+    lines = [
+        "# Regime-Aware Backtest Results",
+        "",
+        f"Generated: {now}",
+        "",
+        "## Summary",
+        "",
+        "| Regime | Before Fix | After Fix |",
+        "|--------|-----------|-----------|",
+    ]
+
+    for regime in [BULL, BEAR, SIDEWAYS]:
+        b_list = [r for r in baseline_results.get(regime, []) if "error" not in r]
+        f_list = [r for r in fixed_results.get(regime, []) if "error" not in r]
+        b_avg = sum(r["total_return"] for r in b_list) / len(b_list) if b_list else float("nan")
+        f_avg = sum(r["total_return"] for r in f_list) / len(f_list) if f_list else float("nan")
+        b_str = _fmt_return(b_avg) if b_avg == b_avg else "N/A"
+        f_str = _fmt_return(f_avg) if f_avg == f_avg else "N/A"
+        lines.append(f"| {regime.upper():<7} | {b_str:>9} | {f_str:>9} |")
+
     lines += [
         "",
-        "## Training-Period Signal Weights (Meta-Model)",
+        "## Detailed Results by Regime",
         "",
-        "IC-derived weights from the first 60% of each period. These weights are",
-        "then applied to generate the combined trading signal in the test period.",
+    ]
+
+    for regime in [BULL, BEAR, SIDEWAYS]:
+        b_list = baseline_results.get(regime, [])
+        f_list = fixed_results.get(regime, [])
+        start, end = REGIME_PERIODS[regime]
+        lines += [
+            f"### {regime.upper()} Regime ({start} → {end})",
+            "",
+            "| Symbol | Baseline Return | Fixed Return | Delta | Sharpe (fixed) | Max DD (fixed) | Active Days |",
+            "|--------|----------------|--------------|-------|----------------|----------------|-------------|",
+        ]
+        for b_res, f_res in zip(b_list, f_list, strict=False):
+            if "error" in b_res:
+                lines.append(f"| {b_res.get('symbol', '?')} | ERROR | ERROR | — | — | — | — |")
+                continue
+            sym = b_res.get("symbol", "?")
+            b_ret = b_res.get("total_return", float("nan"))
+            f_ret = f_res.get("total_return", float("nan"))
+            delta = f_ret - b_ret if not (b_ret != b_ret or f_ret != f_ret) else float("nan")
+            sharpe = f_res.get("sharpe", float("nan"))
+            max_dd = f_res.get("max_drawdown", float("nan"))
+            active = f_res.get("active_days", 0)
+            oos = f_res.get("oos_days", 0)
+            lines.append(
+                f"| {sym} | {_fmt_return(b_ret)} | {_fmt_return(f_ret)} | "
+                f"{_fmt_return(delta)} | {_fmt_sharpe(sharpe)} | "
+                f"{max_dd:.1f}% | {active}/{oos} |"
+            )
+        lines.append("")
+
+    lines += [
+        "## Live Cycles (200 steps, recent data)",
+        "",
+        "| Symbol | Auto-Regime | 20d Return | Strategy Return | Sharpe | Active Days |",
+        "|--------|-------------|-----------|----------------|--------|-------------|",
+    ]
+    for r in live_results:
+        if "error" in r:
+            lines.append(f"| {r.get('symbol', '?')} | ERROR | — | — | — | — |")
+            continue
+        regime_label = r.get("live_regime", "?").upper()
+        ret_20d = r.get("ret_20d", 0.0)
+        strat_ret = r.get("total_return", float("nan"))
+        sharpe = r.get("sharpe", float("nan"))
+        active = r.get("active_days", 0)
+        oos = r.get("oos_days", 0)
+        lines.append(
+            f"| {r.get('symbol', '?')} | {regime_label} | "
+            f"{_fmt_return(ret_20d)} | {_fmt_return(strat_ret)} | "
+            f"{_fmt_sharpe(sharpe)} | {active}/{oos} |"
+        )
+
+    lines += [
+        "",
+        "## Regime Signal Multipliers Applied",
         "",
         "| Signal | BULL | BEAR | SIDEWAYS |",
         "|--------|------|------|----------|",
-    ]
-    for sig in SIGNAL_NAMES:
-        row = f"| `{sig}` |"
-        for c in col_names:
-            if c in results:
-                w = derive_weights(results[c].train_ic).get(sig, 0.0)
-                row += f" {w:+.4f} |"
-            else:
-                row += " N/A |"
-        lines.append(row)
-
-    # Auto-generated findings
-    lines += ["", "## Key Findings", ""]
-    if len(results) == 3:
-        best = max(results.items(), key=lambda x: x[1].sharpe)
-        worst = min(results.items(), key=lambda x: x[1].sharpe)
-        lines.append(f"- **Best regime**: {best[0]} (Sharpe {best[1].sharpe:+.3f})")
-        lines.append(f"- **Worst regime**: {worst[0]} (Sharpe {worst[1].sharpe:+.3f})")
-        for regime, result in results.items():
-            if result.signal_ic:
-                top = max(result.signal_ic.items(), key=lambda x: abs(x[1]))
-                lines.append(f"- **{regime}** strongest signal: `{top[0]}` (IC {top[1]:+.4f})")
-        lines.append(
-            f"- **Total trades across all regimes**: "
-            f"{sum(r.total_trades for r in results.values())}"
-        )
-
-    lines += [
+        "| momentum (SMA) | 1.5 | 0.3 | 0.2 |",
+        "| rsi | 0.5 | 1.5 | 1.4 |",
+        "| vol_regime | 0.3 | 0.8 | 1.5 |",
+        "| bb | 1.0 | 1.3 | 1.2 |",
+        "| macd | 1.2 | 0.8 | 0.7 |",
+        "| vwm | 1.1 | 0.9 | 0.8 |",
         "",
-        "## Methodology",
+        "## Conviction Thresholds Applied",
         "",
-        "- **Data**: Binance public API, daily OHLCV (BTC, ETH, SOL), cached to `data/historical/`",
-        "- **Signals**: SMA crossover, RSI, MACD, Bollinger Bands, 20d/60d momentum, vol regime",
-        "- **Meta-model**: IC-weighted signal combination (weights derived from training period)",
-        "- **Entry**: next bar's open when score >= 0.15 (long) or <= -0.15 (short)",
-        "- **Exit**: next bar's open when combined score crosses zero",
-        "- **MAE**: max adverse excursion from daily low/high; **MFE**: max favorable",
-        "- **Sharpe/Sortino**: annualised (x sqrt(252)). Portfolio = equal-weight average of BTC+ETH+SOL",
-        "- **No look-ahead bias**: signals use only close-of-day data; execute at next-day open",
+        "| Regime | Agreement Ratio | Min Conviction |",
+        "|--------|----------------|----------------|",
+        "| BULL | ≥ 0.50 | — |",
+        "| BEAR | ≥ 0.70 | — |",
+        "| SIDEWAYS | ≥ 0.60 | > 0.40 |",
+        "",
+        "## Notes",
+        "",
+        "- Baseline: uniform Brier-weight aggregation, no regime awareness",
+        "- Fixed: regime-specific multipliers + BULL momentum floor (min weight 0.30)",
+        "- Trend strength gate: 20d+60d momentum agreement AND price > SMA50",
+        "- Long-only, half-Kelly sizing, 0.1% commission per side",
+        "- Walk-forward expanding window, no lookahead",
     ]
 
-    RESULTS_MD.write_text("\n".join(lines) + "\n")
-    print(f"\n  Saved: {RESULTS_MD}")
+    output_path.write_text("\n".join(lines) + "\n")
+    logger.info("Results saved to %s", output_path)
 
 
-def save_trades_csv(results: dict[str, PeriodResult]) -> None:
-    DOCS_DIR.mkdir(parents=True, exist_ok=True)
-    with open(TRADES_CSV, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(
-            [
-                "regime",
-                "symbol",
-                "direction",
-                "entry_date",
-                "exit_date",
-                "entry_price",
-                "exit_price",
-                "pnl_pct",
-                "duration_days",
-                "mae_pct",
-                "mfe_pct",
-            ]
-        )
-        for regime, result in results.items():
-            for t in result.trades:
-                w.writerow(
-                    [
-                        regime,
-                        t.symbol,
-                        t.direction,
-                        t.entry_date,
-                        t.exit_date,
-                        t.entry_price,
-                        t.exit_price,
-                        t.pnl_pct,
-                        t.duration_days,
-                        t.mae_pct,
-                        t.mfe_pct,
-                    ]
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Regime-aware historical backtest")
+    parser.add_argument("--force-refresh", action="store_true", help="Re-download all data")
+    parser.add_argument("--symbol", default=None, help="Run single symbol (e.g. BTC/USDT)")
+    args = parser.parse_args()
+
+    symbols = [args.symbol] if args.symbol else SYMBOLS
+    force = args.force_refresh
+    modifier = RegimeAwareSignalModifier()
+
+    baseline_results: dict[str, list[dict]] = {r: [] for r in [BULL, BEAR, SIDEWAYS]}
+    fixed_results: dict[str, list[dict]] = {r: [] for r in [BULL, BEAR, SIDEWAYS]}
+
+    # --- Historical regime backtests ---
+    for regime in [BULL, BEAR, SIDEWAYS]:
+        start, end = REGIME_PERIODS[regime]
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info("REGIME: %s  (%s → %s)", regime.upper(), start, end)
+        logger.info("=" * 60)
+
+        for symbol in symbols:
+            try:
+                bars = get_ohlcv(symbol, start, end, force_refresh=force)
+                if len(bars) < MIN_LOOKBACK + MIN_TRAIN + 10:
+                    logger.warning("Not enough bars for %s %s: %d", symbol, regime, len(bars))
+                    baseline_results[regime].append({"symbol": symbol, "error": "too_few_bars"})
+                    fixed_results[regime].append({"symbol": symbol, "error": "too_few_bars"})
+                    continue
+
+                logger.info("Baseline (%s %s)...", symbol, regime.upper())
+                b_res = run_backtest(
+                    symbol, bars, regime=None, modifier=None, use_regime_weights=False
                 )
-    print(f"  Saved: {TRADES_CSV}")
+                baseline_results[regime].append(b_res)
 
+                logger.info("Fixed    (%s %s)...", symbol, regime.upper())
+                f_res = run_backtest(
+                    symbol, bars, regime=regime, modifier=modifier, use_regime_weights=True
+                )
+                fixed_results[regime].append(f_res)
 
-# ---------------------------------------------------------------------------
-# 10. Entry point
-# ---------------------------------------------------------------------------
+                b_ret = b_res.get("total_return", float("nan"))
+                f_ret = f_res.get("total_return", float("nan"))
+                logger.info(
+                    "  %s %s:  baseline=%s  fixed=%s  delta=%s",
+                    symbol,
+                    regime.upper(),
+                    _fmt_return(b_ret),
+                    _fmt_return(f_ret),
+                    _fmt_return(f_ret - b_ret) if b_ret == b_ret and f_ret == f_ret else "N/A",
+                )
 
+            except Exception as exc:
+                logger.error("FAILED %s %s: %s", symbol, regime, exc, exc_info=True)
+                baseline_results[regime].append({"symbol": symbol, "error": str(exc)})
+                fixed_results[regime].append({"symbol": symbol, "error": str(exc)})
 
-def main() -> None:
-    print("Omega Historical Backtest Harness")
-    print("=" * 40)
-    print(f"Symbols : {', '.join(SYMBOLS)}")
-    print(f"Regimes : {', '.join(REGIMES)}")
-    print(f"Split   : {int(TRAIN_FRAC * 100)}% train / {int((1 - TRAIN_FRAC) * 100)}% test")
+    # --- Live cycles (200 steps, recent data) ---
+    logger.info("")
+    logger.info("=" * 60)
+    logger.info("LIVE CYCLES (200 steps, recent market data)")
+    logger.info("=" * 60)
 
-    results: dict[str, PeriodResult] = {}
-    for regime, (start, end) in REGIMES.items():
-        results[regime] = run_regime(regime, start, end)
+    live_results: list[dict] = []
+    for symbol in symbols:
+        try:
+            bars = get_recent_ohlcv(symbol, days=365, force_refresh=False)
+            # Use last 200 + lookback bars
+            live_bars = bars[-(200 + MIN_LOOKBACK) :]
+            r = run_live_cycles(symbol, live_bars, n_cycles=200, modifier=modifier)
+            live_results.append(r)
+            logger.info(
+                "  %s live:  regime=%s  return=%s  sharpe=%s",
+                symbol,
+                r.get("live_regime", "?").upper(),
+                _fmt_return(r.get("total_return", float("nan"))),
+                _fmt_sharpe(r.get("sharpe", float("nan"))),
+            )
+        except Exception as exc:
+            logger.error("FAILED live %s: %s", symbol, exc, exc_info=True)
+            live_results.append({"symbol": symbol, "error": str(exc)})
 
-    print_table(results)
-    save_markdown(results)
-    save_trades_csv(results)
+    # --- Print reports ---
+    print_regime_report(baseline_results, fixed_results)
+    print_summary_table(baseline_results, fixed_results)
+    print_live_cycles_report(live_results)
 
-    total_trades = sum(r.total_trades for r in results.values())
-    print(f"\nComplete. {total_trades} trades recorded across all regimes.")
+    # --- Save to docs ---
+    out_path = DOCS_DIR / "regime_aware_results.md"
+    save_results_markdown(baseline_results, fixed_results, live_results, out_path)
+    logger.info("Done. Results saved to %s", out_path)
+
+    # Exit code: 0 if at least one fixed result improved or is positive
+    all_fixed = [
+        r for regime_list in fixed_results.values() for r in regime_list if "error" not in r
+    ]
+    if any(r.get("total_return", -999) > 0 for r in all_fixed):
+        return 0
+    logger.warning("No positive returns achieved in any regime with fixed strategy")
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
