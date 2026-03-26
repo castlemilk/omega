@@ -118,6 +118,36 @@ class DynamicWeightAllocator:
         for signal_name, ic_value in ic_updates.items():
             self.update_ic(signal_name, ic_value, regime)
 
+    def seed_initial_ic(
+        self,
+        initial_ics: dict[str, float],
+        n_samples: int = MIN_IC_SAMPLES,
+    ) -> None:
+        """
+        Seed initial IC EMA values to establish a prior weight distribution.
+
+        Directly sets ic_ema and sample_counts (bypassing EMA smoothing) so
+        the allocator starts with informed weights rather than equal fallback.
+        Applies to all known regimes.
+
+        Parameters
+        ----------
+        initial_ics : dict
+            {signal_name: desired_ic_ema_value}  — values ∈ [-1, 1].
+        n_samples : int
+            Sample count to assign (must be >= MIN_IC_SAMPLES to bypass fallback).
+        """
+        n_samples = max(n_samples, MIN_IC_SAMPLES)
+        for regime in list(self._profiles.keys()):
+            profile = self._profiles[regime]
+            for signal_name, ic_value in initial_ics.items():
+                if signal_name not in self._signals:
+                    logger.warning("seed_initial_ic: unknown signal '%s'", signal_name)
+                    continue
+                profile.ic_ema[signal_name] = float(ic_value)
+                profile.sample_counts[signal_name] = n_samples
+            profile.weights = self._compute_weights(profile)
+
     def allocate(self, regime: str = "default") -> AllocationResult:
         """
         Return the current weight allocation for the given regime.

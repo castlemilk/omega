@@ -145,7 +145,10 @@ class OmegaRunner:
 
         self._store = make_state_backend()
 
-        self._exporter = MetricsExporter(state_store=self._store)
+        self._exporter = MetricsExporter(
+            state_store=self._store,
+            port=self._cfg.monitoring.metrics_port,
+        )
         self._exporter.start()
         logger.info(
             "Metrics exporter started on port %d",
@@ -172,6 +175,23 @@ class OmegaRunner:
         logger.info(
             "PaperTradingEngine wired (db_url configured: %s).", bool(paper_trading._db_url)
         )
+
+        # Register shared memory/reasoning nodes — activate but don't route them
+        # via main pipeline steps (VictoriaNode handles MEMORY/REFLECT internally).
+        # They are available for direct invocation by other components.
+        try:
+            from omega.nodes.shared.reflection_node import ReflectionNode
+            from omega.nodes.shared.semantic_memory import SemanticMemoryNode
+
+            self._reflection_node = ReflectionNode()
+            self._orchestrator.register_node(self._reflection_node, activate=False)
+            logger.info("Registered ReflectionNode (inactive — driven by VictoriaNode).")
+
+            self._semantic_node = SemanticMemoryNode()
+            self._orchestrator.register_node(self._semantic_node, activate=False)
+            logger.info("Registered SemanticMemoryNode (inactive — driven by VictoriaNode).")
+        except Exception as exc:
+            logger.warning("Failed to register shared memory nodes: %s", exc)
 
     def _teardown(self) -> None:
         if self._exporter:
