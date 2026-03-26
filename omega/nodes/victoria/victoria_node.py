@@ -42,6 +42,7 @@ from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
+from omega.nodes.victoria.liquidation_signals import LiquidationCascadeSignal, LiquidationRisk
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.news_signals import NewsSignalProvider
 from omega.nodes.victoria.risk_management import RiskManagementNode
@@ -55,6 +56,7 @@ from omega.nodes.victoria.signals_advanced import (
     OrderFlowSignal,
     SentimentSignal,
 )
+from omega.nodes.victoria.stablecoin_signals import StablecoinFlowSignal
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.twitter_signals import TwitterSentimentSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
@@ -75,6 +77,7 @@ SIGNAL_NAMES = [
     "btc_dominance",
     "news_sentiment",
     "twitter_sentiment",
+    "stablecoin_flow",
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -125,6 +128,8 @@ class VictoriaNode(Node):
         self._btc_dominance = BTCDominanceSignal()
         self._news_signal = NewsSignalProvider()
         self._twitter_sentiment = TwitterSentimentSignal()
+        self._stablecoin_flow = StablecoinFlowSignal()
+        self._liquidation_cascade = LiquidationCascadeSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -135,6 +140,7 @@ class VictoriaNode(Node):
         # Runtime state
         self._last_market_data: dict[str, Any] = {}
         self._last_signals: dict[str, Any] = {}
+        self._last_liquidation_risk: LiquidationRisk | None = None
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
@@ -385,6 +391,7 @@ class VictoriaNode(Node):
             "btc_dominance",
             "news_sentiment",
             "twitter_sentiment",
+            "stablecoin_flow",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -836,6 +843,38 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("twitter_sentiment signal failed: %s", exc)
 
+            # Stablecoin flow — directional signal (feeds DynamicWeightAllocator)
+            try:
+                sc_val = self._stablecoin_flow.compute(market_data)
+                signals["stablecoin_flow"] = {
+                    "value": sc_val.value,
+                    "confidence": sc_val.confidence,
+                    "regime_tag": sc_val.regime_tag,
+                    "raw": sc_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("stablecoin_flow signal failed: %s", exc)
+
+            # Liquidation cascade risk filter — NOT directional; stored separately
+            # as _liquidation_risk and also embedded in signals for logging/DB.
+            try:
+                liq_risk = self._liquidation_cascade.compute(market_data)
+                self._last_liquidation_risk = liq_risk
+                signals["_liquidation_risk"] = {
+                    "risk_score": liq_risk.risk_score,
+                    "position_scale": liq_risk.position_scale,
+                    "regime_tag": liq_risk.regime_tag,
+                    "raw": liq_risk.raw,
+                }
+                logger.debug(
+                    "liquidation_cascade: risk=%.3f scale=%.1f regime=%s",
+                    liq_risk.risk_score,
+                    liq_risk.position_scale,
+                    liq_risk.regime_tag,
+                )
+            except Exception as exc:
+                logger.debug("liquidation_cascade signal failed: %s", exc)
+
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
         for name, sig in signals.items():
@@ -1003,6 +1042,25 @@ class VictoriaNode(Node):
         regime: str = inp.parameters.get("regime", "default")
         pico_mode: bool = inp.parameters.get("pico_mode", False)
 
+        # ── Liquidation cascade risk gate ─────────────────────────────────────
+        # Read the most recent liquidation risk (computed during _do_compute_signals).
+        # Extreme risk (>0.9) blocks all new positions; high risk (>0.7) halves sizes.
+        liq_scale = 1.0
+        if self._last_liquidation_risk is not None:
+            liq_scale = self._last_liquidation_risk.position_scale
+            if liq_scale == 0.0:
+                logger.warning(
+                    "liquidation_cascade: EXTREME risk (%.3f) — blocking all new positions",
+                    self._last_liquidation_risk.risk_score,
+                )
+                return []
+            if liq_scale < 1.0:
+                logger.info(
+                    "liquidation_cascade: HIGH risk (%.3f) — reducing positions to %.0f%%",
+                    self._last_liquidation_risk.risk_score,
+                    liq_scale * 100,
+                )
+
         # Normalise signals to {ticker: {"composite": float, ...}} regardless of
         # whether they arrive as raw VictoriaNode output or the orchestrator-wrapped
         # {node_id: compute_signals_result} format.
@@ -1035,8 +1093,18 @@ class VictoriaNode(Node):
                 ]
                 if composites:
                     result.setdefault("composite", sum(composites) / len(composites))
+                # Apply liquidation cascade position scale
+                if liq_scale < 1.0 and "weight" in result:
+                    result["weight"] = float(result["weight"]) * liq_scale
+                    result["_liquidation_scale"] = liq_scale
                 return [result]
             if isinstance(result, list):
+                # Apply liquidation cascade position scale to each proposal
+                if liq_scale < 1.0:
+                    for proposal in result:
+                        if isinstance(proposal, dict) and "weight" in proposal:
+                            proposal["weight"] = float(proposal["weight"]) * liq_scale
+                            proposal["_liquidation_scale"] = liq_scale
                 return result
         return []
 

@@ -41,6 +41,8 @@ class NodeAction(StrEnum):
     DEBATE_GATE = "debategate"
     WALK_FORWARD = "walkforward"
     MONITOR_LIQUIDATIONS = "monitor_liquidations"
+    COMPUTE_LIQUIDATION_RISK = "compute_liquidation_risk"
+    COMPUTE_STABLECOIN_FLOW = "compute_stablecoin_flow"
     ARCHITECTURAL_REVIEW = "architectural_review"
     RISK_DEBATE = "risk_debate"
     IMPROVEMENT = "improvement"
