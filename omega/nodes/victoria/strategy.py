@@ -405,11 +405,31 @@ class StrategyNode(Node):
             if composite is not None:
                 convictions[ticker] = score_to_conviction(float(composite))
 
+        # --- Regime directional filter ---
+        # Block longs in confirmed bear regimes and shorts in confirmed bull regimes.
+        # Regime info is embedded in the signals dict by the signal computation pipeline.
+        _regime_hmm: str = str(signals.get("_regime_hmm", signals.get("_regime", ""))).lower()
+        _regime_probs: list = signals.get("_regime_probs", [])
+        _regime_confidence: float = 0.0
+        if _regime_probs and len(_regime_probs) >= 3:
+            if _regime_hmm == "bear":
+                _regime_confidence = float(_regime_probs[1])
+            elif _regime_hmm == "bull":
+                _regime_confidence = float(_regime_probs[0])
+            elif _regime_hmm == "sideways":
+                _regime_confidence = float(_regime_probs[2])
+
+        _REGIME_CONFIDENCE_THRESHOLD = 0.6
+        _block_longs = _regime_hmm == "bear" and _regime_confidence >= _REGIME_CONFIDENCE_THRESHOLD
+        _block_shorts = _regime_hmm == "bull" and _regime_confidence >= _REGIME_CONFIDENCE_THRESHOLD
+
         # Screen tickers that have non-HOLD conviction above signal threshold
         # and apply the full conviction filter stack.
         long_candidates: dict[str, Any] = {}
         proposals_this_cycle = 0
         filtered_this_cycle = 0
+        regime_blocked_longs = 0
+        regime_blocked_shorts = 0
 
         short_candidates: dict[str, Any] = {}
 
@@ -419,6 +439,9 @@ class StrategyNode(Node):
                 if sig.get("composite", 0.0) <= self._signal_threshold:
                     continue
                 proposals_this_cycle += 1
+                if _block_longs:
+                    regime_blocked_longs += 1
+                    continue
                 passes, reason = self._passes_conviction_filters(sig, current_cycle)
                 if not passes:
                     filtered_this_cycle += 1
@@ -429,6 +452,9 @@ class StrategyNode(Node):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
                     continue
                 proposals_this_cycle += 1
+                if _block_shorts:
+                    regime_blocked_shorts += 1
+                    continue
                 passes, reason = self._passes_conviction_filters(sig, current_cycle)
                 if not passes:
                     filtered_this_cycle += 1
@@ -436,8 +462,17 @@ class StrategyNode(Node):
                     continue
                 short_candidates[ticker] = sig
 
+        if regime_blocked_longs or regime_blocked_shorts:
+            logger.info(
+                "Regime filter (%s, conf=%.2f) — blocked %d long proposal(s), %d short proposal(s)",
+                _regime_hmm,
+                _regime_confidence,
+                regime_blocked_longs,
+                regime_blocked_shorts,
+            )
+
         self._proposals_generated += proposals_this_cycle
-        self._proposals_filtered += filtered_this_cycle
+        self._proposals_filtered += filtered_this_cycle + regime_blocked_longs + regime_blocked_shorts
 
         # No candidates: either all filtered by conviction or no conviction signals at all.
         # Do NOT fall back to weak signals — the filter's purpose is to reduce trade count.
@@ -449,6 +484,9 @@ class StrategyNode(Node):
                 "convictions": {t: c.name for t, c in convictions.items()},
                 "proposals_generated": proposals_this_cycle,
                 "proposals_filtered": filtered_this_cycle,
+                "regime_blocked_longs": regime_blocked_longs,
+                "regime_blocked_shorts": regime_blocked_shorts,
+                "regime_filter": {"regime": _regime_hmm, "confidence": _regime_confidence},
                 "filter_stats": {
                     "generated": self._proposals_generated,
                     "filtered": self._proposals_filtered,
@@ -550,6 +588,9 @@ class StrategyNode(Node):
             "backtest": bt,
             "proposals_generated": proposals_this_cycle,
             "proposals_filtered": filtered_this_cycle,
+            "regime_blocked_longs": regime_blocked_longs,
+            "regime_blocked_shorts": regime_blocked_shorts,
+            "regime_filter": {"regime": _regime_hmm, "confidence": _regime_confidence},
             "filter_stats": {
                 "generated": self._proposals_generated,
                 "filtered": self._proposals_filtered,
