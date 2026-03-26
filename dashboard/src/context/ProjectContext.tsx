@@ -2,6 +2,21 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { projectClient } from "../client";
 import type { Project } from "../gen/omega/v1/types_pb";
 
+// Maps known project IDs to human-readable display names.
+// Used as fallback when the API returns the ID as the name.
+const PROJECT_ID_TO_NAME: Record<string, string> = {
+  proj_victoria: "Victoria",
+  victoria: "Victoria",
+  proj_polymarket: "Polymarket",
+  polymarket: "Polymarket",
+};
+
+/** Returns a human-readable display name for a project, falling back to the ID map. */
+export function projectDisplayName(p: Project): string {
+  if (p.name && p.name !== p.projectId) return p.name;
+  return PROJECT_ID_TO_NAME[p.projectId] ?? p.projectId;
+}
+
 interface ProjectContextValue {
   projects: Project[];
   selectedProject: Project | null;

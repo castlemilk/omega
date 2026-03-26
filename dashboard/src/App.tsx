@@ -25,6 +25,11 @@ import VictoriaPortfolio from "./pages/VictoriaPortfolio";
 import VictoriaSignals from "./pages/VictoriaSignals";
 import VictoriaTrades from "./pages/VictoriaTrades";
 import VictoriaBacktest from "./pages/VictoriaBacktest";
+import PolymarketOverview from "./pages/PolymarketOverview";
+import PolymarketMarkets from "./pages/PolymarketMarkets";
+import PolymarketEdges from "./pages/PolymarketEdges";
+import PolymarketWeather from "./pages/PolymarketWeather";
+import PolymarketBets from "./pages/PolymarketBets";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealth | null>(null);
@@ -118,6 +123,11 @@ export default function App() {
                     </ErrorBoundary>
                   }
                 />
+                <Route path="/polymarket" element={<PolymarketOverview />} />
+                <Route path="/polymarket/markets" element={<PolymarketMarkets />} />
+                <Route path="/polymarket/edges" element={<PolymarketEdges />} />
+                <Route path="/polymarket/weather" element={<PolymarketWeather />} />
+                <Route path="/polymarket/bets" element={<PolymarketBets />} />
               </Routes>
             </main>
           </div>

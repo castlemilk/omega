@@ -42,7 +42,7 @@ export default function Header({ systemStatus, connected }: HeaderProps) {
               connected ? "border-green-600 text-green-400" : "border-gray-600 text-gray-500"
             }`}
           >
-            {connected ? "streaming" : "offline"}
+            {connected ? "streaming" : "Backend not connected — start with `omega run`"}
           </span>
         )}
       </div>

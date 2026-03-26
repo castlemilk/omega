@@ -1,19 +1,21 @@
-// VICTORIA SIGNALS — signal generators, conviction, Brier scores, regime view
+// VICTORIA SIGNALS — signal generators, conviction, Brier scores, regime view + drill-down
 import { useEffect, useState } from "react";
 import {
   ComposedChart,
+  BarChart,
+  Bar,
+  Cell,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell,
+  ReferenceLine,
 } from "recharts";
-import { T, Panel, StatRow, TermTip, VictoriaPage, fmt } from "../components/victoria/Terminal";
+import { ArrowLeft } from "lucide-react";
 import * as mock from "../mocks/victoria";
+import type { Signal } from "../mocks/victoria";
 import { fetchSignals, fetchRiskMetrics } from "../api/victoria";
 
 // Synthetic IC timeseries per signal (seeded, deterministic-ish via index)
@@ -26,11 +28,146 @@ function buildICHistory(baseIC: number, halfLife: number, n = 60) {
   return out;
 }
 
+// Synthetic conviction history (30 data points)
+function buildConvictionHistory(base: number, n = 30) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const drift = 0.04 * Math.sin(i / 5 + base * 20);
+    const noise = 0.02 * Math.cos(i * 0.9 + base * 30);
+    out.push({ t: i + 1, conviction: +Math.max(0, Math.min(1, base + drift + noise)).toFixed(3) });
+  }
+  return out;
+}
+
 function calcComposite(sigs: typeof mock.signals) {
   const score = sigs.reduce((s, sig) => s + sig.conviction * sig.weight, 0);
   const direction = score > 0.5 ? "LONG" : score < 0.35 ? "SHORT" : "FLAT";
-  const color = direction === "LONG" ? T.green : direction === "SHORT" ? T.red : T.amber;
-  return { score, direction, color };
+  return { score, direction };
+}
+
+function CleanTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+  label?: string | number;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-slate-800 border border-slate-600 rounded-lg p-2.5 shadow-lg text-xs">
+      {label !== undefined && <p className="text-slate-500 mb-1">{label}</p>}
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.color ?? "#10b981" }}>
+          {p.name && `${p.name}: `}
+          {typeof p.value === "number" ? p.value.toFixed(4) : p.value}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function Skel({ h = 12, w = "100%" }: { h?: number; w?: string | number }) {
+  return (
+    <div className="animate-pulse bg-slate-700/60 rounded" style={{ height: h, width: w }} />
+  );
+}
+
+function convClass(c: number) {
+  return c > 0.6 ? "text-emerald-400" : c > 0.4 ? "text-amber-400" : "text-red-400";
+}
+function brierClass(b: number) {
+  return b < 0.25 ? "text-emerald-400" : b < 0.3 ? "text-amber-400" : "text-red-400";
+}
+function trendIcon(trend: string) {
+  return trend === "up" ? "↑" : trend === "down" ? "↓" : "→";
+}
+function trendClass(trend: string) {
+  return trend === "up" ? "text-emerald-400" : trend === "down" ? "text-red-400" : "text-amber-400";
+}
+
+// Signal card for main list
+function SignalCard({
+  sig,
+  onClick,
+}: {
+  sig: Signal;
+  onClick: () => void;
+}) {
+  const icHistory = buildICHistory(sig.avgIC, sig.halfLife);
+
+  return (
+    <div
+      className="bg-slate-800 rounded-xl border border-slate-700 p-4 cursor-pointer hover:border-indigo-500/50 transition-colors"
+      onClick={onClick}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider truncate">
+          {sig.name}
+        </h3>
+        <span className="text-[10px] text-slate-600">▸ detail</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="bg-slate-900 rounded-lg p-2.5 border border-slate-700">
+          <p className="text-[9px] text-slate-500 mb-1">Current Value</p>
+          <p className="text-lg font-bold text-slate-100">
+            {sig.currentValue.toFixed(3)}{" "}
+            <span className={`text-sm ${trendClass(sig.trend)}`}>{trendIcon(sig.trend)}</span>
+          </p>
+        </div>
+        <div className="bg-slate-900 rounded-lg p-2.5 border border-slate-700">
+          <p className="text-[9px] text-slate-500 mb-1">Conviction</p>
+          <p className={`text-lg font-bold ${convClass(sig.conviction)}`}>
+            {(sig.conviction * 100).toFixed(0)}%
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-1.5 text-xs mb-3">
+        {[
+          { l: "Avg IC", v: sig.avgIC.toFixed(4), cls: "text-blue-400" },
+          { l: "Weight", v: `${(sig.weight * 100).toFixed(0)}%`, cls: "text-slate-300" },
+          { l: "Half-life", v: `${sig.halfLife}d`, cls: "text-slate-300" },
+          { l: "Brier", v: sig.brierScore.toFixed(3), cls: brierClass(sig.brierScore) },
+        ].map(({ l, v, cls }) => (
+          <div key={l} className="flex justify-between">
+            <span className="text-slate-500">{l}</span>
+            <span className={`font-mono ${cls}`}>{v}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Conviction bar */}
+      <div className="mb-3">
+        <div className="flex justify-between text-[9px] text-slate-500 mb-1">
+          <span>Conviction</span>
+          <span className={convClass(sig.conviction)}>{(sig.conviction * 100).toFixed(0)}%</span>
+        </div>
+        <div className="h-1.5 bg-slate-700 rounded-full">
+          <div
+            className={`h-1.5 rounded-full transition-all ${sig.conviction > 0.6 ? "bg-emerald-500" : sig.conviction > 0.4 ? "bg-amber-500" : "bg-red-500"}`}
+            style={{ width: `${sig.conviction * 100}%` }}
+          />
+        </div>
+      </div>
+
+      {/* IC sparkline */}
+      <p className="text-[9px] text-slate-500 mb-1">IC History (60d)</p>
+      <div className="h-12">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={icHistory} margin={{ top: 0, right: 0, bottom: 0, left: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+            <XAxis dataKey="t" tick={false} />
+            <YAxis tick={{ fontSize: 8, fill: "#64748b" }} width={20} />
+            <Line type="monotone" dataKey="ic" stroke="#6366f1" strokeWidth={1} dot={false} name="IC" />
+            <ReferenceLine y={0} stroke="#475569" strokeDasharray="2 2" />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 }
 
 export default function VictoriaSignals() {
@@ -41,6 +178,8 @@ export default function VictoriaSignals() {
   const [fundingData, setFundingData] = useState(mock.fundingData);
   const [D, setD] = useState(mock.backtestStats);
   const [fromMock, setFromMock] = useState(true);
+  const [selectedSignal, setSelectedSignal] = useState<Signal | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchSignals(), fetchRiskMetrics()]).then(([sigResult, riskResult]) => {
@@ -58,479 +197,444 @@ export default function VictoriaSignals() {
     });
   }, []);
 
-  const {
-    score: compositeScore,
-    direction: compositeDirection,
-    color: compositeColor,
-  } = calcComposite(signals);
+  function openSignal(sig: Signal) {
+    setDetailLoading(true);
+    setSelectedSignal(sig);
+    setTimeout(() => setDetailLoading(false), 360);
+  }
 
-  return (
-    <VictoriaPage>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "8px 12px",
-          borderBottom: `1px solid ${T.green}`,
-          fontFamily: T.font,
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 16, color: T.green, textShadow: T.glow }}>Ω</span>
-          <span
-            style={{ color: T.green, fontSize: 12, letterSpacing: "0.18em", textShadow: T.glow }}
-          >
-            VICTORIA SIGNALS
-          </span>
-          {fromMock && (
-            <span
-              style={{
-                fontSize: 9,
-                color: T.amber,
-                border: `1px solid ${T.amber}`,
-                padding: "1px 5px",
-                letterSpacing: "0.1em",
-              }}
+  function backToList() {
+    setSelectedSignal(null);
+  }
+
+  const { score: compositeScore, direction: compositeDirection } = calcComposite(signals);
+  const compositeClass =
+    compositeDirection === "LONG"
+      ? "text-emerald-400"
+      : compositeDirection === "SHORT"
+        ? "text-red-400"
+        : "text-amber-400";
+
+  // ── Signal detail panel ──────────────────────────────────────────────
+  if (selectedSignal !== null) {
+    const sig = selectedSignal;
+    const icHistory = buildICHistory(sig.avgIC, sig.halfLife, 60);
+    const convHistory = buildConvictionHistory(sig.conviction, 30);
+
+    return (
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={backToList}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-100 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg transition-colors"
             >
-              MOCK DATA
-            </span>
-          )}
-        </div>
-        <div style={{ display: "flex", gap: 24 }}>
-          {[
-            { l: "COMPOSITE SIGNAL", v: compositeDirection, c: compositeColor },
-            { l: "COMPOSITE SCORE", v: compositeScore.toFixed(3), c: T.green },
-            { l: "ACTIVE SIGNALS", v: `${signals.length}`, c: T.white },
-            { l: "OOS SHARPE", v: fmt(D.sharpeOOS), c: D.sharpeOOS > 0.5 ? T.green : T.amber },
-          ].map((s) => (
-            <div key={s.l} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 9, color: T.dim, letterSpacing: "0.08em" }}>{s.l}</div>
-              <div
-                style={{
-                  fontSize: 14,
-                  color: s.c,
-                  fontWeight: "bold",
-                  textShadow: s.c === T.green ? T.glow : s.c === T.red ? T.glowR : T.glowA,
-                }}
-              >
-                {s.v}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 280px", gap: 3, padding: 3 }}>
-        {/* Signal cards column 1 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {signals.slice(0, 3).map((sig) => {
-            const icHistory = buildICHistory(sig.avgIC, sig.halfLife);
-            const trendIcon = sig.trend === "up" ? "↑" : sig.trend === "down" ? "↓" : "→";
-            const trendColor =
-              sig.trend === "up" ? T.green : sig.trend === "down" ? T.red : T.amber;
-            return (
-              <Panel key={sig.name} title={sig.name}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 4,
-                    marginBottom: 8,
-                  }}
-                >
-                  <div style={{ border: `1px solid ${T.dim}`, padding: "4px 6px" }}>
-                    <div style={{ fontSize: 9, color: T.dim }}>CURRENT VALUE</div>
-                    <div style={{ fontSize: 20, color: sig.color, fontWeight: "bold" }}>
-                      {sig.currentValue.toFixed(3)}{" "}
-                      <span style={{ fontSize: 14, color: trendColor }}>{trendIcon}</span>
-                    </div>
-                  </div>
-                  <div style={{ border: `1px solid ${T.dim}`, padding: "4px 6px" }}>
-                    <div style={{ fontSize: 9, color: T.dim }}>CONVICTION</div>
-                    <div
-                      style={{
-                        fontSize: 20,
-                        color:
-                          sig.conviction > 0.6 ? T.green : sig.conviction > 0.4 ? T.amber : T.red,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {(sig.conviction * 100).toFixed(0)}%
-                    </div>
-                  </div>
-                </div>
-
-                <StatRow label="AVG IC" value={sig.avgIC.toFixed(4)} color={T.cyan} />
-                <StatRow label="WEIGHT" value={`${(sig.weight * 100).toFixed(0)}%`} />
-                <StatRow label="HALF-LIFE" value={`${sig.halfLife}d`} color={T.white} />
-                <StatRow
-                  label="BRIER SCORE"
-                  value={sig.brierScore.toFixed(3)}
-                  color={sig.brierScore < 0.25 ? T.green : sig.brierScore < 0.3 ? T.amber : T.red}
-                />
-
-                {/* Conviction bar */}
-                <div style={{ marginTop: 6, marginBottom: 4 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: 9,
-                      color: T.dim,
-                      marginBottom: 2,
-                    }}
-                  >
-                    <span>CONVICTION</span>
-                    <span style={{ color: sig.color }}>{(sig.conviction * 100).toFixed(0)}%</span>
-                  </div>
-                  <div
-                    style={{ height: 5, background: `${T.dim}33`, border: `1px solid ${T.dim}` }}
-                  >
-                    <div
-                      style={{
-                        width: `${sig.conviction * 100}%`,
-                        height: "100%",
-                        background: sig.color,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* IC history sparkline */}
-                <div style={{ fontSize: 9, color: T.dim, marginBottom: 2 }}>IC HISTORY (60d)</div>
-                <ResponsiveContainer width="100%" height={50}>
-                  <ComposedChart
-                    data={icHistory}
-                    margin={{ top: 0, right: 0, bottom: 0, left: 20 }}
-                  >
-                    <CartesianGrid stroke={T.dim} strokeDasharray="2 10" opacity={0.2} />
-                    <XAxis dataKey="t" tick={false} />
-                    <YAxis tick={{ fill: T.dim, fontSize: 8, fontFamily: T.font }} width={22} />
-                    <Tooltip content={<TermTip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="ic"
-                      stroke={sig.color}
-                      strokeWidth={1}
-                      dot={false}
-                      name="IC"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </Panel>
-            );
-          })}
-        </div>
-
-        {/* Signal cards column 2 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          {signals.slice(3).map((sig) => {
-            const icHistory = buildICHistory(sig.avgIC, sig.halfLife);
-            const trendIcon = sig.trend === "up" ? "↑" : sig.trend === "down" ? "↓" : "→";
-            const trendColor =
-              sig.trend === "up" ? T.green : sig.trend === "down" ? T.red : T.amber;
-            return (
-              <Panel key={sig.name} title={sig.name}>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 4,
-                    marginBottom: 8,
-                  }}
-                >
-                  <div style={{ border: `1px solid ${T.dim}`, padding: "4px 6px" }}>
-                    <div style={{ fontSize: 9, color: T.dim }}>CURRENT VALUE</div>
-                    <div style={{ fontSize: 20, color: sig.color, fontWeight: "bold" }}>
-                      {sig.currentValue.toFixed(3)}{" "}
-                      <span style={{ fontSize: 14, color: trendColor }}>{trendIcon}</span>
-                    </div>
-                  </div>
-                  <div style={{ border: `1px solid ${T.dim}`, padding: "4px 6px" }}>
-                    <div style={{ fontSize: 9, color: T.dim }}>CONVICTION</div>
-                    <div
-                      style={{
-                        fontSize: 20,
-                        color:
-                          sig.conviction > 0.6 ? T.green : sig.conviction > 0.4 ? T.amber : T.red,
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {(sig.conviction * 100).toFixed(0)}%
-                    </div>
-                  </div>
-                </div>
-                <StatRow label="AVG IC" value={sig.avgIC.toFixed(4)} color={T.cyan} />
-                <StatRow label="WEIGHT" value={`${(sig.weight * 100).toFixed(0)}%`} />
-                <StatRow label="HALF-LIFE" value={`${sig.halfLife}d`} color={T.white} />
-                <StatRow
-                  label="BRIER SCORE"
-                  value={sig.brierScore.toFixed(3)}
-                  color={sig.brierScore < 0.25 ? T.green : sig.brierScore < 0.3 ? T.amber : T.red}
-                />
-                <div style={{ marginTop: 6, marginBottom: 4 }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      fontSize: 9,
-                      color: T.dim,
-                      marginBottom: 2,
-                    }}
-                  >
-                    <span>CONVICTION</span>
-                    <span style={{ color: sig.color }}>{(sig.conviction * 100).toFixed(0)}%</span>
-                  </div>
-                  <div
-                    style={{ height: 5, background: `${T.dim}33`, border: `1px solid ${T.dim}` }}
-                  >
-                    <div
-                      style={{
-                        width: `${sig.conviction * 100}%`,
-                        height: "100%",
-                        background: sig.color,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div style={{ fontSize: 9, color: T.dim, marginBottom: 2 }}>IC HISTORY (60d)</div>
-                <ResponsiveContainer width="100%" height={50}>
-                  <ComposedChart
-                    data={icHistory}
-                    margin={{ top: 0, right: 0, bottom: 0, left: 20 }}
-                  >
-                    <CartesianGrid stroke={T.dim} strokeDasharray="2 10" opacity={0.2} />
-                    <XAxis dataKey="t" tick={false} />
-                    <YAxis tick={{ fill: T.dim, fontSize: 8, fontFamily: T.font }} width={22} />
-                    <Tooltip content={<TermTip />} />
-                    <Line
-                      type="monotone"
-                      dataKey="ic"
-                      stroke={sig.color}
-                      strokeWidth={1}
-                      dot={false}
-                      name="IC"
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </Panel>
-            );
-          })}
-
-          {/* Signal combination */}
-          <Panel title="SIGNAL COMBINATION">
-            <div
-              style={{
-                textAlign: "center",
-                padding: 8,
-                border: `1px solid ${compositeColor}`,
-                marginBottom: 8,
-              }}
-            >
-              <div style={{ fontSize: 9, color: T.dim, letterSpacing: "0.15em" }}>
-                COMBINED SIGNAL
-              </div>
-              <div
-                style={{
-                  fontSize: 24,
-                  color: compositeColor,
-                  fontWeight: "bold",
-                  textShadow: compositeColor === T.green ? T.glow : T.glowA,
-                }}
-              >
-                {compositeDirection}
-              </div>
-              <div style={{ fontSize: 12, color: compositeColor }}>
-                {compositeScore.toFixed(3)}
-              </div>
-            </div>
-            <div style={{ fontSize: 9, color: T.dim, marginBottom: 6 }}>WEIGHT DISTRIBUTION</div>
-            {signals.map((sig) => (
-              <div key={sig.name} style={{ marginBottom: 5 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 10,
-                    marginBottom: 2,
-                  }}
-                >
-                  <span style={{ color: T.dim, fontSize: 9 }}>{sig.name.split(" ")[0]}</span>
-                  <span style={{ color: sig.color }}>{(sig.weight * 100).toFixed(0)}%</span>
-                </div>
-                <div style={{ height: 3, background: `${T.dim}33` }}>
-                  <div
-                    style={{
-                      width: `${sig.weight * 100 * 4}%`,
-                      height: "100%",
-                      background: sig.color,
-                    }}
-                  />
-                </div>
+              <ArrowLeft size={13} />
+              Back to Signals
+            </button>
+            <h2 className="text-sm font-semibold text-slate-300">Signal Detail</h2>
+            {fromMock && (
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded">
+                mock
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-6">
+            {[
+              { l: "Signal", v: sig.name, cls: "text-slate-100 font-semibold text-sm" },
+              {
+                l: "Current Value",
+                v: `${sig.currentValue.toFixed(3)} ${trendIcon(sig.trend)}`,
+                cls: `text-sm font-semibold ${trendClass(sig.trend)}`,
+              },
+              {
+                l: "Conviction",
+                v: `${(sig.conviction * 100).toFixed(0)}%`,
+                cls: `text-sm font-semibold ${convClass(sig.conviction)}`,
+              },
+              {
+                l: "Brier Score",
+                v: sig.brierScore.toFixed(3),
+                cls: `text-sm font-semibold text-blue-400`,
+              },
+            ].map((s) => (
+              <div key={s.l} className="text-right">
+                <p className="text-[10px] text-slate-500 mb-0.5">{s.l}</p>
+                <p className={s.cls}>{s.v}</p>
               </div>
             ))}
-          </Panel>
+          </div>
+        </div>
 
-          {/* Funding data chart */}
-          <Panel title="FUNDING RATE SIGNAL">
-            <ResponsiveContainer width="100%" height={100}>
-              <ComposedChart
-                data={fundingData.slice(-30)}
-                margin={{ top: 2, right: 4, bottom: 2, left: 28 }}
+        <div className="grid grid-cols-[1fr_240px] gap-4">
+          {/* Left: charts */}
+          <div className="space-y-4">
+            {detailLoading ? (
+              <>
+                <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-3">
+                  <Skel h={14} w="40%" />
+                  <Skel h={140} />
+                </div>
+                <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-3">
+                  <Skel h={14} w="40%" />
+                  <Skel h={110} />
+                </div>
+              </>
+            ) : (
+              <>
+                {/* IC trend */}
+                <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    IC Trend (60 Days)
+                  </h3>
+                  <p className="text-xs text-slate-600 mb-3">
+                    Information Coefficient over rolling 60-day window. Positive IC = predictive.
+                  </p>
+                  <div className="h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={icHistory} margin={{ top: 4, right: 12, bottom: 4, left: 44 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="t" tick={{ fontSize: 9, fill: "#64748b" }} label={{ value: "days", position: "insideRight", fill: "#64748b", fontSize: 9, offset: 10 }} />
+                        <YAxis tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v: number) => v.toFixed(3)} width={42} />
+                        <Tooltip content={<CleanTooltip />} />
+                        <ReferenceLine y={0} stroke="#475569" strokeDasharray="4 2" />
+                        <Line type="monotone" dataKey="ic" stroke="#6366f1" strokeWidth={1.5} dot={false} name="IC" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex gap-5 mt-3 pt-3 border-t border-slate-700 text-xs">
+                    {[
+                      { l: "Avg IC", v: (icHistory.reduce((s, d) => s + d.ic, 0) / icHistory.length).toFixed(4), cls: "text-blue-400" },
+                      { l: "Max IC", v: Math.max(...icHistory.map((d) => d.ic)).toFixed(4), cls: "text-emerald-400" },
+                      { l: "Min IC", v: Math.min(...icHistory.map((d) => d.ic)).toFixed(4), cls: "text-red-400" },
+                      { l: "Half-life", v: `${sig.halfLife}d`, cls: "text-slate-300" },
+                    ].map(({ l, v, cls }) => (
+                      <div key={l}>
+                        <span className="text-slate-500">{l}: </span>
+                        <span className={`font-semibold font-mono ${cls}`}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Conviction history */}
+                <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    Conviction History (30 Cycles)
+                  </h3>
+                  <p className="text-xs text-slate-600 mb-3">
+                    Rolling conviction score over recent pipeline cycles.
+                  </p>
+                  <div className="h-28">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={convHistory} margin={{ top: 4, right: 12, bottom: 4, left: 44 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis dataKey="t" tick={{ fontSize: 9, fill: "#64748b" }} />
+                        <YAxis domain={[0, 1]} tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} width={42} />
+                        <Tooltip content={<CleanTooltip />} />
+                        <ReferenceLine y={0.5} stroke="#475569" strokeDasharray="4 2" label={{ value: "50%", fill: "#64748b", fontSize: 9 }} />
+                        <Line type="monotone" dataKey="conviction" stroke={sig.conviction > 0.6 ? "#10b981" : sig.conviction > 0.4 ? "#f59e0b" : "#ef4444"} strokeWidth={1.5} dot={false} name="Conviction" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Weight vs other signals */}
+                <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+                    Weight vs Other Signals
+                  </h3>
+                  <p className="text-xs text-slate-600 mb-3">IC-weighted allocation vs peer signals.</p>
+                  <div className="h-28">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={signals.map((s) => ({ name: s.name.split(" ")[0], weight: s.weight, isSelf: s.name === sig.name }))}
+                        layout="vertical"
+                        margin={{ top: 2, right: 12, bottom: 2, left: 88 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 9, fill: "#64748b" }} tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: "#94a3b8" }} width={86} />
+                        <Tooltip content={<CleanTooltip />} />
+                        <Bar dataKey="weight" name="Weight" radius={3}>
+                          {signals.map((s, i) => (
+                            <Cell key={i} fill={s.name === sig.name ? "#6366f1" : "#334155"} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Right: stats */}
+          <div className="space-y-3">
+            {/* Signal stats */}
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                Signal Stats
+              </h3>
+              <div
+                className={`text-center p-4 rounded-lg border mb-3 ${
+                  sig.conviction > 0.6
+                    ? "border-emerald-500/50 bg-emerald-500/10"
+                    : sig.conviction > 0.4
+                      ? "border-amber-500/50 bg-amber-500/10"
+                      : "border-red-500/50 bg-red-500/10"
+                }`}
               >
-                <CartesianGrid stroke={T.dim} strokeDasharray="2 10" opacity={0.3} />
-                <XAxis
-                  dataKey="t"
-                  tick={{ fill: T.dim, fontSize: 8, fontFamily: T.font }}
-                  interval={9}
-                />
-                <YAxis
-                  tick={{ fill: T.dim, fontSize: 8, fontFamily: T.font }}
-                  tickFormatter={(v: number) => `${v.toFixed(2)}%`}
-                  width={30}
-                />
-                <Tooltip content={<TermTip />} />
-                <Line
-                  type="monotone"
-                  dataKey="funding"
-                  stroke={T.amber}
-                  strokeWidth={1.5}
-                  dot={false}
-                  name="Funding%"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </Panel>
+                <p className="text-xs text-slate-500 mb-1.5">Current Value</p>
+                <p className={`text-3xl font-bold ${trendClass(sig.trend)}`}>
+                  {sig.currentValue.toFixed(3)}
+                </p>
+                <p className={`text-xs mt-1 font-semibold ${trendClass(sig.trend)}`}>
+                  {trendIcon(sig.trend)} {sig.trend.toUpperCase()}
+                </p>
+              </div>
+              <div className="space-y-2 text-sm">
+                {[
+                  { l: "Avg IC", v: sig.avgIC.toFixed(4), cls: "text-blue-400" },
+                  { l: "Weight", v: `${(sig.weight * 100).toFixed(0)}%`, cls: "text-slate-300" },
+                  { l: "Half-life", v: `${sig.halfLife}d`, cls: "text-slate-300" },
+                  { l: "Brier Score", v: sig.brierScore.toFixed(3), cls: brierClass(sig.brierScore) },
+                  { l: "Conviction", v: `${(sig.conviction * 100).toFixed(0)}%`, cls: convClass(sig.conviction) },
+                ].map(({ l, v, cls }) => (
+                  <div key={l} className="flex justify-between">
+                    <span className="text-slate-500">{l}</span>
+                    <span className={`font-mono font-semibold ${cls}`}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quality assessment */}
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+                Quality Assessment
+              </h3>
+              <div className="space-y-2 text-sm">
+                {[
+                  { l: "IC Quality", v: sig.avgIC > 0.06 ? "STRONG" : sig.avgIC > 0.03 ? "MODERATE" : "WEAK", cls: sig.avgIC > 0.06 ? "text-emerald-400" : sig.avgIC > 0.03 ? "text-amber-400" : "text-red-400" },
+                  { l: "Conviction", v: sig.conviction > 0.7 ? "HIGH" : sig.conviction > 0.5 ? "MODERATE" : "LOW", cls: convClass(sig.conviction) },
+                  { l: "Brier Accuracy", v: sig.brierScore < 0.25 ? "ACCURATE" : sig.brierScore < 0.3 ? "FAIR" : "POOR", cls: brierClass(sig.brierScore) },
+                  { l: "Weight Rank", v: `#${[...signals].sort((a, b) => b.weight - a.weight).findIndex((s) => s.name === sig.name) + 1} / ${signals.length}`, cls: "text-slate-300" },
+                ].map(({ l, v, cls }) => (
+                  <div key={l} className="flex justify-between">
+                    <span className="text-slate-500">{l}</span>
+                    <span className={`font-semibold ${cls}`}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Conviction + weight bars */}
+            <div className="bg-slate-800 rounded-xl border border-slate-700 p-4 space-y-4">
+              {[
+                { l: "Conviction Level", v: sig.conviction, cls: convClass(sig.conviction), barCls: sig.conviction > 0.6 ? "bg-emerald-500" : sig.conviction > 0.4 ? "bg-amber-500" : "bg-red-500", pct: sig.conviction * 100 },
+                { l: "Portfolio Weight", v: sig.weight, cls: "text-indigo-400", barCls: "bg-indigo-500", pct: Math.min(100, sig.weight * 100 * 4) },
+              ].map(({ l, v, cls, barCls, pct }) => (
+                <div key={l}>
+                  <div className="flex justify-between text-xs mb-1.5">
+                    <span className="text-slate-500">{l}</span>
+                    <span className={`font-mono font-semibold ${cls}`}>{(v * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="h-2 bg-slate-700 rounded-full">
+                    <div className={`h-2 rounded-full ${barCls}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Signal list (main view) ──────────────────────────────────────────
+  return (
+    <div className="space-y-4">
+      {/* Stats bar */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { l: "Composite Signal", v: compositeDirection, cls: compositeClass },
+          { l: "Composite Score", v: compositeScore.toFixed(3), cls: "text-slate-100" },
+          { l: "Active Signals", v: `${signals.length}`, cls: "text-slate-100" },
+          { l: "OOS Sharpe", v: D.sharpeOOS.toFixed(2), cls: D.sharpeOOS > 0.5 ? "text-emerald-400" : "text-amber-400" },
+        ].map((s) => (
+          <div key={s.l} className="bg-slate-800 rounded-xl border border-slate-700 px-4 py-3">
+            <p className="text-xs text-slate-500 mb-1">{s.l}</p>
+            <p className={`text-xl font-bold ${s.cls}`}>{s.v}</p>
+            {fromMock && s.l === "Active Signals" && (
+              <p className="text-[10px] text-amber-400 mt-0.5">mock data</p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-[1fr_1fr_280px] gap-4">
+        {/* Signal cards col 1 */}
+        <div className="space-y-3">
+          {signals.slice(0, 3).map((sig) => (
+            <SignalCard key={sig.name} sig={sig} onClick={() => openSignal(sig)} />
+          ))}
+        </div>
+
+        {/* Signal cards col 2 */}
+        <div className="space-y-3">
+          {signals.slice(3).map((sig) => (
+            <SignalCard key={sig.name} sig={sig} onClick={() => openSignal(sig)} />
+          ))}
+
+          {/* Signal combination */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              Signal Combination
+            </h3>
+            <div
+              className={`text-center p-3 rounded-lg border mb-3 ${
+                compositeDirection === "LONG"
+                  ? "border-emerald-500/50 bg-emerald-500/10"
+                  : compositeDirection === "SHORT"
+                    ? "border-red-500/50 bg-red-500/10"
+                    : "border-amber-500/50 bg-amber-500/10"
+              }`}
+            >
+              <p className="text-[10px] text-slate-500 mb-1">Combined Signal</p>
+              <p className={`text-2xl font-bold ${compositeClass}`}>{compositeDirection}</p>
+              <p className={`text-xs mt-0.5 font-mono ${compositeClass}`}>{compositeScore.toFixed(3)}</p>
+            </div>
+            <p className="text-[10px] text-slate-500 mb-2">Weight Distribution</p>
+            <div className="space-y-2">
+              {signals.map((sig) => (
+                <div key={sig.name}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-400">{sig.name.split(" ")[0]}</span>
+                    <span className="text-indigo-400 font-mono">{(sig.weight * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="h-1 bg-slate-700 rounded-full">
+                    <div className="h-1 bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, sig.weight * 100 * 4)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Funding rate chart */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              Funding Rate Signal
+            </h3>
+            <div className="h-24">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={fundingData.slice(-30)} margin={{ top: 2, right: 4, bottom: 2, left: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis dataKey="t" tick={{ fontSize: 8, fill: "#64748b" }} interval={9} />
+                  <YAxis tick={{ fontSize: 8, fill: "#64748b" }} tickFormatter={(v: number) => `${v.toFixed(2)}%`} width={30} />
+                  <Tooltip content={<CleanTooltip />} />
+                  <Line type="monotone" dataKey="funding" stroke="#f59e0b" strokeWidth={1.5} dot={false} name="Funding%" />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
         {/* RIGHT: regime + ablation */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <Panel title="REGIME PERFORMANCE">
-            {regimes.map((r, i) => (
-              <div
-                key={r.name}
-                style={{
-                  border: `1px solid ${i === currentRegimeIdx ? T.green : T.dim}`,
-                  padding: "6px 8px",
-                  marginBottom: 4,
-                  background: i === currentRegimeIdx ? `${T.green}09` : T.black,
-                }}
-              >
+        <div className="space-y-3">
+          {/* Regime performance */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+              Regime Performance
+            </h3>
+            <div className="space-y-2">
+              {regimes.map((r, i) => (
                 <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 3,
-                  }}
+                  key={r.name}
+                  className={`rounded-lg border p-3 ${
+                    i === currentRegimeIdx
+                      ? "border-emerald-500/60 bg-emerald-500/10"
+                      : "border-slate-700 bg-slate-900"
+                  }`}
                 >
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: i === currentRegimeIdx ? T.green : T.dim,
-                      letterSpacing: "0.1em",
-                      textShadow: i === currentRegimeIdx ? T.glow : "none",
-                    }}
-                  >
-                    {r.name}
-                    {i === currentRegimeIdx ? " ◀" : ""}
-                  </span>
-                  <span style={{ fontSize: 14, color: T.green, fontWeight: "bold" }}>
-                    {r.sharpe.toFixed(2)}
-                  </span>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`text-xs font-semibold ${i === currentRegimeIdx ? "text-emerald-400" : "text-slate-400"}`}>
+                      {r.name}{i === currentRegimeIdx ? " ◀" : ""}
+                    </span>
+                    <span className="text-sm font-bold text-slate-100">{r.sharpe.toFixed(2)}</span>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between text-slate-500">
+                      <span>Ann Return</span><span className="text-blue-400">{r.ret.toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between text-slate-500">
+                      <span>Trades</span><span className="text-slate-300">{r.trades}</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-1 bg-slate-700 rounded-full">
+                    <div
+                      className={`h-1 rounded-full ${i === currentRegimeIdx ? "bg-emerald-500" : "bg-slate-500"}`}
+                      style={{ width: `${r.pct}%` }}
+                    />
+                  </div>
                 </div>
-                <StatRow label="ANN RETURN" value={`${r.ret.toFixed(1)}%`} color={T.cyan} />
-                <StatRow label="TRADES" value={`${r.trades}`} color={T.white} />
-                <StatRow label="FREQUENCY" value={`${r.pct}%`} color={T.dim} />
-                <div style={{ marginTop: 4, height: 3, background: `${T.dim}44` }}>
-                  <div
-                    style={{
-                      width: `${r.pct}%`,
-                      height: "100%",
-                      background: i === currentRegimeIdx ? T.green : T.dim,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </Panel>
-
-          <Panel title="SIGNAL ABLATION — ΔSharpe">
-            <div style={{ fontSize: 10, color: T.dim, marginBottom: 4 }}>
-              FULL SYSTEM:{" "}
-              <span style={{ color: T.green, textShadow: T.glow }}>{fmt(D.sharpeAnn)}</span>
+              ))}
             </div>
-            <ResponsiveContainer width="100%" height={170}>
-              <BarChart
-                data={ablation}
-                layout="vertical"
-                margin={{ top: 2, right: 30, bottom: 2, left: 90 }}
-              >
-                <CartesianGrid
-                  stroke={T.dim}
-                  strokeDasharray="2 10"
-                  opacity={0.3}
-                  horizontal={false}
-                />
-                <XAxis type="number" tick={{ fill: T.dim, fontSize: 9, fontFamily: T.font }} />
-                <YAxis
-                  type="category"
-                  dataKey="name"
-                  tick={{ fill: T.white, fontSize: 9, fontFamily: T.font }}
-                  width={88}
-                />
-                <Tooltip content={<TermTip />} />
-                <Bar dataKey="dSharpe" name="ΔSharpe" radius={0}>
-                  {ablation.map((d, i) => (
-                    <Cell key={i} fill={d.sig ? T.green : T.dim} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </Panel>
+          </div>
 
-          <Panel title="BRIER SCORE ACCURACY">
-            <div style={{ fontSize: 9, color: T.dim, marginBottom: 6 }}>
-              Lower = more accurate (0=perfect, 1=worst)
+          {/* Signal ablation */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Signal Ablation (ΔSharpe)
+            </h3>
+            <p className="text-xs text-slate-500 mb-3">
+              Full system: <span className="text-emerald-400 font-mono font-semibold">{D.sharpeAnn.toFixed(2)}</span>
+            </p>
+            <div className="h-44">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ablation} layout="vertical" margin={{ top: 2, right: 24, bottom: 2, left: 90 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 9, fill: "#64748b" }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: "#94a3b8" }} width={88} />
+                  <Tooltip content={<CleanTooltip />} />
+                  <Bar dataKey="dSharpe" name="ΔSharpe" radius={3}>
+                    {ablation.map((d, i) => (
+                      <Cell key={i} fill={d.sig ? "#10b981" : "#475569"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-            {signals.map((sig) => (
-              <div key={sig.name} style={{ marginBottom: 6 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: 10,
-                    marginBottom: 2,
-                  }}
-                >
-                  <span style={{ color: T.dim, fontSize: 9 }}>{sig.name.split(" ")[0]}</span>
-                  <span
-                    style={{
-                      color:
-                        sig.brierScore < 0.25 ? T.green : sig.brierScore < 0.3 ? T.amber : T.red,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {sig.brierScore.toFixed(3)}
-                  </span>
+          </div>
+
+          {/* Brier scores */}
+          <div className="bg-slate-800 rounded-xl border border-slate-700 p-4">
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Brier Score Accuracy
+            </h3>
+            <p className="text-xs text-slate-600 mb-3">Lower = more accurate (0=perfect, 1=worst)</p>
+            <div className="space-y-2.5">
+              {signals.map((sig) => (
+                <div key={sig.name}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="text-slate-400">{sig.name.split(" ")[0]}</span>
+                    <span className={`font-semibold font-mono ${brierClass(sig.brierScore)}`}>
+                      {sig.brierScore.toFixed(3)}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-slate-700 rounded-full">
+                    <div
+                      className={`h-1.5 rounded-full ${brierClass(sig.brierScore).replace("text-", "bg-").replace("400", "500")}`}
+                      style={{ width: `${sig.brierScore * 200}%` }}
+                    />
+                  </div>
                 </div>
-                <div style={{ height: 4, background: `${T.dim}33`, border: `1px solid ${T.dim}` }}>
-                  <div
-                    style={{
-                      width: `${sig.brierScore * 200}%`,
-                      height: "100%",
-                      background:
-                        sig.brierScore < 0.25 ? T.green : sig.brierScore < 0.3 ? T.amber : T.red,
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </Panel>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
-    </VictoriaPage>
+    </div>
   );
 }

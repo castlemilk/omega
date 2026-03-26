@@ -730,31 +730,103 @@ function AutoPanel() {
 // ---------------------------------------------------------------------------
 // Panel 10 — Signal Quality
 // ---------------------------------------------------------------------------
+
+/** Generate a simple sparkline SVG path from trend + currentValue */
+function mkSparkPath(trend: string, baseIC: number): string {
+  const N = 12;
+  const w = 52;
+  const h = 18;
+  const noise = (i: number) => Math.sin(i * 2.3 + baseIC * 10) * 0.008;
+  const pts = Array.from({ length: N }, (_, i) => {
+    const progress = i / (N - 1);
+    const drift =
+      trend === "up"
+        ? progress * 0.015
+        : trend === "down"
+          ? -progress * 0.012
+          : Math.sin(progress * Math.PI) * 0.008;
+    return Math.max(0.01, Math.min(0.15, baseIC + drift + noise(i)));
+  });
+  const min = Math.min(...pts);
+  const max = Math.max(...pts) || min + 0.001;
+  const coords = pts.map((v, i) => {
+    const x = (i / (N - 1)) * w;
+    const y = h - ((v - min) / (max - min)) * h * 0.8 - h * 0.1;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return `M ${coords.join(" L ")}`;
+}
+
 function SignalPanel() {
+  const sorted = [...signals].sort((a, b) => b.avgIC - a.avgIC);
   return (
-    <Panel title="SIGNAL QUALITY — VICTORIA FACTORS">
-      {signals.slice(0, 4).map((s) => (
-        <div key={s.name} style={{ marginBottom: 5 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: 10,
-              marginBottom: 2,
-            }}
-          >
-            <span style={{ color: T.white }}>{s.name}</span>
-            <span style={{ color: T.cyan, fontSize: 9 }}>
-              IC:{s.avgIC.toFixed(4)} w:{(s.weight * 100).toFixed(0)}% t½:{s.halfLife}d
-            </span>
-          </div>
-          <div style={{ height: 4, background: `${T.dim}33`, border: `1px solid ${T.dim}` }}>
+    <Panel title="SIGNAL QUALITY — TOP 5 FACTORS">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {sorted.map((s, rank) => {
+          const sparkPath = mkSparkPath(s.trend, s.avgIC);
+          const trendColor = s.trend === "up" ? T.green : s.trend === "down" ? T.red : T.amber;
+          const trendArrow = s.trend === "up" ? "↑" : s.trend === "down" ? "↓" : "→";
+          const barW = Math.min(100, s.weight * 100 * 2.8);
+          return (
             <div
-              style={{ width: `${s.weight * 100 * 3}%`, height: "100%", background: s.color }}
-            />
-          </div>
-        </div>
-      ))}
+              key={s.name}
+              style={{
+                borderBottom: `1px solid ${T.dim}22`,
+                paddingBottom: 7,
+              }}
+            >
+              {/* Row 1: rank + name + trend + IC value */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4 }}>
+                <span style={{ color: T.dim, fontSize: 8, width: 10 }}>#{rank + 1}</span>
+                <span style={{ color: T.white, fontSize: 10, flex: 1, fontWeight: "bold" }}>
+                  {s.name}
+                </span>
+                {/* Mini sparkline SVG */}
+                <svg width={52} height={18} style={{ flexShrink: 0 }}>
+                  <path
+                    d={sparkPath}
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={1.5}
+                    strokeLinejoin="round"
+                    opacity={0.85}
+                  />
+                </svg>
+                <span style={{ color: trendColor, fontSize: 9, width: 8 }}>{trendArrow}</span>
+                <span style={{ color: T.cyan, fontSize: 9, width: 42, textAlign: "right" }}>
+                  IC {s.avgIC.toFixed(4)}
+                </span>
+              </div>
+              {/* Row 2: weight bar + meta */}
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ color: T.dim, fontSize: 8, width: 10 }} />
+                <div
+                  style={{
+                    flex: 1,
+                    height: 4,
+                    background: `${T.dim}22`,
+                    border: `1px solid ${T.dim}44`,
+                    borderRadius: 2,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${barW}%`,
+                      height: "100%",
+                      background: s.color,
+                      opacity: 0.8,
+                    }}
+                  />
+                </div>
+                <span style={{ color: T.dim, fontSize: 8 }}>
+                  w:{(s.weight * 100).toFixed(0)}% t½:{s.halfLife}d conv:{(s.conviction * 100).toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </Panel>
   );
 }

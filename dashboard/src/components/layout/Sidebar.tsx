@@ -19,9 +19,13 @@ import {
   FlaskConical,
   Layers,
   ChevronDown,
+  Cloud,
+  TrendingDown,
+  Droplets,
+  DollarSign,
 } from "lucide-react";
 import { useState } from "react";
-import { useProject } from "../../context/ProjectContext";
+import { useProject, projectDisplayName } from "../../context/ProjectContext";
 import type { Project } from "../../gen/omega/v1/types_pb";
 
 const OMEGA_NAV = [
@@ -40,7 +44,7 @@ const OMEGA_NAV = [
   { to: "/improvements", icon: History, label: "Improvements" },
 ];
 
-// Victoria's project-specific views. Future projects will declare their own.
+// Victoria's project-specific views.
 const VICTORIA_NAV = [
   { to: "/victoria", icon: Terminal, label: "Terminal" },
   { to: "/victoria/portfolio", icon: PieChart, label: "Portfolio" },
@@ -49,10 +53,19 @@ const VICTORIA_NAV = [
   { to: "/victoria/backtest", icon: FlaskConical, label: "Backtest" },
 ];
 
+// Polymarket project-specific views.
+const POLYMARKET_NAV = [
+  { to: "/polymarket", icon: LayoutDashboard, label: "Overview" },
+  { to: "/polymarket/markets", icon: Cloud, label: "Markets" },
+  { to: "/polymarket/edges", icon: TrendingDown, label: "Edges" },
+  { to: "/polymarket/weather", icon: Droplets, label: "Weather" },
+  { to: "/polymarket/bets", icon: DollarSign, label: "Bets" },
+];
+
 function projectNavItems(project: Project) {
-  if (project.projectId === "proj_victoria" || project.name === "Victoria") {
-    return VICTORIA_NAV;
-  }
+  const name = projectDisplayName(project);
+  if (name === "Victoria") return VICTORIA_NAV;
+  if (name === "Polymarket") return POLYMARKET_NAV;
   return [];
 }
 
@@ -70,7 +83,7 @@ function ProjectSelector() {
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-surface-700 text-white hover:bg-surface-600 transition-colors"
       >
-        <span className="truncate">{selectedProject?.name ?? "Select project"}</span>
+        <span className="truncate">{selectedProject ? projectDisplayName(selectedProject) : "Select project"}</span>
         <ChevronDown
           size={14}
           className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
@@ -98,7 +111,7 @@ function ProjectSelector() {
                     style={{ backgroundColor: p.metadata.color }}
                   />
                 )}
-                {p.name}
+                {projectDisplayName(p)}
               </span>
               {p.domain && <span className="text-xs text-gray-500 ml-4">{p.domain}</span>}
             </button>
@@ -168,14 +181,14 @@ export default function Sidebar() {
               className="text-xs uppercase tracking-widest font-semibold"
               style={{ color: accentDim }}
             >
-              {selectedProject.name}
+              {projectDisplayName(selectedProject)}
             </span>
           </div>
           {projectNav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
               to={to}
-              end={to === "/victoria"}
+              end={to === "/victoria" || to === "/polymarket"}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive ? "text-black" : "hover:bg-surface-700"
