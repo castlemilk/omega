@@ -1199,6 +1199,8 @@ class OmegaOrchestrator:
                 for node in self.active_nodes:
                     node_market_data.update(getattr(node, "_last_market_data", {}))
                 combined_market_data = {**(market_data or {}), **node_market_data}
+                # Track closed trades before execution so we can diff after
+                closed_before = len(self._paper_trading.closed_trades)
                 executed = self._paper_trading.execute_proposals(
                     proposals,
                     market_data=combined_market_data,
@@ -1209,6 +1211,20 @@ class OmegaOrchestrator:
                     len(executed),
                     ctx.cycle_number,
                 )
+                # Feed closed trade outcomes back to VictoriaNode quant pipeline
+                import contextlib
+
+                newly_closed = self._paper_trading.closed_trades[closed_before:]
+                if newly_closed:
+                    for node in self.active_nodes:
+                        if hasattr(node, "record_trade_outcome"):
+                            for trade in newly_closed:
+                                pnl = float(trade.get("pnl", 0.0))
+                                sym = str(trade.get("sym") or trade.get("symbol", ""))
+                                size = float(trade.get("size", 1.0))
+                                if sym:
+                                    with contextlib.suppress(Exception):
+                                        node.record_trade_outcome(sym, pnl, size)
             except Exception as exc:
                 log.warning("PaperTrading execution failed: %s", exc)
 

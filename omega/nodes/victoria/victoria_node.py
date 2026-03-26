@@ -42,10 +42,15 @@ from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
+from omega.nodes.victoria.factor_model import SignalFactorModel
+from omega.nodes.victoria.information_flow import TransferEntropyAnalyzer
 from omega.nodes.victoria.liquidation_signals import LiquidationCascadeSignal, LiquidationRisk
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
+from omega.nodes.victoria.meta_model import MetaModel
 from omega.nodes.victoria.news_signals import NewsSignalProvider
 from omega.nodes.victoria.options_signals import OptionsSignalProvider
+from omega.nodes.victoria.position_sizing import KellyPositionSizer
+from omega.nodes.victoria.regime_detector import HMMRegimeDetector
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
@@ -154,6 +159,14 @@ class VictoriaNode(Node):
                 "options_microstructure": 0.25,
             },
         )
+
+        # ── V3 Quant Pipeline ────────────────────────────────────────────────
+        self._regime_detector = HMMRegimeDetector()
+        self._factor_model = SignalFactorModel(n_components=3)
+        self._te_analyzer = TransferEntropyAnalyzer()
+        self._meta_model = MetaModel()
+        self._kelly_sizer = KellyPositionSizer(initial_capital=100_000.0)
+        # ── End V3 ──────────────────────────────────────────────────────────
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -453,11 +466,15 @@ class VictoriaNode(Node):
         db_url : str | None
             Postgres connection URL. Falls back to DATABASE_URL env var.
         """
-        import psycopg
+        try:
+            import psycopg
+        except ImportError:
+            logger.debug("psycopg not available — skipping signal persistence")
+            return
 
         url = db_url or os.getenv("DATABASE_URL")
         if not url:
-            logger.warning("persist_signals: DATABASE_URL not set — signal persistence skipped")
+            logger.debug("persist_signals: DATABASE_URL not set — signal persistence skipped")
             return
 
         weights: dict[str, float] = signals.get("_weights", {})
@@ -949,6 +966,76 @@ class VictoriaNode(Node):
         except Exception as exc:
             logger.debug("weight allocation failed, using equal weights: %s", exc)
 
+        # ── V3 Quant Pipeline ────────────────────────────────────────────────
+        # 4a. Regime detection (HMM)
+        regime_result: dict[str, Any] = {}
+        try:
+            regime_result = self._regime_detector.update(market_data)
+            regime_probs: list[float] = regime_result.get("probs", [1 / 3, 1 / 3, 1 / 3])
+            # Apply regime-dependent signal multipliers on top of IC weights
+            multipliers = regime_result.get("signal_multipliers", {})
+            if multipliers:
+                for name in list(raw_weights.keys()):
+                    m = multipliers.get(name, 1.0)
+                    raw_weights[name] = raw_weights.get(name, 0.0) * m
+                # Renormalise
+                total_rw = sum(raw_weights.values()) or 1.0
+                raw_weights = {k: v / total_rw for k, v in raw_weights.items()}
+        except Exception as exc:
+            logger.debug("Regime detection failed: %s", exc)
+            regime_probs = [1 / 3, 1 / 3, 1 / 3]
+
+        # 4b. Factor model (PCA)
+        factor_result: dict[str, Any] = {}
+        factor_factors: list[float] = [0.0, 0.0, 0.0]
+        try:
+            signal_vals_for_factors: dict[str, float] = {
+                name: float(signals[name].get("value", 0.0))
+                for name in signals
+                if not name.startswith("_") and isinstance(signals[name], dict)
+            }
+            factor_result = self._factor_model.update(signal_vals_for_factors)
+            factor_factors = factor_result.get("factors", [0.0, 0.0, 0.0])
+        except Exception as exc:
+            logger.debug("Factor model failed: %s", exc)
+
+        # 4c. Transfer entropy (causal weights)
+        try:
+            self._te_analyzer.update(signal_vals_for_factors)
+            raw_weights = self._te_analyzer.apply_causal_weights(raw_weights)
+        except Exception as exc:
+            logger.debug("Transfer entropy failed: %s", exc)
+
+        # 4d. Meta-model conviction
+        meta_result: dict[str, Any] = {}
+        try:
+            meta_result = self._meta_model.predict(
+                regime_probs=regime_probs,
+                factors=factor_factors,
+                signal_values=signal_vals_for_factors,
+                ic_weights=raw_weights,
+            )
+            # Embed meta-conviction into each signal's "value" when model is active
+            if meta_result.get("use_meta"):
+                conviction_val = float(meta_result.get("conviction", 0.0))
+                confidence_val = float(meta_result.get("confidence", 0.5))
+                signals["_meta_conviction"] = conviction_val
+                signals["_meta_confidence"] = confidence_val
+                signals["_meta_win_prob"] = float(meta_result.get("win_probability", 0.5))
+                signals["_meta_source"] = meta_result.get("source", "meta_model")
+        except Exception as exc:
+            logger.debug("Meta-model prediction failed: %s", exc)
+
+        # Embed quant metadata for downstream consumers
+        signals["_regime_hmm"] = regime_result.get("regime", "unknown")
+        signals["_regime_probs"] = regime_probs
+        signals["_factors"] = factor_factors
+        signals["_factor_composite"] = factor_result.get("composite", 0.0)
+        signals["_meta_fitted"] = self._meta_model.is_fitted
+        signals["_meta_outcomes"] = self._meta_model.outcome_count
+        signals["_kelly_win_rate"] = self._kelly_sizer.compute_kelly_fraction()
+        # ── End V3 ──────────────────────────────────────────────────────────
+
         # 4. Compute quality metrics for this cycle
         signal_names = [k for k in signals if not k.startswith("_")]
         expected_count = len(SIGNAL_NAMES)  # 7 expected signal types
@@ -1117,8 +1204,6 @@ class VictoriaNode(Node):
             if isinstance(result, dict):
                 # Inject composite signal direction so the backtest bridge's
                 # _proposals_to_position can determine long vs short.
-                # Without this, _proposals_to_position always sees weight=1.0
-                # (always long) and no trades ever change direction.
                 composites = [
                     sig.get("composite", 0.0)
                     for sig in flat_signals.values()
@@ -1130,6 +1215,32 @@ class VictoriaNode(Node):
                 if liq_scale < 1.0 and "weight" in result:
                     result["weight"] = float(result["weight"]) * liq_scale
                     result["_liquidation_scale"] = liq_scale
+
+                # ── V3: apply Kelly + Risk Parity sizing to each weight ──────
+                try:
+                    raw_proposals = [
+                        {"symbol": sym, "weight": float(w)}
+                        for sym, w in result.get("weights", {}).items()
+                        if abs(float(w)) >= 0.005
+                    ]
+                    if raw_proposals:
+                        sized = self._kelly_sizer.size_proposals(
+                            raw_proposals,
+                            market_data=self._last_market_data,
+                            method="kelly_risk_parity",
+                        )
+                        result["weights"] = {p["symbol"]: p["weight"] for p in sized}
+                        result["kelly_sizing"] = {
+                            p["symbol"]: {
+                                "kelly_fraction": p.get("kelly_fraction"),
+                                "volatility": p.get("volatility"),
+                                "original_weight": p.get("original_weight"),
+                            }
+                            for p in sized
+                        }
+                except Exception as exc:
+                    logger.debug("Kelly sizing failed: %s", exc)
+                # ── End V3 ──────────────────────────────────────────────────
                 return [result]
             if isinstance(result, list):
                 # Apply liquidation cascade position scale to each proposal
@@ -1140,6 +1251,29 @@ class VictoriaNode(Node):
                             proposal["_liquidation_scale"] = liq_scale
                 return result
         return []
+
+    def record_trade_outcome(self, symbol: str, pnl: float, size: float = 1.0) -> None:
+        """
+        Feed a closed trade result back into the V3 quant pipeline.
+
+        Called by the orchestrator (or PaperTradingEngine) whenever a trade
+        closes.  Updates the MetaModel's training buffer and the KellyPositionSizer's
+        win-rate estimator.
+
+        Parameters
+        ----------
+        symbol : trading pair (e.g. "BTCUSDT")
+        pnl    : realised PnL (positive = win, negative = loss)
+        size   : notional position size in USD
+        """
+        try:
+            self._meta_model.record_outcome(pnl)
+        except Exception as exc:
+            logger.debug("meta_model.record_outcome failed: %s", exc)
+        try:
+            self._kelly_sizer.record_trade_outcome(symbol, pnl, size)
+        except Exception as exc:
+            logger.debug("kelly_sizer.record_trade_outcome failed: %s", exc)
 
     def _do_improvement(self, inp: NodeInput) -> dict[str, Any]:
         """
