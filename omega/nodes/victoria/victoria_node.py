@@ -38,9 +38,12 @@ import uuid
 from typing import Any, ClassVar
 
 from omega.core.actions import NodeAction
+from omega.core.cross_node_memory import CrossNodeMemory
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.signal_bus import get_signal_bus
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
+from omega.nodes.victoria.disagreement_signal import DisagreementSignalComputer
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.factor_model import SignalFactorModel
 from omega.nodes.victoria.information_flow import TransferEntropyAnalyzer
@@ -95,6 +98,127 @@ _VRP_REGIME_MAP = {
 }
 
 
+# ---------------------------------------------------------------------------
+# SignalAttentionFusion — mini-transformer over the signal set
+# ---------------------------------------------------------------------------
+
+
+class SignalAttentionFusion:
+    """
+    8-dimensional scaled dot-product attention over signal vectors.
+
+    Each signal computes:
+      Q (query)  — "what regime are we in?" (from shared regime context)
+      K (key)    — "what regime am I good at?" (from signal's IC history)
+      V (value)  — my conviction (signal value * confidence)
+
+    Attention score = softmax(Q·K^T / √d) · V
+
+    The resulting attention weights are blended 50/50 with IC-based weights
+    so the system retains the learned IC signal while adding regime sensitivity.
+
+    Pure Python implementation — no numpy dependency.
+    """
+
+    DIM = 8  # attention dimension (small for speed)
+
+    def __init__(self, signal_names: list[str]) -> None:
+        import math
+        import random
+
+        self._signal_names = list(signal_names)
+        scale = math.sqrt(2.0 / (self.DIM * 2))
+
+        # Global query projection: regime context → DIM
+        self._W_q: list[list[float]] = self._xavier(self.DIM, self.DIM, scale, random)
+        # Per-signal key projections: signal state → DIM
+        self._W_k: dict[str, list[list[float]]] = {
+            name: self._xavier(self.DIM, self.DIM, scale, random) for name in signal_names
+        }
+
+    def fuse(
+        self,
+        signals: dict[str, Any],
+        ic_weights: dict[str, float],
+        regime_vec: list[float] | None = None,
+    ) -> dict[str, float]:
+        """
+        Compute attention-blended weights for all present signals.
+
+        Parameters
+        ----------
+        signals    : current signal dict (non-_ keys)
+        ic_weights : IC-based weights from DynamicWeightAllocator
+        regime_vec : optional 16-dim regime context vector; zeros if absent
+
+        Returns
+        -------
+        Normalised weight dict: signal_name → weight (sum ≈ 1)
+        """
+        import math
+
+        present = [n for n in self._signal_names if n in signals]
+        if not present:
+            return ic_weights
+
+        # Build query from regime vector (first DIM dims; pad if short)
+        rv = list(regime_vec or [])
+        rv = rv[: self.DIM] if len(rv) >= self.DIM else rv + [0.0] * (self.DIM - len(rv))
+        q = self._matmul_vec(self._W_q, rv)
+
+        # Compute keys and scalar values for each signal
+        keys: dict[str, list[float]] = {}
+        scalar_vals: dict[str, float] = {}
+        for name in present:
+            sig = signals[name]
+            val = float(sig.get("value", 0.0))
+            conf = float(sig.get("confidence", 0.5))
+            ic = float(sig.get("ic", 0.0))
+            w = float(ic_weights.get(name, 1.0))
+            # Key input: [val, conf, ic, weight, zeros…]
+            k_in = [val, conf, ic, w] + [0.0] * (self.DIM - 4)
+            keys[name] = self._matmul_vec(self._W_k[name], k_in)
+            scalar_vals[name] = val * conf
+
+        # Scaled dot-product attention
+        d_k = float(self.DIM) ** 0.5
+        raw_scores = {name: self._dot(q, keys[name]) / d_k for name in present}
+        max_s = max(raw_scores.values())
+        exp_s = {name: math.exp(s - max_s) for name, s in raw_scores.items()}
+        total_exp = sum(exp_s.values()) or 1.0
+        attn_weights = {name: exp_s[name] / total_exp for name in present}
+
+        # Blend 50/50 with IC weights (retain IC learning, add regime sensitivity)
+        blended: dict[str, float] = {}
+        for name in present:
+            blended[name] = 0.5 * ic_weights.get(name, 1.0) + 0.5 * attn_weights[name]
+
+        # Normalise to sum ≈ 1
+        total = sum(blended.values()) or 1.0
+        return {name: v / total for name, v in blended.items()}
+
+    # ------------------------------------------------------------------
+    # Static helpers — pure Python linear algebra
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _xavier(
+        rows: int,
+        cols: int,
+        scale: float,
+        rng: Any,
+    ) -> list[list[float]]:
+        return [[rng.gauss(0.0, scale) for _ in range(cols)] for _ in range(rows)]
+
+    @staticmethod
+    def _matmul_vec(w: list[list[float]], v: list[float]) -> list[float]:
+        return [sum(w[i][j] * v[j] for j in range(len(v))) for i in range(len(w))]
+
+    @staticmethod
+    def _dot(a: list[float], b: list[float]) -> float:
+        return sum(ai * bi for ai, bi in zip(a, b, strict=False))
+
+
 class VictoriaNode(Node):
     """
     Victoria trading node — composes all Victoria subsystems into a single
@@ -139,8 +263,10 @@ class VictoriaNode(Node):
         self._liquidation_cascade = LiquidationCascadeSignal()
         self._options = OptionsSignalProvider()  # GEX/PCR/skew/max-pain/term-structure
 
-        # Dynamic weight allocator
-        self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
+        # Dynamic weight allocator — includes "disagreement" meta-signal
+        self._weight_allocator = DynamicWeightAllocator(
+            signal_names=[*SIGNAL_NAMES, "disagreement"]
+        )
 
         # Seed prior weights: options_microstructure starts at ~20% (alpha-edge #1).
         # All others seeded at 0.10 IC; options at 0.25 → 0.25/1.25 = 20%.
@@ -170,6 +296,21 @@ class VictoriaNode(Node):
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
+
+        # ── New inter-node reasoning subsystems ──────────────────────────
+        # Signal bus: broadcast own state; read peer states before computing
+        self._signal_bus = get_signal_bus()
+
+        # Disagreement signal: exposes the *structure* of disagreement
+        self._disagreement_computer = DisagreementSignalComputer()
+
+        # Attention-weighted signal fusion (8-dim mini-transformer over signals)
+        self._attention_fusion = SignalAttentionFusion(
+            signal_names=[*SIGNAL_NAMES, "disagreement"]
+        )
+
+        # Cross-node memory: learns which signal combinations are predictive
+        self._cross_node_memory = CrossNodeMemory()
 
         # Runtime state
         self._last_market_data: dict[str, Any] = {}
@@ -716,6 +857,18 @@ class VictoriaNode(Node):
         if reflection_ctx:
             inp.context["past_lessons"] = reflection_ctx
 
+        # ── Read peer states from the signal bus BEFORE computing ─────────
+        # This lets us condition on other nodes' latest published signals:
+        # e.g. "derivatives signal is bearish AND news is bearish → higher conviction"
+        peer_consensus = self._signal_bus.compute_peer_consensus(self._node_id)
+        if peer_consensus["peer_count"] > 0:
+            logger.debug(
+                "signal_bus peers=%d consensus_direction=%d strength=%.2f",
+                peer_consensus["peer_count"],
+                peer_consensus["consensus_direction"],
+                peer_consensus["consensus_strength"],
+            )
+
         signals: dict[str, Any] = {}
 
         # 1. Basic technical signals (SMA/RSI/MACD/BB)
@@ -925,7 +1078,27 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("options_microstructure signal failed: %s", exc)
 
-        # 2. Compute IC proxies and update weight allocator with direction consistency
+        # 2. Disagreement signal — exposes the *structure* of signal disagreement
+        # Computed before weighting so it sees raw unweighted signal values.
+        # Key insight: the PATTERN of disagreement is predictive.
+        # When all signals except one agree → outlier is usually wrong.
+        # When signals split 50/50 → stay out.
+        try:
+            disagreement_features = self._disagreement_computer.compute(signals)
+            signals["disagreement"] = self._disagreement_computer.to_signal_dict(
+                disagreement_features
+            )
+            logger.debug(
+                "disagreement: split=%.2f clusters=%d outliers=%d consensus=%.2f",
+                disagreement_features.split_score,
+                disagreement_features.cluster_count,
+                disagreement_features.outlier_count,
+                disagreement_features.consensus_direction,
+            )
+        except Exception as exc:
+            logger.debug("disagreement signal failed: %s", exc)
+
+        # 3. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
         for name, sig in signals.items():
             if name.startswith("_"):
@@ -949,7 +1122,7 @@ class VictoriaNode(Node):
         except Exception as exc:
             logger.debug("IC update failed: %s", exc)
 
-        # 3. Apply dynamic weighting (uses IC-based weights after MIN_IC_SAMPLES)
+        # 4. Apply dynamic weighting (IC-based after MIN_IC_SAMPLES)
         raw_weights = {name: 1.0 for name in signals if not name.startswith("_")}
         try:
             alloc = self._weight_allocator.allocate(regime=regime)
@@ -988,8 +1161,9 @@ class VictoriaNode(Node):
         # 4b. Factor model (PCA)
         factor_result: dict[str, Any] = {}
         factor_factors: list[float] = [0.0, 0.0, 0.0]
+        signal_vals_for_factors: dict[str, float] = {}
         try:
-            signal_vals_for_factors: dict[str, float] = {
+            signal_vals_for_factors = {
                 name: float(signals[name].get("value", 0.0))
                 for name in signals
                 if not name.startswith("_") and isinstance(signals[name], dict)
@@ -1034,6 +1208,36 @@ class VictoriaNode(Node):
         signals["_meta_fitted"] = self._meta_model.is_fitted
         signals["_meta_outcomes"] = self._meta_model.outcome_count
         signals["_kelly_win_rate"] = self._kelly_sizer.compute_kelly_fraction()
+
+        # 4e. Attention-weighted fusion — replace simple IC-weighted average
+        # with a mini-transformer that weights signals by regime relevance.
+        # Blend 50/50 with IC weights to retain learned IC signal quality.
+        try:
+            _regime_codes = {
+                "trending": [1, 0, 0, 0, 0, 0, 0, 0],
+                "ranging": [0, 1, 0, 0, 0, 0, 0, 0],
+                "high_vol": [0, 0, 1, 0, 0, 0, 0, 0],
+                "low_vol": [0, 0, 0, 1, 0, 0, 0, 0],
+                "crisis": [0, 0, 0, 0, 1, 0, 0, 0],
+                "default": [0, 0, 0, 0, 0, 1, 0, 0],
+            }
+            regime_vec: list[float] = [float(x) for x in _regime_codes.get(regime, [0] * 8)]
+            # Append peer consensus as extra context dims
+            if peer_consensus["peer_count"] > 0:
+                regime_vec += [
+                    float(peer_consensus["consensus_direction"]),
+                    float(peer_consensus["consensus_strength"]),
+                ]
+            attn_weights = self._attention_fusion.fuse(
+                signals=signals,
+                ic_weights=raw_weights,
+                regime_vec=regime_vec,
+            )
+            if attn_weights:
+                raw_weights = attn_weights
+                logger.debug("attention_fusion applied for regime '%s'", regime)
+        except Exception as exc:
+            logger.debug("attention_fusion failed, keeping IC weights: %s", exc)
         # ── End V3 ──────────────────────────────────────────────────────────
 
         # 4. Compute quality metrics for this cycle
@@ -1078,6 +1282,35 @@ class VictoriaNode(Node):
         signals["_avg_confidence"] = avg_confidence
         signals["_signal_coverage"] = signal_coverage
         signals["_cycle"] = float(self._total_cycles_run)
+
+        # ── Cross-node memory feature vector ──────────────────────────────
+        # After 100+ trades the co-occurrence matrix provides a reliable
+        # expected_win_rate feature that the meta-model can use to scale
+        # position conviction.
+        try:
+            co_features = self._cross_node_memory.get_feature_vector(signals)
+            signals["_co_occurrence"] = co_features
+        except Exception as exc:
+            logger.debug("cross_node_memory feature vector failed: %s", exc)
+
+        # ── Publish own state to the signal bus ───────────────────────────
+        # Other nodes will read this before their own compute_signals call
+        # so they can condition on our latest state.
+        try:
+            # Build a compact 16-dim tensor for the Go attention router
+            # StateTensor.values is already a list[float]
+            tensor_list = self.get_state_tensor().values
+            self._signal_bus.publish(
+                node_id=self._node_id,
+                signals=signals,
+                tensor=tensor_list if isinstance(tensor_list, list) else list(tensor_list),
+            )
+        except Exception as exc:
+            logger.debug("signal_bus publish failed: %s", exc)
+
+        # ── Peer consensus summary in metadata ────────────────────────────
+        if peer_consensus["peer_count"] > 0:
+            signals["_peer_consensus"] = peer_consensus
 
         self._last_signals = signals
         self.persist_signals(signals)
@@ -1252,28 +1485,41 @@ class VictoriaNode(Node):
                 return result
         return []
 
-    def record_trade_outcome(self, symbol: str, pnl: float, size: float = 1.0) -> None:
+    def record_trade_outcome(
+        self,
+        symbol: str = "",
+        pnl: float = 0.0,
+        size: float = 1.0,
+        cycle_id: str | None = None,
+        signals: dict[str, Any] | None = None,
+    ) -> None:
         """
-        Feed a closed trade result back into the V3 quant pipeline.
+        Feed a closed trade result back into the V3 quant pipeline and cross-node memory.
 
-        Called by the orchestrator (or PaperTradingEngine) whenever a trade
-        closes.  Updates the MetaModel's training buffer and the KellyPositionSizer's
-        win-rate estimator.
-
-        Parameters
-        ----------
-        symbol : trading pair (e.g. "BTCUSDT")
-        pnl    : realised PnL (positive = win, negative = loss)
-        size   : notional position size in USD
+        Updates MetaModel training buffer, KellyPositionSizer win-rate estimator,
+        and CrossNodeMemory co-occurrence matrix.
         """
         try:
             self._meta_model.record_outcome(pnl)
         except Exception as exc:
             logger.debug("meta_model.record_outcome failed: %s", exc)
-        try:
-            self._kelly_sizer.record_trade_outcome(symbol, pnl, size)
-        except Exception as exc:
-            logger.debug("kelly_sizer.record_trade_outcome failed: %s", exc)
+        if symbol:
+            try:
+                self._kelly_sizer.record_trade_outcome(symbol, pnl, size)
+            except Exception as exc:
+                logger.debug("kelly_sizer.record_trade_outcome failed: %s", exc)
+        sig = signals if signals is not None else self._last_signals
+        if sig:
+            try:
+                self._cross_node_memory.record_outcome(sig, pnl=pnl, cycle_id=cycle_id)
+                logger.debug(
+                    "record_trade_outcome: pnl=%.2f cycle=%s total_trades=%d",
+                    pnl,
+                    cycle_id,
+                    self._cross_node_memory.total_trades,
+                )
+            except Exception as exc:
+                logger.debug("record_trade_outcome cross_node failed: %s", exc)
 
     def _do_improvement(self, inp: NodeInput) -> dict[str, Any]:
         """

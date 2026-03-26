@@ -61,6 +61,96 @@ logger = logging.getLogger("omega.orchestrator_v2")
 # are blocked even in PICO mode.  Prevents rubber-stamping all proposals regardless of signal quality.
 _ADVERSARIAL_SCORE_THRESHOLD = 0.4
 
+# ---------------------------------------------------------------------------
+# DebateGateLearner — learns the optimal block threshold from outcomes
+# ---------------------------------------------------------------------------
+
+
+class DebateGateLearner:
+    """
+    Learns the optimal adversarial block threshold from trade outcomes.
+
+    When the gate blocks a proposal, we record what would have happened
+    (via paper-trade simulation or next-cycle price check).
+    If blocked proposals would have been profitable, lower the threshold.
+    If blocked proposals would have been losses, raise it.
+
+    Update rule (EMA):
+      threshold += alpha * (target_block_rate - actual_block_rate)
+
+    Target: block proposals that would lose, pass the ones that would win.
+    """
+
+    def __init__(
+        self,
+        initial_threshold: float = _ADVERSARIAL_SCORE_THRESHOLD,
+        alpha: float = 0.05,  # EMA step size
+        target_block_rate: float = 0.30,  # aim to block ~30% of proposals
+        window: int = 50,  # rolling window for rate computation
+        min_threshold: float = 0.10,
+        max_threshold: float = 0.70,
+    ) -> None:
+        self.threshold = initial_threshold
+        self._alpha = alpha
+        self._target_block_rate = target_block_rate
+        self._window = window
+        self._min_threshold = min_threshold
+        self._max_threshold = max_threshold
+
+        # Rolling history: each entry = {"blocked": bool, "would_have_won": bool | None}
+        self._history: list[dict] = []
+
+    def record_proposal(self, blocked: bool, cycle_id: str, proposal: dict) -> None:
+        """Record a proposal decision (blocked or passed)."""
+        self._history = self._history[-self._window + 1 :]
+        self._history.append(
+            {
+                "blocked": blocked,
+                "cycle_id": cycle_id,
+                "proposal": proposal,
+                "would_have_won": None,  # resolved later via record_outcome
+            }
+        )
+
+    def record_outcome(self, cycle_id: str, pnl: float) -> None:
+        """
+        Resolve the outcome of a proposal that was passed (not blocked).
+
+        Marks the matching history entry so the threshold learner can
+        estimate what the block rate should converge to.
+        """
+        for entry in reversed(self._history):
+            if entry.get("cycle_id") == cycle_id and entry.get("would_have_won") is None:
+                entry["would_have_won"] = pnl > 0
+                break
+
+    def update_threshold(self) -> float:
+        """
+        Run one EMA update step on the block threshold.
+
+        Returns the updated threshold value.
+        """
+        if not self._history:
+            return self.threshold
+
+        total = len(self._history)
+        blocked_count = sum(1 for e in self._history if e["blocked"])
+        actual_block_rate = blocked_count / total if total > 0 else 0.0
+
+        # EMA update: push threshold toward the rate that achieves target_block_rate
+        delta = self._alpha * (self._target_block_rate - actual_block_rate)
+        new_threshold = self.threshold + delta
+        self.threshold = max(self._min_threshold, min(self._max_threshold, new_threshold))
+
+        logger.debug(
+            "DebateGateLearner: actual_block_rate=%.2f target=%.2f threshold %.3f→%.3f",
+            actual_block_rate,
+            self._target_block_rate,
+            self.threshold - delta,
+            self.threshold,
+        )
+        return self.threshold
+
 
 # ---------------------------------------------------------------------------
 # NodeHealth — lightweight health record per node
@@ -150,6 +240,11 @@ class OmegaOrchestrator:
         self._running: bool = False
         self._tracer: Any = None
         self._store: Any = None
+
+        # Debate gate learner — learns optimal block threshold from outcomes
+        self._gate_learner = DebateGateLearner(
+            initial_threshold=_ADVERSARIAL_SCORE_THRESHOLD,
+        )
 
         logger.info("OmegaOrchestrator '%s' initialised", name)
 
@@ -1021,15 +1116,25 @@ class OmegaOrchestrator:
         ring1_flagged = ring1_result is not None and ring1_result.flagged
         attribution = adv_report.attribution
 
+        # Update the learned block threshold from gate learner (EMA)
+        if ctx.cycle_number > 0 and ctx.cycle_number % 10 == 0:
+            learned_threshold = self._gate_learner.update_threshold()
+            logger.debug(
+                "DebateGateLearner updated threshold=%.3f (cycle=%d)",
+                learned_threshold,
+                ctx.cycle_number,
+            )
+
         if ring1_flagged:
             assert ring1_result is not None  # narrowing for type checker
             outlier_nodes: set[str] = set(attribution.outlier_variants) if attribution else set()
             log.warning(
-                "Ring 1 fired [cycle=%d]: max_disagreement=%.3f outliers=%s threshold=%.3f",
+                "Ring 1 fired [cycle=%d]: max_disagreement=%.3f outliers=%s threshold=%.3f learned=%.3f",
                 ctx.cycle_number,
                 ring1_result.max_disagreement,
                 list(outlier_nodes),
                 adv_report.current_threshold,
+                self._gate_learner.threshold,
             )
             result.add_adversarial_flag(
                 ring="ring1",
@@ -1050,6 +1155,12 @@ class OmegaOrchestrator:
         approved: list[dict[str, Any]] = []
         for proposal in clean:
             if not ring1_flagged:
+                # Proposal passes — record as not blocked for gate learner
+                self._gate_learner.record_proposal(
+                    blocked=False,
+                    cycle_id=ctx.cycle_id,
+                    proposal=proposal,
+                )
                 approved.append(proposal)
                 continue
 
@@ -1069,6 +1180,10 @@ class OmegaOrchestrator:
                 )
                 if self._metrics:
                     self._metrics.record_adversarial_flag("ring1", "critical")
+                # Record as blocked for gate learner
+                self._gate_learner.record_proposal(
+                    blocked=True, cycle_id=ctx.cycle_id, proposal=proposal
+                )
                 # do NOT append — proposal is blocked
             elif autonomy_level == AutonomyLevel.AUTONOMOUS.value:
                 # AUTONOMOUS: reduce position size by 50%
@@ -1080,12 +1195,19 @@ class OmegaOrchestrator:
                     "AUTONOMOUS mode: 50%% position reduction for node %s (Ring 1 fired)",
                     node_id,
                 )
+                self._gate_learner.record_proposal(
+                    blocked=False, cycle_id=ctx.cycle_id, proposal=modified
+                )
                 approved.append(modified)
             else:
-                # PICO or unknown: block only when disagreement is extreme (score < 0.6).
-                # Moderate disagreement (score >= 0.6) is acceptable for deterministic strategies.
+                # PICO or unknown: use learned threshold instead of fixed constant
+                # This is the key debate gate learning: the threshold shifts based on outcomes
+                effective_threshold = max(
+                    _ADVERSARIAL_SCORE_THRESHOLD,
+                    self._gate_learner.threshold,
+                )
                 assert ring1_result is not None  # narrowing: ring1_flagged is True
-                if ring1_result.max_disagreement > _ADVERSARIAL_SCORE_THRESHOLD:
+                if ring1_result.max_disagreement > effective_threshold:
                     result.add_adversarial_flag(
                         ring="ring1",
                         severity="critical",
@@ -1095,12 +1217,20 @@ class OmegaOrchestrator:
                             "symbol": proposal.get("symbol", "unknown"),
                             "max_disagreement": ring1_result.max_disagreement,
                             "score": 1.0 - ring1_result.max_disagreement,
+                            "learned_threshold": self._gate_learner.threshold,
                         },
                     )
                     if self._metrics:
                         self._metrics.record_adversarial_flag("ring1", "critical")
+                    # Record as blocked for gate learner
+                    self._gate_learner.record_proposal(
+                        blocked=True, cycle_id=ctx.cycle_id, proposal=proposal
+                    )
                     # do NOT append — blocked by adversarial gate
                 else:
+                    self._gate_learner.record_proposal(
+                        blocked=False, cycle_id=ctx.cycle_id, proposal=proposal
+                    )
                     approved.append(proposal)
 
         # Critical flag → demote autonomy for all active nodes
@@ -1211,20 +1341,26 @@ class OmegaOrchestrator:
                     len(executed),
                     ctx.cycle_number,
                 )
-                # Feed closed trade outcomes back to VictoriaNode quant pipeline
+                # ── Feedback loop: record closed trade outcomes ───────────
+                # Feed PnL back into:
+                #   1. DebateGateLearner — so it can adjust the block threshold
+                #   2. VictoriaNode.record_trade_outcome — updates CrossNodeMemory
                 import contextlib
 
                 newly_closed = self._paper_trading.closed_trades[closed_before:]
                 if newly_closed:
-                    for node in self.active_nodes:
-                        if hasattr(node, "record_trade_outcome"):
-                            for trade in newly_closed:
-                                pnl = float(trade.get("pnl", 0.0))
-                                sym = str(trade.get("sym") or trade.get("symbol", ""))
-                                size = float(trade.get("size", 1.0))
-                                if sym:
-                                    with contextlib.suppress(Exception):
-                                        node.record_trade_outcome(sym, pnl, size)
+                    for trade in newly_closed:
+                        pnl = float(trade.get("pnl", 0.0))
+                        trade_cycle_id = trade.get("cycle_id", "")
+                        sym = str(trade.get("sym") or trade.get("symbol", ""))
+                        size = float(trade.get("size", 1.0))
+                        if trade_cycle_id:
+                            with contextlib.suppress(Exception):
+                                self._gate_learner.record_outcome(trade_cycle_id, pnl)
+                        for node in self.active_nodes:
+                            if hasattr(node, "record_trade_outcome") and sym:
+                                with contextlib.suppress(Exception):
+                                    node.record_trade_outcome(sym, pnl, size)
             except Exception as exc:
                 log.warning("PaperTrading execution failed: %s", exc)
 
