@@ -336,6 +336,9 @@ func main() {
 	// Dashboard REST API — consumed by web/dashboard frontend.
 	handler.NewDashboard(database, composite).RegisterRoutes(mux)
 
+	// Training progress API — consumed by the TrainingPage.
+	handler.NewTrainingHandler(database, "data").RegisterRoutes(mux)
+
 	// Observability endpoints.
 	observability.NewHealthHandler(composite).RegisterRoutes(mux)
 	observability.NewDiagnosticsHandler(diagCollector).RegisterRoutes(mux)

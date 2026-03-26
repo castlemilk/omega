@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ProjectProvider } from './context/ProjectContext'
 import { AppShell } from './components/AppShell'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 // ─── Lazy page imports ────────────────────────────────────────────────────────
 
@@ -19,10 +20,15 @@ const CyclesPage        = lazy(() => import('./pages/CyclesPage').then(m => ({ d
 const AdversarialPage   = lazy(() => import('./pages/AdversarialPage').then(m => ({ default: m.AdversarialPage })))
 const HealthPage        = lazy(() => import('./pages/HealthPage').then(m => ({ default: m.HealthPage })))
 const ImprovementPage   = lazy(() => import('./pages/ImprovementPage').then(m => ({ default: m.ImprovementPage })))
-const MemoryPage        = lazy(() => import('./pages/MemoryPage').then(m => ({ default: m.MemoryPage })))
-const CorrelationsPage  = lazy(() => import('./pages/CorrelationsPage').then(m => ({ default: m.CorrelationsPage })))
-const RegimePage        = lazy(() => import('./pages/RegimePage').then(m => ({ default: m.RegimePage })))
+
+// Training progress page
 const TrainingPage      = lazy(() => import('./pages/TrainingPage').then(m => ({ default: m.TrainingPage })))
+
+// Polymarket-specific pages
+const MarketsPage       = lazy(() => import('./pages/polymarket/MarketsPage').then(m => ({ default: m.MarketsPage })))
+const EdgesPage         = lazy(() => import('./pages/polymarket/EdgesPage').then(m => ({ default: m.EdgesPage })))
+const WeatherPage       = lazy(() => import('./pages/polymarket/WeatherPage').then(m => ({ default: m.WeatherPage })))
+const BetsPage          = lazy(() => import('./pages/polymarket/BetsPage').then(m => ({ default: m.BetsPage })))
 
 // ─── Fallback ────────────────────────────────────────────────────────────────
 
@@ -41,34 +47,37 @@ export default function App() {
     <BrowserRouter>
       <ProjectProvider>
         <AppShell>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              {/* Global platform routes */}
-              <Route path="/" element={<GlobalOverview />} />
-              <Route path="/coordination" element={<CoordinationPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+          <ErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {/* Global platform routes */}
+                <Route path="/" element={<ErrorBoundary><GlobalOverview /></ErrorBoundary>} />
+                <Route path="/training" element={<ErrorBoundary><TrainingPage /></ErrorBoundary>} />
+                <Route path="/coordination" element={<ErrorBoundary><CoordinationPage /></ErrorBoundary>} />
+                <Route path="/settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
 
-              {/* Per-project routes */}
-              <Route path="/projects/:projectId" element={<ProjectOverview />} />
-              <Route path="/projects/:projectId/trading"     element={<TradingPage />} />
-              <Route path="/projects/:projectId/signals"     element={<SignalsPage />} />
-              <Route path="/projects/:projectId/positions"   element={<PositionsPage />} />
-              <Route path="/projects/:projectId/nodes"       element={<NodesPage />} />
-              <Route path="/projects/:projectId/cycles"      element={<CyclesPage />} />
-              <Route path="/projects/:projectId/adversarial" element={<AdversarialPage />} />
-              <Route path="/projects/:projectId/health"      element={<HealthPage />} />
-              <Route path="/projects/:projectId/improvement"   element={<ImprovementPage />} />
-              <Route path="/projects/:projectId/memory"       element={<MemoryPage />} />
-              <Route path="/projects/:projectId/correlations" element={<CorrelationsPage />} />
-              <Route path="/projects/:projectId/regime"       element={<RegimePage />} />
+                {/* Per-project routes */}
+                <Route path="/projects/:projectId" element={<ErrorBoundary><ProjectOverview /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/trading"     element={<ErrorBoundary><TradingPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/signals"     element={<ErrorBoundary><SignalsPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/positions"   element={<ErrorBoundary><PositionsPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/nodes"       element={<ErrorBoundary><NodesPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/cycles"      element={<ErrorBoundary><CyclesPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/adversarial" element={<ErrorBoundary><AdversarialPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/health"      element={<ErrorBoundary><HealthPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/improvement" element={<ErrorBoundary><ImprovementPage /></ErrorBoundary>} />
 
-              {/* Platform routes */}
-              <Route path="/training" element={<TrainingPage />} />
+                {/* Polymarket-specific routes */}
+                <Route path="/projects/:projectId/markets" element={<ErrorBoundary><MarketsPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/edges"   element={<ErrorBoundary><EdgesPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/weather" element={<ErrorBoundary><WeatherPage /></ErrorBoundary>} />
+                <Route path="/projects/:projectId/bets"    element={<ErrorBoundary><BetsPage /></ErrorBoundary>} />
 
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
+                {/* Fallback */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </AppShell>
       </ProjectProvider>
     </BrowserRouter>

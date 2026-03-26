@@ -3,35 +3,56 @@ import { NavLink, useParams, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Server, RefreshCw, Shield, TrendingUp, Activity,
   ChevronLeft, ChevronRight, Settings, GitBranch, BarChart2,
-  Briefcase, Zap, BookOpen, Brain, Grid3X3, Dumbbell,
+  Briefcase, Zap, CloudRain, Cloud, Layers, Brain,
 } from 'lucide-react'
 import { ProjectSwitcher } from './ProjectSwitcher'
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
 const globalNav = [
-  { to: '/',            label: 'Overview',      icon: LayoutDashboard, end: true },
+  { to: '/',             label: 'Overview',     icon: LayoutDashboard, end: true },
+  { to: '/training',     label: 'Training',     icon: Brain, pulse: true },
   { to: '/coordination', label: 'Coordination', icon: GitBranch },
-  { to: '/training',    label: 'Training',      icon: Dumbbell, pulse: true },
-  { to: '/settings',    label: 'Settings',      icon: Settings },
+  { to: '/settings',     label: 'Settings',     icon: Settings },
 ]
 
-function projectNav(projectId: string) {
+/** Per-project nav registry. Keys are normalised project IDs (strip "proj_"). */
+const PROJECT_NAV: Record<string, Array<{ segment: string; label: string; icon: React.ElementType; end?: boolean }>> = {
+  victoria: [
+    { segment: '',            label: 'Overview',    icon: LayoutDashboard, end: true },
+    { segment: 'trading',     label: 'Trading',     icon: Briefcase },
+    { segment: 'signals',     label: 'Signals',     icon: Zap },
+    { segment: 'positions',   label: 'Positions',   icon: BarChart2 },
+    { segment: 'nodes',       label: 'Nodes',       icon: Server },
+    { segment: 'cycles',      label: 'Cycles',      icon: RefreshCw },
+    { segment: 'adversarial', label: 'Adversarial', icon: Shield },
+    { segment: 'health',      label: 'Health',      icon: Activity },
+    { segment: 'improvement', label: 'Improvement', icon: TrendingUp },
+  ],
+  polymarket: [
+    { segment: '',        label: 'Overview', icon: LayoutDashboard, end: true },
+    { segment: 'markets', label: 'Markets',  icon: Layers },
+    { segment: 'edges',   label: 'Edges',    icon: TrendingUp },
+    { segment: 'weather', label: 'Weather',  icon: CloudRain },
+    { segment: 'bets',    label: 'Bets',     icon: Cloud },
+  ],
+}
+
+/** Default nav for any unknown project. */
+const DEFAULT_NAV = [
+  { segment: '', label: 'Overview', icon: LayoutDashboard, end: true },
+]
+
+function getProjectNav(projectId: string) {
+  const normalised = projectId.replace(/^proj_/i, '').toLowerCase()
+  const items = PROJECT_NAV[normalised] ?? DEFAULT_NAV
   const base = `/projects/${projectId}`
-  return [
-    { to: base,               label: 'Overview',    icon: LayoutDashboard, end: true },
-    { to: `${base}/trading`,  label: 'Trading',     icon: Briefcase },
-    { to: `${base}/signals`,  label: 'Signals',     icon: Zap },
-    { to: `${base}/positions`,label: 'Positions',   icon: BarChart2 },
-    { to: `${base}/nodes`,    label: 'Nodes',       icon: Server },
-    { to: `${base}/cycles`,   label: 'Cycles',      icon: RefreshCw },
-    { to: `${base}/adversarial`, label: 'Adversarial', icon: Shield },
-    { to: `${base}/health`,   label: 'Health',      icon: Activity },
-    { to: `${base}/improvement`,   label: 'Improvement',  icon: TrendingUp },
-    { to: `${base}/memory`,        label: 'Memory',       icon: Brain },
-    { to: `${base}/correlations`,  label: 'Correlations', icon: Grid3X3 },
-    { to: `${base}/regime`,        label: 'Regime',       icon: BarChart2 },
-  ]
+  return items.map(({ segment, label, icon, end }) => ({
+    to: segment ? `${base}/${segment}` : base,
+    label,
+    icon,
+    end,
+  }))
 }
 
 // ─── NavItem ─────────────────────────────────────────────────────────────────
@@ -52,13 +73,18 @@ function NavItem({
       }
       title={collapsed ? label : undefined}
     >
-      <div className="relative shrink-0">
-        <Icon className="w-4 h-4" />
-        {pulse && (
-          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        )}
-      </div>
-      {!collapsed && label}
+      <Icon className="w-4 h-4 shrink-0" />
+      {!collapsed && (
+        <span className="flex-1 flex items-center justify-between">
+          {label}
+          {pulse && (
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+          )}
+        </span>
+      )}
     </NavLink>
   )
 }
@@ -125,10 +151,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <ProjectSwitcher collapsed={collapsed} />
         </div>
 
-        {/* Per-project nav */}
+        {/* Per-project nav — keyed by activeProjectId so it re-renders on switch */}
         {activeProjectId && (
-          <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto">
-            {projectNav(activeProjectId).map(({ to, label, icon, end }) => (
+          <nav className="flex-1 px-2 py-1 space-y-0.5 overflow-y-auto" key={activeProjectId}>
+            {getProjectNav(activeProjectId).map(({ to, label, icon, end }) => (
               <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={end} />
             ))}
           </nav>

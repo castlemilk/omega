@@ -211,8 +211,8 @@ func (h *DashboardHandler) handleCycles(w http.ResponseWriter, r *http.Request) 
 		count     int
 		errors    int
 	}
-	rows, err := h.db.StateDB().QueryContext(r.Context(), `
-		SELECT cycle,
+	rows, err := h.db.StateDB().QueryContext(r.Context(), //nolint:gosec
+		`SELECT cycle,
 		       MIN(started_at),
 		       MAX(COALESCE(ended_at, started_at)),
 		       COUNT(*),

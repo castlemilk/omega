@@ -227,6 +227,75 @@ export interface EquityCurveResponse {
   train_end: number
 }
 
+// ─── Types: Training ─────────────────────────────────────────────────────────
+
+export interface TrainingCyclePnL     { cycle: number; pnl: number }
+export interface TrainingCycleWinRate { cycle: number; win_rate: number }
+export interface TrainingMemoryPoint  { cycle: number; episodic: number; semantic: number }
+export interface TrainingSignalConviction { name: string; value: number }
+export interface TrainingActivity { cycle: number; type: 'trade' | 'signal' | 'memory'; message: string }
+export interface TrainingRegime { name: string; confidence: number; dominant_signal: string }
+export interface TrainingConfig { symbols: string[]; initial_capital: number; kelly_fraction: number }
+
+export interface TrainingSnapshot {
+  id: string
+  cycle: number
+  created_at: string
+  total_pnl: number
+  win_rate: number
+  total_trades: number
+}
+
+export interface TrainingProgress {
+  run_id: string
+  total_cycles: number
+  current_cycle: number
+  started_at: string
+  status: string  // "running" | "idle" | "completed" | "failed"
+  pnl_history: TrainingCyclePnL[]
+  win_rate_history: TrainingCycleWinRate[]
+  memory_growth: TrainingMemoryPoint[]
+  signal_conviction: TrainingSignalConviction[]
+  activity_log: TrainingActivity[]
+  current_regime: TrainingRegime
+  config: TrainingConfig
+  snapshots: TrainingSnapshot[]
+}
+
+export interface TrainingSymbolStats {
+  symbol: string
+  trades: number
+  win_rate: number
+  total_pnl: number
+}
+
+export interface TrainingRecentTrade {
+  ts: string
+  sym: string
+  side: string
+  size: number
+  entry: number
+  exit_price: number
+  pnl: number
+}
+
+export interface TrainingMemoryCount { episodic: number; semantic: number; total: number }
+
+export interface TrainingMetrics {
+  total_trades: number
+  win_rate: number
+  total_pnl: number
+  realised_pnl: number
+  unrealised_pnl: number
+  memory_count: TrainingMemoryCount
+  symbol_breakdown: TrainingSymbolStats[]
+  recent_trades: TrainingRecentTrade[]
+  signal_health: TrainingSignalConviction[]
+  current_cycle: number
+  total_cycles: number
+  status: string
+}
+
 // ─── API client ──────────────────────────────────────────────────────────────
 
 export const api = {
@@ -321,6 +390,14 @@ export const api = {
       const ec: EquityCurveResponse = { points: (r.points ?? []).map(p => ({ date: p.date, i: p.i ?? 0, omega: p.omega ?? 0, btc: p.btc ?? 0, dd: p.dd ?? 0 })), train_end: r.trainEnd ?? 0 }
       return ec
     },
+  },
+
+  // ── Training progress ─────────────────────────────────────────────────────
+  training: {
+    getProgress: () => fetch('/api/v1/training/progress').then(r => r.json()) as Promise<TrainingProgress>,
+    getMetrics:  () => fetch('/api/v1/training/metrics').then(r => r.json()) as Promise<TrainingMetrics>,
+    getSnapshots: () => fetch('/api/v1/training/snapshots').then(r => r.json()) as Promise<TrainingSnapshot[]>,
+    takeSnapshot: () => fetch('/api/v1/training/snapshot', { method: 'POST' }).then(r => r.json()) as Promise<TrainingSnapshot>,
   },
 
   // ── OrchestratorService (Connect-RPC) ─────────────────────────────────────
