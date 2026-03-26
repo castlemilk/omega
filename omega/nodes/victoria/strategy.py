@@ -83,6 +83,12 @@ class StrategyNode(Node):
 
     Capabilities : construct_portfolio, backtest_strategy, rank_signals
     Improves via : equal weight → momentum weight → risk parity → signal tuning
+
+    Conviction filters (v1.4+):
+      - Agreement ratio: ≥60% of sub-signals must agree on direction
+      - Weighted conviction: IC-weighted composite must exceed threshold
+      - Regime filter: SIDEWAYS/high-vol requires higher conviction
+      - Time filter: no new positions within 2 cycles of last trade
     """
 
     def __init__(self) -> None:
@@ -97,6 +103,19 @@ class StrategyNode(Node):
         self._last_max_drawdown = 0.0
         self._last_hit_rate = 0.0
         self._backtest_count = 0
+
+        # --- Conviction filter parameters ---
+        # Minimum fraction of sub-signals that must agree on direction (0.6 = 10/16)
+        self._agreement_ratio_threshold: float = 0.6
+        # IC-weighted conviction must exceed this in absolute value
+        self._weighted_conviction_threshold: float = 0.3
+        # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
+        self._signal_ics: dict[str, float] = {}
+        # Tracking counters
+        self._proposals_generated: int = 0  # tickers that passed basic conviction screen
+        self._proposals_filtered: int = 0  # tickers blocked by conviction filters
+        # Time filter: don't open new positions within 2 cycles of last trade
+        self._last_trade_cycle: int = -999
 
     # ------------------------------------------------------------------ Node interface
 
@@ -113,11 +132,17 @@ class StrategyNode(Node):
                 "sharpe_ratio": self._last_sharpe,
                 "max_drawdown": self._last_max_drawdown,
                 "hit_rate": self._last_hit_rate,
+                "proposals_generated": float(self._proposals_generated),
+                "proposals_filtered": float(self._proposals_filtered),
+                "filter_rate": self._filter_rate(),
             },
             metadata={
                 "weighting": self._weighting,
                 "signal_threshold": self._signal_threshold,
                 "backtest_count": self._backtest_count,
+                "agreement_ratio_threshold": self._agreement_ratio_threshold,
+                "weighted_conviction_threshold": self._weighted_conviction_threshold,
+                "signal_ic_count": len(self._signal_ics),
             },
         )
 
@@ -210,7 +235,19 @@ class StrategyNode(Node):
             "sharpe_ratio": self._last_sharpe,
             "max_drawdown": self._last_max_drawdown,
             "hit_rate": self._last_hit_rate,
+            "proposals_generated": float(self._proposals_generated),
+            "proposals_filtered": float(self._proposals_filtered),
+            "filter_rate": self._filter_rate(),
         }
+
+    def update_signal_ics(self, ics: dict[str, float]) -> None:
+        """Load per-signal IC values from signal_audit output for weighted conviction."""
+        self._signal_ics = {k: v for k, v in ics.items() if v > 0}
+        logger.info(
+            "StrategyNode: loaded ICs for %d signals (killed %d negative-IC)",
+            len(self._signal_ics),
+            sum(1 for v in ics.values() if v <= 0),
+        )
 
     def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
@@ -243,12 +280,124 @@ class StrategyNode(Node):
 
         return changed
 
+    # ------------------------------------------------------------------ conviction filters
+
+    def _compute_agreement_ratio(self, signals_dict: dict) -> tuple[float, int, int]:
+        """
+        Count what fraction of directional sub-signals agree on direction.
+
+        Returns (ratio, n_agreeing, n_total).  Direction is determined by the
+        sign of `composite`; signals within ±0.1 of zero are treated as neutral
+        and excluded from the denominator.
+        """
+        composite = float(signals_dict.get("composite", 0.0))
+        directional: list[float] = []
+        for k, v in signals_dict.items():
+            if not (k.endswith("_signal") or k == "sma_crossover"):
+                continue
+            if not isinstance(v, (int, float)):
+                continue
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                continue
+            if math.isnan(fv) or math.isinf(fv):
+                continue
+            if abs(fv) <= 0.1:
+                continue  # neutral — skip
+            directional.append(fv)
+
+        total = len(directional)
+        if total == 0:
+            return 0.0, 0, 0
+
+        if composite >= 0:
+            agreeing = sum(1 for v in directional if v > 0)
+        else:
+            agreeing = sum(1 for v in directional if v < 0)
+
+        return agreeing / total, agreeing, total
+
+    def _compute_weighted_conviction(self, signals_dict: dict) -> float:
+        """
+        IC-weighted composite signal score.
+
+        If no ICs have been loaded, falls back to the raw composite score so
+        the filter still runs with equal weighting.
+        """
+        if not self._signal_ics:
+            return float(signals_dict.get("composite", 0.0))
+
+        weighted_sum = 0.0
+        total_ic = 0.0
+        for k, v in signals_dict.items():
+            if not (k.endswith("_signal") or k == "sma_crossover"):
+                continue
+            ic = self._signal_ics.get(k, 0.0)
+            if ic <= 0:
+                continue  # skip killed / negative-IC signals
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                continue
+            if math.isnan(fv) or math.isinf(fv):
+                continue
+            weighted_sum += fv * ic
+            total_ic += ic
+
+        if total_ic == 0.0:
+            return float(signals_dict.get("composite", 0.0))
+        return weighted_sum / total_ic
+
+    def _passes_conviction_filters(self, sig: dict, cycle: int) -> tuple[bool, str]:
+        """
+        Return (passes, reason) for the full conviction filter stack.
+
+        Filters applied in order:
+          1. Time filter  — no new trades within 2 cycles of last
+          2. Agreement ratio — ≥ threshold of sub-signals agree on direction
+          3. Weighted conviction — IC-weighted composite exceeds threshold
+          4. Regime / volatility — higher bar in high-vol regime
+        """
+        # 1. Time filter
+        if cycle - self._last_trade_cycle < 2:
+            return False, "time_filter"
+
+        # 2. Agreement ratio (base threshold, tightened in high-vol)
+        vol_regime = sig.get("vol_regime", "normal")
+        agreement_threshold = 0.5 if vol_regime == "high" else self._agreement_ratio_threshold
+        ratio, _agreeing, _total = self._compute_agreement_ratio(sig)
+        if ratio < agreement_threshold:
+            return False, f"agreement_ratio({ratio:.2f}<{agreement_threshold:.2f})"
+
+        # 3. Weighted conviction
+        w_conv = self._compute_weighted_conviction(sig)
+        # In high-vol regime, use a tighter conviction threshold
+        conv_threshold = (
+            self._weighted_conviction_threshold * 1.5
+            if vol_regime == "high"
+            else self._weighted_conviction_threshold
+        )
+        if abs(w_conv) < conv_threshold:
+            return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
+
+        return True, "pass"
+
     # ------------------------------------------------------------------ portfolio construction
 
     def _construct_portfolio(
         self, signals: dict[str, Any], market_data: dict[str, Any]
     ) -> dict[str, Any]:
-        """Build portfolio weights from signals using conviction-scaled sizing."""
+        """Build portfolio weights from signals using conviction-scaled sizing.
+
+        Applies conviction threshold filters before building candidates:
+          - Agreement ratio: ≥60% of sub-signals must agree on direction
+          - Weighted conviction: IC-weighted composite must exceed threshold
+          - Regime filter: higher bar in high-volatility regimes
+          - Time filter: no new positions within 2 cycles of last trade
+        """
+        current_cycle = self._execution_count
+
         # Compute conviction for every ticker with a composite score
         convictions: dict[str, ConvictionLevel] = {}
         for ticker, sig in signals.items():
@@ -256,43 +405,55 @@ class StrategyNode(Node):
             if composite is not None:
                 convictions[ticker] = score_to_conviction(float(composite))
 
-        # Long candidates: STRONG_BUY or BUY above signal threshold
-        long_candidates = {
-            ticker: sig
-            for ticker, sig in signals.items()
-            if convictions.get(ticker, ConvictionLevel.HOLD)
-            in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY)
-            and sig.get("composite", 0.0) > self._signal_threshold
-        }
+        # Screen tickers that have non-HOLD conviction above signal threshold
+        # and apply the full conviction filter stack.
+        long_candidates: dict[str, Any] = {}
+        proposals_this_cycle = 0
+        filtered_this_cycle = 0
 
-        # Short candidates: SELL or STRONG_SELL below negative signal threshold
-        short_candidates = {
-            ticker: sig
-            for ticker, sig in signals.items()
-            if convictions.get(ticker, ConvictionLevel.HOLD)
-            in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
-            and sig.get("composite", 0.0) < -self._signal_threshold
-        }
+        short_candidates: dict[str, Any] = {}
 
-        if not long_candidates and not short_candidates:
-            # Fall back to all available if no clear directional signals
-            for ticker, sig in signals.items():
-                if sig.get("composite") is None:
+        for ticker, sig in signals.items():
+            c = convictions.get(ticker, ConvictionLevel.HOLD)
+            if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
+                if sig.get("composite", 0.0) <= self._signal_threshold:
                     continue
-                c = convictions.get(ticker, ConvictionLevel.HOLD)
-                if c == ConvictionLevel.HOLD:
+                proposals_this_cycle += 1
+                passes, reason = self._passes_conviction_filters(sig, current_cycle)
+                if not passes:
+                    filtered_this_cycle += 1
+                    logger.debug("Filtered %s (long): %s", ticker, reason)
                     continue
-                if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
-                    long_candidates[ticker] = sig
-                elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
-                    short_candidates[ticker] = sig
+                long_candidates[ticker] = sig
+            elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
+                if sig.get("composite", 0.0) >= -self._signal_threshold:
+                    continue
+                proposals_this_cycle += 1
+                passes, reason = self._passes_conviction_filters(sig, current_cycle)
+                if not passes:
+                    filtered_this_cycle += 1
+                    logger.debug("Filtered %s (short): %s", ticker, reason)
+                    continue
+                short_candidates[ticker] = sig
 
+        self._proposals_generated += proposals_this_cycle
+        self._proposals_filtered += filtered_this_cycle
+
+        # No candidates: either all filtered by conviction or no conviction signals at all.
+        # Do NOT fall back to weak signals — the filter's purpose is to reduce trade count.
         if not long_candidates and not short_candidates:
             return {
                 "weights": {},
                 "positions": 0,
                 "method": self._weighting,
                 "convictions": {t: c.name for t, c in convictions.items()},
+                "proposals_generated": proposals_this_cycle,
+                "proposals_filtered": filtered_this_cycle,
+                "filter_stats": {
+                    "generated": self._proposals_generated,
+                    "filtered": self._proposals_filtered,
+                    "filter_rate": self._filter_rate(),
+                },
             }
 
         long_base: dict[str, float] = {}
@@ -374,6 +535,10 @@ class StrategyNode(Node):
         # Also run a quick backtest
         bt = self._backtest(signals, market_data)
 
+        # Record cycle as having produced trades (for time filter)
+        if weights:
+            self._last_trade_cycle = current_cycle
+
         return {
             "weights": weights,
             "positions": len(weights),
@@ -383,6 +548,13 @@ class StrategyNode(Node):
             "conviction_distribution": conviction_dist,
             "top_picks": self._rank_signals(signals)[:5],
             "backtest": bt,
+            "proposals_generated": proposals_this_cycle,
+            "proposals_filtered": filtered_this_cycle,
+            "filter_stats": {
+                "generated": self._proposals_generated,
+                "filtered": self._proposals_filtered,
+                "filter_rate": self._filter_rate(),
+            },
         }
 
     def _rank_signals(self, signals: dict[str, Any]) -> list[dict[str, Any]]:
@@ -543,3 +715,7 @@ class StrategyNode(Node):
 
     def _error_rate(self) -> float:
         return self._error_count / max(1, self._execution_count)
+
+    def _filter_rate(self) -> float:
+        """Fraction of conviction-screened proposals that were blocked by filters."""
+        return self._proposals_filtered / max(1, self._proposals_generated)
