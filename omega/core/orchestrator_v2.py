@@ -1333,12 +1333,24 @@ class OmegaOrchestrator:
                 for node in self.active_nodes:
                     node_market_data.update(getattr(node, "_last_market_data", {}))
                 combined_market_data = {**(market_data or {}), **node_market_data}
+
+                if not proposals:
+                    # No new proposals — still run mark_to_market so stale positions close
+                    self._paper_trading.mark_to_market(
+                        combined_market_data,
+                        ctx.cycle_number,
+                        cycle_id=ctx.cycle_id,
+                    )
+                    return
+
                 # Track closed trades before execution so we can diff after
                 closed_before = len(self._paper_trading.closed_trades)
+
                 executed = self._paper_trading.execute_proposals(
                     proposals,
                     market_data=combined_market_data,
                     cycle_id=ctx.cycle_id,
+                    current_cycle=ctx.cycle_number,
                 )
                 log.info(
                     "PaperTrading: executed %d trades (cycle %d)",
