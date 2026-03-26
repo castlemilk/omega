@@ -45,6 +45,7 @@ from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.liquidation_signals import LiquidationCascadeSignal, LiquidationRisk
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.news_signals import NewsSignalProvider
+from omega.nodes.victoria.options_signals import OptionsSignalProvider
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
@@ -78,6 +79,7 @@ SIGNAL_NAMES = [
     "news_sentiment",
     "twitter_sentiment",
     "stablecoin_flow",
+    "options_microstructure",  # Jim Simons GEX/PCR/skew/max-pain/term-structure
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -130,9 +132,28 @@ class VictoriaNode(Node):
         self._twitter_sentiment = TwitterSentimentSignal()
         self._stablecoin_flow = StablecoinFlowSignal()
         self._liquidation_cascade = LiquidationCascadeSignal()
+        self._options = OptionsSignalProvider()  # GEX/PCR/skew/max-pain/term-structure
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
+
+        # Seed prior weights: options_microstructure starts at ~20% (alpha-edge #1).
+        # All others seeded at 0.10 IC; options at 0.25 → 0.25/1.25 = 20%.
+        self._weight_allocator.seed_initial_ic(
+            initial_ics={
+                "basic_signals": 0.10,
+                "order_flow": 0.10,
+                "cross_asset": 0.10,
+                "microstructure": 0.10,
+                "sentiment": 0.10,
+                "vrp": 0.10,
+                "market_data": 0.10,
+                "onchain": 0.10,
+                "long_short_ratio": 0.10,
+                "btc_dominance": 0.10,
+                "options_microstructure": 0.25,
+            },
+        )
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -392,6 +413,7 @@ class VictoriaNode(Node):
             "news_sentiment",
             "twitter_sentiment",
             "stablecoin_flow",
+            "options_microstructure",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -874,6 +896,17 @@ class VictoriaNode(Node):
                 )
             except Exception as exc:
                 logger.debug("liquidation_cascade signal failed: %s", exc)
+
+            try:
+                opts_val = self._options.compute(market_data)
+                signals["options_microstructure"] = {
+                    "value": opts_val.value,
+                    "confidence": opts_val.confidence,
+                    "regime_tag": opts_val.regime_tag,
+                    "raw": opts_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("options_microstructure signal failed: %s", exc)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
