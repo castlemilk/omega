@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
@@ -83,6 +83,8 @@ function EquityCurve() {
 // ─── Trades table ─────────────────────────────────────────────────────────────
 
 function TradesTable() {
+  const { projectId = '' } = useParams<{ projectId: string }>()
+  const navigate = useNavigate()
   const [symFilter, setSymFilter] = useState('')
   const [sideFilter, setSideFilter] = useState('')
 
@@ -139,7 +141,11 @@ function TradesTable() {
                 </tr>
               ))
             : trades.map((t, i) => (
-                <tr key={i} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                <tr
+                  key={i}
+                  className="border-b border-slate-700/30 hover:bg-slate-700/30 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/projects/${projectId}/trading/${i + 1}`)}
+                >
                   <td className="px-4 py-3 text-slate-500 text-xs tabular-nums">{t.ts ? new Date(t.ts).toLocaleString() : '—'}</td>
                   <td className="px-4 py-3 text-slate-200 font-mono text-sm">{t.sym}</td>
                   <td className="px-4 py-3">

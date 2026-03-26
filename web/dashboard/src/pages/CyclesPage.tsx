@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Clock, Shield, AlertTriangle, Zap } from 'lucide-react'
 import { StatusBadge } from '../components/StatusBadge'
 import { useFetch } from '../hooks/useFetch'
@@ -9,7 +10,8 @@ function formatDuration(ms: number): string {
   return `${(ms / 1000).toFixed(2)}s`
 }
 
-function CycleRow({ cycle }: { cycle: Cycle }) {
+function CycleRow({ cycle, projectId }: { cycle: Cycle; projectId: string }) {
+  const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
 
   const started = new Date(cycle.started_at)
@@ -19,7 +21,7 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
     <>
       <div
         className="bg-slate-800 rounded-xl border border-slate-700/50 p-4 hover:border-slate-600 cursor-pointer transition-colors"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={() => navigate(`/projects/${projectId}/cycles/${encodeURIComponent(cycle.id)}`)}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -114,6 +116,7 @@ function CycleRow({ cycle }: { cycle: Cycle }) {
 }
 
 export function CyclesPage() {
+  const { projectId = '' } = useParams<{ projectId: string }>()
   const { data: cycles, loading } = useFetch(api.getCycles)
 
   return (
@@ -145,7 +148,7 @@ export function CyclesPage() {
           ? Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="skeleton h-20 rounded-xl" />
             ))
-          : (cycles ?? []).map((cycle) => <CycleRow key={cycle.id} cycle={cycle} />)}
+          : (cycles ?? []).map((cycle) => <CycleRow key={cycle.id} cycle={cycle} projectId={projectId} />)}
         {!loading && (!cycles || cycles.length === 0) && (
           <div className="text-center py-16 text-slate-500 text-sm">No cycles recorded yet</div>
         )}

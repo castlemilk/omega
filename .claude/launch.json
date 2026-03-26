@@ -18,6 +18,14 @@
       "autoPort": false
     },
     {
+      "name": "dashboard-worktree",
+      "runtimeExecutable": "/Users/benebsworth/.nvm/versions/node/v22.9.0/bin/npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5176"],
+      "cwd": "web/dashboard",
+      "port": 5176,
+      "autoPort": false
+    },
+    {
       "name": "omega-api",
       "runtimeExecutable": "go",
       "runtimeArgs": ["run", "./cmd/omega-api"],

@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -9,7 +9,8 @@ import { api, type Signal } from '../lib/api'
 
 // ─── Signal row ───────────────────────────────────────────────────────────────
 
-function SignalRow({ signal }: { signal: Signal }) {
+function SignalRow({ signal, projectId }: { signal: Signal; projectId: string }) {
+  const navigate = useNavigate()
   const [expanded, setExpanded] = useState(false)
   const { data: history } = useFetch(
     () => expanded ? api.victoria.getSignals() : Promise.resolve(null),
@@ -32,7 +33,7 @@ function SignalRow({ signal }: { signal: Signal }) {
   return (
     <div
       className="bg-slate-800 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-colors cursor-pointer"
-      onClick={() => setExpanded(!expanded)}
+      onClick={() => navigate(`/projects/${projectId}/signals/${encodeURIComponent(signal.name)}`)}
       data-testid={`signal-row-${signal.name}`}
     >
       <div className="flex items-center gap-4 p-4">
@@ -162,7 +163,7 @@ export function SignalsPage() {
               No signals data — check backend connection
             </div>
           )
-          : sorted.map((s) => <SignalRow key={s.name} signal={s} />)}
+          : sorted.map((s) => <SignalRow key={s.name} signal={s} projectId={projectId} />)}
       </div>
     </div>
   )
