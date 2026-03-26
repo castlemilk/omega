@@ -3,7 +3,7 @@ import { NavLink, useParams, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Server, RefreshCw, Shield, TrendingUp, Activity,
   ChevronLeft, ChevronRight, Settings, GitBranch, BarChart2,
-  Briefcase, Zap, BookOpen,
+  Briefcase, Zap, BookOpen, Brain, Grid3X3, Dumbbell,
 } from 'lucide-react'
 import { ProjectSwitcher } from './ProjectSwitcher'
 
@@ -12,6 +12,7 @@ import { ProjectSwitcher } from './ProjectSwitcher'
 const globalNav = [
   { to: '/',            label: 'Overview',      icon: LayoutDashboard, end: true },
   { to: '/coordination', label: 'Coordination', icon: GitBranch },
+  { to: '/training',    label: 'Training',      icon: Dumbbell, pulse: true },
   { to: '/settings',    label: 'Settings',      icon: Settings },
 ]
 
@@ -26,15 +27,18 @@ function projectNav(projectId: string) {
     { to: `${base}/cycles`,   label: 'Cycles',      icon: RefreshCw },
     { to: `${base}/adversarial`, label: 'Adversarial', icon: Shield },
     { to: `${base}/health`,   label: 'Health',      icon: Activity },
-    { to: `${base}/improvement`, label: 'Improvement', icon: TrendingUp },
+    { to: `${base}/improvement`,   label: 'Improvement',  icon: TrendingUp },
+    { to: `${base}/memory`,        label: 'Memory',       icon: Brain },
+    { to: `${base}/correlations`,  label: 'Correlations', icon: Grid3X3 },
+    { to: `${base}/regime`,        label: 'Regime',       icon: BarChart2 },
   ]
 }
 
 // ─── NavItem ─────────────────────────────────────────────────────────────────
 
 function NavItem({
-  to, label, icon: Icon, collapsed, end,
-}: { to: string; label: string; icon: React.ElementType; collapsed: boolean; end?: boolean }) {
+  to, label, icon: Icon, collapsed, end, pulse,
+}: { to: string; label: string; icon: React.ElementType; collapsed: boolean; end?: boolean; pulse?: boolean }) {
   return (
     <NavLink
       to={to}
@@ -48,7 +52,12 @@ function NavItem({
       }
       title={collapsed ? label : undefined}
     >
-      <Icon className="w-4 h-4 shrink-0" />
+      <div className="relative shrink-0">
+        <Icon className="w-4 h-4" />
+        {pulse && (
+          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        )}
+      </div>
       {!collapsed && label}
     </NavLink>
   )
@@ -98,8 +107,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Platform
             </p>
           )}
-          {globalNav.map(({ to, label, icon, end }) => (
-            <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={end} />
+          {globalNav.map(({ to, label, icon, end, pulse }) => (
+            <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={end} pulse={pulse} />
           ))}
         </nav>
 

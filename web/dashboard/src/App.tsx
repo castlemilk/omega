@@ -19,6 +19,10 @@ const CyclesPage        = lazy(() => import('./pages/CyclesPage').then(m => ({ d
 const AdversarialPage   = lazy(() => import('./pages/AdversarialPage').then(m => ({ default: m.AdversarialPage })))
 const HealthPage        = lazy(() => import('./pages/HealthPage').then(m => ({ default: m.HealthPage })))
 const ImprovementPage   = lazy(() => import('./pages/ImprovementPage').then(m => ({ default: m.ImprovementPage })))
+const MemoryPage        = lazy(() => import('./pages/MemoryPage').then(m => ({ default: m.MemoryPage })))
+const CorrelationsPage  = lazy(() => import('./pages/CorrelationsPage').then(m => ({ default: m.CorrelationsPage })))
+const RegimePage        = lazy(() => import('./pages/RegimePage').then(m => ({ default: m.RegimePage })))
+const TrainingPage      = lazy(() => import('./pages/TrainingPage').then(m => ({ default: m.TrainingPage })))
 
 // ─── Fallback ────────────────────────────────────────────────────────────────
 
@@ -53,7 +57,13 @@ export default function App() {
               <Route path="/projects/:projectId/cycles"      element={<CyclesPage />} />
               <Route path="/projects/:projectId/adversarial" element={<AdversarialPage />} />
               <Route path="/projects/:projectId/health"      element={<HealthPage />} />
-              <Route path="/projects/:projectId/improvement" element={<ImprovementPage />} />
+              <Route path="/projects/:projectId/improvement"   element={<ImprovementPage />} />
+              <Route path="/projects/:projectId/memory"       element={<MemoryPage />} />
+              <Route path="/projects/:projectId/correlations" element={<CorrelationsPage />} />
+              <Route path="/projects/:projectId/regime"       element={<RegimePage />} />
+
+              {/* Platform routes */}
+              <Route path="/training" element={<TrainingPage />} />
 
               {/* Fallback */}
               <Route path="*" element={<Navigate to="/" replace />} />
