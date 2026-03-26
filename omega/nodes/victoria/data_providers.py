@@ -14,7 +14,7 @@ All providers:
   - Zero external dependencies (urllib.request only)
   - Respectful rate limiting (time.sleep delays)
   - Return None gracefully on failure (never raise)
-  - Include 5-minute TTL in-memory cache
+  - Include 1-minute TTL in-memory cache
 """
 
 import json
@@ -30,7 +30,7 @@ logger = logging.getLogger("omega.nodes.victoria.data_providers")
 
 _CG_API_KEY = os.environ.get("CG_API_KEY")
 
-_CACHE_TTL_SECONDS = 300  # 5 minutes
+_CACHE_TTL_SECONDS = 60  # 1 minute — fresher prices for training runs
 
 _HEADERS = {
     "User-Agent": "OmegaVictoria/1.0 (quantitative research bot)",
