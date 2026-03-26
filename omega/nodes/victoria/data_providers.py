@@ -19,6 +19,7 @@ All providers:
 
 import json
 import logging
+import os
 import time
 import urllib.error
 import urllib.request
@@ -27,12 +28,19 @@ from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.data_providers")
 
+_CG_API_KEY = os.environ.get("CG_API_KEY")
+
 _CACHE_TTL_SECONDS = 300  # 5 minutes
 
 _HEADERS = {
     "User-Agent": "OmegaVictoria/1.0 (quantitative research bot)",
     "Accept": "application/json",
 }
+
+# CoinGecko headers — includes API key when CG_API_KEY is set
+_CG_HEADERS: dict[str, str] = {**_HEADERS}
+if _CG_API_KEY:
+    _CG_HEADERS["x-cg-demo-api-key"] = _CG_API_KEY
 
 _BINANCE_API = "https://api.binance.com/api/v3"
 _COINGECKO_API = "https://api.coingecko.com/api/v3"
@@ -247,7 +255,7 @@ class CoinGeckoProvider(DataProvider):
             f"&order=market_cap_desc&per_page=50&page=1"
         )
         try:
-            req = urllib.request.Request(url, headers=_HEADERS)
+            req = urllib.request.Request(url, headers=_CG_HEADERS)
             with urllib.request.urlopen(req, timeout=10) as resp:
                 raw = json.loads(resp.read().decode("utf-8"))
 
@@ -271,7 +279,7 @@ class CoinGeckoProvider(DataProvider):
         """Check if CoinGecko API is reachable."""
         try:
             url = f"{_COINGECKO_API}/ping"
-            req = urllib.request.Request(url, headers=_HEADERS)
+            req = urllib.request.Request(url, headers=_CG_HEADERS)
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return "gecko_says" in data

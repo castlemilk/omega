@@ -1,4 +1,4 @@
-"""CoinGecko free-tier data source (no API key required)."""
+"""CoinGecko data source (supports demo API key via CG_API_KEY env var)."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
+from omega.core.credentials import coingecko_api_key
 from omega.data.base import DataSource, MarketData
 
 logger = logging.getLogger(__name__)
@@ -50,10 +51,13 @@ class CoinGeckoSource(DataSource):
         super().__init__(name="coingecko")
         self._timeout = timeout_secs
         self._last_request: float = 0.0
-        self._session_headers = {
+        self._session_headers: dict[str, str] = {
             "Accept": "application/json",
             "User-Agent": "omega-victoria/1.0",
         }
+        api_key = coingecko_api_key()
+        if api_key:
+            self._session_headers["x-cg-demo-api-key"] = api_key
 
     # ------------------------------------------------------------------
     # DataSource interface
