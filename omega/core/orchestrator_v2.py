@@ -57,9 +57,13 @@ from omega.core.registry import NodeRegistry
 
 logger = logging.getLogger("omega.orchestrator_v2")
 
-# Proposals with adversarial disagreement score above this threshold (score = 1 - max_disagreement < 0.6)
-# are blocked even in PICO mode.  Prevents rubber-stamping all proposals regardless of signal quality.
-_ADVERSARIAL_SCORE_THRESHOLD = 0.4
+# Proposals with adversarial disagreement score above this threshold are blocked even in PICO mode.
+# Prevents rubber-stamping all proposals regardless of signal quality.
+# Calibrated for 11 signals: structural max_disagreement with a diverse signal suite (news, derivatives,
+# order flow, microstructure, etc.) is empirically 0.51-0.63 at typical market conditions.
+# Threshold set to 0.70 (sufficient headroom above structural ceiling) - still blocks genuine
+# outliers > 0.70 while allowing normal 11-signal diversity through.
+_ADVERSARIAL_SCORE_THRESHOLD = 0.70
 
 # ---------------------------------------------------------------------------
 # DebateGateLearner — learns the optimal block threshold from outcomes

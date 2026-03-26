@@ -133,7 +133,7 @@ class PaperTradingEngine:
         for open_sym, pos in list(self._positions.items()):
             sym_market = market_data.get(open_sym) or {}
             current_price = (
-                float(sym_market.get("close", 0.0)) if isinstance(sym_market, dict) else 0.0
+                self._extract_price(sym_market) if isinstance(sym_market, dict) else 0.0
             )
             if current_price <= 0:
                 continue
@@ -168,9 +168,8 @@ class PaperTradingEngine:
 
             # Resolve current price for entry
             sym_market = market_data.get(symbol) or {}
-            if isinstance(sym_market, dict):
-                entry_price = float(sym_market.get("close") or sym_market.get("price") or 1.0)
-            else:
+            entry_price = self._extract_price(sym_market) if isinstance(sym_market, dict) else 1.0
+            if entry_price <= 0:
                 entry_price = 1.0
 
             # Close existing position if direction flips — realise PnL

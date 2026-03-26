@@ -59,9 +59,9 @@ from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
     BTCDominanceSignal,
     CrossAssetSignal,
+    DerivativesSignal,
     LongShortRatioSignal,
     MicrostructureSignal,
-    OnChainSignal,
     OrderFlowSignal,
     SentimentSignal,
 )
@@ -81,13 +81,13 @@ SIGNAL_NAMES = [
     "sentiment",
     "vrp",
     "market_data",
-    "onchain",
     "long_short_ratio",
     "btc_dominance",
     "news_sentiment",
     "twitter_sentiment",
     "stablecoin_flow",
     "options_microstructure",  # Jim Simons GEX/PCR/skew/max-pain/term-structure
+    "derivatives",
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -254,7 +254,6 @@ class VictoriaNode(Node):
         self._sentiment = SentimentSignal()
         self._vrp = VRPSignalNode()
         self._market_data_signal = MarketDataSignal()
-        self._onchain = OnChainSignal()
         self._long_short_ratio = LongShortRatioSignal()
         self._btc_dominance = BTCDominanceSignal()
         self._news_signal = NewsSignalProvider()
@@ -262,6 +261,7 @@ class VictoriaNode(Node):
         self._stablecoin_flow = StablecoinFlowSignal()
         self._liquidation_cascade = LiquidationCascadeSignal()
         self._options = OptionsSignalProvider()  # GEX/PCR/skew/max-pain/term-structure
+        self._derivatives = DerivativesSignal()
 
         # Dynamic weight allocator — includes "disagreement" meta-signal
         self._weight_allocator = DynamicWeightAllocator(
@@ -561,13 +561,14 @@ class VictoriaNode(Node):
             "microstructure",
             "sentiment",
             "vrp",
-            "onchain",
+            "market_data",
             "long_short_ratio",
             "btc_dominance",
             "news_sentiment",
             "twitter_sentiment",
             "stablecoin_flow",
             "options_microstructure",
+            "derivatives",
         }
         present = expected_signals.intersection(self._last_signals.keys())
         signal_coverage = len(present) / len(expected_signals)
@@ -981,17 +982,6 @@ class VictoriaNode(Node):
                 logger.debug("market_data signal failed: %s", exc)
 
             try:
-                oc_val = self._onchain.compute(market_data)
-                signals["onchain"] = {
-                    "value": oc_val.value,
-                    "confidence": oc_val.confidence,
-                    "regime_tag": oc_val.regime_tag,
-                    "raw": oc_val.raw,
-                }
-            except Exception as exc:
-                logger.debug("onchain signal failed: %s", exc)
-
-            try:
                 ls_val = self._long_short_ratio.compute(market_data)
                 signals["long_short_ratio"] = {
                     "value": ls_val.value,
@@ -1097,6 +1087,17 @@ class VictoriaNode(Node):
             )
         except Exception as exc:
             logger.debug("disagreement signal failed: %s", exc)
+
+            try:
+                deriv_val = self._derivatives.compute(market_data)
+                signals["derivatives"] = {
+                    "value": deriv_val.value,
+                    "confidence": deriv_val.confidence,
+                    "regime_tag": deriv_val.regime_tag,
+                    "raw": deriv_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("derivatives signal failed: %s", exc)
 
         # 3. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}

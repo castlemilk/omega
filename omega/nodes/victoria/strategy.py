@@ -265,16 +265,29 @@ class StrategyNode(Node):
             and sig.get("composite", 0.0) > self._signal_threshold
         }
 
-        if not long_candidates:
-            # Fall back to all available if no clear buys
-            long_candidates = {
-                ticker: sig
-                for ticker, sig in signals.items()
-                if sig.get("composite") is not None
-                and convictions.get(ticker, ConvictionLevel.HOLD) != ConvictionLevel.HOLD
-            }
+        # Short candidates: SELL or STRONG_SELL below negative signal threshold
+        short_candidates = {
+            ticker: sig
+            for ticker, sig in signals.items()
+            if convictions.get(ticker, ConvictionLevel.HOLD)
+            in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
+            and sig.get("composite", 0.0) < -self._signal_threshold
+        }
 
-        if not long_candidates:
+        if not long_candidates and not short_candidates:
+            # Fall back to all available if no clear directional signals
+            for ticker, sig in signals.items():
+                if sig.get("composite") is None:
+                    continue
+                c = convictions.get(ticker, ConvictionLevel.HOLD)
+                if c == ConvictionLevel.HOLD:
+                    continue
+                if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
+                    long_candidates[ticker] = sig
+                elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
+                    short_candidates[ticker] = sig
+
+        if not long_candidates and not short_candidates:
             return {
                 "weights": {},
                 "positions": 0,
@@ -282,40 +295,73 @@ class StrategyNode(Node):
                 "convictions": {t: c.name for t, c in convictions.items()},
             }
 
-        base_weights: dict[str, float] = {}
+        long_base: dict[str, float] = {}
+        short_base: dict[str, float] = {}
 
         if self._weighting == "equal":
-            w = 1.0 / len(long_candidates)
-            base_weights = {ticker: w for ticker in long_candidates}
+            if long_candidates:
+                w = 1.0 / len(long_candidates)
+                long_base = {ticker: w for ticker in long_candidates}
+            if short_candidates:
+                w = 1.0 / len(short_candidates)
+                short_base = {ticker: w for ticker in short_candidates}
 
         elif self._weighting == "momentum":
-            raw = {
-                ticker: max(0.001, sig.get("composite", 0.001))
-                for ticker, sig in long_candidates.items()
-            }
-            total = sum(raw.values())
-            base_weights = {ticker: v / total for ticker, v in raw.items()}
+            if long_candidates:
+                raw_l = {
+                    ticker: max(0.001, sig.get("composite", 0.001))
+                    for ticker, sig in long_candidates.items()
+                }
+                total_l = sum(raw_l.values())
+                long_base = {ticker: v / total_l for ticker, v in raw_l.items()}
+            if short_candidates:
+                raw_s = {
+                    ticker: max(0.001, abs(sig.get("composite", 0.001)))
+                    for ticker, sig in short_candidates.items()
+                }
+                total_s = sum(raw_s.values())
+                short_base = {ticker: v / total_s for ticker, v in raw_s.items()}
 
         elif self._weighting == "risk_parity":
-            vols: dict[str, float] = {}
+            for _ticker, _sig in {**long_candidates, **short_candidates}.items():
+                pass  # vols computed per-pool below
+            vols_l: dict[str, float] = {}
             for ticker, _sig in long_candidates.items():
                 data = market_data.get(ticker)
                 if data:
                     prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
                     vol = self._compute_volatility(prices, window=20)
-                    vols[ticker] = vol if vol > 0 else 0.3
+                    vols_l[ticker] = vol if vol > 0 else 0.3
                 else:
-                    vols[ticker] = 0.3
-            inv_vol = {ticker: 1.0 / v for ticker, v in vols.items()}
-            total = sum(inv_vol.values())
-            base_weights = {ticker: v / total for ticker, v in inv_vol.items()}
+                    vols_l[ticker] = 0.3
+            if vols_l:
+                inv_vol_l = {ticker: 1.0 / v for ticker, v in vols_l.items()}
+                total_l = sum(inv_vol_l.values())
+                long_base = {ticker: v / total_l for ticker, v in inv_vol_l.items()}
 
-        # Apply conviction size multipliers and re-normalise
-        raw_weights = {
-            ticker: base_weights[ticker] * conviction_size_multiplier(convictions[ticker])
-            for ticker in base_weights
-        }
-        total_w = sum(raw_weights.values())
+            vols_s: dict[str, float] = {}
+            for ticker, _sig in short_candidates.items():
+                data = market_data.get(ticker)
+                if data:
+                    prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
+                    vol = self._compute_volatility(prices, window=20)
+                    vols_s[ticker] = vol if vol > 0 else 0.3
+                else:
+                    vols_s[ticker] = 0.3
+            if vols_s:
+                inv_vol_s = {ticker: 1.0 / v for ticker, v in vols_s.items()}
+                total_s = sum(inv_vol_s.values())
+                short_base = {ticker: v / total_s for ticker, v in inv_vol_s.items()}
+
+        # Apply conviction size multipliers; shorts get negative weights
+        raw_weights: dict[str, float] = {}
+        for ticker, w in long_base.items():
+            raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker])
+        for ticker, w in short_base.items():
+            raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker])
+
+        # Normalise so total |weight| = 1.0
+        total_w = sum(abs(v) for v in raw_weights.values())
         weights: dict[str, float] = (
             {ticker: v / total_w for ticker, v in raw_weights.items()} if total_w > 0 else {}
         )
