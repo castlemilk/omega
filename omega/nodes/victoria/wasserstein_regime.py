@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -227,13 +227,13 @@ class WassersteinRegimeDetector:
                 # Fallback: mean absolute deviation from centroid
                 w_total += float(np.mean(np.abs(col - centroid[dim])))
 
-        return w_total / n_dims
+        return float(w_total / n_dims)
 
     @staticmethod
     def _softmax(x: np.ndarray) -> np.ndarray:
         x = x - np.max(x)  # numerical stability
         e = np.exp(x)
-        return e / e.sum()
+        return np.asarray(e / e.sum())
 
     def _fallback(self, n_obs: int) -> RegimeResult:
         return RegimeResult(

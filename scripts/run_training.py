@@ -94,30 +94,50 @@ def _total_pnl(trades: list[dict]) -> float:
 
 def _init_trades_csv() -> None:
     with open(TRADES_CSV, "w", newline="") as f:
-        csv.writer(f).writerow([
-            "cycle", "timestamp", "symbol", "side", "size",
-            "entry_price", "exit_price", "pnl", "slippage",
-            "hold_cycles", "conviction", "regime", "sit_out_reason",
-        ])
+        csv.writer(f).writerow(
+            [
+                "cycle",
+                "timestamp",
+                "symbol",
+                "side",
+                "size",
+                "entry_price",
+                "exit_price",
+                "pnl",
+                "slippage",
+                "hold_cycles",
+                "conviction",
+                "regime",
+                "sit_out_reason",
+            ]
+        )
 
 
-def _get_data_freshness(victoria) -> float:
+def _get_data_freshness(victoria: object) -> float:
     """Return minutes since last price data fetch. 9999 if unknown."""
     try:
-        di = victoria._data_ingestion
-        return di._data_freshness_minutes()
+        di = getattr(victoria, "_data_ingestion", None)
+        if di is None:
+            return 0.0
+        result_val = di._data_freshness_minutes()
+        return float(result_val)
     except Exception:
         return 0.0  # assume fresh if we can't check
 
 
-def _get_regime(victoria) -> str:
+def _get_regime(victoria: object) -> str:
     try:
-        return victoria._regime_detector.current_regime
+        rd = getattr(victoria, "_regime_detector", None)
+        if rd is None:
+            return "unknown"
+        regime_val = rd.current_regime
+        return str(regime_val)
     except Exception:
         return "unknown"
 
 
 def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5) -> dict:
+    from omega.core.intelligence_metrics import IntelligenceMetricsCollector
     from omega.core.orchestrator_v2 import OmegaOrchestrator
     from omega.core.paper_trading import PaperTradingEngine
     from omega.nodes.victoria.victoria_node import VictoriaNode
@@ -126,15 +146,18 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
 
     log.info("=" * 70)
-    log.info("V10 Training Run — %d cycles  sleep=%.0fs", n_cycles, sleep_seconds)
+    log.info("V12 Training Run — %d cycles  sleep=%.0fs", n_cycles, sleep_seconds)
     log.info("CoinGecko key  : %s", cg_key[:12] + "..." if cg_key else "MISSING")
     log.info("Database URL   : %s", db_url[:40] + "..." if db_url else "NOT SET — in-memory only")
     log.info("Staleness limit: %.0f min", MAX_STALE_MINUTES)
     log.info("Log file       : %s", LOG_FILE)
+    log.info("Intelligence metrics: ACTIVE")
     log.info("=" * 70)
 
+    intel_collector = IntelligenceMetricsCollector(db_url=db_url or None)
+
     victoria = VictoriaNode()
-    orch = OmegaOrchestrator(name="v10_training")
+    orch = OmegaOrchestrator(name="v12_training", metrics_collector=intel_collector)
     orch.register_node(victoria)
 
     engine = PaperTradingEngine(initial_capital=100_000.0, db_url=db_url or None)
@@ -157,8 +180,8 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
 
     for i in range(n_cycles):
         cycle_start = time.perf_counter()
-        result = orch.run_one_cycle()
-        cycle_elapsed = time.perf_counter() - cycle_start
+        orch.run_one_cycle()
+        time.perf_counter() - cycle_start
 
         regime = _get_regime(victoria)
         freshness_min = _get_data_freshness(victoria)
@@ -201,21 +224,23 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
             with open(TRADES_CSV, "a", newline="") as f:
                 w = csv.writer(f)
                 for t in new_closed:
-                    w.writerow([
-                        cycle_num,
-                        datetime.now(UTC).isoformat(),
-                        t.get("sym", t.get("symbol", "")),
-                        t.get("side", ""),
-                        round(float(t.get("size", 0.0)), 4),
-                        round(float(t.get("entry", t.get("entry_price", 0.0))), 4),
-                        round(float(t.get("exit_price") or 0.0), 4),
-                        round(float(t.get("pnl", 0.0)), 4),
-                        round(float(t.get("slippage", 0.0)), 6),
-                        t.get("hold_cycles", t.get("age_cycles", 0)),
-                        t.get("conviction", ""),
-                        regime,
-                        sit_out_reason,
-                    ])
+                    w.writerow(
+                        [
+                            cycle_num,
+                            datetime.now(UTC).isoformat(),
+                            t.get("sym", t.get("symbol", "")),
+                            t.get("side", ""),
+                            round(float(t.get("size", 0.0)), 4),
+                            round(float(t.get("entry", t.get("entry_price", 0.0))), 4),
+                            round(float(t.get("exit_price") or 0.0), 4),
+                            round(float(t.get("pnl", 0.0)), 4),
+                            round(float(t.get("slippage", 0.0)), 6),
+                            t.get("hold_cycles", t.get("age_cycles", 0)),
+                            t.get("conviction", ""),
+                            regime,
+                            sit_out_reason,
+                        ]
+                    )
             last_closed_count = len(closed)
 
         # ── Progress logging ──────────────────────────────────────────────────
@@ -246,20 +271,26 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
 
             status_tag = {
                 "stale_data": "STALE   ",
-                "vol_low":   "SIT-OUT ",
-                "vol_high":  "CAUTION ",
+                "vol_low": "SIT-OUT ",
+                "vol_high": "CAUTION ",
                 "regime_uncertain": "CAUTION ",
-                "normal":    "OK      ",
+                "normal": "OK      ",
             }.get(sit_out_reason, "OK      ")
 
             log.info(
                 "Cycle %3d/%d [%s] %s | fresh=%.1fmin | "
                 "open=%2d closed=%3d | PnL=$%+.0f wr=%.0f%% | %.1fs/c ETA %.0fs",
-                cycle_num, n_cycles, regime[:4].upper(), status_tag,
+                cycle_num,
+                n_cycles,
+                regime[:4].upper(),
+                status_tag,
                 freshness_min,
-                len(open_pos), len(closed),
-                pnl, wr * 100,
-                avg_cycle_s, eta,
+                len(open_pos),
+                len(closed),
+                pnl,
+                wr * 100,
+                avg_cycle_s,
+                eta,
             )
 
         if i < n_cycles - 1:
@@ -338,12 +369,28 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
 
     log.info("")
     log.info("=" * 70)
-    log.info("V10 COMPLETE — %d cycles in %.0fs (%.2fs/cycle)", n_cycles, total_elapsed, total_elapsed / n_cycles)
+    log.info(
+        "V10 COMPLETE — %d cycles in %.0fs (%.2fs/cycle)",
+        n_cycles,
+        total_elapsed,
+        total_elapsed / n_cycles,
+    )
     log.info("=" * 70)
-    log.info("Closed trades   : %d  (long=%d  short=%d)", len(closed_final), len(longs), len(shorts))
+    log.info(
+        "Closed trades   : %d  (long=%d  short=%d)", len(closed_final), len(longs), len(shorts)
+    )
     log.info("Open positions  : %d", len(open_final))
-    log.info("Total PnL       : $%+.2f  (engine realised: $%+.2f)", _total_pnl(closed_final), engine.realised_pnl)
-    log.info("Win rate        : %.1f%%  (%d/%d)", _win_rate(closed_final) * 100, len(wins), len(closed_final))
+    log.info(
+        "Total PnL       : $%+.2f  (engine realised: $%+.2f)",
+        _total_pnl(closed_final),
+        engine.realised_pnl,
+    )
+    log.info(
+        "Win rate        : %.1f%%  (%d/%d)",
+        _win_rate(closed_final) * 100,
+        len(wins),
+        len(closed_final),
+    )
     log.info("Profit factor   : %.2f", profit_factor if profit_factor != float("inf") else 0)
     log.info("")
     log.info("Sit-out breakdown:")
@@ -352,8 +399,15 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
         log.info("  %-20s %3d / %d  (%.0f%%)", k + ":", v, n_cycles, pct)
     log.info("")
     log.info("Per-symbol PnL:")
-    for sym, d in list(results["per_symbol"].items())[:10]:  # type: ignore[index]
-        log.info("  %-12s  PnL=$%+8.2f  trades=%3d  win=%.0f%%", sym, d["pnl"], d["trades"], d["win_rate"] * 100)
+    per_sym: dict = results.get("per_symbol", {})  # type: ignore[assignment]
+    for sym, d in list(per_sym.items())[:10]:
+        log.info(
+            "  %-12s  PnL=$%+8.2f  trades=%3d  win=%.0f%%",
+            sym,
+            d["pnl"],
+            d["trades"],
+            d["win_rate"] * 100,
+        )
     log.info("")
     log.info("Files: %s  |  %s  |  %s", PROGRESS_FILE, TRADES_CSV, RESULTS_FILE)
     log.info("Log  : %s", LOG_FILE)

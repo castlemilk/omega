@@ -951,14 +951,22 @@ class OmegaOrchestrator:
                 if isinstance(sigs, dict):
                     all_signals.update(sigs)
             signals_nonzero = sum(
-                1 for v in all_signals.values()
-                if isinstance(v, (int, float)) and v != 0
+                1 for v in all_signals.values() if isinstance(v, (int, float)) and v != 0
             )
             self._intel_collector.record("signals_active", len(all_signals))
             self._intel_collector.record("signals_nonzero", signals_nonzero)
             rmt = all_signals.get("rmt_info_ratio") or all_signals.get("_rmt_info_ratio")
+            if rmt is None:
+                # RMT signal stores info_ratio in rmt_signal.raw.info_ratio
+                rmt_sig = all_signals.get("rmt_signal")
+                if isinstance(rmt_sig, dict):
+                    raw = rmt_sig.get("raw", {})
+                    rmt = raw.get("info_ratio") if isinstance(raw, dict) else None
             if rmt is not None:
                 self._intel_collector.record("rmt_info_ratio", float(rmt))
+            w_conf = all_signals.get("_regime_w_confidence")
+            if w_conf is not None:
+                self._intel_collector.record("wasserstein_confidence", float(w_conf))
 
         return signal_data
 
@@ -1545,6 +1553,7 @@ class OmegaOrchestrator:
             try:
                 if nid not in self._improvement_scheduler.registered_nodes():
                     from omega.core.improvement_scheduler import NodeScheduleConfig
+
                     self._improvement_scheduler.register(
                         nid,
                         NodeScheduleConfig(node_id=nid, interval_seconds=30.0),

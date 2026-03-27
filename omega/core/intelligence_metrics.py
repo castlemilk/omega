@@ -38,6 +38,7 @@ class IntelligenceMetricsCollector:
             try:
                 import psycopg
                 from psycopg.rows import dict_row
+
                 self._conn = psycopg.connect(self._db_url, row_factory=dict_row)
                 logger.debug("IntelligenceMetricsCollector connected to DB")
             except Exception as exc:
@@ -90,7 +91,7 @@ class IntelligenceMetricsCollector:
 
     def _compute_intelligence_score(self) -> float:
         """
-        0–1 composite score — fraction of 8 intelligence checks that are active.
+        0-1 composite score — fraction of 8 intelligence checks that are active.
 
         Checks:
           1. LLM reasoning active (brain_calls > 0)
@@ -112,7 +113,7 @@ class IntelligenceMetricsCollector:
             self._current_cycle.get("rmt_info_ratio", 0.0) > 0.3,
             self._current_cycle.get("debate_gate_invocations", 0) > 0,
         ]
-        return sum(checks) / len(checks)
+        return float(sum(checks)) / len(checks)
 
     def _write_to_db(self) -> None:
         """INSERT current cycle metrics into intelligence_metrics."""

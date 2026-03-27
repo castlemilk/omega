@@ -9,7 +9,7 @@ carry genuine statistical structure; eigenvalues **below** it are noise.
 
 Primary uses
 ------------
-1. ``denoise_correlation`` — clean the N×N signal correlation matrix so that
+1. ``denoise_correlation`` — clean the N x N signal correlation matrix so that
    downstream geometric methods (Riemannian distance, curvature, TDA) operate
    on signal rather than noise.
 
@@ -44,7 +44,7 @@ from omega.nodes.victoria.information_flow import SIGNAL_NAMES
 logger = logging.getLogger("omega.nodes.victoria.rmt_denoiser")
 
 N_SIGNALS = len(SIGNAL_NAMES)
-MIN_SAMPLES_RMT = 30   # minimum history before eigenvalue analysis is reliable
+MIN_SAMPLES_RMT = 30  # minimum history before eigenvalue analysis is reliable
 _EPS = 1e-8
 
 
@@ -52,9 +52,9 @@ _EPS = 1e-8
 class SignalValue:
     """Mirrors the SignalValue contract used by the other advanced signal nodes."""
 
-    value: float       # z-scored information ratio; >0 = structured, <0 = noisy
+    value: float  # z-scored information ratio; >0 = structured, <0 = noisy
     confidence: float  # 0..1; grows with history length
-    regime_tag: str    # "structured" | "noisy" | "transitioning" | "warmup"
+    regime_tag: str  # "structured" | "noisy" | "transitioning" | "warmup"
     raw: dict
 
 
@@ -65,7 +65,7 @@ class RMTDenoiser:
     Parameters
     ----------
     window : int
-        Rolling window length for the signal history matrix (T rows × N cols).
+        Rolling window length for the signal history matrix (T rows x N cols).
         Larger T reduces estimation noise but lags regime transitions.
     """
 
@@ -82,7 +82,7 @@ class RMTDenoiser:
         Parameters
         ----------
         signal_vectors : ndarray, shape (T, N)
-            Matrix of T observations × N signals.
+            Matrix of T observations x N signals.
 
         Returns
         -------
@@ -97,7 +97,7 @@ class RMTDenoiser:
         4. Replace noise eigenvalues (λ < λ⁺) with their mean.
         5. Reconstruct and normalise back to a correlation matrix.
         """
-        T, N = signal_vectors.shape
+        T, N = signal_vectors.shape  # noqa: N806
 
         if T < N + 2:
             # Underdetermined: return identity (all signals uncorrelated → equal weight)
@@ -106,15 +106,15 @@ class RMTDenoiser:
         # Guard: replace NaN/Inf with 0
         mat = np.nan_to_num(signal_vectors, nan=0.0, posinf=0.0, neginf=0.0)
 
-        # Correlation matrix (N×N)
-        C = np.corrcoef(mat.T)
-        C = np.nan_to_num(C, nan=0.0)
+        # Correlation matrix (N x N)
+        C = np.corrcoef(mat.T)  # noqa: N806
+        C = np.nan_to_num(C, nan=0.0)  # noqa: N806
 
         # Eigendecompose (eigh guarantees real + sorted eigenvalues)
         eigenvalues, eigenvectors = np.linalg.eigh(C)
 
         # Marchenko-Pastur bounds
-        q = N / T                            # ratio signals / time-points
+        q = N / T  # ratio signals / time-points
         lambda_plus = (1.0 + np.sqrt(q)) ** 2
 
         # Split noise vs signal eigenmodes
@@ -128,20 +128,25 @@ class RMTDenoiser:
             cleaned[noise_mask] = noise_avg
 
         # Reconstruct
-        C_clean = eigenvectors @ np.diag(cleaned) @ eigenvectors.T
+        C_clean = eigenvectors @ np.diag(cleaned) @ eigenvectors.T  # noqa: N806
 
         # Normalise to proper correlation matrix (diagonal = 1)
         d = np.sqrt(np.maximum(np.diag(C_clean), _EPS))
-        C_clean = C_clean / np.outer(d, d)
+        C_clean = C_clean / np.outer(d, d)  # noqa: N806
         np.fill_diagonal(C_clean, 1.0)
 
         n_signal_modes = int(signal_mask.sum())
         logger.debug(
             "RMT denoise: T=%d N=%d q=%.3f λ⁺=%.3f signal_modes=%d/%d",
-            T, N, q, lambda_plus, n_signal_modes, N,
+            T,
+            N,
+            q,
+            lambda_plus,
+            n_signal_modes,
+            N,
         )
 
-        return C_clean
+        return np.array(C_clean)
 
     def compute(self, signal_vector: dict) -> SignalValue:
         """
@@ -179,24 +184,29 @@ class RMTDenoiser:
                 value=0.0,
                 confidence=max(0.0, n_hist / MIN_SAMPLES_RMT) * 0.3,
                 regime_tag="warmup",
-                raw={"n_signal_modes": 0, "n_total": N_SIGNALS, "info_ratio": 0.0,
-                     "lambda_plus": 0.0, "q": 0.0},
+                raw={
+                    "n_signal_modes": 0,
+                    "n_total": N_SIGNALS,
+                    "info_ratio": 0.0,
+                    "lambda_plus": 0.0,
+                    "q": 0.0,
+                },
             )
 
         data = np.array(self._signal_history, dtype=float)
-        T, N = data.shape
+        T, N = data.shape  # noqa: N806
         data = np.nan_to_num(data, nan=0.0)
 
         # Compute eigenvalues of the normalised correlation matrix
-        C = np.corrcoef(data.T)
-        C = np.nan_to_num(C, nan=0.0)
+        C = np.corrcoef(data.T)  # noqa: N806
+        C = np.nan_to_num(C, nan=0.0)  # noqa: N806
         eigenvalues = np.linalg.eigvalsh(C)
 
         q = N / T
         lambda_plus = (1.0 + np.sqrt(q)) ** 2
 
         n_signal_modes = int(np.sum(eigenvalues > lambda_plus))
-        info_ratio = n_signal_modes / N          # fraction of signals carrying real info
+        info_ratio = n_signal_modes / N  # fraction of signals carrying real info
 
         self._info_ratio_history.append(info_ratio)
 
@@ -208,7 +218,7 @@ class RMTDenoiser:
         else:
             z = 0.0
 
-        # Clip to ±3σ and scale to roughly [-1, 1]
+        # Clip to +-3 sigma and scale to roughly [-1, 1]
         value = float(np.clip(z / 3.0, -1.0, 1.0))
 
         if value > 0.2:
@@ -228,7 +238,11 @@ class RMTDenoiser:
 
         logger.debug(
             "RMT signal: info_ratio=%.3f n_signal=%d/%d z=%.3f regime=%s",
-            info_ratio, n_signal_modes, N, z, regime_tag,
+            info_ratio,
+            n_signal_modes,
+            N,
+            z,
+            regime_tag,
         )
 
         return SignalValue(
@@ -262,7 +276,7 @@ class RMTDenoiser:
         dict : {signal_name: quality_score}
             quality_score ∈ [0, 1]; higher = more structure-carrying.
         """
-        C_clean = self.get_denoised_correlation()
+        C_clean = self.get_denoised_correlation()  # noqa: N806
         if C_clean is None:
             return {s: 1.0 for s in SIGNAL_NAMES}  # equal quality when no history
 
@@ -271,7 +285,7 @@ class RMTDenoiser:
         scores = {}
         for i, name in enumerate(SIGNAL_NAMES):
             off_diag = np.delete(C_clean[i], i)
-            score = float(np.sqrt(np.mean(off_diag ** 2)))
+            score = float(np.sqrt(np.mean(off_diag**2)))
             scores[name] = score
 
         # Normalise to [0, 1]
