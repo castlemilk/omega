@@ -203,7 +203,34 @@ class CrossAssetSignal:
       - high_correlation (> 0.7): risk-on/risk-off dominates
       - decorrelated (< 0.3):     asset-specific drivers active
       - divergent (negative):     potential pair trade opportunity
+
+    Output normalization: rolling z-score over last 50 values keeps the output
+    on the same scale as other signals (~[-0.5, 0.5]) and prevents this signal
+    from chronically dominating the adversarial disagreement detector.
     """
+
+    _HISTORY_LEN = 50
+    # Scale applied before z-score (maps raw [-1,1] to a reasonable range)
+    _OUTPUT_SCALE = 0.4
+
+    def __init__(self) -> None:
+        self._value_history: list[float] = []
+
+    def _normalize(self, value: float) -> float:
+        """Rolling z-score normalize; fall back to scale-only if < 10 samples."""
+        self._value_history.append(value)
+        if len(self._value_history) > self._HISTORY_LEN:
+            self._value_history.pop(0)
+        n = len(self._value_history)
+        if n < 10:
+            return max(-1.0, min(1.0, value * self._OUTPUT_SCALE))
+        mu = statistics.mean(self._value_history)
+        sigma = statistics.pstdev(self._value_history)
+        if sigma < 1e-6:
+            return 0.0
+        z = (value - mu) / sigma
+        # z-score clamped to [-3, 3] then scaled to [-1, 1]
+        return max(-1.0, min(1.0, z / 3.0))
 
     def compute(self, market_data: dict[str, Any]) -> SignalValue:
         btc = market_data.get("BTCUSDT", {})
@@ -247,27 +274,29 @@ class CrossAssetSignal:
 
         if avg_corr > 0.7:
             regime_tag = "high_correlation"
-            # In high-corr regime, follow BTC direction
+            # In high-corr regime, follow BTC direction (excess above floor only)
             btc_dir = 1.0 if btc_rets and btc_rets[-1] > 0 else -1.0
-            value = btc_dir * avg_corr
+            value = btc_dir * (avg_corr - 0.7) / 0.3  # maps [0.7,1.0] → [0,1]
             confidence = avg_corr
-        elif avg_corr < 0.3:
-            regime_tag = "decorrelated"
-            # Lead-lag signal takes precedence
-            value = lead_lag_signal
-            confidence = 0.4
         elif avg_corr < 0:
             regime_tag = "divergent"
             # Pairs trade opportunity — signal from lead-lag
             value = lead_lag_signal
             confidence = 0.5
+        elif avg_corr < 0.3:
+            regime_tag = "decorrelated"
+            # Lead-lag signal takes precedence
+            value = lead_lag_signal
+            confidence = 0.4
         else:
             regime_tag = "moderate_correlation"
             value = lead_lag_signal
             confidence = 0.3
 
+        normalized = self._normalize(value)
+        raw["normalized_value"] = normalized
         return SignalValue(
-            value=max(-1.0, min(1.0, value)),
+            value=normalized,
             confidence=max(0.0, min(1.0, confidence)),
             regime_tag=regime_tag,
             raw=raw,

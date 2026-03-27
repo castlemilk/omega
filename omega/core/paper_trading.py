@@ -701,10 +701,12 @@ class PaperTradingEngine:
 
         insert_sql = """
             INSERT INTO victoria_trades
-                (ts, sym, side, size, entry, exit_price, pnl, slippage, duration, recorded_at)
+                (ts, sym, side, size, entry, exit_price, pnl, slippage, duration, recorded_at,
+                 trade_id, closed_at)
             VALUES
                 (%(ts)s, %(sym)s, %(side)s, %(size)s, %(entry)s,
-                 %(exit_price)s, %(pnl)s, %(slippage)s, %(duration)s, %(recorded_at)s)
+                 %(exit_price)s, %(pnl)s, %(slippage)s, %(duration)s, %(recorded_at)s,
+                 %(trade_id)s, %(closed_at)s)
         """
         # UPDATE existing open row when a trade is being closed (exit_price populated)
         update_sql = """
@@ -756,6 +758,8 @@ class PaperTradingEngine:
                                 "slippage": float(trade.get("slippage", 0.0)),
                                 "duration": int(trade.get("duration", 0)),
                                 "recorded_at": float(__import__("time").time()),
+                                "trade_id": trade.get("trade_id"),
+                                "closed_at": trade.get("ts") if is_closed else None,
                             },
                         )
                 logger.debug("Persisted %d trade(s) to DB", len(trades))
