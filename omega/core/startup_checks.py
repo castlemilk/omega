@@ -25,11 +25,12 @@ from typing import Any
 
 logger = logging.getLogger("omega.core.startup_checks")
 
-# Minimum required env keys (startup fails if missing)
-_REQUIRED_ENV = ("DATABASE_URL",)
+# No required env keys — DATABASE_URL absence means in-memory mode (supported).
+_REQUIRED_ENV: tuple[str, ...] = ()
 
 # Optional env keys — missing triggers a warning, not failure
 _OPTIONAL_ENV = (
+    "DATABASE_URL",
     "CG_API_KEY",
     "FRED_API_KEY",
     "ANTHROPIC_API_KEY",

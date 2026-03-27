@@ -34,13 +34,14 @@ def test_env_check_warns_missing_optional_keys(monkeypatch):
     assert any("CG_API_KEY" in w for w in report.warnings)
 
 
-def test_env_check_fails_without_database_url(monkeypatch):
+def test_env_check_warns_without_database_url(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     checker = StartupChecker()
     report = StartupReport()
     checker._check_env(report)
-    assert report.env_ok is False
-    assert any("DATABASE_URL" in e for e in report.errors)
+    # Missing DATABASE_URL → in-memory mode (warning, not fatal)
+    assert report.env_ok is True
+    assert any("DATABASE_URL" in w for w in report.warnings)
 
 
 def test_run_returns_report(monkeypatch):
