@@ -803,17 +803,47 @@ class OmegaOrchestrator:
         log = logging.LoggerAdapter(logger, {"cycle_id": ctx.cycle_id, "cycle": cycle_num})
         log.debug("Cycle %d start (regime=%s, nodes=%d)", cycle_num, regime, len(active_ids))
 
-        # 3-7. Execute pipeline
-        poll_outputs = self._step_data_poll(ctx, result, log)
-        signal_data = self._step_signals(ctx, result, poll_outputs, log)
-        proposals = self._step_strategy(ctx, result, signal_data, log)
-        clean_proposals = self._step_adversarial(ctx, result, proposals, signal_data, log)
-        # Collect latest market_data from poll outputs for entry price resolution
+        # 3-7. Execute pipeline — each step is guarded so a crash skips forward
+        # instead of aborting the whole cycle.
+        poll_outputs: dict[str, Any] = {}
+        signal_data: dict[str, Any] = {}
+        proposals: list[dict[str, Any]] = []
+        clean_proposals: list[dict[str, Any]] = []
         cycle_market_data: dict[str, Any] = {}
-        for _po in poll_outputs.values():
-            if _po and _po.success and isinstance(_po.result, dict):
-                cycle_market_data.update(_po.result)
-        self._step_execute(ctx, result, clean_proposals, log, cycle_market_data)
+
+        try:
+            poll_outputs = self._step_data_poll(ctx, result, log)
+        except Exception as _exc:
+            result.error_count += 1
+            log.error("CYCLE STEP CRASH — data_poll: %s", _exc)
+
+        try:
+            signal_data = self._step_signals(ctx, result, poll_outputs, log)
+        except Exception as _exc:
+            result.error_count += 1
+            log.error("CYCLE STEP CRASH — signals: %s", _exc)
+
+        try:
+            proposals = self._step_strategy(ctx, result, signal_data, log)
+        except Exception as _exc:
+            result.error_count += 1
+            log.error("CYCLE STEP CRASH — strategy: %s", _exc)
+
+        try:
+            clean_proposals = self._step_adversarial(ctx, result, proposals, signal_data, log)
+        except Exception as _exc:
+            result.error_count += 1
+            log.error("CYCLE STEP CRASH — adversarial: %s", _exc)
+            clean_proposals = proposals  # fail-open: pass unvalidated proposals
+
+        try:
+            for _po in poll_outputs.values():
+                if _po and _po.success and isinstance(_po.result, dict):
+                    cycle_market_data.update(_po.result)
+            self._step_execute(ctx, result, clean_proposals, log, cycle_market_data)
+        except Exception as _exc:
+            result.error_count += 1
+            log.error("CYCLE STEP CRASH — execute: %s", _exc)
 
         # 8. Post-cycle
         result.duration_seconds = time.perf_counter() - t_start
