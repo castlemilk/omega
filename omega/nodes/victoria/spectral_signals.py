@@ -29,9 +29,9 @@ from omega.nodes.victoria.information_flow import SIGNAL_NAMES
 
 logger = logging.getLogger("omega.nodes.victoria.spectral_signals")
 
-_CORR_THRESHOLD = 0.3   # adjacency edge weight threshold
-_MIN_SAMPLES = 15        # minimum history before eigenvalue analysis is reliable
-_ZSCORE_WINDOW = 50      # rolling window for z-scoring the Fiedler value
+_CORR_THRESHOLD = 0.3  # adjacency edge weight threshold
+_MIN_SAMPLES = 15  # minimum history before eigenvalue analysis is reliable
+_ZSCORE_WINDOW = 50  # rolling window for z-scoring the Fiedler value
 _EPS = 1e-8
 
 
@@ -39,9 +39,9 @@ _EPS = 1e-8
 class SignalValue:
     """Mirrors the SignalValue contract used by the other advanced signal nodes."""
 
-    value: float        # z-scored Fiedler; >0 = consensus, <0 = stress/fragmentation
-    confidence: float   # 0..1; grows with history length
-    regime_tag: str     # "consensus" | "stress" | "fragmented" | "warmup"
+    value: float  # z-scored Fiedler; >0 = consensus, <0 = stress/fragmentation
+    confidence: float  # 0..1; grows with history length
+    regime_tag: str  # "consensus" | "stress" | "fragmented" | "warmup"
     raw: dict
 
 
@@ -143,11 +143,11 @@ class SpectralGraphSignal:
 
         # -- Regime tag ---------------------------------------------------------
         if n_components > 1:
-            regime_tag = "fragmented"          # graph is disconnected
+            regime_tag = "fragmented"  # graph is disconnected
         elif fiedler_zscore < -1.0:
-            regime_tag = "stress"              # Fiedler below average → fragmentation
+            regime_tag = "stress"  # Fiedler below average → fragmentation
         elif fiedler_zscore > 0.5:
-            regime_tag = "consensus"           # Fiedler above average → connectivity
+            regime_tag = "consensus"  # Fiedler above average → connectivity
         else:
             regime_tag = "neutral"
 

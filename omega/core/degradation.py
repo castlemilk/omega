@@ -12,6 +12,7 @@ Usage::
     reg.mark_healthy("binance")
     print(reg.health_summary())
 """
+
 from __future__ import annotations
 
 import logging

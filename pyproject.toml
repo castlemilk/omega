@@ -84,6 +84,12 @@ ignore = [
     "SIM108", # ternary operator — sometimes less readable
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# Black-Scholes / math notation uses uppercase single-letter vars (S, K, T, N, C, etc.)
+"omega/nodes/polymarket/vol_arb.py" = ["N803", "N806", "RUF002"]
+"omega/nodes/victoria/spectral_signals.py" = ["N806"]
+"omega/nodes/victoria/carry_signals.py" = ["RUF002"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["omega"]
 

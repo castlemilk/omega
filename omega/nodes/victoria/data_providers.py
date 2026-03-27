@@ -273,7 +273,9 @@ class CoinGeckoProvider(DataProvider):
                 )
                 return {}
         except Exception as exc:
-            _get_registry().mark_degraded("coingecko", reason=str(exc)[:80], fallback="cached_data")
+            _get_registry().mark_degraded(
+                "coingecko", reason=str(exc)[:80], fallback="cached_data"
+            )
             return {}
 
     def _fetch_raw(self, pairs: list[str]) -> dict[str, Any] | None:
@@ -470,7 +472,9 @@ class FearGreedProvider(DataProvider):
                 )
                 return {}
         except Exception as exc:
-            _get_registry().mark_degraded("fear_greed", reason=str(exc)[:80], fallback="neutral_0.5")
+            _get_registry().mark_degraded(
+                "fear_greed", reason=str(exc)[:80], fallback="neutral_0.5"
+            )
             return {}
 
     def _fetch_raw(self) -> dict[str, Any]:
@@ -552,9 +556,7 @@ class DefiLlamaProvider(DataProvider):
                 _get_registry().mark_healthy("defillama")
                 return result
             else:
-                _get_registry().mark_degraded(
-                    "defillama", reason="circuit open", fallback="skip"
-                )
+                _get_registry().mark_degraded("defillama", reason="circuit open", fallback="skip")
                 return {}
         except Exception as exc:
             _get_registry().mark_degraded("defillama", reason=str(exc)[:80], fallback="skip")

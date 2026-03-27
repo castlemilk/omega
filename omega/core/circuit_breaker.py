@@ -8,11 +8,13 @@ Usage::
     cb = CircuitBreaker("binance", failure_threshold=3, recovery_timeout=300)
     result = cb.call(provider.fetch, pairs)  # returns None when OPEN
 """
+
 from __future__ import annotations
 
 import logging
 import time
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 logger = logging.getLogger("omega.core.circuit_breaker")
 

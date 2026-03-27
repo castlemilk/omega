@@ -39,6 +39,7 @@ class MemoryQualityAssessor:
             try:
                 import psycopg
                 from psycopg.rows import dict_row
+
                 self._conn = psycopg.connect(self._db_url, row_factory=dict_row)
                 logger.debug("MemoryQualityAssessor connected to DB")
             except Exception as exc:
@@ -113,9 +114,7 @@ class MemoryQualityAssessor:
         if self._conn is None:
             return 0.0
         try:
-            row = self._conn.execute(
-                "SELECT AVG(quality) AS avg FROM memory_ratings"
-            ).fetchone()
+            row = self._conn.execute("SELECT AVG(quality) AS avg FROM memory_ratings").fetchone()
             return float(row["avg"]) if row and row["avg"] is not None else 0.0
         except Exception as exc:
             logger.debug("_avg_rating failed: %s", exc)
@@ -172,9 +171,7 @@ class MemoryQualityAssessor:
             return 0.0
         try:
             cutoff = time.time() - _STALE_THRESHOLD_SECONDS
-            total_row = self._conn.execute(
-                "SELECT COUNT(*) AS n FROM shared_memory"
-            ).fetchone()
+            total_row = self._conn.execute("SELECT COUNT(*) AS n FROM shared_memory").fetchone()
             total = int(total_row["n"]) if total_row else 0
             if total == 0:
                 return 0.0

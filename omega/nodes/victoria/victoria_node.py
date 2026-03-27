@@ -43,9 +43,11 @@ from omega.core.credentials import credentials
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.alt_data_signals import AltDataSignalProvider
+from omega.nodes.victoria.carry_signals import FundingCarrySignal
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
+from omega.nodes.victoria.pairs_signals import PairsTradingSignal
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.rmt_denoiser import RMTDenoiser
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
@@ -58,8 +60,8 @@ from omega.nodes.victoria.signals_advanced import (
     OrderFlowSignal,
     SentimentSignal,
 )
-from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
+from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 
@@ -81,9 +83,11 @@ SIGNAL_NAMES = [
     "onchain",
     "long_short_ratio",
     "btc_dominance",
-    "rmt_signal",       # RMT information-content signal (structured vs noisy market)
+    "rmt_signal",  # RMT information-content signal (structured vs noisy market)
     "alt_data",
-    "spectral_graph",   # Fiedler value of signal correlation graph (stress indicator)
+    "spectral_graph",  # Fiedler value of signal correlation graph (stress indicator)
+    "carry",  # Funding-rate carry / mean-reversion
+    "pairs",  # Cointegration pairs spread z-score
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -133,6 +137,8 @@ class VictoriaNode(Node):
         self._long_short_ratio = LongShortRatioSignal()
         self._btc_dominance = BTCDominanceSignal()
         self._alt_data = AltDataSignalProvider()
+        self._carry = FundingCarrySignal()
+        self._pairs = PairsTradingSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -916,6 +922,28 @@ class VictoriaNode(Node):
                 }
             except Exception as exc:
                 logger.debug("alt_data signal failed: %s", exc)
+
+            try:
+                carry_val = self._carry.compute(market_data)
+                signals["carry"] = {
+                    "value": carry_val.value,
+                    "confidence": carry_val.confidence,
+                    "regime_tag": carry_val.regime_tag,
+                    "raw": carry_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("carry signal failed: %s", exc)
+
+            try:
+                pairs_val = self._pairs.compute(market_data)
+                signals["pairs"] = {
+                    "value": pairs_val.value,
+                    "confidence": pairs_val.confidence,
+                    "regime_tag": pairs_val.regime_tag,
+                    "raw": pairs_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("pairs signal failed: %s", exc)
 
             # RMT information-content signal — uses the 10 core signals from
             # information_flow.SIGNAL_NAMES as its input vector.

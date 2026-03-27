@@ -16,6 +16,7 @@ Usage::
     if not report.ok:
         sys.exit(1)
 """
+
 from __future__ import annotations
 
 import logging
@@ -119,9 +120,7 @@ class StartupChecker:
     def _check_db(self, report: StartupReport) -> None:
         db_url = os.environ.get("DATABASE_URL", "")
         if not db_url:
-            report.warnings.append(
-                "DATABASE_URL not set — DB checks skipped, running in-memory"
-            )
+            report.warnings.append("DATABASE_URL not set — DB checks skipped, running in-memory")
             report.db_ok = False
             return
         try:

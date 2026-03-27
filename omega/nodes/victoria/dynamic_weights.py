@@ -107,9 +107,7 @@ class DynamicWeightAllocator:
         n_signals = len(self._signals)
         if n_signals > 0:
             equal_w = 1.0 / n_signals
-            profile.weights = {
-                s: 0.95 * w + 0.05 * equal_w for s, w in profile.weights.items()
-            }
+            profile.weights = {s: 0.95 * w + 0.05 * equal_w for s, w in profile.weights.items()}
             # Re-normalize after decay
             total = sum(profile.weights.values())
             if total > 0:
@@ -289,7 +287,9 @@ class DynamicWeightAllocator:
 
         # Recompute weights after EMA nudge
         profile.weights = self._compute_weights(profile)
-        logger.debug("RMT IC adjustment applied for regime=%s signals=%d", regime, len(quality_scores))
+        logger.debug(
+            "RMT IC adjustment applied for regime=%s signals=%d", regime, len(quality_scores)
+        )
 
     # ------------------------------------------------------------------ weight computation
 

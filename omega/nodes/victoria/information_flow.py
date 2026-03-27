@@ -37,9 +37,11 @@ _RMTDenoiserClass: type | None = None
 def _get_rmt_class() -> type:
     global _RMTDenoiserClass
     if _RMTDenoiserClass is None:
-        from omega.nodes.victoria.rmt_denoiser import RMTDenoiser  # noqa: PLC0415
+        from omega.nodes.victoria.rmt_denoiser import RMTDenoiser
+
         _RMTDenoiserClass = RMTDenoiser
     return _RMTDenoiserClass
+
 
 SIGNAL_NAMES = [
     "basic_signals",

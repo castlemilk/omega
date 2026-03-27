@@ -17,14 +17,13 @@ from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 import time
 import uuid
+import uuid as _uuid
 from typing import Any, ClassVar
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-
-import sqlite3
-import uuid as _uuid
 
 logger = logging.getLogger("omega.nodes.shared.semantic_memory")
 
@@ -345,11 +344,15 @@ class SemanticMemoryNode(Node):
                 logger.info("SemanticMemoryNode: using postgres MemoryKernel")
                 return self._mem_kernel
             except Exception as exc:
-                logger.warning("MemoryKernel (postgres) init failed: %s — falling back to SQLite", exc)
+                logger.warning(
+                    "MemoryKernel (postgres) init failed: %s — falling back to SQLite", exc
+                )
 
         # Fallback: write directly to SQLite victoria memory DB
         self._mem_kernel = _SqliteSemanticStore()
-        logger.info("SemanticMemoryNode: using SQLite fallback store at %s", _SqliteSemanticStore.DB_PATH)
+        logger.info(
+            "SemanticMemoryNode: using SQLite fallback store at %s", _SqliteSemanticStore.DB_PATH
+        )
         return self._mem_kernel
 
 
@@ -374,7 +377,6 @@ class _SqliteSemanticStore:
 
     def __init__(self) -> None:
         import os
-        import time as _time
 
         if not _SqliteSemanticStore.DB_PATH:
             root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
@@ -435,7 +437,15 @@ class _SqliteSemanticStore:
                 """UPDATE semantic_memories
                    SET content = ?, confidence = ?, evidence_count = ?, last_reinforced = ?, tags_json = ?
                    WHERE concept = ? AND namespace = ?""",
-                (content, new_conf, row["evidence_count"] + 1, now, json.dumps(tags), concept, namespace),
+                (
+                    content,
+                    new_conf,
+                    row["evidence_count"] + 1,
+                    now,
+                    json.dumps(tags),
+                    concept,
+                    namespace,
+                ),
             )
             self._conn.commit()
             logger.info("Flushed reinforced semantic pattern '%s' to SQLite", concept)

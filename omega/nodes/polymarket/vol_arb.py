@@ -40,7 +40,7 @@ import time
 import urllib.request
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from omega.core.actions import NodeAction
@@ -57,33 +57,40 @@ _HEADERS = {"User-Agent": USER_AGENT, "Accept": "application/json"}
 
 # ── Thresholds ─────────────────────────────────────────────────────────────────
 
-SPREAD_ARB_THRESHOLD: float = 1.01    # flag when YES+NO > 1.01 (1 % net profit)
-VOL_PREMIUM_THRESHOLD: float = 0.20   # flag when implied_vol > realized * 1.20
-REGIME_GUARD_PCT: float = 0.05        # skip vol-sell if BTC 1h move > 5 %
-REALIZED_VOL_DAYS: int = 30           # rolling window for realized vol
+SPREAD_ARB_THRESHOLD: float = 1.01  # flag when YES+NO > 1.01 (1 % net profit)
+VOL_PREMIUM_THRESHOLD: float = 0.20  # flag when implied_vol > realized * 1.20
+REGIME_GUARD_PCT: float = 0.05  # skip vol-sell if BTC 1h move > 5 %
+REALIZED_VOL_DAYS: int = 30  # rolling window for realized vol
 
 # ── Output path ────────────────────────────────────────────────────────────────
 
-_REPO_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..")
-)
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 OUTPUT_PATH = os.path.join(_REPO_ROOT, "data", "polymarket_vol_arb_opportunities.json")
 
 # ── Market keyword filters ─────────────────────────────────────────────────────
 
 _CRYPTO_KEYWORDS = [
-    "btc", "bitcoin", "eth ", "ethereum", "sol ", "solana",
-    "crypto", "above $", "below $", "will reach", "price target",
+    "btc",
+    "bitcoin",
+    "eth ",
+    "ethereum",
+    "sol ",
+    "solana",
+    "crypto",
+    "above $",
+    "below $",
+    "will reach",
+    "price target",
 ]
 _CRYPTO_BLOCKLIST = ["ethan", "bethlehem", " seth ", "meteorological"]
 
 _SYMBOL_MAP: dict[str, str] = {
     "bitcoin": "BTCUSDT",
-    "btc":     "BTCUSDT",
+    "btc": "BTCUSDT",
     "ethereum": "ETHUSDT",
-    "eth":     "ETHUSDT",
-    "solana":  "SOLUSDT",
-    "sol":     "SOLUSDT",
+    "eth": "ETHUSDT",
+    "solana": "SOLUSDT",
+    "sol": "SOLUSDT",
 }
 
 
@@ -96,15 +103,13 @@ class VolArbOpportunity:
     question: str
     yes_price: float
     no_price: float
-    arb_type: str               # "spread_arb" | "vol_arb" | "synthetic"
+    arb_type: str  # "spread_arb" | "vol_arb" | "synthetic"
     implied_vol: float | None = None
     realized_vol: float | None = None
     vol_premium_pct: float | None = None
     spread: float | None = None
     recommended_action: str = ""
-    detected_at: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    detected_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in self.__dict__.items()}
@@ -249,13 +254,17 @@ class VolArbNode(Node):
                     spread=round(net, 4),
                     recommended_action=(
                         f"SELL BOTH: YES at {yes_p:.2f} + NO at {no_p:.2f} = "
-                        f"{combined:.3f} collected vs $1.00 payout → +{net*100:.1f}¢ net"
+                        f"{combined:.3f} collected vs $1.00 payout → +{net * 100:.1f}¢ net"
                     ),
                 )
                 opportunities.append(opp)
                 logger.info(
                     "SPREAD ARB | %s | YES=%.3f NO=%.3f sum=%.3f net=+%.3f",
-                    mkt["question"][:70], yes_p, no_p, combined, net,
+                    mkt["question"][:70],
+                    yes_p,
+                    no_p,
+                    combined,
+                    net,
                 )
 
             # ── Mode 2: implied vol arb (skip during BTC breakout) ────────────
@@ -283,16 +292,19 @@ class VolArbNode(Node):
                                 vol_premium_pct=round(premium * 100, 1),
                                 recommended_action=(
                                     f"SELL {sell_side} at {sell_price:.2f}: "
-                                    f"implied vol {iv*100:.0f}%, realized vol {rv*100:.0f}%, "
-                                    f"+{premium*100:.0f}% vol premium"
+                                    f"implied vol {iv * 100:.0f}%, realized vol {rv * 100:.0f}%, "
+                                    f"+{premium * 100:.0f}% vol premium"
                                 ),
                             )
                             opportunities.append(opp)
                             logger.info(
                                 "VOL ARB | %s | IV=%.0f%% RV=%.0f%% premium=+%.0f%% — SELL %s at %.2f",
                                 mkt["question"][:70],
-                                iv * 100, rv * 100, premium * 100,
-                                sell_side, sell_price,
+                                iv * 100,
+                                rv * 100,
+                                premium * 100,
+                                sell_side,
+                                sell_price,
                             )
 
         # ── Synthetic fallback when Gamma API returns no matching markets ──────
@@ -314,14 +326,18 @@ class VolArbNode(Node):
             "in_breakout_regime": in_breakout,
             "realized_vols": {k: round(v, 4) for k, v in realized_vols.items()},
             "details": [o.to_dict() for o in opportunities],
-            "scanned_at": datetime.now(timezone.utc).isoformat(),
+            "scanned_at": datetime.now(UTC).isoformat(),
         }
 
         logger.info(
             "vol_arb scan: cycle=%d markets=%d opps=%d "
             "(spread=%d vol=%d synthetic=%d) breakout=%s",
-            cycle, len(markets), len(opportunities),
-            summary["spread_arbs"], summary["vol_arbs"], summary["synthetic"],
+            cycle,
+            len(markets),
+            len(opportunities),
+            summary["spread_arbs"],
+            summary["vol_arbs"],
+            summary["synthetic"],
             in_breakout,
         )
         return summary
@@ -338,10 +354,7 @@ class VolArbNode(Node):
         k = 1.0 / (1.0 + 0.2316419 * x)
         poly = k * (
             0.319381530
-            + k * (-0.356563782
-            + k * (1.781477937
-            + k * (-1.821255978
-            + k * 1.330274429)))
+            + k * (-0.356563782 + k * (1.781477937 + k * (-1.821255978 + k * 1.330274429)))
         )
         return 1.0 - (1.0 / math.sqrt(2 * math.pi)) * math.exp(-0.5 * x * x) * poly
 
@@ -428,10 +441,7 @@ class VolArbNode(Node):
         if cached is not None:
             return float(cached)
 
-        url = (
-            f"{BINANCE_API}/klines"
-            f"?symbol={symbol}&interval=1d&limit={REALIZED_VOL_DAYS + 1}"
-        )
+        url = f"{BINANCE_API}/klines?symbol={symbol}&interval=1d&limit={REALIZED_VOL_DAYS + 1}"
         try:
             req = urllib.request.Request(url, headers=_HEADERS)
             with urllib.request.urlopen(req, timeout=10) as resp:
@@ -445,9 +455,7 @@ class VolArbNode(Node):
 
         closes = [float(k[4]) for k in raw]
         log_rets = [
-            math.log(closes[i] / closes[i - 1])
-            for i in range(1, len(closes))
-            if closes[i - 1] > 0
+            math.log(closes[i] / closes[i - 1]) for i in range(1, len(closes)) if closes[i - 1] > 0
         ]
         if len(log_rets) < 2:
             return None
@@ -491,7 +499,9 @@ class VolArbNode(Node):
         if is_breakout:
             logger.info(
                 "REGIME GUARD: %s 1h move=%.1f%% > %.0f%% — skipping vol-sell signals",
-                symbol, pct * 100, REGIME_GUARD_PCT * 100,
+                symbol,
+                pct * 100,
+                REGIME_GUARD_PCT * 100,
             )
 
         self._set_cached(cache_key, is_breakout)
@@ -511,8 +521,7 @@ class VolArbNode(Node):
 
         for page in range(5):
             url = (
-                f"{GAMMA_API_BASE}/markets"
-                f"?active=true&closed=false&limit=100&offset={page * 100}"
+                f"{GAMMA_API_BASE}/markets?active=true&closed=false&limit=100&offset={page * 100}"
             )
             try:
                 req = urllib.request.Request(url, headers=_HEADERS)
@@ -613,10 +622,10 @@ class VolArbNode(Node):
         """
         opps: list[VolArbOpportunity] = []
         scenarios = [
-            ("BTCUSDT", 1.05,  7 / 365.0, 0.55,  "Will BTC be above {K:,.0f} by next week?"),
-            ("BTCUSDT", 0.95,  7 / 365.0, 0.52,  "Will BTC stay above {K:,.0f} through April?"),
-            ("ETHUSDT", 1.10, 14 / 365.0, 0.45,  "Will ETH exceed {K:,.0f} before end of month?"),
-            ("SOLUSDT", 0.90,  5 / 365.0, 0.58,  "Will SOL drop below {K:,.0f} this week?"),
+            ("BTCUSDT", 1.05, 7 / 365.0, 0.55, "Will BTC be above {K:,.0f} by next week?"),
+            ("BTCUSDT", 0.95, 7 / 365.0, 0.52, "Will BTC stay above {K:,.0f} through April?"),
+            ("ETHUSDT", 1.10, 14 / 365.0, 0.45, "Will ETH exceed {K:,.0f} before end of month?"),
+            ("SOLUSDT", 0.90, 5 / 365.0, 0.58, "Will SOL drop below {K:,.0f} this week?"),
         ]
 
         for symbol, k_mult, T, yes_p, q_tmpl in scenarios:
@@ -647,23 +656,26 @@ class VolArbNode(Node):
                         vol_premium_pct=round(premium * 100, 1),
                         recommended_action=(
                             f"[SYNTHETIC] SELL {sell_side} at {sell_price:.2f}: "
-                            f"implied vol {iv*100:.0f}%, realized vol {rv*100:.0f}%, "
-                            f"+{premium*100:.0f}% vol premium | S={S:,.0f} K={K:,.0f} T={T*365:.0f}d"
+                            f"implied vol {iv * 100:.0f}%, realized vol {rv * 100:.0f}%, "
+                            f"+{premium * 100:.0f}% vol premium | S={S:,.0f} K={K:,.0f} T={T * 365:.0f}d"
                         ),
                     )
                     opps.append(opp)
                     logger.info(
                         "SYNTHETIC VOL ARB | %s | S=%.0f K=%.0f IV=%.0f%% RV=%.0f%% +%.0f%%",
-                        symbol, S, K, iv * 100, rv * 100, premium * 100,
+                        symbol,
+                        S,
+                        K,
+                        iv * 100,
+                        rv * 100,
+                        premium * 100,
                     )
 
         return opps
 
     # ── Persistence ───────────────────────────────────────────────────────────
 
-    def _save_opportunities(
-        self, opps: list[VolArbOpportunity], cycle: int
-    ) -> None:
+    def _save_opportunities(self, opps: list[VolArbOpportunity], cycle: int) -> None:
         if not opps:
             return
 
@@ -727,9 +739,9 @@ def _parse_strike(question: str) -> float | None:
     Handles: $70,000 | $70K | 70000 USD | above 70000 | will reach 95000
     """
     patterns = [
-        r'\$([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)([kK]?)',
-        r'([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:usd|usdt|dollars?)\b',
-        r'(?:above|below|reach|hit|exceed|surpass|cross)\s+\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)([kK]?)',
+        r"\$([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)([kK]?)",
+        r"([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:usd|usdt|dollars?)\b",
+        r"(?:above|below|reach|hit|exceed|surpass|cross)\s+\$?([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]+)?)([kK]?)",
     ]
     for pat in patterns:
         m = re.search(pat, question, re.IGNORECASE)

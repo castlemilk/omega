@@ -13,8 +13,8 @@ Usage::
 from __future__ import annotations
 
 import contextlib
-import os
 import logging
+import os
 import signal
 import time
 from typing import Any
@@ -157,6 +157,7 @@ class OmegaRunner:
         )
 
         from omega.core.intelligence_metrics import IntelligenceMetricsCollector
+
         _db_url = os.environ.get("DATABASE_URL")
         _intel_collector = IntelligenceMetricsCollector(db_url=_db_url) if _db_url else None
         if _intel_collector is not None and _intel_collector._conn is None:
