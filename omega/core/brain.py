@@ -846,12 +846,12 @@ def create_brain(config: BrainConfig | None = None) -> BrainAdapter:
 
 
 def _auto_detect_provider() -> str:
-    """Return the best available provider based on env vars."""
-    if os.environ.get("ANTHROPIC_API_KEY"):
+    """Return the best available provider based on env vars or .env file."""
+    if credentials.get("ANTHROPIC_API_KEY"):
         return "anthropic"
-    if os.environ.get("OPENAI_API_KEY"):
+    if credentials.get("OPENAI_API_KEY"):
         return "openai"
-    if os.environ.get("DEEPSEEK_API_KEY"):
+    if credentials.get("DEEPSEEK_API_KEY"):
         return "deepseek"
     if os.environ.get("OMEGA_BRAIN_CLI_COMMAND") or os.environ.get("OMEGA_BRAIN_CLI_PRESET"):
         return "cli"

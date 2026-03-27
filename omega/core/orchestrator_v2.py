@@ -54,6 +54,7 @@ from omega.core.metrics_exporter import MetricsExporter
 from omega.core.node import Node, NodeInput, NodeOutput
 from omega.core.regime_handler import RegimeTransitionHandler
 from omega.core.registry import NodeRegistry
+from omega.nodes.shared.semantic_memory import SemanticMemoryNode
 
 logger = logging.getLogger("omega.orchestrator_v2")
 
@@ -244,6 +245,7 @@ class OmegaOrchestrator:
         self._running: bool = False
         self._tracer: Any = None
         self._store: Any = None
+        self._semantic_memory = SemanticMemoryNode(review_interval=50)
 
         # Debate gate learner — learns optimal block threshold from outcomes
         self._gate_learner = DebateGateLearner(
@@ -1436,6 +1438,38 @@ class OmegaOrchestrator:
                             nid,
                             transition.new_level.value,
                         )
+
+        # Direct improve() trigger every 10 cycles — fires for all active nodes,
+        # bypassing TPE gating so nodes can self-upgrade internal heuristics
+        # (e.g. SignalGenerationNode unlocks RSI/MACD/Bollinger when called here).
+        if cycle_num > 0 and cycle_num % 10 == 0:
+            cycle_metrics = dict(result.metrics)
+            for node in self.active_nodes:
+                if hasattr(node, "improve"):
+                    try:
+                        node.improve(cycle_metrics)
+                    except Exception as exc:
+                        log.warning("Direct improve() failed for %s: %s", node, exc)
+
+        # Semantic memory consolidation every 50 cycles — distils episodic
+        # memories into long-term patterns (LLM-assisted or rule-based fallback).
+        if cycle_num > 0 and cycle_num % 50 == 0:
+            try:
+                out = self._semantic_memory.execute(
+                    NodeInput(
+                        action="build_semantic",
+                        parameters={},
+                        context={"cycle": cycle_num},
+                    )
+                )
+                if out.success and isinstance(out.result, dict):
+                    log.info(
+                        "Semantic memory consolidation cycle=%d: %s",
+                        cycle_num,
+                        out.result,
+                    )
+            except Exception as exc:
+                log.warning("Semantic memory consolidation failed: %s", exc)
 
         # Emit Prometheus metrics
         if self._metrics:
