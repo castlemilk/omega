@@ -1,0 +1,103 @@
+{
+  "version": "v10",
+  "run": {
+    "date": "2026-03-27T02:13:40.444882+00:00",
+    "cycles": 100,
+    "sleep_seconds": 30.0,
+    "elapsed_s": 3652.3,
+    "avg_cycle_s": 36.523,
+    "cg_key_used": true,
+    "db_url_used": true
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 0,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 100
+  },
+  "trades": {
+    "total_closed": 183,
+    "long_trades": 51,
+    "short_trades": 132,
+    "open_positions": 9,
+    "win_rate": 0.3005,
+    "total_pnl_usd": -170.08,
+    "realised_pnl_engine": -170.08,
+    "gross_profit": 481.65,
+    "gross_loss": 651.73,
+    "profit_factor": 0.739
+  },
+  "per_symbol": {
+    "LINKUSDT": {
+      "trades": 24,
+      "longs": 16,
+      "shorts": 8,
+      "pnl": -201.11,
+      "win_rate": 0.042
+    },
+    "ETHUSDT": {
+      "trades": 18,
+      "longs": 18,
+      "shorts": 0,
+      "pnl": 73.36,
+      "win_rate": 0.611
+    },
+    "SOLUSDT": {
+      "trades": 17,
+      "longs": 17,
+      "shorts": 0,
+      "pnl": 57.67,
+      "win_rate": 0.647
+    },
+    "BTCUSDT": {
+      "trades": 19,
+      "longs": 0,
+      "shorts": 19,
+      "pnl": -30.82,
+      "win_rate": 0.316
+    },
+    "XRPUSDT": {
+      "trades": 16,
+      "longs": 0,
+      "shorts": 16,
+      "pnl": -25.37,
+      "win_rate": 0.375
+    },
+    "DOTUSDT": {
+      "trades": 18,
+      "longs": 0,
+      "shorts": 18,
+      "pnl": -19.45,
+      "win_rate": 0.167
+    },
+    "BNBUSDT": {
+      "trades": 17,
+      "longs": 0,
+      "shorts": 17,
+      "pnl": -10.41,
+      "win_rate": 0.294
+    },
+    "ADAUSDT": {
+      "trades": 18,
+      "longs": 0,
+      "shorts": 18,
+      "pnl": -8.41,
+      "win_rate": 0.333
+    },
+    "AVAXUSDT": {
+      "trades": 18,
+      "longs": 0,
+      "shorts": 18,
+      "pnl": -5.56,
+      "win_rate": 0.333
+    },
+    "MATICUSDT": {
+      "trades": 18,
+      "longs": 0,
+      "shorts": 18,
+      "pnl": 0.0,
+      "win_rate": 0.0
+    }
+  }
+}
