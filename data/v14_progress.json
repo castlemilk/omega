@@ -118,5 +118,50 @@
     "sit_out_reason": "normal",
     "avg_cycle_time_s": 35.462,
     "elapsed_s": 2482.3
+  },
+  {
+    "cycle": 80,
+    "timestamp": "2026-03-27T09:57:22.830311+00:00",
+    "trades_open": 9,
+    "trades_closed": 130,
+    "total_pnl": 221.74,
+    "win_rate": 0.3692,
+    "regime": "unknown",
+    "improve_calls": 1,
+    "semantic_patterns_db": 0,
+    "data_freshness_min": 0.0,
+    "sit_out_reason": "normal",
+    "avg_cycle_time_s": 35.498,
+    "elapsed_s": 2839.8
+  },
+  {
+    "cycle": 90,
+    "timestamp": "2026-03-27T10:03:21.472604+00:00",
+    "trades_open": 8,
+    "trades_closed": 144,
+    "total_pnl": 256.77,
+    "win_rate": 0.3958,
+    "regime": "unknown",
+    "improve_calls": 1,
+    "semantic_patterns_db": 0,
+    "data_freshness_min": 0.0,
+    "sit_out_reason": "normal",
+    "avg_cycle_time_s": 35.539,
+    "elapsed_s": 3198.5
+  },
+  {
+    "cycle": 100,
+    "timestamp": "2026-03-27T10:09:16.806403+00:00",
+    "trades_open": 7,
+    "trades_closed": 161,
+    "total_pnl": 298.71,
+    "win_rate": 0.3789,
+    "regime": "unknown",
+    "improve_calls": 1,
+    "semantic_patterns_db": 0,
+    "data_freshness_min": 0.0,
+    "sit_out_reason": "normal",
+    "avg_cycle_time_s": 35.538,
+    "elapsed_s": 3553.8
   }
 ]

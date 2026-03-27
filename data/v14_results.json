@@ -1,0 +1,43 @@
+{
+  "version": "v14",
+  "fixes_applied": [
+    "meta_model: n_estimators=50, min_samples_leaf=10, max_features=sqrt",
+    "dynamic_weights: IC weight decay 0.95*w + 0.05*(1/N)",
+    "semantic_memory: SQLite fallback store, store_semantic logging upgraded",
+    "orchestrator: IMPROVEMENT_INTERVAL=10, scheduler auto-register",
+    "conviction_distribution: included in all _construct_portfolio return paths"
+  ],
+  "run": {
+    "date": "2026-03-27T10:09:16.806923+00:00",
+    "cycles": 100,
+    "sleep_seconds": 30.0,
+    "elapsed_s": 3553.8,
+    "avg_cycle_s": 35.538,
+    "cg_key_used": true,
+    "db_url_used": false
+  },
+  "intelligence": {
+    "improve_calls": 1,
+    "semantic_patterns_db": 0,
+    "semantic_patterns_node": 0
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 0,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 100
+  },
+  "trades": {
+    "total_closed": 161,
+    "long_trades": 21,
+    "short_trades": 140,
+    "open_positions": 7,
+    "win_rate": 0.3789,
+    "total_pnl_usd": 298.71,
+    "realised_pnl_engine": 298.71,
+    "gross_profit": 883.37,
+    "gross_loss": 584.66,
+    "profit_factor": 1.511
+  }
+}
