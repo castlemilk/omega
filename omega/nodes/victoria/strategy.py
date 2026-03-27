@@ -14,6 +14,7 @@ import logging
 import math
 import time
 import uuid
+from datetime import UTC, datetime
 from enum import IntEnum
 from typing import Any
 
@@ -21,6 +22,10 @@ from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
+
+# Symbols excluded from trading (still used as regime/signal indicators).
+# BTC has a 27.8% win rate — used only as a market regime indicator.
+_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
 
 
 # ---------------------------------------------------------------------------
@@ -517,7 +522,9 @@ class StrategyNode(Node):
             elif _regime_hmm == "sideways":
                 _regime_confidence = float(_regime_probs[2])
 
-        _regime_confidence_threshold = 0.6
+        # Lowered from 0.60 → 0.40: block longs at lower bear confidence to prevent
+        # SOL/ETH longs from leaking through in weak bear regimes.
+        _regime_confidence_threshold = 0.40
         _block_longs = _regime_hmm == "bear" and _regime_confidence >= _regime_confidence_threshold
         _block_shorts = (
             _regime_hmm == "bull" and _regime_confidence >= _regime_confidence_threshold
@@ -555,6 +562,17 @@ class StrategyNode(Node):
         else:
             self._normal_trade_count += 1
 
+        # --- Time-of-day filter ---
+        # Based on PnL data: 09h UTC shorts +60.9% wr; 23h UTC shorts 28.3% wr (-$215/day).
+        # Reduce position size 50% during the US-close reversal window (22-00h UTC).
+        _hour_utc = datetime.now(UTC).hour
+        if _hour_utc in {22, 23, 0}:
+            sit_out_size_mult *= 0.5
+            logger.info(
+                "Time filter: %02dh UTC (US-close reversal window) — position size reduced 50%%",
+                _hour_utc,
+            )
+
         # Screen tickers that have non-HOLD conviction above signal threshold
         # and apply the full conviction filter stack.
         long_candidates: dict[str, Any] = {}
@@ -567,6 +585,10 @@ class StrategyNode(Node):
 
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
+                continue
+            # Skip blacklisted symbols — BTC is a regime indicator, not a trading vehicle
+            if ticker in _TRADING_BLACKLIST:
+                logger.debug("Skipping %s (trading blacklist)", ticker)
                 continue
             c = convictions.get(ticker, ConvictionLevel.HOLD)
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
