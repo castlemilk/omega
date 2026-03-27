@@ -117,6 +117,12 @@ class StrategyNode(Node):
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
 
+        # --- Sit-out filter counters ---
+        self._sit_out_regime_count: int = 0   # uncertain regime → 75% size reduction
+        self._sit_out_vol_low_count: int = 0  # dead-calm vol → full sit-out
+        self._sit_out_vol_high_count: int = 0 # chaotic vol → 50% size reduction
+        self._normal_trade_count: int = 0     # cycles with full-size trading
+
     # ------------------------------------------------------------------ Node interface
 
     def get_state(self) -> NodeState:
@@ -143,6 +149,10 @@ class StrategyNode(Node):
                 "agreement_ratio_threshold": self._agreement_ratio_threshold,
                 "weighted_conviction_threshold": self._weighted_conviction_threshold,
                 "signal_ic_count": len(self._signal_ics),
+                "sit_out_regime": self._sit_out_regime_count,
+                "sit_out_vol_low": self._sit_out_vol_low_count,
+                "sit_out_vol_high": self._sit_out_vol_high_count,
+                "normal_trade_cycles": self._normal_trade_count,
             },
         )
 
@@ -238,6 +248,10 @@ class StrategyNode(Node):
             "proposals_generated": float(self._proposals_generated),
             "proposals_filtered": float(self._proposals_filtered),
             "filter_rate": self._filter_rate(),
+            "sit_out_regime": float(self._sit_out_regime_count),
+            "sit_out_vol_low": float(self._sit_out_vol_low_count),
+            "sit_out_vol_high": float(self._sit_out_vol_high_count),
+            "normal_trade_cycles": float(self._normal_trade_count),
         }
 
     def update_signal_ics(self, ics: dict[str, float]) -> None:
@@ -383,6 +397,85 @@ class StrategyNode(Node):
 
         return True, "pass"
 
+    # ------------------------------------------------------------------ sit-out filters
+
+    def _vol_percentile_rank(self, prices: list[float], window: int = 20, lookback: int = 100) -> float:
+        """
+        Return the percentile rank (0–1) of the current window vol within the
+        last `lookback` candles.  Returns 0.5 (neutral) if insufficient data.
+        """
+        if len(prices) < lookback + 1:
+            return 0.5
+
+        obs: list[float] = []
+        start = max(window + 1, len(prices) - lookback)
+        for i in range(start, len(prices)):
+            rets = [
+                (prices[j] - prices[j - 1]) / prices[j - 1]
+                for j in range(i - window + 1, i + 1)
+                if prices[j - 1] != 0
+            ]
+            if len(rets) < 2:
+                continue
+            mean = sum(rets) / len(rets)
+            var = sum((r - mean) ** 2 for r in rets) / (len(rets) - 1)
+            obs.append(math.sqrt(var))
+
+        if not obs:
+            return 0.5
+
+        current_vol = obs[-1]
+        return sum(1 for v in obs if v <= current_vol) / len(obs)
+
+    def _check_sit_out(
+        self, signals: dict[str, Any], market_data: dict[str, Any]
+    ) -> tuple[str, float]:
+        """
+        Check whether market conditions warrant reducing or skipping trades.
+
+        Returns (reason, size_multiplier):
+          "vol_low"          → 0.0   (dead-calm market, sit out entirely)
+          "regime_uncertain" → 0.25  (no dominant regime, 75% size reduction)
+          "vol_high"         → 0.50  (chaotic market, 50% size reduction)
+          "normal"           → 1.0
+
+        Vol check takes priority; extreme vol is more dangerous than regime uncertainty.
+        """
+        # ── Volatility-based check ──────────────────────────────────────────
+        vol_rank: float | None = None
+        for _ticker, data in market_data.items():
+            if not isinstance(data, dict):
+                continue
+            prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
+            if len(prices) >= 101:
+                vol_rank = self._vol_percentile_rank(prices, window=20, lookback=100)
+                break
+
+        if vol_rank is not None:
+            if vol_rank < 0.20:
+                return "vol_low", 0.0
+            if vol_rank > 0.80:
+                return "vol_high", 0.50
+
+        # ── Regime uncertainty check ────────────────────────────────────────
+        regime_probs: list = signals.get("_regime_probs", [])
+        if regime_probs and len(regime_probs) >= 3:
+            max_prob = max(float(p) for p in regime_probs[:3])
+            if max_prob < 0.50:
+                bull_p = float(regime_probs[0])
+                bear_p = float(regime_probs[1])
+                side_p = float(regime_probs[2])
+                logger.info(
+                    "Market uncertain (bull %.0f%%, bear %.0f%%, sideways %.0f%%) "
+                    "— reducing position size 75%%",
+                    bull_p * 100,
+                    bear_p * 100,
+                    side_p * 100,
+                )
+                return "regime_uncertain", 0.25
+
+        return "normal", 1.0
+
     # ------------------------------------------------------------------ portfolio construction
 
     def _construct_portfolio(
@@ -399,8 +492,11 @@ class StrategyNode(Node):
         current_cycle = self._execution_count
 
         # Compute conviction for every ticker with a composite score
+        # Skip metadata keys (_regime_probs, _regime_hmm, etc.)
         convictions: dict[str, ConvictionLevel] = {}
         for ticker, sig in signals.items():
+            if ticker.startswith("_") or not isinstance(sig, dict):
+                continue
             composite = sig.get("composite")
             if composite is not None:
                 convictions[ticker] = score_to_conviction(float(composite))
@@ -423,6 +519,38 @@ class StrategyNode(Node):
         _block_longs = _regime_hmm == "bear" and _regime_confidence >= _REGIME_CONFIDENCE_THRESHOLD
         _block_shorts = _regime_hmm == "bull" and _regime_confidence >= _REGIME_CONFIDENCE_THRESHOLD
 
+        # --- Sit-out filter ---
+        sit_out_reason, sit_out_size_mult = self._check_sit_out(signals, market_data)
+        if sit_out_reason == "vol_low":
+            self._sit_out_vol_low_count += 1
+            logger.info("Market dead-calm (vol < 20th pct) — sitting out entirely this cycle")
+            return {
+                "weights": {},
+                "positions": 0,
+                "method": self._weighting,
+                "sit_out": sit_out_reason,
+                "sit_out_size_mult": 0.0,
+                "convictions": {t: c.name for t, c in convictions.items()},
+                "proposals_generated": 0,
+                "proposals_filtered": 0,
+                "regime_blocked_longs": 0,
+                "regime_blocked_shorts": 0,
+                "regime_filter": {"regime": _regime_hmm, "confidence": _regime_confidence},
+                "filter_stats": {
+                    "generated": self._proposals_generated,
+                    "filtered": self._proposals_filtered,
+                    "filter_rate": self._filter_rate(),
+                },
+            }
+        elif sit_out_reason == "vol_high":
+            self._sit_out_vol_high_count += 1
+            logger.info("Market chaotic (vol > 80th pct) — reducing position size 50%%")
+        elif sit_out_reason == "regime_uncertain":
+            self._sit_out_regime_count += 1
+            # log message already emitted inside _check_sit_out
+        else:
+            self._normal_trade_count += 1
+
         # Screen tickers that have non-HOLD conviction above signal threshold
         # and apply the full conviction filter stack.
         long_candidates: dict[str, Any] = {}
@@ -434,6 +562,8 @@ class StrategyNode(Node):
         short_candidates: dict[str, Any] = {}
 
         for ticker, sig in signals.items():
+            if ticker.startswith("_") or not isinstance(sig, dict):
+                continue
             c = convictions.get(ticker, ConvictionLevel.HOLD)
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
                 if sig.get("composite", 0.0) <= self._signal_threshold:
@@ -559,10 +689,12 @@ class StrategyNode(Node):
         for ticker, w in short_base.items():
             raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker])
 
-        # Normalise so total |weight| = 1.0
+        # Normalise so total |weight| = 1.0, then apply sit-out size multiplier
         total_w = sum(abs(v) for v in raw_weights.values())
         weights: dict[str, float] = (
-            {ticker: v / total_w for ticker, v in raw_weights.items()} if total_w > 0 else {}
+            {ticker: v / total_w * sit_out_size_mult for ticker, v in raw_weights.items()}
+            if total_w > 0
+            else {}
         )
 
         # Conviction distribution summary for metrics
@@ -582,6 +714,8 @@ class StrategyNode(Node):
             "positions": len(weights),
             "method": self._weighting,
             "signal_threshold": self._signal_threshold,
+            "sit_out": sit_out_reason,
+            "sit_out_size_mult": sit_out_size_mult,
             "convictions": {t: convictions[t].name for t in weights},
             "conviction_distribution": conviction_dist,
             "top_picks": self._rank_signals(signals)[:5],

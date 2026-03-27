@@ -1077,6 +1077,18 @@ class VictoriaNode(Node):
 
         flat_signals: dict[str, Any] = adapt_signals(signals) if isinstance(signals, dict) else {}
 
+        # Re-inject metadata keys (_regime_probs, _regime_hmm, etc.) stripped by adapt_signals.
+        # Handles both raw VictoriaNode format (top-level _keys) and orchestrator
+        # format ({node_id: result_dict}, where _keys live one level deep).
+        if isinstance(signals, dict):
+            for _k, _v in signals.items():
+                if _k.startswith("_"):
+                    flat_signals[_k] = _v
+                elif isinstance(_v, dict):
+                    for _inner_k, _inner_v in _v.items():
+                        if _inner_k.startswith("_"):
+                            flat_signals[_inner_k] = _inner_v
+
         strategy_inp = NodeInput(
             action=NodeAction.CONSTRUCT_PORTFOLIO.value,
             parameters={
