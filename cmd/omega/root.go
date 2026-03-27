@@ -24,7 +24,7 @@ var (
 )
 
 func init() {
-	cobra.OnInitialize(initConfig)
+	cobra.OnInitialize(loadDotEnv, initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default: omega.yml)")
 	rootCmd.PersistentFlags().StringVar(&apiURL, "api-url", "http://localhost:8080", "Omega API base URL")
@@ -34,9 +34,11 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 
-	rootCmd.AddCommand(runCmd)    // omega run  — start full stack
-	rootCmd.AddCommand(cycleCmd)  // omega cycle — orchestrator heartbeat loop
-	rootCmd.AddCommand(statusCmd)
+	rootCmd.AddCommand(runCmd)      // omega run     — start full stack
+	rootCmd.AddCommand(cycleCmd)    // omega cycle   — orchestrator heartbeat loop
+	rootCmd.AddCommand(statusCmd)   // omega status  — system + trade stats
+	rootCmd.AddCommand(trainCmd)    // omega train   — Python bridge training cycles
+	rootCmd.AddCommand(signalsCmd)  // omega signals — list signals by IC
 	rootCmd.AddCommand(backtestCmd)
 	rootCmd.AddCommand(challengesCmd)
 	rootCmd.AddCommand(nodesCmd)

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,6 +12,8 @@ import (
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/spf13/cobra"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 var (
@@ -22,7 +25,7 @@ var (
 
 var statusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show system health, node states, and alignment decisions",
+	Short: "Show system health, trade stats, signal health, and memory count",
 	RunE:  showStatus,
 }
 
@@ -138,6 +141,9 @@ func printStatus() error {
 		}
 	}
 
+	// Postgres-sourced stats (graceful fallback if DB not available).
+	printDBStatus()
+
 	return nil
 }
 
@@ -192,4 +198,86 @@ func printIntelligenceMetrics(client omegav1connect.OrchestratorServiceClient) e
 		}
 	}
 	return nil
+}
+
+// printDBStatus queries Postgres for Victoria trade stats, regime, signal
+// health, and memory count. Silently skips each section on error.
+func printDBStatus() {
+	sqlDB, vdb, err := openVictoriaDB()
+	if err != nil {
+		fmt.Printf("\n=== Victoria / DB Stats ===\n")
+		fmt.Printf("  (postgres unavailable: %v)\n", err)
+		return
+	}
+	defer sqlDB.Close() //nolint:errcheck,gosec
+
+	fmt.Printf("\n=== Victoria Trade Stats ===\n")
+	if pnl, err := vdb.GetPnL(); err == nil {
+		fmt.Printf("  %-20s  $%.2f\n", "Realised PnL", pnl.RealisedPnL)
+		fmt.Printf("  %-20s  $%.2f\n", "Unrealised PnL", pnl.UnrealisedPnL)
+		fmt.Printf("  %-20s  %.1f%%\n", "Win Rate", pnl.WinRate*100)
+		fmt.Printf("  %-20s  %.3f\n", "Sharpe", pnl.Sharpe)
+		fmt.Printf("  %-20s  %.1f%%\n", "Max Drawdown", pnl.MaxDD*100)
+		fmt.Printf("  %-20s  %.1f%%\n", "Ann. Return", pnl.AnnReturn*100)
+	}
+	if trades, err := vdb.GetTrades("", "", 9999); err == nil {
+		wins := 0
+		for _, t := range trades {
+			if t.Pnl > 0 {
+				wins++
+			}
+		}
+		fmt.Printf("  %-20s  %d\n", "Total Trades", len(trades))
+		if len(trades) > 0 {
+			fmt.Printf("  %-20s  %d (%.1f%%)\n", "Winning Trades", wins, float64(wins)/float64(len(trades))*100)
+		}
+	}
+
+	fmt.Printf("\n=== Regime Detection ===\n")
+	if rm, err := vdb.GetRiskMetrics(); err == nil && len(rm.Regimes) > 0 {
+		fmt.Printf("  %-20s  %-12s  %-8s  %-8s  %s\n", "Regime", "Sharpe", "Return", "Trades", "Pct")
+		fmt.Printf("  %s\n", "────────────────────────────────────────────────────────────")
+		for i, r := range rm.Regimes {
+			marker := "  "
+			if i == rm.CurrentRegimeIdx {
+				marker = "▶ "
+			}
+			fmt.Printf("  %s%-18s  %-12.3f  %-8.1f%%  %-8d  %.1f%%\n",
+				marker, r.Name, r.Sharpe, r.Ret*100, r.Trades, r.Pct*100)
+		}
+	} else {
+		fmt.Printf("  (no regime data)\n")
+	}
+
+	fmt.Printf("\n=== Signal Health ===\n")
+	if signals, err := vdb.GetSignals(); err == nil {
+		active, zero := 0, 0
+		fmt.Printf("  %-30s  %-8s  %-8s  %s\n", "Signal", "IC", "Weight", "Value")
+		fmt.Printf("  %s\n", "──────────────────────────────────────────────────────────────")
+		for _, s := range signals {
+			state := "active"
+			if s.CurrentValue == 0 {
+				state = "zero  "
+				zero++
+			} else {
+				active++
+			}
+			fmt.Printf("  [%s] %-28s  %-8.4f  %-8.4f  %.6f\n",
+				state, s.Name, s.AvgIC, s.Weight, s.CurrentValue)
+		}
+		fmt.Printf("  Active: %d  Zero: %d\n", active, zero)
+	}
+
+	fmt.Printf("\n=== Memory ===\n")
+	printMemoryCount(sqlDB)
+}
+
+// printMemoryCount queries episode and semantic_memory counts directly.
+func printMemoryCount(sqlDB *sql.DB) {
+	var episodes, semantic int
+	sqlDB.QueryRow(`SELECT COUNT(*) FROM episodes`).Scan(&episodes)           //nolint:errcheck,gosec
+	sqlDB.QueryRow(`SELECT COUNT(*) FROM semantic_memories`).Scan(&semantic) //nolint:errcheck,gosec
+	fmt.Printf("  Episodes:         %d\n", episodes)
+	fmt.Printf("  Semantic entries: %d\n", semantic)
+	fmt.Printf("  Total:            %d\n", episodes+semantic)
 }
