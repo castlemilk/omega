@@ -11,3 +11,6 @@ datasources:
     jsonData:
       timeInterval: "15s"
       httpMethod: POST
+      exemplarTraceIdDestinations:
+        - datasourceUid: tempo
+          name: traceID

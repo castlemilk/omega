@@ -4,7 +4,7 @@
     {"type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0"}
   ],
   "annotations": {"list": []},
-  "description": "Omega system health overview — heartbeat timing, node activity, error rate, uptime",
+  "description": "Omega system overview — cycle latency, node execution, memory, errors, health",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -16,36 +16,19 @@
       "fieldConfig": {
         "defaults": {
           "color": {"mode": "thresholds"},
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {"color": "red", "value": null},
-              {"color": "green", "value": 1}
-            ]
-          },
-          "unit": "short"
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 50}]},
+          "unit": "short",
+          "min": 0,
+          "max": 100
         },
         "overrides": []
       },
       "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
       "id": 1,
-      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "text": {}, "textMode": "auto"},
-      "title": "Omega Up",
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Health Score",
       "type": "stat",
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_up", "legendFormat": ""}]
-    },
-    {
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {
-        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "s"},
-        "overrides": []
-      },
-      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
-      "id": 2,
-      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "title": "Process Uptime",
-      "type": "stat",
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "time() - omega_process_start_time_seconds", "legendFormat": ""}]
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_health_score", "legendFormat": ""}]
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
@@ -53,25 +36,12 @@
         "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"},
         "overrides": []
       },
-      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
-      "id": 3,
-      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "title": "Total Heartbeats",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Total Cycles",
       "type": "stat",
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_heartbeat_duration_seconds_count", "legendFormat": ""}]
-    },
-    {
-      "datasource": {"type": "prometheus", "uid": "prometheus"},
-      "fieldConfig": {
-        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 30}]}, "unit": "s"},
-        "overrides": []
-      },
-      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
-      "id": 4,
-      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "title": "Heartbeat p95 Duration",
-      "type": "stat",
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, rate(omega_heartbeat_duration_seconds_bucket[10m]))", "legendFormat": ""}]
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_cycles_total", "legendFormat": ""}]
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
@@ -79,12 +49,38 @@
         "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "yellow", "value": 0.05}, {"color": "red", "value": 0.1}]}, "unit": "percentunit"},
         "overrides": []
       },
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Error Rate",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(omega_errors_total[10m])) / (sum(rate(omega_node_executions_total[10m])) > 0)", "legendFormat": ""}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Memory Consolidations",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_memory_consolidations_total", "legendFormat": ""}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"},
+        "overrides": []
+      },
       "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
       "id": 5,
-      "options": {"colorMode": "background", "graphMode": "none", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "title": "Node Error Rate",
+      "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Improvement Proposals",
       "type": "stat",
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(rate(omega_node_execution_total{status=\"failure\"}[10m])) / sum(rate(omega_node_execution_total[10m]))", "legendFormat": ""}]
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(omega_improvement_proposals_total)", "legendFormat": ""}]
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
@@ -95,9 +91,9 @@
       "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
       "id": 6,
       "options": {"colorMode": "value", "graphMode": "area", "reduceOptions": {"calcs": ["lastNotNull"]}},
-      "title": "Total Improvements",
+      "title": "Adversarial Vetoes",
       "type": "stat",
-      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_improvement_cycle_total{result=\"improved\"}", "legendFormat": ""}]
+      "targets": [{"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(omega_adversarial_vetoes_total)", "legendFormat": ""}]
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
@@ -108,43 +104,72 @@
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
       "id": 7,
       "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
-      "title": "Heartbeat Duration Over Time",
+      "title": "Cycle Latency (p50 / p95 / p99)",
       "type": "timeseries",
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.50, rate(omega_heartbeat_duration_seconds_bucket[5m]))", "legendFormat": "p50"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, rate(omega_heartbeat_duration_seconds_bucket[5m]))", "legendFormat": "p95"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99, rate(omega_heartbeat_duration_seconds_bucket[5m]))", "legendFormat": "p99"}
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.50, rate(omega_cycle_duration_seconds_bucket[5m]))", "legendFormat": "p50"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, rate(omega_cycle_duration_seconds_bucket[5m]))", "legendFormat": "p95"},
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.99, rate(omega_cycle_duration_seconds_bucket[5m]))", "legendFormat": "p99"}
       ]
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {
-        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "reqps"},
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "s"},
         "overrides": []
       },
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
       "id": 8,
-      "options": {"legend": {"calcs": ["mean"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
-      "title": "Node Execution Rate",
+      "options": {"legend": {"calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Node Execution Time (p95 per node)",
       "type": "timeseries",
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (node_type) (rate(omega_node_execution_total{status=\"success\"}[5m]))", "legendFormat": "{{node_type}} success"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (node_type) (rate(omega_node_execution_total{status=\"failure\"}[5m]))", "legendFormat": "{{node_type}} failure"}
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "histogram_quantile(0.95, sum by (node_name, le) (rate(omega_node_execution_duration_seconds_bucket[5m])))", "legendFormat": "{{node_name}}"}
       ]
     },
     {
       "datasource": {"type": "prometheus", "uid": "prometheus"},
       "fieldConfig": {
-        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "short"},
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "ops"},
         "overrides": []
       },
       "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
       "id": 9,
-      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
-      "title": "Improvement Cycles",
+      "options": {"legend": {"calcs": ["mean"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Node Execution Rate",
       "type": "timeseries",
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_improvement_cycle_total", "legendFormat": "{{result}}"}
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (node_name, status) (rate(omega_node_executions_total[5m]))", "legendFormat": "{{node_name}} / {{status}}"}
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "ops"},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 10,
+      "options": {"legend": {"calcs": ["mean"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Error Rate by Node",
+      "type": "timeseries",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (node_name, error_class) (rate(omega_errors_total[5m]))", "legendFormat": "{{node_name}} / {{error_class}}"}
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "ops"},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "id": 11,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Memory Accumulation Rate",
+      "type": "timeseries",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "rate(omega_memory_consolidations_total[5m])", "legendFormat": "consolidations/s"}
       ]
     },
     {
@@ -153,14 +178,43 @@
         "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "short"},
         "overrides": []
       },
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
-      "id": 10,
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "id": 12,
       "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
-      "title": "Open Issues & Adversarial Flags",
+      "title": "Improvement Proposals by Outcome",
       "type": "timeseries",
       "targets": [
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(omega_challenge_registry_total{status=\"open\"})", "legendFormat": "open issues"},
-        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum(omega_adversarial_flags_total)", "legendFormat": "adversarial flags"}
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (outcome) (rate(omega_improvement_proposals_total[5m]))", "legendFormat": "{{outcome}}"}
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+      "id": 13,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Circuit Breaker State (0=closed 1=open 2=half-open)",
+      "type": "timeseries",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "omega_circuit_breaker_state", "legendFormat": "{{node_id}}"}
+      ]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "custom": {"lineWidth": 2}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+      "id": 14,
+      "options": {"legend": {"calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "title": "Safety Violations by Layer",
+      "type": "timeseries",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "prometheus"}, "expr": "sum by (layer) (rate(omega_safety_violations_total[5m]))", "legendFormat": "layer {{layer}}"}
       ]
     }
   ],
@@ -172,5 +226,5 @@
   "timezone": "browser",
   "title": "Omega — Overview",
   "uid": "omega-overview",
-  "version": 1
+  "version": 2
 }
