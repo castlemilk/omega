@@ -26,6 +26,9 @@ import urllib.request
 from abc import ABC, abstractmethod
 from typing import Any
 
+from omega.core.circuit_breaker import CircuitBreaker
+from omega.core.degradation import get_registry as _get_registry
+
 logger = logging.getLogger("omega.nodes.victoria.data_providers")
 
 _CG_API_KEY = os.environ.get("CG_API_KEY")
@@ -107,6 +110,7 @@ class BinanceProvider(DataProvider):
         self._cache: dict[str, tuple[float, Any]] = {}
         self._total_fetched = 0
         self._total_failed = 0
+        self._cb = CircuitBreaker("binance", failure_threshold=3, recovery_timeout=300)
 
     @property
     def name(self) -> str:
@@ -119,13 +123,27 @@ class BinanceProvider(DataProvider):
     def fetch_klines(
         self, pair: str, interval: str = "1d", limit: int = 90
     ) -> dict[str, Any] | None:
-        """Fetch OHLCV klines from Binance for a single pair."""
+        """Fetch OHLCV klines from Binance (circuit-breaker guarded)."""
         cache_key = f"{pair}:{interval}:{limit}"
         if cache_key in self._cache:
             ts, data = self._cache[cache_key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
                 return data
+        try:
+            result = self._cb.call(self._fetch_klines_raw, pair, interval, limit)
+            if result is not None:
+                _get_registry().mark_healthy("binance")
+            else:
+                _get_registry().mark_degraded("binance", reason="circuit open", fallback="bybit")
+            return result
+        except Exception as exc:
+            _get_registry().mark_degraded("binance", reason=str(exc)[:80], fallback="bybit")
+            return None
 
+    def _fetch_klines_raw(
+        self, pair: str, interval: str = "1d", limit: int = 90
+    ) -> dict[str, Any] | None:
+        """Raw kline fetch — called by fetch_klines via circuit breaker."""
         url = f"{_BINANCE_API}/klines?symbol={pair}&interval={interval}&limit={limit}"
         max_attempts = 3
 
@@ -166,6 +184,7 @@ class BinanceProvider(DataProvider):
                     "fetched_at": time.time(),
                 }
                 self._total_fetched += 1
+                cache_key = f"{pair}:{interval}:{limit}"
                 self._cache[cache_key] = (time.time(), data)
                 logger.debug(
                     "Binance: %s → %d bars, last=%.2f",
@@ -183,7 +202,7 @@ class BinanceProvider(DataProvider):
                 else:
                     logger.warning("Failed to fetch %s from Binance: HTTP %d", pair, e.code)
                     self._total_failed += 1
-                    return None
+                    raise
 
             except Exception as exc:
                 if attempt < max_attempts - 1:
@@ -191,7 +210,7 @@ class BinanceProvider(DataProvider):
                 else:
                     logger.warning("Failed to fetch %s from Binance: %s", pair, exc)
                     self._total_failed += 1
-                    return None
+                    raise
 
         return None
 
@@ -226,6 +245,7 @@ class CoinGeckoProvider(DataProvider):
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
+        self._cb = CircuitBreaker("coingecko", failure_threshold=3, recovery_timeout=300)
 
     @property
     def name(self) -> str:
@@ -236,14 +256,28 @@ class CoinGeckoProvider(DataProvider):
         return "CoinGecko — market caps, rankings, 24h price change"
 
     def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
-        """Fetch CoinGecko market data for given pairs."""
+        """Fetch CoinGecko market data (circuit-breaker guarded)."""
         cache_key = "bulk_markets"
         if cache_key in self._cache:
             ts, data = self._cache[cache_key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
-                # Filter to only the requested pairs
                 return {p: data[p] for p in pairs if p in data}
+        try:
+            result = self._cb.call(self._fetch_raw, pairs)
+            if result is not None:
+                _get_registry().mark_healthy("coingecko")
+                return {p: result[p] for p in pairs if p in result}
+            else:
+                _get_registry().mark_degraded(
+                    "coingecko", reason="circuit open", fallback="cached_data"
+                )
+                return {}
+        except Exception as exc:
+            _get_registry().mark_degraded("coingecko", reason=str(exc)[:80], fallback="cached_data")
+            return {}
 
+    def _fetch_raw(self, pairs: list[str]) -> dict[str, Any] | None:
+        """Raw CoinGecko fetch — called by fetch() via circuit breaker."""
         ids_needed = [_COINGECKO_IDS[p] for p in pairs if p in _COINGECKO_IDS]
         if not ids_needed:
             return {}
@@ -254,26 +288,21 @@ class CoinGeckoProvider(DataProvider):
             f"?vs_currency=usd&ids={ids_str}"
             f"&order=market_cap_desc&per_page=50&page=1"
         )
-        try:
-            req = urllib.request.Request(url, headers=_CG_HEADERS)
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                raw = json.loads(resp.read().decode("utf-8"))
+        req = urllib.request.Request(url, headers=_CG_HEADERS)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
 
-            id_to_pair = {v: k for k, v in _COINGECKO_IDS.items()}
-            result: dict[str, Any] = {}
-            for coin in raw:
-                cg_id = coin.get("id", "")
-                pair = id_to_pair.get(cg_id)
-                if pair:
-                    result[pair] = coin
+        id_to_pair = {v: k for k, v in _COINGECKO_IDS.items()}
+        result: dict[str, Any] = {}
+        for coin in raw:
+            cg_id = coin.get("id", "")
+            pair = id_to_pair.get(cg_id)
+            if pair:
+                result[pair] = coin
 
-            self._cache[cache_key] = (time.time(), result)
-            logger.debug("CoinGecko: %d coins enriched", len(result))
-            return {p: result[p] for p in pairs if p in result}
-
-        except Exception as exc:
-            logger.warning("CoinGecko fetch failed: %s", exc)
-            return {}
+        self._cache["bulk_markets"] = (time.time(), result)
+        logger.debug("CoinGecko: %d coins enriched", len(result))
+        return result
 
     def is_available(self) -> bool:
         """Check if CoinGecko API is reachable."""
@@ -413,6 +442,7 @@ class FearGreedProvider(DataProvider):
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
+        self._cb = CircuitBreaker("fear_greed", failure_threshold=3, recovery_timeout=300)
 
     @property
     def name(self) -> str:
@@ -423,51 +453,61 @@ class FearGreedProvider(DataProvider):
         return "Alternative.me Fear & Greed Index — crypto market sentiment (0-100)"
 
     def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
-        """Fetch the Fear & Greed Index (pairs is ignored — market-wide index)."""
+        """Fetch Fear & Greed Index (circuit-breaker guarded; pairs ignored)."""
         cache_key = "fear_greed_30d"
         if cache_key in self._cache:
             ts, data = self._cache[cache_key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
                 return data
-
-        url = f"{_FEARGREED_API}/?limit=30&format=json"
         try:
-            req = urllib.request.Request(url, headers=_HEADERS)
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                raw = json.loads(resp.read().decode("utf-8"))
-
-            entries = raw.get("data", [])
-            if not entries:
+            result = self._cb.call(self._fetch_raw)
+            if result is not None:
+                _get_registry().mark_healthy("fear_greed")
+                return result
+            else:
+                _get_registry().mark_degraded(
+                    "fear_greed", reason="circuit open", fallback="neutral_0.5"
+                )
                 return {}
-
-            history = [
-                {
-                    "value": int(e["value"]),
-                    "label": e["value_classification"],
-                    "timestamp": int(e["timestamp"]),
-                }
-                for e in entries
-            ]
-
-            result = {
-                "fear_greed": {
-                    "current_value": history[0]["value"],
-                    "current_label": history[0]["label"],
-                    "history": history,
-                    "fetched_at": time.time(),
-                }
-            }
-            self._cache[cache_key] = (time.time(), result)
-            logger.debug(
-                "FearGreed: current=%d (%s)",
-                result["fear_greed"]["current_value"],
-                result["fear_greed"]["current_label"],
-            )
-            return result
-
         except Exception as exc:
-            logger.warning("FearGreed fetch failed: %s", exc)
+            _get_registry().mark_degraded("fear_greed", reason=str(exc)[:80], fallback="neutral_0.5")
             return {}
+
+    def _fetch_raw(self) -> dict[str, Any]:
+        """Raw Fear & Greed fetch — called by fetch() via circuit breaker."""
+        url = f"{_FEARGREED_API}/?limit=30&format=json"
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+
+        entries = raw.get("data", [])
+        if not entries:
+            return {}
+
+        history = [
+            {
+                "value": int(e["value"]),
+                "label": e["value_classification"],
+                "timestamp": int(e["timestamp"]),
+            }
+            for e in entries
+        ]
+
+        result = {
+            "fear_greed": {
+                "current_value": history[0]["value"],
+                "current_label": history[0]["label"],
+                "history": history,
+                "fetched_at": time.time(),
+            }
+        }
+        self._cache["fear_greed_30d"] = (time.time(), result)
+        logger.debug(
+            "FearGreed: current=%d (%s)",
+            result["fear_greed"]["current_value"],
+            result["fear_greed"]["current_label"],
+        )
+        return result
 
     def is_available(self) -> bool:
         """Check if the Fear & Greed endpoint is reachable."""
@@ -489,6 +529,7 @@ class DefiLlamaProvider(DataProvider):
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
+        self._cb = CircuitBreaker("defillama", failure_threshold=3, recovery_timeout=300)
 
     @property
     def name(self) -> str:
@@ -499,56 +540,65 @@ class DefiLlamaProvider(DataProvider):
         return "DefiLlama — DeFi protocol TVL rankings (top 20 by TVL)"
 
     def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
-        """Fetch top 20 DeFi protocols by TVL (pairs is ignored)."""
+        """Fetch top 20 DeFi protocols by TVL (circuit-breaker guarded; pairs ignored)."""
         cache_key = "defi_protocols"
         if cache_key in self._cache:
             ts, data = self._cache[cache_key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
                 return data
-
-        url = f"{_DEFILLAMA_API}/protocols"
         try:
-            req = urllib.request.Request(url, headers=_HEADERS)
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                raw = json.loads(resp.read().decode("utf-8"))
-
-            if not isinstance(raw, list):
+            result = self._cb.call(self._fetch_raw)
+            if result is not None:
+                _get_registry().mark_healthy("defillama")
+                return result
+            else:
+                _get_registry().mark_degraded(
+                    "defillama", reason="circuit open", fallback="skip"
+                )
                 return {}
-
-            # Sort by TVL descending, take top 20
-            sorted_protocols = sorted(
-                raw,
-                key=lambda p: p.get("tvl") or 0,
-                reverse=True,
-            )[:20]
-
-            top_protocols = [
-                {
-                    "name": p.get("name", ""),
-                    "symbol": p.get("symbol", ""),
-                    "tvl": float(p.get("tvl") or 0),
-                    "chain": p.get("chain", ""),
-                    "category": p.get("category", ""),
-                }
-                for p in sorted_protocols
-            ]
-
-            total_tvl = sum(p["tvl"] for p in top_protocols)
-
-            result = {
-                "defi_tvl": {
-                    "top_protocols": top_protocols,
-                    "total_tvl": total_tvl,
-                    "fetched_at": time.time(),
-                }
-            }
-            self._cache[cache_key] = (time.time(), result)
-            logger.debug("DefiLlama: top 20 protocols, total TVL $%,.0f", total_tvl)
-            return result
-
         except Exception as exc:
-            logger.warning("DefiLlama fetch failed: %s", exc)
+            _get_registry().mark_degraded("defillama", reason=str(exc)[:80], fallback="skip")
             return {}
+
+    def _fetch_raw(self) -> dict[str, Any]:
+        """Raw DefiLlama fetch — called by fetch() via circuit breaker."""
+        url = f"{_DEFILLAMA_API}/protocols"
+        req = urllib.request.Request(url, headers=_HEADERS)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+
+        if not isinstance(raw, list):
+            return {}
+
+        sorted_protocols = sorted(
+            raw,
+            key=lambda p: p.get("tvl") or 0,
+            reverse=True,
+        )[:20]
+
+        top_protocols = [
+            {
+                "name": p.get("name", ""),
+                "symbol": p.get("symbol", ""),
+                "tvl": float(p.get("tvl") or 0),
+                "chain": p.get("chain", ""),
+                "category": p.get("category", ""),
+            }
+            for p in sorted_protocols
+        ]
+
+        total_tvl = sum(p["tvl"] for p in top_protocols)
+
+        result = {
+            "defi_tvl": {
+                "top_protocols": top_protocols,
+                "total_tvl": total_tvl,
+                "fetched_at": time.time(),
+            }
+        }
+        self._cache["defi_protocols"] = (time.time(), result)
+        logger.debug("DefiLlama: top 20 protocols, total TVL $%,.0f", total_tvl)
+        return result
 
     def is_available(self) -> bool:
         """Check if DefiLlama endpoint is reachable."""
