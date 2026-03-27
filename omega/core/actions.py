@@ -65,6 +65,7 @@ class NodeAction(StrEnum):
     POLYMARKET_PRICING = "polymarket_pricing"
     EDGE_DETECTION = "edge_detection"
     DETECT = "detect"
+    VOL_ARB = "vol_arb"
 
 
 class StepType(StrEnum):
@@ -93,6 +94,7 @@ class StepType(StrEnum):
     # Extended / future step types
     LIQUIDATION_CASCADE = "LIQUIDATION_CASCADE"
     ONCHAIN_DATA = "ONCHAIN_DATA"
+    VOL_ARB = "VOL_ARB"
 
 
 # Capability alias groups — each group routes to the same action.
@@ -124,6 +126,7 @@ STEP_TO_ACTION: dict[StepType, NodeAction] = {
     StepType.EDGE_DETECTION: NodeAction.EDGE_DETECTION,
     StepType.LIQUIDATION_CASCADE: NodeAction.MONITOR_LIQUIDATIONS,
     StepType.ONCHAIN_DATA: NodeAction.FETCH_MARKET_DATA,
+    StepType.VOL_ARB: NodeAction.VOL_ARB,
 }
 
 

@@ -25,6 +25,11 @@ pipeline_config:
     node_type: RISK_MANAGEMENT
     description: Validate position sizes via Kelly criterion
     order: 4
+  - step_id: step_5
+    name: VolArb
+    node_type: VOL_ARB
+    description: Implied-vol vs realized-vol arbitrage scanner (Christensen & Prabhala 1998)
+    order: 5
 
 eval_config:
   primary_metrics:

@@ -41,20 +41,23 @@ def _register_polymarket_nodes(orch: object) -> None:
     try:
         from omega.nodes.polymarket.edge_detection import EdgeDetectionNode
         from omega.nodes.polymarket.pricing import PolymarketPricingNode
+        from omega.nodes.polymarket.vol_arb import VolArbNode
         from omega.nodes.polymarket.weather_ensemble import WeatherEnsembleNode
 
         weather_node = WeatherEnsembleNode()
         pricing_node = PolymarketPricingNode()
         edge_node = EdgeDetectionNode()
+        vol_arb_node = VolArbNode()
 
-        for n in (weather_node, pricing_node, edge_node):
+        for n in (weather_node, pricing_node, edge_node, vol_arb_node):
             orch.register_node(n)  # type: ignore[attr-defined]
 
         logger.info(
-            "Polymarket nodes registered: %s, %s, %s",
+            "Polymarket nodes registered: %s, %s, %s, %s",
             weather_node.get_state().name,
             pricing_node.get_state().name,
             edge_node.get_state().name,
+            vol_arb_node.get_state().name,
         )
     except Exception as exc:
         logger.warning("Failed to register Polymarket nodes: %s — continuing without them", exc)
