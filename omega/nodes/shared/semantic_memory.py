@@ -23,6 +23,9 @@ from typing import Any, ClassVar
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
+import sqlite3
+import uuid as _uuid
+
 logger = logging.getLogger("omega.nodes.shared.semantic_memory")
 
 DEFAULT_REVIEW_INTERVAL = 50
@@ -194,7 +197,7 @@ class SemanticMemoryNode(Node):
                 )
                 stored_count += 1
             except Exception as exc:
-                logger.debug("store_semantic failed for '%s': %s", concept, exc)
+                logger.warning("store_semantic failed for '%s': %s", concept, exc)
 
         self._patterns_extracted += stored_count
         self._last_review_cycle = cycle
@@ -315,14 +318,171 @@ class SemanticMemoryNode(Node):
     def _get_mem_kernel(self) -> Any:
         if self._mem_kernel is not None:
             return self._mem_kernel
+
         import os
 
-        if not os.environ.get("DATABASE_URL"):
-            return None
-        try:
-            from omega.core.memory import MemoryKernel
+        # Try postgres first (DATABASE_URL set and psycopg available)
+        if os.environ.get("DATABASE_URL"):
+            try:
+                from omega.core.memory import MemoryKernel
 
-            self._mem_kernel = MemoryKernel()
-        except Exception as exc:
-            logger.debug("MemoryKernel init failed: %s", exc)
+                self._mem_kernel = MemoryKernel()
+                logger.info("SemanticMemoryNode: using postgres MemoryKernel")
+                return self._mem_kernel
+            except Exception as exc:
+                logger.warning("MemoryKernel (postgres) init failed: %s — falling back to SQLite", exc)
+
+        # Fallback: write directly to SQLite victoria memory DB
+        self._mem_kernel = _SqliteSemanticStore()
+        logger.info("SemanticMemoryNode: using SQLite fallback store at %s", _SqliteSemanticStore.DB_PATH)
         return self._mem_kernel
+
+
+# ---------------------------------------------------------------------------
+# _SqliteSemanticStore — SQLite fallback for when DATABASE_URL is not set
+# ---------------------------------------------------------------------------
+
+
+class _SqliteSemanticStore:
+    """
+    Minimal SQLite-backed store implementing the MemoryKernel subset needed by
+    SemanticMemoryNode (store_semantic + retrieve_episodes).
+
+    Uses the schema already present in data/omega_victoria_memory.db:
+      - episodes(episode_id, timestamp, cycle, event_type, content_json, tags_json,
+                 importance, namespace)
+      - semantic_memories(memory_id, concept, content, confidence, evidence_count,
+                           last_reinforced, tags_json, namespace)
+    """
+
+    DB_PATH: str = ""  # resolved at first instantiation
+
+    def __init__(self) -> None:
+        import os
+        import time as _time
+
+        if not _SqliteSemanticStore.DB_PATH:
+            root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            _SqliteSemanticStore.DB_PATH = os.path.join(root, "data", "omega_victoria_memory.db")
+
+        self._conn = sqlite3.connect(_SqliteSemanticStore.DB_PATH, check_same_thread=False)
+        self._conn.row_factory = sqlite3.Row
+        self._ensure_schema()
+
+    def _ensure_schema(self) -> None:
+        self._conn.executescript("""
+            CREATE TABLE IF NOT EXISTS semantic_memories (
+                memory_id       TEXT    PRIMARY KEY,
+                concept         TEXT    NOT NULL,
+                content         TEXT    NOT NULL,
+                confidence      REAL    NOT NULL DEFAULT 1.0,
+                evidence_count  INTEGER NOT NULL DEFAULT 1,
+                last_reinforced REAL    NOT NULL,
+                tags_json       TEXT    NOT NULL DEFAULT '[]',
+                namespace       TEXT    NOT NULL DEFAULT 'global'
+            );
+            CREATE TABLE IF NOT EXISTS episodes (
+                episode_id   TEXT    PRIMARY KEY,
+                timestamp    REAL    NOT NULL,
+                cycle        INTEGER NOT NULL,
+                event_type   TEXT    NOT NULL,
+                content_json TEXT    NOT NULL,
+                tags_json    TEXT    NOT NULL,
+                importance   REAL    NOT NULL DEFAULT 1.0,
+                namespace    TEXT    NOT NULL DEFAULT 'global'
+            );
+            CREATE INDEX IF NOT EXISTS idx_semantic_namespace ON semantic_memories(namespace);
+            CREATE INDEX IF NOT EXISTS idx_episodes_event_type ON episodes(event_type);
+            CREATE INDEX IF NOT EXISTS idx_episodes_namespace ON episodes(namespace);
+        """)
+        self._conn.commit()
+
+    def store_semantic(
+        self,
+        concept: str,
+        content: str,
+        confidence: float = 1.0,
+        tags: list | None = None,
+        namespace: str = "global",
+    ) -> str:
+        import time as _time
+
+        tags = tags or []
+        now = _time.time()
+        row = self._conn.execute(
+            "SELECT memory_id, evidence_count, confidence FROM semantic_memories WHERE concept = ? AND namespace = ?",
+            (concept, namespace),
+        ).fetchone()
+
+        if row:
+            new_conf = min(1.0, row["confidence"] + confidence * 0.1)
+            self._conn.execute(
+                """UPDATE semantic_memories
+                   SET content = ?, confidence = ?, evidence_count = ?, last_reinforced = ?, tags_json = ?
+                   WHERE concept = ? AND namespace = ?""",
+                (content, new_conf, row["evidence_count"] + 1, now, json.dumps(tags), concept, namespace),
+            )
+            self._conn.commit()
+            logger.info("Flushed reinforced semantic pattern '%s' to SQLite", concept)
+            return str(row["memory_id"])
+        else:
+            mid = str(_uuid.uuid4())
+            self._conn.execute(
+                """INSERT INTO semantic_memories
+                   (memory_id, concept, content, confidence, evidence_count, last_reinforced, tags_json, namespace)
+                   VALUES (?, ?, ?, ?, 1, ?, ?, ?)""",
+                (mid, concept, content, confidence, now, json.dumps(tags), namespace),
+            )
+            self._conn.commit()
+            logger.info("Flushed new semantic pattern '%s' to SQLite", concept)
+            return mid
+
+    def retrieve_episodes(
+        self,
+        event_type: str | None = None,
+        limit: int = 50,
+        min_importance: float = 0.0,
+        since_cycle: int | None = None,
+        namespace: str | None = None,
+        **_kw: object,
+    ) -> list:
+        """Return Episode-like dicts from SQLite episodes table."""
+        from omega.core.memory import Episode
+
+        sql = "SELECT * FROM episodes WHERE importance >= ?"
+        params: list = [min_importance]
+        if event_type:
+            sql += " AND event_type = ?"
+            params.append(event_type)
+        if namespace:
+            sql += " AND namespace = ?"
+            params.append(namespace)
+        if since_cycle is not None:
+            sql += " AND cycle >= ?"
+            params.append(since_cycle)
+        sql += " ORDER BY importance DESC LIMIT ?"
+        params.append(limit)
+
+        rows = self._conn.execute(sql, params).fetchall()
+        episodes = []
+        for r in rows:
+            try:
+                content = json.loads(r["content_json"])
+            except Exception:
+                content = {"raw": r["content_json"]}
+            try:
+                tags = json.loads(r["tags_json"])
+            except Exception:
+                tags = []
+            episodes.append(
+                Episode(
+                    episode_id=r["episode_id"],
+                    timestamp=r["timestamp"],
+                    event_type=r["event_type"],
+                    content=content,
+                    tags=tags,
+                    importance=r["importance"],
+                    cycle=r["cycle"],
+                )
+            )
+        return episodes

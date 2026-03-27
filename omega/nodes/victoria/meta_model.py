@@ -263,11 +263,12 @@ class MetaModel:
 
             try:
                 model: Any = GradientBoostingClassifier(
-                    n_estimators=60,
+                    n_estimators=50,
                     max_depth=3,
                     learning_rate=0.08,
                     subsample=0.8,
-                    min_samples_leaf=5,
+                    min_samples_leaf=10,
+                    max_features="sqrt",
                     random_state=42,
                 )
                 model.fit(x_scaled, y)

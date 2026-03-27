@@ -205,7 +205,7 @@ class OmegaOrchestrator:
     """
 
     # After N cycles, run TPE improvement if eligible
-    IMPROVEMENT_INTERVAL = 50
+    IMPROVEMENT_INTERVAL = 10
     # After N cycles, run memory consolidation
     CONSOLIDATION_INTERVAL = 100
 
@@ -1454,8 +1454,15 @@ class OmegaOrchestrator:
             nid = state.node_id
             if not self._improvement_engine.is_registered(nid):
                 continue
-            # Check scheduler
+            # Check scheduler — auto-register with a short interval if not yet tracked
             try:
+                if nid not in self._improvement_scheduler.registered_nodes():
+                    from omega.core.improvement_scheduler import NodeScheduleConfig
+                    self._improvement_scheduler.register(
+                        nid,
+                        NodeScheduleConfig(node_id=nid, interval_seconds=30.0),
+                        run_immediately=True,
+                    )
                 due = self._improvement_scheduler.due_nodes()
                 if nid not in due:
                     continue
