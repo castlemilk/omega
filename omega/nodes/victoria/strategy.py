@@ -736,6 +736,8 @@ class StrategyNode(Node):
         """Rank tickers by composite signal strength, including conviction."""
         ranked = []
         for ticker, sig in signals.items():
+            if ticker.startswith("_") or not isinstance(sig, dict):
+                continue
             composite = sig.get("composite")
             if composite is not None:
                 conviction = score_to_conviction(float(composite))
