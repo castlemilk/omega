@@ -59,6 +59,7 @@ from omega.nodes.victoria.signals_advanced import (
     SentimentSignal,
 )
 from omega.nodes.victoria.strategy import StrategyNode
+from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 
@@ -80,8 +81,9 @@ SIGNAL_NAMES = [
     "onchain",
     "long_short_ratio",
     "btc_dominance",
-    "rmt_signal",  # RMT information-content signal (structured vs noisy market)
+    "rmt_signal",       # RMT information-content signal (structured vs noisy market)
     "alt_data",
+    "spectral_graph",   # Fiedler value of signal correlation graph (stress indicator)
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -140,6 +142,9 @@ class VictoriaNode(Node):
 
         # RMT denoiser — standalone signal + foundation for geometric methods
         self._rmt_denoiser = RMTDenoiser(window=100)
+
+        # Spectral graph theory stress indicator (geometric method #4)
+        self._spectral_graph = SpectralGraphSignal(window=30)
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -929,6 +934,23 @@ class VictoriaNode(Node):
                 }
             except Exception as exc:
                 logger.debug("rmt_signal failed: %s", exc)
+
+            # Spectral graph stress indicator — Fiedler value of correlation network
+            try:
+                spectral_input = {
+                    name: float(signals[name].get("value", 0.0))
+                    for name in signals
+                    if not name.startswith("_") and isinstance(signals[name], dict)
+                }
+                sg_val = self._spectral_graph.compute(spectral_input)
+                signals["spectral_graph"] = {
+                    "value": sg_val.value,
+                    "confidence": sg_val.confidence,
+                    "regime_tag": sg_val.regime_tag,
+                    "raw": sg_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("spectral_graph signal failed: %s", exc)
 
         # 1b. Wasserstein regime detection — augments VRP-based regime
         try:
