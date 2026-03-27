@@ -1,0 +1,2202 @@
+[
+  {
+    "name": "OrderFlowSignal",
+    "module_path": "omega.nodes.victoria.signals_advanced",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Computes order-book depth imbalance, cumulative-volume-delta (CVD), and bid-ask spread from Binance L2 order book snapshots.",
+    "purpose": "Detect real-time directional pressure from institutional order flow before price moves.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance REST order book (depth 20)",
+      "Binance trade stream"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/depth",
+      "https://api.binance.com/api/v3/trades"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "cvd_window": 100,
+      "depth_levels": 20,
+      "imbalance_threshold": 0.6
+    },
+    "tunable_parameters": [
+      "depth_levels",
+      "cvd_window",
+      "imbalance_threshold"
+    ],
+    "current_ic": 0.146,
+    "current_weight": 0.123,
+    "references": [
+      {
+        "title": "Order imbalance based strategy in high frequency trading",
+        "authors": "Cartea, Jaimungal \u0026 Penalva 2015",
+        "relevance": "Theoretical basis for bid-ask imbalance as a short-term alpha signal"
+      },
+      {
+        "title": "Informed Trading in Futures Markets",
+        "authors": "Ederington \u0026 Lee 1993",
+        "relevance": "Order flow imbalance predicts short-term price direction"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md"
+    ],
+    "added_date": "2026-01-15",
+    "last_modified": "2026-03-20",
+    "version": "1.2",
+    "changelog": [
+      "V1.0: bid-ask imbalance only",
+      "V1.1: added CVD",
+      "V1.2: configurable depth levels"
+    ]
+  },
+  {
+    "name": "CrossAssetSignal",
+    "module_path": "omega.nodes.victoria.signals_advanced",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Measures rolling cross-correlations between BTC, ETH, SOL and SPY to detect regime shifts via co-movement changes.",
+    "purpose": "Identify when crypto decouples from equities or when ETH/SOL lead BTC — exploitable short-term divergences.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance OHLCV (BTC/ETH/SOL)",
+      "Yahoo Finance SPY daily"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/klines"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "equity_symbol": "SPY",
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ],
+      "window": 30
+    },
+    "tunable_parameters": [
+      "window"
+    ],
+    "current_ic": 0.093,
+    "current_weight": 0.081,
+    "references": [
+      {
+        "title": "Cross-asset signals in quantitative trading",
+        "authors": "Asness, Moskowitz \u0026 Pedersen 2013",
+        "relevance": "Cross-asset momentum and correlation timing"
+      },
+      {
+        "title": "Crypto–equity correlation dynamics",
+        "authors": "Corbet et al. 2021",
+        "relevance": "BTC-SPY correlation regime changes during market stress"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md"
+    ],
+    "added_date": "2026-01-15",
+    "last_modified": "2026-03-10",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: BTC/ETH only",
+      "V1.1: added SOL + SPY"
+    ]
+  },
+  {
+    "name": "MicrostructureSignal",
+    "module_path": "omega.nodes.victoria.signals_advanced",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Estimates effective bid-ask spread, Kyle's lambda (price impact), and trade intensity from tick-level Binance data.",
+    "purpose": "Measure market liquidity and execution cost regime — widens before large moves, tightens in trending markets.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance aggTrades stream",
+      "Binance order book"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/aggTrades"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "lambda_window": 100,
+      "trade_window": 500
+    },
+    "tunable_parameters": [
+      "trade_window",
+      "lambda_window"
+    ],
+    "current_ic": 0.071,
+    "references": [
+      {
+        "title": "Continuous Auctions and Insider Trading",
+        "authors": "Kyle 1985",
+        "relevance": "Lambda (price impact coefficient) from Kyle model"
+      },
+      {
+        "title": "A New Approach to Measuring Financial Contagion",
+        "authors": "Forbes \u0026 Rigobon 2002",
+        "relevance": "Spread-based microstructure regime classification"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-10",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "SentimentSignal",
+    "module_path": "omega.nodes.victoria.signals_advanced",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Aggregates the Fear \u0026 Greed Index (alternative.me) and CryptoPanic bullish/bearish vote ratio into a composite sentiment score.",
+    "purpose": "Contrarian and trend-confirming signal — extreme fear predicts reversals, moderate fear trends with momentum.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "alternative.me Fear \u0026 Greed API",
+      "CryptoPanic API votes"
+    ],
+    "api_endpoints": [
+      "https://api.alternative.me/fng/",
+      "https://cryptopanic.com/api/v1/posts/"
+    ],
+    "requires_api_key": true,
+    "api_key_name": "CRYPTOPANIC_API_KEY",
+    "parameters": {
+      "fear_extreme_threshold": 20,
+      "greed_extreme_threshold": 80,
+      "vote_window": 24
+    },
+    "tunable_parameters": [
+      "fear_extreme_threshold",
+      "greed_extreme_threshold"
+    ],
+    "current_ic": 0.058,
+    "references": [
+      {
+        "title": "Investor sentiment and the cross-section of stock returns",
+        "authors": "Baker \u0026 Wurgler 2006",
+        "relevance": "Sentiment as contrarian signal at extremes"
+      },
+      {
+        "title": "Speculative Betas",
+        "authors": "Hong \u0026 Sraer 2016",
+        "relevance": "Sentiment-driven mispricing in high-beta assets"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md"
+    ],
+    "added_date": "2026-01-20",
+    "last_modified": "2026-03-15",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: F\u0026G only",
+      "V1.1: added CryptoPanic votes"
+    ]
+  },
+  {
+    "name": "SignalGenerationNode",
+    "module_path": "omega.nodes.victoria.signal_generation",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Computes classical technical indicators: SMA crossover, RSI, MACD, Bollinger Bands, and volume momentum from OHLCV data. Self-improving via improve() — currently stuck at v1.0 (improve() never called by orchestrator).",
+    "purpose": "Baseline technical signal suite that provides fundamental price-action context for the ensemble.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance OHLCV REST"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/klines"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "bb_num_std": 2,
+      "bb_window": 20,
+      "macd_fast": 12,
+      "macd_signal": 9,
+      "macd_slow": 26,
+      "rsi_overbought": 70,
+      "rsi_oversold": 30,
+      "rsi_window": 14,
+      "sma_fast": 10,
+      "sma_slow": 30,
+      "volume_window": 20
+    },
+    "tunable_parameters": [
+      "sma_fast",
+      "sma_slow",
+      "rsi_window",
+      "rsi_overbought",
+      "rsi_oversold",
+      "macd_fast",
+      "macd_slow",
+      "bb_window"
+    ],
+    "current_ic": 0.104,
+    "current_weight": 0.092,
+    "references": [
+      {
+        "title": "Technical Analysis of the Financial Markets",
+        "authors": "Murphy 1999",
+        "relevance": "SMA/RSI/MACD baseline indicator definitions"
+      },
+      {
+        "title": "151 Formulas for Algorithmic Trading Strategies",
+        "authors": "Kakushadze \u0026 Serur 2018",
+        "relevance": "Formulas 1–15: momentum and trend indicators"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-01-10",
+    "last_modified": "2026-03-01",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: SMA + RSI + MACD + BB + volume (v1.1–v1.3 implemented but never unlocked)"
+    ]
+  },
+  {
+    "name": "MarketDataSignal",
+    "module_path": "omega.nodes.victoria.market_data_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Computes price returns (1h, 4h, 24h), realized volatility, and momentum scores from raw OHLCV.",
+    "purpose": "Foundation signal layer: price-based features consumed by all higher-level nodes.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance OHLCV REST"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/klines"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "return_windows": [
+        1,
+        4,
+        24,
+        168
+      ],
+      "vol_window": 30
+    },
+    "tunable_parameters": [
+      "vol_window"
+    ],
+    "current_ic": 0.104,
+    "references": [
+      {
+        "title": "Returns to Buying Winners and Selling Losers",
+        "authors": "Jegadeesh \u0026 Titman 1993",
+        "relevance": "Cross-sectional momentum from return windows"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-01-10",
+    "last_modified": "2026-02-15",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "VRPSignal",
+    "module_path": "omega.nodes.victoria.vrp_signal",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Computes the Volatility Risk Premium as the spread between 30-day implied volatility (Deribit ATM options) and subsequent realized volatility. Generates a carry regime signal when VRP is positive.",
+    "purpose": "Exploit systematic overpricing of options — positive VRP regime favours vol-selling and mean-reversion strategies.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Deribit options REST",
+      "Binance OHLCV (realized vol)"
+    ],
+    "api_endpoints": [
+      "https://www.deribit.com/api/v2/public/get_ticker"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "iv_window": 30,
+      "rv_window": 30,
+      "vrp_zscore_threshold": 1
+    },
+    "tunable_parameters": [
+      "iv_window",
+      "rv_window",
+      "vrp_zscore_threshold"
+    ],
+    "current_ic": 0.118,
+    "current_weight": 0.089,
+    "references": [
+      {
+        "title": "The Variance Risk Premium",
+        "authors": "Bollerslev, Tauchen \u0026 Zhou 2009",
+        "relevance": "VRP measurement and its predictive content for equity returns"
+      },
+      {
+        "title": "Volatility Risk Premia and Future Stock Returns",
+        "authors": "Carr \u0026 Wu 2009",
+        "relevance": "Cross-sectional and time-series VRP as alpha signal"
+      }
+    ],
+    "inspired_by": "Christensen \u0026 Prabhala 1998 — implied vol as biased forecast of realized vol",
+    "research_docs": [
+      "docs/ideas/geometric-mathematics-for-trading.md"
+    ],
+    "added_date": "2026-02-10",
+    "last_modified": "2026-03-20",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: raw VRP",
+      "V1.1: z-score normalization + regime output"
+    ]
+  },
+  {
+    "name": "FundingRateSignal",
+    "module_path": "omega.nodes.victoria.alt_data_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Reads Binance perpetual swap funding rates (8-hourly) and computes a rolling z-score to signal crowded long/short positioning.",
+    "purpose": "Funding extremes predict mean-reversion — highly positive funding means crowded longs about to unwind.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance futures funding rate API"
+    ],
+    "api_endpoints": [
+      "https://fapi.binance.com/fapi/v1/fundingRate"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "extreme_threshold": 2,
+      "zscore_window": 90
+    },
+    "tunable_parameters": [
+      "zscore_window",
+      "extreme_threshold"
+    ],
+    "current_ic": 0.082,
+    "current_weight": 0.071,
+    "references": [
+      {
+        "title": "The Cross-Section of Cryptocurrency Returns",
+        "authors": "Liu, Tsyvinski \u0026 Wu 2022",
+        "relevance": "Funding rate as carry signal in crypto perpetuals"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md"
+    ],
+    "added_date": "2026-01-20",
+    "last_modified": "2026-03-10",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "OpenInterestSignal",
+    "module_path": "omega.nodes.victoria.alt_data_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Tracks Binance perpetual open interest change (1h delta and 24h delta) as a proxy for new speculative capital entering or leaving the market.",
+    "purpose": "Rising OI with rising price = trend confirmation; rising OI with falling price = increasing shorts / bearish.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance futures open interest API"
+    ],
+    "api_endpoints": [
+      "https://fapi.binance.com/fapi/v1/openInterest",
+      "https://fapi.binance.com/futures/data/openInterestHist"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "delta_window_hours": [
+        1,
+        4,
+        24
+      ]
+    },
+    "tunable_parameters": [],
+    "current_ic": 0.067,
+    "references": [
+      {
+        "title": "Open Interest and Futures Price Volatility",
+        "authors": "Bessembinder \u0026 Seguin 1992",
+        "relevance": "OI as proxy for speculative participation and volatility regime"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-01-25",
+    "last_modified": "2026-02-20",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "MacroSignal",
+    "module_path": "omega.nodes.victoria.macro_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Ingests US macro data from FRED: M2 money supply growth, federal funds rate, real 10Y yield, 2s10s yield curve, DXY, and Fed net liquidity (assets minus RRP minus TGA).",
+    "purpose": "Regime signal — crypto bull markets historically correlate with monetary expansion and falling real yields.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "FRED API (M2SL, FEDFUNDS, DFII10, T10Y2Y, DTWEXBGS)",
+      "FRED balance sheet series"
+    ],
+    "api_endpoints": [
+      "https://api.stlouisfed.org/fred/series/observations"
+    ],
+    "requires_api_key": true,
+    "api_key_name": "FRED_API_KEY",
+    "parameters": {
+      "series": [
+        "M2SL",
+        "FEDFUNDS",
+        "DFII10",
+        "T10Y2Y",
+        "DTWEXBGS"
+      ],
+      "smoothing_window": 4
+    },
+    "tunable_parameters": [
+      "smoothing_window"
+    ],
+    "references": [
+      {
+        "title": "The Fed Model: A Note",
+        "authors": "Asness 2003",
+        "relevance": "Fed liquidity and real yield impact on risk asset valuations"
+      },
+      {
+        "title": "Global Liquidity and Bitcoin",
+        "authors": "Cieslak \u0026 Schrimpf 2022",
+        "relevance": "Net liquidity measure as crypto price predictor"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md"
+    ],
+    "added_date": "2026-02-05",
+    "last_modified": "2026-03-15",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "OptionsSignal",
+    "module_path": "omega.nodes.victoria.options_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Fetches Deribit BTC/ETH options data to compute gamma exposure (GEX), put/call ratio, IV skew (25-delta RR), max pain price, and term structure slope.",
+    "purpose": "Options market provides institutional positioning signals — GEX pinning, skew as tail-risk proxy, max pain as gravitational level.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Deribit options REST API"
+    ],
+    "api_endpoints": [
+      "https://www.deribit.com/api/v2/public/get_book_summary_by_currency",
+      "https://www.deribit.com/api/v2/public/get_instruments"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "delta_threshold": 0.25,
+      "expiry_window_days": 30,
+      "gex_flip_threshold": 0
+    },
+    "tunable_parameters": [
+      "expiry_window_days"
+    ],
+    "references": [
+      {
+        "title": "Gamma Exposure and Market Maker Hedging",
+        "authors": "Bouchaud \u0026 Potters 2003",
+        "relevance": "GEX pinning effect near large gamma strikes"
+      },
+      {
+        "title": "The Information Content of the Implied Volatility Term Structure",
+        "authors": "Mixon 2007",
+        "relevance": "IV term structure slope as forward-looking fear indicator"
+      }
+    ],
+    "inspired_by": "SpotGamma GEX methodology",
+    "research_docs": [
+      "docs/ideas/geometric-mathematics-for-trading.md"
+    ],
+    "added_date": "2026-02-15",
+    "last_modified": "2026-03-20",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: put/call + skew",
+      "V1.1: GEX + max pain + term structure"
+    ]
+  },
+  {
+    "name": "DerivativesSignal",
+    "module_path": "omega.nodes.victoria.derivatives_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Computes futures basis (spot-perp spread), funding rate carry, and basis term structure from Binance quarterly and perpetual contracts.",
+    "purpose": "Basis and carry signals capture institutional term-structure expectations — contango/backwardation regime detection.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance futures REST",
+      "Binance perp funding rate"
+    ],
+    "api_endpoints": [
+      "https://fapi.binance.com/fapi/v1/ticker/price",
+      "https://fapi.binance.com/fapi/v1/fundingRate"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "basis_window": 24,
+      "carry_annualize": true
+    },
+    "tunable_parameters": [
+      "basis_window"
+    ],
+    "current_ic": 0.076,
+    "references": [
+      {
+        "title": "Carry Trades and Global FX Volatility",
+        "authors": "Menkhoff et al. 2012",
+        "relevance": "Carry strategy returns and crash risk in derivative markets"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-10",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "LiquidationSignal",
+    "module_path": "omega.nodes.victoria.liquidation_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Fetches Coinglass and Bybit liquidation data to compute cascade risk scores — proximity to large liquidation clusters predicts volatility spikes.",
+    "purpose": "Liquidation clusters act as price magnets; signals proximity to cascades for risk management and momentum entries.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Coinglass liquidation heatmap API",
+      "Bybit risk limit tiers"
+    ],
+    "api_endpoints": [
+      "https://open-api.coinglass.com/public/v2/liquidation_chart"
+    ],
+    "requires_api_key": true,
+    "api_key_name": "COINGLASS_API_KEY",
+    "parameters": {
+      "cluster_radius_pct": 1.5,
+      "history_days": 7
+    },
+    "tunable_parameters": [
+      "cluster_radius_pct"
+    ],
+    "current_ic": 0.089,
+    "references": [
+      {
+        "title": "Fire Sales in a Model of Complexity",
+        "authors": "Caballero \u0026 Simsek 2013",
+        "relevance": "Liquidation cascade mechanics in leveraged markets"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md"
+    ],
+    "added_date": "2026-02-10",
+    "last_modified": "2026-03-15",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: Coinglass only",
+      "V1.1: Bybit levels + historical window"
+    ]
+  },
+  {
+    "name": "LiquidationCascadeSignal",
+    "module_path": "omega.nodes.victoria.liquidation_cascade",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Models the amplification factor of liquidation cascades using historical price-liquidation co-movements. Outputs a cascade amplification score and estimated cascade radius.",
+    "purpose": "Predict second-order liquidation effects beyond the initial cluster — cascade risk \u003e 1 means hedging required.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Coinglass historical liquidations",
+      "Binance OHLCV"
+    ],
+    "api_endpoints": [
+      "https://open-api.coinglass.com/public/v2/liquidation_chart"
+    ],
+    "requires_api_key": true,
+    "api_key_name": "COINGLASS_API_KEY",
+    "parameters": {
+      "amplification_decay": 0.9,
+      "history_days": 30,
+      "min_cluster_size_usd": 1000000
+    },
+    "tunable_parameters": [
+      "history_days",
+      "amplification_decay"
+    ],
+    "current_ic": 0.096,
+    "references": [
+      {
+        "title": "Systemic Risk and Liquidation Cascades",
+        "authors": "Brunnermeier \u0026 Pedersen 2009",
+        "relevance": "Liquidity spirals and cascade amplification in leveraged systems"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-02-20",
+    "last_modified": "2026-03-20",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial with historical learning"
+    ]
+  },
+  {
+    "name": "StablecoinSignal",
+    "module_path": "omega.nodes.victoria.stablecoin_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Tracks USDT and USDC on-chain supply growth via DeFiLlama, plus Tether premium (USDT/USD on OTC markets) as a measure of crypto market demand.",
+    "purpose": "Stablecoin inflows signal fresh capital entering crypto; Tether premium above 1% historically precedes bull runs.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "DeFiLlama stablecoin API",
+      "CoinGecko USDT price"
+    ],
+    "api_endpoints": [
+      "https://stablecoins.llama.fi/stablecoins",
+      "https://api.coingecko.com/api/v3/simple/price"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "premium_threshold": 0.002,
+      "supply_window": 7
+    },
+    "tunable_parameters": [
+      "supply_window"
+    ],
+    "current_ic": 0.054,
+    "references": [
+      {
+        "title": "Is Bitcoin Really Untethered?",
+        "authors": "Griffin \u0026 Shams 2020",
+        "relevance": "USDT issuance as demand signal and price predictor"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-02-15",
+    "last_modified": "2026-03-10",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "NewsSignal",
+    "module_path": "omega.nodes.victoria.news_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Aggregates CryptoPanic API headlines and RSS feeds, applies VADER sentiment NLP, and learns per-source reliability weights from outcome feedback.",
+    "purpose": "News-driven price gaps are exploitable in the first 30 minutes — source reliability weighting filters noise.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "CryptoPanic API",
+      "CoinDesk RSS",
+      "CoinTelegraph RSS"
+    ],
+    "api_endpoints": [
+      "https://cryptopanic.com/api/v1/posts/"
+    ],
+    "requires_api_key": true,
+    "api_key_name": "CRYPTOPANIC_API_KEY",
+    "parameters": {
+      "lookback_hours": 2,
+      "min_importance": "medium",
+      "vader_compound_threshold": 0.05
+    },
+    "tunable_parameters": [
+      "lookback_hours",
+      "vader_compound_threshold"
+    ],
+    "current_ic": 0.045,
+    "references": [
+      {
+        "title": "The Impact of News Sentiment on Cryptocurrency Markets",
+        "authors": "Kraaijeveld \u0026 De Smedt 2020",
+        "relevance": "News sentiment predictive content for BTC/ETH"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-15",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: VADER on all sources equally",
+      "V1.1: per-source reliability weights learned from feedback"
+    ]
+  },
+  {
+    "name": "TwitterSignal",
+    "module_path": "omega.nodes.victoria.twitter_signals",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Reads CryptoCompare social stats API for tweet volume, Reddit activity, and social dominance scores for BTC/ETH/SOL.",
+    "purpose": "Social volume spikes predict volatility; social dominance shifts predict capital rotation between tokens.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "CryptoCompare Social Stats API"
+    ],
+    "api_endpoints": [
+      "https://min-api.cryptocompare.com/data/social/coin/histo/hour"
+    ],
+    "requires_api_key": true,
+    "api_key_name": "CC_API_KEY",
+    "parameters": {
+      "spike_threshold": 2.5,
+      "zscore_window": 48
+    },
+    "tunable_parameters": [
+      "zscore_window",
+      "spike_threshold"
+    ],
+    "current_ic": 0.038,
+    "references": [
+      {
+        "title": "Twitter Sentiment and the Stock Market",
+        "authors": "Bollen, Mao \u0026 Zeng 2011",
+        "relevance": "Social sentiment as leading predictor of price moves"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-10",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "OnChainSignal",
+    "module_path": "omega.nodes.victoria.onchain_data",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Pulls on-chain metrics from ErcinDedeoglu's GitHub dataset and CryptoQuant: MVRV Z-score, Puell Multiple, exchange netflow, taker buy/sell ratio, and Coinbase premium index.",
+    "purpose": "On-chain signals reflect holder behaviour and miner economics — MVRV and Puell are primary cycle peak/trough indicators.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "ErcinDedeoglu GitHub (bitcoin-on-chain-indicators)",
+      "CryptoQuant exchange netflow",
+      "Binance taker ratio API"
+    ],
+    "api_endpoints": [
+      "https://raw.githubusercontent.com/coinmetrics/data/master/csv/",
+      "https://fapi.binance.com/futures/data/takerlongshortRatio"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "mvrv_overvalued_threshold": 3.5,
+      "mvrv_undervalued_threshold": 1,
+      "netflow_window": 7,
+      "puell_extreme_high": 4,
+      "puell_extreme_low": 0.5
+    },
+    "tunable_parameters": [
+      "mvrv_overvalued_threshold",
+      "mvrv_undervalued_threshold"
+    ],
+    "current_ic": 0.096,
+    "current_weight": 0.085,
+    "references": [
+      {
+        "title": "The Bitcoin Network Momentum and Value Cycles",
+        "authors": "Plan B 2019",
+        "relevance": "MVRV as market cycle indicator for BTC"
+      },
+      {
+        "title": "Puell Multiple as a Mining-Driven Cycle Indicator",
+        "authors": "Dedeoglu 2019",
+        "url": "https://github.com/ercindedeoglu/bitcoin-on-chain",
+        "relevance": "Miner revenue relative to 365-day average as cycle signal"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md"
+    ],
+    "added_date": "2026-01-25",
+    "last_modified": "2026-03-20",
+    "version": "1.2",
+    "changelog": [
+      "V1.0: MVRV + Puell",
+      "V1.1: exchange netflow",
+      "V1.2: Coinbase premium + taker ratio"
+    ]
+  },
+  {
+    "name": "InformationFlowSignal",
+    "module_path": "omega.nodes.victoria.information_flow",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Computes transfer entropy from BTC returns to ETH and SOL returns to detect which asset is the current information leader.",
+    "purpose": "BTC-dominance regime detection via information causality — when ETH leads, alt-season dynamics apply.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance OHLCV (BTC/ETH/SOL)"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/klines"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "bins": 10,
+      "lag": 1,
+      "window": 120
+    },
+    "tunable_parameters": [
+      "window",
+      "lag"
+    ],
+    "current_ic": 0.062,
+    "references": [
+      {
+        "title": "Information Transfer Between Stock Market Sectors",
+        "authors": "Kwon \u0026 Yang 2008",
+        "relevance": "Transfer entropy methodology for financial time series"
+      },
+      {
+        "title": "151 Formulas for Algorithmic Trading Strategies",
+        "authors": "Kakushadze \u0026 Serur 2018",
+        "relevance": "Formula 103: information ratio and cross-asset information flow"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/geometric-mathematics-for-trading.md"
+    ],
+    "added_date": "2026-02-20",
+    "last_modified": "2026-03-15",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "DisagreementSignal",
+    "module_path": "omega.nodes.victoria.disagreement_signal",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Measures the pairwise disagreement entropy across all signal outputs in the current cycle. High disagreement indicates regime uncertainty; low disagreement indicates consensus.",
+    "purpose": "Meta-signal: when all signals agree, conviction is high; when they disagree, reduce position size.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Internal signal bus (no external API)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "disagreement_threshold": 0.7,
+      "entropy_bins": 5
+    },
+    "tunable_parameters": [
+      "disagreement_threshold"
+    ],
+    "references": [
+      {
+        "title": "Analyst Disagreement and Return Predictability",
+        "authors": "Diether, Malloy \u0026 Scherbina 2002",
+        "relevance": "Disagreement among forecasters as uncertainty proxy"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-03-01",
+    "last_modified": "2026-03-15",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "WassersteinRegimeSignal",
+    "module_path": "omega.nodes.victoria.wasserstein_regime",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Uses optimal transport (Wasserstein-2 distance) between rolling 30-day correlation matrices to detect regime transitions — large distance = regime change.",
+    "purpose": "Model-free regime detection that is sensitive to structural breaks in cross-asset correlations, not just return distributions.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance OHLCV (BTC/ETH/SOL/BNB)"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/klines"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "distance_threshold": 0.15,
+      "overlap": 5,
+      "window": 30
+    },
+    "tunable_parameters": [
+      "window",
+      "distance_threshold"
+    ],
+    "current_ic": 0.078,
+    "references": [
+      {
+        "title": "Optimal Transport: Old and New",
+        "authors": "Villani 2009",
+        "relevance": "Wasserstein distance theory for probability distributions"
+      },
+      {
+        "title": "Wasserstein Distance for Portfolio Regime Detection",
+        "authors": "Marti et al. 2021",
+        "relevance": "Financial correlation matrix comparison via optimal transport"
+      }
+    ],
+    "inspired_by": "Marti et al. 2021 — applying Wasserstein distance to financial correlation matrices",
+    "research_docs": [
+      "docs/ideas/geometric-mathematics-for-trading.md"
+    ],
+    "added_date": "2026-03-05",
+    "last_modified": "2026-03-20",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial Wasserstein-2 on Pearson correlation matrices"
+    ]
+  },
+  {
+    "name": "RMTDenoiserNode",
+    "module_path": "omega.nodes.victoria.rmt_denoiser",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Applies Random Matrix Theory (Marchenko-Pastur law) to eigenvalue-clean the signal correlation matrix, separating true signal structure from noise.",
+    "purpose": "Noise in correlation matrices degrades portfolio construction — RMT cleaning extracts the true factor structure.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Internal signal bus (correlation matrix of all signals)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "eigenvalue_clip": "marchenko_pastur",
+      "q_ratio": 0.5
+    },
+    "tunable_parameters": [
+      "q_ratio"
+    ],
+    "references": [
+      {
+        "title": "Distribution of eigenvalues for some sets of random matrices",
+        "authors": "Marchenko \u0026 Pastur 1967",
+        "relevance": "Foundational RMT result defining the noise eigenvalue bulk"
+      },
+      {
+        "title": "Noise Dressing of Financial Correlation Matrices",
+        "authors": "Laloux et al. 1999",
+        "relevance": "Application of RMT to financial covariance matrix cleaning"
+      }
+    ],
+    "inspired_by": "Laloux et al. 1999 — RMT correlation matrix cleaning for portfolio optimization",
+    "research_docs": [
+      "docs/ideas/geometric-mathematics-for-trading.md",
+      "docs/ideas/quantscience-library-research.md"
+    ],
+    "added_date": "2026-03-10",
+    "last_modified": "2026-03-25",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: Marchenko-Pastur eigenvalue clipping on signal correlation matrix"
+    ]
+  },
+  {
+    "name": "FactorModelNode",
+    "module_path": "omega.nodes.victoria.factor_model",
+    "node_type": "signal",
+    "project": "victoria",
+    "description": "Decomposes the signal matrix into orthogonal PCA factors and computes each signal's factor loadings for risk attribution.",
+    "purpose": "Identify correlated risk clusters in the signal ensemble — prevent doubling up on the same underlying risk factor.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Internal signal bus"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "explained_variance_threshold": 0.85,
+      "n_components": 5
+    },
+    "tunable_parameters": [
+      "n_components"
+    ],
+    "references": [
+      {
+        "title": "Risk Models and Their Uses",
+        "authors": "Ross 1976",
+        "relevance": "APT factor model as basis for risk decomposition"
+      },
+      {
+        "title": "151 Formulas for Algorithmic Trading Strategies",
+        "authors": "Kakushadze \u0026 Serur 2018",
+        "relevance": "Formula 78: PCA-based risk factor construction"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/geometric-mathematics-for-trading.md"
+    ],
+    "added_date": "2026-03-10",
+    "last_modified": "2026-03-20",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial PCA factor decomposition"
+    ]
+  },
+  {
+    "name": "VictoriaNode",
+    "module_path": "omega.nodes.victoria.victoria_node",
+    "node_type": "strategy",
+    "project": "victoria",
+    "description": "Top-level Victoria trading node. Composes all signal subsystems, applies IC-weighted ensemble scoring, routes through DebateGate adversarial filter, and constructs final portfolio. Supports pico/supervised/autonomous modes.",
+    "purpose": "The orchestrating node that turns a signal ensemble into a position. Brain optional.",
+    "autonomy_level": 3,
+    "has_memory": true,
+    "has_reasoning": true,
+    "has_reflection": true,
+    "uses_brain": true,
+    "data_sources": [
+      "All signal subsystems",
+      "SignalBus",
+      "MemoryBus"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "conviction_threshold": 0.3,
+      "max_position_pct": 0.1,
+      "mode": "pico"
+    },
+    "tunable_parameters": [
+      "conviction_threshold",
+      "max_position_pct"
+    ],
+    "current_ic": 0.147,
+    "references": [
+      {
+        "title": "The Kelly Criterion in Blackjack, Sports Betting, and the Stock Market",
+        "authors": "Thorp 1997",
+        "relevance": "Kelly-based position sizing as core portfolio construction method"
+      }
+    ],
+    "research_docs": [
+      "docs/architecture.md",
+      "docs/v14_results.md"
+    ],
+    "added_date": "2026-01-10",
+    "last_modified": "2026-03-27",
+    "version": "3.4",
+    "changelog": [
+      "V1: single-signal",
+      "V2: ensemble + IC weights",
+      "V3: DebateGate + MemoryBus",
+      "V3.4: pico baseline + regime multipliers"
+    ]
+  },
+  {
+    "name": "StrategyNode",
+    "module_path": "omega.nodes.victoria.strategy",
+    "node_type": "strategy",
+    "project": "victoria",
+    "description": "Reads peer signals from SignalBus and VictoriaNode output to construct Kelly-optimal portfolio with regime-aware position scaling.",
+    "purpose": "Translates conviction scores into executable position sizes respecting risk limits.",
+    "autonomy_level": 3,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": true,
+    "data_sources": [
+      "SignalBus",
+      "RegimeDetectorNode output"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "kelly_fraction": 0.25,
+      "max_leverage": 3,
+      "regime_scale_bear": 0.6,
+      "regime_scale_bull": 1.2
+    },
+    "tunable_parameters": [
+      "kelly_fraction",
+      "max_leverage",
+      "regime_scale_bull",
+      "regime_scale_bear"
+    ],
+    "references": null,
+    "research_docs": [
+      "docs/architecture.md"
+    ],
+    "added_date": "2026-01-15",
+    "last_modified": "2026-03-20",
+    "version": "2.1",
+    "changelog": [
+      "V1: fixed Kelly",
+      "V2: regime-aware scaling",
+      "V2.1: SignalBus peer reads"
+    ]
+  },
+  {
+    "name": "RegimeDetectorNode",
+    "module_path": "omega.nodes.victoria.regime_detector",
+    "node_type": "strategy",
+    "project": "victoria",
+    "description": "Classifies market into bullish/bearish/neutral/crisis regimes using HMM with Gaussian emissions on log-returns and realized volatility.",
+    "purpose": "All downstream signal multipliers and position sizes are conditioned on regime — getting this right is critical.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance OHLCV",
+      "WassersteinRegimeSignal output"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "hmm_n_iter": 100,
+      "n_regimes": 4,
+      "vol_lookback": 30
+    },
+    "tunable_parameters": [
+      "n_regimes",
+      "vol_lookback"
+    ],
+    "references": [
+      {
+        "title": "A New Approach to the Economic Analysis of Nonstationary Time Series",
+        "authors": "Hamilton 1989",
+        "relevance": "Hidden Markov Model for regime-switching in financial time series"
+      }
+    ],
+    "inspired_by": "Hamilton 1989 HMM regime-switching model",
+    "research_docs": [
+      "docs/regime_aware_results.md"
+    ],
+    "added_date": "2026-01-20",
+    "last_modified": "2026-03-15",
+    "version": "1.3",
+    "changelog": [
+      "V1.0: 2-state HMM",
+      "V1.2: 4-state + vol features",
+      "V1.3: WassersteinRegime input"
+    ]
+  },
+  {
+    "name": "MetaModelNode",
+    "module_path": "omega.nodes.victoria.meta_model",
+    "node_type": "strategy",
+    "project": "victoria",
+    "description": "GradientBoosting ensemble meta-learner that takes all signal outputs as features and learns optimal weighting from realized PnL outcomes.",
+    "purpose": "Non-linear signal combination — captures interaction effects between signals that IC-weighted linear ensemble misses.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "All signal node outputs",
+      "PaperTradingEngine PnL"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "learning_rate": 0.1,
+      "max_depth": 4,
+      "min_samples_leaf": 20,
+      "n_estimators": 100
+    },
+    "tunable_parameters": [
+      "n_estimators",
+      "max_depth",
+      "learning_rate"
+    ],
+    "references": [
+      {
+        "title": "Greedy Function Approximation: A Gradient Boosting Machine",
+        "authors": "Friedman 2001",
+        "relevance": "GBM as meta-learner for signal stacking"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-02-15",
+    "last_modified": "2026-03-20",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: sklearn GBM",
+      "V1.1: regime-conditional training"
+    ]
+  },
+  {
+    "name": "PositionSizingNode",
+    "module_path": "omega.nodes.victoria.position_sizing",
+    "node_type": "risk",
+    "project": "victoria",
+    "description": "Computes dynamic position sizes using a fractional Kelly criterion adjusted for estimated IC and signal correlation, with risk parity overlay.",
+    "purpose": "Bet sizing is the primary driver of long-run returns — Kelly maximizes log-wealth growth rate.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Signal IC history",
+      "Portfolio correlation matrix"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "kelly_fraction": 0.25,
+      "max_position_pct": 0.15,
+      "risk_parity_weight": 0.3,
+      "vol_target": 0.15
+    },
+    "tunable_parameters": [
+      "kelly_fraction",
+      "max_position_pct",
+      "vol_target"
+    ],
+    "references": [
+      {
+        "title": "A New Interpretation of Information Rate",
+        "authors": "Kelly 1956",
+        "relevance": "Original Kelly criterion for optimal bet sizing"
+      },
+      {
+        "title": "Risk Parity Portfolios: Efficient Frontiers and Optimal",
+        "authors": "Qian 2011",
+        "relevance": "Risk parity as diversification constraint on Kelly positions"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-01-20",
+    "last_modified": "2026-03-15",
+    "version": "1.2",
+    "changelog": [
+      "V1.0: fixed Kelly",
+      "V1.1: fractional Kelly",
+      "V1.2: risk parity overlay"
+    ]
+  },
+  {
+    "name": "DynamicWeightAllocator",
+    "module_path": "omega.nodes.victoria.dynamic_weights",
+    "node_type": "strategy",
+    "project": "victoria",
+    "description": "Maintains rolling Bayesian IC estimates per signal using exponential decay. Updates weights after each cycle outcome. Powers IC-weighted ensemble in VictoriaNode.",
+    "purpose": "Adaptive signal weighting — signals with recent high IC get more weight; decaying signals get down-weighted.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Per-cycle signal predictions vs outcomes (internal)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "decay_rate": 0.95,
+      "ic_floor": 0,
+      "min_observations": 20
+    },
+    "tunable_parameters": [
+      "decay_rate",
+      "min_observations"
+    ],
+    "references": [
+      {
+        "title": "Bayesian Learning in Undirected Graphical Models",
+        "authors": "Koller \u0026 Friedman 2009",
+        "relevance": "Bayesian updating framework for IC estimation"
+      }
+    ],
+    "research_docs": [],
+    "added_date": "2026-01-15",
+    "last_modified": "2026-03-20",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: equal weights",
+      "V1.1: Bayesian IC decay"
+    ]
+  },
+  {
+    "name": "RiskManagementNode",
+    "module_path": "omega.nodes.victoria.risk_management",
+    "node_type": "risk",
+    "project": "victoria",
+    "description": "Enforces position limits, max drawdown stops, and portfolio-level concentration rules. Integrates DebateGate adversarial checks before any trade is approved.",
+    "purpose": "Last line of defence before execution — reject any position that violates structural risk rules.",
+    "autonomy_level": 2,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Portfolio state",
+      "DebateGate adversarial output"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "debate_gate_threshold": 0.6,
+      "max_drawdown_pct": 0.05,
+      "max_portfolio_leverage": 3,
+      "max_single_position_pct": 0.15
+    },
+    "tunable_parameters": [
+      "max_drawdown_pct",
+      "max_single_position_pct"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-01-10",
+    "last_modified": "2026-03-10",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: basic limits",
+      "V1.1: DebateGate integration"
+    ]
+  },
+  {
+    "name": "DataIngestionNode",
+    "module_path": "omega.nodes.victoria.data_ingestion",
+    "node_type": "execution",
+    "project": "victoria",
+    "description": "Fetches OHLCV data from Binance REST with CoinGecko fallback. Caches results and tracks per-source health scores.",
+    "purpose": "Reliable data pipeline foundation — all signal nodes depend on this node's outputs.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance REST klines",
+      "CoinGecko OHLCV"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/klines",
+      "https://api.coingecko.com/api/v3/coins/{id}/ohlc"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "cache_ttl_seconds": 60,
+      "max_retries": 3,
+      "timeout_seconds": 10
+    },
+    "tunable_parameters": [
+      "cache_ttl_seconds"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-01-10",
+    "last_modified": "2026-03-01",
+    "version": "1.2",
+    "changelog": [
+      "V1.0: Binance only",
+      "V1.1: CoinGecko fallback",
+      "V1.2: health tracking"
+    ]
+  },
+  {
+    "name": "SignalResearchNode",
+    "module_path": "omega.nodes.victoria.signal_research",
+    "node_type": "reasoning",
+    "project": "victoria",
+    "description": "Uses QUICK-tier LLM to analyze MemoryKernel episodes and generate research hypotheses about new alpha signals. Currently generates hypotheses but does not auto-test them.",
+    "purpose": "AI-driven signal discovery — extract patterns from past cycle outcomes that aren't captured by current signal set.",
+    "autonomy_level": 3,
+    "has_memory": true,
+    "has_reasoning": true,
+    "has_reflection": false,
+    "uses_brain": true,
+    "data_sources": [
+      "MemoryKernel episodes",
+      "Cycle outcome history"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "brain_tier": "QUICK",
+      "episode_lookback": 20,
+      "hypothesis_count": 3
+    },
+    "tunable_parameters": [
+      "episode_lookback",
+      "hypothesis_count"
+    ],
+    "references": [
+      {
+        "title": "Hypothesis Generation in Scientific Discovery",
+        "authors": "Langley et al. 1987",
+        "relevance": "Automated hypothesis generation as ML loop component"
+      }
+    ],
+    "research_docs": [
+      "docs/node_intelligence_audit.md"
+    ],
+    "added_date": "2026-02-20",
+    "last_modified": "2026-03-20",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: LLM hypothesis generation from episodes"
+    ]
+  },
+  {
+    "name": "VerificationNode",
+    "module_path": "omega.nodes.victoria.verification",
+    "node_type": "execution",
+    "project": "victoria",
+    "description": "Compares live trade outcomes to backtest expectations and flags systematic divergences (slippage, latency, fill rate).",
+    "purpose": "Detect execution drift — when live performance diverges from backtest, the strategy needs re-calibration.",
+    "autonomy_level": 2,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Live trade records",
+      "Backtest reference database"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "divergence_threshold_pct": 20,
+      "min_trades_for_test": 30
+    },
+    "tunable_parameters": [
+      "divergence_threshold_pct"
+    ],
+    "references": null,
+    "research_docs": [
+      "docs/BUG_BASH_AND_VALIDATION.md"
+    ],
+    "added_date": "2026-02-15",
+    "last_modified": "2026-03-15",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial divergence checks"
+    ]
+  },
+  {
+    "name": "DataCleanersNode",
+    "module_path": "omega.nodes.victoria.cleaners",
+    "node_type": "execution",
+    "project": "victoria",
+    "description": "Multi-stage data validation pipeline: DataIntegrityNode (NaN/outlier detection), LintNode (schema validation), PropertyTestNode (statistical invariants), ConvergenceMonitorNode (IC trend monitoring).",
+    "purpose": "Garbage in, garbage out — catch data quality issues before they contaminate signal generation.",
+    "autonomy_level": 2,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "All upstream signal outputs (validation only)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "min_ic_trend_window": 10,
+      "nan_tolerance_pct": 5,
+      "zscore_outlier_threshold": 5
+    },
+    "tunable_parameters": [
+      "zscore_outlier_threshold"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-02-10",
+    "last_modified": "2026-03-10",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: NaN + outlier detection",
+      "V1.1: IC trend monitoring"
+    ]
+  },
+  {
+    "name": "ReasoningNode",
+    "module_path": "omega.nodes.shared.reasoning_node",
+    "node_type": "reasoning",
+    "project": "shared",
+    "description": "LLM-powered structured reasoning with QUICK-tier brain and MemoryBus context injection. Produces structured decisions with confidence and evidence fields.",
+    "purpose": "Cross-project reasoning layer — any node that needs LLM decision-making delegates here.",
+    "autonomy_level": 3,
+    "has_memory": true,
+    "has_reasoning": true,
+    "has_reflection": false,
+    "uses_brain": true,
+    "data_sources": [
+      "MemoryBus (regime insights, risk warnings)",
+      "Caller-provided context"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "brain_tier": "QUICK",
+      "confidence_threshold": 0.7,
+      "max_context_memories": 5
+    },
+    "tunable_parameters": [
+      "max_context_memories",
+      "confidence_threshold"
+    ],
+    "references": null,
+    "research_docs": [
+      "docs/architecture/distributed-intelligence.md"
+    ],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-20",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: basic LLM calls",
+      "V1.1: MemoryBus context injection"
+    ]
+  },
+  {
+    "name": "ReflectionNode",
+    "module_path": "omega.nodes.shared.reflection_node",
+    "node_type": "reasoning",
+    "project": "shared",
+    "description": "Per-cycle LLM reflection that analyzes cycle outcomes and writes regime insights to both the episodic MemoryKernel and cross-project MemoryBus. Memory consolidation gap: written episodes never consolidated to semantic.",
+    "purpose": "Continuous learning via self-reflection — turn cycle outcomes into persistent strategic knowledge.",
+    "autonomy_level": 3,
+    "has_memory": true,
+    "has_reasoning": true,
+    "has_reflection": true,
+    "uses_brain": true,
+    "data_sources": [
+      "Cycle outcome metrics",
+      "MemoryKernel episodes"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "brain_tier": "QUICK",
+      "min_cycles_before_reflect": 1,
+      "reflection_prompt_version": "v2"
+    },
+    "tunable_parameters": [
+      "min_cycles_before_reflect"
+    ],
+    "references": null,
+    "research_docs": [
+      "docs/architecture/distributed-intelligence.md",
+      "docs/node_intelligence_audit.md"
+    ],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-20",
+    "version": "1.2",
+    "changelog": [
+      "V1.0: episodic writes only",
+      "V1.1: MemoryBus writes",
+      "V1.2: structured insight format"
+    ]
+  },
+  {
+    "name": "SemanticMemoryNode",
+    "module_path": "omega.nodes.shared.semantic_memory",
+    "node_type": "memory",
+    "project": "shared",
+    "description": "Cross-project semantic memory index that enables Victoria and Polymarket to share distilled strategic insights. Wraps the MemoryBus with semantic retrieval (embedding-based similarity).",
+    "purpose": "Break project silos — Victoria's regime knowledge should inform Polymarket's event probability models.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "MemoryBus",
+      "MemoryKernel (both projects)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "embedding_model": "text-embedding-3-small",
+      "min_relevance": 0.4,
+      "top_k": 5
+    },
+    "tunable_parameters": [
+      "top_k",
+      "min_relevance"
+    ],
+    "references": null,
+    "research_docs": [
+      "docs/architecture/distributed-intelligence.md"
+    ],
+    "added_date": "2026-02-10",
+    "last_modified": "2026-03-20",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial cross-project semantic retrieval"
+    ]
+  },
+  {
+    "name": "EdgeDetectionNode",
+    "module_path": "omega.nodes.polymarket.edge_detection",
+    "node_type": "signal",
+    "project": "polymarket",
+    "description": "Computes edge as the difference between Omega's model probability and Polymarket's market price for binary events. Calculates Kelly fraction when edge exceeds threshold.",
+    "purpose": "Only bet when expected value is positive and large enough to justify execution cost.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Gamma API (Polymarket markets)",
+      "Internal probability models"
+    ],
+    "api_endpoints": [
+      "https://gamma-api.polymarket.com/markets"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "kelly_fraction": 0.1,
+      "min_edge_pct": 3,
+      "min_liquidity_usd": 1000
+    },
+    "tunable_parameters": [
+      "min_edge_pct",
+      "kelly_fraction"
+    ],
+    "references": [
+      {
+        "title": "A New Interpretation of Information Rate",
+        "authors": "Kelly 1956",
+        "relevance": "Kelly criterion applied to binary prediction market betting"
+      }
+    ],
+    "research_docs": [
+      "docs/alpha-edge-research.md"
+    ],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-20",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: fixed edge threshold",
+      "V1.1: adaptive threshold from outcome history"
+    ]
+  },
+  {
+    "name": "VolArbNode",
+    "module_path": "omega.nodes.polymarket.vol_arb",
+    "node_type": "signal",
+    "project": "polymarket",
+    "description": "Detects opportunities where Polymarket's implied volatility (from binary option pricing) diverges significantly from realized volatility on the underlying asset.",
+    "purpose": "Vol arb between prediction markets and options markets exploits model disagreement on event probability distributions.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Gamma API",
+      "Binance options (realized vol)",
+      "Deribit (implied vol)"
+    ],
+    "api_endpoints": [
+      "https://gamma-api.polymarket.com/markets",
+      "https://www.deribit.com/api/v2/public/get_ticker"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "lookback_days": 30,
+      "min_vol_spread_pct": 10
+    },
+    "tunable_parameters": [
+      "min_vol_spread_pct"
+    ],
+    "references": null,
+    "research_docs": [
+      "data/polymarket_vol_arb_opportunities.json"
+    ],
+    "added_date": "2026-02-15",
+    "last_modified": "2026-03-15",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial vol comparison"
+    ]
+  },
+  {
+    "name": "WeatherEnsembleNode",
+    "module_path": "omega.nodes.polymarket.weather_ensemble",
+    "node_type": "signal",
+    "project": "polymarket",
+    "description": "Runs a 30-member NOAA GEFS weather ensemble for 57 cities and aggregates probabilistic temperature/precipitation forecasts to price Polymarket weather event markets.",
+    "purpose": "Weather prediction markets are dominated by retail bettors — ensemble meteorological models have systematic edge over simple forecasts.",
+    "autonomy_level": 2,
+    "has_memory": true,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "NOAA GEFS ensemble API (open-meteo)",
+      "Polymarket weather markets"
+    ],
+    "api_endpoints": [
+      "https://ensemble-api.open-meteo.com/v1/ensemble",
+      "https://gamma-api.polymarket.com/markets?tag=weather"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "cities_count": 57,
+      "confidence_threshold": 0.65,
+      "ensemble_members": 30,
+      "forecast_horizon_days": 7
+    },
+    "tunable_parameters": [
+      "confidence_threshold",
+      "forecast_horizon_days"
+    ],
+    "references": [
+      {
+        "title": "The ECMWF Ensemble Prediction System",
+        "authors": "Buizza et al. 2008",
+        "relevance": "Ensemble weather forecasting methodology and calibration"
+      }
+    ],
+    "research_docs": [
+      "docs/ideas/simons-alpha-sources.md",
+      "data/polymarket_weather_edges.json"
+    ],
+    "added_date": "2026-02-20",
+    "last_modified": "2026-03-20",
+    "version": "1.2",
+    "changelog": [
+      "V1.0: 10-member ensemble, 20 cities",
+      "V1.1: 30-member",
+      "V1.2: 57 cities + adaptive confidence"
+    ]
+  },
+  {
+    "name": "PolymarketPricingNode",
+    "module_path": "omega.nodes.polymarket.pricing",
+    "node_type": "execution",
+    "project": "polymarket",
+    "description": "Fetches active Polymarket event markets via Gamma API and computes fair value probabilities using calibrated Bayesian priors.",
+    "purpose": "Market data ingestion layer for Polymarket — all edge detection depends on accurate current prices.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Gamma API (Polymarket)"
+    ],
+    "api_endpoints": [
+      "https://gamma-api.polymarket.com/markets",
+      "https://gamma-api.polymarket.com/events"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "active_only": true,
+      "min_liquidity_usd": 200,
+      "min_volume_usd": 500
+    },
+    "tunable_parameters": [
+      "min_volume_usd"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-10",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: basic fetch",
+      "V1.1: Bayesian calibration"
+    ]
+  },
+  {
+    "name": "LatencyArbNode",
+    "module_path": "omega.nodes.polymarket.strategies.latency_arb",
+    "node_type": "strategy",
+    "project": "polymarket",
+    "description": "Detects latency arbitrage opportunities when Binance crypto price moves before Polymarket crypto-related event markets update.",
+    "purpose": "Polymarket markets referencing crypto prices lag Binance by 30–120 seconds — first mover wins edge.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "BinanceFeedNode (real-time prices)",
+      "Gamma API (event markets)"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/ticker/price",
+      "https://gamma-api.polymarket.com/markets"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "max_latency_seconds": 120,
+      "min_edge_pct": 5,
+      "min_price_move_pct": 1.5
+    },
+    "tunable_parameters": [
+      "min_price_move_pct",
+      "max_latency_seconds"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-03-01",
+    "last_modified": "2026-03-20",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial latency arb detection"
+    ]
+  },
+  {
+    "name": "BinanceFeedNode",
+    "module_path": "omega.nodes.polymarket.strategies.binance_feed",
+    "node_type": "execution",
+    "project": "polymarket",
+    "description": "Stateless Binance spot price feed connector for Polymarket correlation detection. Fetches current prices and 24h stats.",
+    "purpose": "Provides the Binance price reference that LatencyArbNode uses to detect lagged Polymarket updates.",
+    "autonomy_level": 0,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Binance REST ticker API"
+    ],
+    "api_endpoints": [
+      "https://api.binance.com/api/v3/ticker/24hr",
+      "https://api.binance.com/api/v3/ticker/price"
+    ],
+    "requires_api_key": false,
+    "parameters": {
+      "cache_ttl_seconds": 5,
+      "symbols": [
+        "BTCUSDT",
+        "ETHUSDT",
+        "SOLUSDT"
+      ]
+    },
+    "tunable_parameters": [],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-03-01",
+    "last_modified": "2026-03-10",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial"
+    ]
+  },
+  {
+    "name": "DevilsAdvocateNode",
+    "module_path": "omega.nodes.devils_advocate",
+    "node_type": "reasoning",
+    "project": "platform",
+    "description": "Adversarial challenger that generates counter-arguments to proposed trades via ChallengeRegistry and DebateGate. Currently rule-based; LLM challenge generation is not yet wired.",
+    "purpose": "Force explicit risk consideration before every trade — if the devil can't find a flaw, proceed with higher confidence.",
+    "autonomy_level": 3,
+    "has_memory": true,
+    "has_reasoning": true,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "ChallengeRegistry (internal)",
+      "Proposed trade parameters"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "challenge_threshold": 0.6,
+      "max_challenges": 5,
+      "required_rebuttal": true
+    },
+    "tunable_parameters": [
+      "challenge_threshold"
+    ],
+    "references": [
+      {
+        "title": "Thinking, Fast and Slow",
+        "authors": "Kahneman 2011",
+        "relevance": "Adversarial pre-mortem as bias reduction technique"
+      }
+    ],
+    "research_docs": [
+      "docs/superpowers/plans/2026-03-21-devils-advocate.md"
+    ],
+    "added_date": "2026-01-20",
+    "last_modified": "2026-03-15",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: ChallengeRegistry + DebateGate",
+      "V1.1: structured rebuttal format"
+    ]
+  },
+  {
+    "name": "DashboardNode",
+    "module_path": "omega.nodes.dashboard_node",
+    "node_type": "platform",
+    "project": "platform",
+    "description": "Monitoring and reporting node that self-evaluates system health, generates improvement reports, and exports metrics. Cannot take action — observes only.",
+    "purpose": "Single pane of glass for system health — tracks all node metrics and generates actionable improvement suggestions.",
+    "autonomy_level": 2,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "All node health metrics (internal)",
+      "StateStore"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "alert_health_threshold": 0.5,
+      "report_interval_cycles": 10
+    },
+    "tunable_parameters": [
+      "report_interval_cycles"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-01-20",
+    "last_modified": "2026-03-10",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: health metrics",
+      "V1.1: improvement report generation"
+    ]
+  },
+  {
+    "name": "SkillCreatorNode",
+    "module_path": "omega.nodes.skill_creator",
+    "node_type": "platform",
+    "project": "platform",
+    "description": "Factory node that generates new SKILL.md capability definitions at runtime based on observed node behaviour patterns.",
+    "purpose": "Self-extending platform — new capabilities discovered during cycles are formalized as reusable skills.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Node capability logs (internal)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "confidence_threshold": 0.8,
+      "min_usage_count": 3
+    },
+    "tunable_parameters": [
+      "min_usage_count"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-02-01",
+    "last_modified": "2026-03-01",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial SKILL.md generation"
+    ]
+  },
+  {
+    "name": "CalculatorNode",
+    "module_path": "omega.nodes.calculator",
+    "node_type": "platform",
+    "project": "platform",
+    "description": "Stateful arithmetic node with add/subtract/multiply/divide. Tracks operation counts and error rates as a reference implementation for the node framework.",
+    "purpose": "Reference node for testing the autonomy framework — also used in integration tests.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "precision": 6
+    },
+    "tunable_parameters": [],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-01-10",
+    "last_modified": "2026-02-01",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: initial reference implementation"
+    ]
+  },
+  {
+    "name": "TextAnalyzerNode",
+    "module_path": "omega.nodes.text_analyzer",
+    "node_type": "platform",
+    "project": "platform",
+    "description": "Sequential text analysis with progressive feature unlock: v1.0 (word count), v1.1 (sentiment), v1.2 (entity extraction), v1.3 (topic modelling). Demonstrates the improve() progression pattern.",
+    "purpose": "Demonstration of self-improving node pattern — shows how improve() unlocks higher-capability versions.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Text input (caller-provided)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "max_tokens": 512
+    },
+    "tunable_parameters": [],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-01-15",
+    "last_modified": "2026-02-15",
+    "version": "1.0",
+    "changelog": [
+      "V1.0: word count only (v1.1–v1.3 implemented but improve() never called)"
+    ]
+  },
+  {
+    "name": "WebFetcherNode",
+    "module_path": "omega.nodes.web_fetcher",
+    "node_type": "platform",
+    "project": "platform",
+    "description": "HTTP fetch with exponential-backoff retry, response caching, and per-URL reliability score learning from historic success/failure rates.",
+    "purpose": "Resilient HTTP layer used by any node that needs to fetch external data without managing retry logic itself.",
+    "autonomy_level": 1,
+    "has_memory": false,
+    "has_reasoning": false,
+    "has_reflection": false,
+    "uses_brain": false,
+    "data_sources": [
+      "Any HTTP endpoint (caller-provided)"
+    ],
+    "api_endpoints": [],
+    "requires_api_key": false,
+    "parameters": {
+      "backoff_base_seconds": 2,
+      "cache_ttl_seconds": 300,
+      "max_retries": 3,
+      "timeout_seconds": 15
+    },
+    "tunable_parameters": [
+      "max_retries",
+      "cache_ttl_seconds"
+    ],
+    "references": null,
+    "research_docs": [],
+    "added_date": "2026-01-15",
+    "last_modified": "2026-03-01",
+    "version": "1.1",
+    "changelog": [
+      "V1.0: basic retry",
+      "V1.1: per-URL reliability scoring"
+    ]
+  }
+]
