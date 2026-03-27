@@ -9,7 +9,7 @@ from typing import Any
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-from omega.core.credentials import coingecko_api_key
+from omega.core.credentials import credentials
 from omega.data.base import DataSource, MarketData
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class CoinGeckoSource(DataSource):
             "Accept": "application/json",
             "User-Agent": "omega-victoria/1.0",
         }
-        api_key = coingecko_api_key()
+        api_key = credentials.get("COINGECKO_API_KEY")
         if api_key:
             self._session_headers["x-cg-demo-api-key"] = api_key
 
