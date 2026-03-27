@@ -154,7 +154,7 @@ class MemoryBus:
             (time.time(),),
         ).rowcount
         self._conn.commit()
-        return deleted
+        return int(deleted) if deleted is not None else 0
 
     def summary(self) -> dict[str, Any]:
         """Return counts per memory_type."""

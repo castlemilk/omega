@@ -17,18 +17,19 @@ Composition:
 Each gate has a check(context) method returning GateResult(PASS/FAIL/WARNING).
 Gates can be registered with VerificationGateSystem and run collectively.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class GateStatus(str, Enum):
-    PASS    = "pass"
-    FAIL    = "fail"
+class GateStatus(StrEnum):
+    PASS = "pass"
+    FAIL = "fail"
     WARNING = "warning"
 
 
@@ -52,6 +53,7 @@ class GateResult:
 # Abstract base
 # ---------------------------------------------------------------------------
 
+
 class Gate(ABC):
     def __init__(self, name: str) -> None:
         self.name = name
@@ -64,6 +66,7 @@ class Gate(ABC):
 # ---------------------------------------------------------------------------
 # Concrete gates
 # ---------------------------------------------------------------------------
+
 
 class PropertyGate(Gate):
     """Passes when predicate(context) is True."""
@@ -187,13 +190,23 @@ class RegressionGate(Gate):
                     f"Regression: {self._metric} changed {pct_change:.1f}% "
                     f"(before={bval:.4f}, after={aval:.4f}, threshold={self._threshold_pct}%)"
                 ),
-                details={"metric": self._metric, "before": bval, "after": aval, "pct_change": pct_change},
+                details={
+                    "metric": self._metric,
+                    "before": bval,
+                    "after": aval,
+                    "pct_change": pct_change,
+                },
             )
         return GateResult(
             status=GateStatus.PASS,
             gate_name=self.name,
             evidence=f"{self._metric} change={pct_change:+.1f}% within threshold",
-            details={"metric": self._metric, "before": bval, "after": aval, "pct_change": pct_change},
+            details={
+                "metric": self._metric,
+                "before": bval,
+                "after": aval,
+                "pct_change": pct_change,
+            },
         )
 
 
@@ -227,7 +240,7 @@ class ConvergenceGate(Gate):
                 evidence=f"Insufficient history: {len(history)} < {self._window} required",
             )
 
-        recent = list(history[-self._window:])
+        recent = list(history[-self._window :])
         n = len(recent)
         mean_x = (n - 1) / 2.0
         mean_y = sum(recent) / n
@@ -269,6 +282,7 @@ class ConvergenceGate(Gate):
 # Composite gates
 # ---------------------------------------------------------------------------
 
+
 class AndGate(Gate):
     """All children must pass (warnings propagate if no failures)."""
 
@@ -292,7 +306,9 @@ class AndGate(Gate):
                 gate_name=self.name,
                 evidence="; ".join(r.evidence for r in warnings),
             )
-        return GateResult(status=GateStatus.PASS, gate_name=self.name, evidence="All children passed")
+        return GateResult(
+            status=GateStatus.PASS, gate_name=self.name, evidence="All children passed"
+        )
 
 
 class OrGate(Gate):
@@ -305,9 +321,15 @@ class OrGate(Gate):
     def check(self, context: dict[str, Any]) -> GateResult:
         results = [g.check(context) for g in self._children]
         if any(r.passed for r in results):
-            return GateResult(status=GateStatus.PASS, gate_name=self.name, evidence="At least one child passed")
+            return GateResult(
+                status=GateStatus.PASS, gate_name=self.name, evidence="At least one child passed"
+            )
         if any(r.status == GateStatus.WARNING for r in results):
-            return GateResult(status=GateStatus.WARNING, gate_name=self.name, evidence="No child passed; some warnings")
+            return GateResult(
+                status=GateStatus.WARNING,
+                gate_name=self.name,
+                evidence="No child passed; some warnings",
+            )
         return GateResult(
             status=GateStatus.FAIL,
             gate_name=self.name,
@@ -318,6 +340,7 @@ class OrGate(Gate):
 # ---------------------------------------------------------------------------
 # VerificationGateSystem
 # ---------------------------------------------------------------------------
+
 
 class VerificationGateSystem:
     """
@@ -352,5 +375,7 @@ class VerificationGateSystem:
             "passed": sum(1 for r in results if r.passed),
             "failed": sum(1 for r in results if r.failed),
             "warnings": sum(1 for r in results if r.status == GateStatus.WARNING),
-            "failures": [{"gate": r.gate_name, "evidence": r.evidence} for r in results if r.failed],
+            "failures": [
+                {"gate": r.gate_name, "evidence": r.evidence} for r in results if r.failed
+            ],
         }

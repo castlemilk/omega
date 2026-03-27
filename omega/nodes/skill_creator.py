@@ -20,7 +20,7 @@ import os
 import re
 import time
 import uuid
-from typing import Any
+from typing import Any, ClassVar
 
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.skill_loader import SkillLoader
@@ -54,19 +54,17 @@ class SkillCreatorNode(Node):
         print(out.result["path"])         # "/path/to/omega/skills/kubernetes/SKILL.md"
     """
 
-    skill_tags: list[str] = ["research"]
+    skill_tags: ClassVar[list[str]] = ["research"]
 
     def __init__(
         self,
         skills_root: str | None = None,
-        brain_config=None,
+        brain_config: Any = None,
     ) -> None:
         super().__init__(brain_config)
         if skills_root is None:
             skills_root = os.path.normpath(
-                os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), "..", "skills"
-                )
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "skills")
             )
         self._skills_root = skills_root
         self._loader = SkillLoader(self._skills_root)
@@ -110,6 +108,7 @@ class SkillCreatorNode(Node):
         t0 = time.perf_counter()
         self._execution_count += 1
         try:
+            result: dict[str, Any] | list[dict[str, Any]] | str
             if input.action == "create_skill":
                 result = self._create_skill(input.parameters)
             elif input.action == "list_skills":
@@ -178,9 +177,7 @@ class SkillCreatorNode(Node):
         skill_dir = os.path.join(self._skills_root, safe_name)
         os.makedirs(skill_dir, exist_ok=True)
 
-        tags_yaml = (
-            "\n".join(f"  - {t}" for t in tags) if tags else "  - general"
-        )
+        tags_yaml = "\n".join(f"  - {t}" for t in tags) if tags else "  - general"
         skill_md = (
             f"---\n"
             f"name: {safe_name}\n"

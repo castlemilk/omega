@@ -60,13 +60,9 @@ class DataSplitter:
         self._start = date.fromisoformat(start)
         self._end = date.fromisoformat(end)
         if self._end <= self._start:
-            raise ValueError(
-                f"end must be after start: got start={start!r}, end={end!r}"
-            )
+            raise ValueError(f"end must be after start: got start={start!r}, end={end!r}")
         if abs(sum(ratios) - 1.0) > 0.001:
-            raise ValueError(
-                f"ratios must sum to 1, got {sum(ratios):.6f} from {ratios}"
-            )
+            raise ValueError(f"ratios must sum to 1, got {sum(ratios):.6f} from {ratios}")
         self._ratios = ratios
 
     def split(self) -> DateSplit:

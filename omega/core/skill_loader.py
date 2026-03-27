@@ -54,8 +54,8 @@ class SkillLoader:
 
     def __init__(self, skills_root: str) -> None:
         self._root = skills_root
-        self._index: dict[str, SkillMetadata] = {}       # name -> metadata
-        self._tag_index: dict[str, list[str]] = {}        # tag -> [skill names]
+        self._index: dict[str, SkillMetadata] = {}  # name -> metadata
+        self._tag_index: dict[str, list[str]] = {}  # tag -> [skill names]
         self._discover()
 
     # ------------------------------------------------------------------
@@ -123,8 +123,7 @@ class SkillLoader:
         )
         if block:
             return [
-                i.strip()
-                for i in re.findall(r"^[ \t]+-[ \t]+(.+)$", block.group(1), re.MULTILINE)
+                i.strip() for i in re.findall(r"^[ \t]+-[ \t]+(.+)$", block.group(1), re.MULTILINE)
             ]
         # Inline list
         inline = re.search(rf"^{re.escape(key)}:\s+\[(.+)\]$", fm, re.MULTILINE)

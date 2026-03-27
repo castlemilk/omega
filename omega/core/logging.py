@@ -51,16 +51,38 @@ from typing import Any
 # Internal formatter
 # ---------------------------------------------------------------------------
 
-_STANDARD_LOG_FIELDS: frozenset = frozenset({
-    "name", "msg", "args", "levelname", "levelno", "pathname",
-    "filename", "module", "exc_info", "exc_text", "stack_info",
-    "lineno", "funcName", "created", "msecs", "relativeCreated",
-    "thread", "threadName", "processName", "process", "message",
-    # correlation fields — handled explicitly, not duplicated
-    "node_id", "trace_id", "span_id", "cycle_id",
-    # internal python logging bookkeeping
-    "taskName",
-})
+_STANDARD_LOG_FIELDS: frozenset = frozenset(
+    {
+        "name",
+        "msg",
+        "args",
+        "levelname",
+        "levelno",
+        "pathname",
+        "filename",
+        "module",
+        "exc_info",
+        "exc_text",
+        "stack_info",
+        "lineno",
+        "funcName",
+        "created",
+        "msecs",
+        "relativeCreated",
+        "thread",
+        "threadName",
+        "processName",
+        "process",
+        "message",
+        # correlation fields — handled explicitly, not duplicated
+        "node_id",
+        "trace_id",
+        "span_id",
+        "cycle_id",
+        # internal python logging bookkeeping
+        "taskName",
+    }
+)
 
 _CORRELATION_FIELDS = ("node_id", "trace_id", "span_id", "cycle_id")
 
@@ -100,6 +122,7 @@ class _JsonFormatter(logging.Formatter):
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def configure_logging(
     level: str = "INFO",
@@ -211,11 +234,15 @@ class bound_logger:  # noqa: N801 — intentionally lowercase for ergonomics
     def info(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
         self._logger.info(msg, *args, extra=self._extra(extra), **kw)
 
-    def warning(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
+    def warning(
+        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any
+    ) -> None:
         self._logger.warning(msg, *args, extra=self._extra(extra), **kw)
 
     def error(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
         self._logger.error(msg, *args, extra=self._extra(extra), **kw)
 
-    def exception(self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any) -> None:
+    def exception(
+        self, msg: str, *args: Any, extra: dict[str, Any] | None = None, **kw: Any
+    ) -> None:
         self._logger.exception(msg, *args, extra=self._extra(extra), **kw)

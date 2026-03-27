@@ -67,7 +67,7 @@ WEATHER_KEYWORDS = [
 ]
 # Sports teams and other names that accidentally contain weather words.
 WEATHER_BLOCKLIST = [
-    "miami heat",        # NBA team
+    "miami heat",  # NBA team
     "carolina hurricanes",  # NHL team
     "heat check",
     "heat map",

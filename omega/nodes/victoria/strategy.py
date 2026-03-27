@@ -118,10 +118,10 @@ class StrategyNode(Node):
         self._last_trade_cycle: int = -999
 
         # --- Sit-out filter counters ---
-        self._sit_out_regime_count: int = 0   # uncertain regime → 75% size reduction
+        self._sit_out_regime_count: int = 0  # uncertain regime → 75% size reduction
         self._sit_out_vol_low_count: int = 0  # dead-calm vol → full sit-out
-        self._sit_out_vol_high_count: int = 0 # chaotic vol → 50% size reduction
-        self._normal_trade_count: int = 0     # cycles with full-size trading
+        self._sit_out_vol_high_count: int = 0  # chaotic vol → 50% size reduction
+        self._normal_trade_count: int = 0  # cycles with full-size trading
 
     # ------------------------------------------------------------------ Node interface
 
@@ -399,9 +399,11 @@ class StrategyNode(Node):
 
     # ------------------------------------------------------------------ sit-out filters
 
-    def _vol_percentile_rank(self, prices: list[float], window: int = 20, lookback: int = 100) -> float:
+    def _vol_percentile_rank(
+        self, prices: list[float], window: int = 20, lookback: int = 100
+    ) -> float:
         """
-        Return the percentile rank (0–1) of the current window vol within the
+        Return the percentile rank (0-1) of the current window vol within the
         last `lookback` candles.  Returns 0.5 (neutral) if insufficient data.
         """
         if len(prices) < lookback + 1:
@@ -515,9 +517,11 @@ class StrategyNode(Node):
             elif _regime_hmm == "sideways":
                 _regime_confidence = float(_regime_probs[2])
 
-        _REGIME_CONFIDENCE_THRESHOLD = 0.6
-        _block_longs = _regime_hmm == "bear" and _regime_confidence >= _REGIME_CONFIDENCE_THRESHOLD
-        _block_shorts = _regime_hmm == "bull" and _regime_confidence >= _REGIME_CONFIDENCE_THRESHOLD
+        _regime_confidence_threshold = 0.6
+        _block_longs = _regime_hmm == "bear" and _regime_confidence >= _regime_confidence_threshold
+        _block_shorts = (
+            _regime_hmm == "bull" and _regime_confidence >= _regime_confidence_threshold
+        )
 
         # --- Sit-out filter ---
         sit_out_reason, sit_out_size_mult = self._check_sit_out(signals, market_data)
@@ -602,7 +606,9 @@ class StrategyNode(Node):
             )
 
         self._proposals_generated += proposals_this_cycle
-        self._proposals_filtered += filtered_this_cycle + regime_blocked_longs + regime_blocked_shorts
+        self._proposals_filtered += (
+            filtered_this_cycle + regime_blocked_longs + regime_blocked_shorts
+        )
 
         # No candidates: either all filtered by conviction or no conviction signals at all.
         # Do NOT fall back to weak signals — the filter's purpose is to reduce trade count.

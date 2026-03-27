@@ -26,7 +26,7 @@ import math
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 logger = logging.getLogger("omega.core.goals")
 
@@ -113,9 +113,7 @@ class ConstitutionalConstraints:
             severity,
         )
 
-    def check(
-        self, metrics: dict[str, float]
-    ) -> tuple[bool, list[ConstraintViolation]]:
+    def check(self, metrics: dict[str, float]) -> tuple[bool, list[ConstraintViolation]]:
         """Evaluate all constraints against current metrics.
 
         Returns:
@@ -201,7 +199,7 @@ def _sigmoid(x: float) -> float:
 class BalancedScorecard:
     """Multi-dimensional goal tracking across four dimensions."""
 
-    DIMENSIONS = ["returns", "risk", "diversification", "information_ratio"]
+    DIMENSIONS: ClassVar[list[str]] = ["returns", "risk", "diversification", "information_ratio"]
 
     def __init__(self, dimension_weights: dict[str, float] | None = None) -> None:
         if dimension_weights is None:
@@ -308,7 +306,7 @@ class AdaptiveReferenceTracker:
         uncertainty_factor: float = 1.5,
     ) -> None:
         self._objectives = list(objectives)
-        self._alpha = ema_alpha          # EMA smoothing factor (higher = faster adaptation)
+        self._alpha = ema_alpha  # EMA smoothing factor (higher = faster adaptation)
         self._uncertainty_factor = uncertainty_factor
 
         # EMA reference values per objective
@@ -324,9 +322,7 @@ class AdaptiveReferenceTracker:
 
     def set_reference(self, trajectory: dict[str, list[float]]) -> None:
         """Override with a manual reference (first value of each trajectory used)."""
-        self._manual_reference = {
-            obj: vals[0] for obj, vals in trajectory.items() if vals
-        }
+        self._manual_reference = {obj: vals[0] for obj, vals in trajectory.items() if vals}
         logger.debug("AdaptiveReferenceTracker: manual reference set %s", self._manual_reference)
 
     def update(self, current: dict[str, float]) -> None:
@@ -379,7 +375,7 @@ class AdaptiveReferenceTracker:
 
     def control_action(self) -> dict[str, float]:
         """Proportional correction: K_p * (reference - current), scaled by uncertainty."""
-        K_P = 0.1
+        k_p = 0.1
         actions: dict[str, float] = {}
         for obj in self._objectives:
             ref = self._manual_reference.get(obj, self._ema.get(obj))
@@ -389,7 +385,7 @@ class AdaptiveReferenceTracker:
                 continue
             # Scale down correction when uncertainty is high
             uncertainty = 1.0 + self._uncertainty_factor * math.sqrt(self._variance(obj))
-            actions[obj] = K_P * (ref - cur) / uncertainty
+            actions[obj] = k_p * (ref - cur) / uncertainty
         return actions
 
 
@@ -430,11 +426,36 @@ class HTNDecomposer:
             method_name="standard_pipeline",
             preconditions={},
             subtasks=[
-                {"name": "ingest_data", "parameters": {}, "assigned_to": "data_ingestion_node", "priority": 1.0},
-                {"name": "generate_signals", "parameters": {}, "assigned_to": "signal_generation_node", "priority": 0.9},
-                {"name": "run_strategy", "parameters": {}, "assigned_to": "strategy_node", "priority": 0.8},
-                {"name": "assess_risk", "parameters": {}, "assigned_to": "risk_management_node", "priority": 0.85},
-                {"name": "generate_report", "parameters": {}, "assigned_to": "reporting_node", "priority": 0.6},
+                {
+                    "name": "ingest_data",
+                    "parameters": {},
+                    "assigned_to": "data_ingestion_node",
+                    "priority": 1.0,
+                },
+                {
+                    "name": "generate_signals",
+                    "parameters": {},
+                    "assigned_to": "signal_generation_node",
+                    "priority": 0.9,
+                },
+                {
+                    "name": "run_strategy",
+                    "parameters": {},
+                    "assigned_to": "strategy_node",
+                    "priority": 0.8,
+                },
+                {
+                    "name": "assess_risk",
+                    "parameters": {},
+                    "assigned_to": "risk_management_node",
+                    "priority": 0.85,
+                },
+                {
+                    "name": "generate_report",
+                    "parameters": {},
+                    "assigned_to": "reporting_node",
+                    "priority": 0.6,
+                },
             ],
         )
         self.register_method(
@@ -442,9 +463,24 @@ class HTNDecomposer:
             method_name="risk_response",
             preconditions={"max_drawdown_pct": {">": 10.0}},
             subtasks=[
-                {"name": "run_risk_management", "parameters": {"mode": "emergency"}, "assigned_to": "risk_management_node", "priority": 1.0},
-                {"name": "rebalance_portfolio", "parameters": {}, "assigned_to": "strategy_node", "priority": 0.95},
-                {"name": "generate_report", "parameters": {"type": "risk_breach"}, "assigned_to": "reporting_node", "priority": 0.7},
+                {
+                    "name": "run_risk_management",
+                    "parameters": {"mode": "emergency"},
+                    "assigned_to": "risk_management_node",
+                    "priority": 1.0,
+                },
+                {
+                    "name": "rebalance_portfolio",
+                    "parameters": {},
+                    "assigned_to": "strategy_node",
+                    "priority": 0.95,
+                },
+                {
+                    "name": "generate_report",
+                    "parameters": {"type": "risk_breach"},
+                    "assigned_to": "reporting_node",
+                    "priority": 0.7,
+                },
             ],
         )
         self.register_method(
@@ -452,8 +488,18 @@ class HTNDecomposer:
             method_name="data_refresh",
             preconditions={},
             subtasks=[
-                {"name": "ingest_data", "parameters": {"force_refresh": True}, "assigned_to": "data_ingestion_node", "priority": 1.0},
-                {"name": "generate_signals", "parameters": {}, "assigned_to": "signal_generation_node", "priority": 0.9},
+                {
+                    "name": "ingest_data",
+                    "parameters": {"force_refresh": True},
+                    "assigned_to": "data_ingestion_node",
+                    "priority": 1.0,
+                },
+                {
+                    "name": "generate_signals",
+                    "parameters": {},
+                    "assigned_to": "signal_generation_node",
+                    "priority": 0.9,
+                },
             ],
         )
         self.register_method(
@@ -461,15 +507,28 @@ class HTNDecomposer:
             method_name="self_improvement",
             preconditions={},
             subtasks=[
-                {"name": "evaluate_nodes", "parameters": {}, "assigned_to": "orchestrator_node", "priority": 0.9},
-                {"name": "improve_weakest_node", "parameters": {}, "assigned_to": "orchestrator_node", "priority": 0.85},
-                {"name": "generate_report", "parameters": {"type": "improvement"}, "assigned_to": "reporting_node", "priority": 0.6},
+                {
+                    "name": "evaluate_nodes",
+                    "parameters": {},
+                    "assigned_to": "orchestrator_node",
+                    "priority": 0.9,
+                },
+                {
+                    "name": "improve_weakest_node",
+                    "parameters": {},
+                    "assigned_to": "orchestrator_node",
+                    "priority": 0.85,
+                },
+                {
+                    "name": "generate_report",
+                    "parameters": {"type": "improvement"},
+                    "assigned_to": "reporting_node",
+                    "priority": 0.6,
+                },
             ],
         )
 
-    def _check_preconditions(
-        self, preconditions: dict[str, Any], state: dict[str, Any]
-    ) -> bool:
+    def _check_preconditions(self, preconditions: dict[str, Any], state: dict[str, Any]) -> bool:
         for key, condition in preconditions.items():
             state_val = state.get(key)
             if state_val is None:
@@ -489,7 +548,7 @@ class HTNDecomposer:
                         if not (state_val <= limit):
                             return False
                     elif op == "==":
-                        if not (state_val == limit):
+                        if state_val != limit:
                             return False
                     else:
                         logger.warning("Unknown precondition operator: %s", op)
@@ -499,16 +558,10 @@ class HTNDecomposer:
                     return False
         return True
 
-    def applicable_methods(
-        self, goal: str, state: dict[str, Any]
-    ) -> list[str]:
+    def applicable_methods(self, goal: str, state: dict[str, Any]) -> list[str]:
         """Return method names where all preconditions are satisfied by state."""
         methods = self._methods.get(goal, [])
-        return [
-            m["name"]
-            for m in methods
-            if self._check_preconditions(m["preconditions"], state)
-        ]
+        return [m["name"] for m in methods if self._check_preconditions(m["preconditions"], state)]
 
     def _build_tasks(self, subtask_dicts: list[dict[str, Any]]) -> list[Task]:
         tasks: list[Task] = []
@@ -597,7 +650,7 @@ class NashWelfareAggregator:
     def _random_simplex_point(self, n: int) -> list[float]:
         seed = int(time.monotonic_ns()) % (2**32)
         result: list[float] = []
-        for i in range(n):
+        for _i in range(n):
             seed = (seed * 1664525 + 1013904223) % (2**32)
             result.append(seed / (2**32))
         exps = [-math.log(max(1e-15, v)) for v in result]
@@ -639,7 +692,9 @@ class NashWelfareAggregator:
         self._outcomes_history.append(copy.copy(metrics))
         if len(self._outcomes_history) > 200:
             self._outcomes_history = self._outcomes_history[-200:]
-        weighted = {obj: metrics.get(obj, 0.0) * self._weights.get(obj, 0.0) for obj in self._objectives}
+        weighted = {
+            obj: metrics.get(obj, 0.0) * self._weights.get(obj, 0.0) for obj in self._objectives
+        }
         return self.nash_welfare(weighted)
 
 
@@ -675,7 +730,7 @@ class MPCReferenceTracker:
             elif len(values) == 1:
                 predictions[obj] = [values[-1]] * self._horizon
             else:
-                recent = values[-min(10, len(values)):]
+                recent = values[-min(10, len(values)) :]
                 n = len(recent)
                 x_mean = (n - 1) / 2.0
                 y_mean = sum(recent) / n
@@ -729,7 +784,7 @@ class GoalArchitecture:
     Tracking: AdaptiveReferenceTracker (rolling EMA, uncertainty-aware)
     """
 
-    _DEFAULT_OBJECTIVES = ["sharpe_ratio", "coverage_rate", "error_rate"]
+    _DEFAULT_OBJECTIVES: ClassVar[list[str]] = ["sharpe_ratio", "coverage_rate", "error_rate"]
 
     def __init__(
         self,
@@ -758,9 +813,7 @@ class GoalArchitecture:
             self._objectives,
         )
 
-    def _infer_goal(
-        self, metrics: dict[str, float], system_state: dict[str, Any]
-    ) -> str:
+    def _infer_goal(self, metrics: dict[str, float], system_state: dict[str, Any]) -> str:
         """Heuristically select the current goal from metrics/state."""
         drawdown = metrics.get("max_drawdown_pct", 0.0)
         if drawdown > 10.0:
@@ -826,8 +879,6 @@ class GoalArchitecture:
         )
         return decision
 
-    def set_reference_trajectory(
-        self, trajectory: dict[str, list[float]]
-    ) -> None:
+    def set_reference_trajectory(self, trajectory: dict[str, list[float]]) -> None:
         """Set a manual reference trajectory on the adaptive tracker."""
         self._tracker.set_reference(trajectory)

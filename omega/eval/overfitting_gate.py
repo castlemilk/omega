@@ -28,10 +28,10 @@ from dataclasses import dataclass
 class OverfittingResult:
     """Result of the overfitting gate check."""
 
-    passed: bool   # True = not overfitting; proposal is acceptable
-    reason: str    # Human-readable explanation with all numeric context
-    threshold: float  # Minimum acceptable test Sharpe (validate_sharpe - 1σ)
-    gap: float     # validate_sharpe - test_sharpe; positive = test is worse
+    passed: bool  # True = not overfitting; proposal is acceptable
+    reason: str  # Human-readable explanation with all numeric context
+    threshold: float  # Minimum acceptable test Sharpe (validate_sharpe - 1 std_dev)
+    gap: float  # validate_sharpe - test_sharpe; positive = test is worse
 
 
 def check_overfitting(
@@ -44,9 +44,9 @@ def check_overfitting(
     Gate: reject if test Sharpe is more than 1 std-dev below validate Sharpe.
 
     The std-dev is estimated from the bootstrap 95% CI width:
-        σ ≈ (ci_upper - ci_lower) / (2 × 1.96)
+        std_dev ~= (ci_upper - ci_lower) / (2 * 1.96)
 
-    Threshold: validate_sharpe - σ
+    Threshold: validate_sharpe - std_dev
     Pass condition: test_sharpe >= threshold
 
     Parameters
@@ -68,13 +68,13 @@ def check_overfitting(
     if passed:
         reason = (
             f"test_sharpe={test_sharpe:.4f} >= threshold={threshold:.4f} "
-            f"(validate={validate_sharpe:.4f}, σ={std_dev:.4f}, gap={gap:.4f})"
+            f"(validate={validate_sharpe:.4f}, std_dev={std_dev:.4f}, gap={gap:.4f})"
         )
     else:
         reason = (
             f"overfitting detected: test_sharpe={test_sharpe:.4f} < "
             f"threshold={threshold:.4f} "
-            f"(validate={validate_sharpe:.4f}, σ={std_dev:.4f}, gap={gap:.4f})"
+            f"(validate={validate_sharpe:.4f}, std_dev={std_dev:.4f}, gap={gap:.4f})"
         )
 
     return OverfittingResult(passed=passed, reason=reason, threshold=threshold, gap=gap)

@@ -27,7 +27,7 @@ import random
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, ClassVar
 
 logger = logging.getLogger("omega.core.adversarial")
 
@@ -105,7 +105,7 @@ class EnsembleDisagreementDetector:
 
     def __init__(self, disagreement_threshold: float = 0.2) -> None:
         self.disagreement_threshold = disagreement_threshold
-        self._variants: dict[str, str] = {}          # variant_id → description
+        self._variants: dict[str, str] = {}  # variant_id → description
         self._outputs: dict[str, dict[str, float]] = {}  # variant_id → output
 
     def register_variant(self, variant_id: str, description: str = "") -> None:
@@ -123,9 +123,7 @@ class EnsembleDisagreementDetector:
             self._variants[variant_id] = ""
         self._outputs[variant_id] = output
 
-    def _normalised_distance(
-        self, a: dict[str, float], b: dict[str, float]
-    ) -> float:
+    def _normalised_distance(self, a: dict[str, float], b: dict[str, float]) -> float:
         """
         Pairwise Euclidean distance between two signal dicts, normalised by
         the number of shared keys.
@@ -151,9 +149,7 @@ class EnsembleDisagreementDetector:
             for j in range(i + 1, len(variant_ids)):
                 vid_a = variant_ids[i]
                 vid_b = variant_ids[j]
-                dist = self._normalised_distance(
-                    self._outputs[vid_a], self._outputs[vid_b]
-                )
+                dist = self._normalised_distance(self._outputs[vid_a], self._outputs[vid_b])
                 if dist > max_disagreement:
                     max_disagreement = dist
                 if dist > self.disagreement_threshold:
@@ -166,16 +162,13 @@ class EnsembleDisagreementDetector:
 
         if flagged:
             logger.warning(
-                "Ring 1: disagreement flagged — max_distance=%.4f (threshold=%.4f), "
-                "variants=%s",
+                "Ring 1: disagreement flagged — max_distance=%.4f (threshold=%.4f), variants=%s",
                 max_disagreement,
                 self.disagreement_threshold,
                 disagreeing_variants,
             )
         else:
-            logger.debug(
-                "Ring 1: no disagreement — max_distance=%.4f", max_disagreement
-            )
+            logger.debug("Ring 1: no disagreement — max_distance=%.4f", max_disagreement)
 
         return DisagreementResult(
             flagged=flagged,
@@ -214,7 +207,7 @@ class ScenarioGenerator:
     """
 
     # Common tickers used in base scenarios
-    _DEFAULT_TICKERS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "ADAUSDT"]
+    _DEFAULT_TICKERS: ClassVar[list[str]] = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "ADAUSDT"]
 
     def __init__(self, seed: int | None = None) -> None:
         self._rng = random.Random(seed)
@@ -229,8 +222,7 @@ class ScenarioGenerator:
                 scenario_id="base_flash_crash",
                 name="Flash Crash",
                 description=(
-                    "Rapid liquidity withdrawal: BTC drops 30%, alts drop 20%, "
-                    "volatility triples."
+                    "Rapid liquidity withdrawal: BTC drops 30%, alts drop 20%, volatility triples."
                 ),
                 market_shocks={
                     **{"BTCUSDT": -0.30},
@@ -244,9 +236,7 @@ class ScenarioGenerator:
             Scenario(
                 scenario_id="base_vol_spike",
                 name="Volatility Spike",
-                description=(
-                    "Volatility explodes 5×; correlations break down across the board."
-                ),
+                description=("Volatility explodes 5x; correlations break down across the board."),
                 market_shocks={t: 0.0 for t in tickers},
                 vol_multiplier=5.0,
                 correlation_breakdown=True,
@@ -299,8 +289,7 @@ class ScenarioGenerator:
                 scenario_id="base_black_swan",
                 name="Black Swan",
                 description=(
-                    "Catastrophic 50% BTC drop with correlations jumping to 1.0; "
-                    "no refuge assets."
+                    "Catastrophic 50% BTC drop with correlations jumping to 1.0; no refuge assets."
                 ),
                 market_shocks={t: -0.50 for t in tickers},
                 vol_multiplier=8.0,
@@ -327,23 +316,16 @@ class ScenarioGenerator:
 
         if current_signals:
             # Sort tickers by signal strength descending (overweight assets)
-            sorted_signals = sorted(
-                current_signals.items(), key=lambda kv: kv[1], reverse=True
-            )
+            sorted_signals = sorted(current_signals.items(), key=lambda kv: kv[1], reverse=True)
             # Target the top-2 overweight assets
             top_assets = [ticker for ticker, _ in sorted_signals[:2]]
 
             for asset in top_assets:
                 # Targeted crash on the overweight asset
-                shock_magnitude = -(
-                    0.25 + self._rng.uniform(0.05, 0.20)
-                )
+                shock_magnitude = -(0.25 + self._rng.uniform(0.05, 0.20))
                 shocks: dict[str, float] = {}
                 for ticker in current_signals:
-                    shocks[ticker] = (
-                        shock_magnitude if ticker == asset
-                        else shock_magnitude * 0.4
-                    )
+                    shocks[ticker] = shock_magnitude if ticker == asset else shock_magnitude * 0.4
                 targeted.append(
                     Scenario(
                         scenario_id=f"targeted_{asset.lower()}_{uuid.uuid4().hex[:6]}",
@@ -360,10 +342,7 @@ class ScenarioGenerator:
                 )
 
             # Generate a scenario that inverts the entire signal direction
-            inverted_shocks = {
-                ticker: -signal * 0.3
-                for ticker, signal in current_signals.items()
-            }
+            inverted_shocks = {ticker: -signal * 0.3 for ticker, signal in current_signals.items()}
             targeted.append(
                 Scenario(
                     scenario_id=f"signal_inversion_{uuid.uuid4().hex[:6]}",
@@ -440,9 +419,7 @@ class EvolutionaryTournament:
         champion = tournament.get_champion_params()
     """
 
-    def __init__(
-        self, population_size: int = 10, mutation_rate: float = 0.1
-    ) -> None:
+    def __init__(self, population_size: int = 10, mutation_rate: float = 0.1) -> None:
         self.population_size = population_size
         self.mutation_rate = mutation_rate
         self._population: dict[str, dict[str, Any]] = {}  # variant_id → params
@@ -465,20 +442,12 @@ class EvolutionaryTournament:
         for key, val in params.items():
             if isinstance(val, bool):
                 # Flip with low probability
-                mutated[key] = (
-                    not val
-                    if random.random() < self.mutation_rate * 0.5
-                    else val
-                )
+                mutated[key] = not val if random.random() < self.mutation_rate * 0.5 else val
             elif isinstance(val, int):
-                factor = random.uniform(
-                    1.0 - self.mutation_rate, 1.0 + self.mutation_rate
-                )
+                factor = random.uniform(1.0 - self.mutation_rate, 1.0 + self.mutation_rate)
                 mutated[key] = max(1, round(val * factor))
             elif isinstance(val, float):
-                factor = random.uniform(
-                    1.0 - self.mutation_rate, 1.0 + self.mutation_rate
-                )
+                factor = random.uniform(1.0 - self.mutation_rate, 1.0 + self.mutation_rate)
                 mutated[key] = val * factor
             else:
                 mutated[key] = val
@@ -500,13 +469,9 @@ class EvolutionaryTournament:
             vid = self._new_variant_id()
             self._population[vid] = self._mutate_params(base_params)
 
-        logger.info(
-            "Ring 3: initialised population of %d variants", len(self._population)
-        )
+        logger.info("Ring 3: initialised population of %d variants", len(self._population))
 
-    def evaluate(
-        self, fitness_fn: Callable[[dict], float]
-    ) -> dict[str, float]:
+    def evaluate(self, fitness_fn: Callable[[dict], float]) -> dict[str, float]:
         """
         Call fitness_fn for each variant in the population.
         Returns {variant_id: fitness_score}.
@@ -516,9 +481,7 @@ class EvolutionaryTournament:
             try:
                 score = fitness_fn(params)
             except Exception as exc:
-                logger.warning(
-                    "Ring 3: fitness_fn raised for variant '%s': %s", vid, exc
-                )
+                logger.warning("Ring 3: fitness_fn raised for variant '%s': %s", vid, exc)
                 score = 0.0
             scores[vid] = score
             self._fitness_history.setdefault(vid, []).append(score)
@@ -531,9 +494,7 @@ class EvolutionaryTournament:
         )
         return scores
 
-    def tournament_select(
-        self, fitness_scores: dict[str, float], k: int = 3
-    ) -> str:
+    def tournament_select(self, fitness_scores: dict[str, float], k: int = 3) -> str:
         """
         k-tournament selection: randomly pick k variants, return the best.
         Falls back to the global best if the population is smaller than k.
@@ -554,9 +515,7 @@ class EvolutionaryTournament:
             return
 
         n_keep = max(1, round(len(fitness_scores) * survival_rate))
-        sorted_variants = sorted(
-            fitness_scores.items(), key=lambda kv: kv[1], reverse=True
-        )
+        sorted_variants = sorted(fitness_scores.items(), key=lambda kv: kv[1], reverse=True)
         survivors = {vid for vid, _ in sorted_variants[:n_keep]}
         eliminated = [vid for vid in list(self._population) if vid not in survivors]
 
@@ -576,9 +535,7 @@ class EvolutionaryTournament:
         Returns the list of new variant IDs.
         """
         if parent_id not in self._population:
-            logger.warning(
-                "spawn_variants: parent '%s' not in population; skipping.", parent_id
-            )
+            logger.warning("spawn_variants: parent '%s' not in population; skipping.", parent_id)
             return []
 
         parent_params = self._population[parent_id]
@@ -589,14 +546,10 @@ class EvolutionaryTournament:
             self._population[child_id] = self._mutate_params(parent_params)
             new_ids.append(child_id)
 
-        logger.debug(
-            "Ring 3: spawned %d children from parent '%s'", len(new_ids), parent_id
-        )
+        logger.debug("Ring 3: spawned %d children from parent '%s'", len(new_ids), parent_id)
         return new_ids
 
-    def run_tournament(
-        self, fitness_fn: Callable[[dict], float]
-    ) -> TournamentResult:
+    def run_tournament(self, fitness_fn: Callable[[dict], float]) -> TournamentResult:
         """
         Run a full tournament cycle:
           1. Evaluate all variants with fitness_fn.
@@ -607,9 +560,7 @@ class EvolutionaryTournament:
         Returns TournamentResult with champion info.
         """
         if not self._population:
-            raise ValueError(
-                "Population is empty — call initialise_population() first."
-            )
+            raise ValueError("Population is empty — call initialise_population() first.")
 
         self._generation += 1
         fitness_scores = self.evaluate(fitness_fn)
@@ -619,9 +570,7 @@ class EvolutionaryTournament:
 
         # Record which variants will be eliminated before removing them
         n_keep = max(1, round(len(fitness_scores) * 0.5))
-        sorted_variants = sorted(
-            fitness_scores.items(), key=lambda kv: kv[1], reverse=True
-        )
+        sorted_variants = sorted(fitness_scores.items(), key=lambda kv: kv[1], reverse=True)
         eliminated_ids = [vid for vid, _ in sorted_variants[n_keep:]]
 
         self.eliminate_losers(fitness_scores, survival_rate=0.5)
@@ -711,8 +660,8 @@ class AdversarialPressure:
             ap.active_rings = [1, 2]
     """
 
-    RING2_INTERVAL: int = 10   # cycles between scenario generation runs
-    RING3_INTERVAL: int = 50   # cycles between evolutionary tournament runs
+    RING2_INTERVAL: int = 10  # cycles between scenario generation runs
+    RING3_INTERVAL: int = 50  # cycles between evolutionary tournament runs
 
     def __init__(
         self,
@@ -720,9 +669,7 @@ class AdversarialPressure:
         population_size: int = 10,
         active_rings: list[int] | None = None,
     ) -> None:
-        self.ring1 = EnsembleDisagreementDetector(
-            disagreement_threshold=ring1_threshold
-        )
+        self.ring1 = EnsembleDisagreementDetector(disagreement_threshold=ring1_threshold)
         self.ring2 = ScenarioGenerator()
         self.ring3 = EvolutionaryTournament(population_size=population_size)
         self._failure_cases: list[dict] = []
@@ -909,10 +856,7 @@ class AdversarialPressure:
                     "context": {
                         "max_disagreement": ring1_result.max_disagreement,
                         "disagreeing_variants": ring1_result.disagreeing_variants,
-                        "outputs": {
-                            vid: dict(out)
-                            for vid, out in ring1_result.outputs.items()
-                        },
+                        "outputs": {vid: dict(out) for vid, out in ring1_result.outputs.items()},
                     },
                     "cycle": cycle,
                 }
@@ -923,9 +867,7 @@ class AdversarialPressure:
             if scenario.severity < 0.8 or not current_signals:
                 continue
             stressed = self.ring2.stress_test(current_signals, scenario)
-            stressed_mean = (
-                sum(stressed.values()) / len(stressed) if stressed else 0.0
-            )
+            stressed_mean = sum(stressed.values()) / len(stressed) if stressed else 0.0
             if stressed_mean < -0.3:
                 failures.append(
                     {
@@ -947,9 +889,7 @@ class AdversarialPressure:
 
         # Ring 3 failure cases — poor champion fitness
         if ring3_result is not None:
-            best_fitness = ring3_result.fitness_scores.get(
-                ring3_result.champion_id, 0.0
-            )
+            best_fitness = ring3_result.fitness_scores.get(ring3_result.champion_id, 0.0)
             if best_fitness < 0.1:
                 failures.append(
                     {
