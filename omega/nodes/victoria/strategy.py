@@ -635,11 +635,15 @@ class StrategyNode(Node):
         # No candidates: either all filtered by conviction or no conviction signals at all.
         # Do NOT fall back to weak signals — the filter's purpose is to reduce trade count.
         if not long_candidates and not short_candidates:
+            conviction_dist = {level.name: 0 for level in ConvictionLevel}
+            for c in convictions.values():
+                conviction_dist[c.name] += 1
             return {
                 "weights": {},
                 "positions": 0,
                 "method": self._weighting,
                 "convictions": {t: c.name for t, c in convictions.items()},
+                "conviction_distribution": conviction_dist,
                 "proposals_generated": proposals_this_cycle,
                 "proposals_filtered": filtered_this_cycle,
                 "regime_blocked_longs": regime_blocked_longs,
