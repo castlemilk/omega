@@ -27,6 +27,10 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 # BTC has a 27.8% win rate — used only as a market regime indicator.
 _TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
 
+# Symbols excluded from LONG positions only (shorts still permitted).
+# ETH added: strong downward momentum bias makes longs consistently unprofitable.
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "ETHUSDT"})
+
 
 # ---------------------------------------------------------------------------
 # ConvictionLevel — 5-point rating scale
@@ -522,13 +526,28 @@ class StrategyNode(Node):
             elif _regime_hmm == "sideways":
                 _regime_confidence = float(_regime_probs[2])
 
-        # Lowered from 0.60 → 0.40: block longs at lower bear confidence to prevent
-        # SOL/ETH longs from leaking through in weak bear regimes.
-        _regime_confidence_threshold = 0.40
-        _block_longs = _regime_hmm == "bear" and _regime_confidence >= _regime_confidence_threshold
-        _block_shorts = (
-            _regime_hmm == "bull" and _regime_confidence >= _regime_confidence_threshold
-        )
+        # Continuous regime probability scaling: use raw bear/bull probabilities to scale
+        # position weights proportionally. Fall back to binary blocking at 35% if keys absent.
+        _regime_w_bear: float = float(signals.get("_regime_w_bear", -1.0))
+        _regime_w_bull: float = float(signals.get("_regime_w_bull", -1.0))
+        _use_continuous_regime = _regime_w_bear >= 0.0 and _regime_w_bull >= 0.0
+        if _use_continuous_regime:
+            _block_longs = False
+            _block_shorts = False
+            logger.info(
+                "Regime scaling: bear=%.2f, bull=%.2f",
+                _regime_w_bear,
+                _regime_w_bull,
+            )
+        else:
+            # Fallback: binary block at 35% threshold
+            _regime_confidence_threshold = 0.35
+            _block_longs = (
+                _regime_hmm == "bear" and _regime_confidence >= _regime_confidence_threshold
+            )
+            _block_shorts = (
+                _regime_hmm == "bull" and _regime_confidence >= _regime_confidence_threshold
+            )
 
         # --- Sit-out filter ---
         sit_out_reason, sit_out_size_mult = self._check_sit_out(signals, market_data)
@@ -592,6 +611,9 @@ class StrategyNode(Node):
                 continue
             c = convictions.get(ticker, ConvictionLevel.HOLD)
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
+                if ticker in _LONG_BLACKLIST:
+                    logger.debug("Skipping %s (long blacklist)", ticker)
+                    continue
                 if sig.get("composite", 0.0) <= self._signal_threshold:
                     continue
                 proposals_this_cycle += 1
@@ -720,6 +742,15 @@ class StrategyNode(Node):
             raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker])
         for ticker, w in short_base.items():
             raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker])
+
+        # Apply continuous regime scaling: bear_prob reduces longs, bull_prob reduces shorts
+        if _use_continuous_regime:
+            for ticker in list(raw_weights.keys()):
+                w = raw_weights[ticker]
+                if w > 0:
+                    raw_weights[ticker] = w * (1.0 - _regime_w_bear)
+                elif w < 0:
+                    raw_weights[ticker] = w * (1.0 - _regime_w_bull)
 
         # Normalise so total |weight| = 1.0, then apply sit-out size multiplier
         total_w = sum(abs(v) for v in raw_weights.values())
