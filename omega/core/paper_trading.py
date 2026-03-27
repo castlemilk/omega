@@ -377,6 +377,8 @@ class PaperTradingEngine:
                     "pnl": realised,
                     "slippage": 0.0,
                     "duration": age,
+                    "hold_cycles": age,
+                    "conviction": min(abs(float(existing.get("weight", 0.0))), 1.0),
                     "close_reason": "direction_flip",
                     "mae": float(existing.get("mae", 0.0)),
                     "mfe": float(existing.get("mfe", 0.0)),
@@ -451,6 +453,7 @@ class PaperTradingEngine:
                 "unrealized_pnl": 0.0,
                 "cycle_opened": current_cycle,
                 "exit_at_cycle": exit_at_cycle,  # randomized — avoids trend alignment
+                "weight": weight,  # stored for conviction calculation on close
                 "mae": 0.0,
                 "mfe": 0.0,
                 "db_id": db_id,
@@ -557,6 +560,8 @@ class PaperTradingEngine:
                 "pnl": unrealized,
                 "slippage": 0.0,
                 "duration": age,
+                "hold_cycles": age,
+                "conviction": min(abs(float(pos.get("weight", 0.0))), 1.0),
                 "close_reason": close_reason,
                 "mae": float(pos.get("mae", 0.0)),
                 "mfe": float(pos.get("mfe", 0.0)),

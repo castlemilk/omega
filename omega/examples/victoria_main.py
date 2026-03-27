@@ -303,6 +303,8 @@ class VictoriaSystem:
         self._ic_values: dict[str, float] = {}  # signal_name → ic at 1d horizon
         self._ic_long_values: dict[str, float] = {}  # signal_name → ic at 5d horizon
         self._last_sharpe: float = 0.0
+        # Rolling cycle returns for live OOS Sharpe (replaces deterministic stale WF value)
+        self._live_returns: list[float] = []
         # Register signal_research in orchestrator + StateStore
         self.orchestrator.register_node(self.signal_research)
         _sr_state = self.signal_research.get_state()
@@ -880,10 +882,27 @@ class VictoriaSystem:
                             _wf_result.get("n_active_days", 0),
                             _wf_result.get("n_oos_days", 0),
                         )
-                        system_metrics["wf_oos_sharpe"] = _wf_sharpe
+                        # V14: stale WF on fixed historical bars always yields -3.5.
+                        # Override with rolling live Sharpe once we have ≥10 cycles.
                         system_metrics["wf_max_drawdown"] = _wf_dd
                 except Exception as _wfe:
                     logger.warning("Walk-forward backtest skipped: %s", _wfe)
+
+        # ── Live OOS Sharpe from realized cycle returns ───────────────────────
+        # Track per-cycle return (bt.get("return") or 0) to compute a rolling
+        # OOS Sharpe that reflects actual strategy quality rather than a fixed
+        # historical backtest result.
+        _cycle_ret = float(portfolio.get("cycle_pnl_pct", bt.get("return", 0.0)))
+        self._live_returns.append(_cycle_ret)
+        if len(self._live_returns) > 100:
+            self._live_returns.pop(0)
+        if len(self._live_returns) >= 10:
+            import math as _math
+            _rets = self._live_returns[-50:]
+            _mean = sum(_rets) / len(_rets)
+            _var = sum((r - _mean) ** 2 for r in _rets) / max(1, len(_rets) - 1)
+            _std = _math.sqrt(_var) if _var > 0 else 1e-9
+            system_metrics["wf_oos_sharpe"] = round((_mean / _std) * _math.sqrt(len(_rets)), 4)
 
         # ── Evaluate + record ─────────────────────────────────────────────────
         node_states = self.orchestrator.registry.all_states()

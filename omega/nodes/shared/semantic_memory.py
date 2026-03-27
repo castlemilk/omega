@@ -159,17 +159,32 @@ class SemanticMemoryNode(Node):
             return {"status": "skipped", "reason": "no database connection"}
 
         since_cycle = max(0, cycle - self.review_interval)
-        try:
-            recent = mem_kernel.retrieve_episodes(
-                event_type="trading_reflection",
-                limit=self.review_interval,
-                min_importance=0.05,
-                since_cycle=since_cycle,
-                namespace="victoria",
-            )
-        except Exception as exc:
-            logger.debug("retrieve_episodes failed: %s", exc)
-            return {"status": "error", "reason": str(exc)}
+        # V14 fix: query actual event types written by the orchestrator.
+        # Root cause of sem_db=0: queried "trading_reflection" (never written) +
+        # namespace="victoria" (episodes stored under "global").
+        recent: list = []
+        for etype in ("cycle_summary", "signal_outcome", "trading_reflection"):
+            try:
+                episodes = mem_kernel.retrieve_episodes(
+                    event_type=etype,
+                    limit=self.review_interval,
+                    min_importance=0.0,
+                    since_cycle=since_cycle,
+                )
+                recent.extend(episodes)
+            except Exception as exc:
+                logger.debug("retrieve_episodes(%s) failed: %s", etype, exc)
+        if not recent:
+            try:
+                recent = mem_kernel.retrieve_episodes(
+                    event_type=None,
+                    limit=self.review_interval,
+                    min_importance=0.0,
+                    since_cycle=since_cycle,
+                )
+            except Exception as exc:
+                logger.debug("retrieve_episodes(None) failed: %s", exc)
+                return {"status": "error", "reason": str(exc)}
 
         if not recent:
             self._last_review_cycle = cycle
