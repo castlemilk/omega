@@ -14,6 +14,10 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
+
+from omega.nodes.victoria.natural_gradient import NaturalGradientOptimizer
+
 logger = logging.getLogger("omega.nodes.victoria.dynamic_weights")
 
 MAX_SINGLE_WEIGHT = 0.40  # risk parity cap
@@ -56,11 +60,27 @@ class DynamicWeightAllocator:
         weights = result.weights  # {"signal_a": 0.40, "signal_b": 0.35, ...}
     """
 
-    def __init__(self, signal_names: list[str], ema_alpha: float = EMA_ALPHA) -> None:
+    def __init__(
+        self,
+        signal_names: list[str],
+        ema_alpha: float = EMA_ALPHA,
+        use_natural_gradient: bool = False,
+        ng_learning_rate: float = 0.01,
+    ) -> None:
         self._signals = list(signal_names)
         self._ema_alpha = ema_alpha
         self._profiles: dict[str, WeightProfile] = {}
         self._bar = 0
+        self._use_natural_gradient = use_natural_gradient
+
+        # One NaturalGradientOptimizer per regime (statistically independent)
+        self._ng_optimizers: dict[str, NaturalGradientOptimizer] = {}
+        if use_natural_gradient:
+            for regime in KNOWN_REGIMES:
+                self._ng_optimizers[regime] = NaturalGradientOptimizer(
+                    n_signals=len(signal_names),
+                    learning_rate=ng_learning_rate,
+                )
 
         # Initialize a weight profile for each known regime + default
         for regime in KNOWN_REGIMES:
@@ -129,6 +149,64 @@ class DynamicWeightAllocator:
         """Update IC for multiple signals at once."""
         for signal_name, ic_value in ic_updates.items():
             self.update_ic(signal_name, ic_value, regime)
+
+    def update_ng(
+        self,
+        signal_values: dict[str, float],
+        forward_return: float,
+        regime: str = "default",
+    ) -> None:
+        """
+        Update signal weights via natural gradient using a full signal vector
+        and the realised forward return.
+
+        This is the geometry-aware alternative to ``update_ic``.  The Fisher
+        information matrix is estimated from the rolling history of signal
+        vectors and returns; weights are updated along the natural gradient
+        direction rather than the flat EMA path.
+
+        Args:
+            signal_values:  {signal_name: value} for the current bar.
+            forward_return: Realised return for this bar (used as the target).
+            regime:         Current market regime.
+        """
+        if not self._use_natural_gradient:
+            raise RuntimeError(
+                "update_ng requires use_natural_gradient=True; "
+                "pass use_natural_gradient=True to DynamicWeightAllocator.__init__."
+            )
+
+        regime = self._normalize_regime(regime)
+        optimizer = self._ng_optimizers[regime]
+        profile = self._profiles[regime]
+
+        # Build signal array in canonical signal order
+        sv = np.array([signal_values.get(s, 0.0) for s in self._signals], dtype=float)
+
+        # Natural gradient step → returns updated weight array
+        new_weights_arr = optimizer.update(sv, forward_return)
+
+        # Write back into the WeightProfile (dict form)
+        new_weights = dict(zip(self._signals, new_weights_arr.tolist()))
+
+        # Apply the same 40% risk parity cap used by the EMA path
+        new_weights = self._apply_cap(new_weights)
+
+        # Update sample counts so allocate() does not fall back to equal weights
+        for s in self._signals:
+            if signal_values.get(s, 0.0) != 0.0:
+                profile.sample_counts[s] = profile.sample_counts.get(s, 0) + 1
+
+        profile.weights = new_weights
+        profile.last_updated = self._bar
+        self._bar += 1
+
+        logger.debug(
+            "NG update — regime=%s return=%.5f weights=%s",
+            regime,
+            forward_return,
+            {s: round(w, 4) for s, w in new_weights.items()},
+        )
 
     def seed_priors(
         self,
@@ -234,7 +312,7 @@ class DynamicWeightAllocator:
         """Return a serializable snapshot of the weight profile for a regime."""
         regime = self._normalize_regime(regime)
         profile = self._profiles[regime]
-        return {
+        info: dict[str, Any] = {
             "regime": regime,
             "weights": dict(profile.weights),
             "ic_ema": dict(profile.ic_ema),
@@ -243,7 +321,9 @@ class DynamicWeightAllocator:
             "is_data_sufficient": all(
                 profile.sample_counts.get(s, 0) >= MIN_IC_SAMPLES for s in self._signals
             ),
+            "optimizer": "natural_gradient" if self._use_natural_gradient else "ema",
         }
+        return info
 
     def get_all_profiles(self) -> dict[str, dict[str, Any]]:
         return {regime: self.get_profile(regime) for regime in self._profiles}
