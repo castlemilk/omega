@@ -4,7 +4,7 @@ import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { client } from "./client";
-import type { SystemHealth } from "./gen/omega/v1/types_pb";
+import type { SystemHealth as SystemHealthProto } from "./gen/omega/v1/types_pb";
 
 import { ProjectProvider } from "./context/ProjectContext";
 import Dashboard from "./pages/Dashboard";
@@ -30,9 +30,13 @@ import PolymarketMarkets from "./pages/PolymarketMarkets";
 import PolymarketEdges from "./pages/PolymarketEdges";
 import PolymarketWeather from "./pages/PolymarketWeather";
 import PolymarketBets from "./pages/PolymarketBets";
+import SystemHealth from "./pages/SystemHealth";
+import PerformanceMetrics from "./pages/PerformanceMetrics";
+import ErrorLog from "./pages/ErrorLog";
+import PipelineView from "./pages/PipelineView";
 
 export default function App() {
-  const [health, setHealth] = useState<SystemHealth | null>(null);
+  const [health, setHealth] = useState<SystemHealthProto | null>(null);
   const [streamConnected, setStreamConnected] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -128,6 +132,11 @@ export default function App() {
                 <Route path="/polymarket/edges" element={<PolymarketEdges />} />
                 <Route path="/polymarket/weather" element={<PolymarketWeather />} />
                 <Route path="/polymarket/bets" element={<PolymarketBets />} />
+                {/* Observability */}
+                <Route path="/health" element={<SystemHealth />} />
+                <Route path="/perf" element={<PerformanceMetrics />} />
+                <Route path="/errors" element={<ErrorLog />} />
+                <Route path="/projects/:id/pipeline" element={<PipelineView />} />
               </Routes>
             </main>
           </div>

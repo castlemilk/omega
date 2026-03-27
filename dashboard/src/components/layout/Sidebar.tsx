@@ -13,6 +13,8 @@ import {
   Sword,
   History,
   Terminal,
+  Activity,
+  XCircle,
   PieChart,
   Zap,
   List,
@@ -44,6 +46,12 @@ const OMEGA_NAV = [
   { to: "/improvements", icon: History, label: "Improvements" },
 ];
 
+const OBS_NAV = [
+  { to: "/health", icon: Activity, label: "Health" },
+  { to: "/perf", icon: BarChart2, label: "Performance" },
+  { to: "/errors", icon: XCircle, label: "Errors" },
+];
+
 // Victoria's project-specific views.
 const VICTORIA_NAV = [
   { to: "/victoria", icon: Terminal, label: "Terminal" },
@@ -51,6 +59,7 @@ const VICTORIA_NAV = [
   { to: "/victoria/signals", icon: Zap, label: "Signals" },
   { to: "/victoria/trades", icon: List, label: "Trades" },
   { to: "/victoria/backtest", icon: FlaskConical, label: "Backtest" },
+  { to: "/projects/victoria/pipeline", icon: GitBranch, label: "Pipeline" },
 ];
 
 // Polymarket project-specific views.
@@ -147,6 +156,32 @@ export default function Sidebar() {
           key={to}
           to={to}
           end={to === "/"}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isActive
+                ? "bg-indigo-600 text-white"
+                : "text-gray-400 hover:text-white hover:bg-surface-700"
+            }`
+          }
+        >
+          <Icon size={17} />
+          {label}
+        </NavLink>
+      ))}
+
+      {/* Divider */}
+      <div className="border-t border-surface-600 my-3" />
+
+      {/* Observability section */}
+      <div className="px-3 mb-2">
+        <span className="text-xs text-gray-600 uppercase tracking-widest font-semibold">
+          Observability
+        </span>
+      </div>
+      {OBS_NAV.map(({ to, icon: Icon, label }) => (
+        <NavLink
+          key={to}
+          to={to}
           className={({ isActive }) =>
             `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               isActive
