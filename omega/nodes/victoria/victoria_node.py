@@ -47,6 +47,7 @@ from omega.nodes.victoria.carry_signals import FundingCarrySignal
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
+from omega.nodes.victoria.momentum_factor import CrossSectionalMomentumSignal
 from omega.nodes.victoria.pairs_signals import PairsTradingSignal
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.rmt_denoiser import RMTDenoiser
@@ -88,6 +89,7 @@ SIGNAL_NAMES = [
     "spectral_graph",  # Fiedler value of signal correlation graph (stress indicator)
     "carry",  # Funding-rate carry / mean-reversion
     "pairs",  # Cointegration pairs spread z-score
+    "momentum_factor",  # Cross-sectional Jegadeesh-Titman momentum
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -139,6 +141,7 @@ class VictoriaNode(Node):
         self._alt_data = AltDataSignalProvider()
         self._carry = FundingCarrySignal()
         self._pairs = PairsTradingSignal()
+        self._momentum_factor = CrossSectionalMomentumSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -944,6 +947,17 @@ class VictoriaNode(Node):
                 }
             except Exception as exc:
                 logger.debug("pairs signal failed: %s", exc)
+
+            try:
+                mom_val = self._momentum_factor.compute(market_data)
+                signals["momentum_factor"] = {
+                    "value": mom_val.value,
+                    "confidence": mom_val.confidence,
+                    "regime_tag": mom_val.regime_tag,
+                    "raw": mom_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("momentum_factor signal failed: %s", exc)
 
             # RMT information-content signal — uses the 10 core signals from
             # information_flow.SIGNAL_NAMES as its input vector.
