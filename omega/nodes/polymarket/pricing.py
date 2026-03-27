@@ -42,25 +42,35 @@ logger = logging.getLogger("omega.nodes.polymarket.pricing")
 
 GAMMA_API_BASE = "https://gamma-api.polymarket.com"
 WEATHER_KEYWORDS = [
+    # Unambiguous temperature/weather terms only.
     "temperature",
-    "weather",
-    "degrees",
+    "weather forecast",
+    "degrees celsius",
+    "degrees fahrenheit",
     "fahrenheit",
     "celsius",
-    "heat",
-    "cold",
-    "warm",
-    "hot",
+    "heat wave",
+    "heat index",
     "freeze",
     "frost",
     "high temp",
     "low temp",
-    "above",
-    "below",
+    "snowfall",
+    "rainfall",
+    "precipitation",
+    "tornado",
+    "blizzard",
     "°f",
     "°c",
     "° f",
     "° c",
+]
+# Sports teams and other names that accidentally contain weather words.
+WEATHER_BLOCKLIST = [
+    "miami heat",        # NBA team
+    "carolina hurricanes",  # NHL team
+    "heat check",
+    "heat map",
 ]
 USER_AGENT = "omega-polymarket-pricing/1.0"
 CACHE_TTL_SECONDS = 120  # 2 minutes for market prices
@@ -199,6 +209,8 @@ class PolymarketPricingNode(Node):
 
     def _is_weather_market(self, question: str) -> bool:
         q_lower = question.lower()
+        if any(bl in q_lower for bl in WEATHER_BLOCKLIST):
+            return False
         return any(kw in q_lower for kw in WEATHER_KEYWORDS)
 
     def _parse_market(self, raw: dict[str, Any]) -> dict[str, Any] | None:
@@ -255,14 +267,17 @@ class PolymarketPricingNode(Node):
             return cached  # type: ignore[no-any-return]
 
         self._cache_misses += 1
-        markets: list[dict[str, Any]] = []
         limit = int(params.get("limit", 100))
-        max_pages = 5  # paginate up to 500 markets to find weather markets
+        markets: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
 
+        # Strategy 1: paginate and filter by keyword (Gamma API `keyword` param
+        # does not reliably filter by text; we page through and filter client-side).
+        max_pages = 10  # scan up to 1000 markets
         for page in range(max_pages):
-            offset = page * limit
             url = (
-                f"{GAMMA_API_BASE}/markets?active=true&limit={limit}&closed=false&offset={offset}"
+                f"{GAMMA_API_BASE}/markets"
+                f"?active=true&closed=false&limit={limit}&offset={page * limit}"
             )
             try:
                 data = self._get_json(url)
@@ -275,13 +290,16 @@ class PolymarketPricingNode(Node):
                 break  # no more pages
 
             for raw in raw_list:
+                mid = str(raw.get("conditionId", raw.get("id", "")))
+                if mid in seen_ids:
+                    continue
                 parsed = self._parse_market(raw)
                 if parsed:
+                    seen_ids.add(mid)
                     markets.append(parsed)
 
-            # Stop as soon as we have weather markets
             if markets:
-                break
+                break  # found genuine weather markets; stop paging
 
         if not markets:
             logger.info(

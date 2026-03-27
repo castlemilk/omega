@@ -460,6 +460,83 @@ func (c *Client) GetMarket(ctx context.Context, conditionID string) (*Market, er
 }
 
 // -------------------------------------------------------------------------
+// Weather markets
+// -------------------------------------------------------------------------
+
+// weatherKeywords are unambiguous temperature/weather terms.
+// Kept in sync with omega/nodes/polymarket/pricing.py WEATHER_KEYWORDS.
+var weatherKeywords = []string{
+	"temperature", "weather forecast",
+	"degrees celsius", "degrees fahrenheit", "fahrenheit", "celsius",
+	"heat wave", "heat index", "freeze", "frost",
+	"high temp", "low temp", "snowfall", "rainfall", "precipitation",
+	"tornado", "blizzard",
+	"°f", "°c", "° f", "° c",
+}
+
+// weatherBlocklist rejects questions that look like weather but aren't.
+var weatherBlocklist = []string{
+	"miami heat",        // NBA team
+	"carolina hurricanes", // NHL team
+	"heat check",
+	"heat map",
+}
+
+// isWeatherMarket returns true when a market's question or description contains
+// an unambiguous weather/temperature keyword and is not in the blocklist.
+func isWeatherMarket(m Market) bool {
+	haystack := strings.ToLower(m.Question + " " + m.Description)
+	for _, bl := range weatherBlocklist {
+		if strings.Contains(haystack, bl) {
+			return false
+		}
+	}
+	for _, kw := range weatherKeywords {
+		if strings.Contains(haystack, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetWeatherMarkets returns active, non-closed markets filtered to
+// weather/temperature topics.  It paginates through up to maxPages pages
+// of `limit` markets each, stopping once weather markets are found.
+func (c *Client) GetWeatherMarkets(ctx context.Context, limit int) ([]Market, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	active := true
+	closed := false
+	const maxPages = 10
+
+	var result []Market
+	for page := 0; page < maxPages; page++ {
+		batch, err := c.GetMarkets(ctx, &MarketQuery{
+			Active: &active,
+			Closed: &closed,
+			Limit:  limit,
+			Offset: page * limit,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("GetWeatherMarkets page %d: %w", page, err)
+		}
+		if len(batch) == 0 {
+			break // no more pages
+		}
+		for _, m := range batch {
+			if isWeatherMarket(m) {
+				result = append(result, m)
+			}
+		}
+		if len(result) > 0 {
+			break // found weather markets; stop paging
+		}
+	}
+	return result, nil
+}
+
+// -------------------------------------------------------------------------
 // Events
 // -------------------------------------------------------------------------
 
