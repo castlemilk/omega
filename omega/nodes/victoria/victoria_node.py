@@ -59,6 +59,7 @@ from omega.nodes.victoria.signals_advanced import (
 )
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
+from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
@@ -131,6 +132,9 @@ class VictoriaNode(Node):
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
+
+        # Wasserstein-based regime detector (augments VRP-based regime)
+        self._wasserstein_regime = WassersteinRegimeDetector(window=50, min_samples=20)
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -902,6 +906,37 @@ class VictoriaNode(Node):
                 }
             except Exception as exc:
                 logger.debug("alt_data signal failed: %s", exc)
+
+        # 1b. Wasserstein regime detection — augments VRP-based regime
+        try:
+            _w_signal_vec = {
+                name: float(signals[name].get("value", 0.0))
+                for name in signals
+                if not name.startswith("_") and isinstance(signals[name], dict)
+            }
+            _w_result = self._wasserstein_regime.update(_w_signal_vec)
+            # Use Wasserstein regime when it has higher confidence than the current
+            # VRP-derived regime (which is binary FEAR/COMPLACENCY or "default")
+            _current_regime_is_default = regime == "default"
+            if _w_result.confidence > 0.5 or _current_regime_is_default:
+                regime = _w_result.regime
+            # Always store raw Wasserstein output for logging and comparison
+            signals["_regime_wasserstein"] = _w_result.regime
+            signals["_regime_w_confidence"] = round(_w_result.confidence, 4)
+            signals["_regime_w_bull_prob"] = round(_w_result.bull_prob, 4)
+            signals["_regime_w_bear_prob"] = round(_w_result.bear_prob, 4)
+            signals["_regime_w_sideways_prob"] = round(_w_result.sideways_prob, 4)
+            logger.info(
+                "wasserstein regime=%s conf=%.3f (bull=%.3f bear=%.3f side=%.3f) → active_regime=%s",
+                _w_result.regime,
+                _w_result.confidence,
+                _w_result.bull_prob,
+                _w_result.bear_prob,
+                _w_result.sideways_prob,
+                regime,
+            )
+        except Exception as exc:
+            logger.debug("wasserstein regime detection failed: %s", exc)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
