@@ -47,6 +47,7 @@ from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.risk_management import RiskManagementNode
+from omega.nodes.victoria.rmt_denoiser import RMTDenoiser
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.signals_advanced import (
     BTCDominanceSignal,
@@ -79,6 +80,7 @@ SIGNAL_NAMES = [
     "onchain",
     "long_short_ratio",
     "btc_dominance",
+    "rmt_signal",  # RMT information-content signal (structured vs noisy market)
     "alt_data",
 ]
 
@@ -135,6 +137,9 @@ class VictoriaNode(Node):
 
         # Wasserstein-based regime detector (augments VRP-based regime)
         self._wasserstein_regime = WassersteinRegimeDetector(window=50, min_samples=20)
+
+        # RMT denoiser — standalone signal + foundation for geometric methods
+        self._rmt_denoiser = RMTDenoiser(window=100)
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -907,6 +912,24 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("alt_data signal failed: %s", exc)
 
+            # RMT information-content signal — uses the 10 core signals from
+            # information_flow.SIGNAL_NAMES as its input vector.
+            try:
+                rmt_input = {
+                    name: float(signals[name].get("value", 0.0))
+                    for name in signals
+                    if not name.startswith("_") and isinstance(signals[name], dict)
+                }
+                rmt_val = self._rmt_denoiser.compute(rmt_input)
+                signals["rmt_signal"] = {
+                    "value": rmt_val.value,
+                    "confidence": rmt_val.confidence,
+                    "regime_tag": rmt_val.regime_tag,
+                    "raw": rmt_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("rmt_signal failed: %s", exc)
+
         # 1b. Wasserstein regime detection — augments VRP-based regime
         try:
             _w_signal_vec = {
@@ -978,6 +1001,14 @@ class VictoriaNode(Node):
                 signals[name]["ic"] = round(alloc.ic_ema.get(name, 0.0), 6)
         except Exception as exc:
             logger.debug("weight allocation failed, using equal weights: %s", exc)
+
+        # 3b. Apply RMT quality scores to nudge IC EMAs in the weight allocator.
+        try:
+            rmt_quality = self._rmt_denoiser.signal_quality_scores()
+            if rmt_quality:
+                self._weight_allocator.apply_rmt_adjustment(rmt_quality, regime=regime)
+        except Exception as exc:
+            logger.debug("RMT weight adjustment failed: %s", exc)
 
         # 4. Compute quality metrics for this cycle
         signal_names = [k for k in signals if not k.startswith("_")]

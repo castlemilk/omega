@@ -28,6 +28,19 @@ import numpy as np
 
 logger = logging.getLogger("omega.nodes.victoria.information_flow")
 
+# Lazy import to avoid circular dependency at module load time.
+# RMTDenoiser is imported inside __init__ so rmt_denoiser.py can safely
+# import SIGNAL_NAMES from this module.
+_RMTDenoiserClass: type | None = None
+
+
+def _get_rmt_class() -> type:
+    global _RMTDenoiserClass
+    if _RMTDenoiserClass is None:
+        from omega.nodes.victoria.rmt_denoiser import RMTDenoiser  # noqa: PLC0415
+        _RMTDenoiserClass = RMTDenoiser
+    return _RMTDenoiserClass
+
 SIGNAL_NAMES = [
     "basic_signals",
     "order_flow",
@@ -70,6 +83,10 @@ class TransferEntropyAnalyzer:
         self._lead_lags: dict[str, int] = {n: 1 for n in SIGNAL_NAMES}
         self._is_computed = False
 
+        # RMT denoiser — shares the same history window, provides denoised
+        # correlation quality scores to blend with TE-based causal weights.
+        self._rmt = _get_rmt_class()(window=200)
+
     # ------------------------------------------------------------------ public
 
     def update(self, signal_values: dict[str, float]) -> dict[str, Any]:
@@ -83,6 +100,8 @@ class TransferEntropyAnalyzer:
         row = [signal_values.get(n, 0.0) for n in SIGNAL_NAMES]
         self._history.append(row)
         self._update_counter += 1
+        # Feed the RMT denoiser the same observation so its history stays in sync.
+        self._rmt._signal_history.append(row)
 
         n = len(self._history)
         if n >= MIN_SAMPLES_TE and self._update_counter % RECOMPUTE_EVERY == 0:
@@ -158,6 +177,30 @@ class TransferEntropyAnalyzer:
                         best_te = te_val
                         best_lag = lag
                 self._lead_lags[name] = best_lag
+
+            # ── RMT quality blend ─────────────────────────────────────────────
+            # Use the denoised correlation structure to further weight each
+            # signal: signals that participate in genuine eigenmodes (above the
+            # MP bound) get a quality boost; noise-dominated signals are
+            # down-weighted.  The blend weight is 30% RMT / 70% TE so that TE
+            # (directional causality) remains the dominant term.
+            try:
+                rmt_scores = self._rmt.signal_quality_scores()
+                if rmt_scores:
+                    blended: dict[str, float] = {}
+                    for name in SIGNAL_NAMES:
+                        te_w = self._causal_weights.get(name, 1.0)
+                        rmt_w = rmt_scores.get(name, 1.0)
+                        blended[name] = 0.7 * te_w + 0.3 * rmt_w
+                    # Re-normalise to mean ≈ 1
+                    n_s = len(blended)
+                    total_b = sum(blended.values())
+                    if total_b > 1e-8:
+                        self._causal_weights = {
+                            k: max(0.1, v / total_b * n_s) for k, v in blended.items()
+                        }
+            except Exception as _rmt_exc:
+                logger.debug("RMT quality blend failed: %s", _rmt_exc)
 
             self._is_computed = True
             logger.info("TE matrix recomputed. Top causal signals: %s", self._top_n(3))

@@ -250,6 +250,47 @@ class DynamicWeightAllocator:
     def get_all_profiles(self) -> dict[str, dict[str, Any]]:
         return {regime: self.get_profile(regime) for regime in self._profiles}
 
+    def apply_rmt_adjustment(
+        self,
+        quality_scores: dict[str, float],
+        regime: str = "default",
+    ) -> None:
+        """
+        Nudge IC EMAs using RMT-derived signal quality scores.
+
+        Signals with high RMT quality (large participation in above-MP
+        eigenmodes) have their IC EMA boosted; noise-dominated signals are
+        attenuated.  The adjustment is mild (max ±20%) so it supplements
+        rather than overrides the empirical IC history.
+
+        Parameters
+        ----------
+        quality_scores : dict
+            {signal_name: score ∈ [0, 1]} from RMTDenoiser.signal_quality_scores().
+        regime : str
+            Which regime profile to update.
+        """
+        if not quality_scores:
+            return
+
+        regime = self._normalize_regime(regime)
+        profile = self._profiles[regime]
+
+        for name, score in quality_scores.items():
+            if name not in self._signals:
+                continue
+            if profile.sample_counts.get(name, 0) < MIN_IC_SAMPLES:
+                continue  # don't adjust before enough real IC observations
+
+            # score is normalised to [0, 1]; centre around 0.5 → adjustment ∈ [-0.1, 0.1]
+            adjustment = (score - 0.5) * 0.2
+            old_ema = profile.ic_ema[name]
+            profile.ic_ema[name] = old_ema * (1.0 + adjustment)
+
+        # Recompute weights after EMA nudge
+        profile.weights = self._compute_weights(profile)
+        logger.debug("RMT IC adjustment applied for regime=%s signals=%d", regime, len(quality_scores))
+
     # ------------------------------------------------------------------ weight computation
 
     def _compute_weights(self, profile: WeightProfile) -> dict[str, float]:
