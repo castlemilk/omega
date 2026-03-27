@@ -126,6 +126,9 @@ const (
 	// OrchestratorServiceGetLastCycleResultProcedure is the fully-qualified name of the
 	// OrchestratorService's GetLastCycleResult RPC.
 	OrchestratorServiceGetLastCycleResultProcedure = "/omega.v1.OrchestratorService/GetLastCycleResult"
+	// OrchestratorServiceGetIntelligenceMetricsProcedure is the fully-qualified name of the
+	// OrchestratorService's GetIntelligenceMetrics RPC.
+	OrchestratorServiceGetIntelligenceMetricsProcedure = "/omega.v1.OrchestratorService/GetIntelligenceMetrics"
 )
 
 // OrchestratorServiceClient is a client for the omega.v1.OrchestratorService service.
@@ -161,6 +164,7 @@ type OrchestratorServiceClient interface {
 	GetVerificationGates(context.Context, *connect.Request[v1.GetVerificationGatesRequest]) (*connect.Response[v1.GetVerificationGatesResponse], error)
 	GetImprovementHistory(context.Context, *connect.Request[v1.GetImprovementHistoryRequest]) (*connect.Response[v1.GetImprovementHistoryResponse], error)
 	GetLastCycleResult(context.Context, *connect.Request[v1.GetLastCycleResultRequest]) (*connect.Response[v1.GetLastCycleResultResponse], error)
+	GetIntelligenceMetrics(context.Context, *connect.Request[v1.GetIntelligenceMetricsRequest]) (*connect.Response[v1.GetIntelligenceMetricsResponse], error)
 }
 
 // NewOrchestratorServiceClient constructs a client for the omega.v1.OrchestratorService service. By
@@ -360,6 +364,12 @@ func NewOrchestratorServiceClient(httpClient connect.HTTPClient, baseURL string,
 			connect.WithSchema(orchestratorServiceMethods.ByName("GetLastCycleResult")),
 			connect.WithClientOptions(opts...),
 		),
+		getIntelligenceMetrics: connect.NewClient[v1.GetIntelligenceMetricsRequest, v1.GetIntelligenceMetricsResponse](
+			httpClient,
+			baseURL+OrchestratorServiceGetIntelligenceMetricsProcedure,
+			connect.WithSchema(orchestratorServiceMethods.ByName("GetIntelligenceMetrics")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -396,6 +406,7 @@ type orchestratorServiceClient struct {
 	getVerificationGates     *connect.Client[v1.GetVerificationGatesRequest, v1.GetVerificationGatesResponse]
 	getImprovementHistory    *connect.Client[v1.GetImprovementHistoryRequest, v1.GetImprovementHistoryResponse]
 	getLastCycleResult       *connect.Client[v1.GetLastCycleResultRequest, v1.GetLastCycleResultResponse]
+	getIntelligenceMetrics   *connect.Client[v1.GetIntelligenceMetricsRequest, v1.GetIntelligenceMetricsResponse]
 }
 
 // GetHealth calls omega.v1.OrchestratorService.GetHealth.
@@ -553,6 +564,11 @@ func (c *orchestratorServiceClient) GetLastCycleResult(ctx context.Context, req 
 	return c.getLastCycleResult.CallUnary(ctx, req)
 }
 
+// GetIntelligenceMetrics calls omega.v1.OrchestratorService.GetIntelligenceMetrics.
+func (c *orchestratorServiceClient) GetIntelligenceMetrics(ctx context.Context, req *connect.Request[v1.GetIntelligenceMetricsRequest]) (*connect.Response[v1.GetIntelligenceMetricsResponse], error) {
+	return c.getIntelligenceMetrics.CallUnary(ctx, req)
+}
+
 // OrchestratorServiceHandler is an implementation of the omega.v1.OrchestratorService service.
 type OrchestratorServiceHandler interface {
 	GetHealth(context.Context, *connect.Request[v1.GetHealthRequest]) (*connect.Response[v1.GetHealthResponse], error)
@@ -586,6 +602,7 @@ type OrchestratorServiceHandler interface {
 	GetVerificationGates(context.Context, *connect.Request[v1.GetVerificationGatesRequest]) (*connect.Response[v1.GetVerificationGatesResponse], error)
 	GetImprovementHistory(context.Context, *connect.Request[v1.GetImprovementHistoryRequest]) (*connect.Response[v1.GetImprovementHistoryResponse], error)
 	GetLastCycleResult(context.Context, *connect.Request[v1.GetLastCycleResultRequest]) (*connect.Response[v1.GetLastCycleResultResponse], error)
+	GetIntelligenceMetrics(context.Context, *connect.Request[v1.GetIntelligenceMetricsRequest]) (*connect.Response[v1.GetIntelligenceMetricsResponse], error)
 }
 
 // NewOrchestratorServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -781,6 +798,12 @@ func NewOrchestratorServiceHandler(svc OrchestratorServiceHandler, opts ...conne
 		connect.WithSchema(orchestratorServiceMethods.ByName("GetLastCycleResult")),
 		connect.WithHandlerOptions(opts...),
 	)
+	orchestratorServiceGetIntelligenceMetricsHandler := connect.NewUnaryHandler(
+		OrchestratorServiceGetIntelligenceMetricsProcedure,
+		svc.GetIntelligenceMetrics,
+		connect.WithSchema(orchestratorServiceMethods.ByName("GetIntelligenceMetrics")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/omega.v1.OrchestratorService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case OrchestratorServiceGetHealthProcedure:
@@ -845,6 +868,8 @@ func NewOrchestratorServiceHandler(svc OrchestratorServiceHandler, opts ...conne
 			orchestratorServiceGetImprovementHistoryHandler.ServeHTTP(w, r)
 		case OrchestratorServiceGetLastCycleResultProcedure:
 			orchestratorServiceGetLastCycleResultHandler.ServeHTTP(w, r)
+		case OrchestratorServiceGetIntelligenceMetricsProcedure:
+			orchestratorServiceGetIntelligenceMetricsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -976,4 +1001,8 @@ func (UnimplementedOrchestratorServiceHandler) GetImprovementHistory(context.Con
 
 func (UnimplementedOrchestratorServiceHandler) GetLastCycleResult(context.Context, *connect.Request[v1.GetLastCycleResultRequest]) (*connect.Response[v1.GetLastCycleResultResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetLastCycleResult is not implemented"))
+}
+
+func (UnimplementedOrchestratorServiceHandler) GetIntelligenceMetrics(context.Context, *connect.Request[v1.GetIntelligenceMetricsRequest]) (*connect.Response[v1.GetIntelligenceMetricsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("omega.v1.OrchestratorService.GetIntelligenceMetrics is not implemented"))
 }

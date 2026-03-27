@@ -222,6 +222,7 @@ class OmegaOrchestrator:
         metrics_exporter: MetricsExporter | None = None,
         history_size: int = 500,
         paper_trading: Any | None = None,
+        metrics_collector: Any | None = None,  # IntelligenceMetricsCollector
     ) -> None:
         self.name = name
         self._registry = NodeRegistry()
@@ -239,6 +240,7 @@ class OmegaOrchestrator:
         self._consolidation = memory_consolidation
         self._metrics = metrics_exporter
         self._paper_trading = paper_trading
+        self._intel_collector = metrics_collector
 
         self._history = CycleHistory(max_size=history_size)
         self._cycle_number: int = 0
@@ -942,6 +944,22 @@ class OmegaOrchestrator:
         if self._paper_trading is not None and signal_data:
             self._paper_trading.persist_signal_history_to_db(signal_data, ctx.cycle_number)
 
+        # Intelligence metrics: signal coverage
+        if self._intel_collector is not None:
+            all_signals: dict[str, Any] = {}
+            for sigs in signal_data.values():
+                if isinstance(sigs, dict):
+                    all_signals.update(sigs)
+            signals_nonzero = sum(
+                1 for v in all_signals.values()
+                if isinstance(v, (int, float)) and v != 0
+            )
+            self._intel_collector.record("signals_active", len(all_signals))
+            self._intel_collector.record("signals_nonzero", signals_nonzero)
+            rmt = all_signals.get("rmt_info_ratio") or all_signals.get("_rmt_info_ratio")
+            if rmt is not None:
+                self._intel_collector.record("rmt_info_ratio", float(rmt))
+
         return signal_data
 
     def _step_strategy(
@@ -1012,6 +1030,10 @@ class OmegaOrchestrator:
         """Run adversarial checks via AdversarialPressureV2; return clean proposals."""
         if not proposals:
             return []
+
+        # Intelligence metrics: count proposals evaluated by debate gate
+        if self._intel_collector is not None:
+            self._intel_collector.increment("debate_gate_invocations", len(proposals))
 
         # Drop malformed proposals before any further processing
         clean: list[dict[str, Any]] = []
@@ -1108,6 +1130,12 @@ class OmegaOrchestrator:
             log.error("AdversarialPressureV2.run_v2 failed: %s", exc)
             return clean  # fail-open
 
+        # Intelligence metrics: count ring1 fires
+        if self._intel_collector is not None:
+            base = adv_report.base_report
+            if base.ring1_result and base.ring1_result.flagged:
+                self._intel_collector.increment("adversarial_ring1")
+
         # --- DevilsAdvocateNode structural checks ---
         # Run against real cycle data: proposals, signals, data freshness.
         self._run_da_structural_checks(
@@ -1190,6 +1218,8 @@ class OmegaOrchestrator:
                 self._gate_learner.record_proposal(
                     blocked=True, cycle_id=ctx.cycle_id, proposal=proposal
                 )
+                if self._intel_collector is not None:
+                    self._intel_collector.increment("debate_gate_blocks")
                 # do NOT append — proposal is blocked
             elif autonomy_level == AutonomyLevel.AUTONOMOUS.value:
                 # AUTONOMOUS: reduce position size by 50%
@@ -1232,6 +1262,8 @@ class OmegaOrchestrator:
                     self._gate_learner.record_proposal(
                         blocked=True, cycle_id=ctx.cycle_id, proposal=proposal
                     )
+                    if self._intel_collector is not None:
+                        self._intel_collector.increment("debate_gate_blocks")
                     # do NOT append — blocked by adversarial gate
                 else:
                     self._gate_learner.record_proposal(
@@ -1476,6 +1508,27 @@ class OmegaOrchestrator:
             self._metrics.record_heartbeat(result.duration_seconds)
             self._metrics.update_signals({f"cycle_{cycle_num}": float(result.signals_generated)})
 
+        # Intelligence metrics: aggregate brain calls from node results, flush
+        if self._intel_collector is not None:
+            for _node_data in result.node_results.values():
+                if isinstance(_node_data, dict):
+                    bc = _node_data.get("brain_calls", 0)
+                    if bc:
+                        self._intel_collector.increment("brain_calls", int(bc))
+                    bl = _node_data.get("brain_latency_ms")
+                    if bl is not None:
+                        self._intel_collector.record("brain_latency_ms", int(bl))
+                    bt = _node_data.get("brain_tokens_used")
+                    if bt is not None:
+                        self._intel_collector.record("brain_tokens_used", int(bt))
+                    bp = _node_data.get("brain_provider")
+                    if bp:
+                        self._intel_collector.record("brain_provider", str(bp))
+            # Top-level result metrics (paper trading pathway)
+            if result.metrics.get("brain_calls"):
+                self._intel_collector.record("brain_calls", int(result.metrics["brain_calls"]))
+            self._intel_collector.flush(cycle=ctx.cycle_number)
+
     def _try_improvement(
         self,
         ctx: CycleContext,
@@ -1521,6 +1574,9 @@ class OmegaOrchestrator:
                         mean_s = sum(cycle_sharpes) / len(cycle_sharpes)
                         real_metrics.setdefault("sharpe", mean_s)
 
+                if self._intel_collector is not None:
+                    self._intel_collector.increment("improve_calls")
+
                 params = self._improvement_engine.propose(nid)
                 trial = self._improvement_engine.evaluate_and_record(
                     nid,
@@ -1540,6 +1596,13 @@ class OmegaOrchestrator:
                     trial.accepted,
                     params,
                 )
+                # Intelligence metrics: track accept/reject
+                if self._intel_collector is not None:
+                    if trial.accepted:
+                        self._intel_collector.increment("improve_accepted")
+                    else:
+                        self._intel_collector.increment("improve_rejected")
+
                 # Apply accepted params to the live node so improvements take effect.
                 if trial.accepted:
                     try:

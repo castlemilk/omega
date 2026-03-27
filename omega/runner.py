@@ -13,6 +13,7 @@ Usage::
 from __future__ import annotations
 
 import contextlib
+import os
 import logging
 import signal
 import time
@@ -155,7 +156,21 @@ class OmegaRunner:
             self._cfg.monitoring.metrics_port,
         )
 
-        self._orchestrator = OmegaOrchestrator(name="omega", metrics_exporter=self._exporter)
+        from omega.core.intelligence_metrics import IntelligenceMetricsCollector
+        _db_url = os.environ.get("DATABASE_URL")
+        _intel_collector = IntelligenceMetricsCollector(db_url=_db_url) if _db_url else None
+        if _intel_collector is not None and _intel_collector._conn is None:
+            _intel_collector = None
+        logger.info(
+            "IntelligenceMetricsCollector: %s",
+            "enabled" if _intel_collector else "disabled (no DATABASE_URL or DB unreachable)",
+        )
+
+        self._orchestrator = OmegaOrchestrator(
+            name="omega",
+            metrics_exporter=self._exporter,
+            metrics_collector=_intel_collector,
+        )
 
         self._setup_nodes()
 

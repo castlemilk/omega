@@ -9,13 +9,15 @@ import (
 
 	"connectrpc.com/connect"
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
+	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
 	"github.com/spf13/cobra"
 )
 
 var (
-	statusJSON  bool
-	statusWatch bool
-	watchSecs   int
+	statusJSON         bool
+	statusWatch        bool
+	watchSecs          int
+	statusIntelligence bool
 )
 
 var statusCmd = &cobra.Command{
@@ -28,6 +30,7 @@ func init() {
 	statusCmd.Flags().BoolVar(&statusJSON, "json", false, "Output as JSON")
 	statusCmd.Flags().BoolVar(&statusWatch, "watch", false, "Continuously poll status")
 	statusCmd.Flags().IntVar(&watchSecs, "interval", 5, "Watch poll interval in seconds")
+	statusCmd.Flags().BoolVar(&statusIntelligence, "intelligence", false, "Show intelligence layer metrics")
 }
 
 func showStatus(cmd *cobra.Command, args []string) error {
@@ -129,5 +132,64 @@ func printStatus() error {
 		}
 	}
 
+	if statusIntelligence {
+		if err := printIntelligenceMetrics(client); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: intelligence metrics unavailable: %v\n", err)
+		}
+	}
+
+	return nil
+}
+
+func printIntelligenceMetrics(client omegav1connect.OrchestratorServiceClient) error {
+	ctx := context.Background()
+	resp, err := client.GetIntelligenceMetrics(ctx, connect.NewRequest(&omegav1.GetIntelligenceMetricsRequest{
+		LastNCycles: 100,
+	}))
+	if err != nil {
+		return err
+	}
+	m := resp.Msg
+
+	passing := 0
+	for _, c := range m.Checks {
+		if c.Passing {
+			passing++
+		}
+	}
+
+	provider := m.BrainProvider
+	if provider == "" {
+		provider = "nobrain"
+	}
+
+	fmt.Printf("\n=== Intelligence Layer Status (last %d cycles) ===\n", m.CyclesAnalyzed)
+	fmt.Printf("  Brain provider:    %s\n", provider)
+	fmt.Printf("  Brain calls:       %d (%.2f/cycle)\n", m.BrainCallsTotal, m.BrainCallsPerCycle)
+	fmt.Printf("  Improve calls:     %d (%d accepted)\n", m.ImproveCallsTotal, m.ImproveAcceptedTotal)
+	if m.SignalVersionLatest != "" {
+		fmt.Printf("  Signal version:    %s\n", m.SignalVersionLatest)
+	}
+	if len(m.NewSignalsUnlocked) > 0 {
+		fmt.Printf("  New signals:       %v\n", m.NewSignalsUnlocked)
+	}
+	fmt.Printf("\n  Memory:\n")
+	fmt.Printf("    Episodes:          %d\n", m.EpisodesTotal)
+	fmt.Printf("    Semantic patterns: %d\n", m.SemanticPatternsTotal)
+	fmt.Printf("    Shared memory:     %d\n", m.SharedMemoryTotal)
+	fmt.Printf("    Utilization:       %.0f%%\n", m.MemoryUtilizationPct*100)
+	fmt.Printf("    Cross-project:     %.0f%%\n", m.CrossProjectRatio*100)
+	fmt.Printf("\n  Intelligence score:  %.3f (%d/8 checks passing)\n",
+		m.IntelligenceScoreLatest, passing)
+	for _, c := range m.Checks {
+		mark := "✅"
+		if !c.Passing {
+			mark = "❌"
+		}
+		fmt.Printf("    %s %s\n", mark, c.Name)
+		if c.Detail != "" {
+			fmt.Printf("       %s\n", c.Detail)
+		}
+	}
 	return nil
 }

@@ -39,6 +39,7 @@ service OrchestratorService {
   rpc GetVerificationGates(GetVerificationGatesRequest) returns (GetVerificationGatesResponse);
   rpc GetImprovementHistory(GetImprovementHistoryRequest) returns (GetImprovementHistoryResponse);
   rpc GetLastCycleResult(GetLastCycleResultRequest) returns (GetLastCycleResultResponse);
+  rpc GetIntelligenceMetrics(GetIntelligenceMetricsRequest) returns (GetIntelligenceMetricsResponse);
 }
 
 // ── Health ─────────────────────────────────────────────────────────────────
@@ -215,4 +216,42 @@ message GetLastCycleResultResponse {
   double                   total_duration_ms = 3;
   int32                    error_count       = 4;
   bool                     has_result        = 5;
+}
+
+// ── Intelligence metrics ────────────────────────────────────────────────────
+message GetIntelligenceMetricsRequest {
+  int32 last_n_cycles = 1; // 0 = server default (100)
+}
+
+message IntelligenceCheck {
+  string name    = 1;
+  bool   passing = 2;
+  string detail  = 3;
+}
+
+message GetIntelligenceMetricsResponse {
+  // Brain / LLM
+  string brain_provider        = 1;
+  int64  brain_calls_total     = 2;
+  double brain_calls_per_cycle = 3;
+
+  // Self-improvement
+  int64          improve_calls_total    = 4;
+  int64          improve_accepted_total = 5;
+  string         signal_version_latest  = 6;
+  repeated string new_signals_unlocked  = 7;
+
+  // Memory
+  int64  episodes_total          = 8;
+  int64  semantic_patterns_total = 9;
+  int64  shared_memory_total     = 10;
+  double memory_utilization_pct  = 11;
+  double cross_project_ratio     = 12;
+
+  // Intelligence score
+  double intelligence_score_avg    = 13;
+  double intelligence_score_latest = 14;
+  repeated IntelligenceCheck checks = 15;
+
+  int64 cycles_analyzed = 16;
 }

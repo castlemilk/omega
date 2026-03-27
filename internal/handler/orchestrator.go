@@ -1343,3 +1343,79 @@ func (h *OrchestratorHandler) recordGoalTracking(projectID string, cycle int64, 
 		violations,
 	)
 }
+
+// ── Intelligence metrics ──────────────────────────────────────────────────────
+
+func (h *OrchestratorHandler) GetIntelligenceMetrics(
+	ctx context.Context,
+	req *connect.Request[omegav1.GetIntelligenceMetricsRequest],
+) (*connect.Response[omegav1.GetIntelligenceMetricsResponse], error) {
+	lastN := int(req.Msg.LastNCycles)
+
+	summary, err := h.db.GetIntelligenceMetrics(lastN)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, err)
+	}
+
+	sharedTotal, _ := h.db.GetSharedMemoryCount()
+	summary.SharedMemoryTotal = sharedTotal
+
+	checks := []*omegav1.IntelligenceCheck{
+		{
+			Name:    "LLM reasoning",
+			Passing: summary.AvgBrainCalls > 0,
+			Detail:  fmt.Sprintf("avg %.2f brain calls/cycle", summary.AvgBrainCalls),
+		},
+		{
+			Name:    "Self-improvement",
+			Passing: summary.AvgImproveCalls > 0,
+			Detail:  fmt.Sprintf("avg %.2f improve calls/cycle", summary.AvgImproveCalls),
+		},
+		{
+			Name:    "Learning from outcomes",
+			Passing: summary.AvgEpisodesCreated > 0,
+			Detail:  fmt.Sprintf("avg %.2f episodes/cycle", summary.AvgEpisodesCreated),
+		},
+		{
+			Name:    "Pattern recognition",
+			Passing: summary.AvgSemanticExtracted > 0,
+			Detail:  fmt.Sprintf("avg %.2f patterns/cycle", summary.AvgSemanticExtracted),
+		},
+		{
+			Name:    "Cross-project learning",
+			Passing: summary.AvgSharedMemReads > 0,
+			Detail:  fmt.Sprintf("avg %.2f shared mem reads/cycle", summary.AvgSharedMemReads),
+		},
+		{
+			Name:    "Signal coverage",
+			Passing: summary.AvgSignalsNonzero > 10,
+			Detail:  fmt.Sprintf("avg %.1f non-zero signals/cycle", summary.AvgSignalsNonzero),
+		},
+		{
+			Name:    "Market structure detection (RMT)",
+			Passing: summary.AvgRmtInfoRatio > 0.3,
+			Detail:  fmt.Sprintf("avg rmt_info_ratio=%.3f", summary.AvgRmtInfoRatio),
+		},
+		{
+			Name:    "Risk oversight (debate gate)",
+			Passing: summary.AvgDebateGateInvocations > 0,
+			Detail:  fmt.Sprintf("avg %.2f gate invocations/cycle", summary.AvgDebateGateInvocations),
+		},
+	}
+
+	return connect.NewResponse(&omegav1.GetIntelligenceMetricsResponse{
+		BrainProvider:          summary.BrainProvider,
+		BrainCallsTotal:        summary.BrainCallsTotal,
+		BrainCallsPerCycle:     summary.BrainCallsPerCycle,
+		ImproveCallsTotal:      summary.ImproveCallsTotal,
+		ImproveAcceptedTotal:   summary.ImproveAcceptedTotal,
+		SignalVersionLatest:    summary.SignalVersionLatest,
+		EpisodesTotal:          summary.EpisodesTotal,
+		SemanticPatternsTotal:  summary.SemanticPatternsTotal,
+		SharedMemoryTotal:      summary.SharedMemoryTotal,
+		IntelligenceScoreAvg:   summary.IntelligenceScoreAvg,
+		IntelligenceScoreLatest: summary.IntelligenceScoreLast,
+		Checks:                 checks,
+		CyclesAnalyzed:         summary.CyclesAnalyzed,
+	}), nil
+}

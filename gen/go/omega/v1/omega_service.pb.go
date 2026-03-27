@@ -3028,6 +3028,279 @@ func (x *GetLastCycleResultResponse) GetHasResult() bool {
 	return false
 }
 
+// ── Intelligence metrics ────────────────────────────────────────────────────
+type GetIntelligenceMetricsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LastNCycles   int32                  `protobuf:"varint,1,opt,name=last_n_cycles,json=lastNCycles,proto3" json:"last_n_cycles,omitempty"` // 0 = server default (100)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetIntelligenceMetricsRequest) Reset() {
+	*x = GetIntelligenceMetricsRequest{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetIntelligenceMetricsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetIntelligenceMetricsRequest) ProtoMessage() {}
+
+func (x *GetIntelligenceMetricsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetIntelligenceMetricsRequest.ProtoReflect.Descriptor instead.
+func (*GetIntelligenceMetricsRequest) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *GetIntelligenceMetricsRequest) GetLastNCycles() int32 {
+	if x != nil {
+		return x.LastNCycles
+	}
+	return 0
+}
+
+type IntelligenceCheck struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Passing       bool                   `protobuf:"varint,2,opt,name=passing,proto3" json:"passing,omitempty"`
+	Detail        string                 `protobuf:"bytes,3,opt,name=detail,proto3" json:"detail,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IntelligenceCheck) Reset() {
+	*x = IntelligenceCheck{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IntelligenceCheck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IntelligenceCheck) ProtoMessage() {}
+
+func (x *IntelligenceCheck) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IntelligenceCheck.ProtoReflect.Descriptor instead.
+func (*IntelligenceCheck) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *IntelligenceCheck) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *IntelligenceCheck) GetPassing() bool {
+	if x != nil {
+		return x.Passing
+	}
+	return false
+}
+
+func (x *IntelligenceCheck) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+type GetIntelligenceMetricsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Brain / LLM
+	BrainProvider      string  `protobuf:"bytes,1,opt,name=brain_provider,json=brainProvider,proto3" json:"brain_provider,omitempty"`
+	BrainCallsTotal    int64   `protobuf:"varint,2,opt,name=brain_calls_total,json=brainCallsTotal,proto3" json:"brain_calls_total,omitempty"`
+	BrainCallsPerCycle float64 `protobuf:"fixed64,3,opt,name=brain_calls_per_cycle,json=brainCallsPerCycle,proto3" json:"brain_calls_per_cycle,omitempty"`
+	// Self-improvement
+	ImproveCallsTotal    int64    `protobuf:"varint,4,opt,name=improve_calls_total,json=improveCallsTotal,proto3" json:"improve_calls_total,omitempty"`
+	ImproveAcceptedTotal int64    `protobuf:"varint,5,opt,name=improve_accepted_total,json=improveAcceptedTotal,proto3" json:"improve_accepted_total,omitempty"`
+	SignalVersionLatest  string   `protobuf:"bytes,6,opt,name=signal_version_latest,json=signalVersionLatest,proto3" json:"signal_version_latest,omitempty"`
+	NewSignalsUnlocked   []string `protobuf:"bytes,7,rep,name=new_signals_unlocked,json=newSignalsUnlocked,proto3" json:"new_signals_unlocked,omitempty"`
+	// Memory
+	EpisodesTotal         int64   `protobuf:"varint,8,opt,name=episodes_total,json=episodesTotal,proto3" json:"episodes_total,omitempty"`
+	SemanticPatternsTotal int64   `protobuf:"varint,9,opt,name=semantic_patterns_total,json=semanticPatternsTotal,proto3" json:"semantic_patterns_total,omitempty"`
+	SharedMemoryTotal     int64   `protobuf:"varint,10,opt,name=shared_memory_total,json=sharedMemoryTotal,proto3" json:"shared_memory_total,omitempty"`
+	MemoryUtilizationPct  float64 `protobuf:"fixed64,11,opt,name=memory_utilization_pct,json=memoryUtilizationPct,proto3" json:"memory_utilization_pct,omitempty"`
+	CrossProjectRatio     float64 `protobuf:"fixed64,12,opt,name=cross_project_ratio,json=crossProjectRatio,proto3" json:"cross_project_ratio,omitempty"`
+	// Intelligence score
+	IntelligenceScoreAvg    float64              `protobuf:"fixed64,13,opt,name=intelligence_score_avg,json=intelligenceScoreAvg,proto3" json:"intelligence_score_avg,omitempty"`
+	IntelligenceScoreLatest float64              `protobuf:"fixed64,14,opt,name=intelligence_score_latest,json=intelligenceScoreLatest,proto3" json:"intelligence_score_latest,omitempty"`
+	Checks                  []*IntelligenceCheck `protobuf:"bytes,15,rep,name=checks,proto3" json:"checks,omitempty"`
+	CyclesAnalyzed          int64                `protobuf:"varint,16,opt,name=cycles_analyzed,json=cyclesAnalyzed,proto3" json:"cycles_analyzed,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *GetIntelligenceMetricsResponse) Reset() {
+	*x = GetIntelligenceMetricsResponse{}
+	mi := &file_omega_v1_omega_service_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetIntelligenceMetricsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetIntelligenceMetricsResponse) ProtoMessage() {}
+
+func (x *GetIntelligenceMetricsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_omega_service_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetIntelligenceMetricsResponse.ProtoReflect.Descriptor instead.
+func (*GetIntelligenceMetricsResponse) Descriptor() ([]byte, []int) {
+	return file_omega_v1_omega_service_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *GetIntelligenceMetricsResponse) GetBrainProvider() string {
+	if x != nil {
+		return x.BrainProvider
+	}
+	return ""
+}
+
+func (x *GetIntelligenceMetricsResponse) GetBrainCallsTotal() int64 {
+	if x != nil {
+		return x.BrainCallsTotal
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetBrainCallsPerCycle() float64 {
+	if x != nil {
+		return x.BrainCallsPerCycle
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetImproveCallsTotal() int64 {
+	if x != nil {
+		return x.ImproveCallsTotal
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetImproveAcceptedTotal() int64 {
+	if x != nil {
+		return x.ImproveAcceptedTotal
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetSignalVersionLatest() string {
+	if x != nil {
+		return x.SignalVersionLatest
+	}
+	return ""
+}
+
+func (x *GetIntelligenceMetricsResponse) GetNewSignalsUnlocked() []string {
+	if x != nil {
+		return x.NewSignalsUnlocked
+	}
+	return nil
+}
+
+func (x *GetIntelligenceMetricsResponse) GetEpisodesTotal() int64 {
+	if x != nil {
+		return x.EpisodesTotal
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetSemanticPatternsTotal() int64 {
+	if x != nil {
+		return x.SemanticPatternsTotal
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetSharedMemoryTotal() int64 {
+	if x != nil {
+		return x.SharedMemoryTotal
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetMemoryUtilizationPct() float64 {
+	if x != nil {
+		return x.MemoryUtilizationPct
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetCrossProjectRatio() float64 {
+	if x != nil {
+		return x.CrossProjectRatio
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetIntelligenceScoreAvg() float64 {
+	if x != nil {
+		return x.IntelligenceScoreAvg
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetIntelligenceScoreLatest() float64 {
+	if x != nil {
+		return x.IntelligenceScoreLatest
+	}
+	return 0
+}
+
+func (x *GetIntelligenceMetricsResponse) GetChecks() []*IntelligenceCheck {
+	if x != nil {
+		return x.Checks
+	}
+	return nil
+}
+
+func (x *GetIntelligenceMetricsResponse) GetCyclesAnalyzed() int64 {
+	if x != nil {
+		return x.CyclesAnalyzed
+	}
+	return 0
+}
+
 var File_omega_v1_omega_service_proto protoreflect.FileDescriptor
 
 const file_omega_v1_omega_service_proto_rawDesc = "" +
@@ -3192,7 +3465,31 @@ const file_omega_v1_omega_service_proto_rawDesc = "" +
 	"\verror_count\x18\x04 \x01(\x05R\n" +
 	"errorCount\x12\x1d\n" +
 	"\n" +
-	"has_result\x18\x05 \x01(\bR\thasResult2\x94\x15\n" +
+	"has_result\x18\x05 \x01(\bR\thasResult\"C\n" +
+	"\x1dGetIntelligenceMetricsRequest\x12\"\n" +
+	"\rlast_n_cycles\x18\x01 \x01(\x05R\vlastNCycles\"Y\n" +
+	"\x11IntelligenceCheck\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
+	"\apassing\x18\x02 \x01(\bR\apassing\x12\x16\n" +
+	"\x06detail\x18\x03 \x01(\tR\x06detail\"\xb7\x06\n" +
+	"\x1eGetIntelligenceMetricsResponse\x12%\n" +
+	"\x0ebrain_provider\x18\x01 \x01(\tR\rbrainProvider\x12*\n" +
+	"\x11brain_calls_total\x18\x02 \x01(\x03R\x0fbrainCallsTotal\x121\n" +
+	"\x15brain_calls_per_cycle\x18\x03 \x01(\x01R\x12brainCallsPerCycle\x12.\n" +
+	"\x13improve_calls_total\x18\x04 \x01(\x03R\x11improveCallsTotal\x124\n" +
+	"\x16improve_accepted_total\x18\x05 \x01(\x03R\x14improveAcceptedTotal\x122\n" +
+	"\x15signal_version_latest\x18\x06 \x01(\tR\x13signalVersionLatest\x120\n" +
+	"\x14new_signals_unlocked\x18\a \x03(\tR\x12newSignalsUnlocked\x12%\n" +
+	"\x0eepisodes_total\x18\b \x01(\x03R\repisodesTotal\x126\n" +
+	"\x17semantic_patterns_total\x18\t \x01(\x03R\x15semanticPatternsTotal\x12.\n" +
+	"\x13shared_memory_total\x18\n" +
+	" \x01(\x03R\x11sharedMemoryTotal\x124\n" +
+	"\x16memory_utilization_pct\x18\v \x01(\x01R\x14memoryUtilizationPct\x12.\n" +
+	"\x13cross_project_ratio\x18\f \x01(\x01R\x11crossProjectRatio\x124\n" +
+	"\x16intelligence_score_avg\x18\r \x01(\x01R\x14intelligenceScoreAvg\x12:\n" +
+	"\x19intelligence_score_latest\x18\x0e \x01(\x01R\x17intelligenceScoreLatest\x123\n" +
+	"\x06checks\x18\x0f \x03(\v2\x1b.omega.v1.IntelligenceCheckR\x06checks\x12'\n" +
+	"\x0fcycles_analyzed\x18\x10 \x01(\x03R\x0ecyclesAnalyzed2\x81\x16\n" +
 	"\x13OrchestratorService\x12D\n" +
 	"\tGetHealth\x12\x1a.omega.v1.GetHealthRequest\x1a\x1b.omega.v1.GetHealthResponse\x12D\n" +
 	"\tListNodes\x12\x1a.omega.v1.ListNodesRequest\x1a\x1b.omega.v1.ListNodesResponse\x12>\n" +
@@ -3227,7 +3524,8 @@ const file_omega_v1_omega_service_proto_rawDesc = "" +
 	"\x0eGetMemoryStats\x12\x1f.omega.v1.GetMemoryStatsRequest\x1a .omega.v1.GetMemoryStatsResponse\x12e\n" +
 	"\x14GetVerificationGates\x12%.omega.v1.GetVerificationGatesRequest\x1a&.omega.v1.GetVerificationGatesResponse\x12h\n" +
 	"\x15GetImprovementHistory\x12&.omega.v1.GetImprovementHistoryRequest\x1a'.omega.v1.GetImprovementHistoryResponse\x12_\n" +
-	"\x12GetLastCycleResult\x12#.omega.v1.GetLastCycleResultRequest\x1a$.omega.v1.GetLastCycleResultResponseB\x98\x01\n" +
+	"\x12GetLastCycleResult\x12#.omega.v1.GetLastCycleResultRequest\x1a$.omega.v1.GetLastCycleResultResponse\x12k\n" +
+	"\x16GetIntelligenceMetrics\x12'.omega.v1.GetIntelligenceMetricsRequest\x1a(.omega.v1.GetIntelligenceMetricsResponseB\x98\x01\n" +
 	"\fcom.omega.v1B\x11OmegaServiceProtoP\x01Z4github.com/benebsworth/omega/gen/go/omega/v1;omegav1\xa2\x02\x03OXX\xaa\x02\bOmega.V1\xca\x02\bOmega\\V1\xe2\x02\x14Omega\\V1\\GPBMetadata\xea\x02\tOmega::V1b\x06proto3"
 
 var (
@@ -3242,7 +3540,7 @@ func file_omega_v1_omega_service_proto_rawDescGZIP() []byte {
 	return file_omega_v1_omega_service_proto_rawDescData
 }
 
-var file_omega_v1_omega_service_proto_msgTypes = make([]protoimpl.MessageInfo, 64)
+var file_omega_v1_omega_service_proto_msgTypes = make([]protoimpl.MessageInfo, 67)
 var file_omega_v1_omega_service_proto_goTypes = []any{
 	(*GetHealthRequest)(nil),                 // 0: omega.v1.GetHealthRequest
 	(*GetHealthResponse)(nil),                // 1: omega.v1.GetHealthResponse
@@ -3308,137 +3606,143 @@ var file_omega_v1_omega_service_proto_goTypes = []any{
 	(*GetLastCycleResultRequest)(nil),        // 61: omega.v1.GetLastCycleResultRequest
 	(*CycleStepResult)(nil),                  // 62: omega.v1.CycleStepResult
 	(*GetLastCycleResultResponse)(nil),       // 63: omega.v1.GetLastCycleResultResponse
-	(*SystemHealth)(nil),                     // 64: omega.v1.SystemHealth
-	(*Node)(nil),                             // 65: omega.v1.Node
-	(*ExecutionRecord)(nil),                  // 66: omega.v1.ExecutionRecord
-	(*ImprovementRecord)(nil),                // 67: omega.v1.ImprovementRecord
-	(*timestamppb.Timestamp)(nil),            // 68: google.protobuf.Timestamp
-	(*TraceSummary)(nil),                     // 69: omega.v1.TraceSummary
-	(*Span)(nil),                             // 70: omega.v1.Span
-	(*CostEntry)(nil),                        // 71: omega.v1.CostEntry
-	(*Issue)(nil),                            // 72: omega.v1.Issue
-	(*ActivityEntry)(nil),                    // 73: omega.v1.ActivityEntry
-	(*SemanticConcept)(nil),                  // 74: omega.v1.SemanticConcept
-	(*EpisodeEntry)(nil),                     // 75: omega.v1.EpisodeEntry
-	(*ConvergencePoint)(nil),                 // 76: omega.v1.ConvergencePoint
-	(*NodeConfig)(nil),                       // 77: omega.v1.NodeConfig
-	(*BrainConfig)(nil),                      // 78: omega.v1.BrainConfig
-	(*ProviderInfo)(nil),                     // 79: omega.v1.ProviderInfo
-	(*BrainExecutionEntry)(nil),              // 80: omega.v1.BrainExecutionEntry
-	(*AlignmentDecision)(nil),                // 81: omega.v1.AlignmentDecision
-	(*AdversarialResult)(nil),                // 82: omega.v1.AdversarialResult
-	(*GoalState)(nil),                        // 83: omega.v1.GoalState
-	(*Challenge)(nil),                        // 84: omega.v1.Challenge
-	(*MemoryStats)(nil),                      // 85: omega.v1.MemoryStats
-	(*GateResult)(nil),                       // 86: omega.v1.GateResult
-	(*ImprovementDetail)(nil),                // 87: omega.v1.ImprovementDetail
-	(*EventResponse)(nil),                    // 88: omega.v1.EventResponse
+	(*GetIntelligenceMetricsRequest)(nil),    // 64: omega.v1.GetIntelligenceMetricsRequest
+	(*IntelligenceCheck)(nil),                // 65: omega.v1.IntelligenceCheck
+	(*GetIntelligenceMetricsResponse)(nil),   // 66: omega.v1.GetIntelligenceMetricsResponse
+	(*SystemHealth)(nil),                     // 67: omega.v1.SystemHealth
+	(*Node)(nil),                             // 68: omega.v1.Node
+	(*ExecutionRecord)(nil),                  // 69: omega.v1.ExecutionRecord
+	(*ImprovementRecord)(nil),                // 70: omega.v1.ImprovementRecord
+	(*timestamppb.Timestamp)(nil),            // 71: google.protobuf.Timestamp
+	(*TraceSummary)(nil),                     // 72: omega.v1.TraceSummary
+	(*Span)(nil),                             // 73: omega.v1.Span
+	(*CostEntry)(nil),                        // 74: omega.v1.CostEntry
+	(*Issue)(nil),                            // 75: omega.v1.Issue
+	(*ActivityEntry)(nil),                    // 76: omega.v1.ActivityEntry
+	(*SemanticConcept)(nil),                  // 77: omega.v1.SemanticConcept
+	(*EpisodeEntry)(nil),                     // 78: omega.v1.EpisodeEntry
+	(*ConvergencePoint)(nil),                 // 79: omega.v1.ConvergencePoint
+	(*NodeConfig)(nil),                       // 80: omega.v1.NodeConfig
+	(*BrainConfig)(nil),                      // 81: omega.v1.BrainConfig
+	(*ProviderInfo)(nil),                     // 82: omega.v1.ProviderInfo
+	(*BrainExecutionEntry)(nil),              // 83: omega.v1.BrainExecutionEntry
+	(*AlignmentDecision)(nil),                // 84: omega.v1.AlignmentDecision
+	(*AdversarialResult)(nil),                // 85: omega.v1.AdversarialResult
+	(*GoalState)(nil),                        // 86: omega.v1.GoalState
+	(*Challenge)(nil),                        // 87: omega.v1.Challenge
+	(*MemoryStats)(nil),                      // 88: omega.v1.MemoryStats
+	(*GateResult)(nil),                       // 89: omega.v1.GateResult
+	(*ImprovementDetail)(nil),                // 90: omega.v1.ImprovementDetail
+	(*EventResponse)(nil),                    // 91: omega.v1.EventResponse
 }
 var file_omega_v1_omega_service_proto_depIdxs = []int32{
-	64, // 0: omega.v1.GetHealthResponse.health:type_name -> omega.v1.SystemHealth
-	65, // 1: omega.v1.ListNodesResponse.nodes:type_name -> omega.v1.Node
-	65, // 2: omega.v1.GetNodeResponse.node:type_name -> omega.v1.Node
-	66, // 3: omega.v1.GetNodeResponse.recent_executions:type_name -> omega.v1.ExecutionRecord
-	67, // 4: omega.v1.GetNodeResponse.improvements:type_name -> omega.v1.ImprovementRecord
+	67, // 0: omega.v1.GetHealthResponse.health:type_name -> omega.v1.SystemHealth
+	68, // 1: omega.v1.ListNodesResponse.nodes:type_name -> omega.v1.Node
+	68, // 2: omega.v1.GetNodeResponse.node:type_name -> omega.v1.Node
+	69, // 3: omega.v1.GetNodeResponse.recent_executions:type_name -> omega.v1.ExecutionRecord
+	70, // 4: omega.v1.GetNodeResponse.improvements:type_name -> omega.v1.ImprovementRecord
 	6,  // 5: omega.v1.GetNodeResponse.latency_history:type_name -> omega.v1.LatencyPoint
-	68, // 6: omega.v1.LatencyPoint.ts:type_name -> google.protobuf.Timestamp
-	66, // 7: omega.v1.ListNodeExecutionsResponse.executions:type_name -> omega.v1.ExecutionRecord
-	69, // 8: omega.v1.ListTracesResponse.traces:type_name -> omega.v1.TraceSummary
-	70, // 9: omega.v1.GetTraceResponse.spans:type_name -> omega.v1.Span
-	64, // 10: omega.v1.GetMetricsResponse.system:type_name -> omega.v1.SystemHealth
-	65, // 11: omega.v1.GetMetricsResponse.nodes:type_name -> omega.v1.Node
-	71, // 12: omega.v1.GetMetricsResponse.costs:type_name -> omega.v1.CostEntry
-	72, // 13: omega.v1.GetMetricsResponse.open_issues:type_name -> omega.v1.Issue
-	69, // 14: omega.v1.GetMetricsResponse.recent_traces:type_name -> omega.v1.TraceSummary
+	71, // 6: omega.v1.LatencyPoint.ts:type_name -> google.protobuf.Timestamp
+	69, // 7: omega.v1.ListNodeExecutionsResponse.executions:type_name -> omega.v1.ExecutionRecord
+	72, // 8: omega.v1.ListTracesResponse.traces:type_name -> omega.v1.TraceSummary
+	73, // 9: omega.v1.GetTraceResponse.spans:type_name -> omega.v1.Span
+	67, // 10: omega.v1.GetMetricsResponse.system:type_name -> omega.v1.SystemHealth
+	68, // 11: omega.v1.GetMetricsResponse.nodes:type_name -> omega.v1.Node
+	74, // 12: omega.v1.GetMetricsResponse.costs:type_name -> omega.v1.CostEntry
+	75, // 13: omega.v1.GetMetricsResponse.open_issues:type_name -> omega.v1.Issue
+	72, // 14: omega.v1.GetMetricsResponse.recent_traces:type_name -> omega.v1.TraceSummary
 	17, // 15: omega.v1.GetMetricsHistoryResponse.node_histories:type_name -> omega.v1.NodeLatencyHistory
 	6,  // 16: omega.v1.NodeLatencyHistory.history:type_name -> omega.v1.LatencyPoint
-	72, // 17: omega.v1.ListIssuesResponse.issues:type_name -> omega.v1.Issue
-	73, // 18: omega.v1.ListActivityResponse.entries:type_name -> omega.v1.ActivityEntry
-	67, // 19: omega.v1.ListImprovementsResponse.improvements:type_name -> omega.v1.ImprovementRecord
-	74, // 20: omega.v1.GetNodeMemoryResponse.top_semantic:type_name -> omega.v1.SemanticConcept
-	75, // 21: omega.v1.GetNodeMemoryResponse.recent_episodes:type_name -> omega.v1.EpisodeEntry
-	76, // 22: omega.v1.GetConvergenceResponse.points:type_name -> omega.v1.ConvergencePoint
-	71, // 23: omega.v1.GetCostsResponse.costs:type_name -> omega.v1.CostEntry
-	77, // 24: omega.v1.GetNodeConfigResponse.config:type_name -> omega.v1.NodeConfig
-	78, // 25: omega.v1.UpdateNodeBrainRequest.brain:type_name -> omega.v1.BrainConfig
-	77, // 26: omega.v1.UpdateNodeBrainResponse.config:type_name -> omega.v1.NodeConfig
-	79, // 27: omega.v1.ListAvailableProvidersResponse.providers:type_name -> omega.v1.ProviderInfo
-	80, // 28: omega.v1.GetBrainExecutionHistoryResponse.entries:type_name -> omega.v1.BrainExecutionEntry
-	81, // 29: omega.v1.GetAlignmentDecisionsResponse.decisions:type_name -> omega.v1.AlignmentDecision
-	82, // 30: omega.v1.GetAdversarialResultsResponse.results:type_name -> omega.v1.AdversarialResult
-	83, // 31: omega.v1.GetGoalTrackingResponse.state:type_name -> omega.v1.GoalState
-	84, // 32: omega.v1.GetChallengesResponse.challenges:type_name -> omega.v1.Challenge
-	85, // 33: omega.v1.GetMemoryStatsResponse.stats:type_name -> omega.v1.MemoryStats
-	86, // 34: omega.v1.GetVerificationGatesResponse.gates:type_name -> omega.v1.GateResult
-	87, // 35: omega.v1.GetImprovementHistoryResponse.records:type_name -> omega.v1.ImprovementDetail
+	75, // 17: omega.v1.ListIssuesResponse.issues:type_name -> omega.v1.Issue
+	76, // 18: omega.v1.ListActivityResponse.entries:type_name -> omega.v1.ActivityEntry
+	70, // 19: omega.v1.ListImprovementsResponse.improvements:type_name -> omega.v1.ImprovementRecord
+	77, // 20: omega.v1.GetNodeMemoryResponse.top_semantic:type_name -> omega.v1.SemanticConcept
+	78, // 21: omega.v1.GetNodeMemoryResponse.recent_episodes:type_name -> omega.v1.EpisodeEntry
+	79, // 22: omega.v1.GetConvergenceResponse.points:type_name -> omega.v1.ConvergencePoint
+	74, // 23: omega.v1.GetCostsResponse.costs:type_name -> omega.v1.CostEntry
+	80, // 24: omega.v1.GetNodeConfigResponse.config:type_name -> omega.v1.NodeConfig
+	81, // 25: omega.v1.UpdateNodeBrainRequest.brain:type_name -> omega.v1.BrainConfig
+	80, // 26: omega.v1.UpdateNodeBrainResponse.config:type_name -> omega.v1.NodeConfig
+	82, // 27: omega.v1.ListAvailableProvidersResponse.providers:type_name -> omega.v1.ProviderInfo
+	83, // 28: omega.v1.GetBrainExecutionHistoryResponse.entries:type_name -> omega.v1.BrainExecutionEntry
+	84, // 29: omega.v1.GetAlignmentDecisionsResponse.decisions:type_name -> omega.v1.AlignmentDecision
+	85, // 30: omega.v1.GetAdversarialResultsResponse.results:type_name -> omega.v1.AdversarialResult
+	86, // 31: omega.v1.GetGoalTrackingResponse.state:type_name -> omega.v1.GoalState
+	87, // 32: omega.v1.GetChallengesResponse.challenges:type_name -> omega.v1.Challenge
+	88, // 33: omega.v1.GetMemoryStatsResponse.stats:type_name -> omega.v1.MemoryStats
+	89, // 34: omega.v1.GetVerificationGatesResponse.gates:type_name -> omega.v1.GateResult
+	90, // 35: omega.v1.GetImprovementHistoryResponse.records:type_name -> omega.v1.ImprovementDetail
 	62, // 36: omega.v1.GetLastCycleResultResponse.step_results:type_name -> omega.v1.CycleStepResult
-	0,  // 37: omega.v1.OrchestratorService.GetHealth:input_type -> omega.v1.GetHealthRequest
-	2,  // 38: omega.v1.OrchestratorService.ListNodes:input_type -> omega.v1.ListNodesRequest
-	4,  // 39: omega.v1.OrchestratorService.GetNode:input_type -> omega.v1.GetNodeRequest
-	7,  // 40: omega.v1.OrchestratorService.ListNodeExecutions:input_type -> omega.v1.ListNodeExecutionsRequest
-	9,  // 41: omega.v1.OrchestratorService.ListTraces:input_type -> omega.v1.ListTracesRequest
-	11, // 42: omega.v1.OrchestratorService.GetTrace:input_type -> omega.v1.GetTraceRequest
-	13, // 43: omega.v1.OrchestratorService.GetMetrics:input_type -> omega.v1.GetMetricsRequest
-	15, // 44: omega.v1.OrchestratorService.GetMetricsHistory:input_type -> omega.v1.GetMetricsHistoryRequest
-	18, // 45: omega.v1.OrchestratorService.ListIssues:input_type -> omega.v1.ListIssuesRequest
-	20, // 46: omega.v1.OrchestratorService.ListActivity:input_type -> omega.v1.ListActivityRequest
-	22, // 47: omega.v1.OrchestratorService.ListImprovements:input_type -> omega.v1.ListImprovementsRequest
-	24, // 48: omega.v1.OrchestratorService.GetNodeMemory:input_type -> omega.v1.GetNodeMemoryRequest
-	26, // 49: omega.v1.OrchestratorService.GetConvergence:input_type -> omega.v1.GetConvergenceRequest
-	28, // 50: omega.v1.OrchestratorService.GetCosts:input_type -> omega.v1.GetCostsRequest
-	30, // 51: omega.v1.OrchestratorService.SubmitFeedback:input_type -> omega.v1.SubmitFeedbackRequest
-	32, // 52: omega.v1.OrchestratorService.StartOrchestrator:input_type -> omega.v1.StartOrchestratorRequest
-	34, // 53: omega.v1.OrchestratorService.StopOrchestrator:input_type -> omega.v1.StopOrchestratorRequest
-	36, // 54: omega.v1.OrchestratorService.TriggerHeartbeat:input_type -> omega.v1.TriggerHeartbeatRequest
-	38, // 55: omega.v1.OrchestratorService.StreamEvents:input_type -> omega.v1.StreamEventsRequest
-	39, // 56: omega.v1.OrchestratorService.GetNodeConfig:input_type -> omega.v1.GetNodeConfigRequest
-	41, // 57: omega.v1.OrchestratorService.UpdateNodeBrain:input_type -> omega.v1.UpdateNodeBrainRequest
-	43, // 58: omega.v1.OrchestratorService.ListAvailableProviders:input_type -> omega.v1.ListAvailableProvidersRequest
-	45, // 59: omega.v1.OrchestratorService.GetBrainExecutionHistory:input_type -> omega.v1.GetBrainExecutionHistoryRequest
-	47, // 60: omega.v1.OrchestratorService.GetAlignmentDecisions:input_type -> omega.v1.GetAlignmentDecisionsRequest
-	49, // 61: omega.v1.OrchestratorService.GetAdversarialResults:input_type -> omega.v1.GetAdversarialResultsRequest
-	51, // 62: omega.v1.OrchestratorService.GetGoalTracking:input_type -> omega.v1.GetGoalTrackingRequest
-	53, // 63: omega.v1.OrchestratorService.GetChallenges:input_type -> omega.v1.GetChallengesRequest
-	55, // 64: omega.v1.OrchestratorService.GetMemoryStats:input_type -> omega.v1.GetMemoryStatsRequest
-	57, // 65: omega.v1.OrchestratorService.GetVerificationGates:input_type -> omega.v1.GetVerificationGatesRequest
-	59, // 66: omega.v1.OrchestratorService.GetImprovementHistory:input_type -> omega.v1.GetImprovementHistoryRequest
-	61, // 67: omega.v1.OrchestratorService.GetLastCycleResult:input_type -> omega.v1.GetLastCycleResultRequest
-	1,  // 68: omega.v1.OrchestratorService.GetHealth:output_type -> omega.v1.GetHealthResponse
-	3,  // 69: omega.v1.OrchestratorService.ListNodes:output_type -> omega.v1.ListNodesResponse
-	5,  // 70: omega.v1.OrchestratorService.GetNode:output_type -> omega.v1.GetNodeResponse
-	8,  // 71: omega.v1.OrchestratorService.ListNodeExecutions:output_type -> omega.v1.ListNodeExecutionsResponse
-	10, // 72: omega.v1.OrchestratorService.ListTraces:output_type -> omega.v1.ListTracesResponse
-	12, // 73: omega.v1.OrchestratorService.GetTrace:output_type -> omega.v1.GetTraceResponse
-	14, // 74: omega.v1.OrchestratorService.GetMetrics:output_type -> omega.v1.GetMetricsResponse
-	16, // 75: omega.v1.OrchestratorService.GetMetricsHistory:output_type -> omega.v1.GetMetricsHistoryResponse
-	19, // 76: omega.v1.OrchestratorService.ListIssues:output_type -> omega.v1.ListIssuesResponse
-	21, // 77: omega.v1.OrchestratorService.ListActivity:output_type -> omega.v1.ListActivityResponse
-	23, // 78: omega.v1.OrchestratorService.ListImprovements:output_type -> omega.v1.ListImprovementsResponse
-	25, // 79: omega.v1.OrchestratorService.GetNodeMemory:output_type -> omega.v1.GetNodeMemoryResponse
-	27, // 80: omega.v1.OrchestratorService.GetConvergence:output_type -> omega.v1.GetConvergenceResponse
-	29, // 81: omega.v1.OrchestratorService.GetCosts:output_type -> omega.v1.GetCostsResponse
-	31, // 82: omega.v1.OrchestratorService.SubmitFeedback:output_type -> omega.v1.SubmitFeedbackResponse
-	33, // 83: omega.v1.OrchestratorService.StartOrchestrator:output_type -> omega.v1.StartOrchestratorResponse
-	35, // 84: omega.v1.OrchestratorService.StopOrchestrator:output_type -> omega.v1.StopOrchestratorResponse
-	37, // 85: omega.v1.OrchestratorService.TriggerHeartbeat:output_type -> omega.v1.TriggerHeartbeatResponse
-	88, // 86: omega.v1.OrchestratorService.StreamEvents:output_type -> omega.v1.EventResponse
-	40, // 87: omega.v1.OrchestratorService.GetNodeConfig:output_type -> omega.v1.GetNodeConfigResponse
-	42, // 88: omega.v1.OrchestratorService.UpdateNodeBrain:output_type -> omega.v1.UpdateNodeBrainResponse
-	44, // 89: omega.v1.OrchestratorService.ListAvailableProviders:output_type -> omega.v1.ListAvailableProvidersResponse
-	46, // 90: omega.v1.OrchestratorService.GetBrainExecutionHistory:output_type -> omega.v1.GetBrainExecutionHistoryResponse
-	48, // 91: omega.v1.OrchestratorService.GetAlignmentDecisions:output_type -> omega.v1.GetAlignmentDecisionsResponse
-	50, // 92: omega.v1.OrchestratorService.GetAdversarialResults:output_type -> omega.v1.GetAdversarialResultsResponse
-	52, // 93: omega.v1.OrchestratorService.GetGoalTracking:output_type -> omega.v1.GetGoalTrackingResponse
-	54, // 94: omega.v1.OrchestratorService.GetChallenges:output_type -> omega.v1.GetChallengesResponse
-	56, // 95: omega.v1.OrchestratorService.GetMemoryStats:output_type -> omega.v1.GetMemoryStatsResponse
-	58, // 96: omega.v1.OrchestratorService.GetVerificationGates:output_type -> omega.v1.GetVerificationGatesResponse
-	60, // 97: omega.v1.OrchestratorService.GetImprovementHistory:output_type -> omega.v1.GetImprovementHistoryResponse
-	63, // 98: omega.v1.OrchestratorService.GetLastCycleResult:output_type -> omega.v1.GetLastCycleResultResponse
-	68, // [68:99] is the sub-list for method output_type
-	37, // [37:68] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	65, // 37: omega.v1.GetIntelligenceMetricsResponse.checks:type_name -> omega.v1.IntelligenceCheck
+	0,  // 38: omega.v1.OrchestratorService.GetHealth:input_type -> omega.v1.GetHealthRequest
+	2,  // 39: omega.v1.OrchestratorService.ListNodes:input_type -> omega.v1.ListNodesRequest
+	4,  // 40: omega.v1.OrchestratorService.GetNode:input_type -> omega.v1.GetNodeRequest
+	7,  // 41: omega.v1.OrchestratorService.ListNodeExecutions:input_type -> omega.v1.ListNodeExecutionsRequest
+	9,  // 42: omega.v1.OrchestratorService.ListTraces:input_type -> omega.v1.ListTracesRequest
+	11, // 43: omega.v1.OrchestratorService.GetTrace:input_type -> omega.v1.GetTraceRequest
+	13, // 44: omega.v1.OrchestratorService.GetMetrics:input_type -> omega.v1.GetMetricsRequest
+	15, // 45: omega.v1.OrchestratorService.GetMetricsHistory:input_type -> omega.v1.GetMetricsHistoryRequest
+	18, // 46: omega.v1.OrchestratorService.ListIssues:input_type -> omega.v1.ListIssuesRequest
+	20, // 47: omega.v1.OrchestratorService.ListActivity:input_type -> omega.v1.ListActivityRequest
+	22, // 48: omega.v1.OrchestratorService.ListImprovements:input_type -> omega.v1.ListImprovementsRequest
+	24, // 49: omega.v1.OrchestratorService.GetNodeMemory:input_type -> omega.v1.GetNodeMemoryRequest
+	26, // 50: omega.v1.OrchestratorService.GetConvergence:input_type -> omega.v1.GetConvergenceRequest
+	28, // 51: omega.v1.OrchestratorService.GetCosts:input_type -> omega.v1.GetCostsRequest
+	30, // 52: omega.v1.OrchestratorService.SubmitFeedback:input_type -> omega.v1.SubmitFeedbackRequest
+	32, // 53: omega.v1.OrchestratorService.StartOrchestrator:input_type -> omega.v1.StartOrchestratorRequest
+	34, // 54: omega.v1.OrchestratorService.StopOrchestrator:input_type -> omega.v1.StopOrchestratorRequest
+	36, // 55: omega.v1.OrchestratorService.TriggerHeartbeat:input_type -> omega.v1.TriggerHeartbeatRequest
+	38, // 56: omega.v1.OrchestratorService.StreamEvents:input_type -> omega.v1.StreamEventsRequest
+	39, // 57: omega.v1.OrchestratorService.GetNodeConfig:input_type -> omega.v1.GetNodeConfigRequest
+	41, // 58: omega.v1.OrchestratorService.UpdateNodeBrain:input_type -> omega.v1.UpdateNodeBrainRequest
+	43, // 59: omega.v1.OrchestratorService.ListAvailableProviders:input_type -> omega.v1.ListAvailableProvidersRequest
+	45, // 60: omega.v1.OrchestratorService.GetBrainExecutionHistory:input_type -> omega.v1.GetBrainExecutionHistoryRequest
+	47, // 61: omega.v1.OrchestratorService.GetAlignmentDecisions:input_type -> omega.v1.GetAlignmentDecisionsRequest
+	49, // 62: omega.v1.OrchestratorService.GetAdversarialResults:input_type -> omega.v1.GetAdversarialResultsRequest
+	51, // 63: omega.v1.OrchestratorService.GetGoalTracking:input_type -> omega.v1.GetGoalTrackingRequest
+	53, // 64: omega.v1.OrchestratorService.GetChallenges:input_type -> omega.v1.GetChallengesRequest
+	55, // 65: omega.v1.OrchestratorService.GetMemoryStats:input_type -> omega.v1.GetMemoryStatsRequest
+	57, // 66: omega.v1.OrchestratorService.GetVerificationGates:input_type -> omega.v1.GetVerificationGatesRequest
+	59, // 67: omega.v1.OrchestratorService.GetImprovementHistory:input_type -> omega.v1.GetImprovementHistoryRequest
+	61, // 68: omega.v1.OrchestratorService.GetLastCycleResult:input_type -> omega.v1.GetLastCycleResultRequest
+	64, // 69: omega.v1.OrchestratorService.GetIntelligenceMetrics:input_type -> omega.v1.GetIntelligenceMetricsRequest
+	1,  // 70: omega.v1.OrchestratorService.GetHealth:output_type -> omega.v1.GetHealthResponse
+	3,  // 71: omega.v1.OrchestratorService.ListNodes:output_type -> omega.v1.ListNodesResponse
+	5,  // 72: omega.v1.OrchestratorService.GetNode:output_type -> omega.v1.GetNodeResponse
+	8,  // 73: omega.v1.OrchestratorService.ListNodeExecutions:output_type -> omega.v1.ListNodeExecutionsResponse
+	10, // 74: omega.v1.OrchestratorService.ListTraces:output_type -> omega.v1.ListTracesResponse
+	12, // 75: omega.v1.OrchestratorService.GetTrace:output_type -> omega.v1.GetTraceResponse
+	14, // 76: omega.v1.OrchestratorService.GetMetrics:output_type -> omega.v1.GetMetricsResponse
+	16, // 77: omega.v1.OrchestratorService.GetMetricsHistory:output_type -> omega.v1.GetMetricsHistoryResponse
+	19, // 78: omega.v1.OrchestratorService.ListIssues:output_type -> omega.v1.ListIssuesResponse
+	21, // 79: omega.v1.OrchestratorService.ListActivity:output_type -> omega.v1.ListActivityResponse
+	23, // 80: omega.v1.OrchestratorService.ListImprovements:output_type -> omega.v1.ListImprovementsResponse
+	25, // 81: omega.v1.OrchestratorService.GetNodeMemory:output_type -> omega.v1.GetNodeMemoryResponse
+	27, // 82: omega.v1.OrchestratorService.GetConvergence:output_type -> omega.v1.GetConvergenceResponse
+	29, // 83: omega.v1.OrchestratorService.GetCosts:output_type -> omega.v1.GetCostsResponse
+	31, // 84: omega.v1.OrchestratorService.SubmitFeedback:output_type -> omega.v1.SubmitFeedbackResponse
+	33, // 85: omega.v1.OrchestratorService.StartOrchestrator:output_type -> omega.v1.StartOrchestratorResponse
+	35, // 86: omega.v1.OrchestratorService.StopOrchestrator:output_type -> omega.v1.StopOrchestratorResponse
+	37, // 87: omega.v1.OrchestratorService.TriggerHeartbeat:output_type -> omega.v1.TriggerHeartbeatResponse
+	91, // 88: omega.v1.OrchestratorService.StreamEvents:output_type -> omega.v1.EventResponse
+	40, // 89: omega.v1.OrchestratorService.GetNodeConfig:output_type -> omega.v1.GetNodeConfigResponse
+	42, // 90: omega.v1.OrchestratorService.UpdateNodeBrain:output_type -> omega.v1.UpdateNodeBrainResponse
+	44, // 91: omega.v1.OrchestratorService.ListAvailableProviders:output_type -> omega.v1.ListAvailableProvidersResponse
+	46, // 92: omega.v1.OrchestratorService.GetBrainExecutionHistory:output_type -> omega.v1.GetBrainExecutionHistoryResponse
+	48, // 93: omega.v1.OrchestratorService.GetAlignmentDecisions:output_type -> omega.v1.GetAlignmentDecisionsResponse
+	50, // 94: omega.v1.OrchestratorService.GetAdversarialResults:output_type -> omega.v1.GetAdversarialResultsResponse
+	52, // 95: omega.v1.OrchestratorService.GetGoalTracking:output_type -> omega.v1.GetGoalTrackingResponse
+	54, // 96: omega.v1.OrchestratorService.GetChallenges:output_type -> omega.v1.GetChallengesResponse
+	56, // 97: omega.v1.OrchestratorService.GetMemoryStats:output_type -> omega.v1.GetMemoryStatsResponse
+	58, // 98: omega.v1.OrchestratorService.GetVerificationGates:output_type -> omega.v1.GetVerificationGatesResponse
+	60, // 99: omega.v1.OrchestratorService.GetImprovementHistory:output_type -> omega.v1.GetImprovementHistoryResponse
+	63, // 100: omega.v1.OrchestratorService.GetLastCycleResult:output_type -> omega.v1.GetLastCycleResultResponse
+	66, // 101: omega.v1.OrchestratorService.GetIntelligenceMetrics:output_type -> omega.v1.GetIntelligenceMetricsResponse
+	70, // [70:102] is the sub-list for method output_type
+	38, // [38:70] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_omega_service_proto_init() }
@@ -3453,7 +3757,7 @@ func file_omega_v1_omega_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_omega_service_proto_rawDesc), len(file_omega_v1_omega_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   64,
+			NumMessages:   67,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
