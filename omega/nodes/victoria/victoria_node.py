@@ -67,6 +67,7 @@ from omega.nodes.victoria.signals_advanced import (
     SentimentSignal,
 )
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
+from omega.nodes.victoria.whale_signal import WhaleFlowSignal
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
@@ -95,6 +96,7 @@ SIGNAL_NAMES = [
     "carry",  # Funding-rate carry / mean-reversion
     "pairs",  # Cointegration pairs spread z-score
     "momentum_factor",  # Cross-sectional Jegadeesh-Titman momentum
+    "whale_flow",  # Large exchange inflow/outflow (whale accumulation vs distribution)
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -147,6 +149,7 @@ class VictoriaNode(Node):
         self._carry = FundingCarrySignal()
         self._pairs = PairsTradingSignal()
         self._momentum_factor = CrossSectionalMomentumSignal()
+        self._whale_flow = WhaleFlowSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -1010,6 +1013,17 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("momentum_factor signal failed: %s", exc)
 
+            try:
+                whale_val = self._whale_flow.compute(market_data)
+                signals["whale_flow"] = {
+                    "value": whale_val.value,
+                    "confidence": whale_val.confidence,
+                    "regime_tag": whale_val.regime_tag,
+                    "raw": whale_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("whale_flow signal failed: %s", exc)
+
             # RMT information-content signal — uses the 10 core signals from
             # information_flow.SIGNAL_NAMES as its input vector.
             try:
@@ -1301,6 +1315,11 @@ class VictoriaNode(Node):
             return {"value": val.value, "confidence": val.confidence,
                     "regime_tag": val.regime_tag, "raw": val.raw}
 
+        def _whale_flow(acc: dict, ctx: dict) -> dict:
+            v = self._whale_flow.compute(ctx.get("market_data"))
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
         def _alt_data(acc: dict, ctx: dict) -> dict:
             val = self._alt_data.compute()
             return {"value": val.value, "confidence": val.confidence,
@@ -1450,6 +1469,7 @@ class VictoriaNode(Node):
         #   Wave 0 (roots):
         #     market_data_signal   ← processes raw OHLCV prices
         #     alt_data             ← fetches external data independently
+        #     whale_flow           ← whale exchange flow (10-min cached, no market_data dep)
         #
         #   Wave 1 (parallel, all depend on market_data_signal):
         #     basic_signals, order_flow, cross_asset, microstructure,
@@ -1470,6 +1490,8 @@ class VictoriaNode(Node):
                        description="MarketDataSignal — processes raw OHLCV"),
             SignalNode("alt_data", deps=[], fn=_alt_data,
                        description="AltDataSignalProvider — independent external fetch"),
+            SignalNode("whale_flow", deps=[], fn=_whale_flow,
+                       description="WhaleFlowSignal — large exchange inflow/outflow (10-min cache)"),
             # Wave 1
             SignalNode("basic_signals", deps=wave1_deps, fn=_basic_signals,
                        description="SMA/RSI/MACD/BB technical signals"),
@@ -1516,7 +1538,7 @@ class VictoriaNode(Node):
             "basic_signals", "order_flow", "cross_asset", "microstructure",
             "sentiment", "vrp", "market_data_signal", "onchain", "long_short_ratio",
             "btc_dominance", "alt_data", "carry", "pairs", "momentum_factor",
-            "rmt_signal", "spectral_graph",
+            "whale_flow", "rmt_signal", "spectral_graph",
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
