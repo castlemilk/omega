@@ -20,6 +20,7 @@ from typing import Any
 
 from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.risk_manager import PositionRiskManager
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
@@ -138,6 +139,12 @@ class StrategyNode(Node):
         self._last_fiedler_scale: float = 1.0
         self._last_fiedler_tag: str = "warmup"
 
+        # --- Portfolio risk manager (drawdown, correlation, vol, time, heat) ---
+        self._risk = PositionRiskManager()
+        # Optional RMT denoiser reference for correlation-based position limits.
+        # Set via set_rmt_denoiser() after construction (avoids circular imports).
+        self._rmt_denoiser: Any = None
+
     # ------------------------------------------------------------------ Node interface
 
     def get_state(self) -> NodeState:
@@ -170,6 +177,7 @@ class StrategyNode(Node):
                 "normal_trade_cycles": self._normal_trade_count,
                 "fiedler_scale": self._last_fiedler_scale,
                 "fiedler_tag": self._last_fiedler_tag,
+                **{f"risk_{k}": v for k, v in self._risk.get_metrics().items()},
             },
         )
 
@@ -270,6 +278,7 @@ class StrategyNode(Node):
             "sit_out_vol_high": float(self._sit_out_vol_high_count),
             "normal_trade_cycles": float(self._normal_trade_count),
             "fiedler_scale": self._last_fiedler_scale,
+            **{f"risk_{k}": float(v) if not isinstance(v, bool) else float(v) for k, v in self._risk.get_metrics().items()},
         }
 
     def update_signal_ics(self, ics: dict[str, float]) -> None:
@@ -280,6 +289,29 @@ class StrategyNode(Node):
             len(self._signal_ics),
             sum(1 for v in ics.values() if v <= 0),
         )
+
+    def set_rmt_denoiser(self, denoiser: Any) -> None:
+        """
+        Attach an RMTDenoiser instance for correlation-based position limits.
+
+        Call this after construction to enable Layer 2 of the risk manager.
+        Typically wired in victoria_node.py after both objects are created.
+        """
+        self._rmt_denoiser = denoiser
+        logger.info("StrategyNode: RMT denoiser attached for correlation risk filtering")
+
+    def update_risk_pnl(self, realized_pnl: float, unrealized_pnl: float = 0.0) -> None:
+        """
+        Update the risk manager's PnL tracking for drawdown protection.
+
+        Call this each cycle with cumulative realised P&L so the drawdown
+        halt can trigger appropriately.
+        """
+        self._risk.update_pnl(realized_pnl, unrealized_pnl)
+
+    def risk_is_halted(self) -> bool:
+        """Return True if max-drawdown protection has halted trading."""
+        return self._risk.is_halted()
 
     def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
@@ -843,6 +875,38 @@ class StrategyNode(Node):
                 _spectral_val.regime_tag,
             )
 
+        # ── Portfolio risk manager (layers 1-5) ─────────────────────────────
+        # Build price_histories for vol-scaling from market_data
+        _price_histories: dict[str, list[float]] = {}
+        for _t, _d in market_data.items():
+            if not isinstance(_d, dict):
+                continue
+            _prices = self._clean_prices(_d.get("adjclose") or _d.get("close", []))
+            if _prices:
+                _price_histories[_t] = _prices
+
+        # Retrieve RMT correlation matrix if available (injected via set_rmt_denoiser)
+        _corr_matrix = None
+        _corr_tickers: list[str] = []
+        if self._rmt_denoiser is not None:
+            _corr_matrix = self._rmt_denoiser.get_denoised_correlation()
+            from omega.nodes.victoria.information_flow import SIGNAL_NAMES as _SNAMES
+            _corr_tickers = list(_SNAMES)
+
+        # Conviction scores for corr tie-breaking (use raw float conviction values)
+        _conv_scores = {t: float(convictions[t]) for t in weights if t in convictions}
+
+        weights = self._risk.apply_all(
+            weights=weights,
+            price_histories=_price_histories if _price_histories else None,
+            corr_matrix=_corr_matrix,
+            tickers=_corr_tickers if _corr_tickers else None,
+            convictions=_conv_scores if _conv_scores else None,
+        )
+
+        _risk_metrics = self._risk.get_metrics()
+        # ────────────────────────────────────────────────────────────────────
+
         # Conviction distribution summary for metrics
         conviction_dist = {level.name: 0 for level in ConvictionLevel}
         for c in convictions.values():
@@ -879,6 +943,7 @@ class StrategyNode(Node):
                 "filtered": self._proposals_filtered,
                 "filter_rate": self._filter_rate(),
             },
+            "risk": _risk_metrics,
         }
 
     def _rank_signals(self, signals: dict[str, Any]) -> list[dict[str, Any]]:
