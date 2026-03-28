@@ -1107,7 +1107,11 @@ class OmegaOrchestrator:
         # Each signal TYPE from each node is its own variant so that Ring 1 can
         # detect disagreement between (e.g.) the VRP signal vs basic_signals.
         # This ensures meaningful pairwise comparison even with a single node.
+        #
+        # Signals with confidence=0.0 or stale=True are excluded from Ring 1
+        # to avoid spurious disagreement from uninformative / expired data.
         variant_outputs: dict[str, dict[str, float]] = {}
+        confident_signal_count = 0
         for node_id, signals in signal_data.items():
             if not isinstance(signals, dict):
                 continue
@@ -1115,6 +1119,17 @@ class OmegaOrchestrator:
                 if sig_name.startswith("_"):
                     continue
                 if isinstance(sig_val, dict):
+                    # Skip stale signals
+                    if sig_val.get("stale") is True:
+                        log.debug("Ring1 filter: skipping stale signal '%s'", sig_name)
+                        continue
+                    # Skip zero-confidence signals
+                    confidence = sig_val.get("confidence")
+                    if confidence is not None and float(confidence) == 0.0:
+                        log.debug(
+                            "Ring1 filter: skipping zero-confidence signal '%s'", sig_name
+                        )
+                        continue
                     # Per-signal-type variant: flatten its numeric sub-fields
                     flat: dict[str, float] = {}
                     for sub_k, sub_v in sig_val.items():
@@ -1126,8 +1141,19 @@ class OmegaOrchestrator:
                                     flat[f"{sub_k}_{sk2}"] = float(sv2)
                     if flat:
                         variant_outputs[f"{node_id}:{sig_name}"] = flat
+                        confident_signal_count += 1
                 elif isinstance(sig_val, (int, float)):
                     variant_outputs[f"{node_id}:{sig_name}"] = {sig_name: float(sig_val)}
+                    confident_signal_count += 1
+
+        # Skip Ring 1 if fewer than 3 confident signals — not enough diversity for
+        # meaningful pairwise disagreement detection; avoids false positives on
+        # sparse signal cycles.
+        _skip_ring1 = confident_signal_count < 3
+        if _skip_ring1:
+            log.debug(
+                "Ring1 skipped: only %d confident signals (need ≥3)", confident_signal_count
+            )
 
         # Fallback: synthesise variant_outputs from proposal weights if no signal data
         if not variant_outputs:
@@ -1162,10 +1188,12 @@ class OmegaOrchestrator:
         }
 
         # --- Call AdversarialPressureV2 ---
+        # When Ring 1 is skipped (< 3 confident signals), pass empty variant_outputs
+        # so Ring 1 has nothing to compare and will not fire spuriously.
         try:
             adv_report = self._adversarial.run_v2(
                 cycle=ctx.cycle_number,
-                variant_outputs=variant_outputs,
+                variant_outputs={} if _skip_ring1 else variant_outputs,
                 current_signals=current_signals,
                 strategy_params=strategy_params,
             )

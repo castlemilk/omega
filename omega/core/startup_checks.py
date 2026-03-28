@@ -92,6 +92,12 @@ class StartupChecker:
         self._skip_api = skip_api
 
     def run(self) -> StartupReport:
+        try:
+            from dotenv import load_dotenv
+
+            load_dotenv()
+        except ImportError:
+            pass  # python-dotenv not installed; env must be set externally
         report = StartupReport()
         self._check_env(report)
         if not self._skip_db:
