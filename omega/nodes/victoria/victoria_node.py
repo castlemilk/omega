@@ -74,6 +74,7 @@ from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 from omega.nodes.victoria.smart_money_signal import SmartMoneySignal
 from omega.nodes.victoria.finbert_sentiment import FinBertSentimentSignal
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
+from omega.core.data_resilience import get_resilience_layer
 
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
@@ -1316,6 +1317,11 @@ class VictoriaNode(Node):
             "PASS" if isq_result.passed else "FAIL",
             skill_metrics["signal_reliability"],
         )
+
+        # Apply stale data filter — zeros confidence if all price data is >5min old
+        resilience = get_resilience_layer()
+        signals = resilience.apply_staleness_filter(signals, market_data)
+
         return signals
 
     # ------------------------------------------------------------------
@@ -1805,6 +1811,11 @@ SignalNode("whale_flow", deps=[], fn=_whale_flow,
             skill_metrics["signal_reliability"],
             dag_result.total_duration_ms,
         )
+
+        # Apply stale data filter — zeros confidence if all price data is >5min old
+        resilience = get_resilience_layer()
+        signals = resilience.apply_staleness_filter(signals, market_data)
+
         return signals
 
     def _persist_signals_to_db(self, signals: dict[str, Any]) -> None:

@@ -469,19 +469,23 @@ class TestDataCoverageAndFallback:
 
     @patch("omega.nodes.victoria.data_ingestion.BinanceProvider.fetch_klines")
     @patch("omega.nodes.victoria.data_ingestion.BybitProvider.fetch_klines")
+    @patch("omega.nodes.victoria.data_providers.CoinGeckoProvider.fetch_klines")
+    @patch("omega.nodes.victoria.data_providers.CryptoCompareProvider.fetch_klines")
     @patch("omega.nodes.victoria.data_ingestion.FearGreedProvider.fetch")
     @patch("omega.nodes.victoria.data_ingestion.DefiLlamaProvider.fetch")
     def test_coverage_rate_decreases_on_binance_failure(
-        self, mock_defi, mock_fg, mock_bybit, mock_binance
+        self, mock_defi, mock_fg, mock_cc, mock_cg, mock_bybit, mock_binance
     ):
         mock_binance.return_value = None
         mock_bybit.return_value = None
+        mock_cg.return_value = None
+        mock_cc.return_value = None
         mock_fg.return_value = {}
         mock_defi.return_value = {}
 
         self.data_node.execute(_make_input("fetch_market_data"))
         state = self.data_node.get_state()
-        # Coverage should be 0 since all fail
+        # Coverage should be 0 since all four providers fail
         assert state.metrics["coverage_rate"] < 1.0
 
     @patch("omega.nodes.victoria.data_ingestion.BinanceProvider.fetch_klines")

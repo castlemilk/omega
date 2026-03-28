@@ -253,7 +253,73 @@ class CoinGeckoProvider(DataProvider):
 
     @property
     def description(self) -> str:
-        return "CoinGecko — market caps, rankings, 24h price change"
+        return "CoinGecko — market caps, rankings, 24h price change; OHLC fallback"
+
+    def fetch_klines(
+        self, pair: str, interval: str = "1d", limit: int = 90
+    ) -> dict[str, Any] | None:
+        """Fetch OHLC from CoinGecko /coins/{id}/ohlc (3rd-priority OHLCV fallback)."""
+        cg_id = _COINGECKO_IDS.get(pair)
+        if not cg_id:
+            return None
+
+        cache_key = f"cg_ohlc:{pair}:{limit}"
+        if cache_key in self._cache:
+            ts, data = self._cache[cache_key]
+            if time.time() - ts < _CACHE_TTL_SECONDS:
+                return data
+
+        # CoinGecko days parameter — map limit to nearest supported value
+        days = 90 if limit >= 90 else (30 if limit >= 30 else 7)
+        url = f"{_COINGECKO_API}/coins/{cg_id}/ohlc?vs_currency=usd&days={days}"
+        try:
+            req = urllib.request.Request(url, headers=_CG_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+
+            if not raw or not isinstance(raw, list):
+                return None
+
+            # CoinGecko OHLC format: [[timestamp_ms, open, high, low, close], ...]
+            # Keep only the most recent `limit` candles
+            raw = raw[-limit:] if len(raw) > limit else raw
+
+            timestamps = [int(k[0]) // 1000 for k in raw]
+            opens = [float(k[1]) for k in raw]
+            highs = [float(k[2]) for k in raw]
+            lows = [float(k[3]) for k in raw]
+            closes = [float(k[4]) for k in raw]
+
+            data = {
+                "meta": {
+                    "symbol": pair,
+                    "interval": interval,
+                    "source": "coingecko",
+                    "regularMarketPrice": closes[-1] if closes else None,
+                },
+                "timestamps": timestamps,
+                "open": opens,
+                "high": highs,
+                "low": lows,
+                "close": closes,
+                "adjclose": closes,
+                "volume": [0.0] * len(closes),  # CoinGecko OHLC has no volume
+                "quote_volume": [0.0] * len(closes),
+                "pair": pair,
+                "fetched_at": time.time(),
+            }
+            self._cache[cache_key] = (time.time(), data)
+            logger.debug(
+                "CoinGecko OHLC: %s → %d bars, last=%.2f",
+                pair,
+                len(closes),
+                closes[-1] if closes else 0,
+            )
+            return data
+
+        except Exception as exc:
+            logger.warning("Failed to fetch OHLC for %s from CoinGecko: %s", pair, exc)
+            return None
 
     def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
         """Fetch CoinGecko market data (circuit-breaker guarded)."""
@@ -610,6 +676,155 @@ class DefiLlamaProvider(DataProvider):
             with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 return isinstance(data, list) and len(data) > 0
+        except Exception:
+            return False
+
+
+# ─── CryptoCompare Provider ────────────────────────────────────────────────────
+
+_CRYPTOCOMPARE_API = "https://min-api.cryptocompare.com/data/v2"
+
+_CRYPTOCOMPARE_SYMBOLS = {
+    "BTCUSDT": "BTC",
+    "ETHUSDT": "ETH",
+    "SOLUSDT": "SOL",
+    "BNBUSDT": "BNB",
+    "XRPUSDT": "XRP",
+    "ADAUSDT": "ADA",
+    "DOTUSDT": "DOT",
+    "AVAXUSDT": "AVAX",
+    "LINKUSDT": "LINK",
+    "MATICUSDT": "MATIC",
+    "ATOMUSDT": "ATOM",
+    "NEARUSDT": "NEAR",
+    "ALGOUSDT": "ALGO",
+    "FILUSDT": "FIL",
+    "LTCUSDT": "LTC",
+    "UNIUSDT": "UNI",
+    "AAVEUSDT": "AAVE",
+    "SHIBUSDT": "SHIB",
+    "TRXUSDT": "TRX",
+    "DOGEUSDT": "DOGE",
+}
+
+
+class CryptoCompareProvider(DataProvider):
+    """Fetches OHLCV daily klines from CryptoCompare public API (4th-priority fallback)."""
+
+    def __init__(self) -> None:
+        self._cache: dict[str, tuple[float, Any]] = {}
+        self._total_fetched = 0
+        self._total_failed = 0
+
+    @property
+    def name(self) -> str:
+        return "cryptocompare"
+
+    @property
+    def description(self) -> str:
+        return "CryptoCompare public API — daily OHLCV (4th-priority fallback)"
+
+    def fetch_klines(
+        self, pair: str, interval: str = "1d", limit: int = 90
+    ) -> dict[str, Any] | None:
+        """Fetch daily OHLCV from CryptoCompare for a single pair."""
+        cache_key = f"cc:{pair}:{interval}:{limit}"
+        if cache_key in self._cache:
+            ts, data = self._cache[cache_key]
+            if time.time() - ts < _CACHE_TTL_SECONDS:
+                return data
+
+        fsym = _CRYPTOCOMPARE_SYMBOLS.get(pair)
+        if not fsym:
+            return None
+
+        url = f"{_CRYPTOCOMPARE_API}/histoday?fsym={fsym}&tsym=USD&limit={limit}"
+        try:
+            req = urllib.request.Request(url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+
+            if raw.get("Response") != "Success":
+                logger.warning("CryptoCompare non-success for %s: %s", pair, raw.get("Message"))
+                self._total_failed += 1
+                return None
+
+            klines = raw.get("Data", {}).get("Data", [])
+            if not klines:
+                self._total_failed += 1
+                return None
+
+            timestamps = [int(k["time"]) for k in klines]
+            opens = [float(k["open"]) for k in klines]
+            highs = [float(k["high"]) for k in klines]
+            lows = [float(k["low"]) for k in klines]
+            closes = [float(k["close"]) for k in klines]
+            volumes = [float(k["volumefrom"]) for k in klines]
+            quote_vols = [float(k["volumeto"]) for k in klines]
+
+            # Skip zero-price entries (CryptoCompare pads with zeros)
+            valid = [i for i, c in enumerate(closes) if c > 0]
+            if not valid:
+                self._total_failed += 1
+                return None
+            timestamps = [timestamps[i] for i in valid]
+            opens = [opens[i] for i in valid]
+            highs = [highs[i] for i in valid]
+            lows = [lows[i] for i in valid]
+            closes = [closes[i] for i in valid]
+            volumes = [volumes[i] for i in valid]
+            quote_vols = [quote_vols[i] for i in valid]
+
+            data = {
+                "meta": {
+                    "symbol": pair,
+                    "interval": interval,
+                    "source": "cryptocompare",
+                    "regularMarketPrice": closes[-1] if closes else None,
+                },
+                "timestamps": timestamps,
+                "open": opens,
+                "high": highs,
+                "low": lows,
+                "close": closes,
+                "adjclose": closes,
+                "volume": volumes,
+                "quote_volume": quote_vols,
+                "pair": pair,
+                "fetched_at": time.time(),
+            }
+            self._total_fetched += 1
+            self._cache[cache_key] = (time.time(), data)
+            logger.debug(
+                "CryptoCompare: %s → %d bars, last=%.2f",
+                pair,
+                len(closes),
+                closes[-1] if closes else 0,
+            )
+            return data
+
+        except Exception as exc:
+            logger.warning("Failed to fetch %s from CryptoCompare: %s", pair, exc)
+            self._total_failed += 1
+            return None
+
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
+        interval = kwargs.get("interval", "1d")
+        limit = int(kwargs.get("limit", 90))
+        result: dict[str, Any] = {}
+        for pair in pairs:
+            data = self.fetch_klines(pair, interval=interval, limit=limit)
+            result[pair] = data
+            time.sleep(0.1)  # CryptoCompare free tier: be gentle
+        return result
+
+    def is_available(self) -> bool:
+        try:
+            url = f"{_CRYPTOCOMPARE_API}/histoday?fsym=BTC&tsym=USD&limit=1"
+            req = urllib.request.Request(url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return data.get("Response") == "Success"
         except Exception:
             return False
 

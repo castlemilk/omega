@@ -30,6 +30,7 @@ from typing import Any
 
 from omega.core.actions import NodeAction
 from omega.core.credentials import credentials
+from omega.core.data_resilience import DataResilienceLayer
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.nodes.victoria.data_providers import (
     BinanceProvider,
@@ -117,6 +118,9 @@ class DataIngestionNode(Node):
         self._registry.register(self._fear_greed, enabled=True)
         self._registry.register(self._defillama, enabled=True)
 
+        # Multi-provider failover with exponential-backoff circuit breakers
+        self._resilience = DataResilienceLayer()
+
     # ------------------------------------------------------------------ Node interface
 
     def get_state(self) -> NodeState:
@@ -140,6 +144,7 @@ class DataIngestionNode(Node):
                 "use_bybit_fallback": self._use_bybit_fallback,
                 "pairs": self._pairs,
                 "provider_status": self._registry.status(),
+                "resilience_health": self._resilience.get_health_status(),
             },
         )
 
@@ -298,7 +303,7 @@ class DataIngestionNode(Node):
     # ------------------------------------------------------------------ Fetching
 
     def _fetch_all_pairs(self, interval: str = "1d", limit: int = 90) -> dict[str, Any]:
-        """Fetch OHLCV for all tracked pairs with provider fallback + supplementary data."""
+        """Fetch OHLCV for all tracked pairs with provider failover + supplementary data."""
         result: dict[str, Any] = {}
 
         # ── CoinGecko enrichment data ─────────────────────────────────────────
@@ -306,10 +311,11 @@ class DataIngestionNode(Node):
         if self._use_coingecko:
             cg_data = self._coingecko.fetch(self._pairs)
 
-        # ── Primary: Binance ──────────────────────────────────────────────────
-        failed_pairs: list[str] = []
-        for pair in self._pairs:
-            data = self._binance.fetch_klines(pair, interval=interval, limit=limit)
+        # ── OHLCV: Multi-provider failover (Binance → Bybit → CoinGecko → CryptoCompare) ──
+        ohlcv_data = self._resilience.fetch_with_failover(
+            self._pairs, interval=interval, limit=limit
+        )
+        for pair, data in ohlcv_data.items():
             if data:
                 if cg_data:
                     cg = cg_data.get(pair, {})
@@ -321,32 +327,6 @@ class DataIngestionNode(Node):
                 self._total_pairs_fetched += 1
                 result[pair] = data
             else:
-                failed_pairs.append(pair)
-            time.sleep(0.05)
-
-        # ── Fallback: Bybit for failed pairs ──────────────────────────────────
-        bybit_enabled = self._registry.status().get("bybit", {}).get("enabled", True)
-        if failed_pairs and bybit_enabled:
-            for pair in failed_pairs:
-                data = self._bybit.fetch_klines(pair, interval=interval, limit=limit)
-                if data:
-                    if cg_data:
-                        cg = cg_data.get(pair, {})
-                        if cg:
-                            data["market_cap"] = cg.get("market_cap")
-                            data["market_cap_rank"] = cg.get("market_cap_rank")
-                            data["total_volume_usd"] = cg.get("total_volume")
-                            data["price_change_pct_24h"] = cg.get("price_change_percentage_24h")
-                    self._total_pairs_fetched += 1
-                    result[pair] = data
-                    logger.info("Bybit fallback succeeded for %s", pair)
-                else:
-                    self._total_pairs_failed += 1
-                    result[pair] = None
-                    logger.warning("Both Binance and Bybit failed for %s", pair)
-                time.sleep(0.05)
-        else:
-            for pair in failed_pairs:
                 self._total_pairs_failed += 1
                 result[pair] = None
 
