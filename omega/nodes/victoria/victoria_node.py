@@ -787,6 +787,9 @@ class VictoriaNode(Node):
 
     def _do_compute_signals(self, inp: NodeInput) -> dict[str, Any]:
         """Compute all signal types and apply dynamic weighting."""
+        if os.getenv("DAG_PARALLEL"):
+            return self._do_compute_signals_dag(inp)
+
         market_data: dict[str, Any] = inp.parameters.get("market_data") or self._last_market_data
         regime: str = inp.context.get("regime", "default")
         pico_mode: bool = inp.parameters.get("pico_mode", False)
@@ -1255,6 +1258,465 @@ class VictoriaNode(Node):
             isq_result.qualification_score,
             "PASS" if isq_result.passed else "FAIL",
             skill_metrics["signal_reliability"],
+        )
+        return signals
+
+    # ------------------------------------------------------------------
+    # DAG parallel signal computation
+    # ------------------------------------------------------------------
+
+    def _do_compute_signals_dag(self, inp: NodeInput) -> dict[str, Any]:
+        """
+        Parallel DAG implementation of _do_compute_signals.
+
+        Active when ``DAG_PARALLEL=1`` env var is set.  Signals are arranged
+        in three waves:
+
+          Wave 0 (roots): market_data_signal, alt_data
+          Wave 1 (parallel, deps=market_data): basic_signals, order_flow,
+              cross_asset, microstructure, sentiment, vrp, onchain,
+              long_short_ratio, btc_dominance, carry, pairs, momentum_factor
+          Wave 2 (parallel, deps=cross_asset): rmt_signal, spectral_graph,
+              wasserstein_regime
+
+        Post-processing (IC, weight allocation, quality metrics, skill
+        framework) runs serially after the DAG, identical to the serial path.
+        """
+        import math as _math
+
+        from omega.core.dag_pipeline import DAGPipeline, SignalNode
+
+        market_data: dict[str, Any] = inp.parameters.get("market_data") or self._last_market_data
+        regime: str = inp.context.get("regime", "default")
+        pico_mode: bool = inp.parameters.get("pico_mode", False)
+
+        reflection_ctx = self.get_reflection_context()
+        if reflection_ctx:
+            inp.context["past_lessons"] = reflection_ctx
+
+        ctx: dict[str, Any] = {
+            "market_data": market_data,
+            "pico_mode": pico_mode,
+            "inp_context": inp.context,
+        }
+
+        # ── Node compute closures ─────────────────────────────────────
+
+        def _market_data_signal(acc: dict, ctx: dict) -> dict:
+            val = self._market_data_signal.compute(ctx["market_data"])
+            return {"value": val.value, "confidence": val.confidence,
+                    "regime_tag": val.regime_tag, "raw": val.raw}
+
+        def _alt_data(acc: dict, ctx: dict) -> dict:
+            val = self._alt_data.compute()
+            return {"value": val.value, "confidence": val.confidence,
+                    "regime_tag": val.regime_tag, "raw": val.raw}
+
+        def _basic_signals(acc: dict, ctx: dict) -> dict:
+            basic_out = self._signals.execute(
+                NodeInput(
+                    action=NodeAction.COMPUTE_SIGNALS.value,
+                    parameters={"market_data": ctx["market_data"]},
+                    context=ctx.get("inp_context", {}),
+                )
+            )
+            if not basic_out.success or not basic_out.result:
+                return {"value": 0.0, "confidence": 0.0}
+            raw_basic = basic_out.result
+            composites = [
+                float(td["composite"])
+                for td in raw_basic.values()
+                if isinstance(td, dict) and "composite" in td
+            ]
+            result: dict[str, Any] = dict(raw_basic)
+            if composites:
+                raw_value = sum(composites) / len(composites)
+                self._basic_signal_history.append(raw_value)
+                if len(self._basic_signal_history) > 50:
+                    self._basic_signal_history.pop(0)
+                if len(self._basic_signal_history) >= 5:
+                    hist = self._basic_signal_history
+                    mean_h = sum(hist) / len(hist)
+                    var_h = sum((x - mean_h) ** 2 for x in hist) / max(1, len(hist) - 1)
+                    std_h = _math.sqrt(var_h) if var_h > 0 else 1.0
+                    normalised_value = _math.tanh((raw_value - mean_h) / std_h * 0.5)
+                else:
+                    normalised_value = max(-0.5, min(0.5, raw_value * 0.5))
+                result["value"] = normalised_value
+                result["raw_value"] = raw_value
+                result["confidence"] = sum(1 for c in composites if c != 0.0) / len(composites)
+            else:
+                result["value"] = 0.0
+                result["confidence"] = 0.0
+            return result
+
+        def _order_flow(acc: dict, ctx: dict) -> dict:
+            v = self._order_flow.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _cross_asset(acc: dict, ctx: dict) -> dict:
+            v = self._cross_asset.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _microstructure(acc: dict, ctx: dict) -> dict:
+            v = self._microstructure.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _sentiment(acc: dict, ctx: dict) -> dict:
+            v = self._sentiment.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _vrp(acc: dict, ctx: dict) -> dict:
+            vrp_out = self._vrp.execute(
+                NodeInput(
+                    action="compute_vrp",
+                    parameters={"market_data": ctx["market_data"]},
+                    context=ctx.get("inp_context", {}),
+                )
+            )
+            if vrp_out.success and vrp_out.result:
+                vr = vrp_out.result
+                return {"value": vr.get("vrp_signal", 0.0),
+                        "confidence": vr.get("confidence", 0.0),
+                        "regime_tag": vr.get("vrp_regime", "NEUTRAL"),
+                        "raw": vr}
+            return {"value": 0.0, "confidence": 0.0, "regime_tag": "NEUTRAL", "raw": {}}
+
+        def _onchain(acc: dict, ctx: dict) -> dict:
+            v = self._onchain.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _long_short_ratio(acc: dict, ctx: dict) -> dict:
+            v = self._long_short_ratio.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _btc_dominance(acc: dict, ctx: dict) -> dict:
+            v = self._btc_dominance.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _carry(acc: dict, ctx: dict) -> dict:
+            v = self._carry.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _pairs(acc: dict, ctx: dict) -> dict:
+            v = self._pairs.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _momentum_factor(acc: dict, ctx: dict) -> dict:
+            v = self._momentum_factor.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _rmt_signal(acc: dict, ctx: dict) -> dict:
+            signal_vec = {
+                name: float(acc[name].get("value", 0.0))
+                for name in acc
+                if isinstance(acc.get(name), dict) and "value" in acc[name]
+            }
+            v = self._rmt_denoiser.compute(signal_vec)
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _spectral_graph(acc: dict, ctx: dict) -> dict:
+            signal_vec = {
+                name: float(acc[name].get("value", 0.0))
+                for name in acc
+                if isinstance(acc.get(name), dict) and "value" in acc[name]
+            }
+            v = self._spectral_graph.compute(signal_vec)
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _wasserstein(acc: dict, ctx: dict) -> dict:
+            signal_vec = {
+                name: float(acc[name].get("value", 0.0))
+                for name in acc
+                if isinstance(acc.get(name), dict) and "value" in acc[name]
+            }
+            r = self._wasserstein_regime.update(signal_vec)
+            return {
+                "regime": r.regime,
+                "confidence": r.confidence,
+                "bull_prob": r.bull_prob,
+                "bear_prob": r.bear_prob,
+                "sideways_prob": r.sideways_prob,
+            }
+
+        # ── DAG topology ──────────────────────────────────────────────
+        #
+        #   Wave 0 (roots):
+        #     market_data_signal   ← processes raw OHLCV prices
+        #     alt_data             ← fetches external data independently
+        #
+        #   Wave 1 (parallel, all depend on market_data_signal):
+        #     basic_signals, order_flow, cross_asset, microstructure,
+        #     sentiment, vrp, onchain, long_short_ratio, btc_dominance,
+        #     carry, pairs, momentum_factor
+        #
+        #   Wave 2 (parallel, depend on cross_asset / wave-1 signals):
+        #     rmt_signal, spectral_graph   ← need full signal vector
+        #     wasserstein_regime           ← needs full signal vector
+        #
+
+        wave1_deps = ["market_data_signal"]
+        wave2_deps = ["cross_asset", "basic_signals", "sentiment"]  # representative
+
+        dag_nodes: list[SignalNode] = [
+            # Wave 0
+            SignalNode("market_data_signal", deps=[], fn=_market_data_signal,
+                       description="MarketDataSignal — processes raw OHLCV"),
+            SignalNode("alt_data", deps=[], fn=_alt_data,
+                       description="AltDataSignalProvider — independent external fetch"),
+            # Wave 1
+            SignalNode("basic_signals", deps=wave1_deps, fn=_basic_signals,
+                       description="SMA/RSI/MACD/BB technical signals"),
+            SignalNode("order_flow", deps=wave1_deps, fn=_order_flow,
+                       description="VPIN / order-flow imbalance"),
+            SignalNode("cross_asset", deps=wave1_deps, fn=_cross_asset,
+                       description="BTC/ETH/SOL cross-asset correlation"),
+            SignalNode("microstructure", deps=wave1_deps, fn=_microstructure,
+                       description="Spread / tick pattern microstructure"),
+            SignalNode("sentiment", deps=wave1_deps, fn=_sentiment,
+                       description="Funding rate / OI sentiment"),
+            SignalNode("vrp", deps=wave1_deps, fn=_vrp,
+                       description="Volatility risk premium regime"),
+            SignalNode("onchain", deps=wave1_deps, fn=_onchain,
+                       description="On-chain flow signals"),
+            SignalNode("long_short_ratio", deps=wave1_deps, fn=_long_short_ratio,
+                       description="Exchange long/short ratio"),
+            SignalNode("btc_dominance", deps=wave1_deps, fn=_btc_dominance,
+                       description="BTC dominance trend signal"),
+            SignalNode("carry", deps=wave1_deps, fn=_carry,
+                       description="Funding-rate carry / mean-reversion"),
+            SignalNode("pairs", deps=wave1_deps, fn=_pairs,
+                       description="Cointegration pairs spread z-score"),
+            SignalNode("momentum_factor", deps=wave1_deps, fn=_momentum_factor,
+                       description="Cross-sectional Jegadeesh-Titman momentum"),
+            # Wave 2
+            SignalNode("rmt_signal", deps=wave2_deps, fn=_rmt_signal,
+                       description="RMT denoiser — structured vs noisy market"),
+            SignalNode("spectral_graph", deps=wave2_deps, fn=_spectral_graph,
+                       description="Fiedler value — correlation network stress"),
+            SignalNode("wasserstein_regime", deps=wave2_deps, fn=_wasserstein,
+                       description="Wasserstein regime detector"),
+        ]
+
+        pipeline = DAGPipeline(dag_nodes, max_workers=8)
+        dag_result = pipeline.run(ctx=ctx)
+        acc = dag_result.signals
+
+        # ── Assemble signals dict from DAG output ─────────────────────
+        signals: dict[str, Any] = {}
+
+        # Signals directly mapped from DAG nodes
+        for name in (
+            "basic_signals", "order_flow", "cross_asset", "microstructure",
+            "sentiment", "vrp", "market_data_signal", "onchain", "long_short_ratio",
+            "btc_dominance", "alt_data", "carry", "pairs", "momentum_factor",
+            "rmt_signal", "spectral_graph",
+        ):
+            if acc.get(name) is not None:
+                signals[name] = acc[name]
+
+        # Map market_data_signal → market_data key (matches SIGNAL_NAMES)
+        if "market_data_signal" in signals:
+            signals["market_data"] = signals.pop("market_data_signal")
+
+        # VRP regime override (matches serial path)
+        if isinstance(signals.get("vrp"), dict):
+            vrp_regime = signals["vrp"].get("regime_tag", "NEUTRAL")
+            mapped = _VRP_REGIME_MAP.get(vrp_regime)
+            if mapped is not None:
+                regime = mapped
+
+        # Wasserstein regime augmentation (matches serial path)
+        w_out = acc.get("wasserstein_regime")
+        if isinstance(w_out, dict):
+            _current_regime_is_default = regime == "default"
+            if w_out.get("confidence", 0.0) > 0.5 or _current_regime_is_default:
+                regime = w_out["regime"]
+            signals["_regime_wasserstein"] = w_out["regime"]
+            signals["_regime_w_confidence"] = round(w_out.get("confidence", 0.0), 4)
+            signals["_regime_w_bull_prob"] = round(w_out.get("bull_prob", 0.0), 4)
+            signals["_regime_w_bear_prob"] = round(w_out.get("bear_prob", 0.0), 4)
+            signals["_regime_w_sideways_prob"] = round(w_out.get("sideways_prob", 0.0), 4)
+            logger.info(
+                "wasserstein regime=%s conf=%.3f (bull=%.3f bear=%.3f side=%.3f) → active_regime=%s",
+                w_out["regime"],
+                w_out.get("confidence", 0.0),
+                w_out.get("bull_prob", 0.0),
+                w_out.get("bear_prob", 0.0),
+                w_out.get("sideways_prob", 0.0),
+                regime,
+            )
+
+        # Emit DAG timing metadata for observability
+        signals["_dag_total_ms"] = round(dag_result.total_duration_ms, 2)
+        signals["_dag_critical_path"] = " → ".join(dag_result.critical_path)
+        signals["_dag_waves"] = len(dag_result.wave_durations)
+
+        # basic_signals divergence tracking (identical to serial path)
+        _basic_val = float(signals.get("basic_signals", {}).get("value", 0.0))  # type: ignore[union-attr]
+        _other_vals = [
+            float(signals[n].get("value", 0.0))  # type: ignore[union-attr]
+            for n in signals
+            if not n.startswith("_") and n != "basic_signals" and isinstance(signals[n], dict)
+        ]
+        if _other_vals:
+            _consensus_val = sum(_other_vals) / len(_other_vals)
+            _divergence = abs(_basic_val - _consensus_val)
+            _DIVERGENCE_THRESHOLD = 0.40
+            if _divergence > _DIVERGENCE_THRESHOLD:
+                self._basic_signal_divergence_count += 1
+                logger.warning(
+                    "basic_signals divergence: value=%.4f consensus=%.4f "
+                    "gap=%.4f (>%.2f) consecutive_divergences=%d",
+                    _basic_val,
+                    _consensus_val,
+                    _divergence,
+                    _DIVERGENCE_THRESHOLD,
+                    self._basic_signal_divergence_count,
+                )
+            else:
+                if self._basic_signal_divergence_count > 0:
+                    logger.info(
+                        "basic_signals back in range: value=%.4f consensus=%.4f "
+                        "gap=%.4f — reset after %d consecutive divergences",
+                        _basic_val,
+                        _consensus_val,
+                        _divergence,
+                        self._basic_signal_divergence_count,
+                    )
+                self._basic_signal_divergence_count = 0
+            signals["_basic_signal_divergence"] = round(_divergence, 4)
+            signals["_basic_signal_consensus"] = round(_consensus_val, 4)
+
+        # ── Post-processing: IC, weights, quality, skill framework ────
+        # (identical to serial path — shared logic after signal computation)
+
+        ic_updates: dict[str, float] = {}
+        for name, sig in signals.items():
+            if name.startswith("_") or not isinstance(sig, dict):
+                continue
+            current_val = float(sig.get("value", 0.0))
+            prev_val = self._prev_signal_values.get(name, 0.0)
+            if prev_val != 0.0 and current_val != 0.0:
+                ic_updates[name] = 0.6 if (current_val > 0) == (prev_val > 0) else -0.2
+            elif current_val != 0.0:
+                ic_updates[name] = 0.0
+
+        try:
+            if ic_updates:
+                self._weight_allocator.update_ic_batch(ic_updates, regime=regime)
+        except Exception as exc:
+            logger.debug("IC update failed: %s", exc)
+
+        raw_weights = {name: 1.0 for name in signals if not name.startswith("_")}
+        try:
+            alloc = self._weight_allocator.allocate(regime=regime)
+            for name in signals:
+                if name.startswith("_"):
+                    continue
+                if name in alloc.weights:
+                    raw_weights[name] = alloc.weights[name]
+            for name in signals:
+                if name.startswith("_") or not isinstance(signals[name], dict):
+                    continue
+                signals[name]["ic"] = round(alloc.ic_ema.get(name, 0.0), 6)
+        except Exception as exc:
+            logger.debug("weight allocation failed, using equal weights: %s", exc)
+
+        try:
+            rmt_quality = self._rmt_denoiser.signal_quality_scores()
+            if rmt_quality:
+                self._weight_allocator.apply_rmt_adjustment(rmt_quality, regime=regime)
+        except Exception as exc:
+            logger.debug("RMT weight adjustment failed: %s", exc)
+
+        signal_names = [k for k in signals if not k.startswith("_")]
+        expected_count = len(SIGNAL_NAMES)
+        signal_coverage = len(signal_names) / max(expected_count, 1)
+
+        weighted_confidences = []
+        for name in signal_names:
+            sig = signals[name]
+            if isinstance(sig, dict) and "confidence" in sig:
+                weighted_confidences.append(float(sig["confidence"]) * raw_weights.get(name, 1.0))
+
+        total_weight = sum(raw_weights.get(n, 1.0) for n in signal_names) or 1.0
+        avg_confidence = sum(weighted_confidences) / total_weight if weighted_confidences else 0.0
+        data_freshness = 1.0 if self._last_market_data else 0.5
+        quality_score = (
+            signal_coverage * 0.3
+            + avg_confidence * 0.4
+            + data_freshness * 0.2
+            + min(1.0, self._total_cycles_run / 20.0) * 0.1
+        )
+
+        self._quality_history.append(quality_score)
+        self._signal_counts_history.append(len(signal_names))
+        self._prev_signal_values = {
+            name: float(signals[name].get("value", 0.0))
+            for name in signal_names
+            if isinstance(signals[name], dict)
+        }
+        self._total_cycles_run += 1
+
+        signals["_weights"] = raw_weights
+        signals["_regime"] = regime
+        signals["_quality_score"] = quality_score
+        signals["_signal_count"] = float(len(signal_names))
+        signals["_avg_confidence"] = avg_confidence
+        signals["_signal_coverage"] = signal_coverage
+        signals["_cycle"] = float(self._total_cycles_run)
+
+        self._last_signals = signals
+        self.persist_signals(signals)
+        self.reflect_on_cycle(self._total_cycles_run, signals)
+
+        signal_states = self._skill_framework.observe_signals(signals)
+        signals["_skill_states"] = {k: v.value for k, v in signal_states.items()}
+
+        isq_result = self._skill_framework.qualify(
+            signals=signals,
+            market_data=self._last_market_data,
+            context={"regime": regime},
+        )
+        signals["_isq_score"] = isq_result.qualification_score
+        signals["_isq_passed"] = isq_result.passed
+        if isq_result.concerns:
+            signals["_isq_concerns"] = isq_result.concerns
+
+        self._skill_framework.record_cycle(
+            signals=signals,
+            result={"quality_score": quality_score, "regime": regime},
+            score=quality_score,
+        )
+
+        skill_metrics = self._skill_framework.get_metrics()
+
+        logger.info(
+            "cycle=%d quality=%.3f coverage=%.2f avg_conf=%.3f signals=%d "
+            "(IC-weights=%s) isq=%.3f[%s] reliability=%.3f dag=%.1fms",
+            self._total_cycles_run,
+            quality_score,
+            signal_coverage,
+            avg_confidence,
+            len(signal_names),
+            not self._weight_allocator.allocate(regime=regime).is_fallback,
+            isq_result.qualification_score,
+            "PASS" if isq_result.passed else "FAIL",
+            skill_metrics["signal_reliability"],
+            dag_result.total_duration_ms,
         )
         return signals
 
