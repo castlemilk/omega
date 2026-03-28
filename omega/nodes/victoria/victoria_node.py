@@ -169,6 +169,7 @@ class VictoriaNode(Node):
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
+        self._brain_executions = 0  # increments each time the LLM brain returns a response
 
         # IC tracking for weight learning
         self._prev_signal_values: dict[str, float] = {}
@@ -205,6 +206,7 @@ class VictoriaNode(Node):
                 "avg_latency_ms": avg_lat,
                 "error_rate": error_rate,
                 "execution_count": float(self._execution_count),
+                "brain_executions": float(self._brain_executions),
             },
             metadata={
                 "signal_names": SIGNAL_NAMES,
@@ -331,6 +333,7 @@ class VictoriaNode(Node):
                         )
                         raw = brain.consult(debate_prompt, tier=ModelTier.DEEP)
                         if raw:
+                            self._brain_executions += 1
                             lines = [ln.strip() for ln in raw.strip().splitlines() if ln.strip()]
                             llm_verdict = lines[0].upper() if lines else ""
                             llm_reason = lines[1] if len(lines) > 1 else ""
@@ -671,6 +674,7 @@ class VictoriaNode(Node):
             try:
                 raw = brain.consult(prompt, tier=ModelTier.QUICK)
                 if raw:
+                    self._brain_executions += 1
                     reflection_text = raw.strip()
                     # Extract the lesson line
                     for line in raw.splitlines():
