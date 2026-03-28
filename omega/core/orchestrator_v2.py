@@ -236,9 +236,13 @@ class OmegaOrchestrator:
         self._regime_handler = regime_handler or RegimeTransitionHandler()
         # Always wire an adversarial instance — never leave the gate as None in production.
         # Callers may inject a custom instance (e.g., with DebateGate) for domain-specific behaviour.
-        # ring1_threshold=0.40: empirical structural max_disagreement for 11 diverse signals is
-        # 0.51-0.63, so 0.20 fires every cycle.  0.40 catches real outliers without constant noise.
-        self._adversarial = adversarial if adversarial is not None else AdversarialPressureV2(ring1_threshold=0.40)
+        # ring1_threshold=1.0: after switching to cosine distance (0-2 scale), threshold must
+        # be recalibrated.  Cosine distance = 1 - cos(angle).  1.0 means signals are orthogonal
+        # (90°); >1.0 means opposing directions.  Threshold=1.0 fires only when two signal vectors
+        # are more than 90° apart — genuine directional disagreement, not scale artefacts.
+        # Previously 0.40 Euclidean, but basic_signals' raw price sub-keys (BB levels, SMA prices)
+        # were inflating Euclidean distance regardless of signal direction.
+        self._adversarial = adversarial if adversarial is not None else AdversarialPressureV2(ring1_threshold=1.0)
         self._consolidation = memory_consolidation
         self._metrics = metrics_exporter
         self._paper_trading = paper_trading

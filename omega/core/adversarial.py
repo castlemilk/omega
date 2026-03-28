@@ -125,16 +125,29 @@ class EnsembleDisagreementDetector:
 
     def _normalised_distance(self, a: dict[str, float], b: dict[str, float]) -> float:
         """
-        Pairwise Euclidean distance between two signal dicts, normalised by
-        the number of shared keys.
+        Cosine distance between two signal dicts on their shared keys.
 
-        normalised_distance = sqrt(Σ(a[k]-b[k])^2) / max(1, len(keys))
+        cosine_distance = 1 - (a·b) / (|a| * |b|)
+
+        Cosine similarity is scale-invariant, so raw sub-metrics with different
+        magnitudes (e.g. BB price levels at 50 000 vs normalised signal values
+        in [-1, 1]) do not inflate the distance.  Returns a value in [0, 2]
+        (0 = identical direction, 1 = orthogonal, 2 = opposite).
+
+        Falls back to 0.0 when either vector has zero magnitude (all-zero signals).
         """
         shared_keys = set(a.keys()) & set(b.keys())
         if not shared_keys:
             return 0.0
-        squared_sum = sum((a[k] - b[k]) ** 2 for k in shared_keys)
-        return math.sqrt(squared_sum) / max(1, len(shared_keys))
+        dot = sum(a[k] * b[k] for k in shared_keys)
+        mag_a = math.sqrt(sum(a[k] ** 2 for k in shared_keys))
+        mag_b = math.sqrt(sum(b[k] ** 2 for k in shared_keys))
+        if mag_a == 0.0 or mag_b == 0.0:
+            return 0.0
+        cosine_sim = dot / (mag_a * mag_b)
+        # Clamp to [-1, 1] to guard against floating-point drift
+        cosine_sim = max(-1.0, min(1.0, cosine_sim))
+        return 1.0 - cosine_sim
 
     def detect(self) -> DisagreementResult:
         """
