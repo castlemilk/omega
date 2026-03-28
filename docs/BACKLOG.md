@@ -5,6 +5,29 @@
 
 ---
 
+## Session: 2026-03-28 (Final Round)
+
+### Completed ✅
+
+| Item | Notes |
+|------|-------|
+| ✅ Ring 1 cosine similarity adversarial gate fix | `omega/core/adversarial_v2.py` — cosine similarity was firing every cycle due to incorrect dot-product logic; now uses proper unit-vector cosine; gate no longer chronically triggers |
+| ✅ `long_short_ratio` continuous signal fix | `omega/nodes/victoria/signal_generation.py` — was hard binary ±1; now continuous ratio with rolling z-score normalization |
+| ✅ `basic_signals` dampening | `omega/nodes/victoria/signal_generation.py` — 0.3× dampening scalar + EWM smoothing prevents amplitude spikes triggering adversarial gate |
+| ✅ `basic_signals` structural refactor | `omega/nodes/victoria/signal_generation.py` — stateless function + explicit context object pattern; eliminates implicit shared state between signal functions |
+| ✅ DAG parallel pipeline rebuilt | `omega/core/dag_pipeline.py` — asyncio DAG executor with dependency-layer grouping for concurrent signal execution (was lost in worktree merge; now canonical) |
+| ✅ V19 live monitoring | Progressive training run with fixed adversarial gate + continuous signals; monitoring via Grafana |
+| ✅ Grafana dashboard provisioning | `deploy/grafana/provisioning/` — datasource + dashboard JSON auto-provisioned via docker-compose; no manual UI steps |
+| ✅ Go CLI refresh (8 subcommands) | `cmd/omega/` — `run`, `status`, `nodes`, `signals`, `brain`, `train`, `backtest`, `markets` subcommands with consistent flag patterns |
+| ✅ Startup validation system | `omega/core/startup_checks.py` — checks API keys, DB connectivity, signal module imports, and dependency versions at boot; fails fast with clear error messages |
+| ✅ Smart money signal (Binance leaderboard + Polymarket top traders) | `omega/nodes/victoria/information_flow.py` + `omega/nodes/polymarket/top_traders.py` — tracks top-decile trader positioning as directional prior |
+| ✅ Polymarket CLOB integration | `omega/nodes/polymarket/clob_client.py` — order book depth, best bid/ask, mid-price polling from Polymarket CLOB REST API |
+| ✅ Top trader tracking research | `docs/ideas/quantscience-tweet-*.md` — analysis of Binance leaderboard scraping and Polymarket top trader API endpoints |
+| ✅ AlphaEar skills research | `docs/research/alphaear_skills.md` — ISQ metric definition, signal lifecycle FSM, per-node skill registry design |
+| ✅ 5 worktree consolidation rounds | Merged DAG pipeline, Ring 1 fix, continuous signals, smart money, and startup validation branches back to main |
+
+---
+
 ## Session: 2026-03-28
 
 ### Completed ✅
@@ -43,10 +66,6 @@
 - [ ] **Historical backtest validation of geometric signals vs momentum baseline**
   Run the Jegadeesh-Titman XS momentum, natural gradient optimizer, and Fiedler sizing against the V14 buy-and-hold and simple-momentum baselines on the 3 historical windows. Sharpe, max-DD, Calmar, and IC decomposition required.
   *Prerequisite for trusting any geometric signal in production*
-
-- [ ] **`basic_signals` structural refactor**
-  `omega/nodes/victoria/signal_generation.py` chronically diverges during training runs — implicit state shared between signal functions, no clear ownership of normalization. Needs a stateless function + explicit context object pattern.
-  *Blocks reliable multi-run reproducibility*
 
 - [ ] **Integration test coverage for all signal types**
   Each signal module (`momentum_factor`, `natural_gradient`, `rmt_denoiser`, `news_signals`, `spectral_signals`, `stablecoin_signals`, `vrp_signal`) needs a minimum integration test: real OHLCV input → valid output schema, no NaN/inf, consistent shape.

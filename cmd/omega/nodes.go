@@ -16,6 +16,7 @@ import (
 var nodesCmd = &cobra.Command{
 	Use:   "nodes",
 	Short: "Manage registered nodes",
+	RunE:  nodesList, // default: list all nodes
 }
 
 var nodesListCmd = &cobra.Command{

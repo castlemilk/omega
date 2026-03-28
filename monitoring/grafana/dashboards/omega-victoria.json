@@ -1,0 +1,857 @@
+{
+  "__inputs": [],
+  "__requires": [
+    {"type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0"},
+    {"type": "datasource", "id": "grafana-postgresql-datasource", "name": "PostgreSQL", "version": "1.0.0"},
+    {"type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0"}
+  ],
+  "annotations": {"list": []},
+  "description": "Victoria trading performance — PnL, signals, regimes, intelligence, and open positions",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "text", "value": null}]},
+          "unit": "currencyUSD",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "title": "Portfolio Value",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT portfolio_value FROM victoria_portfolio ORDER BY updated_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 0},
+              {"color": "green", "value": 100}
+            ]
+          },
+          "unit": "currencyUSD",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "title": "Total PnL",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT total_pnl FROM victoria_pnl ORDER BY updated_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 40},
+              {"color": "green", "value": 55}
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "title": "Win Rate",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT ROUND(win_rate * 100, 1) AS win_rate FROM victoria_pnl ORDER BY updated_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 1},
+              {"color": "green", "value": 2}
+            ]
+          },
+          "unit": "none",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "title": "Sharpe Ratio",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT ROUND(sharpe::numeric, 3) AS sharpe FROM victoria_pnl ORDER BY updated_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 50},
+              {"color": "green", "value": 75}
+            ]
+          },
+          "unit": "short",
+          "min": 0,
+          "max": 100,
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "id": 5,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "title": "System Health Score",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "expr": "omega_health_score",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 0.5},
+              {"color": "green", "value": 0.75}
+            ]
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "textMode": "auto"
+      },
+      "title": "Intelligence Score",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT COALESCE(intelligence_score, 0) AS intelligence_score FROM intelligence_metrics ORDER BY timestamp DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "unit": "currencyUSD",
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Total PnL"},
+            "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Unrealised PnL"},
+            "properties": [{"id": "color", "value": {"fixedColor": "blue", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Realised PnL"},
+            "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]
+          }
+        ]
+      },
+      "gridPos": {"h": 8, "w": 16, "x": 0, "y": 4},
+      "id": 7,
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "max", "min"], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "none"}
+      },
+      "title": "Victoria PnL over Time",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  to_timestamp(updated_at) AS time,\n  total_pnl AS \"Total PnL\",\n  unrealised_pnl AS \"Unrealised PnL\",\n  realised_pnl AS \"Realised PnL\"\nFROM victoria_pnl\nWHERE $__unixEpochFilter(updated_at)\nORDER BY updated_at ASC",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 40},
+              {"color": "green", "value": 55}
+            ]
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 4, "x": 16, "y": 4},
+      "id": 8,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false},
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true
+      },
+      "title": "Win Rate",
+      "type": "gauge",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT ROUND(win_rate * 100, 1) AS win_rate FROM victoria_pnl ORDER BY updated_at DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "continuous-GrYlRd"},
+          "custom": {
+            "axisColorMode": "text",
+            "axisLabel": "%",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 20,
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "area"}
+          },
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 40},
+              {"color": "green", "value": 55}
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 4, "x": 20, "y": 4},
+      "id": 9,
+      "options": {
+        "legend": {"displayMode": "hidden", "placement": "bottom", "showLegend": false},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "title": "Win Rate Trend",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  to_timestamp(updated_at) AS time,\n  ROUND(win_rate * 100, 2) AS \"Win Rate %\"\nFROM victoria_pnl\nWHERE $__unixEpochFilter(updated_at)\nORDER BY updated_at ASC",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineWidth": 1,
+            "scaleDistribution": {"type": "linear"}
+          },
+          "unit": "short",
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Wins"},
+            "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Losses"},
+            "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]
+          }
+        ]
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+      "id": 10,
+      "options": {
+        "barRadius": 0.05,
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {"calcs": ["sum"], "displayMode": "table", "placement": "right", "showLegend": true},
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "normal",
+        "tooltip": {"mode": "multi", "sort": "none"},
+        "xTickLabelRotation": -30,
+        "xTickLabelSpacing": 200
+      },
+      "title": "Trade Count by Ticker",
+      "type": "barchart",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  sym AS \"Symbol\",\n  SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) AS \"Wins\",\n  SUM(CASE WHEN pnl <= 0 THEN 1 ELSE 0 END) AS \"Losses\"\nFROM victoria_trades\nGROUP BY sym\nORDER BY COUNT(*) DESC\nLIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {
+            "align": "auto",
+            "cellOptions": {"type": "color-background"},
+            "displayMode": "color-background",
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": -0.1},
+              {"color": "green", "value": 0.1}
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Signal"},
+            "properties": [
+              {"id": "custom.width", "value": 180},
+              {"id": "custom.cellOptions", "value": {"type": "auto"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Trend"},
+            "properties": [
+              {"id": "custom.width", "value": 70},
+              {"id": "custom.cellOptions", "value": {"type": "auto"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Conviction"},
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 0.4},
+                    {"color": "green", "value": 0.7}
+                  ]
+                }
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Avg IC"},
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "yellow", "value": 0.02},
+                    {"color": "green", "value": 0.05}
+                  ]
+                }
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}}
+            ]
+          }
+        ]
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+      "id": 11,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false},
+        "showHeader": true,
+        "sortBy": [{"desc": true, "displayName": "Weight"}]
+      },
+      "title": "Signal Health Heatmap",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  name AS \"Signal\",\n  ROUND(current_value::numeric, 4) AS \"Value\",\n  ROUND(conviction::numeric, 3) AS \"Conviction\",\n  ROUND(avg_ic::numeric, 4) AS \"Avg IC\",\n  ROUND(brier_score::numeric, 4) AS \"Brier\",\n  ROUND(weight::numeric, 3) AS \"Weight\",\n  trend AS \"Trend\"\nFROM victoria_signals\nORDER BY weight DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {
+            "align": "auto",
+            "cellOptions": {"type": "auto"},
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "text", "value": null}]}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Regime"},
+            "properties": [
+              {"id": "custom.width", "value": 120},
+              {
+                "id": "mappings",
+                "value": [
+                  {"options": {"bull": {"color": "green", "index": 0, "text": "bull"}, "bear": {"color": "red", "index": 1, "text": "bear"}, "normal": {"color": "blue", "index": 2, "text": "normal"}, "volatile": {"color": "orange", "index": 3, "text": "volatile"}, "crisis": {"color": "dark-red", "index": 4, "text": "crisis"}}, "type": "value"}
+                ]
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Duration (s)"},
+            "properties": [{"id": "unit", "value": "s"}, {"id": "custom.width", "value": 100}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Cycle"},
+            "properties": [{"id": "custom.width", "value": 80}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Transition"},
+            "properties": [
+              {"id": "custom.width", "value": 80},
+              {
+                "id": "mappings",
+                "value": [
+                  {"options": {"YES": {"color": "orange", "index": 0, "text": "YES"}, "no": {"color": "text", "index": 1, "text": "no"}}, "type": "value"}
+                ]
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}}
+            ]
+          }
+        ]
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
+      "id": 12,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false},
+        "showHeader": true
+      },
+      "title": "Regime State Timeline",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  to_char(to_timestamp(started_at), 'MM-DD HH24:MI:SS') AS \"Time\",\n  cycle_number AS \"Cycle\",\n  regime AS \"Regime\",\n  ROUND(duration_seconds::numeric, 2) AS \"Duration (s)\",\n  signals_generated AS \"Signals\",\n  CASE WHEN regime_transition THEN 'YES' ELSE 'no' END AS \"Transition\"\nFROM cycle_results\nORDER BY cycle_number DESC\nLIMIT 25",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "palette-classic"},
+          "custom": {
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {"type": "linear"},
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {"group": "A", "mode": "none"},
+            "thresholdsStyle": {"mode": "off"}
+          },
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Brain Calls"},
+            "properties": [
+              {"id": "unit", "value": "short"},
+              {"id": "custom.axisPlacement", "value": "right"},
+              {"id": "color", "value": {"fixedColor": "purple", "mode": "fixed"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Active Signals"},
+            "properties": [
+              {"id": "unit", "value": "short"},
+              {"id": "custom.axisPlacement", "value": "right"},
+              {"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}
+            ]
+          }
+        ]
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+      "id": 13,
+      "options": {
+        "legend": {"calcs": ["lastNotNull", "mean"], "displayMode": "table", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "multi", "sort": "none"}
+      },
+      "title": "Intelligence Score Trending",
+      "type": "timeseries",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  timestamp AS time,\n  COALESCE(intelligence_score, 0) AS \"Intelligence Score\",\n  brain_calls AS \"Brain Calls\",\n  COALESCE(signals_nonzero, 0) AS \"Active Signals\"\nFROM intelligence_metrics\nWHERE $__timeFilter(timestamp)\nORDER BY timestamp ASC",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "fixed", "fixedColor": "blue"},
+          "custom": {
+            "fillOpacity": 60,
+            "gradientMode": "none",
+            "hideFrom": {"legend": false, "tooltip": false, "viz": false},
+            "lineWidth": 1
+          },
+          "unit": "s",
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+      "id": 14,
+      "options": {
+        "bucketOffset": 0,
+        "fillOpacity": 60,
+        "legend": {"displayMode": "list", "placement": "bottom", "showLegend": true},
+        "tooltip": {"mode": "single", "sort": "none"}
+      },
+      "title": "Cycle Time Histogram",
+      "type": "histogram",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  duration_seconds\nFROM cycle_results\nWHERE started_at >= $__unixEpochFrom() AND started_at <= $__unixEpochTo()\nORDER BY started_at DESC\nLIMIT 1000",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+      "fieldConfig": {
+        "defaults": {
+          "color": {"mode": "thresholds"},
+          "custom": {
+            "align": "auto",
+            "cellOptions": {"type": "auto"},
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {"mode": "absolute", "steps": [{"color": "text", "value": null}]}
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "Side"},
+            "properties": [
+              {"id": "custom.width", "value": 60},
+              {
+                "id": "mappings",
+                "value": [
+                  {"options": {"long": {"color": "green", "index": 0, "text": "LONG"}, "short": {"color": "red", "index": 1, "text": "SHORT"}}, "type": "value"}
+                ]
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "UPnL"},
+            "properties": [
+              {"id": "unit", "value": "currencyUSD"},
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "text", "value": 0},
+                    {"color": "green", "value": 1}
+                  ]
+                }
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "PnL %"},
+            "properties": [
+              {"id": "unit", "value": "percent"},
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"color": "red", "value": null},
+                    {"color": "text", "value": 0},
+                    {"color": "green", "value": 0.5}
+                  ]
+                }
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-background"}}
+            ]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Entry"},
+            "properties": [{"id": "unit", "value": "currencyUSD"}, {"id": "custom.width", "value": 90}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Mark"},
+            "properties": [{"id": "unit", "value": "currencyUSD"}, {"id": "custom.width", "value": 90}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Notional"},
+            "properties": [{"id": "unit", "value": "currencyUSD"}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "Leverage"},
+            "properties": [
+              {"id": "unit", "value": "short"},
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 3},
+                    {"color": "red", "value": 5}
+                  ]
+                }
+              },
+              {"id": "custom.cellOptions", "value": {"type": "color-text"}}
+            ]
+          }
+        ]
+      },
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+      "id": 15,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {"countRows": true, "fields": ["Notional"], "reducer": ["sum"], "show": true},
+        "showHeader": true,
+        "sortBy": [{"desc": true, "displayName": "Notional"}]
+      },
+      "title": "Open Positions",
+      "type": "table",
+      "targets": [
+        {
+          "datasource": {"type": "grafana-postgresql-datasource", "uid": "postgres"},
+          "rawSql": "SELECT\n  sym AS \"Symbol\",\n  side AS \"Side\",\n  ROUND(size::numeric, 4) AS \"Size\",\n  ROUND(entry::numeric, 2) AS \"Entry\",\n  ROUND(mark::numeric, 2) AS \"Mark\",\n  ROUND(upnl::numeric, 2) AS \"UPnL\",\n  ROUND(pct * 100, 2) AS \"PnL %\",\n  ROUND(notional::numeric, 2) AS \"Notional\",\n  ROUND(leverage::numeric, 2) AS \"Leverage\"\nFROM victoria_positions\nORDER BY notional DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["omega", "victoria", "trading", "signals"],
+  "time": {"from": "now-24h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Omega — Victoria Trading",
+  "uid": "omega-victoria",
+  "version": 1
+}

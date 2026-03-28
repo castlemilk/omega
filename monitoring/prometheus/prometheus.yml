@@ -19,6 +19,15 @@ scrape_configs:
     metrics_path: /metrics
     scrape_interval: 15s
 
+  # Python heartbeat loop — omega.core.metrics_exporter on port 9090
+  - job_name: "omega-python-nodes"
+    static_configs:
+      - targets: ["omega-nodes:9090"]
+        labels:
+          layer: "python"
+    metrics_path: /metrics
+    scrape_interval: 15s
+
   # Prometheus self-monitoring
   - job_name: "prometheus"
     static_configs:

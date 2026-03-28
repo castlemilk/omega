@@ -164,11 +164,10 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
     log.info("=" * 70)
 
     # ── Startup validation ────────────────────────────────────────────────────
-    from omega.core.startup_checks import StartupChecker
-    _startup = StartupChecker(skip_db=(not db_url), skip_api=False).run()
-    _startup.print_summary()
-    if not _startup.ok:
-        log.error("Startup checks failed — aborting run")
+    from omega.core.startup_validator import run_validation
+    _report = run_validation(skip_db=(not db_url))
+    if _report.has_errors:
+        log.error("Startup validation failed — aborting run")
         return {}
 
     intel_collector = IntelligenceMetricsCollector(db_url=db_url or None)

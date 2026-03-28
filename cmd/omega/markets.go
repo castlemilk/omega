@@ -12,6 +12,7 @@ import (
 var marketsCmd = &cobra.Command{
 	Use:   "markets",
 	Short: "Polymarket prediction market data",
+	RunE:  marketsList, // default: list active markets
 }
 
 var marketsListCmd = &cobra.Command{

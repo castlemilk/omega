@@ -1,11 +1,11 @@
 {
   "version": "v10",
   "run": {
-    "date": "2026-03-27T07:15:39.850374+00:00",
+    "date": "2026-03-28T09:02:22.175202+00:00",
     "cycles": 100,
     "sleep_seconds": 30.0,
-    "elapsed_s": 3541.0,
-    "avg_cycle_s": 35.41,
+    "elapsed_s": 3606.3,
+    "avg_cycle_s": 36.063,
     "cg_key_used": true,
     "db_url_used": true
   },
@@ -17,85 +17,78 @@
     "normal": 100
   },
   "trades": {
-    "total_closed": 174,
-    "long_trades": 36,
-    "short_trades": 138,
-    "open_positions": 9,
-    "win_rate": 0.3621,
-    "total_pnl_usd": -17.34,
-    "realised_pnl_engine": -17.34,
-    "gross_profit": 597.81,
-    "gross_loss": 615.15,
-    "profit_factor": 0.972
+    "total_closed": 20,
+    "long_trades": 0,
+    "short_trades": 20,
+    "open_positions": 0,
+    "win_rate": 0.2,
+    "total_pnl_usd": -44.29,
+    "realised_pnl_engine": -44.29,
+    "gross_profit": 35.18,
+    "gross_loss": 79.46,
+    "profit_factor": 0.443
   },
   "per_symbol": {
-    "SOLUSDT": {
-      "trades": 17,
-      "longs": 17,
-      "shorts": 0,
-      "pnl": 59.52,
-      "win_rate": 0.529
-    },
-    "ETHUSDT": {
-      "trades": 19,
-      "longs": 19,
-      "shorts": 0,
-      "pnl": -30.43,
-      "win_rate": 0.368
-    },
-    "DOTUSDT": {
-      "trades": 19,
-      "longs": 0,
-      "shorts": 19,
-      "pnl": -18.96,
-      "win_rate": 0.316
-    },
     "ADAUSDT": {
-      "trades": 18,
+      "trades": 2,
       "longs": 0,
-      "shorts": 18,
-      "pnl": -9.88,
-      "win_rate": 0.389
-    },
-    "LINKUSDT": {
-      "trades": 17,
-      "longs": 0,
-      "shorts": 17,
-      "pnl": -5.7,
-      "win_rate": 0.294
+      "shorts": 2,
+      "pnl": -21.47,
+      "win_rate": 0.0
     },
     "AVAXUSDT": {
-      "trades": 18,
+      "trades": 2,
       "longs": 0,
-      "shorts": 18,
-      "pnl": -5.62,
-      "win_rate": 0.389
-    },
-    "BTCUSDT": {
-      "trades": 16,
-      "longs": 0,
-      "shorts": 16,
-      "pnl": -3.71,
-      "win_rate": 0.5
+      "shorts": 2,
+      "pnl": -15.1,
+      "win_rate": 0.0
     },
     "BNBUSDT": {
-      "trades": 16,
+      "trades": 2,
       "longs": 0,
-      "shorts": 16,
-      "pnl": -3.27,
-      "win_rate": 0.375
+      "shorts": 2,
+      "pnl": -10.65,
+      "win_rate": 0.0
+    },
+    "DOTUSDT": {
+      "trades": 2,
+      "longs": 0,
+      "shorts": 2,
+      "pnl": -10.23,
+      "win_rate": 0.0
+    },
+    "LINKUSDT": {
+      "trades": 3,
+      "longs": 0,
+      "shorts": 3,
+      "pnl": 7.72,
+      "win_rate": 0.333
+    },
+    "ETHUSDT": {
+      "trades": 3,
+      "longs": 0,
+      "shorts": 3,
+      "pnl": 3.25,
+      "win_rate": 0.333
+    },
+    "SOLUSDT": {
+      "trades": 2,
+      "longs": 0,
+      "shorts": 2,
+      "pnl": 3.19,
+      "win_rate": 0.5
     },
     "XRPUSDT": {
-      "trades": 16,
+      "trades": 2,
       "longs": 0,
-      "shorts": 16,
-      "pnl": 0.71,
+      "shorts": 2,
+      "pnl": -1.0,
       "win_rate": 0.5
     },
     "MATICUSDT": {
-      "trades": 18,
+      "trades": 2,
       "longs": 0,
-      "shorts": 18,
+      "shorts": 2,
       "pnl": 0.0,
       "win_rate": 0.0
     }
