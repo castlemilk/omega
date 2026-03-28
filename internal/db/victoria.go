@@ -417,6 +417,69 @@ func (v *VictoriaDB) GetRiskMetrics() (*VictoriaRiskMetrics, error) {
 	return m, nil
 }
 
+// ── Signal Performance ────────────────────────────────────────────────────────
+
+// SignalPerfRow holds the latest performance snapshot for one signal.
+type SignalPerfRow struct {
+	SignalName     string
+	Cycle          int
+	IC             float64
+	HitRate        float64
+	ValueAdded     float64
+	Stability      float64
+	CompositeScore float64
+	Timestamp      string
+}
+
+// GetSignalPerformance returns the latest signal_performance row per signal,
+// ordered by composite_score descending.
+//
+// The signal_performance table is written by the Python SignalPerformanceTracker
+// and read here for the CLI leaderboard and attention router quality feed.
+func (v *VictoriaDB) GetSignalPerformance() ([]*SignalPerfRow, error) {
+	rows, err := v.db.Query(`
+		SELECT DISTINCT ON (signal_name)
+			signal_name, cycle, ic, hit_rate, value_added, stability,
+			composite_score, TO_CHAR(timestamp, 'YYYY-MM-DD HH24:MI:SS')
+		FROM signal_performance
+		ORDER BY signal_name, cycle DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck,gosec
+	var result []*SignalPerfRow
+	for rows.Next() {
+		r := &SignalPerfRow{}
+		if err := rows.Scan(
+			&r.SignalName, &r.Cycle, &r.IC, &r.HitRate,
+			&r.ValueAdded, &r.Stability, &r.CompositeScore, &r.Timestamp,
+		); err != nil {
+			return nil, err
+		}
+		result = append(result, r)
+	}
+	return result, rows.Err()
+}
+
+// GetAvgSignalQuality returns the average composite_score across all signals
+// from their most recent cycle.  Used by the coordination layer to feed signal
+// quality back into the RoutingWeightAdapter.
+func (v *VictoriaDB) GetAvgSignalQuality() (float64, error) {
+	var avg float64
+	err := v.db.QueryRow(`
+		SELECT COALESCE(AVG(latest.composite_score), 0.5)
+		FROM (
+			SELECT DISTINCT ON (signal_name)
+				composite_score
+			FROM signal_performance
+			ORDER BY signal_name, cycle DESC
+		) latest`).Scan(&avg)
+	if err != nil {
+		return 0.5, err
+	}
+	return avg, nil
+}
+
 // itoa converts int to string for query building (avoids fmt import).
 func itoa(n int) string {
 	if n == 0 {

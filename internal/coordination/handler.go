@@ -71,6 +71,44 @@ func NewDefaultHandler(store *OutcomeStore, logger *slog.Logger) *Handler {
 }
 
 // ---------------------------------------------------------------------------
+// SignalQualityFeeder — feeds empirical signal quality into routing priors
+// ---------------------------------------------------------------------------
+
+// SignalQualityDB is the interface the handler uses to read signal quality.
+// Satisfied by *db.VictoriaDB; defined here to avoid an import cycle.
+type SignalQualityDB interface {
+	GetAvgSignalQuality() (float64, error)
+}
+
+// RefreshFromSignalPerf reads the average composite_score from signal_performance
+// and updates the RoutingWeightAdapter prior for the named node.
+//
+// Call this after each training cycle (or on a timer) to let empirical signal
+// quality influence which nodes the attention router prefers for signal-related goals.
+//
+//	handler.RefreshFromSignalPerf(db, "victoria_node_1")
+func (h *Handler) RefreshFromSignalPerf(qualityDB SignalQualityDB, nodeID string) {
+	if h.adapter == nil {
+		return
+	}
+	avg, err := qualityDB.GetAvgSignalQuality()
+	if err != nil {
+		h.logger.Warn("RefreshFromSignalPerf: could not read signal quality", "err", err)
+		return
+	}
+	// Clamp to [0, 1] and scale to outcome score range
+	if avg < 0 {
+		avg = 0
+	}
+	if avg > 1 {
+		avg = 1
+	}
+	h.adapter.UpdateFromOutcome(nodeID, float32(avg))
+	h.logger.Debug("RefreshFromSignalPerf: updated routing prior",
+		"node", nodeID, "signal_quality", avg)
+}
+
+// ---------------------------------------------------------------------------
 // Route RPC
 // ---------------------------------------------------------------------------
 
