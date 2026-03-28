@@ -680,7 +680,285 @@ class DefiLlamaProvider(DataProvider):
             return False
 
 
+# ─── Coinbase Provider ─────────────────────────────────────────────────────────
+
+
+class CoinbaseProvider(DataProvider):
+    """Fetches OHLCV candles from Coinbase Exchange public API (4th-priority fallback)."""
+
+    def __init__(self) -> None:
+        self._cache: dict[str, tuple[float, Any]] = {}
+        self._total_fetched = 0
+        self._total_failed = 0
+
+    @property
+    def name(self) -> str:
+        return "coinbase"
+
+    @property
+    def description(self) -> str:
+        return "Coinbase Exchange public candles API — OHLCV (4th-priority fallback)"
+
+    def fetch_klines(
+        self, pair: str, interval: str = "1d", limit: int = 90
+    ) -> dict[str, Any] | None:
+        """Fetch OHLCV candles from Coinbase Exchange for a single pair."""
+        cache_key = f"cb:{pair}:{interval}:{limit}"
+        if cache_key in self._cache:
+            ts, data = self._cache[cache_key]
+            if time.time() - ts < _CACHE_TTL_SECONDS:
+                return data
+
+        product_id = _COINBASE_PAIRS.get(pair)
+        if not product_id:
+            return None
+
+        granularity = _COINBASE_GRANULARITY.get(interval, 86400)
+        end = int(time.time())
+        start = end - limit * granularity
+
+        url = (
+            f"{_COINBASE_API}/{product_id}/candles"
+            f"?granularity={granularity}&start={start}&end={end}"
+        )
+        try:
+            req = urllib.request.Request(url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+
+            if not raw or not isinstance(raw, list):
+                self._total_failed += 1
+                return None
+
+            # Coinbase returns newest-first: [time, low, high, open, close, volume]
+            raw = list(reversed(raw))[-limit:]
+
+            timestamps = [int(k[0]) for k in raw]
+            lows = [float(k[1]) for k in raw]
+            highs = [float(k[2]) for k in raw]
+            opens = [float(k[3]) for k in raw]
+            closes = [float(k[4]) for k in raw]
+            volumes = [float(k[5]) for k in raw]
+
+            data = {
+                "meta": {
+                    "symbol": pair,
+                    "interval": interval,
+                    "source": "coinbase",
+                    "regularMarketPrice": closes[-1] if closes else None,
+                },
+                "timestamps": timestamps,
+                "open": opens,
+                "high": highs,
+                "low": lows,
+                "close": closes,
+                "adjclose": closes,
+                "volume": volumes,
+                "quote_volume": [c * v for c, v in zip(closes, volumes)],
+                "pair": pair,
+                "fetched_at": time.time(),
+            }
+            self._total_fetched += 1
+            self._cache[cache_key] = (time.time(), data)
+            logger.debug(
+                "Coinbase: %s → %d bars, last=%.2f",
+                pair,
+                len(closes),
+                closes[-1] if closes else 0,
+            )
+            return data
+
+        except Exception as exc:
+            logger.warning("Failed to fetch %s from Coinbase: %s", pair, exc)
+            self._total_failed += 1
+            return None
+
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
+        interval = kwargs.get("interval", "1d")
+        limit = int(kwargs.get("limit", 90))
+        result: dict[str, Any] = {}
+        for pair in pairs:
+            data = self.fetch_klines(pair, interval=interval, limit=limit)
+            result[pair] = data
+            time.sleep(0.1)  # Coinbase public API: be gentle
+        return result
+
+    def is_available(self) -> bool:
+        try:
+            url = f"{_COINBASE_API}/BTC-USD/ticker"
+            req = urllib.request.Request(url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return "price" in data
+        except Exception:
+            return False
+
+
+# ─── Kraken Provider ───────────────────────────────────────────────────────────
+
+
+class KrakenProvider(DataProvider):
+    """Fetches OHLCV klines from Kraken public API (5th-priority fallback)."""
+
+    def __init__(self) -> None:
+        self._cache: dict[str, tuple[float, Any]] = {}
+        self._total_fetched = 0
+        self._total_failed = 0
+
+    @property
+    def name(self) -> str:
+        return "kraken"
+
+    @property
+    def description(self) -> str:
+        return "Kraken public API — OHLCV klines (5th-priority fallback)"
+
+    def fetch_klines(
+        self, pair: str, interval: str = "1d", limit: int = 90
+    ) -> dict[str, Any] | None:
+        """Fetch OHLCV klines from Kraken for a single pair."""
+        cache_key = f"kraken:{pair}:{interval}:{limit}"
+        if cache_key in self._cache:
+            ts, data = self._cache[cache_key]
+            if time.time() - ts < _CACHE_TTL_SECONDS:
+                return data
+
+        kraken_pair = _KRAKEN_PAIRS.get(pair)
+        if not kraken_pair:
+            return None
+
+        kraken_interval = _KRAKEN_INTERVAL.get(interval, 1440)
+        url = f"{_KRAKEN_API}/OHLC?pair={kraken_pair}&interval={kraken_interval}"
+        try:
+            req = urllib.request.Request(url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = json.loads(resp.read().decode("utf-8"))
+
+            if raw.get("error"):
+                logger.warning("Kraken error for %s: %s", pair, raw["error"])
+                self._total_failed += 1
+                return None
+
+            result_data = raw.get("result", {})
+            # Kraken returns data under the pair key (sometimes prefixed with X/Z)
+            klines = None
+            for key in result_data:
+                if key != "last":
+                    klines = result_data[key]
+                    break
+
+            if not klines:
+                self._total_failed += 1
+                return None
+
+            # Kraken format: [time, open, high, low, close, vwap, volume, count]
+            klines = klines[-limit:]
+            timestamps = [int(k[0]) for k in klines]
+            opens = [float(k[1]) for k in klines]
+            highs = [float(k[2]) for k in klines]
+            lows = [float(k[3]) for k in klines]
+            closes = [float(k[4]) for k in klines]
+            volumes = [float(k[6]) for k in klines]
+
+            data = {
+                "meta": {
+                    "symbol": pair,
+                    "interval": interval,
+                    "source": "kraken",
+                    "regularMarketPrice": closes[-1] if closes else None,
+                },
+                "timestamps": timestamps,
+                "open": opens,
+                "high": highs,
+                "low": lows,
+                "close": closes,
+                "adjclose": closes,
+                "volume": volumes,
+                "quote_volume": [c * v for c, v in zip(closes, volumes)],
+                "pair": pair,
+                "fetched_at": time.time(),
+            }
+            self._total_fetched += 1
+            self._cache[cache_key] = (time.time(), data)
+            logger.debug(
+                "Kraken: %s → %d bars, last=%.2f",
+                pair,
+                len(closes),
+                closes[-1] if closes else 0,
+            )
+            return data
+
+        except Exception as exc:
+            logger.warning("Failed to fetch %s from Kraken: %s", pair, exc)
+            self._total_failed += 1
+            return None
+
+    def fetch(self, pairs: list[str], **kwargs) -> dict[str, Any]:
+        interval = kwargs.get("interval", "1d")
+        limit = int(kwargs.get("limit", 90))
+        result: dict[str, Any] = {}
+        for pair in pairs:
+            data = self.fetch_klines(pair, interval=interval, limit=limit)
+            result[pair] = data
+            time.sleep(0.1)
+        return result
+
+    def is_available(self) -> bool:
+        try:
+            url = f"{_KRAKEN_API}/Time"
+            req = urllib.request.Request(url, headers=_HEADERS)
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                return not data.get("error")
+        except Exception:
+            return False
+
+
 # ─── CryptoCompare Provider ────────────────────────────────────────────────────
+
+_COINBASE_API = "https://api.exchange.coinbase.com/products"
+_KRAKEN_API = "https://api.kraken.com/0/public"
+
+_COINBASE_PAIRS = {
+    "BTCUSDT": "BTC-USD",
+    "ETHUSDT": "ETH-USD",
+    "SOLUSDT": "SOL-USD",
+    "BNBUSDT": "BNB-USD",
+    "XRPUSDT": "XRP-USD",
+    "ADAUSDT": "ADA-USD",
+    "DOTUSDT": "DOT-USD",
+    "AVAXUSDT": "AVAX-USD",
+    "LINKUSDT": "LINK-USD",
+    "MATICUSDT": "MATIC-USD",
+    "ATOMUSDT": "ATOM-USD",
+    "NEARUSDT": "NEAR-USD",
+    "LTCUSDT": "LTC-USD",
+    "UNIUSDT": "UNI-USD",
+    "AAVEUSDT": "AAVE-USD",
+    "DOGEUSDT": "DOGE-USD",
+    "TRXUSDT": "TRX-USD",
+}
+
+_COINBASE_GRANULARITY = {"1d": 86400, "1h": 3600, "4h": 14400, "1w": 604800}
+
+_KRAKEN_PAIRS = {
+    "BTCUSDT": "XBTUSD",
+    "ETHUSDT": "ETHUSD",
+    "SOLUSDT": "SOLUSD",
+    "XRPUSDT": "XRPUSD",
+    "ADAUSDT": "ADAUSD",
+    "DOTUSDT": "DOTUSD",
+    "AVAXUSDT": "AVAXUSD",
+    "LINKUSDT": "LINKUSD",
+    "ATOMUSDT": "ATOMUSD",
+    "LTCUSDT": "LTCUSD",
+    "UNIUSDT": "UNIUSD",
+    "DOGEUSDT": "XDGUSD",
+    "TRXUSDT": "TRXUSD",
+    "NEARUSDT": "NEARUSD",
+}
+
+_KRAKEN_INTERVAL = {"1d": 1440, "1h": 60, "4h": 240, "1w": 10080}
 
 _CRYPTOCOMPARE_API = "https://min-api.cryptocompare.com/data/v2"
 
