@@ -1,62 +1,124 @@
-id: proj_victoria
-name: Victoria
+# projects/victoria.yaml
+# ──────────────────────────────────────────────────────────────
+# Victoria — Crypto Quantitative Trading
+#
+# Declarative project definition.  Wire existing node types
+# together; no platform code changes required to add a node.
+#
+# To run:  omega run --project projects/victoria.yaml
+# To add a node: add an entry under `nodes:` and connect it.
+# ──────────────────────────────────────────────────────────────
+
+name: victoria
 description: Autonomous crypto quantitative research and trading system
-status: active
-domain: crypto_quant
-autonomy_level: supervised
 
-pipeline_config:
-  - step_id: step_1
-    name: DataIngestion
-    node_type: DATA_INGESTION
-    description: Fetch and normalize market data from Binance/CoinGecko
-    order: 1
-  - step_id: step_2
-    name: SignalResearch
-    node_type: SIGNAL_RESEARCH
-    description: Generate alpha signals from price, volume, and on-chain data
-    order: 2
-  - step_id: step_3
-    name: IntelligenceCoordination
-    node_type: STRATEGY
-    description: Coordinate signals across timeframes into a coherent view
-    order: 3
-  - step_id: step_4
-    name: DynamicWeights
-    node_type: RISK_MANAGEMENT
-    description: Compute dynamic portfolio weights based on conviction and risk
-    order: 4
-  - step_id: step_5
-    name: DebateGate
-    node_type: VERIFICATION
-    description: Adversarial debate gate — bull/bear case adjudication
-    order: 5
-  - step_id: step_6
-    name: WalkForward
-    node_type: VERIFICATION
-    description: Walk-forward backtest validation of proposed weights
-    order: 6
-  - step_id: step_7
-    name: Memory
-    node_type: MEMORY
-    description: Store episodic memory, trigger consolidation every 50 cycles, write to memory bus
-    order: 7
-  - step_id: step_7b
-    name: Reflect
-    node_type: REFLECT
-    description: LLM reflection on cycle outcome — stores episodic insight + rates memory 1-5
-    order: 7
-  - step_id: step_8
-    name: ImprovementEngine
-    node_type: IMPROVEMENT
-    description: TPE-driven hyperparameter optimisation across the pipeline
-    order: 8
-  - step_id: step_9
-    name: Ring3Adversarial
-    node_type: ADVERSARIAL
-    description: Final adversarial red-team before execution
-    order: 9
+nodes:
+  # ── Data layer ──────────────────────────────────────────────
+  - type: data_provider
+    name: market_feed
+    config:
+      provider: binance          # primary; falls back to CoinGecko / Bybit
+      tickers:
+        - BTCUSDT
+        - ETHUSDT
+        - SOLUSDT
+        - BNBUSDT
+        - XRPUSDT
+        - ADAUSDT
+        - DOTUSDT
+        - AVAXUSDT
+        - LINKUSDT
+        - MATICUSDT
 
+  # ── Regime detection ────────────────────────────────────────
+  - type: regime_detector
+    name: regime
+    inputs: [market_feed.market_data]
+    config:
+      algorithm: wasserstein
+
+  # ── Signal layer ─────────────────────────────────────────────
+  - type: signal_generator
+    name: basic_signals
+    inputs:
+      - market_feed.market_data
+      - regime.regime
+    config:
+      signals: [basic]           # RSI, MACD, Bollinger Bands, Z-score, BTC-beta
+
+  - type: signal_generator
+    name: geometric_signals
+    inputs:
+      - market_feed.market_data
+      - regime.regime
+    config:
+      signals: [spectral]        # Spectral-graph, Riemannian curvature
+
+  - type: signal_generator
+    name: smart_money
+    inputs:
+      - market_feed.market_data
+    config:
+      signals: [smart_money]     # Whale flow, order-block detection
+
+  - type: signal_generator
+    name: sentiment_signals
+    inputs:
+      - market_feed.market_data
+    config:
+      signals: [sentiment]       # FinBERT news + Twitter sentiment
+
+  - type: signal_generator
+    name: vrp_signals
+    inputs:
+      - market_feed.market_data
+    config:
+      signals: [vrp]             # Variance Risk Premium
+
+  # ── Strategy layer ───────────────────────────────────────────
+  - type: strategy
+    name: conviction_strategy
+    inputs:
+      - basic_signals.signal_value
+      - basic_signals.confidence
+      - geometric_signals.signal_value
+      - geometric_signals.confidence
+      - smart_money.signal_value
+      - smart_money.confidence
+      - sentiment_signals.signal_value
+      - vrp_signals.signal_value
+      - regime.regime
+    config:
+      min_conviction: 0.6
+      max_positions: 9
+
+  # ── Risk layer ───────────────────────────────────────────────
+  - type: risk_manager
+    name: risk_controls
+    inputs:
+      - conviction_strategy.trade_decision
+      - conviction_strategy.position_weights
+    config:
+      max_drawdown: 0.15
+      max_position_pct: 0.20
+      kelly_fraction: 0.25
+
+  # ── Execution layer ──────────────────────────────────────────
+  - type: executor
+    name: paper_trader
+    inputs:
+      - risk_controls.approved_decision
+    config:
+      mode: paper
+      max_positions: 9
+
+routing:
+  type: dag                      # nodes run in topological dependency order
+  config: {}
+
+# ──────────────────────────────────────────────────────────────
+# Evaluation and improvement (used by omega eval / omega train)
+# ──────────────────────────────────────────────────────────────
 eval_config:
   primary_metrics:
     - sharpe_ratio
@@ -78,3 +140,5 @@ improvement_config:
 
 metadata:
   color: "#00ff00"
+  domain: crypto_quant
+  autonomy_level: supervised

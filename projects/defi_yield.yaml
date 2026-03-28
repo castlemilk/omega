@@ -1,0 +1,66 @@
+# projects/defi_yield.yaml
+# ──────────────────────────────────────────────────────────────
+# DeFi Yield Optimizer
+#
+# Example of a completely different project using the same node
+# type system as Victoria — no platform code needed.
+#
+# To activate: implement a "defi_llama" data provider factory
+# and register it:
+#   register_factory("data_provider", my_defi_llama_factory)
+# ──────────────────────────────────────────────────────────────
+
+name: defi_yield
+description: DeFi yield optimization across Aave, Compound, and Curve
+
+nodes:
+  - type: data_provider
+    name: defi_llama
+    config:
+      provider: defillama
+      protocols: [aave, compound, curve, uniswap, convex]
+      metrics: [tvl, apy, volume_24h]
+
+  - type: signal_generator
+    name: yield_signals
+    inputs:
+      - defi_llama.market_data
+    config:
+      signals: [basic]           # APY momentum, TVL z-score, yield spread
+
+  - type: strategy
+    name: yield_optimizer
+    inputs:
+      - yield_signals.signal_value
+      - yield_signals.confidence
+    config:
+      min_conviction: 0.5
+      max_positions: 5
+      rebalance_threshold: 0.02  # rebalance when allocation drifts > 2%
+
+  - type: executor
+    name: paper_allocator
+    inputs:
+      - yield_optimizer.trade_decision
+    config:
+      mode: paper
+      max_positions: 5
+
+routing:
+  type: dag
+  config: {}
+
+eval_config:
+  primary_metrics:
+    - sharpe_ratio
+    - avg_apy
+    - max_drawdown
+  metric_targets:
+    sharpe_ratio: 1.2
+    avg_apy: 0.08
+    max_drawdown: -0.10
+  eval_frequency: per_cycle
+
+metadata:
+  domain: defi_yield
+  autonomy_level: supervised
