@@ -71,6 +71,8 @@ from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
+from omega.nodes.victoria.smart_money_signal import SmartMoneySignal
+from omega.nodes.victoria.finbert_sentiment import FinBertSentimentSignal
 
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
@@ -97,6 +99,8 @@ SIGNAL_NAMES = [
     "pairs",  # Cointegration pairs spread z-score
     "momentum_factor",  # Cross-sectional Jegadeesh-Titman momentum
     "timeseries_forecast",  # Holt + AR(3) Kronos-style next-period return forecast
+    "smart_money",          # Binance top-trader position consensus
+    "finbert_sentiment",    # Keyword-based crypto news sentiment (recency-weighted)
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -152,6 +156,12 @@ class VictoriaNode(Node):
 
         # Timeseries forecast (Kronos-inspired: Holt + AR next-period return)
         self._timeseries_forecast = TimeseriesForecastSignal()
+
+        # Smart-money: Binance top-trader position consensus
+        self._smart_money = SmartMoneySignal()
+
+        # FinBERT-style sentiment: keyword-based crypto news sentiment
+        self._finbert_sentiment = FinBertSentimentSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -1026,6 +1036,28 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("timeseries_forecast signal failed: %s", exc)
 
+            try:
+                sm_val = self._smart_money.compute(market_data)
+                signals["smart_money"] = {
+                    "value": sm_val.value,
+                    "confidence": sm_val.confidence,
+                    "regime_tag": sm_val.regime_tag,
+                    "raw": sm_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("smart_money signal failed: %s", exc)
+
+            try:
+                fb_val = self._finbert_sentiment.compute(market_data)
+                signals["finbert_sentiment"] = {
+                    "value": fb_val.value,
+                    "confidence": fb_val.confidence,
+                    "regime_tag": fb_val.regime_tag,
+                    "raw": fb_val.raw,
+                }
+            except Exception as exc:
+                logger.debug("finbert_sentiment signal failed: %s", exc)
+
             # RMT information-content signal — uses the 10 core signals from
             # information_flow.SIGNAL_NAMES as its input vector.
             try:
@@ -1431,6 +1463,16 @@ class VictoriaNode(Node):
             return {"value": v.value, "confidence": v.confidence,
                     "regime_tag": v.regime_tag, "raw": v.raw}
 
+        def _smart_money(acc: dict, ctx: dict) -> dict:
+            v = self._smart_money.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
+        def _finbert_sentiment(acc: dict, ctx: dict) -> dict:
+            v = self._finbert_sentiment.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
         def _rmt_signal(acc: dict, ctx: dict) -> dict:
             signal_vec = {
                 name: float(acc[name].get("value", 0.0))
@@ -1518,6 +1560,10 @@ class VictoriaNode(Node):
                        description="Cross-sectional Jegadeesh-Titman momentum"),
             SignalNode("timeseries_forecast", deps=wave1_deps, fn=_timeseries_forecast,
                        description="Holt + AR(3) Kronos-style next-period return forecast"),
+            SignalNode("smart_money", deps=[], fn=_smart_money,
+                       description="Binance top-trader position consensus"),
+            SignalNode("finbert_sentiment", deps=[], fn=_finbert_sentiment,
+                       description="Keyword-based crypto news sentiment (recency-weighted)"),
             # Wave 2
             SignalNode("rmt_signal", deps=wave2_deps, fn=_rmt_signal,
                        description="RMT denoiser — structured vs noisy market"),
@@ -1540,6 +1586,7 @@ class VictoriaNode(Node):
             "sentiment", "vrp", "market_data_signal", "onchain", "long_short_ratio",
             "btc_dominance", "alt_data", "carry", "pairs", "momentum_factor",
             "timeseries_forecast", "rmt_signal", "spectral_graph",
+            "smart_money", "finbert_sentiment",
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
