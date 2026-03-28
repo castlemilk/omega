@@ -41,6 +41,7 @@ from typing import Any, ClassVar
 from omega.core.actions import NodeAction
 from omega.core.credentials import credentials
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.signal_performance import SignalPerformanceTracker
 from omega.core.node_skills import (
     NodeSkillFramework,
     victoria_isq_template,
@@ -174,6 +175,11 @@ class VictoriaNode(Node):
         # IC tracking for weight learning
         self._prev_signal_values: dict[str, float] = {}
         self._quality_history: list[float] = []
+
+        # Signal performance tracker — empirical IC / hit-rate / value-added / stability
+        self._signal_perf_tracker = SignalPerformanceTracker(SIGNAL_NAMES)
+        # Last known BTC price used to derive forward returns for IC computation
+        self._prev_btc_price: float = 0.0
         self._signal_counts_history: list[int] = []
         self._total_cycles_run: int = 0
 
@@ -465,8 +471,17 @@ class VictoriaNode(Node):
         """
         error_rate = self._error_count / max(1, self._execution_count)
 
-        # Derive signal quality from last known signals
-        signal_quality = self._derive_signal_quality()
+        # Use empirical signal quality from the performance tracker when enough
+        # data has been collected (>= 5 cycles); fall back to confidence-based
+        # estimate for early cycles.
+        tracker_quality = self._signal_perf_tracker.get_composite_quality()
+        confidence_quality = self._derive_signal_quality()
+        # Blend: tracker quality is more reliable after warm-up
+        n_samples = min(
+            len(h) for h in self._signal_perf_tracker._history.values()
+        ) if self._signal_perf_tracker._history else 0
+        warmup_weight = min(1.0, n_samples / 5.0)
+        signal_quality = warmup_weight * tracker_quality + (1.0 - warmup_weight) * confidence_quality
 
         # Cycle health: 1 - error_rate (simple proxy)
         cycle_health = max(0.0, 1.0 - error_rate)
@@ -1115,7 +1130,49 @@ class VictoriaNode(Node):
             signals["_basic_signal_divergence"] = round(_divergence, 4)
             signals["_basic_signal_consensus"] = round(_consensus_val, 4)
 
-        # 2. Compute IC proxies and update weight allocator with direction consistency
+        # 2. Signal performance tracker — record previous cycle's signals against
+        # the realized forward return (current price change vs. previous price).
+        # Timing: signals at T paired with return T→T+1 (computed at T+1 entry).
+        _current_btc_price = _extract_btc_price(market_data)
+
+        if self._prev_signal_values and self._prev_btc_price > 0 and _current_btc_price > 0:
+            _forward_return = (_current_btc_price - self._prev_btc_price) / self._prev_btc_price
+            try:
+                self._signal_perf_tracker.record_cycle(
+                    cycle=self._total_cycles_run,
+                    signal_values=self._prev_signal_values,
+                    forward_return=_forward_return,
+                    # Proxy trade PnL: composite signal × forward return (sign alignment)
+                    trade_pnl=sum(
+                        float(self._prev_signal_values.get(n, 0.0)) * _forward_return
+                        for n in SIGNAL_NAMES
+                    ) / len(SIGNAL_NAMES),
+                )
+            except Exception as exc:
+                logger.debug("signal_perf_tracker.record_cycle failed: %s", exc)
+
+            # Feed empirical IC updates back into DynamicWeightAllocator so
+            # weight allocation uses actual realized predictiveness, not just
+            # direction-consistency proxies.
+            try:
+                empirical_ic = self._signal_perf_tracker.get_ic_updates()
+                if empirical_ic:
+                    self._weight_allocator.update_ic_batch(empirical_ic, regime=regime)
+            except Exception as exc:
+                logger.debug("empirical IC update failed: %s", exc)
+
+            # Persist to DB every N cycles (throttled internally)
+            try:
+                self._signal_perf_tracker.persist_to_db(self._total_cycles_run)
+            except Exception as exc:
+                logger.debug("signal_perf_tracker.persist_to_db failed: %s", exc)
+
+        # Update BTC price for next cycle's forward return computation
+        if _current_btc_price > 0:
+            self._prev_btc_price = _current_btc_price
+
+        # 2b. Compute IC proxies and update weight allocator with direction consistency
+        # (kept as a fast fallback before enough empirical IC observations exist)
         ic_updates: dict[str, float] = {}
         for name, sig in signals.items():
             if name.startswith("_"):
@@ -1920,3 +1977,54 @@ class VictoriaNode(Node):
             "_best_score": best_score,
             "_improvement_applied": 1.0 if improvement_applied else 0.0,
         }
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers
+# ---------------------------------------------------------------------------
+
+
+def _extract_btc_price(market_data: dict) -> float:
+    """
+    Extract the latest BTC close price from market_data.
+
+    market_data is keyed by ticker (e.g. "BTCUSDT", "BTC/USDT") and each
+    value is either:
+      - a dict with a "close" or "price" key (scalar), or
+      - a dict mapping bar-index → OHLCV dict.
+
+    Returns 0.0 if no BTC data is found.
+    """
+    if not market_data:
+        return 0.0
+
+    for ticker, td in market_data.items():
+        if not isinstance(ticker, str):
+            continue
+        upper = ticker.upper()
+        if "BTC" not in upper:
+            continue
+        if not isinstance(td, dict):
+            continue
+
+        # Direct scalar close / price
+        if "close" in td:
+            try:
+                return float(td["close"])
+            except (TypeError, ValueError):
+                pass
+        if "price" in td:
+            try:
+                return float(td["price"])
+            except (TypeError, ValueError):
+                pass
+
+        # Nested OHLCV: {bar_index: {open, high, low, close, volume}}
+        for v in td.values():
+            if isinstance(v, dict) and "close" in v:
+                try:
+                    return float(v["close"])
+                except (TypeError, ValueError):
+                    pass
+
+    return 0.0
