@@ -834,19 +834,13 @@ class VictoriaNode(Node):
                 if len(self._basic_signal_history) > 50:
                     self._basic_signal_history.pop(0)
 
-                if len(self._basic_signal_history) >= 5:
-                    hist = self._basic_signal_history
-                    mean_h = sum(hist) / len(hist)
-                    variance_h = sum((x - mean_h) ** 2 for x in hist) / max(1, len(hist) - 1)
-                    import math as _math
-                    std_h = _math.sqrt(variance_h) if variance_h > 0 else 1.0
-                    # z-score then squash: tanh keeps the value in (-1, 1) and
-                    # damps extreme spikes that would look like outlier signals.
-                    z = (raw_value - mean_h) / std_h
-                    normalised_value = _math.tanh(z * 0.5)  # ×0.5 → gentler curve
-                else:
-                    # Not enough history yet; preserve sign, dampen magnitude
-                    normalised_value = max(-0.5, min(0.5, raw_value * 0.5))
+                # Simple proportional dampening — keeps basic_signals in the same
+                # ±0.25 output range as other calibrated signals.  The previous
+                # z-score approach amplified the signal in low-variance/trending
+                # regimes (std→tiny, z→huge, tanh→1.0), making the false-positive
+                # problem worse rather than better.
+                import math as _math
+                normalised_value = _math.tanh(raw_value) * 0.25
 
                 signals["basic_signals"]["value"] = normalised_value
                 signals["basic_signals"]["raw_value"] = raw_value  # keep for inspection

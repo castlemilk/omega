@@ -733,27 +733,34 @@ class LongShortRatioSignal:
             except Exception:
                 return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
 
+        import math as _math
+
         ls_ratio = float(ls_ratio)
         raw["long_short_ratio"] = ls_ratio
 
+        # Continuous contrarian signal: replace hard binary steps with a smooth
+        # tanh curve so the output stays in the ±0.25 range that calibrated
+        # signals use.  Hard steps (-0.4, -0.8) were causing chronic Ring 1 fires
+        # because a constant -0.4 against a +0.1–0.3 bullish consensus gave a
+        # pairwise Euclidean distance > 0.40 on every cycle.
+        # positioning_skew ∈ [-1, 1]: positive = crowded long (bearish), negative = crowded short (bullish)
+        skew = (ls_ratio - 1.0) / max(ls_ratio, 1.0)
+        # Scale: max ≈ ±0.25 at extremes, ≈ ±0.15 at moderate crowding
+        value = float(max(-1.0, min(1.0, -_math.tanh(skew * 2.0) * 0.25)))
+
         if ls_ratio >= self._EXTREME_LONG:
-            value = -0.8
             regime_tag = "extreme_crowded_long"
             confidence = 0.7
         elif ls_ratio >= self._LONG_THRESHOLD:
-            value = -0.4
             regime_tag = "crowded_long"
             confidence = 0.55
         elif ls_ratio <= self._EXTREME_SHORT:
-            value = 0.8
             regime_tag = "extreme_crowded_short"
             confidence = 0.7
         elif ls_ratio <= self._SHORT_THRESHOLD:
-            value = 0.4
             regime_tag = "crowded_short"
             confidence = 0.55
         else:
-            value = 0.0
             regime_tag = "balanced_positioning"
             confidence = 0.3
 
