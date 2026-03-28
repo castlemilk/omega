@@ -25,6 +25,7 @@ import {
   TrendingDown,
   Droplets,
   DollarSign,
+  BookOpen,
 } from "lucide-react";
 import { useState } from "react";
 import { useProject, projectDisplayName } from "../../context/ProjectContext";
@@ -69,6 +70,7 @@ const POLYMARKET_NAV = [
   { to: "/polymarket/edges", icon: TrendingDown, label: "Edges" },
   { to: "/polymarket/weather", icon: Droplets, label: "Weather" },
   { to: "/polymarket/bets", icon: DollarSign, label: "Bets" },
+  { to: "/polymarket/positions", icon: BookOpen, label: "Positions" },
 ];
 
 function projectNavItems(project: Project) {

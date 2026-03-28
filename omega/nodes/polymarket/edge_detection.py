@@ -125,6 +125,7 @@ class EdgeDetectionNode(Node):
         self,
         edge_threshold: float = DEFAULT_EDGE_THRESHOLD,
         max_kelly_fraction: float = DEFAULT_MAX_KELLY,
+        clob_client: Any = None,
     ) -> None:
         self._node_id = str(uuid.uuid4())
         self._version = "1.0"
@@ -135,6 +136,18 @@ class EdgeDetectionNode(Node):
         self.edge_threshold = edge_threshold
         self.max_kelly_fraction = max_kelly_fraction
         self._mem_bus: Any = None
+        # Optional CLOB client — enables live order-book enrichment and
+        # smart-money consensus via TopTradersNode.
+        self._clob: Any = clob_client
+        self._top_traders: Any = None
+        if clob_client is not None:
+            try:
+                from omega.nodes.polymarket.top_traders import TopTradersNode
+
+                self._top_traders = TopTradersNode(clob_client=clob_client)
+                logger.debug("EdgeDetectionNode: TopTradersNode attached")
+            except Exception as exc:
+                logger.debug("EdgeDetectionNode: TopTradersNode init failed: %s", exc)
 
     def get_state(self) -> NodeState:
         return NodeState(
@@ -281,6 +294,44 @@ class EdgeDetectionNode(Node):
         except Exception as exc:
             logger.debug("_get_memory_adjustment failed: %s", exc)
             return 0.0
+
+    def _get_smart_money_signal(
+        self, market_id: str, direction: str
+    ) -> dict[str, Any]:
+        """
+        Query TopTradersNode for smart-money consensus on a market.
+
+        Returns a dict with keys ``smart_direction``, ``smart_confidence``,
+        and ``smart_aligned`` (True when order-book flow agrees with our edge).
+        Returns empty dict when no CLOB client is configured.
+        """
+        if self._top_traders is None or not market_id:
+            return {}
+        try:
+            from omega.core.node import NodeInput as _NI
+
+            out = self._top_traders.execute(
+                _NI(action="consensus", parameters={"condition_id": market_id})
+            )
+            if not out.success or not isinstance(out.result, dict):
+                return {}
+            r = out.result
+            smart_dir = r.get("direction", "neutral")
+            smart_conf = float(r.get("confidence", 0.0))
+            # "bull" aligns with YES direction; "bear" aligns with NO
+            aligned = (
+                (smart_dir == "bull" and direction == "YES")
+                or (smart_dir == "bear" and direction == "NO")
+            )
+            return {
+                "smart_direction": smart_dir,
+                "smart_confidence": round(smart_conf, 4),
+                "smart_aligned": aligned,
+                "smart_imbalance": round(r.get("imbalance_ratio", 1.0), 4),
+            }
+        except Exception as exc:
+            logger.debug("_get_smart_money_signal failed for %s: %s", market_id, exc)
+            return {}
 
     def _get_mem_bus(self) -> Any:
         """Lazy-init MemoryBus; returns None if DATABASE_URL not set."""
@@ -534,7 +585,7 @@ class EdgeDetectionNode(Node):
             cycle, city, market_slug, model_prob, market_price, round(edge, 4), round(kelly, 4)
         )
 
-        return {
+        result = {
             "city": city,
             "market_id": market_id,
             "market_slug": market_slug,
@@ -549,6 +600,22 @@ class EdgeDetectionNode(Node):
             "edge_threshold": self.edge_threshold,
             "detected_at": datetime.now().isoformat(),
         }
+
+        # Enrich with smart-money consensus when a CLOBClient is attached.
+        smart = self._get_smart_money_signal(market_id, direction)
+        if smart:
+            result.update(smart)
+            # Boost confidence when smart money aligns with our edge signal.
+            if smart.get("smart_aligned") and smart.get("smart_confidence", 0) > 0.3:
+                boost = smart["smart_confidence"] * 0.10
+                result["confidence"] = round(min(1.0, confidence + boost), 4)
+                logger.debug(
+                    "_detect_single: smart-money boost +%.3f → confidence=%.4f",
+                    boost,
+                    result["confidence"],
+                )
+
+        return result
 
     def _batch_detect(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         results = []

@@ -30,6 +30,7 @@ import PolymarketMarkets from "./pages/PolymarketMarkets";
 import PolymarketEdges from "./pages/PolymarketEdges";
 import PolymarketWeather from "./pages/PolymarketWeather";
 import PolymarketBets from "./pages/PolymarketBets";
+import PolymarketPositions from "./pages/PolymarketPositions";
 import SystemHealth from "./pages/SystemHealth";
 import PerformanceMetrics from "./pages/PerformanceMetrics";
 import ErrorLog from "./pages/ErrorLog";
@@ -132,6 +133,7 @@ export default function App() {
                 <Route path="/polymarket/edges" element={<PolymarketEdges />} />
                 <Route path="/polymarket/weather" element={<PolymarketWeather />} />
                 <Route path="/polymarket/bets" element={<PolymarketBets />} />
+                <Route path="/polymarket/positions" element={<PolymarketPositions />} />
                 {/* Observability */}
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/perf" element={<PerformanceMetrics />} />
