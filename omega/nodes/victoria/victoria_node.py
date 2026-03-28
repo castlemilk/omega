@@ -41,6 +41,11 @@ from typing import Any, ClassVar
 from omega.core.actions import NodeAction
 from omega.core.credentials import credentials
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.core.node_skills import (
+    NodeSkillFramework,
+    victoria_isq_template,
+    victoria_skills,
+)
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.alt_data_signals import AltDataSignalProvider
 from omega.nodes.victoria.carry_signals import FundingCarrySignal
@@ -173,6 +178,15 @@ class VictoriaNode(Node):
 
         # Lazy-initialised reflection store (requires DATABASE_URL at runtime)
         self._reflection_store: Any = None
+
+        # Per-node skills framework — skills registry, signal evolution,
+        # ISQ qualification, and RAG context.
+        self._skill_framework = NodeSkillFramework(
+            node_name="VictoriaNode",
+            isq_template=victoria_isq_template(),
+        )
+        for skill in victoria_skills():
+            self._skill_framework.register_skill(skill)
 
     # ------------------------------------------------------------------
     # Node interface
@@ -396,11 +410,13 @@ class VictoriaNode(Node):
             )
 
     def evaluate(self) -> dict[str, float]:
-        return {
+        metrics = {
             "avg_latency_ms": self._total_latency_ms / max(1, self._execution_count),
             "error_rate": self._error_count / max(1, self._execution_count),
             "execution_count": float(self._execution_count),
         }
+        metrics.update(self._skill_framework.get_metrics())
+        return metrics
 
     def get_param_space(self) -> list:
         """
@@ -1123,14 +1139,45 @@ class VictoriaNode(Node):
         # Generate and store per-cycle reflection (V-TR1)
         self.reflect_on_cycle(self._total_cycles_run, signals)
 
+        # ── NodeSkillFramework integration ────────────────────────────────
+        # 1. Track signal lifecycle states (EMERGING → STABLE → FALSIFIED)
+        signal_states = self._skill_framework.observe_signals(signals)
+        signals["_skill_states"] = {k: v.value for k, v in signal_states.items()}
+
+        # 2. Run ISQ qualification — flags low-confidence output
+        isq_result = self._skill_framework.qualify(
+            signals=signals,
+            market_data=self._last_market_data,
+            context={"regime": regime},
+        )
+        signals["_isq_score"] = isq_result.qualification_score
+        signals["_isq_passed"] = isq_result.passed
+        if isq_result.concerns:
+            signals["_isq_concerns"] = isq_result.concerns
+
+        # 3. Record cycle in RAG context (score = quality_score)
+        self._skill_framework.record_cycle(
+            signals=signals,
+            result={"quality_score": quality_score, "regime": regime},
+            score=quality_score,
+        )
+
+        # 4. Emit skill framework metrics alongside normal cycle metrics
+        skill_metrics = self._skill_framework.get_metrics()
+        # ─────────────────────────────────────────────────────────────────
+
         logger.info(
-            "cycle=%d quality=%.3f coverage=%.2f avg_conf=%.3f signals=%d (IC-weights=%s)",
+            "cycle=%d quality=%.3f coverage=%.2f avg_conf=%.3f signals=%d "
+            "(IC-weights=%s) isq=%.3f[%s] reliability=%.3f",
             self._total_cycles_run,
             quality_score,
             signal_coverage,
             avg_confidence,
             len(signal_names),
             not self._weight_allocator.allocate(regime=regime).is_fallback,
+            isq_result.qualification_score,
+            "PASS" if isq_result.passed else "FAIL",
+            skill_metrics["signal_reliability"],
         )
         return signals
 
