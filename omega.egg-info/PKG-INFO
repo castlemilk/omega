@@ -1,13 +1,25 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: omega
 Version: 0.1.0
 Summary: Project Omega — self-improving node orchestration framework
 License: MIT
 Requires-Python: >=3.11
 Description-Content-Type: text/markdown
+Requires-Dist: psycopg[binary]>=3.1
+Requires-Dist: betterproto>=0.9.0
+Provides-Extra: math
+Requires-Dist: numpy>=1.26; extra == "math"
+Provides-Extra: telemetry
+Requires-Dist: opentelemetry-api>=1.25; extra == "telemetry"
+Requires-Dist: opentelemetry-sdk>=1.25; extra == "telemetry"
+Requires-Dist: opentelemetry-exporter-otlp-proto-http>=1.25; extra == "telemetry"
 Provides-Extra: dev
+Requires-Dist: numpy>=1.26; extra == "dev"
 Requires-Dist: pytest>=8.0; extra == "dev"
 Requires-Dist: pytest-cov>=5.0; extra == "dev"
+Requires-Dist: pytest-xdist>=3.0; extra == "dev"
+Requires-Dist: ruff>=0.4.0; extra == "dev"
+Requires-Dist: mypy>=1.10.0; extra == "dev"
 
 # Project Omega
 
@@ -17,7 +29,43 @@ Omega validates a core hypothesis: can we define node contracts, compose them vi
 
 ---
 
-## Quick Start
+## Quick Start — Full Stack
+
+The easiest way to get everything running with real data:
+
+```bash
+# 1. Start Postgres (required for trading data)
+make db-up
+
+# 2. Set the database URL
+export DATABASE_URL=postgres://omega:omega@localhost:5432/omega?sslmode=disable
+
+# 3. Start the full stack: Python bridge + Go API + React dashboard
+omega run
+```
+
+This starts:
+| Layer | URL | Label |
+|---|---|---|
+| Python pipeline bridge | http://localhost:9090 | `[bridge]` |
+| Go Connect-RPC API | http://localhost:8080 | `[api]` |
+| React dev server | http://localhost:5173 | `[frontend]` |
+
+Output from each process is prefixed with its label. `Ctrl+C` shuts everything down cleanly.
+
+**Options:**
+```bash
+omega run --no-frontend   # API + bridge only (if the frontend is already running)
+```
+
+**Install the CLI first:**
+```bash
+go install ./cmd/omega
+```
+
+---
+
+### Legacy Python-only quick start
 
 ```bash
 cd omega

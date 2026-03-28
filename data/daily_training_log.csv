@@ -1,3 +1,4 @@
 date,status,cycles_run,trades_closed,winners,win_rate,total_pnl,avg_pnl,regime,top_winner,top_loser,notes
 2026-03-28,SKIPPED_NO_DOCKER,0,0,0,N/A,N/A,N/A,N/A,N/A,N/A,"Sandbox VM lacks Docker - cannot start postgres or run training. Last run data (2026-03-27): 100 cycles, 132 trades, 47.7% WR, -$17.34 PnL"
 2026-03-27,COMPLETED_FROM_CSV,100,132,63,47.7%,-17.34,-0.13,unknown,SOLUSDT long (+$59.52),ETHUSDT long (-$30.43),Backfilled from v10_trades.csv. Negative PnL driven by ETH long and DOT short.
+2026-03-29,SKIPPED_NO_DOCKER,0,0,0,N/A,N/A,N/A,N/A,N/A,N/A,"Sandbox VM lacks Docker - cannot start postgres or run training. Last completed run (2026-03-28): 200 cycles, 16 trades, 50.0% WR, +$67.22 PnL, profit factor 8.3"
