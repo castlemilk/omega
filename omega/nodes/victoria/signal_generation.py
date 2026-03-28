@@ -227,10 +227,16 @@ class SignalGenerationNode(Node):
             ts: dict[str, Any] = {}
 
             # SMA crossover (always active)
+            # Proportional: (short - long) / long, clipped to [-1, 1].
+            # This avoids the hard binary ±1 that systematically inflates composite
+            # magnitude relative to other signal types (root cause of chronic
+            # adversarial-gate divergence).
             sma_short = _safe_mean(prices, self._sma_short)  # type: ignore[arg-type]
             sma_long = _safe_mean(prices, self._sma_long)  # type: ignore[arg-type]
-            if sma_short is not None and sma_long is not None:
-                ts["sma_crossover"] = 1.0 if sma_short > sma_long else -1.0
+            if sma_short is not None and sma_long is not None and sma_long != 0:
+                raw_ratio = (sma_short - sma_long) / sma_long
+                # Scale so a 2% deviation → signal ≈ 0.5; clip to [-1, 1]
+                ts["sma_crossover"] = max(-1.0, min(1.0, raw_ratio * 25.0))
                 ts["sma_short"] = sma_short
                 ts["sma_long"] = sma_long
 
@@ -239,7 +245,9 @@ class SignalGenerationNode(Node):
                 rsi = self._compute_rsi(prices, self._rsi_period)
                 if rsi is not None:
                     ts["rsi"] = rsi
-                    ts["rsi_signal"] = 1.0 if rsi < 30 else (-1.0 if rsi > 70 else 0.0)
+                    # Continuous: (50 - rsi) / 50 maps RSI=0 → +1, RSI=100 → -1,
+                    # RSI=50 → 0.  More proportional than a hard ±1 threshold.
+                    ts["rsi_signal"] = max(-1.0, min(1.0, (50.0 - rsi) / 50.0))
 
             # MACD
             if self._use_macd:
@@ -247,7 +255,14 @@ class SignalGenerationNode(Node):
                 if macd_line is not None and sig_line is not None:
                     ts["macd"] = macd_line
                     ts["macd_signal_line"] = sig_line
-                    ts["macd_crossover"] = 1.0 if macd_line > sig_line else -1.0
+                    # Proportional: histogram normalised by price (×100 → ~% scale),
+                    # then scaled so a 0.1% histogram → signal ≈ 0.5.  Clip ±1.
+                    price_ref = prices[-1] if prices else 1.0
+                    if price_ref != 0:
+                        histogram = macd_line - sig_line
+                        ts["macd_crossover"] = max(-1.0, min(1.0, histogram / price_ref * 500.0))
+                    else:
+                        ts["macd_crossover"] = 1.0 if macd_line > sig_line else -1.0
 
             # Bollinger Bands
             if self._use_bb:
@@ -257,9 +272,13 @@ class SignalGenerationNode(Node):
                     ts["bb_lower"] = bb["lower"]
                     ts["bb_mid"] = bb["mid"]
                     price = prices[-1]
-                    ts["bb_signal"] = (
-                        1.0 if price < bb["lower"] else (-1.0 if price > bb["upper"] else 0.0)
-                    )
+                    band_half = bb["upper"] - bb["mid"]
+                    if band_half > 0:
+                        # Continuous: how far price deviates from mid as fraction of half-band.
+                        # price at upper band → -1 (overbought); at lower band → +1 (oversold).
+                        ts["bb_signal"] = max(-1.0, min(1.0, (bb["mid"] - price) / band_half))
+                    else:
+                        ts["bb_signal"] = 0.0
 
             # Z-score momentum
             if self._use_zscore:

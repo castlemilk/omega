@@ -238,7 +238,8 @@ class TestSignalGenerationNodeExecution:
         assert "BTCUSDT" in out.result
         btc = out.result["BTCUSDT"]
         assert "sma_crossover" in btc
-        assert btc["sma_crossover"] in (1.0, -1.0)
+        # sma_crossover is now proportional in [-1, 1] (not a hard ±1 binary)
+        assert -1.0 <= btc["sma_crossover"] <= 1.0
 
     def test_compute_signals_composite_bounded(self):
         md = _make_market_data(["BTCUSDT", "ETHUSDT"])

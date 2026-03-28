@@ -177,6 +177,11 @@ class VictoriaNode(Node):
         self._signal_counts_history: list[int] = []
         self._total_cycles_run: int = 0
 
+        # Rolling history for basic_signals z-score normalisation (last 50 values)
+        self._basic_signal_history: list[float] = []
+        # Disagreement tracking: consecutive cycles where basic_signals diverges from consensus
+        self._basic_signal_divergence_count: int = 0
+
         # Lazy-initialised reflection store (requires DATABASE_URL at runtime)
         self._reflection_store: Any = None
 
@@ -812,7 +817,36 @@ class VictoriaNode(Node):
             ]
             signals["basic_signals"] = dict(raw_basic)
             if composites:
-                signals["basic_signals"]["value"] = sum(composites) / len(composites)
+                raw_value = sum(composites) / len(composites)
+
+                # ── Z-score normalisation ──────────────────────────────────────
+                # basic_signals used to output values in ±0.5–1.0 range (all
+                # sub-indicators were binary ±1), while other signal types
+                # (order_flow, cross_asset, etc.) output calibrated values in
+                # ±0.1–0.3.  That systematic scale mismatch caused basic_signals
+                # to dominate signal_debate and chronically fire the adversarial
+                # gate.  We normalise against a rolling window so the output
+                # distribution matches the other signals.
+                self._basic_signal_history.append(raw_value)
+                if len(self._basic_signal_history) > 50:
+                    self._basic_signal_history.pop(0)
+
+                if len(self._basic_signal_history) >= 5:
+                    hist = self._basic_signal_history
+                    mean_h = sum(hist) / len(hist)
+                    variance_h = sum((x - mean_h) ** 2 for x in hist) / max(1, len(hist) - 1)
+                    import math as _math
+                    std_h = _math.sqrt(variance_h) if variance_h > 0 else 1.0
+                    # z-score then squash: tanh keeps the value in (-1, 1) and
+                    # damps extreme spikes that would look like outlier signals.
+                    z = (raw_value - mean_h) / std_h
+                    normalised_value = _math.tanh(z * 0.5)  # ×0.5 → gentler curve
+                else:
+                    # Not enough history yet; preserve sign, dampen magnitude
+                    normalised_value = max(-0.5, min(0.5, raw_value * 0.5))
+
+                signals["basic_signals"]["value"] = normalised_value
+                signals["basic_signals"]["raw_value"] = raw_value  # keep for inspection
                 # confidence = fraction of tickers with non-zero composite
                 non_zero = sum(1 for c in composites if c != 0.0)
                 signals["basic_signals"]["confidence"] = non_zero / len(composites)
@@ -1044,6 +1078,45 @@ class VictoriaNode(Node):
             )
         except Exception as exc:
             logger.debug("wasserstein regime detection failed: %s", exc)
+
+        # 1c. basic_signals disagreement tracking
+        # Log when basic_signals diverges from the consensus of other signals so we
+        # can monitor whether the normalisation fix keeps divergence below the
+        # adversarial-gate threshold (0.40).
+        _basic_val = float(signals.get("basic_signals", {}).get("value", 0.0))  # type: ignore[union-attr]
+        _other_vals = [
+            float(signals[n].get("value", 0.0))  # type: ignore[union-attr]
+            for n in signals
+            if not n.startswith("_") and n != "basic_signals" and isinstance(signals[n], dict)
+        ]
+        if _other_vals:
+            _consensus_val = sum(_other_vals) / len(_other_vals)
+            _divergence = abs(_basic_val - _consensus_val)
+            _DIVERGENCE_THRESHOLD = 0.40
+            if _divergence > _DIVERGENCE_THRESHOLD:
+                self._basic_signal_divergence_count += 1
+                logger.warning(
+                    "basic_signals divergence: value=%.4f consensus=%.4f "
+                    "gap=%.4f (>%.2f) consecutive_divergences=%d",
+                    _basic_val,
+                    _consensus_val,
+                    _divergence,
+                    _DIVERGENCE_THRESHOLD,
+                    self._basic_signal_divergence_count,
+                )
+            else:
+                if self._basic_signal_divergence_count > 0:
+                    logger.info(
+                        "basic_signals back in range: value=%.4f consensus=%.4f "
+                        "gap=%.4f — reset after %d consecutive divergences",
+                        _basic_val,
+                        _consensus_val,
+                        _divergence,
+                        self._basic_signal_divergence_count,
+                    )
+                self._basic_signal_divergence_count = 0
+            signals["_basic_signal_divergence"] = round(_divergence, 4)
+            signals["_basic_signal_consensus"] = round(_consensus_val, 4)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
