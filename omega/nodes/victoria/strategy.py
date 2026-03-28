@@ -278,7 +278,10 @@ class StrategyNode(Node):
             "sit_out_vol_high": float(self._sit_out_vol_high_count),
             "normal_trade_cycles": float(self._normal_trade_count),
             "fiedler_scale": self._last_fiedler_scale,
-            **{f"risk_{k}": float(v) if not isinstance(v, bool) else float(v) for k, v in self._risk.get_metrics().items()},
+            **{
+                f"risk_{k}": float(v) if not isinstance(v, bool) else float(v)
+                for k, v in self._risk.get_metrics().items()
+            },
         }
 
     def update_signal_ics(self, ics: dict[str, float]) -> None:
@@ -891,6 +894,7 @@ class StrategyNode(Node):
         if self._rmt_denoiser is not None:
             _corr_matrix = self._rmt_denoiser.get_denoised_correlation()
             from omega.nodes.victoria.information_flow import SIGNAL_NAMES as _SNAMES
+
             _corr_tickers = list(_SNAMES)
 
         # Conviction scores for corr tie-breaking (use raw float conviction values)

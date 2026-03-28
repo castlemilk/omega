@@ -52,29 +52,126 @@ _RECENCY_HALF_LIFE = 7200.0
 # Keyword lexicon
 # ---------------------------------------------------------------------------
 
-_POSITIVE_KEYWORDS = frozenset({
-    "bullish", "rally", "surge", "soar", "gain", "gains", "rise", "rises",
-    "moon", "breakout", "outperform", "upgrade", "adoption", "buy", "long",
-    "support", "rebound", "recover", "recovery", "upside", "positive",
-    "institutional", "approval", "approved", "partnership", "launch",
-    "growth", "profit", "profits", "all-time high", "ath", "accumulation",
-    "accumulate", "inflow", "inflows", "confidence", "optimistic", "optimism",
-    "strong", "strength", "booming", "boom", "higher", "advance", "advances",
-    "jumped", "jump", "climbed", "climb", "breakthrough", "milestone",
-    "etf", "spot etf", "listing", "listed",
-})
+_POSITIVE_KEYWORDS = frozenset(
+    {
+        "bullish",
+        "rally",
+        "surge",
+        "soar",
+        "gain",
+        "gains",
+        "rise",
+        "rises",
+        "moon",
+        "breakout",
+        "outperform",
+        "upgrade",
+        "adoption",
+        "buy",
+        "long",
+        "support",
+        "rebound",
+        "recover",
+        "recovery",
+        "upside",
+        "positive",
+        "institutional",
+        "approval",
+        "approved",
+        "partnership",
+        "launch",
+        "growth",
+        "profit",
+        "profits",
+        "all-time high",
+        "ath",
+        "accumulation",
+        "accumulate",
+        "inflow",
+        "inflows",
+        "confidence",
+        "optimistic",
+        "optimism",
+        "strong",
+        "strength",
+        "booming",
+        "boom",
+        "higher",
+        "advance",
+        "advances",
+        "jumped",
+        "jump",
+        "climbed",
+        "climb",
+        "breakthrough",
+        "milestone",
+        "etf",
+        "spot etf",
+        "listing",
+        "listed",
+    }
+)
 
-_NEGATIVE_KEYWORDS = frozenset({
-    "bearish", "crash", "dump", "plunge", "fall", "falls", "drop", "drops",
-    "decline", "declines", "sell", "short", "resistance", "correction",
-    "selloff", "sell-off", "liquidation", "liquidations", "outflow", "outflows",
-    "downgrade", "ban", "banned", "hack", "hacked", "exploit", "theft",
-    "scam", "fraud", "lawsuit", "sec", "enforcement", "regulation",
-    "crackdown", "negative", "pessimistic", "pessimism", "weak", "weakness",
-    "lower", "retreat", "retreats", "collapsed", "collapse", "fear",
-    "uncertainty", "fud", "concern", "concerns", "warning", "risk",
-    "losses", "loss", "broke", "broken support", "death cross",
-})
+_NEGATIVE_KEYWORDS = frozenset(
+    {
+        "bearish",
+        "crash",
+        "dump",
+        "plunge",
+        "fall",
+        "falls",
+        "drop",
+        "drops",
+        "decline",
+        "declines",
+        "sell",
+        "short",
+        "resistance",
+        "correction",
+        "selloff",
+        "sell-off",
+        "liquidation",
+        "liquidations",
+        "outflow",
+        "outflows",
+        "downgrade",
+        "ban",
+        "banned",
+        "hack",
+        "hacked",
+        "exploit",
+        "theft",
+        "scam",
+        "fraud",
+        "lawsuit",
+        "sec",
+        "enforcement",
+        "regulation",
+        "crackdown",
+        "negative",
+        "pessimistic",
+        "pessimism",
+        "weak",
+        "weakness",
+        "lower",
+        "retreat",
+        "retreats",
+        "collapsed",
+        "collapse",
+        "fear",
+        "uncertainty",
+        "fud",
+        "concern",
+        "concerns",
+        "warning",
+        "risk",
+        "losses",
+        "loss",
+        "broke",
+        "broken support",
+        "death cross",
+    }
+)
 
 # Ticker → name mappings for per-ticker attribution
 _TICKER_KEYWORDS: dict[str, list[str]] = {
@@ -183,9 +280,8 @@ def _fetch_coingecko_news(now: float) -> list[tuple[str, float, float]]:
         ts_raw = item.get("updated_at") or item.get("published_at") or ""
         try:
             import datetime
-            ts = datetime.datetime.fromisoformat(
-                str(ts_raw).replace("Z", "+00:00")
-            ).timestamp()
+
+            ts = datetime.datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00")).timestamp()
         except Exception:
             ts = now
 
@@ -222,9 +318,8 @@ def _fetch_cryptopanic_news(now: float) -> list[tuple[str, float, float]]:
         ts_raw = item.get("published_at", "")
         try:
             import datetime
-            ts = datetime.datetime.fromisoformat(
-                str(ts_raw).replace("Z", "+00:00")
-            ).timestamp()
+
+            ts = datetime.datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00")).timestamp()
         except Exception:
             ts = now
 
@@ -298,7 +393,9 @@ def _aggregate(
 
     # Confidence: more recent, more articles → higher confidence
     recent_count = sum(1 for _, _, w in articles if w > 0.5)
-    confidence = _clamp(0.3 + 0.4 * min(1.0, recent_count / 10) + 0.3 * min(1.0, total_weight / 5), 0.0, 1.0)
+    confidence = _clamp(
+        0.3 + 0.4 * min(1.0, recent_count / 10) + 0.3 * min(1.0, total_weight / 5), 0.0, 1.0
+    )
 
     return composite, confidence, raw
 
@@ -364,7 +461,10 @@ class FinBertSentimentSignal:
 
         logger.debug(
             "FinBertSentimentSignal: value=%.3f confidence=%.2f regime=%s articles=%d",
-            composite, confidence, regime_tag, len(articles),
+            composite,
+            confidence,
+            regime_tag,
+            len(articles),
         )
 
         return _SignalValue(

@@ -36,10 +36,9 @@ from __future__ import annotations
 
 import json as _json
 import logging
-import math
 import time
-import urllib.request
 import urllib.parse
+import urllib.request
 from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.smart_money_signal")
@@ -282,9 +281,7 @@ class SmartMoneySignal:
 
         # Composite: average over tracked tickers present in consensus,
         # fall back to all tickers if none of the tracked ones appear.
-        tracked_scores = [
-            consensus[t] for t in _TRACKED_TICKERS if t in consensus
-        ]
+        tracked_scores = [consensus[t] for t in _TRACKED_TICKERS if t in consensus]
         if not tracked_scores:
             tracked_scores = list(consensus.values())
 
@@ -295,7 +292,9 @@ class SmartMoneySignal:
         coverage = len([t for t in _TRACKED_TICKERS if t in consensus]) / max(
             1, len(_TRACKED_TICKERS)
         )
-        confidence = _clamp(0.4 + 0.5 * coverage + 0.1 * min(1.0, len(all_positions) / 10), 0.0, 1.0)
+        confidence = _clamp(
+            0.4 + 0.5 * coverage + 0.1 * min(1.0, len(all_positions) / 10), 0.0, 1.0
+        )
 
         if composite > 0.2:
             regime_tag = "smart_money_long"
@@ -309,7 +308,11 @@ class SmartMoneySignal:
 
         logger.debug(
             "SmartMoneySignal: value=%.3f confidence=%.2f regime=%s traders=%d tickers=%d",
-            composite, confidence, regime_tag, len(all_positions), len(consensus),
+            composite,
+            confidence,
+            regime_tag,
+            len(all_positions),
+            len(consensus),
         )
 
         return _SignalValue(

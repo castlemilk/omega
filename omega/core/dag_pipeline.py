@@ -34,9 +34,10 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict, deque
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger("omega.core.dag_pipeline")
 
@@ -80,9 +81,7 @@ class PipelineResult:
     wave_membership: dict[str, int] = field(default_factory=dict)
 
     def summary(self) -> str:
-        cp_ms = sum(
-            self.timings[n].duration_ms for n in self.critical_path if n in self.timings
-        )
+        cp_ms = sum(self.timings[n].duration_ms for n in self.critical_path if n in self.timings)
         waves_str = ", ".join(f"{d:.1f}ms" for d in self.wave_durations)
         return (
             f"total={self.total_duration_ms:.1f}ms  "
@@ -136,15 +135,11 @@ class DAGPipeline:
         for name, node in self._nodes.items():
             for dep in node.deps:
                 if dep not in self._nodes:
-                    raise ValueError(
-                        f"Signal '{name}' declares unknown dependency '{dep}'"
-                    )
+                    raise ValueError(f"Signal '{name}' declares unknown dependency '{dep}'")
                 in_degree[name] += 1
                 dependents[dep].append(name)
 
-        queue: deque[str] = deque(
-            name for name, deg in in_degree.items() if deg == 0
-        )
+        queue: deque[str] = deque(name for name, deg in in_degree.items() if deg == 0)
         waves: list[list[str]] = []
         wave_map: dict[str, int] = {}
 
@@ -164,9 +159,7 @@ class DAGPipeline:
         scheduled = sum(len(w) for w in waves)
         if scheduled != len(self._nodes):
             cycle_nodes = [n for n, d in in_degree.items() if d > 0]
-            raise ValueError(
-                f"DAG has a cycle involving: {cycle_nodes}"
-            )
+            raise ValueError(f"DAG has a cycle involving: {cycle_nodes}")
 
         logger.debug(
             "DAG topology: %d nodes in %d waves: %s",
@@ -222,8 +215,7 @@ class DAGPipeline:
                     thread_name_prefix=f"dag_wave{wave_idx}",
                 ) as executor:
                     future_to_name = {
-                        executor.submit(self._exec_node, name, snap, ctx): name
-                        for name in wave
+                        executor.submit(self._exec_node, name, snap, ctx): name for name in wave
                     }
                     for future in as_completed(future_to_name):
                         name = future_to_name[future]

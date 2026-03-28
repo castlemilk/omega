@@ -88,12 +88,12 @@ class DebateGateLearner:
 
     def __init__(
         self,
-        initial_threshold: float = _ADVERSARIAL_SCORE_THRESHOLD,
+        initial_threshold: float = 1.0,
         alpha: float = 0.05,  # EMA step size
         target_block_rate: float = 0.30,  # aim to block ~30% of proposals
         window: int = 50,  # rolling window for rate computation
         min_threshold: float = 0.10,
-        max_threshold: float = 0.70,
+        max_threshold: float = 1.5,
     ) -> None:
         self.threshold = initial_threshold
         self._alpha = alpha
@@ -242,7 +242,9 @@ class OmegaOrchestrator:
         # are more than 90° apart — genuine directional disagreement, not scale artefacts.
         # Previously 0.40 Euclidean, but basic_signals' raw price sub-keys (BB levels, SMA prices)
         # were inflating Euclidean distance regardless of signal direction.
-        self._adversarial = adversarial if adversarial is not None else AdversarialPressureV2(ring1_threshold=1.0)
+        self._adversarial = (
+            adversarial if adversarial is not None else AdversarialPressureV2(ring1_threshold=1.0)
+        )
         self._consolidation = memory_consolidation
         self._metrics = metrics_exporter
         self._paper_trading = paper_trading
@@ -255,9 +257,14 @@ class OmegaOrchestrator:
         self._store: Any = None
         self._semantic_memory = SemanticMemoryNode(review_interval=50)
 
-        # Debate gate learner — learns optimal block threshold from outcomes
+        # Debate gate learner — learns optimal block threshold from outcomes.
+        # initial=1.0 matches Ring 1's cosine-distance threshold; max=1.5
+        # gives headroom for whale_flow which naturally produces 1.0–1.3
+        # disagreement even after tanh dampening (vs previous max of 0.70
+        # which capped effective_threshold at 0.70, blocking at max_disagreement >0.70).
         self._gate_learner = DebateGateLearner(
-            initial_threshold=_ADVERSARIAL_SCORE_THRESHOLD,
+            initial_threshold=1.0,
+            max_threshold=1.5,
         )
 
         logger.info("OmegaOrchestrator '%s' initialised", name)
@@ -1132,9 +1139,7 @@ class OmegaOrchestrator:
                     # Skip zero-confidence signals
                     confidence = sig_val.get("confidence")
                     if confidence is not None and float(confidence) == 0.0:
-                        log.debug(
-                            "Ring1 filter: skipping zero-confidence signal '%s'", sig_name
-                        )
+                        log.debug("Ring1 filter: skipping zero-confidence signal '%s'", sig_name)
                         continue
                     # Per-signal-type variant: flatten its numeric sub-fields
                     flat: dict[str, float] = {}
@@ -1157,9 +1162,7 @@ class OmegaOrchestrator:
         # sparse signal cycles.
         _skip_ring1 = confident_signal_count < 3
         if _skip_ring1:
-            log.debug(
-                "Ring1 skipped: only %d confident signals (need ≥3)", confident_signal_count
-            )
+            log.debug("Ring1 skipped: only %d confident signals (need ≥3)", confident_signal_count)
 
         # Fallback: synthesise variant_outputs from proposal weights if no signal data
         if not variant_outputs:

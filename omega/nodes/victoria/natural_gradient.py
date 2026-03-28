@@ -107,12 +107,12 @@ class NaturalGradientOptimizer:
             )
             return self._weights.copy()
 
-        signals = np.array(self._signal_history)   # (T, n)
-        returns = np.array(self._return_history)   # (T,)
+        signals = np.array(self._signal_history)  # (T, n)
+        returns = np.array(self._return_history)  # (T,)
 
         # ---- 1. Euclidean gradient of MSE loss --------------------------
-        predicted = signals @ self._weights           # (T,)
-        residuals = returns - predicted               # (T,)
+        predicted = signals @ self._weights  # (T,)
+        residuals = returns - predicted  # (T,)
         variance = max(float(np.var(residuals)), 1e-10)
 
         # ∇L = -1/T  Σ_t  signal_t * residual_t   (MSE gradient w.r.t. w)
@@ -121,10 +121,7 @@ class NaturalGradientOptimizer:
         # ---- 2. Fisher information matrix --------------------------------
         # score_t = signal_t * residual_t / σ²   shape (T, n)
         scores = signals * residuals[:, None] / variance
-        self._fisher = (
-            scores.T @ scores / len(scores)
-            + _FISHER_REG * np.eye(self.n)
-        )
+        self._fisher = scores.T @ scores / len(scores) + _FISHER_REG * np.eye(self.n)
 
         # ---- 3. Natural gradient = F^{-1} * ∇L --------------------------
         try:
@@ -150,9 +147,7 @@ class NaturalGradientOptimizer:
     def weight_dict(self, signal_names: list[str]) -> dict[str, float]:
         """Return current weights as a {name: weight} dict."""
         if len(signal_names) != self.n:
-            raise ValueError(
-                f"signal_names length {len(signal_names)} != n_signals {self.n}"
-            )
+            raise ValueError(f"signal_names length {len(signal_names)} != n_signals {self.n}")
         return dict(zip(signal_names, self._weights.tolist()))
 
     def reset(self) -> None:

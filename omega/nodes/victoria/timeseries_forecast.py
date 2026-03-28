@@ -58,15 +58,15 @@ logger = logging.getLogger("omega.nodes.victoria.timeseries_forecast")
 # Constants
 # ---------------------------------------------------------------------------
 
-_WINDOW = 30          # bars of history tokenised per ticker
-_AR_LAGS = 3          # AR(p) order
-_HOLT_ALPHA = 0.30    # level smoothing
-_HOLT_BETA = 0.15     # trend smoothing
-_BLEND_HOLT = 0.60    # weight on Holt forecast in blend
-_BLEND_AR = 0.40      # weight on AR forecast in blend
-_VOL_WINDOW = 10      # bars for rolling vol (denominator of signal)
+_WINDOW = 30  # bars of history tokenised per ticker
+_AR_LAGS = 3  # AR(p) order
+_HOLT_ALPHA = 0.30  # level smoothing
+_HOLT_BETA = 0.15  # trend smoothing
+_BLEND_HOLT = 0.60  # weight on Holt forecast in blend
+_BLEND_AR = 0.40  # weight on AR forecast in blend
+_VOL_WINDOW = 10  # bars for rolling vol (denominator of signal)
 _SENTIMENT_WEIGHT = 0.15  # max news/sentiment bias on final signal
-_CACHE_TTL = 300      # seconds — 5 minutes between forced refreshes
+_CACHE_TTL = 300  # seconds — 5 minutes between forced refreshes
 
 
 # ---------------------------------------------------------------------------
@@ -200,10 +200,10 @@ class TickerForecast:
     """Single-ticker forecast result."""
 
     ticker: str
-    forecast_signal: float          # [-1.0, +1.0]
-    predicted_return: float         # raw 1-step predicted return
-    confidence: float               # 0.0–1.0
-    holt_price: float | None = None # Holt predicted price
+    forecast_signal: float  # [-1.0, +1.0]
+    predicted_return: float  # raw 1-step predicted return
+    confidence: float  # 0.0–1.0
+    holt_price: float | None = None  # Holt predicted price
     ar_return: float | None = None  # AR predicted return
     vol_scale: float = 0.02
     sentiment_bias: float = 0.0
@@ -230,8 +230,9 @@ def _forecast_ticker(
     prices = _clean(close_raw)
 
     if len(prices) < _WINDOW:
-        logger.debug("timeseries_forecast: %s skipped — need %d bars, got %d",
-                     ticker, _WINDOW, len(prices))
+        logger.debug(
+            "timeseries_forecast: %s skipped — need %d bars, got %d", ticker, _WINDOW, len(prices)
+        )
         return None
 
     # Use last _WINDOW bars
@@ -263,10 +264,7 @@ def _forecast_ticker(
         return None
 
     # Normalise blend to [0, 1] weight sum
-    blend_weight = (
-        _BLEND_HOLT * (holt_return is not None)
-        + _BLEND_AR * (ar_return is not None)
-    )
+    blend_weight = _BLEND_HOLT * (holt_return is not None) + _BLEND_AR * (ar_return is not None)
     blended_return = blend_sum / blend_weight if blend_weight > 0 else 0.0
 
     # Convert predicted return to signal via tanh normalised by vol
@@ -274,14 +272,14 @@ def _forecast_ticker(
     signal_raw = math.tanh(blended_return / max(vol_scale, 1e-6) * 0.5)
 
     # Apply sentiment bias (additive, clamped)
-    bias = max(-_SENTIMENT_WEIGHT, min(_SENTIMENT_WEIGHT,
-                                       sentiment_bias * _SENTIMENT_WEIGHT))
+    bias = max(-_SENTIMENT_WEIGHT, min(_SENTIMENT_WEIGHT, sentiment_bias * _SENTIMENT_WEIGHT))
     signal = max(-1.0, min(1.0, signal_raw + bias))
 
     # Confidence: degrades if models disagree (high |holt - ar| diff)
     if holt_return is not None and ar_return is not None:
-        model_agreement = 1.0 - min(1.0, abs(holt_return - ar_return) /
-                                        max(abs(blended_return), 1e-8))
+        model_agreement = 1.0 - min(
+            1.0, abs(holt_return - ar_return) / max(abs(blended_return), 1e-8)
+        )
         confidence = 0.5 + 0.5 * max(0.0, model_agreement)
     else:
         confidence = 0.4  # single model — lower confidence
@@ -350,6 +348,7 @@ def _get_sentiment_bias(market_data: dict[str, Any]) -> float:
     # 2. NewsSignalProvider (free, no auth required)
     try:
         from omega.nodes.victoria.news_signals import NewsSignalProvider
+
         news_val = NewsSignalProvider().compute(market_data)
         # Use news value only if confidence is meaningful
         if news_val.confidence >= 0.2:
@@ -370,7 +369,7 @@ try:
     from omega.nodes.victoria.signals_advanced import SignalValue
 except ImportError:
     # Standalone fallback (tests / direct import)
-    @dataclass  # type: ignore[no-redef]
+    @dataclass
     class SignalValue:  # type: ignore[no-redef]
         value: float
         confidence: float
@@ -439,41 +438,42 @@ class TimeseriesForecastSignal:
             # Cache check
             price_h = _price_hash(data)
             cached = TimeseriesForecastSignal._cache.get(ticker)
-            if (
-                cached is not None
-                and cached[0] == price_h
-                and now - cached[2] < _CACHE_TTL
-            ):
+            fc: TickerForecast | None
+            if cached is not None and cached[0] == price_h and now - cached[2] < _CACHE_TTL:
                 self._cache_hits += 1
                 fc = cached[1]
                 # Re-apply current sentiment bias (may have changed)
                 rebiased = max(
                     -1.0,
-                    min(1.0, fc.raw.get("signal_raw", fc.forecast_signal)
-                        + max(-_SENTIMENT_WEIGHT,
-                              min(_SENTIMENT_WEIGHT,
-                                  sentiment_bias * _SENTIMENT_WEIGHT))),
+                    min(
+                        1.0,
+                        fc.raw.get("signal_raw", fc.forecast_signal)
+                        + max(
+                            -_SENTIMENT_WEIGHT,
+                            min(_SENTIMENT_WEIGHT, sentiment_bias * _SENTIMENT_WEIGHT),
+                        ),
+                    ),
                 )
-                forecasts.append(TickerForecast(
-                    ticker=fc.ticker,
-                    forecast_signal=rebiased,
-                    predicted_return=fc.predicted_return,
-                    confidence=fc.confidence,
-                    holt_price=fc.holt_price,
-                    ar_return=fc.ar_return,
-                    vol_scale=fc.vol_scale,
-                    sentiment_bias=sentiment_bias * _SENTIMENT_WEIGHT,
-                    raw=dict(fc.raw),
-                ))
+                forecasts.append(
+                    TickerForecast(
+                        ticker=fc.ticker,
+                        forecast_signal=rebiased,
+                        predicted_return=fc.predicted_return,
+                        confidence=fc.confidence,
+                        holt_price=fc.holt_price,
+                        ar_return=fc.ar_return,
+                        vol_scale=fc.vol_scale,
+                        sentiment_bias=sentiment_bias * _SENTIMENT_WEIGHT,
+                        raw=dict(fc.raw),
+                    )
+                )
                 continue
 
             # Compute fresh forecast
             try:
                 fc = _forecast_ticker(ticker, data, sentiment_bias)
             except Exception as exc:
-                logger.debug(
-                    "timeseries_forecast: ticker=%s failed: %s", ticker, exc
-                )
+                logger.debug("timeseries_forecast: ticker=%s failed: %s", ticker, exc)
                 fc = None
 
             if fc is not None:
@@ -496,9 +496,7 @@ class TimeseriesForecastSignal:
         # Composite: confidence-weighted average of per-ticker signals
         total_weight = sum(fc.confidence for fc in forecasts)
         if total_weight > 0:
-            composite = sum(
-                fc.forecast_signal * fc.confidence for fc in forecasts
-            ) / total_weight
+            composite = sum(fc.forecast_signal * fc.confidence for fc in forecasts) / total_weight
         else:
             composite = sum(fc.forecast_signal for fc in forecasts) / len(forecasts)
 
@@ -507,9 +505,7 @@ class TimeseriesForecastSignal:
         # Aggregate confidence
         avg_confidence = total_weight / len(forecasts)
         n_valid = len(forecasts)
-        n_requested = len(
-            [t for t, d in market_data.items() if isinstance(d, dict)]
-        )
+        n_requested = len([t for t, d in market_data.items() if isinstance(d, dict)])
         coverage_conf = n_valid / max(1, n_requested)
         final_confidence = min(1.0, avg_confidence * 0.7 + coverage_conf * 0.3)
 

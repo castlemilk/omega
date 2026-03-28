@@ -38,7 +38,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger("omega.core.data_resilience")
@@ -61,13 +61,13 @@ class _ProviderHealth:
     """Mutable health state tracked per provider."""
 
     name: str
-    state: str = "CLOSED"          # CLOSED | OPEN | HALF_OPEN
-    failure_count: int = 0         # consecutive failures in current window
-    trip_count: int = 0            # how many times circuit has opened
+    state: str = "CLOSED"  # CLOSED | OPEN | HALF_OPEN
+    failure_count: int = 0  # consecutive failures in current window
+    trip_count: int = 0  # how many times circuit has opened
     last_failure_time: float = 0.0
     last_success_time: float = 0.0
-    error_count: int = 0           # total lifetime errors
-    success_count: int = 0         # total lifetime successes
+    error_count: int = 0  # total lifetime errors
+    success_count: int = 0  # total lifetime successes
     last_error: str = ""
 
     def backoff_seconds(self) -> float:
@@ -166,8 +166,8 @@ class DataResilienceLayer:
         from omega.nodes.victoria.data_providers import (
             BinanceProvider,
             BybitProvider,
-            CoinGeckoProvider,
             CoinbaseProvider,
+            CoinGeckoProvider,
             CryptoCompareProvider,
             KrakenProvider,
         )
@@ -257,10 +257,9 @@ class DataResilienceLayer:
             len(all_pairs),
         )
         for sig_name, sig_val in signals.items():
-            if isinstance(sig_val, dict) and "confidence" in sig_val:
-                sig_val["confidence"] = 0.0
-                sig_val["stale"] = True
-            elif isinstance(sig_val, dict):
+            if (isinstance(sig_val, dict) and "confidence" in sig_val) or isinstance(
+                sig_val, dict
+            ):
                 sig_val["confidence"] = 0.0
                 sig_val["stale"] = True
 
@@ -298,13 +297,9 @@ class DataResilienceLayer:
                 "timestamp": 1712345678.9,
             }
         """
-        provider_statuses = {
-            name: h.status_dict() for name, h in self._health.items()
-        }
+        provider_statuses = {name: h.status_dict() for name, h in self._health.items()}
 
-        open_count = sum(
-            1 for h in self._health.values() if h.state == "OPEN"
-        )
+        open_count = sum(1 for h in self._health.values() if h.state == "OPEN")
         if open_count == 0:
             overall = "healthy"
         elif open_count < len(self._health):
@@ -369,9 +364,7 @@ class DataResilienceLayer:
                 )
                 return data
 
-        logger.error(
-            "DataResilience: ALL providers failed for %s — no price data", pair
-        )
+        logger.error("DataResilience: ALL providers failed for %s — no price data", pair)
         return None
 
     def _call_provider(
@@ -383,12 +376,13 @@ class DataResilienceLayer:
         limit: int,
     ) -> dict[str, Any] | None:
         """Call a provider's fetch_klines, recording health outcomes."""
+        from typing import cast
         health = self._health[provider_name]
         try:
             # All OHLCV providers expose fetch_klines(pair, interval, limit)
             data = provider.fetch_klines(pair, interval=interval, limit=limit)
             if data is not None:
-                return data
+                return cast(dict[str, Any], data)
             # None return = soft failure (no exception)
             health.record_failure(f"fetch_klines returned None for {pair}")
             return None

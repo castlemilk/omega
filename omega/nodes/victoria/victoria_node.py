@@ -40,6 +40,7 @@ from typing import Any, ClassVar
 
 from omega.core.actions import NodeAction
 from omega.core.credentials import credentials
+from omega.core.data_resilience import get_resilience_layer
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.node_skills import (
     NodeSkillFramework,
@@ -51,6 +52,7 @@ from omega.nodes.victoria.alt_data_signals import AltDataSignalProvider
 from omega.nodes.victoria.carry_signals import FundingCarrySignal
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
+from omega.nodes.victoria.finbert_sentiment import FinBertSentimentSignal
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.momentum_factor import CrossSectionalMomentumSignal
 from omega.nodes.victoria.pairs_signals import PairsTradingSignal
@@ -66,15 +68,13 @@ from omega.nodes.victoria.signals_advanced import (
     OrderFlowSignal,
     SentimentSignal,
 )
+from omega.nodes.victoria.smart_money_signal import SmartMoneySignal
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
-from omega.nodes.victoria.smart_money_signal import SmartMoneySignal
-from omega.nodes.victoria.finbert_sentiment import FinBertSentimentSignal
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
-from omega.core.data_resilience import get_resilience_layer
 
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
@@ -101,9 +101,9 @@ SIGNAL_NAMES = [
     "pairs",  # Cointegration pairs spread z-score
     "momentum_factor",  # Cross-sectional Jegadeesh-Titman momentum
     "timeseries_forecast",  # Holt + AR(3) Kronos-style next-period return forecast
-"smart_money",          # Binance top-trader position consensus
-    "finbert_sentiment",    # Keyword-based crypto news sentiment (recency-weighted)
-"whale_flow",           # Exchange inflow/outflow whale pressure signal
+    "smart_money",  # Binance top-trader position consensus
+    "finbert_sentiment",  # Keyword-based crypto news sentiment (recency-weighted)
+    "whale_flow",  # Exchange inflow/outflow whale pressure signal
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -160,12 +160,12 @@ class VictoriaNode(Node):
         # Timeseries forecast (Kronos-inspired: Holt + AR next-period return)
         self._timeseries_forecast = TimeseriesForecastSignal()
 
-# Smart-money: Binance top-trader position consensus
+        # Smart-money: Binance top-trader position consensus
         self._smart_money = SmartMoneySignal()
 
         # FinBERT-style sentiment: keyword-based crypto news sentiment
         self._finbert_sentiment = FinBertSentimentSignal()
-# Whale flow signal — exchange inflow/outflow pressure (10-min cached)
+        # Whale flow signal — exchange inflow/outflow pressure (10-min cached)
         self._whale_flow = WhaleFlowSignal()
 
         # Dynamic weight allocator
@@ -829,7 +829,9 @@ class VictoriaNode(Node):
                 sig_val["warmup"] = True
                 logger.debug(
                     "Signal '%s' in warmup period (cycle %d/%d) — excluded from Ring 1",
-                    sig_name, count, self._SIGNAL_WARMUP_CYCLES,
+                    sig_name,
+                    count,
+                    self._SIGNAL_WARMUP_CYCLES,
                 )
             elif sig_val.get("warmup"):
                 # Clear the tag once warmup is over
@@ -890,6 +892,7 @@ class VictoriaNode(Node):
                 # regimes (std→tiny, z→huge, tanh→1.0), making the false-positive
                 # problem worse rather than better.
                 import math as _math
+
                 normalised_value = _math.tanh(raw_value) * 0.25
 
                 signals["basic_signals"]["value"] = normalised_value
@@ -1095,8 +1098,17 @@ class VictoriaNode(Node):
 
             try:
                 wf_val = self._whale_flow.compute(market_data)
+                # Proportional dampening — whale_flow outputs values near ±1.0 at high
+                # confidence, producing cosine distances > 1.0 vs other signals in the
+                # ±0.1–0.3 range.  This caused 112 adversarial events across 85 cycles.
+                # Compress to ±0.46 range (matching calibrated peers) while preserving
+                # direction and relative magnitude.  See: basic_signals tanh*0.25 fix.
+                import math as _wf_math
+
+                wf_normalised = _wf_math.tanh(wf_val.value) * 0.5
                 signals["whale_flow"] = {
-                    "value": wf_val.value,
+                    "value": wf_normalised,
+                    "raw_value": wf_val.value,
                     "confidence": wf_val.confidence,
                     "regime_tag": wf_val.regime_tag,
                     "raw": wf_val.raw,
@@ -1174,9 +1186,9 @@ class VictoriaNode(Node):
         # Log when basic_signals diverges from the consensus of other signals so we
         # can monitor whether the normalisation fix keeps divergence below the
         # adversarial-gate threshold (0.40).
-        _basic_val = float(signals.get("basic_signals", {}).get("value", 0.0))  # type: ignore[union-attr]
+        _basic_val = float(signals.get("basic_signals", {}).get("value", 0.0))
         _other_vals = [
-            float(signals[n].get("value", 0.0))  # type: ignore[union-attr]
+            float(signals[n].get("value", 0.0))
             for n in signals
             if not n.startswith("_") and n != "basic_signals" and isinstance(signals[n], dict)
         ]
@@ -1400,13 +1412,21 @@ class VictoriaNode(Node):
 
         def _market_data_signal(acc: dict, ctx: dict) -> dict:
             val = self._market_data_signal.compute(ctx["market_data"])
-            return {"value": val.value, "confidence": val.confidence,
-                    "regime_tag": val.regime_tag, "raw": val.raw}
+            return {
+                "value": val.value,
+                "confidence": val.confidence,
+                "regime_tag": val.regime_tag,
+                "raw": val.raw,
+            }
 
         def _alt_data(acc: dict, ctx: dict) -> dict:
             val = self._alt_data.compute()
-            return {"value": val.value, "confidence": val.confidence,
-                    "regime_tag": val.regime_tag, "raw": val.raw}
+            return {
+                "value": val.value,
+                "confidence": val.confidence,
+                "regime_tag": val.regime_tag,
+                "raw": val.raw,
+            }
 
         def _basic_signals(acc: dict, ctx: dict) -> dict:
             basic_out = self._signals.execute(
@@ -1448,23 +1468,39 @@ class VictoriaNode(Node):
 
         def _order_flow(acc: dict, ctx: dict) -> dict:
             v = self._order_flow.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _cross_asset(acc: dict, ctx: dict) -> dict:
             v = self._cross_asset.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _microstructure(acc: dict, ctx: dict) -> dict:
             v = self._microstructure.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _sentiment(acc: dict, ctx: dict) -> dict:
             v = self._sentiment.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _vrp(acc: dict, ctx: dict) -> dict:
             vrp_out = self._vrp.execute(
@@ -1476,61 +1512,107 @@ class VictoriaNode(Node):
             )
             if vrp_out.success and vrp_out.result:
                 vr = vrp_out.result
-                return {"value": vr.get("vrp_signal", 0.0),
-                        "confidence": vr.get("confidence", 0.0),
-                        "regime_tag": vr.get("vrp_regime", "NEUTRAL"),
-                        "raw": vr}
+                return {
+                    "value": vr.get("vrp_signal", 0.0),
+                    "confidence": vr.get("confidence", 0.0),
+                    "regime_tag": vr.get("vrp_regime", "NEUTRAL"),
+                    "raw": vr,
+                }
             return {"value": 0.0, "confidence": 0.0, "regime_tag": "NEUTRAL", "raw": {}}
 
         def _onchain(acc: dict, ctx: dict) -> dict:
             v = self._onchain.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _long_short_ratio(acc: dict, ctx: dict) -> dict:
             v = self._long_short_ratio.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _btc_dominance(acc: dict, ctx: dict) -> dict:
             v = self._btc_dominance.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _carry(acc: dict, ctx: dict) -> dict:
             v = self._carry.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _pairs(acc: dict, ctx: dict) -> dict:
             v = self._pairs.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _momentum_factor(acc: dict, ctx: dict) -> dict:
             v = self._momentum_factor.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _timeseries_forecast(acc: dict, ctx: dict) -> dict:
             v = self._timeseries_forecast.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _smart_money(acc: dict, ctx: dict) -> dict:
             v = self._smart_money.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _finbert_sentiment(acc: dict, ctx: dict) -> dict:
             v = self._finbert_sentiment.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _whale_flow(acc: dict, ctx: dict) -> dict:
+            import math as _wf_math
+
             v = self._whale_flow.compute(ctx["market_data"])
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            wf_normalised = _wf_math.tanh(v.value) * 0.5
+            return {
+                "value": wf_normalised,
+                "raw_value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _rmt_signal(acc: dict, ctx: dict) -> dict:
             signal_vec = {
@@ -1539,8 +1621,12 @@ class VictoriaNode(Node):
                 if isinstance(acc.get(name), dict) and "value" in acc[name]
             }
             v = self._rmt_denoiser.compute(signal_vec)
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _spectral_graph(acc: dict, ctx: dict) -> dict:
             signal_vec = {
@@ -1549,8 +1635,12 @@ class VictoriaNode(Node):
                 if isinstance(acc.get(name), dict) and "value" in acc[name]
             }
             v = self._spectral_graph.compute(signal_vec)
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
 
         def _wasserstein(acc: dict, ctx: dict) -> dict:
             signal_vec = {
@@ -1588,50 +1678,128 @@ class VictoriaNode(Node):
 
         dag_nodes: list[SignalNode] = [
             # Wave 0
-            SignalNode("market_data_signal", deps=[], fn=_market_data_signal,
-                       description="MarketDataSignal — processes raw OHLCV"),
-            SignalNode("alt_data", deps=[], fn=_alt_data,
-                       description="AltDataSignalProvider — independent external fetch"),
+            SignalNode(
+                "market_data_signal",
+                deps=[],
+                fn=_market_data_signal,
+                description="MarketDataSignal — processes raw OHLCV",
+            ),
+            SignalNode(
+                "alt_data",
+                deps=[],
+                fn=_alt_data,
+                description="AltDataSignalProvider — independent external fetch",
+            ),
             # Wave 1
-            SignalNode("basic_signals", deps=wave1_deps, fn=_basic_signals,
-                       description="SMA/RSI/MACD/BB technical signals"),
-            SignalNode("order_flow", deps=wave1_deps, fn=_order_flow,
-                       description="VPIN / order-flow imbalance"),
-            SignalNode("cross_asset", deps=wave1_deps, fn=_cross_asset,
-                       description="BTC/ETH/SOL cross-asset correlation"),
-            SignalNode("microstructure", deps=wave1_deps, fn=_microstructure,
-                       description="Spread / tick pattern microstructure"),
-            SignalNode("sentiment", deps=wave1_deps, fn=_sentiment,
-                       description="Funding rate / OI sentiment"),
-            SignalNode("vrp", deps=wave1_deps, fn=_vrp,
-                       description="Volatility risk premium regime"),
-            SignalNode("onchain", deps=wave1_deps, fn=_onchain,
-                       description="On-chain flow signals"),
-            SignalNode("long_short_ratio", deps=wave1_deps, fn=_long_short_ratio,
-                       description="Exchange long/short ratio"),
-            SignalNode("btc_dominance", deps=wave1_deps, fn=_btc_dominance,
-                       description="BTC dominance trend signal"),
-            SignalNode("carry", deps=wave1_deps, fn=_carry,
-                       description="Funding-rate carry / mean-reversion"),
-            SignalNode("pairs", deps=wave1_deps, fn=_pairs,
-                       description="Cointegration pairs spread z-score"),
-            SignalNode("momentum_factor", deps=wave1_deps, fn=_momentum_factor,
-                       description="Cross-sectional Jegadeesh-Titman momentum"),
-            SignalNode("timeseries_forecast", deps=wave1_deps, fn=_timeseries_forecast,
-                       description="Holt + AR(3) Kronos-style next-period return forecast"),
-SignalNode("smart_money", deps=[], fn=_smart_money,
-                       description="Binance top-trader position consensus"),
-            SignalNode("finbert_sentiment", deps=[], fn=_finbert_sentiment,
-                       description="Keyword-based crypto news sentiment (recency-weighted)"),
-SignalNode("whale_flow", deps=[], fn=_whale_flow,
-                       description="Exchange inflow/outflow whale pressure (10-min cached)"),
+            SignalNode(
+                "basic_signals",
+                deps=wave1_deps,
+                fn=_basic_signals,
+                description="SMA/RSI/MACD/BB technical signals",
+            ),
+            SignalNode(
+                "order_flow",
+                deps=wave1_deps,
+                fn=_order_flow,
+                description="VPIN / order-flow imbalance",
+            ),
+            SignalNode(
+                "cross_asset",
+                deps=wave1_deps,
+                fn=_cross_asset,
+                description="BTC/ETH/SOL cross-asset correlation",
+            ),
+            SignalNode(
+                "microstructure",
+                deps=wave1_deps,
+                fn=_microstructure,
+                description="Spread / tick pattern microstructure",
+            ),
+            SignalNode(
+                "sentiment",
+                deps=wave1_deps,
+                fn=_sentiment,
+                description="Funding rate / OI sentiment",
+            ),
+            SignalNode(
+                "vrp", deps=wave1_deps, fn=_vrp, description="Volatility risk premium regime"
+            ),
+            SignalNode(
+                "onchain", deps=wave1_deps, fn=_onchain, description="On-chain flow signals"
+            ),
+            SignalNode(
+                "long_short_ratio",
+                deps=wave1_deps,
+                fn=_long_short_ratio,
+                description="Exchange long/short ratio",
+            ),
+            SignalNode(
+                "btc_dominance",
+                deps=wave1_deps,
+                fn=_btc_dominance,
+                description="BTC dominance trend signal",
+            ),
+            SignalNode(
+                "carry",
+                deps=wave1_deps,
+                fn=_carry,
+                description="Funding-rate carry / mean-reversion",
+            ),
+            SignalNode(
+                "pairs",
+                deps=wave1_deps,
+                fn=_pairs,
+                description="Cointegration pairs spread z-score",
+            ),
+            SignalNode(
+                "momentum_factor",
+                deps=wave1_deps,
+                fn=_momentum_factor,
+                description="Cross-sectional Jegadeesh-Titman momentum",
+            ),
+            SignalNode(
+                "timeseries_forecast",
+                deps=wave1_deps,
+                fn=_timeseries_forecast,
+                description="Holt + AR(3) Kronos-style next-period return forecast",
+            ),
+            SignalNode(
+                "smart_money",
+                deps=[],
+                fn=_smart_money,
+                description="Binance top-trader position consensus",
+            ),
+            SignalNode(
+                "finbert_sentiment",
+                deps=[],
+                fn=_finbert_sentiment,
+                description="Keyword-based crypto news sentiment (recency-weighted)",
+            ),
+            SignalNode(
+                "whale_flow",
+                deps=[],
+                fn=_whale_flow,
+                description="Exchange inflow/outflow whale pressure (10-min cached)",
+            ),
             # Wave 2
-            SignalNode("rmt_signal", deps=wave2_deps, fn=_rmt_signal,
-                       description="RMT denoiser — structured vs noisy market"),
-            SignalNode("spectral_graph", deps=wave2_deps, fn=_spectral_graph,
-                       description="Fiedler value — correlation network stress"),
-            SignalNode("wasserstein_regime", deps=wave2_deps, fn=_wasserstein,
-                       description="Wasserstein regime detector"),
+            SignalNode(
+                "rmt_signal",
+                deps=wave2_deps,
+                fn=_rmt_signal,
+                description="RMT denoiser — structured vs noisy market",
+            ),
+            SignalNode(
+                "spectral_graph",
+                deps=wave2_deps,
+                fn=_spectral_graph,
+                description="Fiedler value — correlation network stress",
+            ),
+            SignalNode(
+                "wasserstein_regime",
+                deps=wave2_deps,
+                fn=_wasserstein,
+                description="Wasserstein regime detector",
+            ),
         ]
 
         pipeline = DAGPipeline(dag_nodes, max_workers=8)
@@ -1643,12 +1811,29 @@ SignalNode("whale_flow", deps=[], fn=_whale_flow,
 
         # Signals directly mapped from DAG nodes
         for name in (
-            "basic_signals", "order_flow", "cross_asset", "microstructure",
-            "sentiment", "vrp", "market_data_signal", "onchain", "long_short_ratio",
-            "btc_dominance", "alt_data", "carry", "pairs", "momentum_factor",
-"timeseries_forecast", "rmt_signal", "spectral_graph",
-            "smart_money", "finbert_sentiment",
-"timeseries_forecast", "whale_flow", "rmt_signal", "spectral_graph",
+            "basic_signals",
+            "order_flow",
+            "cross_asset",
+            "microstructure",
+            "sentiment",
+            "vrp",
+            "market_data_signal",
+            "onchain",
+            "long_short_ratio",
+            "btc_dominance",
+            "alt_data",
+            "carry",
+            "pairs",
+            "momentum_factor",
+            "timeseries_forecast",
+            "rmt_signal",
+            "spectral_graph",
+            "smart_money",
+            "finbert_sentiment",
+            "timeseries_forecast",
+            "whale_flow",
+            "rmt_signal",
+            "spectral_graph",
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
@@ -1691,9 +1876,9 @@ SignalNode("whale_flow", deps=[], fn=_whale_flow,
         signals["_dag_waves"] = len(dag_result.wave_durations)
 
         # basic_signals divergence tracking (identical to serial path)
-        _basic_val = float(signals.get("basic_signals", {}).get("value", 0.0))  # type: ignore[union-attr]
+        _basic_val = float(signals.get("basic_signals", {}).get("value", 0.0))
         _other_vals = [
-            float(signals[n].get("value", 0.0))  # type: ignore[union-attr]
+            float(signals[n].get("value", 0.0))
             for n in signals
             if not n.startswith("_") and n != "basic_signals" and isinstance(signals[n], dict)
         ]

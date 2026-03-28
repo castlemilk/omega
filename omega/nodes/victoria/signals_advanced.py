@@ -32,7 +32,7 @@ class SignalValue:
     value: float  # directional: -1.0 (bear) to +1.0 (bull)
     confidence: float  # 0.0 (no confidence) to 1.0 (full confidence)
     regime_tag: str  # e.g. "trending", "ranging", "high_vol", "toxic_flow"
-    raw: dict[str, float]  # underlying computed values for inspection
+    raw: dict[str, Any]  # underlying computed values for inspection
 
 
 # ---------------------------------------------------------------------------

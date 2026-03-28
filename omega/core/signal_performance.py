@@ -49,7 +49,7 @@ from __future__ import annotations
 import logging
 import math
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger("omega.core.signal_performance")
@@ -78,10 +78,10 @@ class SignalRanking:
     """Performance summary for a single signal, sorted by composite_score."""
 
     signal_name: str
-    ic: float            # information coefficient (Pearson r)
-    hit_rate: float      # profitable-direction match rate
-    value_added: float   # PnL vs flat portfolio baseline
-    stability: float     # lag-1 autocorrelation [0, 1]
+    ic: float  # information coefficient (Pearson r)
+    hit_rate: float  # profitable-direction match rate
+    value_added: float  # PnL vs flat portfolio baseline
+    stability: float  # lag-1 autocorrelation [0, 1]
     composite_score: float
     sample_count: int
 
@@ -275,7 +275,7 @@ class SignalPerformanceTracker:
             return
 
         try:
-            import psycopg  # type: ignore[import]
+            import psycopg
         except ImportError:
             logger.debug("persist_to_db: psycopg not available — skipping")
             return
@@ -334,7 +334,13 @@ class SignalPerformanceTracker:
         """Return raw metric dict for a single signal (for testing / diagnostics)."""
         history = self._history.get(name, [])
         if len(history) < _MIN_SAMPLES:
-            return {"ic": 0.0, "hit_rate": 0.0, "value_added": 0.0, "stability": 0.0, "n": float(len(history))}
+            return {
+                "ic": 0.0,
+                "hit_rate": 0.0,
+                "value_added": 0.0,
+                "stability": 0.0,
+                "n": float(len(history)),
+            }
         values = [h[0] for h in history]
         returns = [h[1] for h in history]
         pnls = [h[2] for h in history]
@@ -348,6 +354,7 @@ class SignalPerformanceTracker:
 
 
 # ── Table DDL ──────────────────────────────────────────────────────────────────
+
 
 def _ensure_table(cur: Any) -> None:
     """Create signal_performance table if it does not exist (idempotent)."""
@@ -382,6 +389,7 @@ def _ensure_table(cur: Any) -> None:
 
 
 # ── Statistical helpers ────────────────────────────────────────────────────────
+
 
 def _pearson_correlation(xs: list[float], ys: list[float]) -> float:
     """

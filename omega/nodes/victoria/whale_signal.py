@@ -23,12 +23,12 @@ Fallback: 0.0 with confidence=0.0 if all sources fail.
 
 from __future__ import annotations
 
+import json as _json
 import logging
 import math
 import os
 import time
 import urllib.request
-import json as _json
 from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.whale_signal")
@@ -92,7 +92,9 @@ class _SignalValue:
 
 
 def _unavailable(reason: str) -> _SignalValue:
-    return _SignalValue(value=0.0, confidence=0.0, regime_tag="unavailable", raw={"reason": 0.0, reason: 0.0})
+    return _SignalValue(
+        value=0.0, confidence=0.0, regime_tag="unavailable", raw={"reason": 0.0, reason: 0.0}
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -377,7 +379,9 @@ class WhaleFlowSignal:
                 if sv.confidence > 0.0:
                     logger.debug(
                         "WhaleFlowSignal [whale-alert]: value=%.3f confidence=%.2f regime=%s",
-                        sv.value, sv.confidence, sv.regime_tag,
+                        sv.value,
+                        sv.confidence,
+                        sv.regime_tag,
                     )
                     return sv
             except Exception as exc:
@@ -391,7 +395,9 @@ class WhaleFlowSignal:
                 if sv.confidence > 0.0:
                     logger.debug(
                         "WhaleFlowSignal [coinglass]: value=%.3f confidence=%.2f regime=%s",
-                        sv.value, sv.confidence, sv.regime_tag,
+                        sv.value,
+                        sv.confidence,
+                        sv.regime_tag,
                     )
                     return sv
             except Exception as exc:
@@ -403,7 +409,9 @@ class WhaleFlowSignal:
             if sv.confidence > 0.0:
                 logger.debug(
                     "WhaleFlowSignal [binance-proxy]: value=%.3f confidence=%.2f regime=%s",
-                    sv.value, sv.confidence, sv.regime_tag,
+                    sv.value,
+                    sv.confidence,
+                    sv.regime_tag,
                 )
                 return sv
         except Exception as exc:

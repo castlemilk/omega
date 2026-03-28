@@ -26,7 +26,6 @@ from __future__ import annotations
 import importlib
 import logging
 import os
-import re
 import socket
 import urllib.parse
 from dataclasses import dataclass, field
@@ -43,7 +42,7 @@ _CRITICAL_KEYS: tuple[str, ...] = ()
 # Keys that will cause a WARNING if missing
 _WARN_KEYS: tuple[str, ...] = (
     "COINGECKO_API_KEY",
-    "CG_API_KEY",          # alias accepted
+    "CG_API_KEY",  # alias accepted
     "ANTHROPIC_API_KEY",
     "DATABASE_URL",
 )
@@ -52,11 +51,14 @@ _WARN_KEYS: tuple[str, ...] = (
 _KEY_GROUPS: list[tuple[str, tuple[str, ...]]] = [
     ("COINGECKO_API_KEY", ("COINGECKO_API_KEY", "CG_API_KEY")),
     ("ANTHROPIC_API_KEY", ("ANTHROPIC_API_KEY", "CLAUDE_API_KEY")),
-    ("DATABASE_URL",      ("DATABASE_URL",)),
+    ("DATABASE_URL", ("DATABASE_URL",)),
 ]
 
 # Required Python dependencies
-_REQUIRED_DEPS = ("numpy", "scipy", "sklearn", "pandas")
+_REQUIRED_DEPS = (
+    "numpy",
+    "scipy",
+)  # sklearn+pandas removed: C-ext codesign issue on macOS 3.14 (signals use numpy fallbacks)
 
 # Signal modules to validate (relative to omega.nodes.victoria)
 _SIGNAL_MODULES = [
@@ -91,16 +93,26 @@ _SIGNAL_MODULES = [
 
 # Docker services: (name, host, port)
 _DOCKER_SERVICES: list[tuple[str, str, int]] = [
-    ("postgres",   "localhost", 5432),
+    ("postgres", "localhost", 5432),
     ("prometheus", "localhost", 9090),
-    ("grafana",    "localhost", 3000),
+    ("grafana", "localhost", 3000),
 ]
 
 # Required columns in victoria_trades (including recent migration additions)
 _VICTORIA_TRADES_REQUIRED_COLUMNS = {
-    "id", "ts", "sym", "side", "size", "entry", "exit_price",
-    "pnl", "slippage", "duration", "recorded_at",
-    "trade_id", "closed_at",
+    "id",
+    "ts",
+    "sym",
+    "side",
+    "size",
+    "entry",
+    "exit_price",
+    "pnl",
+    "slippage",
+    "duration",
+    "recorded_at",
+    "trade_id",
+    "closed_at",
 }
 
 # Required tables for system operation
@@ -116,8 +128,9 @@ _REQUIRED_TABLES = (
 
 # ── Result types ──────────────────────────────────────────────────────────────
 
+
 class CheckResult(NamedTuple):
-    status: str   # "ok" | "warn" | "error"
+    status: str  # "ok" | "warn" | "error"
     label: str
     detail: str
 
@@ -146,8 +159,8 @@ class ValidationReport:
         print("=== Omega Startup Validation ===")
         for c in self.checks:
             tag = {
-                "ok":    "[OK]   ",
-                "warn":  "[WARN] ",
+                "ok": "[OK]   ",
+                "warn": "[WARN] ",
                 "error": "[ERROR]",
             }.get(c.status, "[?????]")
             print(f"{tag} {c.label}: {c.detail}")
@@ -163,14 +176,12 @@ class ValidationReport:
         else:
             err_suffix = "error" if total_err == 1 else "errors"
             warn_suffix = "warning" if total_warn == 1 else "warnings"
-            print(
-                f"=== NOT READY — {total_err} {err_suffix}, "
-                f"{total_warn} {warn_suffix} ==="
-            )
+            print(f"=== NOT READY — {total_err} {err_suffix}, {total_warn} {warn_suffix} ===")
         print()
 
 
 # ── Validator ─────────────────────────────────────────────────────────────────
+
 
 class StartupValidator:
     """Full pre-flight validation suite."""
@@ -235,13 +246,15 @@ class StartupValidator:
             critical_missing = [k for k in missing if k in _CRITICAL_KEYS]
             if critical_missing:
                 report.add(
-                    "error", "API Keys",
-                    f"{n_present}/{total} present (MISSING CRITICAL: {', '.join(critical_missing)})"
+                    "error",
+                    "API Keys",
+                    f"{n_present}/{total} present (MISSING CRITICAL: {', '.join(critical_missing)})",
                 )
             else:
                 report.add(
-                    "warn", "API Keys",
-                    f"{n_present}/{total} present (missing: {', '.join(missing)})"
+                    "warn",
+                    "API Keys",
+                    f"{n_present}/{total} present (missing: {', '.join(missing)})",
                 )
         else:
             report.add("ok", "API Keys", f"{n_present}/{total} present")
@@ -279,7 +292,7 @@ class StartupValidator:
             return
 
         try:
-            import psycopg  # type: ignore[import]
+            import psycopg
         except ImportError:
             report.add("warn", "Database", "psycopg not installed — skipping DB check")
             return
@@ -302,8 +315,9 @@ class StartupValidator:
             safe_url = _redact_db_url(db_url)
             if missing_tables:
                 report.add(
-                    "warn", "Database",
-                    f"connected ({safe_url}) — missing tables: {', '.join(missing_tables)}"
+                    "warn",
+                    "Database",
+                    f"connected ({safe_url}) — missing tables: {', '.join(missing_tables)}",
                 )
             else:
                 report.add("ok", "Database", f"connected ({safe_url})")
@@ -319,7 +333,7 @@ class StartupValidator:
             return  # already warned in database check
 
         try:
-            import psycopg  # type: ignore[import]
+            import psycopg
         except ImportError:
             return
 
@@ -343,8 +357,9 @@ class StartupValidator:
         missing_cols = _VICTORIA_TRADES_REQUIRED_COLUMNS - existing
         if missing_cols:
             report.add(
-                "warn", "Schema",
-                f"victoria_trades missing columns: {', '.join(sorted(missing_cols))}"
+                "warn",
+                "Schema",
+                f"victoria_trades missing columns: {', '.join(sorted(missing_cols))}",
             )
         else:
             report.add("ok", "Schema", "victoria_trades has all required columns")
@@ -366,9 +381,10 @@ class StartupValidator:
         total = len(_SIGNAL_MODULES)
         if failed:
             report.add(
-                "warn", "Signals",
+                "warn",
+                "Signals",
                 f"{healthy}/{total} modules healthy — failures: {', '.join(failed[:5])}"
-                + (" ..." if len(failed) > 5 else "")
+                + (" ..." if len(failed) > 5 else ""),
             )
         else:
             report.add("ok", "Signals", f"{healthy}/{total} modules healthy")
@@ -391,6 +407,7 @@ class StartupValidator:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _find_env_file() -> Path:
     """Walk up from cwd looking for .env."""
@@ -440,6 +457,7 @@ def _short_exc(exc: Exception) -> str:
 
 
 # ── Convenience entry point ────────────────────────────────────────────────────
+
 
 def run_validation(
     skip_docker: bool = False,

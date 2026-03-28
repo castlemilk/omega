@@ -182,18 +182,14 @@ def get_consensus(
     # --- find the target token_id ---
     token_id = _find_token_id(market, outcome)
     if not token_id:
-        logger.debug(
-            "TopTraders: no %s token found for market %s", outcome, condition_id
-        )
+        logger.debug("TopTraders: no %s token found for market %s", outcome, condition_id)
         return base
 
     # --- fetch order book ---
     try:
         book = clob_client.get_order_book(token_id)
     except Exception as exc:
-        logger.warning(
-            "TopTraders: get_order_book(%s) failed: %s", token_id[:16], exc
-        )
+        logger.warning("TopTraders: get_order_book(%s) failed: %s", token_id[:16], exc)
         return base
 
     if book is None or (not book.bids and not book.asks):
@@ -258,9 +254,7 @@ def get_multi_market_consensus(
 
     Returns a dict mapping condition_id → SmartMoneyConsensus.
     """
-    return {
-        cid: get_consensus(clob_client, cid, outcome) for cid in condition_ids
-    }
+    return {cid: get_consensus(clob_client, cid, outcome) for cid in condition_ids}
 
 
 def aggregate_consensus(signals: list[SmartMoneyConsensus]) -> dict[str, Any]:
@@ -273,8 +267,13 @@ def aggregate_consensus(signals: list[SmartMoneyConsensus]) -> dict[str, Any]:
       - ``bull_count`` / ``bear_count`` / ``neutral_count``
     """
     if not signals:
-        return {"direction": "neutral", "avg_confidence": 0.0,
-                "bull_count": 0, "bear_count": 0, "neutral_count": 0}
+        return {
+            "direction": "neutral",
+            "avg_confidence": 0.0,
+            "bull_count": 0,
+            "bear_count": 0,
+            "neutral_count": 0,
+        }
 
     bull_weight = sum(s.confidence for s in signals if s.direction == "bull")
     bear_weight = sum(s.confidence for s in signals if s.direction == "bear")
@@ -288,11 +287,7 @@ def aggregate_consensus(signals: list[SmartMoneyConsensus]) -> dict[str, Any]:
         direction = "neutral"
 
     directional = [s for s in signals if s.direction != "neutral"]
-    avg_conf = (
-        sum(s.confidence for s in directional) / len(directional)
-        if directional
-        else 0.0
-    )
+    avg_conf = sum(s.confidence for s in directional) / len(directional) if directional else 0.0
 
     return {
         "direction": direction,
@@ -343,9 +338,7 @@ class TopTradersNode(Node):
     # ------------------------------------------------------------------
 
     def get_state(self) -> NodeState:
-        avg_lat = (
-            self._total_latency_ms / self._exec_count if self._exec_count else 0.0
-        )
+        avg_lat = self._total_latency_ms / self._exec_count if self._exec_count else 0.0
         return NodeState(
             node_id=self.NODE_NAME,
             name="TopTradersNode",

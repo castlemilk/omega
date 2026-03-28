@@ -10,16 +10,22 @@ top_traders   — Smart-money consensus derived from order-book flow
 strategies    — Execution strategies (latency arb, market making, etc.)
 """
 
-from omega.nodes.polymarket.clob_client import CLOBClient, MarketInfo, OrderBook, PaperOrderResult, LiveOrderResult
-from omega.nodes.polymarket.top_traders import TopTradersNode, SmartMoneyConsensus, get_consensus
+from omega.nodes.polymarket.clob_client import (
+    CLOBClient,
+    LiveOrderResult,
+    MarketInfo,
+    OrderBook,
+    PaperOrderResult,
+)
+from omega.nodes.polymarket.top_traders import SmartMoneyConsensus, TopTradersNode, get_consensus
 
 __all__ = [
     "CLOBClient",
+    "LiveOrderResult",
     "MarketInfo",
     "OrderBook",
     "PaperOrderResult",
-    "LiveOrderResult",
-    "TopTradersNode",
     "SmartMoneyConsensus",
+    "TopTradersNode",
     "get_consensus",
 ]

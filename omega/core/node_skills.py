@@ -20,10 +20,10 @@ Modules
 
 from __future__ import annotations
 
+import logging
 import math
 import re
 import uuid
-import logging
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -112,8 +112,8 @@ class SkillRegistry:
         if success:
             skill.success_count += 1
         alpha = 0.1
-        skill.confidence_score = (
-            (1 - alpha) * skill.confidence_score + alpha * (1.0 if success else 0.0)
+        skill.confidence_score = (1 - alpha) * skill.confidence_score + alpha * (
+            1.0 if success else 0.0
         )
         skill.last_updated = datetime.now()
 
@@ -263,18 +263,13 @@ class SignalEvolution:
         n = len(self._values)
         recent = list(self._values)[-5:]
         avg_recent = sum(recent) / len(recent) if recent else 0.0
-        return (
-            f"value={value:.4f} avg_recent_5={avg_recent:.4f} "
-            f"n_obs={n} → {to_state.value}"
-        )
+        return f"value={value:.4f} avg_recent_5={avg_recent:.4f} n_obs={n} → {to_state.value}"
 
     @property
     def signal_reliability(self) -> float:
         """Fraction of lifecycle completions that reached STABLE vs FALSIFIED."""
         stable = sum(1 for t in self.transitions if t.to_state == SignalLifecycle.STABLE)
-        falsified = sum(
-            1 for t in self.transitions if t.to_state == SignalLifecycle.FALSIFIED
-        )
+        falsified = sum(1 for t in self.transitions if t.to_state == SignalLifecycle.FALSIFIED)
         total = stable + falsified
         return stable / total if total > 0 else 0.5  # neutral prior
 
@@ -313,14 +308,10 @@ class SignalEvolutionTracker:
     def signal_reliability(self) -> float:
         """Overall reliability: fraction of signals in STABLE vs FALSIFIED."""
         stable = sum(
-            1
-            for e in self._evolutions.values()
-            if e.current_state == SignalLifecycle.STABLE
+            1 for e in self._evolutions.values() if e.current_state == SignalLifecycle.STABLE
         )
         falsified = sum(
-            1
-            for e in self._evolutions.values()
-            if e.current_state == SignalLifecycle.FALSIFIED
+            1 for e in self._evolutions.values() if e.current_state == SignalLifecycle.FALSIFIED
         )
         total = stable + falsified
         return stable / total if total > 0 else 0.5
@@ -386,10 +377,7 @@ class ISQResult:
 
     def __str__(self) -> str:
         status = "PASS" if self.passed else "FAIL"
-        return (
-            f"ISQ[{status}] score={self.qualification_score:.3f} "
-            f"concerns={len(self.concerns)}"
-        )
+        return f"ISQ[{status}] score={self.qualification_score:.3f} concerns={len(self.concerns)}"
 
 
 class ISQValidator:
@@ -434,16 +422,10 @@ class ISQValidator:
         check_results["data_freshness"] = self._check_freshness(market_data, concerns)
         check_results["signal_count"] = self._check_signal_count(signals, concerns)
         check_results["signal_consistency"] = self._check_consistency(signals, concerns)
-        check_results["regime_alignment"] = self._check_regime_alignment(
-            signals, ctx, concerns
-        )
-        check_results["cross_validation"] = self._check_cross_validation(
-            signals, concerns
-        )
+        check_results["regime_alignment"] = self._check_regime_alignment(signals, ctx, concerns)
+        check_results["cross_validation"] = self._check_cross_validation(signals, concerns)
 
-        score = sum(
-            self._WEIGHTS[k] * check_results[k] for k in self._WEIGHTS
-        )
+        score = sum(self._WEIGHTS[k] * check_results[k] for k in self._WEIGHTS)
         passed = score >= self._template.qualification_threshold
 
         result = ISQResult(
@@ -459,9 +441,7 @@ class ISQValidator:
     # Individual checks
     # ------------------------------------------------------------------ #
 
-    def _check_freshness(
-        self, market_data: dict[str, Any], concerns: list[str]
-    ) -> float:
+    def _check_freshness(self, market_data: dict[str, Any], concerns: list[str]) -> float:
         ts = market_data.get("timestamp") or market_data.get("fetched_at")
         if ts is None:
             concerns.append("No market data timestamp — freshness unknown")
@@ -481,21 +461,15 @@ class ISQValidator:
             age = (datetime.now() - dt).total_seconds()
             max_age = self._template.data_freshness_max_seconds
             if age > max_age * 2:
-                concerns.append(
-                    f"Market data stale: {age:.0f}s old (max {max_age:.0f}s)"
-                )
+                concerns.append(f"Market data stale: {age:.0f}s old (max {max_age:.0f}s)")
                 return 0.0
             return max(0.0, 1.0 - age / max_age)
         except Exception:
             return 0.5  # can't parse → neutral
 
-    def _check_signal_count(
-        self, signals: dict[str, Any], concerns: list[str]
-    ) -> float:
+    def _check_signal_count(self, signals: dict[str, Any], concerns: list[str]) -> float:
         count = sum(
-            1
-            for k, v in signals.items()
-            if not k.startswith("_") and isinstance(v, (int, float))
+            1 for k, v in signals.items() if not k.startswith("_") and isinstance(v, (int, float))
         )
         # Also count dict-type signals that have a "value" field
         count += sum(
@@ -511,9 +485,7 @@ class ISQValidator:
             return count / max(min_count, 1)
         return 1.0
 
-    def _check_consistency(
-        self, signals: dict[str, Any], concerns: list[str]
-    ) -> float:
+    def _check_consistency(self, signals: dict[str, Any], concerns: list[str]) -> float:
         values: list[float] = []
         for k, v in signals.items():
             if k.startswith("_"):
@@ -547,11 +519,7 @@ class ISQValidator:
         context: dict[str, Any],
         concerns: list[str],
     ) -> float:
-        regime = (
-            context.get("regime")
-            or signals.get("_regime")
-            or "NEUTRAL"
-        )
+        regime = context.get("regime") or signals.get("_regime") or "NEUTRAL"
         regime_sigs = self._template.regime_alignment_signals
         if not regime_sigs:
             return 0.65  # no template → partial credit
@@ -582,14 +550,10 @@ class ISQValidator:
             score = 0.65  # neutral regime → partial credit
 
         if score < 0.35:
-            concerns.append(
-                f"Signals poorly aligned with regime '{regime}' (avg={avg:.3f})"
-            )
+            concerns.append(f"Signals poorly aligned with regime '{regime}' (avg={avg:.3f})")
         return score
 
-    def _check_cross_validation(
-        self, signals: dict[str, Any], concerns: list[str]
-    ) -> float:
+    def _check_cross_validation(self, signals: dict[str, Any], concerns: list[str]) -> float:
         pairs = self._template.cross_validation_pairs
         if not pairs:
             return 0.65  # no template → partial credit
@@ -603,9 +567,7 @@ class ISQValidator:
             agree = v1 * v2 >= 0  # same sign → agreement
             scores.append(1.0 if agree else 0.0)
             if not agree:
-                concerns.append(
-                    f"Cross-signal conflict: {s1}={v1:.3f} ↔ {s2}={v2:.3f}"
-                )
+                concerns.append(f"Cross-signal conflict: {s1}={v1:.3f} ↔ {s2}={v2:.3f}")
 
         return sum(scores) / len(scores) if scores else 0.65
 
@@ -761,9 +723,7 @@ class NodeRAGContext:
         )
         self._knowledge.append(ep)
 
-    def retrieve(
-        self, query: dict[str, Any], top_k: int = 5
-    ) -> list[dict[str, Any]]:
+    def retrieve(self, query: dict[str, Any], top_k: int = 5) -> list[dict[str, Any]]:
         """
         BM25-ranked retrieval from recent + best + knowledge stores.
 
@@ -782,16 +742,12 @@ class NodeRAGContext:
         for ep in corpus:
             for t in set(ep.tokens):
                 df[t] = df.get(t, 0) + 1
-        idf = {
-            t: math.log((N - cnt + 0.5) / (cnt + 0.5) + 1)
-            for t, cnt in df.items()
-        }
+        idf = {t: math.log((N - cnt + 0.5) / (cnt + 0.5) + 1) for t, cnt in df.items()}
 
         avg_dl = sum(len(ep.tokens) for ep in corpus) / N
 
         scored: list[tuple[float, RAGEpisode]] = [
-            (_bm25_score(query_tokens, ep.tokens, avg_dl, idf), ep)
-            for ep in corpus
+            (_bm25_score(query_tokens, ep.tokens, avg_dl, idf), ep) for ep in corpus
         ]
         scored.sort(key=lambda x: x[0], reverse=True)
 
@@ -972,9 +928,7 @@ class NodeSkillFramework:
             score=score,
         )
 
-    def retrieve_context(
-        self, query: dict[str, Any], top_k: int = 5
-    ) -> list[dict[str, Any]]:
+    def retrieve_context(self, query: dict[str, Any], top_k: int = 5) -> list[dict[str, Any]]:
         """Retrieve the most relevant past episodes for the given query."""
         return self.rag.retrieve(query, top_k=top_k)
 
@@ -989,9 +943,7 @@ class NodeSkillFramework:
             "skill_count": float(skill_summary["count"]),
             "avg_skill_confidence": float(skill_summary.get("avg_confidence", 0.0)),
             "signal_reliability": round(self.evolution.signal_reliability, 4),
-            "isq_score": (
-                self._last_isq.qualification_score if self._last_isq else 0.5
-            ),
+            "isq_score": (self._last_isq.qualification_score if self._last_isq else 0.5),
             "isq_passed": float(self._last_isq.passed if self._last_isq else 0),
             "cycle_count": float(self._cycle_count),
             "rag_recent_episodes": float(self.rag.episode_count),

@@ -48,7 +48,6 @@ from __future__ import annotations
 
 import logging
 import math
-from collections import deque
 from datetime import UTC, datetime
 from typing import Any
 
@@ -57,18 +56,18 @@ import numpy as np
 logger = logging.getLogger("omega.core.risk_manager")
 
 # ── tuneable constants ────────────────────────────────────────────────────────
-MAX_DRAWDOWN_PCT: float = 0.08        # halt trading if PnL drops 8% below peak
-MAX_POSITIONS: int = 6                # hard cap on concurrent positions
-MAX_CAPITAL_DEPLOYED: float = 0.30    # max sum(|weights|) ≤ 30%
-CORR_THRESHOLD: float = 0.75         # RMT correlation above which tickers conflict
-VOL_WINDOW: int = 20                 # bars used to compute recent realised vol
-VOL_HISTORY_LEN: int = 60            # price history length for vol estimation
-TARGET_VOL: float = 0.15             # annualised target vol for vol-scaling (≈ risk-parity)
+MAX_DRAWDOWN_PCT: float = 0.08  # halt trading if PnL drops 8% below peak
+MAX_POSITIONS: int = 6  # hard cap on concurrent positions
+MAX_CAPITAL_DEPLOYED: float = 0.30  # max sum(|weights|) ≤ 30%
+CORR_THRESHOLD: float = 0.75  # RMT correlation above which tickers conflict
+VOL_WINDOW: int = 20  # bars used to compute recent realised vol
+VOL_HISTORY_LEN: int = 60  # price history length for vol estimation
+TARGET_VOL: float = 0.15  # annualised target vol for vol-scaling (≈ risk-parity)
 # Time-of-day windows (UTC hour, minute) → size multiplier
 _TIME_RISK_WINDOWS: list[tuple[int, int, int, int, float]] = [
     # (start_hour, start_min, end_hour, end_min, multiplier)
-    (14, 30, 15, 30, 0.50),   # US market open — most volatile 60-min window
-    (0,   0,  1,  0, 0.75),   # Asia pre-session — moderate reduction
+    (14, 30, 15, 30, 0.50),  # US market open — most volatile 60-min window
+    (0, 0, 1, 0, 0.75),  # Asia pre-session — moderate reduction
 ]
 
 
@@ -338,7 +337,11 @@ class PositionRiskManager:
             if window_start <= current_minutes < window_end:
                 logger.debug(
                     "RiskManager: time window %02d:%02d–%02d:%02d UTC → size multiplier %.2f",
-                    start_h, start_m, end_h, end_m, multiplier,
+                    start_h,
+                    start_m,
+                    end_h,
+                    end_m,
+                    multiplier,
                 )
                 return multiplier
 
@@ -346,9 +349,7 @@ class PositionRiskManager:
 
     # ──────────────────────────────────────── layer 5: portfolio heat ────────
 
-    def apply_portfolio_heat(
-        self, weights: dict[str, float]
-    ) -> dict[str, float]:
+    def apply_portfolio_heat(self, weights: dict[str, float]) -> dict[str, float]:
         """
         Enforce portfolio heat caps:
           - Maximum self.max_positions concurrent positions
@@ -371,7 +372,7 @@ class PositionRiskManager:
         if len(result) > self.max_positions:
             # Keep the self.max_positions largest by |weight|
             sorted_by_size = sorted(result.items(), key=lambda kv: abs(kv[1]), reverse=True)
-            trimmed = sorted_by_size[self.max_positions:]
+            trimmed = sorted_by_size[self.max_positions :]
             for ticker, _ in trimmed:
                 del result[ticker]
                 self.heat_trims += 1
@@ -444,9 +445,7 @@ class PositionRiskManager:
 
         # Layer 2: correlation filter
         if corr_matrix is not None and tickers is not None:
-            result = self.filter_correlated_positions(
-                result, corr_matrix, tickers, convictions
-            )
+            result = self.filter_correlated_positions(result, corr_matrix, tickers, convictions)
 
         # Layer 3: volatility scaling
         if price_histories:
@@ -496,11 +495,9 @@ class PositionRiskManager:
         if len(clean) < window + 1:
             return TARGET_VOL
 
-        recent = clean[-(window + 1):]
+        recent = clean[-(window + 1) :]
         log_rets = [
-            math.log(recent[i] / recent[i - 1])
-            for i in range(1, len(recent))
-            if recent[i - 1] > 0
+            math.log(recent[i] / recent[i - 1]) for i in range(1, len(recent)) if recent[i - 1] > 0
         ]
         if len(log_rets) < 2:
             return TARGET_VOL

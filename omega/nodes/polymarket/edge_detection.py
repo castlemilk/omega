@@ -295,9 +295,7 @@ class EdgeDetectionNode(Node):
             logger.debug("_get_memory_adjustment failed: %s", exc)
             return 0.0
 
-    def _get_smart_money_signal(
-        self, market_id: str, direction: str
-    ) -> dict[str, Any]:
+    def _get_smart_money_signal(self, market_id: str, direction: str) -> dict[str, Any]:
         """
         Query TopTradersNode for smart-money consensus on a market.
 
@@ -319,9 +317,8 @@ class EdgeDetectionNode(Node):
             smart_dir = r.get("direction", "neutral")
             smart_conf = float(r.get("confidence", 0.0))
             # "bull" aligns with YES direction; "bear" aligns with NO
-            aligned = (
-                (smart_dir == "bull" and direction == "YES")
-                or (smart_dir == "bear" and direction == "NO")
+            aligned = (smart_dir == "bull" and direction == "YES") or (
+                smart_dir == "bear" and direction == "NO"
             )
             return {
                 "smart_direction": smart_dir,

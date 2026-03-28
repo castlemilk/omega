@@ -259,9 +259,7 @@ class CLOBClient:
                 logger.debug("CLOBClient: no credentials — read-only mode")
 
         except ImportError:
-            raise RuntimeError(
-                "py-clob-client not installed.  Run: pip install py-clob-client"
-            )
+            raise RuntimeError("py-clob-client not installed.  Run: pip install py-clob-client")
 
         return self._client
 
@@ -387,9 +385,7 @@ class CLOBClient:
             return self._paper_order(token_id, side, price, size_usdc)
 
         if not self._creds_available:
-            logger.error(
-                "CLOBClient.place_limit_order: LIVE mode but no credentials configured."
-            )
+            logger.error("CLOBClient.place_limit_order: LIVE mode but no credentials configured.")
             return self._paper_order(token_id, side, price, size_usdc)
 
         return self._live_limit_order(token_id, side, price, size_usdc)
@@ -409,9 +405,7 @@ class CLOBClient:
         """
         market = self.get_market(condition_id)
         if market is None or not market.tokens:
-            logger.warning(
-                "CLOBClient.place_market_order: market not found for %s", condition_id
-            )
+            logger.warning("CLOBClient.place_market_order: market not found for %s", condition_id)
             return self._paper_order(condition_id, side, 0.0, size_usdc)
 
         # Map YES/NO to the correct token.
@@ -425,9 +419,7 @@ class CLOBClient:
                 break
 
         if not token_id:
-            logger.warning(
-                "CLOBClient.place_market_order: no %s token for %s", side, condition_id
-            )
+            logger.warning("CLOBClient.place_market_order: no %s token for %s", side, condition_id)
             return self._paper_order(condition_id, side, price, size_usdc)
 
         return self.place_limit_order(
