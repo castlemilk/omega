@@ -1123,6 +1123,12 @@ class OmegaOrchestrator:
                     if sig_val.get("stale") is True:
                         log.debug("Ring1 filter: skipping stale signal '%s'", sig_name)
                         continue
+                    # Skip signals in warmup period (new signals, first 20 cycles)
+                    if sig_val.get("warmup") is True:
+                        log.debug(
+                            "Ring1 filter: skipping warmup signal '%s' (calibrating)", sig_name
+                        )
+                        continue
                     # Skip zero-confidence signals
                     confidence = sig_val.get("confidence")
                     if confidence is not None and float(confidence) == 0.0:

@@ -191,6 +191,11 @@ class VictoriaNode(Node):
         self._total_latency_ms = 0.0
         self._brain_executions = 0  # increments each time the LLM brain returns a response
 
+        # Signal warmup: new signals are excluded from Ring 1 for their first
+        # SIGNAL_WARMUP_CYCLES cycles to prevent a new addition from chronically
+        # triggering adversarial blocks while it calibrates.
+        self._signal_cycle_counts: dict[str, int] = {}
+
         # IC tracking for weight learning
         self._prev_signal_values: dict[str, float] = {}
         self._quality_history: list[float] = []
@@ -805,6 +810,31 @@ class VictoriaNode(Node):
             self._last_market_data = out.result if isinstance(out.result, dict) else {}
         return self._last_market_data
 
+    # Number of cycles a new signal is excluded from Ring 1 consensus.
+    _SIGNAL_WARMUP_CYCLES: int = 20
+
+    def _apply_warmup_tags(self, signals: dict[str, Any]) -> None:
+        """Increment per-signal cycle counts and tag warmup=True for new signals.
+
+        Signals younger than _SIGNAL_WARMUP_CYCLES are tagged so the orchestrator
+        can exclude them from Ring 1 consensus computation, preventing a newly-added
+        signal from chronically triggering adversarial blocks while it calibrates.
+        """
+        for sig_name, sig_val in signals.items():
+            if sig_name.startswith("_") or not isinstance(sig_val, dict):
+                continue
+            count = self._signal_cycle_counts.get(sig_name, 0) + 1
+            self._signal_cycle_counts[sig_name] = count
+            if count <= self._SIGNAL_WARMUP_CYCLES:
+                sig_val["warmup"] = True
+                logger.debug(
+                    "Signal '%s' in warmup period (cycle %d/%d) — excluded from Ring 1",
+                    sig_name, count, self._SIGNAL_WARMUP_CYCLES,
+                )
+            elif sig_val.get("warmup"):
+                # Clear the tag once warmup is over
+                del sig_val["warmup"]
+
     def _do_compute_signals(self, inp: NodeInput) -> dict[str, Any]:
         """Compute all signal types and apply dynamic weighting."""
         if os.getenv("DAG_PARALLEL"):
@@ -1178,6 +1208,9 @@ class VictoriaNode(Node):
                 self._basic_signal_divergence_count = 0
             signals["_basic_signal_divergence"] = round(_divergence, 4)
             signals["_basic_signal_consensus"] = round(_consensus_val, 4)
+
+        # Tag new signals with warmup=True so Ring 1 excludes them during calibration.
+        self._apply_warmup_tags(signals)
 
         # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
@@ -1695,6 +1728,9 @@ SignalNode("whale_flow", deps=[], fn=_whale_flow,
 
         # ── Post-processing: IC, weights, quality, skill framework ────
         # (identical to serial path — shared logic after signal computation)
+
+        # Tag new signals with warmup=True so Ring 1 excludes them during calibration.
+        self._apply_warmup_tags(signals)
 
         ic_updates: dict[str, float] = {}
         for name, sig in signals.items():
