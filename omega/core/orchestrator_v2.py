@@ -236,7 +236,9 @@ class OmegaOrchestrator:
         self._regime_handler = regime_handler or RegimeTransitionHandler()
         # Always wire an adversarial instance — never leave the gate as None in production.
         # Callers may inject a custom instance (e.g., with DebateGate) for domain-specific behaviour.
-        self._adversarial = adversarial if adversarial is not None else AdversarialPressureV2()
+        # ring1_threshold=0.40: empirical structural max_disagreement for 11 diverse signals is
+        # 0.51-0.63, so 0.20 fires every cycle.  0.40 catches real outliers without constant noise.
+        self._adversarial = adversarial if adversarial is not None else AdversarialPressureV2(ring1_threshold=0.40)
         self._consolidation = memory_consolidation
         self._metrics = metrics_exporter
         self._paper_trading = paper_trading

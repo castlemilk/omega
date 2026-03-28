@@ -79,6 +79,15 @@ PROGRESS_FILE = DATA_DIR / "training_progress.json"
 TRADES_CSV = DATA_DIR / "v10_trades.csv"
 RESULTS_FILE = DATA_DIR / "v10_results.json"
 
+_VERSION = "v10"  # updated by --version arg at startup
+
+
+def _set_version(version: str) -> None:
+    global TRADES_CSV, RESULTS_FILE, _VERSION
+    _VERSION = version
+    TRADES_CSV = DATA_DIR / f"{version}_trades.csv"
+    RESULTS_FILE = DATA_DIR / f"{version}_results.json"
+
 # Staleness: if market data is older than this, skip the cycle
 MAX_STALE_MINUTES = 5.0
 
@@ -425,9 +434,11 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="V10 training run — all filters stacked")
+    parser = argparse.ArgumentParser(description="Training run — all filters stacked")
     parser.add_argument("--cycles", type=int, default=100, help="Number of training cycles")
     parser.add_argument("--sleep", type=float, default=30.0, help="Seconds between cycles")
     parser.add_argument("--log-interval", type=int, default=5, help="Log every N cycles")
+    parser.add_argument("--version", type=str, default="v10", help="Version tag for output files (e.g. v18)")
     args = parser.parse_args()
+    _set_version(args.version)
     run(n_cycles=args.cycles, sleep_seconds=args.sleep, log_interval=args.log_interval)

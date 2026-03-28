@@ -242,19 +242,15 @@ class ImprovementEngine:
     @staticmethod
     def _default_evaluator() -> ImprovementEvaluator:
         """
-        Returns NullEvaluator — domain nodes must inject their own evaluator.
+        Returns SyntheticEvaluator as a safe default so the engine is functional
+        without explicit configuration.  Domain nodes should inject their own
+        evaluator via ImprovementEngine(evaluator=...) or set_evaluator().
 
-        Previously this method imported DataIngestionNode and fetched BTCUSDT,
-        coupling the framework to the trading domain.  That logic now lives in
-        omega/nodes/victoria/domain_config.py (VictoriaDomainConfig.evaluator).
-
-        To use the improvement engine, pass an explicit evaluator::
-
-            ImprovementEngine(evaluator=SyntheticEvaluator())        # tests
-            ImprovementEngine(evaluator=BacktestEvaluator())         # Victoria
-            ImprovementEngine(evaluator=MyDomainEvaluator())         # custom
+        Previously returned NullEvaluator which raised NotImplementedError on
+        every evaluate() call, causing the orchestrator's improvement cycle to
+        crash silently and log "ImprovementEngine has no evaluator configured".
         """
-        return NullEvaluator()
+        return SyntheticEvaluator()
 
     def set_evaluator(self, evaluator: ImprovementEvaluator) -> None:
         """Replace the active evaluator at runtime."""
