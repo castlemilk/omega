@@ -128,7 +128,13 @@ def _make_anthropic_response(text: str) -> MagicMock:
     return mock_resp
 
 
-def test_anthropic_consult_no_api_key():
+def test_anthropic_consult_no_api_key(monkeypatch):
+    # Ensure no API key is resolvable (clear both canonical key and legacy alias)
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("CLAUDE_API_KEY", raising=False)
+    from omega.core import credentials as creds_mod
+    monkeypatch.setattr(creds_mod.credentials, "_cache", {})
+    monkeypatch.setattr(creds_mod.credentials, "_env_file_loaded", True)  # skip .env load
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
     # no key set — should return ""
     result = brain.consult("hello")

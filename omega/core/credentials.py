@@ -73,12 +73,30 @@ class CredentialStore:
         return None
 
     def _load_env_file(self) -> None:
-        """Load credentials from .env file."""
+        """Load credentials from .env file.
+
+        Search order:
+        1. OMEGA_ENV_FILE env var (explicit override)
+        2. .env in CWD
+        3. Walk up parent directories (up to 5 levels) to find .env
+           — supports running from git worktrees where .env lives at the repo root
+        """
         self._env_file_loaded = True
-        candidates = [Path(".env")]
+        candidates: list[Path] = []
         env_file = os.environ.get("OMEGA_ENV_FILE", "")
         if env_file:
             candidates.append(Path(env_file))
+
+        # CWD first, then walk up to repo root
+        cwd = Path(".").resolve()
+        candidates.append(cwd / ".env")
+        parent = cwd.parent
+        for _ in range(5):
+            candidates.append(parent / ".env")
+            if parent == parent.parent:
+                break
+            parent = parent.parent
+
         for env_path in candidates:
             if env_path.exists():
                 with open(env_path) as f:

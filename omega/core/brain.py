@@ -37,6 +37,11 @@ from omega.core.credentials import credentials
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="Anthropic Claude LLM (recommended)"
 )
+credentials.register(
+    "CLAUDE_API_KEY",
+    required=False,
+    description="Alias for ANTHROPIC_API_KEY (legacy .env key name)",
+)
 credentials.register("OPENAI_API_KEY", required=False, description="OpenAI GPT LLM")
 credentials.register(
     "DEEPSEEK_API_KEY", required=False, description="DeepSeek LLM (cost-effective)"
@@ -275,7 +280,10 @@ class AnthropicBrain(BrainAdapter):
     def __init__(self, config: BrainConfig) -> None:
         self.config = config
         self._api_key = (
-            config.extra_config.get("api_key") or credentials.get("ANTHROPIC_API_KEY") or ""
+            config.extra_config.get("api_key")
+            or credentials.get("ANTHROPIC_API_KEY")
+            or credentials.get("CLAUDE_API_KEY")  # legacy alias used in some .env files
+            or ""
         )
         self._model = config.model or "claude-sonnet-4-6"
         self._system = config.system_prompt or _ANTHROPIC_SYSTEM
@@ -847,7 +855,8 @@ def create_brain(config: BrainConfig | None = None) -> BrainAdapter:
 
 def _auto_detect_provider() -> str:
     """Return the best available provider based on env vars or .env file."""
-    if credentials.get("ANTHROPIC_API_KEY"):
+    # Check ANTHROPIC_API_KEY and its legacy alias CLAUDE_API_KEY
+    if credentials.get("ANTHROPIC_API_KEY") or credentials.get("CLAUDE_API_KEY"):
         return "anthropic"
     if credentials.get("OPENAI_API_KEY"):
         return "openai"
