@@ -20,6 +20,7 @@ from typing import Any
 
 from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
+from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
 
@@ -132,6 +133,11 @@ class StrategyNode(Node):
         self._sit_out_vol_high_count: int = 0  # chaotic vol → 50% size reduction
         self._normal_trade_count: int = 0  # cycles with full-size trading
 
+        # --- Spectral graph / Fiedler position size modifier ---
+        self._spectral = SpectralGraphSignal(window=30)
+        self._last_fiedler_scale: float = 1.0
+        self._last_fiedler_tag: str = "warmup"
+
     # ------------------------------------------------------------------ Node interface
 
     def get_state(self) -> NodeState:
@@ -162,6 +168,8 @@ class StrategyNode(Node):
                 "sit_out_vol_low": self._sit_out_vol_low_count,
                 "sit_out_vol_high": self._sit_out_vol_high_count,
                 "normal_trade_cycles": self._normal_trade_count,
+                "fiedler_scale": self._last_fiedler_scale,
+                "fiedler_tag": self._last_fiedler_tag,
             },
         )
 
@@ -261,6 +269,7 @@ class StrategyNode(Node):
             "sit_out_vol_low": float(self._sit_out_vol_low_count),
             "sit_out_vol_high": float(self._sit_out_vol_high_count),
             "normal_trade_cycles": float(self._normal_trade_count),
+            "fiedler_scale": self._last_fiedler_scale,
         }
 
     def update_signal_ics(self, ics: dict[str, float]) -> None:
@@ -406,6 +415,56 @@ class StrategyNode(Node):
 
         return True, "pass"
 
+    # ------------------------------------------------------------------ spectral / Fiedler
+
+    @staticmethod
+    def _fiedler_size_scale(zscore: float, regime_tag: str) -> float:
+        """
+        Convert Fiedler z-score to a position size multiplier in [0.25, 1.0].
+
+        Interpretation:
+          - "warmup"     → 1.0 (no history yet; don't penalise)
+          - "fragmented" → 0.25 (graph disconnected; maximum stress)
+          - Otherwise: linear decay from 1.0 at z=0 down to 0.25 at z≤−5
+            scale = 1.0 + 0.15 * zscore, clamped to [0.25, 1.0]
+            Consensus (z > 0) is capped at 1.0 — no leverage bonus.
+        """
+        if regime_tag == "warmup":
+            return 1.0
+        if regime_tag == "fragmented":
+            return 0.25
+        return max(0.25, min(1.0, 1.0 + 0.15 * zscore))
+
+    def _build_spectral_vector(self, signals: dict[str, Any]) -> dict[str, float]:
+        """
+        Extract the cross-signal category vector for the spectral graph.
+
+        victoria_node.py places each signal module's output as a top-level key in
+        the signals dict under its SIGNAL_NAMES identifier (e.g. "basic_signals",
+        "order_flow", "cross_asset", …).  Each entry is a dict with a "value" field.
+
+        The spectral graph builds a Laplacian of the correlation network of these
+        signal categories over time.  When all signal types agree (high |corr|) →
+        high Fiedler → consensus.  When they diverge → low Fiedler → stress.
+
+        Falls back to 0.0 for signal categories not yet computed (warmup / PICO mode).
+        """
+        from omega.nodes.victoria.information_flow import SIGNAL_NAMES
+
+        result: dict[str, float] = {}
+        for name in SIGNAL_NAMES:
+            sig_cat = signals.get(name)
+            if isinstance(sig_cat, dict):
+                val = sig_cat.get("value", 0.0)
+                try:
+                    f = float(val)
+                    result[name] = f if not (math.isnan(f) or math.isinf(f)) else 0.0
+                except (TypeError, ValueError):
+                    result[name] = 0.0
+            else:
+                result[name] = 0.0
+        return result
+
     # ------------------------------------------------------------------ sit-out filters
 
     def _vol_percentile_rank(
@@ -549,6 +608,14 @@ class StrategyNode(Node):
                 _regime_hmm == "bull" and _regime_confidence >= _regime_confidence_threshold
             )
 
+        # --- Fiedler spectral position size modifier (computed early for all paths) ---
+        # λ₂ of the signal correlation graph Laplacian — low = signals fragmenting.
+        _sv = self._build_spectral_vector(signals)
+        _spectral_val = self._spectral.compute(_sv)
+        _fiedler_scale = self._fiedler_size_scale(_spectral_val.value, _spectral_val.regime_tag)
+        self._last_fiedler_scale = _fiedler_scale
+        self._last_fiedler_tag = _spectral_val.regime_tag
+
         # --- Sit-out filter ---
         sit_out_reason, sit_out_size_mult = self._check_sit_out(signals, market_data)
         if sit_out_reason == "vol_low":
@@ -560,6 +627,9 @@ class StrategyNode(Node):
                 "method": self._weighting,
                 "sit_out": sit_out_reason,
                 "sit_out_size_mult": 0.0,
+                "fiedler_scale": round(_fiedler_scale, 4),
+                "fiedler_regime": _spectral_val.regime_tag,
+                "fiedler_zscore": round(float(_spectral_val.value), 4),
                 "convictions": {t: c.name for t, c in convictions.items()},
                 "proposals_generated": 0,
                 "proposals_filtered": 0,
@@ -664,6 +734,9 @@ class StrategyNode(Node):
                 "weights": {},
                 "positions": 0,
                 "method": self._weighting,
+                "fiedler_scale": round(_fiedler_scale, 4),
+                "fiedler_regime": _spectral_val.regime_tag,
+                "fiedler_zscore": round(float(_spectral_val.value), 4),
                 "convictions": {t: c.name for t, c in convictions.items()},
                 "conviction_distribution": conviction_dist,
                 "proposals_generated": proposals_this_cycle,
@@ -760,6 +833,16 @@ class StrategyNode(Node):
             else {}
         )
 
+        # Apply Fiedler scale (computed at top of method before early returns)
+        if _fiedler_scale < 1.0 and weights:
+            weights = {t: w * _fiedler_scale for t, w in weights.items()}
+            logger.info(
+                "Fiedler scale %.3f (z=%.3f, regime=%s) — position sizes reduced",
+                _fiedler_scale,
+                _spectral_val.value,
+                _spectral_val.regime_tag,
+            )
+
         # Conviction distribution summary for metrics
         conviction_dist = {level.name: 0 for level in ConvictionLevel}
         for c in convictions.values():
@@ -779,6 +862,9 @@ class StrategyNode(Node):
             "signal_threshold": self._signal_threshold,
             "sit_out": sit_out_reason,
             "sit_out_size_mult": sit_out_size_mult,
+            "fiedler_scale": round(_fiedler_scale, 4),
+            "fiedler_regime": _spectral_val.regime_tag,
+            "fiedler_zscore": round(float(_spectral_val.value), 4),
             "convictions": {t: convictions[t].name for t in weights},
             "conviction_distribution": conviction_dist,
             "top_picks": self._rank_signals(signals)[:5],
