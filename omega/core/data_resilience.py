@@ -5,10 +5,12 @@ Multi-provider failover with exponential backoff circuit breakers and stale
 data detection for Victoria market data.
 
 Provider priority for OHLCV price data (per pair):
-    1. Binance      — primary exchange, most liquidity
-    2. Bybit        — tier-1 fallback, same pair format
-    3. CoinGecko    — public API fallback, slower rate limits
-    4. CryptoCompare — last-resort fallback, daily-only
+    1. Binance       — primary exchange, most liquidity
+    2. Bybit         — tier-1 fallback, same pair format
+    3. CoinGecko     — public API fallback, slower rate limits
+    4. Coinbase      — Coinbase Exchange public candles API
+    5. Kraken        — Kraken public OHLC API
+    6. CryptoCompare — last-resort fallback, daily-only
 
 Circuit breaker schedule (per provider):
     3 consecutive failures → open for 30s  (trip 1)
@@ -165,12 +167,16 @@ class DataResilienceLayer:
             BinanceProvider,
             BybitProvider,
             CoinGeckoProvider,
+            CoinbaseProvider,
             CryptoCompareProvider,
+            KrakenProvider,
         )
 
         self._binance = BinanceProvider()
         self._bybit = BybitProvider()
         self._coingecko = CoinGeckoProvider()
+        self._coinbase = CoinbaseProvider()
+        self._kraken = KrakenProvider()
         self._cryptocompare = CryptoCompareProvider()
 
         # Health state per provider (ordered priority)
@@ -178,6 +184,8 @@ class DataResilienceLayer:
             "binance": _ProviderHealth("binance"),
             "bybit": _ProviderHealth("bybit"),
             "coingecko": _ProviderHealth("coingecko"),
+            "coinbase": _ProviderHealth("coinbase"),
+            "kraken": _ProviderHealth("kraken"),
             "cryptocompare": _ProviderHealth("cryptocompare"),
         }
 
@@ -195,7 +203,7 @@ class DataResilienceLayer:
         """
         Fetch OHLCV for all pairs with sequential provider failover.
 
-        For each pair: Binance → Bybit → CoinGecko → CryptoCompare.
+        For each pair: Binance → Bybit → CoinGecko → Coinbase → Kraken → CryptoCompare.
         Returns a dict mapping pair → data (or None if all providers failed).
         Updates per-pair ``_last_fetched_at`` for staleness tracking.
         """
@@ -281,6 +289,8 @@ class DataResilienceLayer:
                     "binance":       { state, trip_count, ... },
                     "bybit":         { ... },
                     "coingecko":     { ... },
+                    "coinbase":      { ... },
+                    "kraken":        { ... },
                     "cryptocompare": { ... },
                 },
                 "stale_pairs": ["BTCUSDT", ...],
@@ -332,6 +342,8 @@ class DataResilienceLayer:
             ("binance", self._binance),
             ("bybit", self._bybit),
             ("coingecko", self._coingecko),
+            ("coinbase", self._coinbase),
+            ("kraken", self._kraken),
             ("cryptocompare", self._cryptocompare),
         ]
 
