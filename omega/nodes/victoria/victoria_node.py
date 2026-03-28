@@ -41,7 +41,6 @@ from typing import Any, ClassVar
 from omega.core.actions import NodeAction
 from omega.core.credentials import credentials
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
-from omega.core.signal_performance import SignalPerformanceTracker
 from omega.core.node_skills import (
     NodeSkillFramework,
     victoria_isq_template,
@@ -68,8 +67,8 @@ from omega.nodes.victoria.signals_advanced import (
     SentimentSignal,
 )
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
-from omega.nodes.victoria.whale_signal import WhaleFlowSignal
 from omega.nodes.victoria.strategy import StrategyNode
+from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 
@@ -97,7 +96,7 @@ SIGNAL_NAMES = [
     "carry",  # Funding-rate carry / mean-reversion
     "pairs",  # Cointegration pairs spread z-score
     "momentum_factor",  # Cross-sectional Jegadeesh-Titman momentum
-    "whale_flow",  # Large exchange inflow/outflow (whale accumulation vs distribution)
+    "timeseries_forecast",  # Holt + AR(3) Kronos-style next-period return forecast
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -150,7 +149,9 @@ class VictoriaNode(Node):
         self._carry = FundingCarrySignal()
         self._pairs = PairsTradingSignal()
         self._momentum_factor = CrossSectionalMomentumSignal()
-        self._whale_flow = WhaleFlowSignal()
+
+        # Timeseries forecast (Kronos-inspired: Holt + AR next-period return)
+        self._timeseries_forecast = TimeseriesForecastSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -178,11 +179,6 @@ class VictoriaNode(Node):
         # IC tracking for weight learning
         self._prev_signal_values: dict[str, float] = {}
         self._quality_history: list[float] = []
-
-        # Signal performance tracker — empirical IC / hit-rate / value-added / stability
-        self._signal_perf_tracker = SignalPerformanceTracker(SIGNAL_NAMES)
-        # Last known BTC price used to derive forward returns for IC computation
-        self._prev_btc_price: float = 0.0
         self._signal_counts_history: list[int] = []
         self._total_cycles_run: int = 0
 
@@ -474,17 +470,8 @@ class VictoriaNode(Node):
         """
         error_rate = self._error_count / max(1, self._execution_count)
 
-        # Use empirical signal quality from the performance tracker when enough
-        # data has been collected (>= 5 cycles); fall back to confidence-based
-        # estimate for early cycles.
-        tracker_quality = self._signal_perf_tracker.get_composite_quality()
-        confidence_quality = self._derive_signal_quality()
-        # Blend: tracker quality is more reliable after warm-up
-        n_samples = min(
-            len(h) for h in self._signal_perf_tracker._history.values()
-        ) if self._signal_perf_tracker._history else 0
-        warmup_weight = min(1.0, n_samples / 5.0)
-        signal_quality = warmup_weight * tracker_quality + (1.0 - warmup_weight) * confidence_quality
+        # Derive signal quality from last known signals
+        signal_quality = self._derive_signal_quality()
 
         # Cycle health: 1 - error_rate (simple proxy)
         cycle_health = max(0.0, 1.0 - error_rate)
@@ -1029,15 +1016,15 @@ class VictoriaNode(Node):
                 logger.debug("momentum_factor signal failed: %s", exc)
 
             try:
-                whale_val = self._whale_flow.compute(market_data)
-                signals["whale_flow"] = {
-                    "value": whale_val.value,
-                    "confidence": whale_val.confidence,
-                    "regime_tag": whale_val.regime_tag,
-                    "raw": whale_val.raw,
+                ts_val = self._timeseries_forecast.compute(market_data)
+                signals["timeseries_forecast"] = {
+                    "value": ts_val.value,
+                    "confidence": ts_val.confidence,
+                    "regime_tag": ts_val.regime_tag,
+                    "raw": ts_val.raw,
                 }
             except Exception as exc:
-                logger.debug("whale_flow signal failed: %s", exc)
+                logger.debug("timeseries_forecast signal failed: %s", exc)
 
             # RMT information-content signal — uses the 10 core signals from
             # information_flow.SIGNAL_NAMES as its input vector.
@@ -1144,49 +1131,7 @@ class VictoriaNode(Node):
             signals["_basic_signal_divergence"] = round(_divergence, 4)
             signals["_basic_signal_consensus"] = round(_consensus_val, 4)
 
-        # 2. Signal performance tracker — record previous cycle's signals against
-        # the realized forward return (current price change vs. previous price).
-        # Timing: signals at T paired with return T→T+1 (computed at T+1 entry).
-        _current_btc_price = _extract_btc_price(market_data)
-
-        if self._prev_signal_values and self._prev_btc_price > 0 and _current_btc_price > 0:
-            _forward_return = (_current_btc_price - self._prev_btc_price) / self._prev_btc_price
-            try:
-                self._signal_perf_tracker.record_cycle(
-                    cycle=self._total_cycles_run,
-                    signal_values=self._prev_signal_values,
-                    forward_return=_forward_return,
-                    # Proxy trade PnL: composite signal × forward return (sign alignment)
-                    trade_pnl=sum(
-                        float(self._prev_signal_values.get(n, 0.0)) * _forward_return
-                        for n in SIGNAL_NAMES
-                    ) / len(SIGNAL_NAMES),
-                )
-            except Exception as exc:
-                logger.debug("signal_perf_tracker.record_cycle failed: %s", exc)
-
-            # Feed empirical IC updates back into DynamicWeightAllocator so
-            # weight allocation uses actual realized predictiveness, not just
-            # direction-consistency proxies.
-            try:
-                empirical_ic = self._signal_perf_tracker.get_ic_updates()
-                if empirical_ic:
-                    self._weight_allocator.update_ic_batch(empirical_ic, regime=regime)
-            except Exception as exc:
-                logger.debug("empirical IC update failed: %s", exc)
-
-            # Persist to DB every N cycles (throttled internally)
-            try:
-                self._signal_perf_tracker.persist_to_db(self._total_cycles_run)
-            except Exception as exc:
-                logger.debug("signal_perf_tracker.persist_to_db failed: %s", exc)
-
-        # Update BTC price for next cycle's forward return computation
-        if _current_btc_price > 0:
-            self._prev_btc_price = _current_btc_price
-
-        # 2b. Compute IC proxies and update weight allocator with direction consistency
-        # (kept as a fast fallback before enough empirical IC observations exist)
+        # 2. Compute IC proxies and update weight allocator with direction consistency
         ic_updates: dict[str, float] = {}
         for name, sig in signals.items():
             if name.startswith("_"):
@@ -1372,11 +1317,6 @@ class VictoriaNode(Node):
             return {"value": val.value, "confidence": val.confidence,
                     "regime_tag": val.regime_tag, "raw": val.raw}
 
-        def _whale_flow(acc: dict, ctx: dict) -> dict:
-            v = self._whale_flow.compute(ctx.get("market_data"))
-            return {"value": v.value, "confidence": v.confidence,
-                    "regime_tag": v.regime_tag, "raw": v.raw}
-
         def _alt_data(acc: dict, ctx: dict) -> dict:
             val = self._alt_data.compute()
             return {"value": val.value, "confidence": val.confidence,
@@ -1486,6 +1426,11 @@ class VictoriaNode(Node):
             return {"value": v.value, "confidence": v.confidence,
                     "regime_tag": v.regime_tag, "raw": v.raw}
 
+        def _timeseries_forecast(acc: dict, ctx: dict) -> dict:
+            v = self._timeseries_forecast.compute(ctx["market_data"])
+            return {"value": v.value, "confidence": v.confidence,
+                    "regime_tag": v.regime_tag, "raw": v.raw}
+
         def _rmt_signal(acc: dict, ctx: dict) -> dict:
             signal_vec = {
                 name: float(acc[name].get("value", 0.0))
@@ -1526,7 +1471,6 @@ class VictoriaNode(Node):
         #   Wave 0 (roots):
         #     market_data_signal   ← processes raw OHLCV prices
         #     alt_data             ← fetches external data independently
-        #     whale_flow           ← whale exchange flow (10-min cached, no market_data dep)
         #
         #   Wave 1 (parallel, all depend on market_data_signal):
         #     basic_signals, order_flow, cross_asset, microstructure,
@@ -1547,8 +1491,6 @@ class VictoriaNode(Node):
                        description="MarketDataSignal — processes raw OHLCV"),
             SignalNode("alt_data", deps=[], fn=_alt_data,
                        description="AltDataSignalProvider — independent external fetch"),
-            SignalNode("whale_flow", deps=[], fn=_whale_flow,
-                       description="WhaleFlowSignal — large exchange inflow/outflow (10-min cache)"),
             # Wave 1
             SignalNode("basic_signals", deps=wave1_deps, fn=_basic_signals,
                        description="SMA/RSI/MACD/BB technical signals"),
@@ -1574,6 +1516,8 @@ class VictoriaNode(Node):
                        description="Cointegration pairs spread z-score"),
             SignalNode("momentum_factor", deps=wave1_deps, fn=_momentum_factor,
                        description="Cross-sectional Jegadeesh-Titman momentum"),
+            SignalNode("timeseries_forecast", deps=wave1_deps, fn=_timeseries_forecast,
+                       description="Holt + AR(3) Kronos-style next-period return forecast"),
             # Wave 2
             SignalNode("rmt_signal", deps=wave2_deps, fn=_rmt_signal,
                        description="RMT denoiser — structured vs noisy market"),
@@ -1595,7 +1539,7 @@ class VictoriaNode(Node):
             "basic_signals", "order_flow", "cross_asset", "microstructure",
             "sentiment", "vrp", "market_data_signal", "onchain", "long_short_ratio",
             "btc_dominance", "alt_data", "carry", "pairs", "momentum_factor",
-            "whale_flow", "rmt_signal", "spectral_graph",
+            "timeseries_forecast", "rmt_signal", "spectral_graph",
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
@@ -1999,54 +1943,3 @@ class VictoriaNode(Node):
             "_best_score": best_score,
             "_improvement_applied": 1.0 if improvement_applied else 0.0,
         }
-
-
-# ---------------------------------------------------------------------------
-# Module-level helpers
-# ---------------------------------------------------------------------------
-
-
-def _extract_btc_price(market_data: dict) -> float:
-    """
-    Extract the latest BTC close price from market_data.
-
-    market_data is keyed by ticker (e.g. "BTCUSDT", "BTC/USDT") and each
-    value is either:
-      - a dict with a "close" or "price" key (scalar), or
-      - a dict mapping bar-index → OHLCV dict.
-
-    Returns 0.0 if no BTC data is found.
-    """
-    if not market_data:
-        return 0.0
-
-    for ticker, td in market_data.items():
-        if not isinstance(ticker, str):
-            continue
-        upper = ticker.upper()
-        if "BTC" not in upper:
-            continue
-        if not isinstance(td, dict):
-            continue
-
-        # Direct scalar close / price
-        if "close" in td:
-            try:
-                return float(td["close"])
-            except (TypeError, ValueError):
-                pass
-        if "price" in td:
-            try:
-                return float(td["price"])
-            except (TypeError, ValueError):
-                pass
-
-        # Nested OHLCV: {bar_index: {open, high, low, close, volume}}
-        for v in td.values():
-            if isinstance(v, dict) and "close" in v:
-                try:
-                    return float(v["close"])
-                except (TypeError, ValueError):
-                    pass
-
-    return 0.0
