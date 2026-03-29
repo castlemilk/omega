@@ -218,6 +218,155 @@ def _get_proposals_stats(strat) -> tuple[int, int]:
         return 0, 0
 
 
+# ANSI colour helpers (no external deps)
+_R = "\033[0m"
+_BOLD = "\033[1m"
+_GREEN = "\033[92m"
+_RED = "\033[91m"
+_YELLOW = "\033[93m"
+_CYAN = "\033[96m"
+_BOX_W = 54
+
+
+def _diag_line(label: str, value: str) -> str:
+    return f"  {_BOLD}{label:<14}{_R} {value}"
+
+
+def print_training_diagnostics(victoria, strategy, cycle: int, engine) -> None:
+    """Print a colorized diagnostics block — shows regime, data, signals, blockers."""
+    sep = "═" * _BOX_W
+
+    print(f"\n{_CYAN}{sep}{_R}")
+    print(f"{_CYAN}══ TRAINING DIAGNOSTICS (cycle {cycle}) {'═' * max(0, _BOX_W - 30 - len(str(cycle)))}{_R}")
+    print(f"{_CYAN}{sep}{_R}")
+
+    # ── Regime ────────────────────────────────────────────────────────────
+    signals_cache: dict = {}
+    try:
+        signals_cache = getattr(victoria, "_last_signals", {}) or {}
+    except Exception:
+        pass
+
+    regime_raw = signals_cache.get("_regime") or _get_regime(victoria)
+    regime_upper = str(regime_raw).upper()
+    if regime_upper in ("UNKNOWN", "UNKN", ""):
+        regime_str = f"{_RED}UNKN ⚠️{_R}"
+    else:
+        conf = 0.0
+        try:
+            probs = victoria._wasserstein_regime._regime_probs
+            conf = max(probs) if probs else 0.0
+        except Exception:
+            pass
+        label_colour = _GREEN if regime_upper == "BULL" else (_RED if regime_upper == "BEAR" else _YELLOW)
+        regime_str = f"{label_colour}{regime_upper}{_R} (conf: {conf:.2f})"
+    print(_diag_line("REGIME:", regime_str))
+
+    # ── Data freshness ────────────────────────────────────────────────────
+    freshness = _get_data_freshness(victoria)
+    if freshness > MAX_STALE_MINUTES:
+        fresh_str = f"{_RED}❌ STALE ({freshness:.1f}min >5min){_R}"
+    else:
+        fresh_str = f"{_GREEN}✅ {freshness:.1f}min ago{_R}"
+    print(_diag_line("DATA FRESH:", fresh_str))
+
+    # ── Active signals ────────────────────────────────────────────────────
+    ticker_signals = {
+        k: v for k, v in signals_cache.items()
+        if not k.startswith("_") and isinstance(v, dict)
+    }
+    active = sum(1 for v in ticker_signals.values() if v.get("composite") is not None)
+    total = len(ticker_signals)
+    sig_str = f"{active}/{total} active" if total > 0 else f"{_YELLOW}none yet{_R}"
+    print(_diag_line("SIGNALS:", sig_str))
+
+    # ── Sit-out status ────────────────────────────────────────────────────
+    if strategy is not None:
+        vol_low = getattr(strategy, "_sit_out_vol_low_count", 0)
+        vol_high = getattr(strategy, "_sit_out_vol_high_count", 0)
+        regime_out = getattr(strategy, "_sit_out_regime_count", 0)
+        if vol_low > 0:
+            sit_str = f"{_YELLOW}YES: vol_low (streak: {vol_low}){_R}"
+        elif vol_high > 0:
+            sit_str = f"{_YELLOW}YES: vol_high (streak: {vol_high}){_R}"
+        elif regime_out > 0:
+            sit_str = f"{_YELLOW}YES: regime_uncertain (count: {regime_out}){_R}"
+        else:
+            sit_str = f"{_GREEN}NO{_R}"
+    else:
+        sit_str = "strategy n/a"
+    print(_diag_line("SIT-OUT:", sit_str))
+
+    # ── Per-ticker conviction ─────────────────────────────────────────────
+    conv_parts: list[str] = []
+    for sym, data in ticker_signals.items():
+        composite = data.get("composite")
+        if composite is None:
+            continue
+        composite = float(composite)
+        ticker = sym.replace("USDT", "").replace("/USDT", "")
+        if composite > 0.05:
+            direction = f"{_GREEN}BUY{_R}"
+        elif composite < -0.05:
+            direction = f"{_RED}SELL{_R}"
+        else:
+            direction = "HOLD"
+        conv_parts.append(f"{ticker}: {composite:+.2f} ({direction})")
+    conv_str = " | ".join(conv_parts) if conv_parts else f"{_YELLOW}n/a{_R}"
+    print(_diag_line("CONVICTION:", conv_str))
+
+    # ── Trade stats ───────────────────────────────────────────────────────
+    closed = engine.closed_trades
+    open_pos = engine.open_trades
+    pnl = _total_pnl(closed)
+    wr = _win_rate(closed)
+    trade_str = (
+        f"open={len(open_pos)} closed={len(closed)} | "
+        f"PnL=${pnl:+.2f} | WR={wr * 100:.0f}%"
+    )
+    print(_diag_line("TRADES:", trade_str))
+
+    # ── Long/short breakdown ──────────────────────────────────────────────
+    all_trades = list(closed) + list(open_pos)
+    n_longs = sum(1 for t in all_trades if t.get("side") == "long")
+    n_shorts = sum(1 for t in all_trades if t.get("side") == "short")
+    ls_str = f"longs={n_longs} shorts={n_shorts}"
+    if n_longs == 0 and n_shorts >= 3:
+        ls_str += f"  {_RED}⚠️  short-only bias{_R}"
+    elif n_shorts == 0 and n_longs >= 3:
+        ls_str += f"  {_YELLOW}⚠️  long-only — short side suppressed?{_R}"
+    print(_diag_line("LONG/SHORT:", ls_str))
+
+    # ── Blockers ──────────────────────────────────────────────────────────
+    blockers: list[str] = []
+    if regime_upper in ("UNKNOWN", "UNKN", ""):
+        blockers.append("Regime detector not firing")
+    if strategy is not None and getattr(strategy, "_sit_out_vol_low_count", 0) > 0:
+        blockers.append(f"vol_low sit-out (streak {strategy._sit_out_vol_low_count})")
+    if freshness > MAX_STALE_MINUTES:
+        blockers.append(f"Data freshness >{freshness:.1f}min")
+    composites = [
+        float(v.get("composite", 0.0))
+        for v in ticker_signals.values()
+        if v.get("composite") is not None
+    ]
+    if composites and all(abs(c) < 0.05 for c in composites):
+        blockers.append("No conviction above threshold (all HOLD)")
+    if n_longs == 0 and n_shorts >= 3:
+        blockers.append("Short-only bias detected — check short_bias fix")
+    if total == 0:
+        blockers.append("No signal data yet (first cycle?)")
+
+    if blockers:
+        blocker_str = f"{_RED}" + " | ".join(blockers) + _R
+    else:
+        blocker_str = f"{_GREEN}NONE{_R}"
+    print(_diag_line("BLOCKERS:", blocker_str))
+
+    print(f"{_CYAN}{sep}{_R}\n")
+    sys.stdout.flush()
+
+
 # ---------------------------------------------------------------------------
 # Main training loop
 # ---------------------------------------------------------------------------
@@ -296,6 +445,9 @@ def run(
     improve_calls = 0
     total_start = time.perf_counter()
 
+    # Pre-loop diagnostic (cycle 0 — before any trades)
+    print_training_diagnostics(victoria, strat, 0, engine)
+
     try:
         for i in range(n_cycles):
             cycle_num = i + 1
@@ -305,6 +457,10 @@ def run(
 
             if result.improvement_proposed:
                 improve_calls += 1
+
+            # Diagnostics every 10 cycles
+            if cycle_num % 10 == 0:
+                print_training_diagnostics(victoria, strat, cycle_num, engine)
 
             # Semantic memory consolidation every 10 cycles
             if cycle_num % 10 == 0:
