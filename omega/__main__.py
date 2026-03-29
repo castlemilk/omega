@@ -101,6 +101,46 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Print status as JSON",
     )
 
+    # ── run-project ──────────────────────────────────────────────────────────
+    rp_p = sub.add_parser(
+        "run-project",
+        help="Load a YAML project config and orchestrate its nodes",
+    )
+    rp_p.add_argument(
+        "project",
+        metavar="NAME_OR_PATH",
+        help=(
+            "Project name (e.g. 'victoria') or path to a YAML file "
+            "(e.g. 'projects/victoria.yaml')"
+        ),
+    )
+    rp_p.add_argument(
+        "--heartbeat",
+        type=float,
+        default=60.0,
+        metavar="SECONDS",
+        help="Seconds between cycles (default: 60)",
+    )
+    rp_p.add_argument(
+        "--cycles",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Stop after N cycles (default: run forever)",
+    )
+    rp_p.add_argument(
+        "--reload-interval",
+        type=float,
+        default=10.0,
+        metavar="SECONDS",
+        help="Seconds between YAML hot-reload checks (0 = disable, default: 10)",
+    )
+    rp_p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate the project config without executing any nodes",
+    )
+
     # ── baseline ─────────────────────────────────────────────────────────────
     bl_p = sub.add_parser("baseline", help="Run PICO baseline tests")
     bl_p.add_argument(
@@ -121,6 +161,19 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 # Command handlers
 # ---------------------------------------------------------------------------
+
+
+def _cmd_run_project(args: argparse.Namespace) -> int:
+    from omega.core.project_runner import ProjectRunner
+
+    runner = ProjectRunner(
+        path_or_name=args.project,
+        heartbeat=args.heartbeat,
+        max_cycles=args.cycles,
+        reload_interval=args.reload_interval,
+        dry_run=args.dry_run,
+    )
+    return runner.run()
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
@@ -296,6 +349,7 @@ def main(argv: list[str] | None = None) -> int:
 
     dispatch = {
         "run": _cmd_run,
+        "run-project": _cmd_run_project,
         "backtest": _cmd_backtest,
         "status": _cmd_status,
         "baseline": _cmd_baseline,

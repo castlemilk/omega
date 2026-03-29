@@ -334,7 +334,11 @@ func main() {
 	mux.Handle(pipePath, pipeSvcHandler)
 
 	// Dashboard REST API — consumed by web/dashboard frontend.
-	handler.NewDashboard(database, composite).RegisterRoutes(mux)
+	dash := handler.NewDashboard(database, composite)
+	if nodeReg != nil {
+		dash = dash.WithRegistry(nodeReg)
+	}
+	dash.RegisterRoutes(mux)
 
 	// Training progress API — consumed by the TrainingPage.
 	handler.NewTrainingHandler(database, "data").RegisterRoutes(mux)

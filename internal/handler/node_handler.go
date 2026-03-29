@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	omegav1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	omegav1connect "github.com/benebsworth/omega/gen/go/omega/v1/omegav1connect"
@@ -278,13 +279,42 @@ func (h *NodeHandler) GetNodeHealth(
 
 // entryToRegistration converts a registry.NodeEntry to the proto NodeRegistration type.
 func entryToRegistration(e registry.NodeEntry) *omegav1.NodeRegistration {
-	return &omegav1.NodeRegistration{
-		Id:       e.ID,
-		Name:     e.Name,
-		Language: e.Language,
-		Address:  e.Address,
-		Version:  e.Version,
+	// Convert capability strings back to enum values.
+	caps := make([]omegav1.NodeCapability, 0, len(e.Capabilities))
+	for _, c := range e.Capabilities {
+		if v, ok := omegav1.NodeCapability_value[c]; ok {
+			caps = append(caps, omegav1.NodeCapability(v))
+		}
 	}
+
+	// Map registry state to proto NodeStatus.
+	status := omegav1.NodeStatus_NODE_STATUS_UNSPECIFIED
+	switch e.State {
+	case registry.NodeStateHealthy:
+		status = omegav1.NodeStatus_NODE_STATUS_HEALTHY
+	case registry.NodeStateDegraded:
+		status = omegav1.NodeStatus_NODE_STATUS_DEGRADED
+	case registry.NodeStateOffline:
+		status = omegav1.NodeStatus_NODE_STATUS_OFFLINE
+	}
+
+	reg := &omegav1.NodeRegistration{
+		Id:           e.ID,
+		Name:         e.Name,
+		Language:     e.Language,
+		Address:      e.Address,
+		Version:      e.Version,
+		Capabilities: caps,
+		HealthScore:  e.Health,
+		Status:       status,
+	}
+	if !e.LastHeartbeat.IsZero() {
+		reg.LastHeartbeat = timestamppb.New(e.LastHeartbeat)
+	}
+	if !e.RegisteredAt.IsZero() {
+		reg.RegisteredAt = timestamppb.New(e.RegisteredAt)
+	}
+	return reg
 }
 
 // translateErr wraps a Connect error from a downstream node call so the caller

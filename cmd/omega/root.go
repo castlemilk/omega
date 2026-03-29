@@ -34,10 +34,11 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
 
-	rootCmd.AddCommand(runCmd)      // omega run     — start full stack
-	rootCmd.AddCommand(cycleCmd)    // omega cycle   — orchestrator heartbeat loop
-	rootCmd.AddCommand(statusCmd)   // omega status  — system + trade stats
-	rootCmd.AddCommand(trainCmd)    // omega train   — Python bridge training cycles
+	rootCmd.AddCommand(runCmd)        // omega run            — start full stack
+	rootCmd.AddCommand(cycleCmd)      // omega cycle          — orchestrator heartbeat loop
+	rootCmd.AddCommand(statusCmd)     // omega status         — system + trade stats
+	rootCmd.AddCommand(trainCmd)      // omega train          — Python bridge training cycles
+	rootCmd.AddCommand(overnightCmd)  // omega run-overnight  — batched overnight scheduler
 	rootCmd.AddCommand(signalsCmd)    // omega signals    — list signals by IC
 	rootCmd.AddCommand(signalPerfCmd) // omega signal-perf — signal performance leaderboard
 	rootCmd.AddCommand(backtestCmd)

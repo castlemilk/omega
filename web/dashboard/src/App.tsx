@@ -17,6 +17,7 @@ const SignalsPage       = lazy(() => import('./pages/SignalsPage').then(m => ({ 
 const SignalDetail      = lazy(() => import('./pages/SignalDetail').then(m => ({ default: m.SignalDetail })))
 const PositionsPage     = lazy(() => import('./pages/PositionsPage').then(m => ({ default: m.PositionsPage })))
 const NodesPage         = lazy(() => import('./pages/NodesPage').then(m => ({ default: m.NodesPage })))
+const NodesRegistryPage = lazy(() => import('./pages/NodesRegistryPage').then(m => ({ default: m.NodesRegistryPage })))
 const CyclesPage        = lazy(() => import('./pages/CyclesPage').then(m => ({ default: m.CyclesPage })))
 const CycleDetail       = lazy(() => import('./pages/CycleDetail').then(m => ({ default: m.CycleDetail })))
 const AdversarialPage   = lazy(() => import('./pages/AdversarialPage').then(m => ({ default: m.AdversarialPage })))
@@ -44,6 +45,7 @@ export default function App() {
             <Routes>
               {/* Global platform routes */}
               <Route path="/" element={<GlobalOverview />} />
+              <Route path="/nodes/registry" element={<NodesRegistryPage />} />
               <Route path="/coordination" element={<CoordinationPage />} />
               <Route path="/settings" element={<SettingsPage />} />
 

@@ -68,6 +68,29 @@ export interface Node {
     success_rate: number
     total_executions: number
   }
+  // Registry fields (present when node is registered via NodeService)
+  capabilities?: string[]
+  health_state?: string
+  last_heartbeat?: string
+  address?: string
+  language?: string
+  health_score?: number
+}
+
+// RegistryNode is the full NodeRegistration from the NodeService Connect-RPC.
+// Fields mirror the proto NodeRegistration message, normalised to snake_case.
+export interface RegistryNode {
+  id: string
+  name: string
+  language: string
+  capabilities: string[]  // e.g. "NODE_CAPABILITY_SIGNAL_RESEARCH"
+  address: string
+  health_score: number    // [0.0, 1.0]
+  last_heartbeat: string  // RFC3339
+  autonomy_level: string
+  version: string
+  status: string          // "NODE_STATUS_HEALTHY" | "NODE_STATUS_DEGRADED" | "NODE_STATUS_OFFLINE" | …
+  registered_at: string   // RFC3339
 }
 
 export interface Cycle {
@@ -296,6 +319,61 @@ export interface TrainingMetrics {
   status: string
 }
 
+// ─── Types: Intelligence ─────────────────────────────────────────────────────
+
+export interface IntelligenceCycleRecord {
+  cycle: number
+  intelligence_score: number
+  brain_calls: number
+  improve_calls: number
+  episodes_created: number
+  semantic_patterns_extracted: number
+  shared_memory_reads: number
+  signals_nonzero: number
+  rmt_info_ratio: number
+  debate_gate_invocations: number
+  brain_provider: string
+  brain_latency_ms: number
+  brain_tokens_used: number
+  trust_score_avg: number
+  routing_decisions: number
+  adversarial_ring1: number
+  adversarial_ring2: number
+  adversarial_ring3: number
+}
+
+export interface IntelligenceHistory {
+  records: IntelligenceCycleRecord[]
+  avg_score_7d: number
+  checks_passing: number
+  total_checks: number
+}
+
+export interface ReflectionRecord {
+  episode_id: string
+  cycle: number
+  trade_result: string
+  regime: string
+  rating: number
+  lesson: string
+  signal_summary: string
+  conviction: number
+}
+
+export interface MemoryQuality {
+  episode_count: number
+  semantic_count: number
+  shared_memory_count: number
+  memory_ratings_count: number
+  memory_influenced_trades: number
+  memory_win_rate: number
+  memory_utilization: number
+  episode_diversity: number
+  cross_project_ratio: number
+  stale_memory_pct: number
+  avg_episode_rating: number
+}
+
 // ─── API client ──────────────────────────────────────────────────────────────
 
 export const api = {
@@ -405,9 +483,6 @@ export const api = {
     getHealth: () =>
       rpc<{ health: SystemHealth }>('OrchestratorService', 'GetHealth'),
 
-    listNodes: () =>
-      rpc<{ nodes: Node[] }>('OrchestratorService', 'ListNodes'),
-
     streamEvents: (signal?: AbortSignal) =>
       fetch('/omega.v1.OrchestratorService/StreamEvents', {
         method: 'POST',
@@ -418,5 +493,40 @@ export const api = {
         body: JSON.stringify({}),
         signal,
       }),
+  },
+
+  // ── Intelligence (REST) ───────────────────────────────────────────────────
+  intelligence: {
+    getHistory:      () => get<IntelligenceHistory>('/intelligence/history'),
+    getReflections:  () => get<ReflectionRecord[]>('/intelligence/reflections'),
+    getMemoryQuality:() => get<MemoryQuality>('/intelligence/memory-quality'),
+  },
+
+  // ── NodeService (Connect-RPC) ──────────────────────────────────────────────
+  node: {
+    listNodes: async (): Promise<{ nodes: RegistryNode[] }> => {
+      type RawNode = {
+        id: string; name: string; language: string
+        capabilities: string[]; address: string
+        healthScore: number; lastHeartbeat: string
+        autonomyLevel: string; version: string
+        status: string; registeredAt: string
+      }
+      const res = await rpc<{ nodes: RawNode[] }>('NodeService', 'ListNodes')
+      const nodes: RegistryNode[] = (res.nodes ?? []).map(n => ({
+        id:             n.id ?? '',
+        name:           n.name ?? '',
+        language:       n.language ?? '',
+        capabilities:   n.capabilities ?? [],
+        address:        n.address ?? '',
+        health_score:   n.healthScore ?? 0,
+        last_heartbeat: n.lastHeartbeat ?? '',
+        autonomy_level: n.autonomyLevel ?? '',
+        version:        n.version ?? '',
+        status:         n.status ?? '',
+        registered_at:  n.registeredAt ?? '',
+      }))
+      return { nodes }
+    },
   },
 }

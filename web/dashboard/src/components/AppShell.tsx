@@ -10,10 +10,11 @@ import { ProjectSwitcher } from './ProjectSwitcher'
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
 const globalNav = [
-  { to: '/',             label: 'Overview',     icon: LayoutDashboard, end: true },
-  { to: '/training',     label: 'Training',     icon: Brain, pulse: true },
-  { to: '/coordination', label: 'Coordination', icon: GitBranch },
-  { to: '/settings',     label: 'Settings',     icon: Settings },
+  { to: '/',               label: 'Overview',      icon: LayoutDashboard, end: true },
+  { to: '/nodes/registry', label: 'Node Registry', icon: Server },
+  { to: '/training',       label: 'Training',      icon: Brain, pulse: true },
+  { to: '/coordination',   label: 'Coordination',  icon: GitBranch },
+  { to: '/settings',       label: 'Settings',      icon: Settings },
 ]
 
 /** Per-project nav registry. Keys are normalised project IDs (strip "proj_"). */

@@ -12,6 +12,7 @@ import (
 
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/observability"
+	"github.com/benebsworth/omega/internal/registry"
 )
 
 // DashboardHandler serves the REST endpoints consumed by web/dashboard.
@@ -19,6 +20,7 @@ type DashboardHandler struct {
 	db        *db.DB
 	composite *observability.CompositeHealth
 	startTime time.Time
+	reg       *registry.NodeRegistry // optional; nil = no registry data
 }
 
 // NewDashboard creates a DashboardHandler.
@@ -28,6 +30,12 @@ func NewDashboard(database *db.DB, composite *observability.CompositeHealth) *Da
 		composite: composite,
 		startTime: time.Now(),
 	}
+}
+
+// WithRegistry attaches the node registry so handleNodes can merge registry data.
+func (h *DashboardHandler) WithRegistry(reg *registry.NodeRegistry) *DashboardHandler {
+	h.reg = reg
+	return h
 }
 
 // RegisterRoutes mounts all dashboard endpoints on mux.
@@ -68,6 +76,13 @@ type dashNode struct {
 	LastExecution       string          `json:"last_execution"`
 	Status              string          `json:"status"`
 	Performance         dashPerformance `json:"performance"`
+	// Registry fields — populated when node is registered via NodeService.
+	Capabilities  []string `json:"capabilities,omitempty"`
+	HealthState   string   `json:"health_state,omitempty"`
+	LastHeartbeat string   `json:"last_heartbeat,omitempty"`
+	Address       string   `json:"address,omitempty"`
+	Language      string   `json:"language,omitempty"`
+	HealthScore   float64  `json:"health_score,omitempty"`
 }
 
 type dashPerformance struct {
@@ -159,10 +174,66 @@ func (h *DashboardHandler) handleNodes(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Build a base map from DB nodes.
 	out := make([]dashNode, 0, len(nodes))
+	byID := make(map[string]int, len(nodes)) // nodeID → index in out
 	for _, n := range nodes {
-		out = append(out, dbNodeToDash(n))
+		d := dbNodeToDash(n)
+		byID[n.NodeID] = len(out)
+		out = append(out, d)
 	}
+
+	// Merge registry data when available.
+	if h.reg != nil {
+		registryEntries := h.reg.All()
+		for _, e := range registryEntries {
+			caps := e.Capabilities
+			if caps == nil {
+				caps = []string{}
+			}
+			hb := ""
+			if !e.LastHeartbeat.IsZero() {
+				hb = e.LastHeartbeat.UTC().Format(time.RFC3339)
+			}
+			if idx, ok := byID[e.ID]; ok {
+				// Enrich existing DB node with registry metadata.
+				out[idx].Capabilities = caps
+				out[idx].HealthState = string(e.State)
+				out[idx].LastHeartbeat = hb
+				out[idx].Address = e.Address
+				out[idx].Language = e.Language
+				out[idx].HealthScore = e.Health
+				if e.Version != "" {
+					out[idx].Strategy = e.Version
+				}
+			} else {
+				// Registry-only node (not yet in DB).
+				status := "idle"
+				if e.State == registry.NodeStateOffline {
+					status = "error"
+				} else if e.State == registry.NodeStateHealthy {
+					status = "active"
+				}
+				out = append(out, dashNode{
+					ID:                  e.ID,
+					Name:                e.Name,
+					AutonomyLevel:       "SUPERVISED",
+					Strategy:            e.Version,
+					CircuitBreakerState: "CLOSED",
+					Status:              status,
+					Performance:         dashPerformance{SuccessRate: e.Health},
+					Capabilities:        caps,
+					HealthState:         string(e.State),
+					LastHeartbeat:       hb,
+					Address:             e.Address,
+					Language:            e.Language,
+					HealthScore:         e.Health,
+				})
+			}
+		}
+	}
+
 	writeJSON(w, out)
 }
 
