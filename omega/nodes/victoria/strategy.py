@@ -134,6 +134,10 @@ class StrategyNode(Node):
         self._sit_out_vol_high_count: int = 0  # chaotic vol → 50% size reduction
         self._normal_trade_count: int = 0  # cycles with full-size trading
 
+        # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
+        self._vol_low_threshold: float = 0.20   # percentile below which vol is "dead-calm"
+        self._vol_high_threshold: float = 0.80  # percentile above which vol is "chaotic"
+
         # --- Spectral graph / Fiedler position size modifier ---
         self._spectral = SpectralGraphSignal(window=30)
         self._last_fiedler_scale: float = 1.0
@@ -557,9 +561,9 @@ class StrategyNode(Node):
                 break
 
         if vol_rank is not None:
-            if vol_rank < 0.20:
+            if vol_rank < self._vol_low_threshold:
                 return "vol_low", 0.0
-            if vol_rank > 0.80:
+            if vol_rank > self._vol_high_threshold:
                 return "vol_high", 0.50
 
         # ── Regime uncertainty check ────────────────────────────────────────
