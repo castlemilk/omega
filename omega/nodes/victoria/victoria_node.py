@@ -76,6 +76,8 @@ from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 from omega.nodes.victoria.news_projection import NewsProjectionLayer
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
+from omega.nodes.victoria.curvature_signal import GeodesicCurvatureSignal
+from omega.nodes.victoria.conformal_calibrator import ConformalCalibrator
 
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
@@ -183,6 +185,12 @@ class VictoriaNode(Node):
 
         # News-projection layer — maps current news context to per-signal soft priors
         self._news_projection = NewsProjectionLayer(signal_names=SIGNAL_NAMES)
+
+        # Geodesic curvature signal — measures trajectory curvature on unit hypersphere
+        self._curvature_signal = GeodesicCurvatureSignal(window=20, min_samples=5)
+
+        # Split-conformal calibrator — distribution-free prediction intervals for forecasts
+        self._conformal_calibrator = ConformalCalibrator(alpha=0.10, cal_size=50)
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -1683,6 +1691,21 @@ class VictoriaNode(Node):
                 "sideways_prob": r.sideways_prob,
             }
 
+        def _curvature(acc: dict, ctx: dict) -> dict:
+            # Runs after all wave-2 signals; uses the full accumulated signal dict
+            signal_dict = {
+                name: acc[name]
+                for name in acc
+                if isinstance(acc.get(name), dict) and "value" in acc[name]
+            }
+            v = self._curvature_signal.compute(signal_dict)
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
+
         # ── DAG topology ──────────────────────────────────────────────
         #
         #   Wave 0 (roots):
@@ -1698,9 +1721,12 @@ class VictoriaNode(Node):
         #     rmt_signal, spectral_graph   ← need full signal vector
         #     wasserstein_regime           ← needs full signal vector
         #
+        #   Wave 3 (serial, depends on all wave-2 outputs):
+        #     curvature_signal  ← geodesic curvature of trajectory on unit hypersphere
 
         wave1_deps = ["market_data_signal"]
         wave2_deps = ["cross_asset", "basic_signals", "sentiment"]  # representative
+        wave3_deps = ["rmt_signal", "spectral_graph", "wasserstein_regime"]
 
         dag_nodes: list[SignalNode] = [
             # Wave 0
@@ -1826,6 +1852,13 @@ class VictoriaNode(Node):
                 fn=_wasserstein,
                 description="Wasserstein regime detector",
             ),
+            # Wave 3
+            SignalNode(
+                "curvature_signal",
+                deps=wave3_deps,
+                fn=_curvature,
+                description="Geodesic curvature — trajectory smoothness on unit hypersphere",
+            ),
         ]
 
         pipeline = DAGPipeline(dag_nodes, max_workers=8)
@@ -1860,6 +1893,7 @@ class VictoriaNode(Node):
             "whale_flow",
             "rmt_signal",
             "spectral_graph",
+            "curvature_signal",
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
@@ -2018,6 +2052,28 @@ class VictoriaNode(Node):
         signals["_avg_confidence"] = avg_confidence
         signals["_signal_coverage"] = signal_coverage
         signals["_cycle"] = float(self._total_cycles_run)
+
+        # Update split-conformal calibrator with timeseries_forecast vs realised signal
+        # We use the previous cycle's forecast vs the current cycle's market_data composite
+        # as an online approximation of (forecast, realised) pairs.
+        try:
+            ts_forecast = signals.get("timeseries_forecast")
+            if isinstance(ts_forecast, dict) and "value" in ts_forecast:
+                forecast_val = float(ts_forecast["value"])
+                # Use the market_data signal value as the "realised" proxy
+                md_signal = signals.get("market_data") or signals.get("market_data_signal", {})
+                realised_val = float(md_signal.get("value", 0.0)) if isinstance(md_signal, dict) else 0.0
+                self._conformal_calibrator.update(forecast=forecast_val, realised=realised_val)
+                # Attach interval info to the forecast signal
+                interval = self._conformal_calibrator.predict(forecast_val)
+                signals["timeseries_forecast"]["conformal_lo"] = round(interval.lower, 6)
+                signals["timeseries_forecast"]["conformal_hi"] = round(interval.upper, 6)
+                signals["timeseries_forecast"]["conformal_q"] = round(interval.quantile, 6) if interval.quantile != float("inf") else None
+                signals["timeseries_forecast"]["conformal_uncertainty"] = round(
+                    self._conformal_calibrator.uncertainty_score(forecast_val), 4
+                )
+        except Exception as exc:
+            logger.debug("conformal calibrator update failed: %s", exc)
 
         self._last_signals = signals
         self.persist_signals(signals)
@@ -2255,6 +2311,12 @@ class VictoriaNode(Node):
             except Exception as exc:
                 logger.debug("IC bootstrap failed: %s", exc)
 
+        # Apply best-known params from the improvement engine if available
+        apply_result = self._apply_best_params()
+        if apply_result.get("applied"):
+            improvement_applied = True
+            improvement_detail = f"apply_params:{apply_result.get('source', 'engine')}"
+
         return {
             "status": "ok",
             "action": "improvement",
@@ -2270,4 +2332,76 @@ class VictoriaNode(Node):
             "_quality_score": latest_score,
             "_best_score": best_score,
             "_improvement_applied": 1.0 if improvement_applied else 0.0,
+        }
+
+    def _apply_best_params(self) -> dict:
+        """
+        Apply the best-known hyperparameters from the improvement engine to
+        VictoriaNode's tunable settings.
+
+        Parameters (from get_param_space):
+          signal_threshold  → minimum signal confidence required for portfolio inclusion
+          lookback_days     → lookback window passed to StrategyNode
+          risk_scale        → position size multiplier applied to StrategyNode
+          top_n_signals     → maximum number of signals used in portfolio construction
+
+        Returns a dict with "applied": bool and "params" if applied.
+        """
+        from omega.core.improvement_engine import ImprovementEngine
+
+        # Lazy-init a lightweight engine instance for param querying
+        if not hasattr(self, "_improvement_engine"):
+            self._improvement_engine = ImprovementEngine()
+            self._improvement_engine.register_node(
+                self._node_id, param_space=self.get_param_space()
+            )
+            return {"applied": False, "reason": "engine_initialised"}
+
+        best = self._improvement_engine.best_params(self._node_id)
+        if best is None:
+            return {"applied": False, "reason": "no_best_params"}
+
+        applied_keys: list[str] = []
+
+        # signal_threshold: store on instance; strategy/weight allocator can read it
+        thresh = best.get("signal_threshold")
+        if thresh is not None:
+            old = getattr(self, "_signal_threshold", None)
+            self._signal_threshold = float(thresh)
+            if old != self._signal_threshold:
+                applied_keys.append("signal_threshold")
+
+        # lookback_days / top_n_signals: pass to strategy node if it accepts them
+        lookback = best.get("lookback_days")
+        if lookback is not None:
+            try:
+                self._strategy.set_lookback(int(lookback))
+                applied_keys.append("lookback_days")
+            except AttributeError:
+                pass  # StrategyNode may not expose set_lookback yet
+
+        risk_scale = best.get("risk_scale")
+        if risk_scale is not None:
+            try:
+                self._strategy.set_risk_scale(float(risk_scale))
+                applied_keys.append("risk_scale")
+            except AttributeError:
+                pass
+
+        top_n = best.get("top_n_signals")
+        if top_n is not None:
+            try:
+                self._strategy.set_top_n_signals(int(top_n))
+                applied_keys.append("top_n_signals")
+            except AttributeError:
+                pass
+
+        if applied_keys:
+            logger.info("improvement: applied_params=%s from engine best_params", applied_keys)
+
+        return {
+            "applied": bool(applied_keys),
+            "params": best,
+            "applied_keys": applied_keys,
+            "source": "improvement_engine",
         }
