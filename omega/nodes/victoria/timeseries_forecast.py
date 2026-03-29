@@ -208,6 +208,11 @@ class TickerForecast:
     vol_scale: float = 0.02
     sentiment_bias: float = 0.0
     raw: dict[str, float] = field(default_factory=dict)
+    # Conformal prediction interval (bootstrap-based)
+    p10: float = 0.0  # 10th-percentile predicted return
+    p50: float = 0.0  # 50th-percentile predicted return
+    p90: float = 0.0  # 90th-percentile predicted return
+    uncertainty: float = 0.0  # interval-width-based uncertainty score ∈ [0, 1]
 
 
 def _forecast_ticker(
@@ -271,18 +276,30 @@ def _forecast_ticker(
     # tanh(x/vol * 0.5): predicting a 1σ move → signal ≈ 0.46
     signal_raw = math.tanh(blended_return / max(vol_scale, 1e-6) * 0.5)
 
+    # --- Conformal prediction: bootstrap uncertainty intervals ---
+    p10, p50, p90 = _bootstrap_forecast(rets, recent_prices)
+    uncertainty = _uncertainty_score(p10, p90, vol_scale)
+
+    # Interval-adjusted signal: attenuate when interval straddles zero
+    signal_raw = _interval_adjusted_signal(signal_raw, p10, p90, vol_scale)
+
     # Apply sentiment bias (additive, clamped)
     bias = max(-_SENTIMENT_WEIGHT, min(_SENTIMENT_WEIGHT, sentiment_bias * _SENTIMENT_WEIGHT))
     signal = max(-1.0, min(1.0, signal_raw + bias))
 
     # Confidence: degrades if models disagree (high |holt - ar| diff)
+    # Also degrades with high uncertainty from bootstrap interval
     if holt_return is not None and ar_return is not None:
         model_agreement = 1.0 - min(
             1.0, abs(holt_return - ar_return) / max(abs(blended_return), 1e-8)
         )
-        confidence = 0.5 + 0.5 * max(0.0, model_agreement)
+        base_confidence = 0.5 + 0.5 * max(0.0, model_agreement)
     else:
-        confidence = 0.4  # single model — lower confidence
+        base_confidence = 0.4  # single model — lower confidence
+
+    # Penalise confidence by uncertainty: high uncertainty → lower confidence
+    confidence = base_confidence * (1.0 - 0.5 * uncertainty)
+    confidence = max(0.0, min(1.0, confidence))
 
     raw: dict[str, float] = {
         "blended_return": blended_return,
@@ -290,6 +307,10 @@ def _forecast_ticker(
         "signal_raw": signal_raw,
         "sentiment_bias_applied": bias,
         "n_models": float(n_models),
+        "p10": p10,
+        "p50": p50,
+        "p90": p90,
+        "uncertainty": uncertainty,
     }
     if holt_return is not None:
         raw["holt_return"] = holt_return
@@ -306,7 +327,114 @@ def _forecast_ticker(
         vol_scale=vol_scale,
         sentiment_bias=bias,
         raw=raw,
+        p10=p10,
+        p50=p50,
+        p90=p90,
+        uncertainty=uncertainty,
     )
+
+
+# ---------------------------------------------------------------------------
+# Conformal prediction / bootstrap uncertainty quantification
+# ---------------------------------------------------------------------------
+
+_BOOTSTRAP_SAMPLES = 50   # number of bootstrap resamples
+_CONFORMAL_ALPHA = 0.10   # target miscoverage rate → 80% prediction interval
+
+
+def _bootstrap_forecast(rets: list[float], prices: list[float]) -> tuple[float, float, float]:
+    """
+    Bootstrap the blended forecast to estimate 10th/90th percentile returns.
+
+    Returns (p10, p50, p90) of predicted return distribution.
+    We resample the return series with replacement and re-run Holt + AR
+    on each bootstrap sample, collecting a distribution of 1-step forecasts.
+    """
+    if len(rets) < _AR_LAGS + 8:
+        return 0.0, 0.0, 0.0
+
+    rng_state = int(abs(sum(prices[-5:])) * 1000) % (2**31)
+    forecasts: list[float] = []
+
+    n = len(rets)
+    for seed in range(_BOOTSTRAP_SAMPLES):
+        # Deterministic pseudo-random resample (avoid random module side effects)
+        # LCG: x_{i+1} = (a * x_i + c) mod m
+        state = (rng_state + seed * 6364136223846793005) % (2**31)
+        indices: list[int] = []
+        for _ in range(n):
+            state = (state * 1103515245 + 12345) & 0x7FFFFFFF
+            indices.append(state % n)
+
+        boot_rets = [rets[i] for i in indices]
+
+        # Reconstruct price series from resampled returns
+        boot_prices = [prices[0]]
+        for r in boot_rets[: len(prices) - 1]:
+            boot_prices.append(boot_prices[-1] * (1.0 + r))
+
+        holt_px = _holt_forecast(boot_prices, _HOLT_ALPHA, _HOLT_BETA)
+        holt_ret: float | None = None
+        if holt_px is not None and boot_prices[-1] != 0:
+            holt_ret = (holt_px - boot_prices[-1]) / boot_prices[-1]
+
+        ar_ret = _ar_forecast(boot_rets, _AR_LAGS)
+
+        blend_sum = 0.0
+        blend_w = 0.0
+        if holt_ret is not None:
+            blend_sum += _BLEND_HOLT * holt_ret
+            blend_w += _BLEND_HOLT
+        if ar_ret is not None:
+            blend_sum += _BLEND_AR * ar_ret
+            blend_w += _BLEND_AR
+
+        if blend_w > 0:
+            forecasts.append(blend_sum / blend_w)
+
+    if not forecasts:
+        return 0.0, 0.0, 0.0
+
+    forecasts.sort()
+    n_fc = len(forecasts)
+    p10_idx = max(0, int(n_fc * 0.10))
+    p50_idx = max(0, int(n_fc * 0.50))
+    p90_idx = min(n_fc - 1, int(n_fc * 0.90))
+
+    return forecasts[p10_idx], forecasts[p50_idx], forecasts[p90_idx]
+
+
+def _uncertainty_score(p10: float, p90: float, vol_scale: float) -> float:
+    """
+    Convert prediction interval width to an uncertainty score ∈ [0, 1].
+
+    Wide interval relative to vol → high uncertainty (close to 1.0).
+    Narrow interval → low uncertainty (close to 0.0).
+    """
+    interval_width = p90 - p10
+    if vol_scale < 1e-8:
+        return 0.5
+    # width / (2 * vol_scale): 1σ interval → ~0.5, 2σ → ~1.0
+    return min(1.0, max(0.0, interval_width / (2.0 * vol_scale)))
+
+
+def _interval_adjusted_signal(signal_raw: float, p10: float, p90: float, vol_scale: float) -> float:
+    """
+    Shrink the raw signal toward zero when prediction interval is wide.
+
+    When both quantiles agree on direction (both positive or both negative),
+    we keep the signal.  When they disagree (interval straddles zero), we
+    attenuate proportionally to how much the interval straddles zero.
+    """
+    if p10 == 0.0 and p90 == 0.0:
+        return signal_raw
+
+    interval_width = max(1e-8, p90 - p10)
+    zero_straddle_frac = max(0.0, min(1.0, -p10 / interval_width)) if p10 < 0 < p90 else 0.0
+
+    # Attenuation: fully attenuate at 100% straddle, no attenuation if same sign
+    attenuation = 1.0 - zero_straddle_frac
+    return signal_raw * attenuation
 
 
 # ---------------------------------------------------------------------------
@@ -465,6 +593,10 @@ class TimeseriesForecastSignal:
                         vol_scale=fc.vol_scale,
                         sentiment_bias=sentiment_bias * _SENTIMENT_WEIGHT,
                         raw=dict(fc.raw),
+                        p10=fc.p10,
+                        p50=fc.p50,
+                        p90=fc.p90,
+                        uncertainty=fc.uncertainty,
                     )
                 )
                 continue
@@ -509,8 +641,20 @@ class TimeseriesForecastSignal:
         coverage_conf = n_valid / max(1, n_requested)
         final_confidence = min(1.0, avg_confidence * 0.7 + coverage_conf * 0.3)
 
-        # Regime tag
-        if final_confidence < 0.3:
+        # Aggregate uncertainty from bootstrap intervals
+        avg_uncertainty = (
+            sum(fc.uncertainty for fc in forecasts) / len(forecasts)
+            if forecasts else 0.0
+        )
+        # Composite prediction intervals (confidence-weighted)
+        if total_weight > 0:
+            agg_p10 = sum(fc.p10 * fc.confidence for fc in forecasts) / total_weight
+            agg_p90 = sum(fc.p90 * fc.confidence for fc in forecasts) / total_weight
+        else:
+            agg_p10 = agg_p90 = 0.0
+
+        # Regime tag — incorporate uncertainty
+        if avg_uncertainty > 0.7 or final_confidence < 0.3:
             regime_tag = "high_uncertainty"
         elif composite > 0.1:
             regime_tag = "bullish_forecast"
@@ -519,11 +663,12 @@ class TimeseriesForecastSignal:
         else:
             regime_tag = "neutral_forecast"
 
-        # Raw output — include per-ticker summary
+        # Raw output — include per-ticker summary + aggregate uncertainty
         per_ticker_raw: dict[str, float] = {}
         for fc in forecasts:
             per_ticker_raw[f"{fc.ticker}_signal"] = round(fc.forecast_signal, 4)
             per_ticker_raw[f"{fc.ticker}_ret"] = round(fc.predicted_return, 6)
+            per_ticker_raw[f"{fc.ticker}_uncertainty"] = round(fc.uncertainty, 4)
 
         raw: dict[str, float] = {
             "composite": round(composite, 4),
@@ -533,17 +678,23 @@ class TimeseriesForecastSignal:
             "sentiment_bias": round(sentiment_bias, 4),
             "cache_hits": float(self._cache_hits),
             "call_count": float(self._call_count),
+            # Aggregate conformal prediction interval
+            "agg_p10": round(agg_p10, 6),
+            "agg_p90": round(agg_p90, 6),
+            "avg_uncertainty": round(avg_uncertainty, 4),
             **per_ticker_raw,
         }
 
         logger.debug(
-            "timeseries_forecast: composite=%.4f conf=%.3f tickers=%d/%d "
-            "sentiment_bias=%.3f regime=%s",
+            "timeseries_forecast: composite=%.4f conf=%.3f uncertainty=%.3f "
+            "interval=[%.4f,%.4f] tickers=%d/%d regime=%s",
             composite,
             final_confidence,
+            avg_uncertainty,
+            agg_p10,
+            agg_p90,
             n_valid,
             n_requested,
-            sentiment_bias,
             regime_tag,
         )
 

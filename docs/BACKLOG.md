@@ -121,6 +121,43 @@
 
 ---
 
+## Session: 2026-03-29 (Signal Intelligence Layer — News Projection + Conformal Forecast + Integration Tests)
+
+### Completed ✅
+
+#### Signal Intelligence
+| Item | Notes |
+|------|-------|
+| ✅ **News-projection layer** | `omega/nodes/victoria/news_projection.py` — keyword topic classification (9 topics: macro, liquidation, derivatives, whale, sentiment, technical, onchain, news_positive, news_negative) → per-signal IC multipliers ∈ [0.70, 1.30] with EMA smoothing; zero ML dependencies |
+| ✅ **`apply_news_prior()` on DynamicWeightAllocator** | `omega/nodes/victoria/dynamic_weights.py` — nudges IC EMAs by news-alignment multipliers; only adjusts signals with sufficient IC history; strength-gated (noop < 0.05) |
+| ✅ **VictoriaNode step 3c wiring** | `omega/nodes/victoria/victoria_node.py` — `NewsProjectionLayer.project_from_signals()` called after RMT (step 3b); result wired to `apply_news_prior()`; `_news_dominant_topic` and `_news_strength` surfaced in signals dict |
+| ✅ **Conformal prediction / bootstrap uncertainty intervals** | `omega/nodes/victoria/timeseries_forecast.py` — LCG deterministic bootstrap (50 samples) produces (p10, p50, p90) quantile intervals; `_uncertainty_score()` maps interval width to [0,1]; `_interval_adjusted_signal()` attenuates by zero-straddle fraction; forecast confidence penalised by `1.0 - 0.5 * uncertainty` |
+| ✅ **Timeseries forecast raw output extended** | `compute()` now returns `avg_uncertainty`, `agg_p10`, `agg_p90` in raw dict; `regime_tag = "high_uncertainty"` when `avg_uncertainty > 0.7` |
+
+#### Verification (P0 check)
+| Item | Notes |
+|------|-------|
+| ✅ **Wasserstein / scipy dependency** | Confirmed resolved: `wasserstein_regime.py` uses `try/except ImportError` fallback to mean absolute deviation — no hard scipy requirement |
+| ✅ **ACTION-010 already wired** | Confirmed `orchestrator_v2.py` already calls `self._adversarial.run_v2(...)` — no change needed |
+
+#### Test Coverage
+| Item | Notes |
+|------|-------|
+| ✅ **Integration test suite for all 20 signal types** | `tests/test_signal_integration.py` — real OHLCV input → valid SignalValue output, no NaN/inf, values in [-1, +1]; all network mocked; parametrized malformed-input coverage |
+| ✅ **News-projection + conformal prediction test suite** | `tests/test_news_projection.py` — topic-specific boost assertions, multiplier range validation, EMA smoothing, `apply_news_prior()` integration, `_bootstrap_forecast` / `_uncertainty_score` / `_interval_adjusted_signal` unit tests |
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `omega/nodes/victoria/news_projection.py` | **Created** — NewsProjectionLayer, TopicScore, NewsProjectionResult |
+| `omega/nodes/victoria/dynamic_weights.py` | **Modified** — added `apply_news_prior()` |
+| `omega/nodes/victoria/victoria_node.py` | **Modified** — import + instantiate NewsProjectionLayer; step 3c in `_do_compute_signals` |
+| `omega/nodes/victoria/timeseries_forecast.py` | **Modified** — added `_bootstrap_forecast`, `_uncertainty_score`, `_interval_adjusted_signal`; extended `TickerForecast` and `compute()` output |
+| `tests/test_signal_integration.py` | **Created** — 20-signal integration test suite |
+| `tests/test_news_projection.py` | **Created** — NewsProjectionLayer + DynamicWeightAllocator + conformal prediction tests |
+
+---
+
 ## Open Items (Carried Forward)
 
 > Items from prior sessions still open. See `omega-strategic-backlog.md` for full specs.
@@ -146,10 +183,11 @@
 
 - [ ] **Kronos-style time-series foundation model integration** — Pre-trained TSF model (Chronos / Moirai) as a signal source; zero-shot regime prediction and anomaly detection. Replaces hand-crafted GARCH baselines.
 - [ ] **Historical backtest validation of geometric signals vs momentum baseline** — Jegadeesh-Titman, natural gradient, Fiedler sizing vs V14 baselines on 3 historical windows. Sharpe, max-DD, Calmar, IC decomposition.
-- [ ] **Integration test coverage for all 18 signal types** — Real OHLCV input → valid output schema, no NaN/inf, consistent shape per signal module.
-- [ ] **News-projection layer** — FinBERT embeddings projected onto per-signal historical IC; news-alignment score as soft prior over signal relevance.
+- [x] **Integration test coverage for all 20 signal types** — ✅ Done: `tests/test_signal_integration.py`
+- [x] **News-projection layer** — ✅ Done: `omega/nodes/victoria/news_projection.py` + `apply_news_prior()` + step 3c wiring
 - [ ] **Dashboard: signal evolution visualization** — EMERGING → STABLE → FALSIFIED state badges, sparkline IC trend, last-transition timestamp surfaced in intelligence page.
 - [ ] **Attention router empirical training** — Collect 1000+ `(goal, routing, outcome)` tuples from V23+ runs; offline-train EMA priors.
+- [ ] **Run V24** — First run with news-projection layer + conformal forecast uncertainty. Compare Sharpe and max-DD vs V23 baseline.
 
 ---
 

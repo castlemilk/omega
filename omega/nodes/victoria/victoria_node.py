@@ -74,6 +74,7 @@ from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
+from omega.nodes.victoria.news_projection import NewsProjectionLayer
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
 
 credentials.register(
@@ -179,6 +180,9 @@ class VictoriaNode(Node):
 
         # Spectral graph theory stress indicator (geometric method #4)
         self._spectral_graph = SpectralGraphSignal(window=30)
+
+        # News-projection layer — maps current news context to per-signal soft priors
+        self._news_projection = NewsProjectionLayer(signal_names=SIGNAL_NAMES)
 
         # Risk management node (used for DebateGate)
         self._risk_management = RiskManagementNode()
@@ -1272,6 +1276,28 @@ class VictoriaNode(Node):
                 self._weight_allocator.apply_rmt_adjustment(rmt_quality, regime=regime)
         except Exception as exc:
             logger.debug("RMT weight adjustment failed: %s", exc)
+
+        # 3c. Apply news-projection soft priors to nudge IC EMAs by news context.
+        # This adjusts signal weights based on which signals are most relevant
+        # given today's news/sentiment environment (macro, liquidations, etc.).
+        try:
+            news_result = self._news_projection.project_from_signals(signals)
+            if news_result.news_strength > 0.05:
+                self._weight_allocator.apply_news_prior(
+                    news_result.signal_multipliers,
+                    strength=news_result.news_strength,
+                    regime=regime,
+                )
+                signals["_news_dominant_topic"] = news_result.dominant_topic
+                signals["_news_strength"] = round(news_result.news_strength, 4)
+                logger.debug(
+                    "news_prior: topic=%s strength=%.3f tokens=%d",
+                    news_result.dominant_topic,
+                    news_result.news_strength,
+                    news_result.tokens_analysed,
+                )
+        except Exception as exc:
+            logger.debug("news projection failed: %s", exc)
 
         # 4. Compute quality metrics for this cycle
         signal_names = [k for k in signals if not k.startswith("_")]

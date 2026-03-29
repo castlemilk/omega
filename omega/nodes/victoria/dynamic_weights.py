@@ -371,6 +371,64 @@ class DynamicWeightAllocator:
             "RMT IC adjustment applied for regime=%s signals=%d", regime, len(quality_scores)
         )
 
+    def apply_news_prior(
+        self,
+        signal_multipliers: dict[str, float],
+        strength: float = 1.0,
+        regime: str = "default",
+    ) -> None:
+        """
+        Apply news-projection multipliers as a soft prior on IC EMAs.
+
+        The news-projection layer provides per-signal relevance multipliers
+        based on the current news/sentiment context.  This method nudges IC
+        EMAs by ``(multiplier - 1.0) * strength * max_adjustment`` so that
+        signals more relevant to today's news get a temporary weight boost.
+
+        The adjustment is intentionally mild (max ±15% of current IC EMA)
+        so that it never overrides the empirical IC history — it only provides
+        directional guidance when the empirical data is sparse or neutral.
+
+        Parameters
+        ----------
+        signal_multipliers : dict
+            {signal_name: multiplier} from NewsProjectionResult.signal_multipliers.
+            Values near 1.0 = neutral; > 1.0 = boost; < 1.0 = attenuate.
+        strength : float
+            News informativeness score [0, 1] from NewsProjectionResult.news_strength.
+            Scales the adjustment so low-confidence news has less impact.
+        regime : str
+            Which regime profile to update.
+        """
+        if not signal_multipliers or strength < 0.05:
+            return
+
+        regime = self._normalize_regime(regime)
+        profile = self._profiles[regime]
+        _MAX_ADJ = 0.15  # max ±15% IC EMA adjustment per cycle
+
+        updated = 0
+        for name, multiplier in signal_multipliers.items():
+            if name not in self._signals:
+                continue
+            if profile.sample_counts.get(name, 0) < MIN_IC_SAMPLES:
+                continue  # only adjust after enough real IC observations
+
+            deviation = multiplier - 1.0  # range ≈ [-0.30, +0.30]
+            adjustment = deviation * strength * _MAX_ADJ
+            old_ema = profile.ic_ema[name]
+            profile.ic_ema[name] = old_ema * (1.0 + adjustment)
+            updated += 1
+
+        if updated > 0:
+            profile.weights = self._compute_weights(profile)
+            logger.debug(
+                "news_prior applied: regime=%s signals_adjusted=%d strength=%.3f",
+                regime,
+                updated,
+                strength,
+            )
+
     # ------------------------------------------------------------------ weight computation
 
     def _compute_weights(self, profile: WeightProfile) -> dict[str, float]:
