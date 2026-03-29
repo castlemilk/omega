@@ -30,8 +30,9 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 _TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
 
 # Symbols excluded from LONG positions only (shorts still permitted).
-# ETH added: strong downward momentum bias makes longs consistently unprofitable.
-_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "ETHUSDT"})
+# Only BTC excluded: used purely as regime indicator with <28% win rate.
+# ETH longs re-enabled — signal system determines direction per cycle.
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
 
 
 # ---------------------------------------------------------------------------
@@ -436,9 +437,12 @@ class StrategyNode(Node):
 
         # 2. Agreement ratio (base threshold, tightened in high-vol)
         vol_regime = sig.get("vol_regime", "normal")
-        agreement_threshold = 0.5 if vol_regime == "high" else self._agreement_ratio_threshold
+        agreement_threshold = 0.7 if vol_regime == "high" else self._agreement_ratio_threshold
         ratio, _agreeing, _total = self._compute_agreement_ratio(sig)
-        if ratio < agreement_threshold:
+        # Skip agreement ratio when there are no directional sub-signals (e.g. synthetic
+        # adv_* tickers that carry only a composite value).  The composite itself serves
+        # as the sole direction indicator in that case.
+        if _total > 0 and ratio < agreement_threshold:
             return False, f"agreement_ratio({ratio:.2f}<{agreement_threshold:.2f})"
 
         # 3. Weighted conviction
@@ -626,8 +630,14 @@ class StrategyNode(Node):
 
         # Continuous regime probability scaling: use raw bear/bull probabilities to scale
         # position weights proportionally. Fall back to binary blocking at 35% if keys absent.
-        _regime_w_bear: float = float(signals.get("_regime_w_bear", -1.0))
-        _regime_w_bull: float = float(signals.get("_regime_w_bull", -1.0))
+        # victoria_node.py writes _regime_w_bear_prob / _regime_w_bull_prob (Wasserstein output);
+        # accept both names for backward compatibility.
+        _regime_w_bear: float = float(
+            signals.get("_regime_w_bear_prob", signals.get("_regime_w_bear", -1.0))
+        )
+        _regime_w_bull: float = float(
+            signals.get("_regime_w_bull_prob", signals.get("_regime_w_bull", -1.0))
+        )
         _use_continuous_regime = _regime_w_bear >= 0.0 and _regime_w_bull >= 0.0
         if _use_continuous_regime:
             _block_longs = False

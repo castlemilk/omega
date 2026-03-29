@@ -303,9 +303,13 @@ class SignalGenerationNode(Node):
                 ts["vol_regime"] = regime  # "high" | "normal" | "low"
                 ts["recent_vol_ann"] = recent_vol
                 ts["long_vol_ann"] = long_vol
-                # In high-vol regime, dampen signals
-                if regime == "high" and "composite" in ts:
-                    ts["vol_regime_signal"] = -0.2  # slight dampening
+                # Vol regime signal: high-vol is bearish (IC -0.389), low-vol slightly bullish.
+                # Symmetric so it does not create a directional bias by itself.
+                if regime == "high":
+                    ts["vol_regime_signal"] = -0.2
+                elif regime == "low":
+                    ts["vol_regime_signal"] = 0.1
+                # "normal": no signal added (neutral, does not shift composite)
 
             # Composite signal: mean of all directional signals
             directional = [
