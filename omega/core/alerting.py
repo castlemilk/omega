@@ -93,8 +93,7 @@ class DBWriteBuffer:
             self._db_down = True
             self._down_since = time.time()
             logger.warning(
-                "DBWriteBuffer: DB marked DOWN — buffering writes "
-                "(capacity=%d)",
+                "DBWriteBuffer: DB marked DOWN — buffering writes (capacity=%d)",
                 _BUFFER_CAPACITY,
             )
         self._buffer.append(rows)

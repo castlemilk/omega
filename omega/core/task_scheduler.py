@@ -43,10 +43,11 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from collections.abc import Callable
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger("omega.core.task_scheduler")
 
@@ -72,9 +73,7 @@ class CronExpression:
     def __init__(self, expr: str) -> None:
         parts = expr.strip().split()
         if len(parts) != 5:
-            raise ValueError(
-                f"Cron expression must have 5 fields (got {len(parts)}): {expr!r}"
-            )
+            raise ValueError(f"Cron expression must have 5 fields (got {len(parts)}): {expr!r}")
         self._expr = expr
         self._minute = _parse_field(parts[0], 0, 59)
         self._hour = _parse_field(parts[1], 0, 23)
@@ -121,10 +120,10 @@ class ScheduledTask:
     """Internal representation of a scheduled task."""
 
     name: str
-    task_type: str       # "cron" | "one_shot"
-    cron: str            # cron expression (empty for one_shot)
-    run_at_iso: str      # ISO-8601 UTC datetime (empty for cron)
-    tz: str              # timezone name (e.g. "UTC", "US/Eastern")
+    task_type: str  # "cron" | "one_shot"
+    cron: str  # cron expression (empty for one_shot)
+    run_at_iso: str  # ISO-8601 UTC datetime (empty for cron)
+    tz: str  # timezone name (e.g. "UTC", "US/Eastern")
     last_run_iso: str = ""
     run_count: int = 0
 
@@ -174,9 +173,7 @@ class TaskScheduler:
             run_count=existing.run_count if existing else 0,
         )
         self._fns[name] = fn
-        logger.debug(
-            "TaskScheduler: registered cron task '%s' (%s %s)", name, cron_expr, tz
-        )
+        logger.debug("TaskScheduler: registered cron task '%s' (%s %s)", name, cron_expr, tz)
         return name
 
     def add_one_shot(
@@ -190,7 +187,7 @@ class TaskScheduler:
         Returns the task name.
         """
         if run_at.tzinfo is None:
-            run_at = run_at.replace(tzinfo=timezone.utc)
+            run_at = run_at.replace(tzinfo=UTC)
         self._tasks[name] = ScheduledTask(
             name=name,
             task_type="one_shot",
@@ -223,9 +220,9 @@ class TaskScheduler:
         Returns list of task names that were attempted (including failed ones).
         """
         if now is None:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
         elif now.tzinfo is None:
-            now = now.replace(tzinfo=timezone.utc)
+            now = now.replace(tzinfo=UTC)
 
         attempted: list[str] = []
 
@@ -256,9 +253,7 @@ class TaskScheduler:
                     fn()
                     task.last_run_iso = now.isoformat()
                     task.run_count += 1
-                    logger.info(
-                        "TaskScheduler: ran task '%s' (count=%d)", name, task.run_count
-                    )
+                    logger.info("TaskScheduler: ran task '%s' (count=%d)", name, task.run_count)
                 except Exception as exc:
                     task.last_run_iso = now.isoformat()
                     task.run_count += 1
@@ -292,9 +287,7 @@ class TaskScheduler:
         try:
             data: dict[str, Any] = json.loads(fpath.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError) as exc:
-            logger.warning(
-                "TaskScheduler: could not load state from %s: %s", fpath, exc
-            )
+            logger.warning("TaskScheduler: could not load state from %s: %s", fpath, exc)
             return
         for name, task_dict in data.items():
             if name not in self._tasks:
@@ -302,9 +295,7 @@ class TaskScheduler:
             else:
                 self._tasks[name].last_run_iso = task_dict.get("last_run_iso", "")
                 self._tasks[name].run_count = task_dict.get("run_count", 0)
-        logger.debug(
-            "TaskScheduler: loaded state from %s (%d tasks)", fpath, len(data)
-        )
+        logger.debug("TaskScheduler: loaded state from %s (%d tasks)", fpath, len(data))
 
     # ── Introspection ─────────────────────────────────────────────────────────
 
@@ -323,7 +314,7 @@ def _to_tz(dt: datetime, tz_name: str) -> datetime:
 
         return dt.astimezone(ZoneInfo(tz_name))
     except Exception:
-        return dt.astimezone(timezone.utc)
+        return dt.astimezone(UTC)
 
 
 def _parse_iso(iso: str) -> datetime | None:
@@ -337,5 +328,5 @@ def _parse_iso(iso: str) -> datetime | None:
 
 def _minute_bucket(dt: datetime) -> str:
     """Return a string key representing the UTC minute bucket."""
-    utc = dt.astimezone(timezone.utc)
+    utc = dt.astimezone(UTC)
     return utc.strftime("%Y%m%d%H%M")

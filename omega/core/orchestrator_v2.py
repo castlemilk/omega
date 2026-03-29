@@ -121,9 +121,7 @@ class AttentionRouter:
                 self._idle_cycles[name] = 0
         self._signals_this_cycle = set(signal_names)
 
-    def record_trade_outcome(
-        self, winning: bool, contributing_signals: list[str]
-    ) -> None:
+    def record_trade_outcome(self, winning: bool, contributing_signals: list[str]) -> None:
         """Boost contributing signals on a win; no-op on a loss."""
         if not winning:
             return
@@ -131,9 +129,7 @@ class AttentionRouter:
             if name not in self._weights:
                 self._weights[name] = 1.0
                 self._idle_cycles[name] = 0
-            self._weights[name] = min(
-                self._weights[name] + self._boost, self._max_weight
-            )
+            self._weights[name] = min(self._weights[name] + self._boost, self._max_weight)
             self._idle_cycles[name] = 0
 
     def advance_cycle(self) -> None:
@@ -1614,9 +1610,7 @@ class OmegaOrchestrator:
                         for trade in newly_closed:
                             trade_pnl = float(trade.get("pnl", 0.0))
                             contributing = [
-                                str(s)
-                                for s in (trade.get("signals") or [])
-                                if isinstance(s, str)
+                                str(s) for s in (trade.get("signals") or []) if isinstance(s, str)
                             ]
                             self._attention_router.record_trade_outcome(
                                 winning=trade_pnl > 0,

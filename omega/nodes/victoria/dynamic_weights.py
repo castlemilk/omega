@@ -405,7 +405,7 @@ class DynamicWeightAllocator:
 
         regime = self._normalize_regime(regime)
         profile = self._profiles[regime]
-        _MAX_ADJ = 0.15  # max ±15% IC EMA adjustment per cycle
+        _max_adj = 0.15  # max ±15% IC EMA adjustment per cycle
 
         updated = 0
         for name, multiplier in signal_multipliers.items():
@@ -415,7 +415,7 @@ class DynamicWeightAllocator:
                 continue  # only adjust after enough real IC observations
 
             deviation = multiplier - 1.0  # range ≈ [-0.30, +0.30]
-            adjustment = deviation * strength * _MAX_ADJ
+            adjustment = deviation * strength * _max_adj
             old_ema = profile.ic_ema[name]
             profile.ic_ema[name] = old_ema * (1.0 + adjustment)
             updated += 1

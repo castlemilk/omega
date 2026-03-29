@@ -46,8 +46,9 @@ Usage::
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Type
+from typing import Any
 
 logger = logging.getLogger("omega.core.node_registry")
 
@@ -77,7 +78,7 @@ class Port:
     many: bool = False
     required: bool = True
 
-    def is_compatible_with(self, other: "Port") -> bool:
+    def is_compatible_with(self, other: Port) -> bool:
         """Return True if *self* (source output) can feed *other* (dest input)."""
         return self.dtype == "any" or other.dtype == "any" or self.dtype == other.dtype
 
@@ -102,7 +103,7 @@ class NodeTypeSpec:
     """
 
     name: str
-    cls: Type
+    cls: type
     inputs: list[Port] = field(default_factory=list)
     outputs: list[Port] = field(default_factory=list)
     description: str = ""
@@ -196,9 +197,7 @@ class NodeTypeRegistry:
         # Wildcard: validate each output against the destination port
         if src_port_name == "*":
             for out_port in src_spec.outputs:
-                errors.extend(
-                    self._check_port_pair(src_spec, out_port, dst_spec, dst_port_name)
-                )
+                errors.extend(self._check_port_pair(src_spec, out_port, dst_spec, dst_port_name))
             return errors
 
         src_port = src_spec.get_output(src_port_name)
@@ -353,7 +352,7 @@ def node_type(
     inputs: list[Port] | None = None,
     outputs: list[Port] | None = None,
     description: str = "",
-) -> Callable[[Type], Type]:
+) -> Callable[[type], type]:
     """
     Class decorator that registers a class as a node type.
 
@@ -377,7 +376,7 @@ def node_type(
             ...
     """
 
-    def decorator(cls: Type) -> Type:
+    def decorator(cls: type) -> type:
         spec = NodeTypeSpec(
             name=type_name,
             cls=cls,

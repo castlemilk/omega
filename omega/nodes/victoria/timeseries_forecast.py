@@ -338,8 +338,8 @@ def _forecast_ticker(
 # Conformal prediction / bootstrap uncertainty quantification
 # ---------------------------------------------------------------------------
 
-_BOOTSTRAP_SAMPLES = 50   # number of bootstrap resamples
-_CONFORMAL_ALPHA = 0.10   # target miscoverage rate → 80% prediction interval
+_BOOTSTRAP_SAMPLES = 50  # number of bootstrap resamples
+_CONFORMAL_ALPHA = 0.10  # target miscoverage rate → 80% prediction interval
 
 
 def _bootstrap_forecast(rets: list[float], prices: list[float]) -> tuple[float, float, float]:
@@ -418,7 +418,9 @@ def _uncertainty_score(p10: float, p90: float, vol_scale: float) -> float:
     return min(1.0, max(0.0, interval_width / (2.0 * vol_scale)))
 
 
-def _interval_adjusted_signal(signal_raw: float, p10: float, p90: float, vol_scale: float) -> float:
+def _interval_adjusted_signal(
+    signal_raw: float, p10: float, p90: float, vol_scale: float
+) -> float:
     """
     Shrink the raw signal toward zero when prediction interval is wide.
 
@@ -643,8 +645,7 @@ class TimeseriesForecastSignal:
 
         # Aggregate uncertainty from bootstrap intervals
         avg_uncertainty = (
-            sum(fc.uncertainty for fc in forecasts) / len(forecasts)
-            if forecasts else 0.0
+            sum(fc.uncertainty for fc in forecasts) / len(forecasts) if forecasts else 0.0
         )
         # Composite prediction intervals (confidence-weighted)
         if total_weight > 0:

@@ -299,7 +299,7 @@ class DAGPipeline:
                             if dep_ms > best_ms:
                                 best_ms = dep_ms
                                 best_path = dep_path
-                    dp[name] = (best_ms + own_ms, best_path + [name])
+                    dp[name] = (best_ms + own_ms, [*best_path, name])
 
         if not dp:
             return []

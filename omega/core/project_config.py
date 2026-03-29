@@ -68,9 +68,10 @@ Adding a new project
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger("omega.core.project_config")
 
@@ -101,7 +102,7 @@ class NodeDef:
     condition: dict[str, Any] | None = None
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "NodeDef":
+    def from_dict(cls, d: dict[str, Any]) -> NodeDef:
         return cls(
             type=d["type"],
             name=d["name"],
@@ -132,7 +133,7 @@ class RoutingConfig:
     config: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any] | None) -> "RoutingConfig":
+    def from_dict(cls, d: dict[str, Any] | None) -> RoutingConfig:
         if d is None:
             return cls()
         return cls(type=d.get("type", "dag"), config=dict(d.get("config", {})))
@@ -209,7 +210,7 @@ class ProjectConfig:
         return order
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any], source_path: Path | None = None) -> "ProjectConfig":
+    def from_dict(cls, d: dict[str, Any], source_path: Path | None = None) -> ProjectConfig:
         nodes = [NodeDef.from_dict(nd) for nd in d.get("nodes", [])]
         routing = RoutingConfig.from_dict(d.get("routing"))
         return cls(
@@ -245,6 +246,7 @@ def get_factory(type_name: str) -> NodeFactory | None:
 # ---------------------------------------------------------------------------
 # Default factories for built-in Victoria node types
 # ---------------------------------------------------------------------------
+
 
 def _build_data_provider(nd: NodeDef) -> Any:
     """
@@ -286,30 +288,37 @@ def _build_signal_generator(nd: NodeDef) -> Any:
 
     if "basic" in signals:
         from omega.nodes.victoria.signal_generation import SignalGenerationNode
+
         return SignalGenerationNode()
 
     if "geometric" in signals or "spectral" in signals:
         from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
+
         return SpectralGraphSignal()
 
     if "smart_money" in signals:
         from omega.nodes.victoria.smart_money_signal import SmartMoneySignal
+
         return SmartMoneySignal()
 
     if "sentiment" in signals:
         from omega.nodes.victoria.finbert_sentiment import FinBertSentimentSignal
+
         return FinBertSentimentSignal()
 
     if "vrp" in signals:
         from omega.nodes.victoria.vrp_signal import VRPSignalNode
+
         return VRPSignalNode()
 
     if "whale" in signals:
         from omega.nodes.victoria.whale_signal import WhaleFlowSignal
+
         return WhaleFlowSignal()
 
     # Fallback
     from omega.nodes.victoria.signal_generation import SignalGenerationNode
+
     return SignalGenerationNode()
 
 
@@ -317,8 +326,10 @@ def _build_regime_detector(nd: NodeDef) -> Any:
     algo = nd.config.get("algorithm", "wasserstein")
     if algo == "wasserstein":
         from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
+
         return WassersteinRegimeDetector()
     from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
+
     return WassersteinRegimeDetector()
 
 
@@ -335,6 +346,7 @@ def _build_executor(nd: NodeDef) -> Any:
     mode = nd.config.get("mode", "paper")
     if mode == "paper":
         from omega.core.paper_trading import PaperTradingExecutorNode
+
         node = PaperTradingExecutorNode()
         if "max_positions" in nd.config:
             node._max_positions = int(nd.config["max_positions"])
@@ -353,8 +365,9 @@ def _build_risk_manager(nd: NodeDef) -> Any:
 
 def _build_intelligence(nd: NodeDef) -> Any:
     """Wrap any node with an intelligence overlay. Currently a passthrough stub."""
-    from omega.core.node import Node, NodeInput, NodeOutput, NodeState
     import uuid
+
+    from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
     class _IntelligenceStub(Node):
         """Passthrough intelligence overlay — extend to add LLM reflection."""
@@ -365,6 +378,7 @@ def _build_intelligence(nd: NodeDef) -> Any:
 
         def get_state(self) -> NodeState:
             from datetime import datetime
+
             return NodeState(
                 node_id=self._node_id,
                 name=f"Intelligence:{self._name}",
@@ -496,8 +510,7 @@ class ProjectLoader:
 
         # 3 & 4. Connection validation
         node_defs_as_dicts = [
-            {"type": nd.type, "name": nd.name, "inputs": nd.inputs}
-            for nd in config.nodes
+            {"type": nd.type, "name": nd.name, "inputs": nd.inputs} for nd in config.nodes
         ]
         conn_errors = registry.validate_project_connections(node_defs_as_dicts)
         errors.extend(conn_errors)
@@ -615,6 +628,7 @@ class ProjectLoader:
 # without modifying existing paper_trading.py
 # ---------------------------------------------------------------------------
 
+
 class PaperTradingExecutorNode:
     """
     Adapter that wraps the paper trading system as an ExecutorNode.
@@ -625,7 +639,6 @@ class PaperTradingExecutorNode:
 
     def __init__(self) -> None:
         import uuid
-        from datetime import datetime
 
         self._node_id = str(uuid.uuid4())
         self._max_positions = 9
@@ -633,8 +646,9 @@ class PaperTradingExecutorNode:
 
     # Minimal Node interface so it can be stored in a node map
     def get_state(self) -> Any:
-        from omega.core.node import NodeState
         from datetime import datetime
+
+        from omega.core.node import NodeState
 
         return NodeState(
             node_id=self._node_id,
@@ -651,13 +665,11 @@ class PaperTradingExecutorNode:
         return ["execute_trades", "paper_trade"]
 
     def describe(self) -> str:
-        return (
-            f"Paper trading executor (mode={self._mode}, "
-            f"max_positions={self._max_positions})"
-        )
+        return f"Paper trading executor (mode={self._mode}, max_positions={self._max_positions})"
 
     def execute(self, input: Any) -> Any:
         from omega.core.node import NodeOutput
+
         return NodeOutput(request_id=getattr(input, "request_id", ""), success=True)
 
     def evaluate(self) -> dict:

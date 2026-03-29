@@ -29,6 +29,7 @@ Usage
     # inside training loop after each cycle:
     breaker.record(sit_out_reason)
 """
+
 from __future__ import annotations
 
 import logging

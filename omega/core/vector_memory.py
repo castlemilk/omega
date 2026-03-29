@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 import re
 import sqlite3
 import time
@@ -45,20 +44,94 @@ logger = logging.getLogger("omega.core.vector_memory")
 # Ensures common trading terms are always in the vocabulary even before
 # enough corpus entries exist to build a good IDF.
 _SEED_VOCAB = [
-    "btc", "eth", "sol", "bitcoin", "ethereum", "solana", "crypto",
-    "momentum", "signal", "regime", "funding", "rate", "liquidation",
-    "volatility", "sentiment", "whale", "onchain", "stablecoin",
-    "leverage", "long", "short", "buy", "sell", "entry", "exit",
-    "sharpe", "drawdown", "pnl", "profit", "loss", "win", "trade",
-    "risk", "reward", "position", "portfolio", "equity", "margin",
-    "bull", "bear", "neutral", "trend", "reversal", "breakout",
-    "support", "resistance", "volume", "open", "close", "high", "low",
-    "rsi", "macd", "ema", "sma", "atr", "bollinger", "correlation",
-    "alpha", "beta", "gamma", "delta", "vega", "theta", "options",
-    "futures", "spot", "perpetual", "basis", "carry", "roll",
-    "macro", "fed", "inflation", "gdp", "cpi",
-    "market", "exchange", "liquidity", "spread", "slippage", "fee",
-    "node", "cycle", "improvement", "evaluation", "score", "metric",
+    "btc",
+    "eth",
+    "sol",
+    "bitcoin",
+    "ethereum",
+    "solana",
+    "crypto",
+    "momentum",
+    "signal",
+    "regime",
+    "funding",
+    "rate",
+    "liquidation",
+    "volatility",
+    "sentiment",
+    "whale",
+    "onchain",
+    "stablecoin",
+    "leverage",
+    "long",
+    "short",
+    "buy",
+    "sell",
+    "entry",
+    "exit",
+    "sharpe",
+    "drawdown",
+    "pnl",
+    "profit",
+    "loss",
+    "win",
+    "trade",
+    "risk",
+    "reward",
+    "position",
+    "portfolio",
+    "equity",
+    "margin",
+    "bull",
+    "bear",
+    "neutral",
+    "trend",
+    "reversal",
+    "breakout",
+    "support",
+    "resistance",
+    "volume",
+    "open",
+    "close",
+    "high",
+    "low",
+    "rsi",
+    "macd",
+    "ema",
+    "sma",
+    "atr",
+    "bollinger",
+    "correlation",
+    "alpha",
+    "beta",
+    "gamma",
+    "delta",
+    "vega",
+    "theta",
+    "options",
+    "futures",
+    "spot",
+    "perpetual",
+    "basis",
+    "carry",
+    "roll",
+    "macro",
+    "fed",
+    "inflation",
+    "gdp",
+    "cpi",
+    "market",
+    "exchange",
+    "liquidity",
+    "spread",
+    "slippage",
+    "fee",
+    "node",
+    "cycle",
+    "improvement",
+    "evaluation",
+    "score",
+    "metric",
 ]
 
 _SCHEMA = """
@@ -197,9 +270,7 @@ class VectorMemoryLayer:
         return results
 
     def count(self) -> int:
-        row = self._conn.execute(
-            "SELECT COUNT(*) as n FROM vector_memories"
-        ).fetchone()
+        row = self._conn.execute("SELECT COUNT(*) as n FROM vector_memories").fetchone()
         return row["n"] if row else 0
 
     def prune_oldest(self, keep: int = 10_000) -> int:
@@ -223,12 +294,9 @@ class VectorMemoryLayer:
     def _ensure_cache(self) -> None:
         if self._cache_loaded:
             return
-        rows = self._conn.execute(
-            "SELECT id, embedding FROM vector_memories"
-        ).fetchall()
+        rows = self._conn.execute("SELECT id, embedding FROM vector_memories").fetchall()
         self._embedding_cache = {
-            row["id"]: np.array(json.loads(row["embedding"]), dtype=np.float32)
-            for row in rows
+            row["id"]: np.array(json.loads(row["embedding"]), dtype=np.float32) for row in rows
         }
         self._cache_loaded = True
 

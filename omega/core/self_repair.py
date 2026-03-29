@@ -193,9 +193,7 @@ class SelfRepairLoop:
 
     # ── Log parsing ────────────────────────────────────────────────────────────
 
-    def _parse_log_errors(
-        self, log_file: str, last_n_lines: int = 1000
-    ) -> list[LogError]:
+    def _parse_log_errors(self, log_file: str, last_n_lines: int = 1000) -> list[LogError]:
         """
         Parse the last ``last_n_lines`` lines of ``log_file`` for errors.
         Returns a list of LogError objects.

@@ -50,7 +50,7 @@ from __future__ import annotations
 
 import logging
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.news_projection")
@@ -83,46 +83,141 @@ _EMA_ALPHA = 0.30
 # These mirror the categories in finbert_sentiment.py but at a higher level.
 _TOPIC_KEYWORDS: dict[str, list[str]] = {
     "macro": [
-        "fed", "interest rate", "inflation", "cpi", "fomc", "treasury",
-        "macro", "gdp", "recession", "yield curve", "dollar", "yen",
-        "monetary policy", "quantitative", "easing", "tightening",
+        "fed",
+        "interest rate",
+        "inflation",
+        "cpi",
+        "fomc",
+        "treasury",
+        "macro",
+        "gdp",
+        "recession",
+        "yield curve",
+        "dollar",
+        "yen",
+        "monetary policy",
+        "quantitative",
+        "easing",
+        "tightening",
     ],
     "liquidation": [
-        "liquidat", "long squeeze", "short squeeze", "margin call", "cascade",
-        "forced sell", "deleverag", "stop hunt", "wipe out", "flush",
+        "liquidat",
+        "long squeeze",
+        "short squeeze",
+        "margin call",
+        "cascade",
+        "forced sell",
+        "deleverag",
+        "stop hunt",
+        "wipe out",
+        "flush",
     ],
     "derivatives": [
-        "funding rate", "open interest", "futures premium", "basis",
-        "options", "implied vol", "put call", "deribit", "perp",
-        "perpetual", "derivatives", "leverage", "liq price",
+        "funding rate",
+        "open interest",
+        "futures premium",
+        "basis",
+        "options",
+        "implied vol",
+        "put call",
+        "deribit",
+        "perp",
+        "perpetual",
+        "derivatives",
+        "leverage",
+        "liq price",
     ],
     "whale": [
-        "whale", "large holder", "institutional", "etf", "spot etf",
-        "custody", "blackrock", "fidelity", "accumulation", "distribution",
-        "exchange flow", "outflow", "inflow", "coinbase premium",
+        "whale",
+        "large holder",
+        "institutional",
+        "etf",
+        "spot etf",
+        "custody",
+        "blackrock",
+        "fidelity",
+        "accumulation",
+        "distribution",
+        "exchange flow",
+        "outflow",
+        "inflow",
+        "coinbase premium",
     ],
     "sentiment": [
-        "fear", "greed", "euphoria", "panic", "fomo", "retail",
-        "social media", "twitter", "reddit", "sentiment", "narrative",
-        "hype", "mania", "capitulation",
+        "fear",
+        "greed",
+        "euphoria",
+        "panic",
+        "fomo",
+        "retail",
+        "social media",
+        "twitter",
+        "reddit",
+        "sentiment",
+        "narrative",
+        "hype",
+        "mania",
+        "capitulation",
     ],
     "technical": [
-        "support", "resistance", "breakout", "breakdown", "momentum",
-        "trend", "rsi", "macd", "bollinger", "moving average", "pattern",
-        "elliott wave", "fibonacci", "technical analysis",
+        "support",
+        "resistance",
+        "breakout",
+        "breakdown",
+        "momentum",
+        "trend",
+        "rsi",
+        "macd",
+        "bollinger",
+        "moving average",
+        "pattern",
+        "elliott wave",
+        "fibonacci",
+        "technical analysis",
     ],
     "onchain": [
-        "on-chain", "onchain", "blockchain", "miners", "hashrate",
-        "wallet", "address", "utxo", "stablecoin", "usdt", "usdc",
-        "supply", "circulation", "inactive", "long-term holder", "nvt",
+        "on-chain",
+        "onchain",
+        "blockchain",
+        "miners",
+        "hashrate",
+        "wallet",
+        "address",
+        "utxo",
+        "stablecoin",
+        "usdt",
+        "usdc",
+        "supply",
+        "circulation",
+        "inactive",
+        "long-term holder",
+        "nvt",
     ],
     "news_positive": [
-        "bullish", "rally", "surge", "all-time high", "ath", "adoption",
-        "partnership", "launch", "upgrade", "approval", "regulation positive",
+        "bullish",
+        "rally",
+        "surge",
+        "all-time high",
+        "ath",
+        "adoption",
+        "partnership",
+        "launch",
+        "upgrade",
+        "approval",
+        "regulation positive",
     ],
     "news_negative": [
-        "bearish", "crash", "dump", "hack", "exploit", "sec", "ban",
-        "regulation negative", "collapse", "fraud", "bankruptcy",
+        "bearish",
+        "crash",
+        "dump",
+        "hack",
+        "exploit",
+        "sec",
+        "ban",
+        "regulation negative",
+        "collapse",
+        "fraud",
+        "bankruptcy",
     ],
 }
 
@@ -449,9 +544,7 @@ class NewsProjectionLayer:
                 raw_multipliers[signal] += w * (rel - 1.0)  # accumulate deviation from 1.0
 
         if total_topic_weight < 1e-8:
-            return self._neutral_result(
-                active_topics=topics, tokens_analysed=len(tokens)
-            )
+            return self._neutral_result(active_topics=topics, tokens_analysed=len(tokens))
 
         # Normalise deviations
         for signal in self._signal_names:
@@ -499,8 +592,7 @@ class NewsProjectionLayer:
         dominant = topics[0].topic if topics else "none"
 
         logger.debug(
-            "news_projection: topics=%s strength=%.3f dominant=%s "
-            "top_signal=%s mult=%.3f",
+            "news_projection: topics=%s strength=%.3f dominant=%s top_signal=%s mult=%.3f",
             [(t.topic, round(t.confidence, 2)) for t in topics[:3]],
             news_strength,
             dominant,

@@ -41,7 +41,6 @@ CLI
 from __future__ import annotations
 
 import logging
-import os
 import threading
 import time
 import uuid
@@ -55,6 +54,7 @@ logger = logging.getLogger("omega.core.project_runner")
 # ---------------------------------------------------------------------------
 # Path resolution
 # ---------------------------------------------------------------------------
+
 
 def resolve_project_path(name_or_path: str) -> Path:
     """
@@ -90,6 +90,7 @@ def resolve_project_path(name_or_path: str) -> Path:
 # Cycle result
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class CycleResult:
     """Summary of a single runner cycle."""
@@ -117,6 +118,7 @@ class CycleResult:
 # ---------------------------------------------------------------------------
 # Wave computation
 # ---------------------------------------------------------------------------
+
 
 def _compute_waves(config: Any) -> list[list[str]]:
     """
@@ -159,6 +161,7 @@ def _compute_waves(config: Any) -> list[list[str]]:
 # ---------------------------------------------------------------------------
 # Node input construction
 # ---------------------------------------------------------------------------
+
 
 def _build_node_input(
     nd: Any,
@@ -203,7 +206,7 @@ def _build_node_input(
                 parameters[conn_str] = src_result
 
     # Determine action verb from node type
-    _ACTION_MAP = {
+    _action_map = {
         "data_provider": "ingest",
         "regime_detector": "detect",
         "signal_generator": "compute_signals",
@@ -212,7 +215,7 @@ def _build_node_input(
         "executor": "execute",
         "intelligence": "reflect",
     }
-    action = _ACTION_MAP.get(nd.type, "execute")
+    action = _action_map.get(nd.type, "execute")
 
     return NodeInput(
         request_id=str(uuid.uuid4()),
@@ -225,6 +228,7 @@ def _build_node_input(
 # ---------------------------------------------------------------------------
 # Attention weighting
 # ---------------------------------------------------------------------------
+
 
 def _attention_weights(node_names: list[str]) -> dict[str, float]:
     """
@@ -263,6 +267,7 @@ def _attention_weights(node_names: list[str]) -> dict[str, float]:
 # ---------------------------------------------------------------------------
 # ProjectRunner
 # ---------------------------------------------------------------------------
+
 
 class ProjectRunner:
     """
@@ -365,10 +370,8 @@ class ProjectRunner:
         node_results: dict[str, dict[str, Any]] = {}
         errors: dict[str, str] = {}
 
-        for wave_idx, wave in enumerate(self._waves):
-            wave_nodes = [
-                nd for nd in self._config.nodes if nd.name in wave
-            ]
+        for _wave_idx, wave in enumerate(self._waves):
+            wave_nodes = [nd for nd in self._config.nodes if nd.name in wave]
             wave_results = self._execute_wave(wave_nodes, accumulated, cycle)
 
             for name, output in wave_results.items():
@@ -396,11 +399,7 @@ class ProjectRunner:
         # Apply attention weighting if configured
         attention_weights: dict[str, float] = {}
         if self._config.routing.type == "attention":
-            signal_nodes = [
-                nd.name
-                for nd in self._config.nodes
-                if nd.type == "signal_generator"
-            ]
+            signal_nodes = [nd.name for nd in self._config.nodes if nd.type == "signal_generator"]
             if signal_nodes:
                 attention_weights = _attention_weights(signal_nodes)
                 logger.debug("Attention weights: %s", attention_weights)
@@ -459,6 +458,7 @@ class ProjectRunner:
         node = self._nodes.get(nd.name)
         if node is None:
             from omega.core.node import NodeOutput
+
             return NodeOutput(
                 request_id="",
                 success=False,
@@ -471,6 +471,7 @@ class ProjectRunner:
             output = node.execute(node_input)
         except Exception as exc:
             from omega.core.node import NodeOutput
+
             output = NodeOutput(
                 request_id=node_input.request_id,
                 success=False,
@@ -490,6 +491,7 @@ class ProjectRunner:
         """Publish signal node output to the shared SignalBus."""
         try:
             from omega.core.signal_bus import get_signal_bus
+
             bus = get_signal_bus()
             bus.publish(node_name, result)
         except Exception as exc:
@@ -566,9 +568,7 @@ class ProjectRunner:
             if watcher:
                 watcher.join(timeout=2.0)
 
-        logger.info(
-            "Project '%s' finished after %d cycle(s).", self._config.name, cycle
-        )
+        logger.info("Project '%s' finished after %d cycle(s).", self._config.name, cycle)
         return 0
 
     def stop(self) -> None:

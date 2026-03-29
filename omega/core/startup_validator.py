@@ -265,9 +265,8 @@ class StartupValidator:
         issues: list[str] = []
 
         db_url = os.environ.get("DATABASE_URL", "")
-        if db_url:
-            if not _valid_db_url(db_url):
-                issues.append("DATABASE_URL format invalid (expected postgres://...)")
+        if db_url and not _valid_db_url(db_url):
+            issues.append("DATABASE_URL format invalid (expected postgres://...)")
 
         anthropic_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("CLAUDE_API_KEY", "")
         if anthropic_key and not anthropic_key.startswith("sk-ant-"):

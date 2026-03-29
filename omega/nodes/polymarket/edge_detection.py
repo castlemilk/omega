@@ -306,10 +306,10 @@ class EdgeDetectionNode(Node):
         if self._top_traders is None or not market_id:
             return {}
         try:
-            from omega.core.node import NodeInput as _NI
+            from omega.core.node import NodeInput as NodeInputLocal
 
             out = self._top_traders.execute(
-                _NI(action="consensus", parameters={"condition_id": market_id})
+                NodeInputLocal(action="consensus", parameters={"condition_id": market_id})
             )
             if not out.success or not isinstance(out.result, dict):
                 return {}

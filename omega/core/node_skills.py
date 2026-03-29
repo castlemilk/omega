@@ -28,7 +28,7 @@ from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
 
 logger = logging.getLogger("omega.core.node_skills")
 
@@ -249,12 +249,11 @@ class SignalEvolution:
         a10 = agreement(last10)
 
         # FALSIFIED: current state is STABLE/WEAKENING + 3-cycle direction flip
-        if self.current_state in (SignalLifecycle.STABLE, SignalLifecycle.WEAKENING):
-            if len(last3) == 3:
-                flip = last3[0] != 0 and last3[-1] != 0 and last3[0] != last3[-1]
-                consistent_flip = all(d == last3[-1] for d in last3[-2:])
-                if flip and consistent_flip:
-                    return SignalLifecycle.FALSIFIED
+        if self.current_state in (SignalLifecycle.STABLE, SignalLifecycle.WEAKENING) and len(last3) == 3:
+            flip = last3[0] != 0 and last3[-1] != 0 and last3[0] != last3[-1]
+            consistent_flip = all(d == last3[-1] for d in last3[-2:])
+            if flip and consistent_flip:
+                return SignalLifecycle.FALSIFIED
 
         # WEAKENING: was STABLE but agreement dropped
         if self.current_state == SignalLifecycle.STABLE and a5 < 0.60:
@@ -474,7 +473,7 @@ class ISQValidator:
     is marked as failed and callers can lower-confidence their output.
     """
 
-    _WEIGHTS = {
+    _WEIGHTS: ClassVar[dict[str, float]] = {
         "data_freshness": 0.25,
         "signal_count": 0.10,
         "signal_consistency": 0.30,
@@ -815,14 +814,14 @@ class NodeRAGContext:
             return []
 
         # Build IDF
-        N = len(corpus)
+        n = len(corpus)
         df: dict[str, int] = {}
         for ep in corpus:
             for t in set(ep.tokens):
                 df[t] = df.get(t, 0) + 1
-        idf = {t: math.log((N - cnt + 0.5) / (cnt + 0.5) + 1) for t, cnt in df.items()}
+        idf = {t: math.log((n - cnt + 0.5) / (cnt + 0.5) + 1) for t, cnt in df.items()}
 
-        avg_dl = sum(len(ep.tokens) for ep in corpus) / N
+        avg_dl = sum(len(ep.tokens) for ep in corpus) / n
 
         scored: list[tuple[float, RAGEpisode]] = [
             (_bm25_score(query_tokens, ep.tokens, avg_dl, idf), ep) for ep in corpus

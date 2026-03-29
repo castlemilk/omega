@@ -135,7 +135,7 @@ class StrategyNode(Node):
         self._normal_trade_count: int = 0  # cycles with full-size trading
 
         # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
-        self._vol_low_threshold: float = 0.20   # percentile below which vol is "dead-calm"
+        self._vol_low_threshold: float = 0.20  # percentile below which vol is "dead-calm"
         self._vol_high_threshold: float = 0.80  # percentile above which vol is "chaotic"
 
         # --- Spectral graph / Fiedler position size modifier ---
@@ -283,7 +283,7 @@ class StrategyNode(Node):
             "normal_trade_cycles": float(self._normal_trade_count),
             "fiedler_scale": self._last_fiedler_scale,
             **{
-                f"risk_{k}": float(v) if not isinstance(v, bool) else float(v)
+                f"risk_{k}": float(v)
                 for k, v in self._risk.get_metrics().items()
             },
         }

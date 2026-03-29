@@ -26,7 +26,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import signal
 import sys
 import time
@@ -170,7 +169,9 @@ class OvernightRunner:
 
             batch_num += 1
             print(f"\n{'═' * 60}")
-            print(f"[overnight] Batch {batch_num}/{self.total_batches}  ({self.batch_size} cycles)")
+            print(
+                f"[overnight] Batch {batch_num}/{self.total_batches}  ({self.batch_size} cycles)"
+            )
             print(f"{'═' * 60}")
 
             result = self._run_batch(batch_num)
@@ -229,9 +230,7 @@ class OvernightRunner:
                     PROFIT_FACTOR_THRESHOLD,
                 )
                 result.alert_level = "warn"
-                result.alert_message = (
-                    f"profit_factor={result.profit_factor:.3f} below threshold {PROFIT_FACTOR_THRESHOLD}"
-                )
+                result.alert_message = f"profit_factor={result.profit_factor:.3f} below threshold {PROFIT_FACTOR_THRESHOLD}"
                 progress.batches[-1] = asdict(result)
                 print(
                     f"[overnight] ⚠ Batch {batch_num}: PnL positive but "
@@ -292,10 +291,7 @@ class OvernightRunner:
 
             if (i + 1) % 50 == 0:
                 elapsed = time.monotonic() - t0
-                print(
-                    f"  [{i + 1:>3}/{self.batch_size}] "
-                    f"elapsed={elapsed:.0f}s  errors={errors}"
-                )
+                print(f"  [{i + 1:>3}/{self.batch_size}] elapsed={elapsed:.0f}s  errors={errors}")
 
         finished_at = _now()
         elapsed_total = time.monotonic() - t0
@@ -428,7 +424,9 @@ class OvernightRunner:
     def _install_signal_handlers(self) -> None:
         def _handler(signum: int, frame: Any) -> None:
             logger.info("Signal %d received — stopping after current cycle", signum)
-            print(f"\n[overnight] Signal {signum} received — finishing current cycle then stopping...")
+            print(
+                f"\n[overnight] Signal {signum} received — finishing current cycle then stopping..."
+            )
             self._running = False
 
         signal.signal(signal.SIGTERM, _handler)
@@ -447,7 +445,9 @@ class OvernightRunner:
         print(f"  Batches completed: {progress.completed_batches}/{progress.total_batches}")
         if batches:
             pnls = [b.get("total_pnl", 0.0) for b in batches]
-            print(f"  PnL per batch:  min={min(pnls):.2f}  max={max(pnls):.2f}  final={pnls[-1]:.2f}")
+            print(
+                f"  PnL per batch:  min={min(pnls):.2f}  max={max(pnls):.2f}  final={pnls[-1]:.2f}"
+            )
             alerts = [b for b in batches if b.get("alert_level") in ("warn", "critical")]
             if alerts:
                 print(f"  Alerts raised:  {len(alerts)} batch(es)")
@@ -467,9 +467,7 @@ def _now() -> str:
 def _save_progress(progress: OvernightProgress) -> None:
     try:
         RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
-        RESULTS_PATH.write_text(
-            json.dumps(asdict(progress), indent=2), encoding="utf-8"
-        )
+        RESULTS_PATH.write_text(json.dumps(asdict(progress), indent=2), encoding="utf-8")
     except Exception as exc:
         logger.warning("Could not save overnight results: %s", exc)
 

@@ -27,9 +27,10 @@ import logging
 import pkgutil
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -43,10 +44,10 @@ logger = logging.getLogger(__name__)
 class NodeMessage:
     """Envelope passed between composable nodes."""
 
-    source: str        # e.g. "victoria.basic_signals"
-    target: str        # e.g. "victoria.strategy" or "*" for broadcast
-    msg_type: str      # "signal" | "trade_decision" | "regime_change"
-    payload: Dict[str, Any]
+    source: str  # e.g. "victoria.basic_signals"
+    target: str  # e.g. "victoria.strategy" or "*" for broadcast
+    msg_type: str  # "signal" | "trade_decision" | "regime_change"
+    payload: dict[str, Any]
     timestamp: float
     confidence: float  # 0.0–1.0
 
@@ -69,8 +70,8 @@ class NodeHealth:
     status: HealthStatus
     latency_ms: float = 0.0
     error_rate: float = 0.0
-    last_error: Optional[str] = None
-    details: Dict[str, Any] = field(default_factory=dict)
+    last_error: str | None = None
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -108,7 +109,7 @@ class NodeAdapter(ABC):
         self._call_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
-        self._last_error: Optional[str] = None
+        self._last_error: str | None = None
 
     # ── Lifecycle ──────────────────────────────────────────────────────────
 
@@ -124,20 +125,22 @@ class NodeAdapter(ABC):
         self._started = False
         logger.info("NodeAdapter %s stopped", self._name)
 
+    @abstractmethod
     async def _on_startup(self) -> None:  # pragma: no cover
         """Override to add custom initialisation."""
+        ...
 
+    @abstractmethod
     async def _on_shutdown(self) -> None:  # pragma: no cover
         """Override to add custom cleanup."""
+        ...
 
     # ── Core interface ─────────────────────────────────────────────────────
 
-    async def process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def process(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Run one processing cycle, tracking latency and error metrics."""
         if not self._started:
-            raise RuntimeError(
-                f"NodeAdapter {self._name!r} not started — call startup() first"
-            )
+            raise RuntimeError(f"NodeAdapter {self._name!r} not started — call startup() first")
         t0 = time.monotonic()
         try:
             result = await self._process(inputs)
@@ -152,7 +155,7 @@ class NodeAdapter(ABC):
             raise
 
     @abstractmethod
-    async def _process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Subclasses implement the actual processing logic here."""
         ...
 
@@ -181,8 +184,7 @@ class NodeAdapter(ABC):
         return self.health_check()
 
     @abstractmethod
-    def get_metadata(self) -> NodeMetadata:
-        ...
+    def get_metadata(self) -> NodeMetadata: ...
 
 
 # ---------------------------------------------------------------------------
@@ -200,16 +202,16 @@ class SignalAdapter(NodeAdapter):
 
     def __init__(
         self,
-        signal_fn: Callable[[Dict[str, Any]], Dict[str, Any]],
+        signal_fn: Callable[[dict[str, Any]], dict[str, Any]],
         name: str,
-        output_keys: Optional[list[str]] = None,
+        output_keys: list[str] | None = None,
         version: str = "1.0.0",
     ) -> None:
         super().__init__(name=name, version=version)
         self._signal_fn = signal_fn
         self._output_keys = output_keys or ["signals"]
 
-    async def _process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process(self, inputs: dict[str, Any]) -> dict[str, Any]:
         market_data = inputs.get("market_data", inputs)
         loop = asyncio.get_event_loop()
         if asyncio.iscoroutinefunction(self._signal_fn):
@@ -251,7 +253,7 @@ class StrategyAdapter(NodeAdapter):
         )
         logger.info("StrategyAdapter capabilities: %s", caps)
 
-    async def _process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process(self, inputs: dict[str, Any]) -> dict[str, Any]:
         from omega.core.node import NodeInput  # local import avoids circular deps
 
         action = inputs.get("action", "construct_portfolio")
@@ -299,7 +301,7 @@ class ExecutorAdapter(NodeAdapter):
         super().__init__(name="victoria.executor", version=version)
         self._engine = engine
 
-    async def _process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process(self, inputs: dict[str, Any]) -> dict[str, Any]:
         action = inputs.get("action", "execute")
         market_data = inputs.get("market_data", {})
         cycle_id = inputs.get("cycle_id")
@@ -358,7 +360,7 @@ class DataAdapter(NodeAdapter):
 
     def __init__(
         self,
-        resilience_layer: Optional[Any] = None,
+        resilience_layer: Any | None = None,
         version: str = "1.0.0",
     ) -> None:
         super().__init__(name="victoria.data", version=version)
@@ -370,7 +372,7 @@ class DataAdapter(NodeAdapter):
 
             self._layer = get_resilience_layer()
 
-    async def _process(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+    async def _process(self, inputs: dict[str, Any]) -> dict[str, Any]:
         pairs = inputs.get("pairs", ["BTCUSDT", "ETHUSDT", "SOLUSDT"])
         interval = inputs.get("interval", "1d")
         limit = inputs.get("limit", 90)
@@ -398,15 +400,15 @@ class DataAdapter(NodeAdapter):
 # Plugin discovery via @omega_node decorator
 # ---------------------------------------------------------------------------
 
-_REGISTRY: Dict[str, Type[NodeAdapter]] = {}
+_REGISTRY: dict[str, type[NodeAdapter]] = {}
 
 
 def omega_node(
     name: str,
     *,
     version: str = "1.0.0",
-    tags: Optional[list[str]] = None,
-) -> Callable[[Type[NodeAdapter]], Type[NodeAdapter]]:
+    tags: list[str] | None = None,
+) -> Callable[[type[NodeAdapter]], type[NodeAdapter]]:
     """Class decorator that registers a NodeAdapter subclass in the plugin registry.
 
     Usage::
@@ -419,11 +421,9 @@ def omega_node(
                 ...
     """
 
-    def decorator(cls: Type[NodeAdapter]) -> Type[NodeAdapter]:
+    def decorator(cls: type[NodeAdapter]) -> type[NodeAdapter]:
         if not (isinstance(cls, type) and issubclass(cls, NodeAdapter)):
-            raise TypeError(
-                f"@omega_node requires a NodeAdapter subclass, got {cls!r}"
-            )
+            raise TypeError(f"@omega_node requires a NodeAdapter subclass, got {cls!r}")
         _REGISTRY[name] = cls
         cls._omega_node_name = name  # type: ignore[attr-defined]
         cls._omega_node_version = version  # type: ignore[attr-defined]
@@ -434,7 +434,7 @@ def omega_node(
     return decorator
 
 
-def discover_plugins(nodes_package: str = "omega.nodes") -> Dict[str, Type[NodeAdapter]]:
+def discover_plugins(nodes_package: str = "omega.nodes") -> dict[str, type[NodeAdapter]]:
     """Scan *nodes_package* for Python modules that contain ``@omega_node``-decorated
     classes and register any that are not already in the registry.
 
@@ -443,18 +443,14 @@ def discover_plugins(nodes_package: str = "omega.nodes") -> Dict[str, Type[NodeA
     try:
         pkg = importlib.import_module(nodes_package)
     except ImportError:
-        logger.warning(
-            "discover_plugins: package %r not importable, skipping", nodes_package
-        )
+        logger.warning("discover_plugins: package %r not importable, skipping", nodes_package)
         return _REGISTRY
 
     pkg_path = getattr(pkg, "__path__", None)
     if pkg_path is None:
         return _REGISTRY
 
-    for _finder, modname, _ispkg in pkgutil.walk_packages(
-        pkg_path, prefix=nodes_package + "."
-    ):
+    for _finder, modname, _ispkg in pkgutil.walk_packages(pkg_path, prefix=nodes_package + "."):
         try:
             mod = importlib.import_module(modname)
         except Exception as exc:
@@ -466,18 +462,18 @@ def discover_plugins(nodes_package: str = "omega.nodes") -> Dict[str, Type[NodeA
                 issubclass(obj, NodeAdapter)
                 and obj is not NodeAdapter
                 and hasattr(obj, "_omega_node_name")
-                and obj._omega_node_name not in _REGISTRY  # type: ignore[attr-defined]
+                and obj._omega_node_name not in _REGISTRY
             ):
-                _REGISTRY[obj._omega_node_name] = obj  # type: ignore[attr-defined]
+                _REGISTRY[obj._omega_node_name] = obj
                 logger.debug(
                     "discover_plugins: registered %r from %s",
-                    obj._omega_node_name,  # type: ignore[attr-defined]
+                    obj._omega_node_name,
                     modname,
                 )
 
     return _REGISTRY
 
 
-def get_registry() -> Dict[str, Type[NodeAdapter]]:
+def get_registry() -> dict[str, type[NodeAdapter]]:
     """Return a snapshot of the current plugin registry."""
     return dict(_REGISTRY)

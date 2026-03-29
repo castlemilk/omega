@@ -39,9 +39,7 @@ from pathlib import Path
 
 logger = logging.getLogger("omega.core.strategy_factory")
 
-_DEFAULT_GENERATED_DIR = str(
-    Path(__file__).parent.parent / "nodes" / "victoria" / "generated"
-)
+_DEFAULT_GENERATED_DIR = str(Path(__file__).parent.parent / "nodes" / "victoria" / "generated")
 
 
 class SignalHotLoader:
@@ -61,9 +59,7 @@ class SignalHotLoader:
         # Ensure the directory is a Python package
         init = self._dir / "__init__.py"
         if not init.exists():
-            init.write_text(
-                '"""Auto-generated signal functions — do not edit manually."""\n'
-            )
+            init.write_text('"""Auto-generated signal functions — do not edit manually."""\n')
         # name -> module
         self._modules: dict[str, types.ModuleType] = {}
 
@@ -153,5 +149,5 @@ class SignalHotLoader:
         mod.__package__ = "omega_generated"
         # Register before exec so any self-referential imports work
         sys.modules[module_name] = mod
-        exec(code, mod.__dict__)  # noqa: S102
+        exec(code, mod.__dict__)
         return mod

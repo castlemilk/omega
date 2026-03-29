@@ -19,6 +19,7 @@ Usage
     # result.warnings → list of human-readable warning strings
     # result.details  → dict[check_name, bool | str]
 """
+
 from __future__ import annotations
 
 import importlib
@@ -95,9 +96,7 @@ class StartupPreflight:
             result._info(f"DATABASE_URL set ({db_url[:40]}…)")
         else:
             result.details["database_url_set"] = False
-            logger.info(
-                "PREFLIGHT INFO: DATABASE_URL not set — SQLite fallback will be used"
-            )
+            logger.info("PREFLIGHT INFO: DATABASE_URL not set — SQLite fallback will be used")
 
         # Verify SQLite fallback is reachable (write a temp DB)
         try:
@@ -117,9 +116,7 @@ class StartupPreflight:
     def _check_exchange(result: PreflightResult) -> None:
         for name, url in _EXCHANGE_PROBES:
             try:
-                req = urllib.request.Request(
-                    url, headers={"User-Agent": "omega-preflight/1.0"}
-                )
+                req = urllib.request.Request(url, headers={"User-Agent": "omega-preflight/1.0"})
                 with urllib.request.urlopen(req, timeout=_PROBE_TIMEOUT_S) as resp:
                     if resp.status < 400:
                         result.details["exchange_ok"] = name
@@ -152,14 +149,13 @@ class StartupPreflight:
                 "Some signals may be unavailable. Run: pip install -r requirements.txt"
             )
         else:
-            result._info(
-                f"All required packages importable: {_REQUIRED_PACKAGES}"
-            )
+            result._info(f"All required packages importable: {_REQUIRED_PACKAGES}")
 
     @staticmethod
     def _check_victoria_node(result: PreflightResult) -> None:
         try:
-            from omega.nodes.victoria.victoria_node import VictoriaNode  # noqa: F401
+            from omega.nodes.victoria.victoria_node import VictoriaNode
+
             node = VictoriaNode()
             _ = node.get_state()
             result.details["victoria_node_ok"] = True

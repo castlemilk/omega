@@ -110,8 +110,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "project",
         metavar="NAME_OR_PATH",
         help=(
-            "Project name (e.g. 'victoria') or path to a YAML file "
-            "(e.g. 'projects/victoria.yaml')"
+            "Project name (e.g. 'victoria') or path to a YAML file (e.g. 'projects/victoria.yaml')"
         ),
     )
     rp_p.add_argument(

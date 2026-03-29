@@ -256,7 +256,7 @@ class DataResilienceLayer:
             "DataResilience: ALL %d pairs stale — zeroing signal confidence",
             len(all_pairs),
         )
-        for sig_name, sig_val in signals.items():
+        for _sig_name, sig_val in signals.items():
             if (isinstance(sig_val, dict) and "confidence" in sig_val) or isinstance(
                 sig_val, dict
             ):
@@ -345,7 +345,7 @@ class DataResilienceLayer:
             HALF_OPEN → "degraded"
             OPEN      → "down"
         """
-        _STATE_TO_STATUS = {
+        _state_to_status = {
             "CLOSED": "healthy",
             "HALF_OPEN": "degraded",
             "OPEN": "down",
@@ -366,7 +366,7 @@ class DataResilienceLayer:
                 last_success = None
 
             summary[name] = {
-                "status": _STATE_TO_STATUS.get(h.state, "unknown"),
+                "status": _state_to_status.get(h.state, "unknown"),
                 "last_success": last_success,
                 "failure_count": h.failure_count,
                 "circuit": h.state,
@@ -432,6 +432,7 @@ class DataResilienceLayer:
     ) -> dict[str, Any] | None:
         """Call a provider's fetch_klines, recording health outcomes."""
         from typing import cast
+
         health = self._health[provider_name]
         try:
             # All OHLCV providers expose fetch_klines(pair, interval, limit)

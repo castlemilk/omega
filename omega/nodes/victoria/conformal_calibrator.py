@@ -65,7 +65,7 @@ from __future__ import annotations
 import logging
 import math
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import NamedTuple
 
 logger = logging.getLogger("omega.nodes.victoria.conformal_calibrator")
@@ -74,9 +74,9 @@ logger = logging.getLogger("omega.nodes.victoria.conformal_calibrator")
 # Constants
 # ---------------------------------------------------------------------------
 
-_DEFAULT_ALPHA = 0.10      # 90 % nominal coverage
-_DEFAULT_CAL_SIZE = 50     # calibration window (cycles)
-_MIN_CAL_SAMPLES = 5       # minimum samples before intervals are non-trivial
+_DEFAULT_ALPHA = 0.10  # 90 % nominal coverage
+_DEFAULT_CAL_SIZE = 50  # calibration window (cycles)
+_MIN_CAL_SAMPLES = 5  # minimum samples before intervals are non-trivial
 _COVERAGE_ADAPT_RATE = 0.05  # adaptation step when coverage drifts
 
 
@@ -84,7 +84,7 @@ class PredictionInterval(NamedTuple):
     lower: float
     mid: float
     upper: float
-    quantile: float    # the conformal quantile q̂ used
+    quantile: float  # the conformal quantile q̂ used
     coverage_target: float  # 1 - alpha
 
 

@@ -24,11 +24,11 @@ Usage
         ring1_pass=True,                  # did any symbol pass _passes_conviction_filters
     )
 """
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
 
 logger = logging.getLogger("omega.core.training_watchdog")
 
@@ -97,13 +97,13 @@ class WatchdogState:
             )
             self._maybe_escalate(sit_out_reason=sit_out_reason)
 
-    def ring1_pass_rate(self) -> Optional[float]:
+    def ring1_pass_rate(self) -> float | None:
         """Fraction of recent cycles where any symbol passed conviction filters."""
         if not self._ring1_results:
             return None
         return sum(self._ring1_results) / len(self._ring1_results)
 
-    def conviction_filter_rate(self) -> Optional[float]:
+    def conviction_filter_rate(self) -> float | None:
         """Fraction of proposals blocked by conviction filters (cumulative)."""
         if self.proposals_generated_total == 0:
             return None
@@ -113,9 +113,7 @@ class WatchdogState:
         n = self.consecutive_zero_trade_cycles
 
         if n == self.warn_threshold:
-            dominant_reason = max(
-                self.sit_out_reason_counts, key=self.sit_out_reason_counts.get
-            )
+            dominant_reason = max(self.sit_out_reason_counts, key=self.sit_out_reason_counts.get)
             ring1_rate = self.ring1_pass_rate()
             logger.warning(
                 "WATCHDOG WARNING: %d consecutive zero-trade cycles. "
@@ -144,9 +142,7 @@ class WatchdogState:
         conv_rate = self.conviction_filter_rate()
 
         reasons_str = ", ".join(
-            f"{r}={c}" for r, c in sorted(
-                self.sit_out_reason_counts.items(), key=lambda x: -x[1]
-            )
+            f"{r}={c}" for r, c in sorted(self.sit_out_reason_counts.items(), key=lambda x: -x[1])
         )
 
         logger.error(
@@ -171,8 +167,5 @@ def _fmt_dist(dist: dict[str, int]) -> str:
     if not dist:
         return "{}"
     total = sum(dist.values())
-    parts = [
-        f"{k}={v}({v/total:.0%})"
-        for k, v in sorted(dist.items(), key=lambda x: -x[1])
-    ]
+    parts = [f"{k}={v}({v / total:.0%})" for k, v in sorted(dist.items(), key=lambda x: -x[1])]
     return "{" + ", ".join(parts) + "}"

@@ -66,22 +66,22 @@ logger = logging.getLogger("omega.nodes.victoria.curvature_signal")
 # Constants
 # ---------------------------------------------------------------------------
 
-_WINDOW = 20          # rolling window length (cycles)
-_MIN_SAMPLES = 5      # minimum cycles before signal is active
-_EPS = 1e-8           # numerical floor to prevent divide-by-zero
-_SCALE = 5.0          # geodesic curvature amplification for tanh mapping
-_TREND_K = 3.0        # angular velocity amplification for trend signal
+_WINDOW = 20  # rolling window length (cycles)
+_MIN_SAMPLES = 5  # minimum cycles before signal is active
+_EPS = 1e-8  # numerical floor to prevent divide-by-zero
+_SCALE = 5.0  # geodesic curvature amplification for tanh mapping
+_TREND_K = 3.0  # angular velocity amplification for trend signal
 _OMEGA_THRESHOLD = 0.05  # min angular velocity to classify as "turning"
-_ZSCORE_WINDOW = 30   # rolling window for z-score normalisation of κ_g
+_ZSCORE_WINDOW = 30  # rolling window for z-score normalisation of κ_g
 
 
 @dataclass
 class SignalValue:
     """Mirrors the SignalValue contract used by the other advanced signal nodes."""
 
-    value: float      # trading signal ∈ [-1, +1]
-    confidence: float # 0..1; grows with history length
-    regime_tag: str   # "trend_continuation" | "curvature_spike" | "warmup" | "flat"
+    value: float  # trading signal ∈ [-1, +1]
+    confidence: float  # 0..1; grows with history length
+    regime_tag: str  # "trend_continuation" | "curvature_spike" | "warmup" | "flat"
     raw: dict
 
 

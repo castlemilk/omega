@@ -39,6 +39,7 @@ import uuid
 from typing import Any, ClassVar
 
 from omega.core.actions import NodeAction
+from omega.core.alerting import compute_health_score, get_write_buffer
 from omega.core.credentials import credentials
 from omega.core.data_resilience import get_resilience_layer
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
@@ -50,11 +51,14 @@ from omega.core.node_skills import (
 from omega.core.state_tensor import StateTensor, VictoriaStateTensorBuilder
 from omega.nodes.victoria.alt_data_signals import AltDataSignalProvider
 from omega.nodes.victoria.carry_signals import FundingCarrySignal
+from omega.nodes.victoria.conformal_calibrator import ConformalCalibrator
+from omega.nodes.victoria.curvature_signal import GeodesicCurvatureSignal
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.finbert_sentiment import FinBertSentimentSignal
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.momentum_factor import CrossSectionalMomentumSignal
+from omega.nodes.victoria.news_projection import NewsProjectionLayer
 from omega.nodes.victoria.pairs_signals import PairsTradingSignal
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.rmt_denoiser import RMTDenoiser
@@ -74,11 +78,7 @@ from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
-from omega.nodes.victoria.news_projection import NewsProjectionLayer
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
-from omega.nodes.victoria.curvature_signal import GeodesicCurvatureSignal
-from omega.nodes.victoria.conformal_calibrator import ConformalCalibrator
-from omega.core.alerting import compute_health_score, get_write_buffer
 
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
@@ -1208,8 +1208,8 @@ class VictoriaNode(Node):
         if _other_vals:
             _consensus_val = sum(_other_vals) / len(_other_vals)
             _divergence = abs(_basic_val - _consensus_val)
-            _DIVERGENCE_THRESHOLD = 0.40
-            if _divergence > _DIVERGENCE_THRESHOLD:
+            _divergence_threshold = 0.40
+            if _divergence > _divergence_threshold:
                 self._basic_signal_divergence_count += 1
                 logger.warning(
                     "basic_signals divergence: value=%.4f consensus=%.4f "
@@ -1217,7 +1217,7 @@ class VictoriaNode(Node):
                     _basic_val,
                     _consensus_val,
                     _divergence,
-                    _DIVERGENCE_THRESHOLD,
+                    _divergence_threshold,
                     self._basic_signal_divergence_count,
                 )
             else:
@@ -1946,8 +1946,8 @@ class VictoriaNode(Node):
         if _other_vals:
             _consensus_val = sum(_other_vals) / len(_other_vals)
             _divergence = abs(_basic_val - _consensus_val)
-            _DIVERGENCE_THRESHOLD = 0.40
-            if _divergence > _DIVERGENCE_THRESHOLD:
+            _divergence_threshold = 0.40
+            if _divergence > _divergence_threshold:
                 self._basic_signal_divergence_count += 1
                 logger.warning(
                     "basic_signals divergence: value=%.4f consensus=%.4f "
@@ -1955,7 +1955,7 @@ class VictoriaNode(Node):
                     _basic_val,
                     _consensus_val,
                     _divergence,
-                    _DIVERGENCE_THRESHOLD,
+                    _divergence_threshold,
                     self._basic_signal_divergence_count,
                 )
             else:
@@ -2063,13 +2063,17 @@ class VictoriaNode(Node):
                 forecast_val = float(ts_forecast["value"])
                 # Use the market_data signal value as the "realised" proxy
                 md_signal = signals.get("market_data") or signals.get("market_data_signal", {})
-                realised_val = float(md_signal.get("value", 0.0)) if isinstance(md_signal, dict) else 0.0
+                realised_val = (
+                    float(md_signal.get("value", 0.0)) if isinstance(md_signal, dict) else 0.0
+                )
                 self._conformal_calibrator.update(forecast=forecast_val, realised=realised_val)
                 # Attach interval info to the forecast signal
                 interval = self._conformal_calibrator.predict(forecast_val)
                 signals["timeseries_forecast"]["conformal_lo"] = round(interval.lower, 6)
                 signals["timeseries_forecast"]["conformal_hi"] = round(interval.upper, 6)
-                signals["timeseries_forecast"]["conformal_q"] = round(interval.quantile, 6) if interval.quantile != float("inf") else None
+                signals["timeseries_forecast"]["conformal_q"] = (
+                    round(interval.quantile, 6) if interval.quantile != float("inf") else None
+                )
                 signals["timeseries_forecast"]["conformal_uncertainty"] = round(
                     self._conformal_calibrator.uncertainty_score(forecast_val), 4
                 )
@@ -2235,9 +2239,7 @@ class VictoriaNode(Node):
         provider_summary = resilience.get_provider_health_summary()
         write_buf = get_write_buffer()
         health = compute_health_score(
-            provider_statuses={
-                k: v for k, v in provider_summary.items() if k != "timestamp"
-            },
+            provider_statuses={k: v for k, v in provider_summary.items() if k != "timestamp"},
             db_down=write_buf.is_down,
             signals=flat_signals,
             regime=regime,
