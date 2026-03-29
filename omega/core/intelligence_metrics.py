@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import os
+from collections import deque
 from typing import Any
 
 logger = logging.getLogger("omega.core.intelligence_metrics")
@@ -30,10 +31,27 @@ class IntelligenceMetricsCollector:
     All methods are no-ops when ``db_url`` is None or DB is unreachable.
     """
 
-    def __init__(self, db_url: str | None = None) -> None:
+    def __init__(
+        self,
+        db_url: str | None = None,
+        ema_alpha: float = 0.3,
+        score_history_size: int = 100,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        db_url             : Postgres connection string (None = no-op mode).
+        ema_alpha          : EMA smoothing factor.  Higher α = more weight on
+                             the current cycle.  Lower α = longer memory.
+                             Range (0, 1].  Default 0.3.
+        score_history_size : Maximum number of past scores to retain.
+        """
         self._db_url = db_url or os.environ.get("DATABASE_URL")
         self._current_cycle: dict[str, Any] = {}
         self._conn: Any = None
+        self._ema_alpha = ema_alpha
+        self._score_history: deque[float] = deque(maxlen=score_history_size)
+        self._ema_score: float | None = None
         if self._db_url:
             try:
                 import psycopg
@@ -44,6 +62,11 @@ class IntelligenceMetricsCollector:
             except Exception as exc:
                 logger.warning("IntelligenceMetricsCollector: DB connect failed: %s", exc)
                 self._conn = None
+
+    @property
+    def score_history(self) -> list[float]:
+        """Ordered list of past composite scores (oldest first)."""
+        return list(self._score_history)
 
     # ------------------------------------------------------------------
     # Accumulation API
@@ -68,6 +91,13 @@ class IntelligenceMetricsCollector:
         No-op if no DB connection is available.
         """
         score = self._compute_intelligence_score()
+        # Maintain EMA and history for the next cycle's score computation
+        if self._ema_score is None:
+            self._ema_score = score
+        else:
+            self._ema_score = self._ema_alpha * score + (1.0 - self._ema_alpha) * self._ema_score
+        self._score_history.append(score)
+
         self._current_cycle["intelligence_score"] = score
         self._current_cycle["cycle"] = cycle
 
@@ -91,9 +121,10 @@ class IntelligenceMetricsCollector:
 
     def _compute_intelligence_score(self) -> float:
         """
-        0-1 composite score — fraction of 8 intelligence checks that are active.
+        0-1 composite score blending current-cycle checks with exponentially-decayed
+        historical performance.
 
-        Checks:
+        Current-cycle binary checks:
           1. LLM reasoning active (brain_calls > 0)
           2. Self-improvement active (improve_calls > 0)
           3. Learning from outcomes (episodes_created > 0)
@@ -102,6 +133,9 @@ class IntelligenceMetricsCollector:
           6. Signal coverage (signals_nonzero > 10)
           7. Market structure detected (rmt_info_ratio > 0.3)
           8. Risk oversight (debate_gate_invocations > 0)
+
+        Blended with EMA of past scores:
+          score = ema_alpha * raw_score + (1 - ema_alpha) * ema_history
         """
         checks = [
             self._current_cycle.get("brain_calls", 0) > 0,
@@ -113,7 +147,12 @@ class IntelligenceMetricsCollector:
             self._current_cycle.get("rmt_info_ratio", 0.0) > 0.3,
             self._current_cycle.get("debate_gate_invocations", 0) > 0,
         ]
-        return float(sum(checks)) / len(checks)
+        raw_score = float(sum(checks)) / len(checks)
+
+        if self._ema_score is None:
+            return raw_score
+
+        return self._ema_alpha * raw_score + (1.0 - self._ema_alpha) * self._ema_score
 
     def _write_to_db(self) -> None:
         """INSERT current cycle metrics into intelligence_metrics."""

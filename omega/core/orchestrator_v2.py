@@ -67,6 +67,110 @@ logger = logging.getLogger("omega.orchestrator_v2")
 _ADVERSARIAL_SCORE_THRESHOLD = 0.70
 
 # ---------------------------------------------------------------------------
+# AttentionRouter — per-signal weight decay toward uniform
+# ---------------------------------------------------------------------------
+
+
+class AttentionRouter:
+    """
+    Routes orchestrator attention across signals using learnable weights.
+
+    Weights start at 1.0 (uniform) and are boosted when a signal contributes
+    to a winning trade.  When a signal has *not* contributed to any winning
+    trade for ``n_decay_cycles`` consecutive cycles, its weight is decayed
+    toward the uniform floor of 1.0 using an exponential decay step.
+
+    Parameters
+    ----------
+    n_decay_cycles : int
+        Number of consecutive idle cycles (no winning contribution) before
+        decay is applied.
+    boost : float
+        Additive boost applied to a signal's weight when it contributes to a
+        win.  Default 0.1.
+    decay_rate : float
+        Fraction of the excess above 1.0 removed per decay step (0–1).
+        At 0.5 the excess halves each step; at 0.0 no decay occurs.
+        Default 0.3.
+    max_weight : float
+        Upper cap for any signal weight.  Default 5.0.
+    """
+
+    def __init__(
+        self,
+        n_decay_cycles: int = 20,
+        boost: float = 0.1,
+        decay_rate: float = 0.3,
+        max_weight: float = 5.0,
+    ) -> None:
+        self._n_decay_cycles = n_decay_cycles
+        self._boost = boost
+        self._decay_rate = decay_rate
+        self._max_weight = max_weight
+
+        self._weights: dict[str, float] = {}
+        self._idle_cycles: dict[str, int] = {}
+        self._signals_this_cycle: set[str] = set()
+        self.routing_decisions: int = 0
+
+    def record_signals_this_cycle(self, signal_names: list[str]) -> None:
+        """Register which signals were active in the current cycle."""
+        for name in signal_names:
+            if name not in self._weights:
+                self._weights[name] = 1.0
+                self._idle_cycles[name] = 0
+        self._signals_this_cycle = set(signal_names)
+
+    def record_trade_outcome(
+        self, winning: bool, contributing_signals: list[str]
+    ) -> None:
+        """Boost contributing signals on a win; no-op on a loss."""
+        if not winning:
+            return
+        for name in contributing_signals:
+            if name not in self._weights:
+                self._weights[name] = 1.0
+                self._idle_cycles[name] = 0
+            self._weights[name] = min(
+                self._weights[name] + self._boost, self._max_weight
+            )
+            self._idle_cycles[name] = 0
+
+    def advance_cycle(self) -> None:
+        """Advance cycle counter; apply decay to signals idle ≥ n_decay_cycles."""
+        self.routing_decisions += 1
+        for name in list(self._weights):
+            self._idle_cycles[name] = self._idle_cycles.get(name, 0) + 1
+            if self._idle_cycles[name] >= self._n_decay_cycles:
+                excess = self._weights[name] - 1.0
+                if excess > 0:
+                    self._weights[name] = 1.0 + excess * (1.0 - self._decay_rate)
+        self._signals_this_cycle = set()
+
+    def get_weight(self, signal_name: str) -> float:
+        """Return routing weight for a signal (default 1.0 if unseen)."""
+        return self._weights.get(signal_name, 1.0)
+
+    def get_weights(self) -> dict[str, float]:
+        """Return a copy of all current weights."""
+        return dict(self._weights)
+
+    def summary(self) -> dict:
+        """Serialisable summary for logging / metrics."""
+        if not self._weights:
+            return {"signal_count": 0, "routing_decisions": self.routing_decisions}
+        avg_w = sum(self._weights.values()) / len(self._weights)
+        top = max(self._weights, key=lambda k: self._weights[k])
+        return {
+            "signal_count": len(self._weights),
+            "avg_weight": round(avg_w, 4),
+            "max_weight_signal": top,
+            "max_weight": round(self._weights[top], 4),
+            "routing_decisions": self.routing_decisions,
+        }
+
+
+# ---------------------------------------------------------------------------
 # DebateGateLearner — learns the optimal block threshold from outcomes
 # ---------------------------------------------------------------------------
 
@@ -256,6 +360,9 @@ class OmegaOrchestrator:
         self._tracer: Any = None
         self._store: Any = None
         self._semantic_memory = SemanticMemoryNode(review_interval=50)
+
+        # Attention router — per-signal weight decay toward uniform.
+        self._attention_router = AttentionRouter()
 
         # Debate gate learner — learns optimal block threshold from outcomes.
         # initial=1.0 matches Ring 1's cosine-distance threshold; max=1.5
@@ -987,6 +1094,16 @@ class OmegaOrchestrator:
         if self._paper_trading is not None and signal_data:
             self._paper_trading.persist_signal_history_to_db(signal_data, ctx.cycle_number)
 
+        # Attention router: register active signals this cycle
+        all_signal_names: list[str] = []
+        for sigs in signal_data.values():
+            if isinstance(sigs, dict):
+                all_signal_names.extend(
+                    k for k in sigs if not k.startswith("_") and not isinstance(sigs[k], str)
+                )
+        if all_signal_names:
+            self._attention_router.record_signals_this_cycle(all_signal_names)
+
         # Intelligence metrics: signal coverage
         if self._intel_collector is not None:
             all_signals: dict[str, Any] = {}
@@ -1492,6 +1609,19 @@ class OmegaOrchestrator:
                             if hasattr(node, "record_trade_outcome") and sym:
                                 with contextlib.suppress(Exception):
                                     node.record_trade_outcome(sym, pnl, size)
+                    # Attention router: feed trade outcomes into weight learning
+                    with contextlib.suppress(Exception):
+                        for trade in newly_closed:
+                            trade_pnl = float(trade.get("pnl", 0.0))
+                            contributing = [
+                                str(s)
+                                for s in (trade.get("signals") or [])
+                                if isinstance(s, str)
+                            ]
+                            self._attention_router.record_trade_outcome(
+                                winning=trade_pnl > 0,
+                                contributing_signals=contributing,
+                            )
             except Exception as exc:
                 log.warning("PaperTrading execution failed: %s", exc)
 
@@ -1588,6 +1718,13 @@ class OmegaOrchestrator:
         if self._metrics:
             self._metrics.record_heartbeat(result.duration_seconds)
             self._metrics.update_signals({f"cycle_{cycle_num}": float(result.signals_generated)})
+
+        # Attention router: advance cycle (applies weight decay to idle signals)
+        self._attention_router.advance_cycle()
+        if self._intel_collector is not None:
+            self._intel_collector.record(
+                "routing_decisions", self._attention_router.routing_decisions
+            )
 
         # Intelligence metrics: aggregate brain calls from node results, flush
         if self._intel_collector is not None:

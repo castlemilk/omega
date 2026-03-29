@@ -150,6 +150,13 @@ class SignalLifecycle(str, Enum):
     STABLE = "STABLE"
     WEAKENING = "WEAKENING"
     FALSIFIED = "FALSIFIED"
+    RETIRED = "RETIRED"
+
+
+class SignalRetirementReason(str, Enum):
+    """Why a signal was auto-retired."""
+
+    LOW_IC = "LOW_IC"  # IC stayed below threshold for retirement_window cycles
 
 
 @dataclass
@@ -184,10 +191,18 @@ class SignalEvolution:
     _values: deque = field(default_factory=lambda: deque(maxlen=20))
     _directions: deque = field(default_factory=lambda: deque(maxlen=20))
 
+    # IC tracking for auto-retirement
+    cycles_below_ic_threshold: int = 0
+    retirement_reason: SignalRetirementReason | None = None
+
     # ------------------------------------------------------------------ #
 
     def observe(self, value: float) -> SignalLifecycle:
         """Record a new observation and potentially transition state."""
+        # Retired signals do not change state
+        if self.current_state == SignalLifecycle.RETIRED:
+            return self.current_state
+
         direction = 1 if value > 0.05 else (-1 if value < -0.05 else 0)
         self._values.append(value)
         self._directions.append(direction)
@@ -278,16 +293,23 @@ class SignalEvolutionTracker:
     """
     Tracks the lifecycle of multiple signals.
 
-    Usage::
-
-        tracker = SignalEvolutionTracker()
-        states = tracker.observe_many({"sentiment": 0.3, "momentum": -0.1})
-        # {"sentiment": SignalLifecycle.EMERGING, "momentum": SignalLifecycle.EMERGING}
+    Parameters
+    ----------
+    window           : Rolling window size for direction observations.
+    ic_threshold     : Minimum IC below which a cycle counts toward retirement.
+    retirement_window: Consecutive cycles below ic_threshold required to auto-retire.
     """
 
-    def __init__(self, window: int = 20) -> None:
+    def __init__(
+        self,
+        window: int = 20,
+        ic_threshold: float = 0.02,
+        retirement_window: int = 50,
+    ) -> None:
         self._evolutions: dict[str, SignalEvolution] = {}
         self._window = window
+        self._ic_threshold = ic_threshold
+        self._retirement_window = retirement_window
 
     def observe(self, signal_name: str, value: float) -> SignalLifecycle:
         if signal_name not in self._evolutions:
@@ -303,6 +325,62 @@ class SignalEvolutionTracker:
 
     def get_evolution(self, signal_name: str) -> SignalEvolution | None:
         return self._evolutions.get(signal_name)
+
+    def record_ic(self, signal_name: str, ic: float) -> None:
+        """
+        Record an IC value for a signal and trigger retirement if applicable.
+
+        If the signal's IC has been below ``ic_threshold`` for
+        ``retirement_window`` consecutive cycles, the signal is auto-retired.
+        """
+        ev = self._evolutions.get(signal_name)
+        if ev is None:
+            return
+        if ev.current_state == SignalLifecycle.RETIRED:
+            return
+
+        if ic < self._ic_threshold:
+            ev.cycles_below_ic_threshold += 1
+        else:
+            ev.cycles_below_ic_threshold = 0  # reset on recovery
+
+        if ev.cycles_below_ic_threshold >= self._retirement_window:
+            ev.retirement_reason = SignalRetirementReason.LOW_IC
+            if ev.current_state != SignalLifecycle.RETIRED:
+                ev.transitions.append(
+                    StateTransition(
+                        from_state=ev.current_state,
+                        to_state=SignalLifecycle.RETIRED,
+                        timestamp=datetime.now(),
+                        evidence=(
+                            f"IC={ic:.4f} below threshold={self._ic_threshold:.4f} "
+                            f"for {ev.cycles_below_ic_threshold} consecutive cycles "
+                            f"(window={self._retirement_window})"
+                        ),
+                        signal_value=ic,
+                    )
+                )
+                ev.current_state = SignalLifecycle.RETIRED
+                logger.warning(
+                    "Signal '%s' auto-retired: IC=%.4f below %.4f for %d cycles",
+                    signal_name,
+                    ic,
+                    self._ic_threshold,
+                    ev.cycles_below_ic_threshold,
+                )
+
+    def is_retired(self, signal_name: str) -> bool:
+        """Return True if the named signal has been auto-retired."""
+        ev = self._evolutions.get(signal_name)
+        return ev is not None and ev.current_state == SignalLifecycle.RETIRED
+
+    def get_retired_signals(self) -> list[str]:
+        """Return names of all signals that have been auto-retired."""
+        return [
+            name
+            for name, ev in self._evolutions.items()
+            if ev.current_state == SignalLifecycle.RETIRED
+        ]
 
     @property
     def signal_reliability(self) -> float:
