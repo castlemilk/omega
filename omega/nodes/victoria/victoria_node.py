@@ -78,6 +78,7 @@ from omega.nodes.victoria.news_projection import NewsProjectionLayer
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
 from omega.nodes.victoria.curvature_signal import GeodesicCurvatureSignal
 from omega.nodes.victoria.conformal_calibrator import ConformalCalibrator
+from omega.core.alerting import compute_health_score, get_write_buffer
 
 credentials.register(
     "ANTHROPIC_API_KEY", required=False, description="LLM brain for Victoria reflections"
@@ -2124,12 +2125,11 @@ class VictoriaNode(Node):
     def _persist_signals_to_db(self, signals: dict[str, Any]) -> None:
         """Write computed signals to victoria_signals table.
 
-        Called after every _do_compute_signals() regardless of whether the call
-        came from the Go bridge or direct orchestration.  Silently skips if
-        DATABASE_URL is unset or psycopg2 is unavailable.
+        Called after every _do_compute_signals().  On failure, batches are
+        buffered by DBWriteBuffer and replayed automatically on the next cycle
+        when the DB recovers.  Logs clearly when the DB transitions between
+        down and recovered states.
         """
-        import os
-
         db_url = os.environ.get("DATABASE_URL")
         if not db_url:
             return
@@ -2139,7 +2139,13 @@ class VictoriaNode(Node):
             logger.debug("psycopg2 not available — skipping signal persistence")
             return
 
-        rows = []
+        buf = get_write_buffer()
+
+        # On each cycle, attempt to flush any buffered batches first.
+        if buf.pending_count > 0:
+            buf.try_flush(db_url)
+
+        rows: list[dict[str, Any]] = []
         weights = signals.get("_weights", {})
         for name, sig in signals.items():
             if name.startswith("_"):
@@ -2177,9 +2183,17 @@ class VictoriaNode(Node):
                         cur.execute(sql, row)
             finally:
                 conn.close()
+            # If we were previously down and just succeeded, mark recovered.
+            if buf.is_down:
+                buf.try_flush(db_url)
             logger.debug("Persisted %d signal(s) to victoria_signals", len(rows))
         except Exception as exc:
-            logger.warning("Failed to persist signals to victoria_signals: %s", exc)
+            logger.warning(
+                "DB write failed — buffering %d row(s) for replay: %s",
+                len(rows),
+                exc,
+            )
+            buf.add(rows)
 
     def _do_construct_portfolio(self, inp: NodeInput) -> list[dict[str, Any]]:
         """Construct portfolio from signals, respecting autonomy level."""
@@ -2216,6 +2230,20 @@ class VictoriaNode(Node):
             },
             context=inp.context,
         )
+        # Compute system health score and apply position scale-down if degraded.
+        resilience = get_resilience_layer()
+        provider_summary = resilience.get_provider_health_summary()
+        write_buf = get_write_buffer()
+        health = compute_health_score(
+            provider_statuses={
+                k: v for k, v in provider_summary.items() if k != "timestamp"
+            },
+            db_down=write_buf.is_down,
+            signals=flat_signals,
+            regime=regime,
+        )
+        position_scale = health["position_scale"]
+
         out = self._strategy.execute(strategy_inp)
         if out.success and out.result:
             result = out.result
@@ -2231,8 +2259,21 @@ class VictoriaNode(Node):
                 ]
                 if composites:
                     result.setdefault("composite", sum(composites) / len(composites))
+                # Scale down position sizes proportionally when health < 50.
+                if position_scale < 1.0:
+                    if "size" in result:
+                        result["size"] = float(result["size"]) * position_scale
+                    result["_health_score"] = health["score"]
+                    result["_position_scale"] = position_scale
                 return [result]
             if isinstance(result, list):
+                if position_scale < 1.0:
+                    for item in result:
+                        if isinstance(item, dict) and "size" in item:
+                            item["size"] = float(item["size"]) * position_scale
+                        if isinstance(item, dict):
+                            item["_health_score"] = health["score"]
+                            item["_position_scale"] = position_scale
                 return result
         return []
 

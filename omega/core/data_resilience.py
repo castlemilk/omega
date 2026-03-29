@@ -320,6 +320,61 @@ class DataResilienceLayer:
             "timestamp": time.time(),
         }
 
+    def get_provider_health_summary(self) -> dict[str, Any]:
+        """
+        Return a dashboard-optimised provider health summary.
+
+        Designed for direct consumption by the React dashboard's
+        ``/api/v1/provider-health`` endpoint.
+
+        Structure::
+
+            {
+                "binance": {
+                    "status": "healthy" | "degraded" | "down",
+                    "last_success": "2m ago" | None,
+                    "failure_count": 0,
+                    "circuit": "CLOSED" | "OPEN" | "HALF_OPEN",
+                },
+                ...
+                "timestamp": 1712345678.9,
+            }
+
+        Status mapping:
+            CLOSED    → "healthy"
+            HALF_OPEN → "degraded"
+            OPEN      → "down"
+        """
+        _STATE_TO_STATUS = {
+            "CLOSED": "healthy",
+            "HALF_OPEN": "degraded",
+            "OPEN": "down",
+        }
+
+        now = time.time()
+        summary: dict[str, Any] = {}
+        for name, h in self._health.items():
+            if h.last_success_time:
+                ago_s = now - h.last_success_time
+                if ago_s < 60:
+                    last_success: str | None = f"{int(ago_s)}s ago"
+                elif ago_s < 3600:
+                    last_success = f"{int(ago_s // 60)}m ago"
+                else:
+                    last_success = f"{int(ago_s // 3600)}h ago"
+            else:
+                last_success = None
+
+            summary[name] = {
+                "status": _STATE_TO_STATUS.get(h.state, "unknown"),
+                "last_success": last_success,
+                "failure_count": h.failure_count,
+                "circuit": h.state,
+            }
+
+        summary["timestamp"] = now
+        return summary
+
     def provider_health(self, name: str) -> _ProviderHealth | None:
         """Return the _ProviderHealth object for a named provider (for testing)."""
         return self._health.get(name)
