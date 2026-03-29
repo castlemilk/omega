@@ -1,0 +1,231 @@
+# projects/market_maker.yaml
+# ──────────────────────────────────────────────────────────────
+# Market Maker — Avellaneda-Stoikov Optimal Quote Placement
+#
+# Declarative project definition. Implements the classic A-S market
+# making model: optimal bid/ask placement accounting for inventory
+# risk and adverse selection from informed order flow.
+#
+# Reference: Avellaneda & Stoikov (2008), "High-frequency trading
+#            in a limit order book"
+#
+# To run:  omega run --project projects/market_maker.yaml
+# ──────────────────────────────────────────────────────────────
+
+name: market_maker
+description: >
+  Avellaneda-Stoikov optimal market making with L2 order book data,
+  inventory-adjusted quote placement, and Lee-Ready adverse selection
+  filtering. Runs in paper mode with 5-layer risk controls.
+
+nodes:
+  # ── Data layer ──────────────────────────────────────────────
+
+  # Level 2 order book: full bid/ask depth snapshots at 100ms cadence
+  - type: data_provider
+    name: orderbook_feed
+    config:
+      provider: binance
+      feed_type: l2_depth          # L2 order book (not OHLCV)
+      tickers:
+        - BTCUSDT
+        - ETHUSDT
+      depth_levels: 20             # Top-20 bid and ask levels
+      snapshot_interval_ms: 100   # 100ms refresh
+
+  # Trade tape: individual fills for Lee-Ready classification
+  - type: data_provider
+    name: trade_tape
+    config:
+      provider: binance
+      feed_type: aggTrades          # Aggregated trade stream
+      tickers:
+        - BTCUSDT
+        - ETHUSDT
+
+  # ── Signal layer ─────────────────────────────────────────────
+
+  # Mid-price and spread signal from L2 book
+  - type: signal_generator
+    name: spread_signal
+    inputs:
+      - orderbook_feed.order_book
+    config:
+      signals: [spread]
+      # Outputs:
+      #   mid_price         — (best_bid + best_ask) / 2
+      #   quoted_spread     — best_ask - best_bid
+      #   effective_spread  — rolling EWMA of trade impact
+      #   book_imbalance    — (bid_vol - ask_vol) / (bid_vol + ask_vol)
+      spread_ewma_halflife: 60      # seconds, for effective spread smoothing
+      imbalance_depth_levels: 5     # levels used for imbalance calc
+
+  # Inventory risk signal: -γ·q·σ² (A-S penalty for holding inventory)
+  - type: signal_generator
+    name: inventory_risk_signal
+    inputs:
+      - orderbook_feed.order_book
+      - trade_tape.trades
+    config:
+      signals: [inventory_risk]
+      # A-S inventory penalty: reservation price shift = -γ * q * σ²
+      #   γ (risk_aversion): market maker's risk-aversion parameter
+      #   q: current signed inventory (contracts held)
+      #   σ²: realised variance of mid-price (rolling window)
+      risk_aversion: 0.1            # γ — tuned via TPE; typical range 0.01–1.0
+      sigma_window_seconds: 300     # 5-minute rolling variance window
+      max_inventory_usd: 10000      # hard inventory cap in USD equivalent
+
+  # Adverse selection signal: Lee-Ready trade direction classification
+  - type: signal_generator
+    name: adverse_selection_signal
+    inputs:
+      - orderbook_feed.order_book
+      - trade_tape.trades
+    config:
+      signals: [adverse_selection]
+      # Lee-Ready (1991) tick rule + quote rule hybrid:
+      #   1. Quote rule: classify by comparing trade price to prevailing mid
+      #   2. Tick rule: fallback when trade is at mid (ambiguous)
+      #   3. Toxicity score: fraction of recent trades classified as informed
+      classification_method: lee_ready
+      toxicity_window_trades: 200   # rolling window for toxicity score
+      toxicity_threshold: 0.65      # widen spread when toxicity > threshold
+      tick_rule_lookback: 5         # ticks to look back for tick rule fallback
+
+  # ── Strategy layer ───────────────────────────────────────────
+
+  # A-S optimal quote placement
+  - type: strategy
+    name: avellaneda_stoikov
+    inputs:
+      - spread_signal.mid_price
+      - spread_signal.quoted_spread
+      - spread_signal.book_imbalance
+      - inventory_risk_signal.reservation_price    # mid - γ*q*σ²
+      - inventory_risk_signal.inventory_penalty
+      - adverse_selection_signal.toxicity_score
+      - adverse_selection_signal.trade_direction
+    config:
+      # A-S optimal half-spread:
+      #   δ* = γ·σ²·T + (2/γ)·ln(1 + γ/k)
+      #   where k = order arrival rate parameter
+      #
+      # Reservation price (inventory-adjusted mid):
+      #   r = s - q·γ·σ²·(T - t)
+      #
+      # Optimal quotes:
+      #   bid = r - δ*
+      #   ask = r + δ*
+      terminal_time_seconds: 3600   # T — one trading hour horizon
+      order_arrival_rate: 1.5       # k — fitted to historical fill data
+      min_half_spread_bps: 1.0      # floor on half-spread (1 basis point)
+      max_half_spread_bps: 50.0     # ceiling on half-spread (50 bps)
+      # Toxicity adjustment: widen spread when adverse selection is elevated
+      toxicity_spread_multiplier: 2.0   # multiply δ* by this when toxic > threshold
+      # Imbalance skew: shift quotes toward the heavier side of the book
+      imbalance_skew_factor: 0.3    # fraction of imbalance to shift reservation price
+
+  # ── Risk layer ───────────────────────────────────────────────
+
+  # 5-layer risk controls for market making
+  - type: risk_manager
+    name: mm_risk_controls
+    inputs:
+      - avellaneda_stoikov.bid_quote
+      - avellaneda_stoikov.ask_quote
+      - inventory_risk_signal.inventory_usd
+      - adverse_selection_signal.toxicity_score
+    config:
+      # Layer 1: Inventory limit — cancel all orders if breached
+      max_inventory_usd: 10000         # absolute position cap
+      inventory_breach_action: cancel_all
+
+      # Layer 2: Daily loss limit — halt when P&L threshold hit
+      max_daily_loss_usd: 500          # stop trading for rest of session
+      daily_loss_action: halt_session
+
+      # Layer 3: Toxicity circuit breaker — pull quotes when book is toxic
+      toxicity_halt_threshold: 0.80   # fraction of informed order flow
+      toxicity_halt_duration_seconds: 60  # cooldown before re-quoting
+
+      # Layer 4: Volatility halt — widen quotes or pause during vol spikes
+      volatility_halt_sigma_multiple: 3.0  # halt if σ > 3× rolling baseline
+      volatility_halt_action: widen_spread  # or: pause (cancel and wait)
+      volatility_widen_multiplier: 3.0
+
+      # Layer 5: Spread sanity check — reject quotes that are too tight or too wide
+      min_executable_spread_bps: 0.5   # below this is likely a data error
+      max_executable_spread_bps: 200.0 # above this, quotes won't fill
+
+  # ── Execution layer ──────────────────────────────────────────
+
+  - type: executor
+    name: paper_trader
+    inputs:
+      - mm_risk_controls.approved_bid
+      - mm_risk_controls.approved_ask
+    config:
+      mode: paper                    # paper | live
+      # Simulated fill model for paper trading
+      fill_model: probabilistic      # probabilistic | queue_position | instant
+      # Probabilistic fill model: P(fill) decays with distance from mid
+      fill_halflife_bps: 5.0         # distance at which P(fill) = 0.5
+      # Simulated latency (realistic for co-located HFT)
+      simulated_latency_us: 100      # microseconds
+      # Cancel-replace on quote refresh
+      quote_refresh_interval_ms: 500 # refresh quotes every 500ms
+
+  # ── Intelligence layer ───────────────────────────────────────
+
+  - type: intelligence
+    name: parameter_tuner
+    inputs:
+      - paper_trader.fill_events
+      - paper_trader.pnl
+      - inventory_risk_signal.inventory_usd
+    config:
+      # Bayesian optimisation over A-S parameters
+      optimize_params:
+        - risk_aversion         # γ
+        - order_arrival_rate    # k
+        - toxicity_threshold
+        - imbalance_skew_factor
+      tpe_trials: 100
+      optimize_frequency: per_session  # re-tune at session start
+      target_metric: sharpe_ratio
+      min_fill_events: 50             # need at least 50 fills before optimising
+
+routing:
+  type: dag
+  config: {}
+
+# ──────────────────────────────────────────────────────────────
+# Evaluation configuration
+# ──────────────────────────────────────────────────────────────
+eval_config:
+  primary_metrics:
+    - sharpe_ratio
+    - fill_rate               # fraction of quotes that get filled
+    - inventory_turnover      # how quickly inventory reverts to zero
+    - adverse_selection_cost  # P&L lost to informed traders
+    - quoted_spread           # mean quoted spread in bps
+  metric_targets:
+    sharpe_ratio: 2.0
+    fill_rate: 0.3            # 30% fill rate is healthy for market making
+    adverse_selection_cost: -0.0005  # max 5bps per trade lost to informed flow
+  eval_frequency: per_cycle
+
+improvement_config:
+  tpe_enabled: true
+  tpe_trials: 100
+  adversarial_enabled: true
+  adversarial_rounds: 3
+  walk_forward_enabled: true
+  walk_forward_windows: 5
+
+metadata:
+  color: "#ff9900"
+  domain: market_making
+  autonomy_level: supervised
+  reference: "Avellaneda & Stoikov (2008) — High-frequency trading in a limit order book"
