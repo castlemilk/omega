@@ -118,7 +118,7 @@ func runStack(_ *cobra.Command, _ []string) error {
 		feLabel := "\033[35m[frontend]\033[0m"
 		fmt.Printf("%s starting React dev server on :5173…\n", feLabel)
 		feCmd := exec.CommandContext(ctx, "npm", "run", "dev")
-		feCmd.Dir = "web/dashboard"
+		feCmd.Dir = "dashboard"
 		feCmd.Env = env
 		feOut, _ := feCmd.StdoutPipe()
 		feErr, _ := feCmd.StderrPipe()
