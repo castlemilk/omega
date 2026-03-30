@@ -325,8 +325,13 @@ class SignalGenerationNode(Node):
             _sma_dir = ts.get("sma_crossover", 0.0)
             _trend_str = abs(_sma_dir)
             if _trend_str > 0.5:
-                # Dampen factor: 1.0 at strength=0.5 → 0.0 at strength=1.0
-                _dampen = max(0.0, 1.0 - (_trend_str - 0.5) * 2.0)
+                # Dampen factor: 1.0 at strength=0.5 → 0.3 at strength=1.0.
+                # Floor at 0.3 (not 0.0) so mean-reversion signals are reduced
+                # but never eliminated.  RSI/BB differ between tickers even in
+                # a uniform downtrend (some are more oversold than others), and
+                # zeroing them out collapses all composites to the same value,
+                # which is the root cause of the rank-staircase pattern.
+                _dampen = max(0.3, 1.0 - (_trend_str - 0.5) * 2.0)
                 _changed = False
                 if _sma_dir < 0:  # downtrend: dampen bullish (positive) mean-reversion
                     for _mr in ("rsi_signal", "bb_signal"):
@@ -385,28 +390,24 @@ class SignalGenerationNode(Node):
                         if dir_vals:
                             ts["composite"] = sum(dir_vals) / len(dir_vals)
 
-        # Cross-sectional normalization: blend absolute composite with rank within the
-        # current universe. Ensures signal differentiation even in uniform regimes
-        # (e.g., all bearish in a crypto winter) so the portfolio contains a mix of
-        # conviction levels rather than a monoculture of identical SELL signals.
-        # Only activates when cross-sectional variance is below the minimum threshold.
+        # Debug: log composite spread so we can verify cross-ticker differentiation
         _composites = [
             (t, s.get("composite", 0.0))
             for t, s in signals.items()
-            if s.get("composite") is not None
+            if s.get("composite") is not None and not t.startswith("_")
         ]
         if len(_composites) >= 3:
             _vals = [v for _, v in _composites]
             _mu = sum(_vals) / len(_vals)
             _std = math.sqrt(sum((v - _mu) ** 2 for v in _vals) / len(_vals))
-            if _std < 0.08:  # low cross-sectional variance — enforce minimum spread
-                _sorted = sorted(_composites, key=lambda x: x[1])
-                _n = len(_sorted)
-                for _rank, (_t, _raw) in enumerate(_sorted):
-                    # rank_norm spans [-1, +1] from most-bearish to least-bearish
-                    _rank_norm = (_rank / (_n - 1)) * 2.0 - 1.0 if _n > 1 else 0.0
-                    # 70% absolute signal direction + 30% cross-sectional rank
-                    signals[_t]["composite"] = round(0.7 * _raw + 0.3 * _rank_norm, 4)
+            logger.debug(
+                "composite spread: n=%d mean=%.3f std=%.3f min=%.3f max=%.3f",
+                len(_vals),
+                _mu,
+                _std,
+                min(_vals),
+                max(_vals),
+            )
 
         return signals
 

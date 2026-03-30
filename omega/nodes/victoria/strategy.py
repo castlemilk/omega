@@ -120,9 +120,9 @@ class StrategyNode(Node):
         # Minimum fraction of sub-signals that must agree on direction (0.6 = 10/16)
         self._agreement_ratio_threshold: float = 0.6
         # IC-weighted conviction must exceed this in absolute value.
-        # 0.20 allows moderate-conviction signals through; the cross-sectional
-        # normalization in signal_generation.py ensures differentiation so that
-        # thresholds are met even in uniform bear/bull regimes.
+        # 0.20 allows moderate-conviction signals through.  Differentiation
+        # between tickers comes from genuine signal spread (RSI/BB vary
+        # between assets even in uniform regimes), not artificial rank injection.
         self._weighted_conviction_threshold: float = 0.20
         # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
         self._signal_ics: dict[str, float] = {}
