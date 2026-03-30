@@ -7,6 +7,7 @@ import { client } from "./client";
 import type { SystemHealth as SystemHealthProto } from "./gen/omega/v1/types_pb";
 
 import { ProjectProvider } from "./context/ProjectContext";
+import HealthBanner from "./components/layout/HealthBanner";
 import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import Nodes from "./pages/Nodes";
@@ -35,6 +36,8 @@ import SystemHealth from "./pages/SystemHealth";
 import PerformanceMetrics from "./pages/PerformanceMetrics";
 import ErrorLog from "./pages/ErrorLog";
 import PipelineView from "./pages/PipelineView";
+import Training from "./pages/Training";
+import SignalHealth from "./pages/SignalHealth";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealthProto | null>(null);
@@ -73,6 +76,7 @@ export default function App() {
           <Sidebar />
           <div className="flex-1 flex flex-col min-h-screen">
             <Header systemStatus={health?.status} connected={streamConnected} />
+            <HealthBanner />
             <main className="flex-1 overflow-auto p-6">
               <Routes>
                 <Route path="/" element={<Dashboard health={health} />} />
@@ -138,6 +142,8 @@ export default function App() {
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/perf" element={<PerformanceMetrics />} />
                 <Route path="/errors" element={<ErrorLog />} />
+                <Route path="/training" element={<Training />} />
+                <Route path="/signals" element={<SignalHealth />} />
                 <Route path="/projects/:id/pipeline" element={<PipelineView />} />
               </Routes>
             </main>
