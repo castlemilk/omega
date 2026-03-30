@@ -23,6 +23,7 @@ const CycleDetail       = lazy(() => import('./pages/CycleDetail').then(m => ({ 
 const AdversarialPage   = lazy(() => import('./pages/AdversarialPage').then(m => ({ default: m.AdversarialPage })))
 const HealthPage        = lazy(() => import('./pages/HealthPage').then(m => ({ default: m.HealthPage })))
 const ImprovementPage   = lazy(() => import('./pages/ImprovementPage').then(m => ({ default: m.ImprovementPage })))
+const ControlPlane      = lazy(() => import('./pages/ControlPlane').then(m => ({ default: m.ControlPlane })))
 
 // ─── Fallback ────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,7 @@ export default function App() {
               <Route path="/" element={<GlobalOverview />} />
               <Route path="/nodes/registry" element={<NodesRegistryPage />} />
               <Route path="/coordination" element={<CoordinationPage />} />
+              <Route path="/control-plane" element={<ControlPlane />} />
               <Route path="/settings" element={<SettingsPage />} />
 
               {/* Per-project routes */}

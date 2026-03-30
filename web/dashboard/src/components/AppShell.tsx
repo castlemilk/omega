@@ -3,18 +3,19 @@ import { NavLink, useParams, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Server, RefreshCw, Shield, TrendingUp, Activity,
   ChevronLeft, ChevronRight, Settings, GitBranch, BarChart2,
-  Briefcase, Zap, CloudRain, Cloud, Layers, Brain,
+  Briefcase, Zap, CloudRain, Cloud, Layers, Brain, Radio,
 } from 'lucide-react'
 import { ProjectSwitcher } from './ProjectSwitcher'
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
 const globalNav = [
-  { to: '/',               label: 'Overview',      icon: LayoutDashboard, end: true },
-  { to: '/nodes/registry', label: 'Node Registry', icon: Server },
-  { to: '/training',       label: 'Training',      icon: Brain, pulse: true },
-  { to: '/coordination',   label: 'Coordination',  icon: GitBranch },
-  { to: '/settings',       label: 'Settings',      icon: Settings },
+  { to: '/',               label: 'Overview',       icon: LayoutDashboard, end: true },
+  { to: '/nodes/registry', label: 'Node Registry',  icon: Server },
+  { to: '/training',       label: 'Training',       icon: Brain, pulse: true },
+  { to: '/coordination',   label: 'Coordination',   icon: GitBranch },
+  { to: '/control-plane',  label: 'Control Plane',  icon: Radio },
+  { to: '/settings',       label: 'Settings',       icon: Settings },
 ]
 
 /** Per-project nav registry. Keys are normalised project IDs (strip "proj_"). */

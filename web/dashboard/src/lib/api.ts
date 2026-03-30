@@ -374,6 +374,43 @@ export interface MemoryQuality {
   avg_episode_rating: number
 }
 
+// ─── Types: Control Plane ────────────────────────────────────────────────────
+
+export interface ControlPlaneNode {
+  node_id: string
+  node_type: string
+  health: 'healthy' | 'degraded' | 'stale' | 'dead' | 'unknown'
+  last_seen: string    // RFC3339
+  metrics: Record<string, string>
+  blockers: string[]
+  stale: boolean
+}
+
+export interface ControlPlaneDiagnostics {
+  available?: boolean
+  node_id: string
+  cycle: number
+  regime: string
+  data_freshness_seconds: number
+  active_signals: number
+  total_signals: number
+  sit_out: boolean
+  sit_out_reason: string
+  open_trades: number
+  closed_trades: number
+  pnl: number
+  longs: number
+  shorts: number
+  blockers: string[]
+  ticker_convictions: Record<string, number>
+  timestamp: string
+}
+
+export interface ControlPlaneBlocker {
+  node_id: string
+  blockers: string[]
+}
+
 // ─── API client ──────────────────────────────────────────────────────────────
 
 export const api = {
@@ -493,6 +530,13 @@ export const api = {
         body: JSON.stringify({}),
         signal,
       }),
+  },
+
+  // ── Control Plane (REST) ─────────────────────────────────────────────────
+  controlPlane: {
+    getNodes:      () => fetch('/api/v1/nodes').then(r => r.json())       as Promise<ControlPlaneNode[]>,
+    getDiagnostics:() => fetch('/api/v1/diagnostics').then(r => r.json()) as Promise<ControlPlaneDiagnostics>,
+    getBlockers:   () => fetch('/api/v1/blockers').then(r => r.json())    as Promise<ControlPlaneBlocker[]>,
   },
 
   // ── Intelligence (REST) ───────────────────────────────────────────────────
