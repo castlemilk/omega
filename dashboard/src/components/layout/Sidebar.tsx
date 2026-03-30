@@ -26,6 +26,7 @@ import {
   Droplets,
   DollarSign,
   BookOpen,
+  Radio,
 } from "lucide-react";
 import { useState } from "react";
 import { useProject, projectDisplayName } from "../../context/ProjectContext";
@@ -49,6 +50,8 @@ const OMEGA_NAV = [
 
 const OBS_NAV = [
   { to: "/health", icon: Activity, label: "Health" },
+  { to: "/training", icon: Radio, label: "Training" },
+  { to: "/signals", icon: Zap, label: "Signals" },
   { to: "/perf", icon: BarChart2, label: "Performance" },
   { to: "/errors", icon: XCircle, label: "Errors" },
 ];
