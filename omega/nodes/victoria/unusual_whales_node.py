@@ -108,7 +108,11 @@ class OptionsFlowAdapter(NodeAdapter):
 
         if not provider.is_configured:
             return _signal_envelope(
-                {"uw_options_flow": _neutral_signal("uw_options_flow", "UW_API_KEY not configured")},
+                {
+                    "uw_options_flow": _neutral_signal(
+                        "uw_options_flow", "UW_API_KEY not configured"
+                    )
+                },
                 available=False,
             )
 
@@ -151,7 +155,9 @@ class OptionsFlowAdapter(NodeAdapter):
                     "description": f"Balanced flow ratio {ratio:.2f}",
                 }
         else:
-            signals["uw_options_flow"] = _neutral_signal("uw_options_flow", "Net flow data unavailable")
+            signals["uw_options_flow"] = _neutral_signal(
+                "uw_options_flow", "Net flow data unavailable"
+            )
 
         # ── Sector flow signal ────────────────────────────────────────────
         sector_flow = flow.get("sector_flow")
@@ -161,8 +167,10 @@ class OptionsFlowAdapter(NodeAdapter):
                 sector = entry.get("sector", "unknown")
                 ratio_val = entry.get("ratio")
                 if ratio_val is not None:
-                    sector_biases[sector] = "bullish" if float(ratio_val) > 1.2 else (
-                        "bearish" if float(ratio_val) < 0.8 else "neutral"
+                    sector_biases[sector] = (
+                        "bullish"
+                        if float(ratio_val) > 1.2
+                        else ("bearish" if float(ratio_val) < 0.8 else "neutral")
                     )
             signals["uw_sector_flow"] = {
                 "direction": "neutral",
@@ -270,7 +278,7 @@ class DarkPoolAdapter(NodeAdapter):
         premium_prints = 0
         discount_prints = 0
 
-        for ticker, prints in ticker_prints.items():
+        for _ticker, prints in ticker_prints.items():
             if not isinstance(prints, list):
                 continue
             for p in prints:
@@ -298,7 +306,7 @@ class DarkPoolAdapter(NodeAdapter):
                     "value": premium_ratio,
                     "description": (
                         f"Dark pool: {premium_prints}/{total_prints} prints at premium "
-                        f"(${total_notional/1e6:.1f}M notional)"
+                        f"(${total_notional / 1e6:.1f}M notional)"
                     ),
                 }
             elif premium_ratio < 0.4:
@@ -309,7 +317,7 @@ class DarkPoolAdapter(NodeAdapter):
                     "value": premium_ratio,
                     "description": (
                         f"Dark pool: {discount_prints}/{total_prints} prints at discount "
-                        f"(${total_notional/1e6:.1f}M notional)"
+                        f"(${total_notional / 1e6:.1f}M notional)"
                     ),
                 }
             else:
@@ -317,7 +325,7 @@ class DarkPoolAdapter(NodeAdapter):
                     "direction": "neutral",
                     "confidence": 0.3,
                     "value": premium_ratio,
-                    "description": f"Balanced dark pool activity (${total_notional/1e6:.1f}M notional)",
+                    "description": f"Balanced dark pool activity (${total_notional / 1e6:.1f}M notional)",
                 }
         else:
             signals["uw_dark_pool"] = _neutral_signal(
@@ -430,7 +438,9 @@ class CongressAdapter(NodeAdapter):
                     "description": f"Balanced congressional activity ({buy_count} buys, {sell_count} sells)",
                 }
         else:
-            signals["uw_congress"] = _neutral_signal("uw_congress", "No buy/sell actions in recent trades")
+            signals["uw_congress"] = _neutral_signal(
+                "uw_congress", "No buy/sell actions in recent trades"
+            )
 
         # Surface any late filers (possible signal of upcoming undisclosed activity)
         late = congress.get("late_filings") or []

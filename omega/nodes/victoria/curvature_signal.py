@@ -259,4 +259,4 @@ class GeodesicCurvatureSignal:
         mean = sum(h) / len(h)
         var = sum((x - mean) ** 2 for x in h) / max(1, len(h) - 1)
         std = math.sqrt(var) if var > 0 else _EPS
-        return (value - mean) / std
+        return float((value - mean) / std)

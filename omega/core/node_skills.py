@@ -27,7 +27,7 @@ import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any, ClassVar
 
 logger = logging.getLogger("omega.core.node_skills")
@@ -142,7 +142,7 @@ class SkillRegistry:
 # ---------------------------------------------------------------------------
 
 
-class SignalLifecycle(str, Enum):
+class SignalLifecycle(StrEnum):
     """Lifecycle states of a trading signal."""
 
     EMERGING = "EMERGING"
@@ -153,7 +153,7 @@ class SignalLifecycle(str, Enum):
     RETIRED = "RETIRED"
 
 
-class SignalRetirementReason(str, Enum):
+class SignalRetirementReason(StrEnum):
     """Why a signal was auto-retired."""
 
     LOW_IC = "LOW_IC"  # IC stayed below threshold for retirement_window cycles
@@ -249,7 +249,10 @@ class SignalEvolution:
         a10 = agreement(last10)
 
         # FALSIFIED: current state is STABLE/WEAKENING + 3-cycle direction flip
-        if self.current_state in (SignalLifecycle.STABLE, SignalLifecycle.WEAKENING) and len(last3) == 3:
+        if (
+            self.current_state in (SignalLifecycle.STABLE, SignalLifecycle.WEAKENING)
+            and len(last3) == 3
+        ):
             flip = last3[0] != 0 and last3[-1] != 0 and last3[0] != last3[-1]
             consistent_flip = all(d == last3[-1] for d in last3[-2:])
             if flip and consistent_flip:

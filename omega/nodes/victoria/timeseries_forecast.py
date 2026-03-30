@@ -120,7 +120,7 @@ def _ols_1d(x: list[float], y: list[float]) -> tuple[float, float]:
     sx = sum(x)
     sy = sum(y)
     sxx = sum(xi * xi for xi in x)
-    sxy = sum(xi * yi for xi, yi in zip(x, y))
+    sxy = sum(xi * yi for xi, yi in zip(x, y, strict=False))
     denom = n * sxx - sx * sx
     if denom == 0:
         return 0.0, sy / n
@@ -186,7 +186,7 @@ def _ar_forecast(rets: list[float], p: int = 3) -> float | None:
 
     # Predict using last p returns
     last_p = rets[-p:]
-    predicted = sum(w * r for w, r in zip(weights, last_p))
+    predicted = sum(w * r for w, r in zip(weights, last_p, strict=False))
     return predicted
 
 

@@ -343,7 +343,7 @@ class OvernightRunner:
         if self._paper_trading is None:
             return {}
         try:
-            return self._paper_trading.compute_metrics()
+            return dict(self._paper_trading.compute_metrics())
         except Exception as exc:
             logger.warning("compute_metrics failed: %s", exc)
             return {}
@@ -353,7 +353,7 @@ class OvernightRunner:
         if self._analyzer is None:
             return []
         try:
-            return self._analyzer.analyze(cycle=batch_num * self.batch_size)
+            return list(self._analyzer.analyze(cycle=batch_num * self.batch_size))
         except Exception as exc:
             logger.warning("analyzer.analyze failed: %s", exc)
             return []

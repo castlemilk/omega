@@ -148,7 +148,7 @@ class NaturalGradientOptimizer:
         """Return current weights as a {name: weight} dict."""
         if len(signal_names) != self.n:
             raise ValueError(f"signal_names length {len(signal_names)} != n_signals {self.n}")
-        return dict(zip(signal_names, self._weights.tolist()))
+        return dict(zip(signal_names, self._weights.tolist(), strict=False))
 
     def reset(self) -> None:
         """Reset optimizer state (but keep hyper-parameters)."""

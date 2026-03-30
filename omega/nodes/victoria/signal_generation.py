@@ -318,6 +318,33 @@ class SignalGenerationNode(Node):
             if directional:
                 ts["composite"] = sum(directional) / len(directional)
 
+            # Trend-adaptive dampening: in strong directional trends, mean-reversion
+            # signals (RSI, BB) become deeply oversold/overbought but the trend persists.
+            # Dampening prevents them from cancelling trend signals and collapsing the
+            # composite toward HOLD when there is a clear directional opportunity.
+            _sma_dir = ts.get("sma_crossover", 0.0)
+            _trend_str = abs(_sma_dir)
+            if _trend_str > 0.5:
+                # Dampen factor: 1.0 at strength=0.5 → 0.0 at strength=1.0
+                _dampen = max(0.0, 1.0 - (_trend_str - 0.5) * 2.0)
+                _changed = False
+                if _sma_dir < 0:  # downtrend: dampen bullish (positive) mean-reversion
+                    for _mr in ("rsi_signal", "bb_signal"):
+                        if ts.get(_mr, 0.0) > 0:
+                            ts[_mr] = ts[_mr] * _dampen
+                            _changed = True
+                else:  # uptrend: dampen bearish (negative) mean-reversion
+                    for _mr in ("rsi_signal", "bb_signal"):
+                        if ts.get(_mr, 0.0) < 0:
+                            ts[_mr] = ts[_mr] * _dampen
+                            _changed = True
+                if _changed:
+                    _dir2 = [
+                        v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
+                    ]
+                    if _dir2:
+                        ts["composite"] = sum(_dir2) / len(_dir2)
+
             ts["price"] = prices[-1] if prices else None
             ts["ticker"] = ticker
 
@@ -357,6 +384,29 @@ class SignalGenerationNode(Node):
                         ]
                         if dir_vals:
                             ts["composite"] = sum(dir_vals) / len(dir_vals)
+
+        # Cross-sectional normalization: blend absolute composite with rank within the
+        # current universe. Ensures signal differentiation even in uniform regimes
+        # (e.g., all bearish in a crypto winter) so the portfolio contains a mix of
+        # conviction levels rather than a monoculture of identical SELL signals.
+        # Only activates when cross-sectional variance is below the minimum threshold.
+        _composites = [
+            (t, s.get("composite", 0.0))
+            for t, s in signals.items()
+            if s.get("composite") is not None
+        ]
+        if len(_composites) >= 3:
+            _vals = [v for _, v in _composites]
+            _mu = sum(_vals) / len(_vals)
+            _std = math.sqrt(sum((v - _mu) ** 2 for v in _vals) / len(_vals))
+            if _std < 0.08:  # low cross-sectional variance — enforce minimum spread
+                _sorted = sorted(_composites, key=lambda x: x[1])
+                _n = len(_sorted)
+                for _rank, (_t, _raw) in enumerate(_sorted):
+                    # rank_norm spans [-1, +1] from most-bearish to least-bearish
+                    _rank_norm = (_rank / (_n - 1)) * 2.0 - 1.0 if _n > 1 else 0.0
+                    # 70% absolute signal direction + 30% cross-sectional rank
+                    signals[_t]["composite"] = round(0.7 * _raw + 0.3 * _rank_norm, 4)
 
         return signals
 

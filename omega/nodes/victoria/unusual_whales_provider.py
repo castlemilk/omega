@@ -188,7 +188,9 @@ class DarkPoolClient:
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
-        self._cb = CircuitBreaker("unusual_whales_darkpool", failure_threshold=3, recovery_timeout=300)
+        self._cb = CircuitBreaker(
+            "unusual_whales_darkpool", failure_threshold=3, recovery_timeout=300
+        )
 
     def _cached(self, key: str, fn, *args) -> Any | None:
         if key in self._cache:
@@ -256,7 +258,9 @@ class CongressClient:
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
         # Congress data updates slowly; longer circuit breaker recovery is fine
-        self._cb = CircuitBreaker("unusual_whales_congress", failure_threshold=3, recovery_timeout=600)
+        self._cb = CircuitBreaker(
+            "unusual_whales_congress", failure_threshold=3, recovery_timeout=600
+        )
 
     def _cached(self, key: str, fn, *args) -> Any | None:
         if key in self._cache:
@@ -324,7 +328,9 @@ class InsiderClient:
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
-        self._cb = CircuitBreaker("unusual_whales_insider", failure_threshold=3, recovery_timeout=300)
+        self._cb = CircuitBreaker(
+            "unusual_whales_insider", failure_threshold=3, recovery_timeout=300
+        )
 
     def _cached(self, key: str, fn, *args) -> Any | None:
         if key in self._cache:
@@ -382,7 +388,9 @@ class StockOptionsClient:
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
-        self._cb = CircuitBreaker("unusual_whales_stock", failure_threshold=3, recovery_timeout=300)
+        self._cb = CircuitBreaker(
+            "unusual_whales_stock", failure_threshold=3, recovery_timeout=300
+        )
 
     def _cached(self, key: str, fn, *args) -> Any | None:
         if key in self._cache:
@@ -494,9 +502,7 @@ class UnusualWhalesProvider:
             "signal_available": net_flow is not None,
         }
 
-    def get_dark_pool_summary(
-        self, tickers: list[str] | None = None
-    ) -> dict[str, Any] | None:
+    def get_dark_pool_summary(self, tickers: list[str] | None = None) -> dict[str, Any] | None:
         """
         Aggregate dark pool signal inputs for a list of tickers.
 
@@ -546,9 +552,7 @@ class UnusualWhalesProvider:
             "signal_available": trades is not None,
         }
 
-    def get_iv_rank_summary(
-        self, tickers: list[str] | None = None
-    ) -> dict[str, Any] | None:
+    def get_iv_rank_summary(self, tickers: list[str] | None = None) -> dict[str, Any] | None:
         """
         IV rank data for a list of tickers (for VRP signal enhancement).
 

@@ -259,7 +259,9 @@ class CLOBClient:
                 logger.debug("CLOBClient: no credentials — read-only mode")
 
         except ImportError:
-            raise RuntimeError("py-clob-client not installed.  Run: pip install py-clob-client") from None
+            raise RuntimeError(
+                "py-clob-client not installed.  Run: pip install py-clob-client"
+            ) from None
 
         return self._client
 

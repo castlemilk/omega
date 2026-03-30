@@ -754,7 +754,7 @@ class CoinbaseProvider(DataProvider):
                 "close": closes,
                 "adjclose": closes,
                 "volume": volumes,
-                "quote_volume": [c * v for c, v in zip(closes, volumes)],
+                "quote_volume": [c * v for c, v in zip(closes, volumes, strict=False)],
                 "pair": pair,
                 "fetched_at": time.time(),
             }
@@ -874,7 +874,7 @@ class KrakenProvider(DataProvider):
                 "close": closes,
                 "adjclose": closes,
                 "volume": volumes,
-                "quote_volume": [c * v for c, v in zip(closes, volumes)],
+                "quote_volume": [c * v for c, v in zip(closes, volumes, strict=False)],
                 "pair": pair,
                 "fetched_at": time.time(),
             }

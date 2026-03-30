@@ -113,7 +113,7 @@ class WatchdogState:
         n = self.consecutive_zero_trade_cycles
 
         if n == self.warn_threshold:
-            dominant_reason = max(self.sit_out_reason_counts, key=self.sit_out_reason_counts.get)
+            dominant_reason = max(self.sit_out_reason_counts, key=lambda k: self.sit_out_reason_counts.get(k, 0))
             ring1_rate = self.ring1_pass_rate()
             logger.warning(
                 "WATCHDOG WARNING: %d consecutive zero-trade cycles. "

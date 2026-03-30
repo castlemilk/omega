@@ -57,7 +57,10 @@ _WEIGHT_THRESHOLD = 0.01
 # Minimum position size as fraction of capital.
 # Kelly with tiny edges produces sub-threshold positions that never hit stops,
 # inflating win rate.  Positions below this are either taken at MIN or skipped.
+# Use a small epsilon to avoid floating-point issues when weights are computed as
+# exactly 0.05 (e.g. 0.30 / 6 = 0.049999... in IEEE 754).
 _MIN_POSITION_FRACTION = 0.05
+_MIN_POSITION_FRACTION_EFFECTIVE = _MIN_POSITION_FRACTION - 1e-9
 
 # Randomized hold window (cycles) — avoids systematic trend alignment
 _EXIT_CYCLES_MIN = 3
@@ -323,7 +326,7 @@ class PaperTradingEngine:
 
             # Conviction filter: if position fraction is too small, skip or bump to minimum
             raw_size_fraction = abs(weight)
-            if raw_size_fraction < _MIN_POSITION_FRACTION:
+            if raw_size_fraction < _MIN_POSITION_FRACTION_EFFECTIVE:
                 # Track skipped low-conviction trades
                 self.conviction_skipped += 1
                 logger.debug(

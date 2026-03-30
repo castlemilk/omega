@@ -119,8 +119,11 @@ class StrategyNode(Node):
         # --- Conviction filter parameters ---
         # Minimum fraction of sub-signals that must agree on direction (0.6 = 10/16)
         self._agreement_ratio_threshold: float = 0.6
-        # IC-weighted conviction must exceed this in absolute value
-        self._weighted_conviction_threshold: float = 0.3
+        # IC-weighted conviction must exceed this in absolute value.
+        # 0.20 allows moderate-conviction signals through; the cross-sectional
+        # normalization in signal_generation.py ensures differentiation so that
+        # thresholds are met even in uniform bear/bull regimes.
+        self._weighted_conviction_threshold: float = 0.20
         # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
         self._signal_ics: dict[str, float] = {}
         # Tracking counters
@@ -283,10 +286,7 @@ class StrategyNode(Node):
             "sit_out_vol_high": float(self._sit_out_vol_high_count),
             "normal_trade_cycles": float(self._normal_trade_count),
             "fiedler_scale": self._last_fiedler_scale,
-            **{
-                f"risk_{k}": float(v)
-                for k, v in self._risk.get_metrics().items()
-            },
+            **{f"risk_{k}": float(v) for k, v in self._risk.get_metrics().items()},
         }
 
     def update_signal_ics(self, ics: dict[str, float]) -> None:
@@ -724,6 +724,12 @@ class StrategyNode(Node):
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
                 continue
+            # Skip synthetic signal-type aggregates (adv_order_flow, adv_cross_asset, etc.)
+            # These are metadata entries from adapt_signals — they have no market price and
+            # cannot be executed by the paper trading engine.
+            if ticker.startswith("adv_"):
+                logger.debug("Skipping %s (synthetic signal aggregate, not tradeable)", ticker)
+                continue
             # Skip blacklisted symbols — BTC is a regime indicator, not a trading vehicle
             if ticker in _TRADING_BLACKLIST:
                 logger.debug("Skipping %s (trading blacklist)", ticker)
@@ -799,6 +805,29 @@ class StrategyNode(Node):
                     "filter_rate": self._filter_rate(),
                 },
             }
+
+        # Limit candidates to top N by |composite| strength before building weights.
+        # When many tickers share identical conviction (common in uniform regimes),
+        # unrestricted candidates spread capital too thinly — each position falls
+        # to MAX_CAPITAL_DEPLOYED / N, which can dip below MIN_POSITION_FRACTION.
+        # Capping at MAX_POSITIONS // 2 keeps per-position size meaningful (≥10%).
+        _max_per_side = max(1, self._risk.max_positions // 2)
+        if len(long_candidates) > _max_per_side:
+            long_candidates = dict(
+                sorted(
+                    long_candidates.items(),
+                    key=lambda kv: abs(kv[1].get("composite", 0.0)),
+                    reverse=True,
+                )[:_max_per_side]
+            )
+        if len(short_candidates) > _max_per_side:
+            short_candidates = dict(
+                sorted(
+                    short_candidates.items(),
+                    key=lambda kv: abs(kv[1].get("composite", 0.0)),
+                    reverse=True,
+                )[:_max_per_side]
+            )
 
         long_base: dict[str, float] = {}
         short_base: dict[str, float] = {}

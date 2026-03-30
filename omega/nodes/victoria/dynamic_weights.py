@@ -187,7 +187,7 @@ class DynamicWeightAllocator:
         new_weights_arr = optimizer.update(sv, forward_return)
 
         # Write back into the WeightProfile (dict form)
-        new_weights = dict(zip(self._signals, new_weights_arr.tolist()))
+        new_weights = dict(zip(self._signals, new_weights_arr.tolist(), strict=False))
 
         # Apply the same 40% risk parity cap used by the EMA path
         new_weights = self._apply_cap(new_weights)

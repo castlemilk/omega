@@ -60,6 +60,7 @@ from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.momentum_factor import CrossSectionalMomentumSignal
 from omega.nodes.victoria.news_projection import NewsProjectionLayer
 from omega.nodes.victoria.pairs_signals import PairsTradingSignal
+from omega.nodes.victoria.regime_detector import BottomSignalDetector
 from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.rmt_denoiser import RMTDenoiser
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
@@ -77,7 +78,6 @@ from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
-from omega.nodes.victoria.regime_detector import BottomSignalDetector
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 from omega.nodes.victoria.wavelet_signal import WaveletSignal
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
@@ -1220,20 +1220,23 @@ class VictoriaNode(Node):
                 signals["_macro_bottom_active"] = _macro_bias.bottom_signals_active
                 signals["_mvrv_proxy"] = _macro_bias.mvrv_proxy
                 signals["_asopr_proxy"] = _macro_bias.asopr_proxy
-                if _macro_bias.bottom_signals_active and _macro_bias.score > 0.2:
+                if (
+                    _macro_bias.bottom_signals_active
+                    and _macro_bias.score > 0.2
+                    and regime in ("bear", "BEAR")
+                ):
                     # Bias regime away from bear when macro bottom signals fire.
                     # This prevents Victoria from going heavily short in structural
                     # bull market bottoms (e.g. MVRV Z-Score < 1.2, aSOPR < 1.0).
-                    if regime in ("bear", "BEAR"):
-                        regime = "sideways"
-                        signals["_regime_macro_corrected"] = True
-                        logger.info(
-                            "MacroBias regime correction: bear → sideways "
-                            "(score=%.3f mvrv=%.3f asopr=%.3f bottom_signals=active)",
-                            _macro_bias.score,
-                            _macro_bias.mvrv_proxy,
-                            _macro_bias.asopr_proxy,
-                        )
+                    regime = "sideways"
+                    signals["_regime_macro_corrected"] = True
+                    logger.info(
+                        "MacroBias regime correction: bear → sideways "
+                        "(score=%.3f mvrv=%.3f asopr=%.3f bottom_signals=active)",
+                        _macro_bias.score,
+                        _macro_bias.mvrv_proxy,
+                        _macro_bias.asopr_proxy,
+                    )
         except Exception as exc:
             logger.debug("macro bottom-signal bias failed: %s", exc)
 

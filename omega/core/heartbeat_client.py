@@ -45,8 +45,8 @@ from __future__ import annotations
 
 import json
 import logging
-import urllib.request
 import urllib.error
+import urllib.request
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -145,6 +145,6 @@ class HeartbeatClient:
             return True
         except urllib.error.URLError as exc:
             log.warning("heartbeat: %s unreachable (%s) — continuing", url, exc.reason)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             log.warning("heartbeat: POST %s failed (%s) — continuing", path, exc)
         return False

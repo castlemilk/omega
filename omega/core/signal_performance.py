@@ -403,7 +403,7 @@ def _pearson_correlation(xs: list[float], ys: list[float]) -> float:
         return 0.0
     mx = sum(xs) / n
     my = sum(ys) / n
-    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
     var_x = sum((x - mx) ** 2 for x in xs)
     var_y = sum((y - my) ** 2 for y in ys)
     denom = math.sqrt(var_x * var_y)
@@ -428,7 +428,7 @@ def _compute_hit_rate(
     """
     eligible = 0
     hits = 0
-    for v, r, pnl in zip(values, returns, pnls):
+    for v, r, pnl in zip(values, returns, pnls, strict=False):
         if abs(v) <= _SIGNAL_EPSILON:
             continue  # no signal — skip
         eligible += 1
@@ -458,7 +458,7 @@ def _compute_value_added(values: list[float], pnls: list[float]) -> float:
     total_w = sum(signal_weights)
     if total_w < 1e-10:
         return 0.0
-    weighted_pnl = sum(w * p for w, p in zip(signal_weights, pnls)) / total_w
+    weighted_pnl = sum(w * p for w, p in zip(signal_weights, pnls, strict=False)) / total_w
     return weighted_pnl - flat_pnl
 
 

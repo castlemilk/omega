@@ -68,10 +68,10 @@ logger = logging.getLogger("omega.nodes.victoria.wavelet_signal")
 # Constants
 # ---------------------------------------------------------------------------
 
-_DWT_LEVEL = 4       # default decomposition depth
-_MIN_SAMPLES = 32    # minimum price bars before signal is active
-_TREND_K = 8.0       # tanh scale for trend signal
-_MOMENTUM_K = 10.0   # tanh scale for momentum signal
+_DWT_LEVEL = 4  # default decomposition depth
+_MIN_SAMPLES = 32  # minimum price bars before signal is active
+_TREND_K = 8.0  # tanh scale for trend signal
+_MOMENTUM_K = 10.0  # tanh scale for momentum signal
 _EPS = 1e-10
 
 
@@ -80,13 +80,13 @@ _EPS = 1e-10
 # ---------------------------------------------------------------------------
 
 try:
-    import pywt as _pywt  # type: ignore
+    import pywt as _pywt
 
     _PYWT_AVAILABLE = True
     logger.debug("pywt available — using Daubechies-4 wavelet")
 except (ImportError, TypeError):
     _PYWT_AVAILABLE = False
-    _pywt = None  # type: ignore
+    _pywt = None
     logger.debug("pywt not available — using numpy-only Haar fallback")
 
 
@@ -99,9 +99,9 @@ except (ImportError, TypeError):
 class SignalValue:
     """Standard SignalValue contract used across Victoria signal nodes."""
 
-    value: float       # composite signal ∈ [-1, +1]
+    value: float  # composite signal ∈ [-1, +1]
     confidence: float  # 0..1
-    regime_tag: str    # "bullish_trend" | "bearish_trend" | "high_noise" | "neutral" | "warmup"
+    regime_tag: str  # "bullish_trend" | "bearish_trend" | "high_noise" | "neutral" | "warmup"
     raw: dict
 
 
@@ -220,10 +220,9 @@ class WaveletSignal:
         wavelet_noise_ratio = self._compute_noise_ratio(approx, details)
 
         # Composite signal: trend dominant, momentum adds high-freq confirmation
-        noise_penalty = wavelet_noise_ratio ** 2
-        composite = (
-            wavelet_trend * (1.0 - noise_penalty)
-            + wavelet_momentum * 0.3 * (1.0 - noise_penalty)
+        noise_penalty = wavelet_noise_ratio**2
+        composite = wavelet_trend * (1.0 - noise_penalty) + wavelet_momentum * 0.3 * (
+            1.0 - noise_penalty
         )
         # Clip to [-1, +1]
         value = float(np.clip(composite, -1.0, 1.0))
@@ -254,9 +253,7 @@ class WaveletSignal:
     # Decomposition
     # ------------------------------------------------------------------
 
-    def _decompose(
-        self, prices: np.ndarray
-    ) -> tuple[np.ndarray, list[np.ndarray]]:
+    def _decompose(self, prices: np.ndarray) -> tuple[np.ndarray, list[np.ndarray]]:
         """
         Run DWT at self._level using pywt (db4) or numpy Haar fallback.
 
@@ -300,7 +297,7 @@ class WaveletSignal:
             return 0.0
         diffs = np.diff(approx.astype(float))
         mean_diff = float(np.mean(diffs))
-        rms = float(np.sqrt(np.mean(approx ** 2))) + _EPS
+        rms = float(np.sqrt(np.mean(approx**2))) + _EPS
         normalised = mean_diff / rms
         return float(math.tanh(normalised * _TREND_K))
 
@@ -323,7 +320,7 @@ class WaveletSignal:
             mid = len(arr) // 2
             recent = float(np.mean(arr[mid:]))
             past = float(np.mean(arr[:mid]))
-            rms = float(np.sqrt(np.mean(arr ** 2))) + _EPS
+            rms = float(np.sqrt(np.mean(arr**2))) + _EPS
             cycle_energy.append((recent - past) / rms)
 
         if not cycle_energy:
@@ -333,9 +330,7 @@ class WaveletSignal:
         return float(math.tanh(raw_momentum * _MOMENTUM_K))
 
     @staticmethod
-    def _compute_noise_ratio(
-        approx: np.ndarray, details: list[np.ndarray]
-    ) -> float:
+    def _compute_noise_ratio(approx: np.ndarray, details: list[np.ndarray]) -> float:
         """
         Noise-to-signal ratio.
 
@@ -349,7 +344,7 @@ class WaveletSignal:
 
         for i, layer in enumerate(details):
             arr = layer.astype(float)
-            e = float(np.sum(arr ** 2))
+            e = float(np.sum(arr**2))
             total_energy += e
             if i == 0:  # finest = noise
                 noise_energy = e

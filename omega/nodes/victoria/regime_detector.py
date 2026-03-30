@@ -471,7 +471,7 @@ class BottomSignalDetector:
         # ── Composite score ──────────────────────────────────────────────────
         # Weights: MVRV (0.45) is most reliable proxy, aSOPR (0.35), exch (0.20)
         weights = [0.45, 0.35, 0.20]
-        raw = sum(w * s for w, s in zip(weights, signals_fired))
+        raw = sum(w * s for w, s in zip(weights, signals_fired, strict=False))
         score = float(np.tanh(raw * 2.0))  # amplify and squash to [-1, 1]
 
         # bottom_signals_active: two of three individual signals > 0.15
@@ -527,7 +527,7 @@ class HMMRegimeDetector:
     def update(
         self,
         market_data: dict[str, Any],
-        macro_bias: "MacroBias | None" = None,
+        macro_bias: MacroBias | None = None,
     ) -> dict[str, Any]:
         """Update the regime estimate from market data.
 
@@ -571,7 +571,7 @@ class HMMRegimeDetector:
     def _apply_macro_bias(
         self,
         result: dict[str, Any],
-        bias: "MacroBias",
+        bias: MacroBias,
     ) -> dict[str, Any]:
         """
         Reduce bear probability when macro bottom signals are active.
