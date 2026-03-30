@@ -26,6 +26,7 @@ import {
   Droplets,
   DollarSign,
   BookOpen,
+  Radio,
 } from "lucide-react";
 import { useState } from "react";
 import { useProject, projectDisplayName } from "../../context/ProjectContext";
@@ -51,6 +52,7 @@ const OBS_NAV = [
   { to: "/health", icon: Activity, label: "Health" },
   { to: "/perf", icon: BarChart2, label: "Performance" },
   { to: "/errors", icon: XCircle, label: "Errors" },
+  { to: "/control-plane", icon: Radio, label: "Control Plane" },
 ];
 
 // Victoria's project-specific views.

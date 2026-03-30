@@ -35,6 +35,7 @@ import SystemHealth from "./pages/SystemHealth";
 import PerformanceMetrics from "./pages/PerformanceMetrics";
 import ErrorLog from "./pages/ErrorLog";
 import PipelineView from "./pages/PipelineView";
+import ControlPlane from "./pages/ControlPlane";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealthProto | null>(null);
@@ -138,6 +139,7 @@ export default function App() {
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/perf" element={<PerformanceMetrics />} />
                 <Route path="/errors" element={<ErrorLog />} />
+                <Route path="/control-plane" element={<ControlPlane />} />
                 <Route path="/projects/:id/pipeline" element={<PipelineView />} />
               </Routes>
             </main>
