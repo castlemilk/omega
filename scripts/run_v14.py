@@ -29,6 +29,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from omega.core.heartbeat_client import HeartbeatClient  # noqa: E402
+
 
 def _load_env() -> None:
     env_file = ROOT / ".env"
@@ -303,6 +305,8 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
     engine = PaperTradingEngine(initial_capital=100_000.0, db_url=db_url or None)
     orch.set_paper_trading(engine)
 
+    hb = HeartbeatClient()  # fire-and-forget; silently no-ops if Go API is down
+
     _init_trades_csv()
 
     progress: list[dict] = []
@@ -420,6 +424,55 @@ def run(n_cycles: int = 100, sleep_seconds: float = 30.0, log_interval: int = 5)
             progress.append(checkpoint)
             with open(PROGRESS_FILE, "w") as f:
                 json.dump(progress, f, indent=2)
+
+            # Compute per-ticker conviction for the heartbeat
+            signals_cache = getattr(victoria, "_last_signals", {}) or {}
+            ticker_signals = {
+                k: v for k, v in signals_cache.items()
+                if not k.startswith("_") and isinstance(v, dict)
+            }
+            ticker_convictions = {
+                k: float(v.get("composite", 0.0))
+                for k, v in ticker_signals.items()
+                if v.get("composite") is not None
+            }
+            active_sigs = sum(1 for v in ticker_signals.values() if v.get("composite") is not None)
+
+            # Build blocker list (mirrors print_training_diagnostics logic)
+            diag_blockers: list[str] = []
+            if _get_regime(victoria).upper() in ("UNKNOWN", "UNKN", ""):
+                diag_blockers.append("Regime detector not firing")
+            if strat is not None and getattr(strat, "_sit_out_vol_low_count", 0) > 0:
+                diag_blockers.append(f"vol_low sit-out (streak {strat._sit_out_vol_low_count})")
+            if freshness_min > MAX_STALE_MINUTES:
+                diag_blockers.append(f"Data freshness >{freshness_min:.1f}min")
+            composites = [float(v.get("composite", 0.0)) for v in ticker_signals.values() if v.get("composite") is not None]
+            if composites and all(abs(c) < 0.05 for c in composites):
+                diag_blockers.append("No conviction above threshold (all HOLD)")
+
+            all_trades_now = list(engine.closed_trades) + list(engine.open_trades)
+            n_longs_now = sum(1 for t in all_trades_now if t.get("side") == "long")
+            n_shorts_now = sum(1 for t in all_trades_now if t.get("side") == "short")
+            if n_longs_now == 0 and n_shorts_now >= 3:
+                diag_blockers.append("Short-only bias detected")
+
+            hb.send_diagnostics(
+                node_id="victoria_training",
+                cycle=cycle_num,
+                regime=regime,
+                data_freshness_seconds=freshness_min * 60.0,
+                active_signals=active_sigs,
+                total_signals=len(ticker_signals),
+                sit_out=sit_out_reason != "normal",
+                sit_out_reason=sit_out_reason,
+                open_trades=len(open_pos),
+                closed_trades=len(closed),
+                pnl=pnl,
+                longs=n_longs_now,
+                shorts=n_shorts_now,
+                blockers=diag_blockers,
+                ticker_convictions=ticker_convictions,
+            )
 
             status_tag = {
                 "stale_data": "STALE   ", "vol_low": "SIT-OUT ",
