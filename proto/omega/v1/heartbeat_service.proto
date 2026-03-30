@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+import "google/protobuf/timestamp.proto";
+
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+enum NodeHealth {
+  NODE_HEALTH_UNSPECIFIED = 0;
+  NODE_HEALTH_HEALTHY     = 1;
+  NODE_HEALTH_DEGRADED    = 2;
+  NODE_HEALTH_STALE       = 3;
+  NODE_HEALTH_DEAD        = 4;
+}
+
+// ── Core messages ─────────────────────────────────────────────────────────────
+
+// Heartbeat is sent by any node (Python signal nodes, Go services, etc.) to
+// report that it is alive and describe its current operational state.
+message Heartbeat {
+  string node_id   = 1;
+  string node_type = 2;  // SIGNAL_GENERATOR | STRATEGY | EXECUTOR | DATA_PROVIDER | TRAINING_LOOP
+  google.protobuf.Timestamp timestamp = 3;
+  NodeHealth health            = 4;
+  map<string, string> metrics  = 5;  // flexible key-value metrics
+  repeated string blockers     = 6;  // what's preventing this node from working
+}
+
+// TrainingDiagnostics is a rich per-cycle snapshot from the Python training
+// loop — captures regime, signal state, trade counts, PnL and blockers.
+message TrainingDiagnostics {
+  string node_id              = 1;
+  int32  cycle                = 2;
+  string regime               = 3;
+  float  data_freshness_seconds = 4;
+  int32  active_signals       = 5;
+  int32  total_signals        = 6;
+  bool   sit_out              = 7;
+  string sit_out_reason       = 8;
+  int32  open_trades          = 9;
+  int32  closed_trades        = 10;
+  float  pnl                  = 11;
+  int32  longs                = 12;
+  int32  shorts               = 13;
+  repeated string blockers               = 14;
+  map<string, double> ticker_convictions = 15;
+  google.protobuf.Timestamp timestamp    = 16;
+}
+
+// HeartbeatAck is the acknowledgement returned for inbound heartbeats.
+message HeartbeatAck {
+  bool acknowledged                  = 1;
+  google.protobuf.Timestamp server_time = 2;
+}
+
+// ── Query messages ────────────────────────────────────────────────────────────
+
+message NodeStatusRequest {
+  string node_id = 1;
+}
+
+message NodeStatusResponse {
+  string     node_id   = 1;
+  string     node_type = 2;
+  NodeHealth health    = 3;
+  google.protobuf.Timestamp last_seen = 4;
+  map<string, string> metrics  = 5;
+  repeated string     blockers = 6;
+  bool                stale    = 7;
+}
+
+message ListHeartbeatNodesRequest {
+  string health_filter = 1;  // optional: NodeHealth name; empty = all nodes
+}
+
+message ListHeartbeatNodesResponse {
+  repeated NodeStatusResponse nodes = 1;
+}
+
+message GetDiagnosticsRequest {
+  string node_id = 1;  // optional: empty returns the most-recently-seen diagnostics
+}
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
+service HeartbeatService {
+  // Inbound — nodes report UP.
+  rpc SendHeartbeat(Heartbeat) returns (HeartbeatAck);
+  rpc SendTrainingDiagnostics(TrainingDiagnostics) returns (HeartbeatAck);
+
+  // Outbound — control plane queries DOWN.
+  rpc GetNodeStatus(NodeStatusRequest) returns (NodeStatusResponse);
+  rpc ListNodes(ListHeartbeatNodesRequest) returns (ListHeartbeatNodesResponse);
+  rpc GetDiagnostics(GetDiagnosticsRequest) returns (TrainingDiagnostics);
+}

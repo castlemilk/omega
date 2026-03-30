@@ -19,9 +19,11 @@ import (
 	"github.com/benebsworth/omega/internal/auth"
 	"github.com/benebsworth/omega/internal/brain"
 	"github.com/benebsworth/omega/internal/bridge"
+	"github.com/benebsworth/omega/internal/controlplane"
 	"github.com/benebsworth/omega/internal/coordination"
 	"github.com/benebsworth/omega/internal/db"
 	"github.com/benebsworth/omega/internal/handler"
+	hbsvc "github.com/benebsworth/omega/internal/heartbeat"
 	"github.com/benebsworth/omega/internal/integrations"
 	"github.com/benebsworth/omega/internal/integrations/connectors"
 	mw "github.com/benebsworth/omega/internal/middleware"
@@ -253,6 +255,13 @@ func main() {
 		nodeH = handler.NewNodeHandler(nodeReg)
 	}
 
+	// ── Heartbeat store + service ─────────────────────────────────────────────
+	// Shared in-memory store: both the Connect-RPC handler and the REST control
+	// plane read/write the same store instance.
+	hbStore := hbsvc.New()
+	hbHandler := hbsvc.NewHandler(hbStore)
+	cpHandler := controlplane.New(hbStore, logger)
+
 	// ── Coordination handler ───────────────────────────────────────────────────
 	var coordH *coordination.Handler
 	if outcomeStore, outcomeErr := coordination.NewOutcomeStore(database.StateDB()); outcomeErr != nil {
@@ -332,6 +341,14 @@ func main() {
 		omegav1connect.UnimplementedPipelineServiceHandler{}, withHandlerOpts()...,
 	)
 	mux.Handle(pipePath, pipeSvcHandler)
+
+	// HeartbeatService — receives node heartbeats and training diagnostics.
+	hbPath, hbSvcHandler := omegav1connect.NewHeartbeatServiceHandler(hbHandler, withHandlerOpts()...)
+	mux.Handle(hbPath, hbSvcHandler)
+
+	// Control plane REST — dashboard-friendly JSON endpoints for node status,
+	// diagnostics, and blockers.  Also accepts inbound Python heartbeats.
+	cpHandler.RegisterRoutes(mux)
 
 	// Dashboard REST API — consumed by web/dashboard frontend.
 	dash := handler.NewDashboard(database, composite)
