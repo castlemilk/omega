@@ -158,36 +158,100 @@
 
 ---
 
+## Session: 2026-03-30 (Go Platform Layer + Training Observability + Error Recovery)
+
+### Completed ✅
+
+#### Signal Intelligence
+| Item | Notes |
+|------|-------|
+| ✅ **Geodesic curvature signal** | `omega/nodes/victoria/curvature_signal.py` — Riemannian curvature of the signal manifold as a regime-change early warning |
+| ✅ **Conformal calibrator** | `omega/nodes/victoria/conformal_calibrator.py` — split-conformal prediction intervals wired into improvement engine `apply_params` |
+| ✅ **Improvement engine `apply_params` wiring** | `omega/core/improvement_engine.py` — parameters from conformal calibration now fed back into signal weights; closes self-improvement loop |
+| ✅ **OOS test holdout gate** | `omega/eval/overfitting_gate.py` — mandatory third TPE split (train/validate/test); blocks deployment if OOS Sharpe < threshold |
+| ✅ **Signal IC decay detection** | `omega/core/intelligence_metrics.py` — EMA intelligence score tracks per-signal IC decay; retiring signals when EMA falls below floor |
+| ✅ **Structural adversarial challenges** | `omega/eval/scenarios.py` — concentration risk, data staleness, cross-signal correlation challenges wired into eval suite |
+
+#### Training Observability
+| Item | Notes |
+|------|-------|
+| ✅ **Training watchdog** | `omega/core/training_watchdog.py` — detects stalled training loops, emits kill signal after configurable timeout |
+| ✅ **JSONL metrics logger** | `omega/core/training_watchdog.py` — cycle metrics appended to `.jsonl` file per run for offline analysis |
+| ✅ **Training preflight checks** | `omega/core/training_preflight.py` — validates data freshness, DB connectivity, and signal imports before training starts |
+| ✅ **Sit-out circuit breaker** | `omega/core/sit_out_breaker.py` — halts training after N consecutive loss cycles; prevents runaway degradation |
+| ✅ **`print_training_diagnostics()`** | `omega/core/` — cycle-0 + every-10-cycle blocker analysis; surfaces root causes of zero-signal / zero-trade cycles |
+
+#### Error Recovery
+| Item | Notes |
+|------|-------|
+| ✅ **DB auto-reconnect buffer** | `omega/core/data_resilience.py` — write queue with retry buffer on DB disconnect; no lost cycle data during transient failures |
+| ✅ **Provider health summary** | `omega/core/data_resilience.py` — per-provider success/failure ratio surfaced in status output |
+| ✅ **System health score** | `omega/core/data_resilience.py` — composite 0–100 score from provider health, DB status, signal availability; logged each cycle |
+
+#### Intelligence Layer
+| Item | Notes |
+|------|-------|
+| ✅ **AttentionRouter weight decay** | `omega/core/attention_router.py` — EMA decay on routing weights prevents stale signal over-emphasis |
+| ✅ **Signal retirement** | `omega/core/attention_router.py` — signals with EMA IC below threshold auto-retired; routing weight zeroed |
+| ✅ **EMA intelligence metrics** | `omega/core/intelligence_metrics.py` — rolling Sharpe, IC, win-rate, regime-attribution EMA per signal; decay-aware scoring |
+
+#### Go Platform Layer
+| Item | Notes |
+|------|-------|
+| ✅ **Go `omega run` CLI** | `cmd/omega/run.go` — pure Go orchestrator executing full cycle loop; replaces Python runner for platform control path |
+| ✅ **Go heartbeat system** | `internal/heartbeat/store.go` + `internal/heartbeat/handler.go` — node heartbeat store with TTL expiry, HTTP handler, gRPC registration |
+| ✅ **Heartbeat proto** | `proto/omega/v1/heartbeat_service.proto` + generated Go/TypeScript stubs — `RegisterHeartbeat`, `GetHeartbeat`, `ListHeartbeats` RPCs |
+| ✅ **Python heartbeat client** | `omega/core/heartbeat_client.py` — Python nodes ping Go control plane every N seconds; auto-deregisters on shutdown |
+| ✅ **Control plane observability** | `internal/controlplane/handler.go` — node liveness state, last-seen timestamps, and heartbeat gap alerts |
+
+#### Data Providers
+| Item | Notes |
+|------|-------|
+| ✅ **Unusual Whales provider skeleton** | `omega/nodes/victoria/unusual_whales_provider.py` + `unusual_whales_node.py` — options flow, dark pool prints, congressional trading signals; API client scaffolded |
+
+#### Bug Fixes
+| Item | Notes |
+|------|-------|
+| ✅ **Short-only bias fix (5 root causes)** | `omega/nodes/victoria/signal_generation.py`, `conviction.py`, `dynamic_weights.py`, `basic_signals.py`, `strategy.py` — five independent biases each producing short-skewed signals identified and corrected |
+
+#### Housekeeping
+| Item | Notes |
+|------|-------|
+| ✅ **Worktree consolidation (65 → 2)** | All feature worktrees merged and pruned; only `main` and `amazing-williamson` remain |
+| ✅ **Shorted SEO PR #102** | Keyword clustering, meta description overhaul, and structured data fixes for feelingdesigner/shorted |
+
+---
+
 ## Open Items (Carried Forward)
 
 > Items from prior sessions still open. See `omega-strategic-backlog.md` for full specs.
 
 | ID | Item | Priority | Status |
 |----|------|----------|--------|
-| ACTION-006 | Fix REST autonomy gate (`GET /api/v1/nodes` blocked at PICO) | P0 | Open |
+| **P0-001** | **Fix zero-signal pipeline** — currently being debugged; sit-out breaker triggering on cycle 0 | **P0** | **Active** |
+| **P1-001** | **Go layer end-to-end verification** — `omega run` → heartbeat → control plane → DB write; smoke test all paths | **P1** | Not started |
+| **P1-002** | **Dashboard wired to heartbeat API** — node cards show live/stale status from `/api/v1/heartbeats`; replace polling stub | **P1** | Not started |
+| **P2-001** | **Platform layer Go rewrite** — vector memory, task scheduler, self-repair loop migrated from Python to Go service | **P2** | Not started |
+| ACTION-006 | Fix REST autonomy gate (`GET /api/v1/nodes` blocked at PICO) | P2 | Open |
 | ACTION-007 | Fix `Tracer.end_span()` type confusion (TraceContext vs str) | P2 | Open |
 | ACTION-009 | Confirm StateService → Postgres connection (0 rows in DB) | P1 | Open |
-| ACTION-010 | Wire `AdversarialPressureV2` in `_step_adversarial()` | P1 | Open |
 | ACTION-011 | Wire `GoalArchitecture` into cycle | P2 | Open |
 | ACTION-012 | Fix Python trace IDs to W3C-compliant format | P2 | Open |
 | ACTION-013 | Wire memory kernel to cycle output | P3 | Open |
-| ACTION-014 | Populate adversarial structural challenges (concentration, staleness, correlation) | P2 | Open |
-| ACTION-015 | OOS contamination — add third TPE split (train/validate/test) | P2 | Open |
-| EPIC-001 | Deploy OTLP backend (Grafana Cloud or self-hosted LGTM) | P0 | Not started |
+| EPIC-001 | Deploy OTLP backend (Grafana Cloud or self-hosted LGTM) | P1 | Not started |
 | EPIC-004 | Safety violation persistence to Postgres | P1 | Not started |
 | EPIC-023 | Data pipeline integrity (multiplicative equity curve, look-ahead bias, freshness guard) | P0 | Partial |
 | EPIC-024 | Security hardening (default creds, unauth RPC endpoints, audit log) | P1 | Not started |
-| EPIC-025 | Self-improvement loop completion (apply_params, goal architecture, ring-1 temporal) | P1 | Partial |
 
 ### Next Session Priorities
 
-- [ ] **Kronos-style time-series foundation model integration** — Pre-trained TSF model (Chronos / Moirai) as a signal source; zero-shot regime prediction and anomaly detection. Replaces hand-crafted GARCH baselines.
-- [ ] **Historical backtest validation of geometric signals vs momentum baseline** — Jegadeesh-Titman, natural gradient, Fiedler sizing vs V14 baselines on 3 historical windows. Sharpe, max-DD, Calmar, IC decomposition.
-- [x] **Integration test coverage for all 20 signal types** — ✅ Done: `tests/test_signal_integration.py`
-- [x] **News-projection layer** — ✅ Done: `omega/nodes/victoria/news_projection.py` + `apply_news_prior()` + step 3c wiring
-- [ ] **Dashboard: signal evolution visualization** — EMERGING → STABLE → FALSIFIED state badges, sparkline IC trend, last-transition timestamp surfaced in intelligence page.
-- [ ] **Attention router empirical training** — Collect 1000+ `(goal, routing, outcome)` tuples from V23+ runs; offline-train EMA priors.
-- [ ] **Run V24** — First run with news-projection layer + conformal forecast uncertainty. Compare Sharpe and max-DD vs V23 baseline.
+- [ ] **Debug zero-signal pipeline** — trace why sit-out breaker fires on cycle 0; check data freshness, signal computation path, conviction threshold
+- [ ] **Go heartbeat smoke test** — `omega run` → Python heartbeat client → Go store → `GET /api/v1/heartbeats` round-trip verification
+- [ ] **Dashboard heartbeat integration** — wire node cards to live heartbeat API; stale nodes show degraded badge
+- [ ] **Go platform services** — vector memory service in Go (`internal/memory/`), task scheduler (`internal/coord/`), self-repair daemon (`internal/observability/`)
+- [ ] **Run V24** — first run with news-projection + conformal calibrator + curvature signal + OOS gate + sit-out breaker; target Sharpe > V23 1.82
+- [ ] **Kronos-style time-series foundation model** — Chronos / Moirai as zero-shot signal source; replace hand-crafted GARCH
+- [ ] **Unusual Whales API key + live signals** — complete provider wiring once API key obtained
 
 ---
 
