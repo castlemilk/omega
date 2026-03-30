@@ -47,6 +47,7 @@ from omega.core.actions import (
 from omega.core.adversarial_v2 import AdversarialPressureV2
 from omega.core.autonomy import AutonomyLevel, GraduatedAutonomyController
 from omega.core.cycle import CycleContext, CycleHistory, CycleResult
+from omega.core.heartbeat_client import HeartbeatClient
 from omega.core.improvement_engine import ImprovementEngine
 from omega.core.improvement_scheduler import ImprovementScheduler
 from omega.core.memory_consolidation import ConsolidationPipeline
@@ -356,6 +357,10 @@ class OmegaOrchestrator:
         self._tracer: Any = None
         self._store: Any = None
         self._semantic_memory = SemanticMemoryNode(review_interval=50)
+
+        # Heartbeat client — reports cycle diagnostics to Go control plane.
+        # Silently no-ops when the Go service is not running.
+        self._heartbeat = HeartbeatClient()
 
         # Attention router — per-signal weight decay toward uniform.
         self._attention_router = AttentionRouter()
@@ -996,6 +1001,51 @@ class OmegaOrchestrator:
             len(result.adversarial_flags),
             result.duration_seconds,
         )
+
+        # Report diagnostics to the Go control plane (fire-and-forget).
+        # Extracts PnL and trade counts from paper-trading state if available.
+        try:
+            pnl = 0.0
+            open_trades = 0
+            closed_trades = 0
+            longs = 0
+            shorts = 0
+            if self._paper_trading is not None:
+                pnl = float(getattr(self._paper_trading, "realised_pnl", 0.0))
+                open_pos = getattr(self._paper_trading, "positions", {})
+                open_trades = len(open_pos)
+                closed_trades = len(getattr(self._paper_trading, "closed_trades", []))
+                for pos in open_pos.values() if isinstance(open_pos, dict) else []:
+                    side = pos.get("side", "")
+                    if side == "long":
+                        longs += 1
+                    elif side == "short":
+                        shorts += 1
+            sit_out = bool(result.metrics.get("sit_out", False))
+            sit_out_reason = str(result.metrics.get("sit_out_reason", "normal"))
+            blockers: list[str] = []
+            if result.error_count > 0:
+                blockers.append(f"{result.error_count} cycle errors")
+            if result.adversarial_flags:
+                blockers.extend(result.adversarial_flags[:3])  # limit to 3 for brevity
+            self._heartbeat.send_diagnostics(
+                node_id=f"orchestrator.{self.name}",
+                cycle=cycle_num,
+                regime=ctx.regime,
+                active_signals=result.signals_generated,
+                total_signals=len(self.active_nodes),
+                sit_out=sit_out,
+                sit_out_reason=sit_out_reason,
+                open_trades=open_trades,
+                closed_trades=closed_trades,
+                pnl=pnl,
+                longs=longs,
+                shorts=shorts,
+                blockers=blockers,
+            )
+        except Exception as _hb_exc:
+            logger.debug("heartbeat send failed (non-fatal): %s", _hb_exc)
+
         return result
 
     # ------------------------------------------------------------------

@@ -77,6 +77,7 @@ from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
+from omega.nodes.victoria.regime_detector import BottomSignalDetector
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
 
@@ -177,6 +178,9 @@ class VictoriaNode(Node):
 
         # Wasserstein-based regime detector (augments VRP-based regime)
         self._wasserstein_regime = WassersteinRegimeDetector(window=50, min_samples=20)
+
+        # Macro bottom-signal detector — Glassnode-proxy signals from free OHLCV data
+        self._bottom_detector = BottomSignalDetector()
 
         # RMT denoiser — standalone signal + foundation for geometric methods
         self._rmt_denoiser = RMTDenoiser(window=100)
@@ -1194,6 +1198,39 @@ class VictoriaNode(Node):
             )
         except Exception as exc:
             logger.debug("wasserstein regime detection failed: %s", exc)
+
+        # 1b-ii. Macro bottom-signal bias — prevents false bear calls during
+        # structural bottoms (proxies MVRV Z-Score, aSOPR, exchange reserves)
+        try:
+            _btc_closes: list[float] = []
+            for _ticker_key in ("BTCUSDT", "BTC-USDT", "btcusdt", "BTC/USDT", "BTCUSD"):
+                if _ticker_key in market_data and isinstance(market_data[_ticker_key], dict):
+                    _raw_close = market_data[_ticker_key].get("close", [])
+                    if isinstance(_raw_close, list) and len(_raw_close) >= 30:
+                        _btc_closes = [float(c) for c in _raw_close if c]
+                        break
+            if _btc_closes:
+                _macro_bias = self._bottom_detector.compute(_btc_closes)
+                signals["_macro_bias_score"] = round(_macro_bias.score, 4)
+                signals["_macro_bottom_active"] = _macro_bias.bottom_signals_active
+                signals["_mvrv_proxy"] = _macro_bias.mvrv_proxy
+                signals["_asopr_proxy"] = _macro_bias.asopr_proxy
+                if _macro_bias.bottom_signals_active and _macro_bias.score > 0.2:
+                    # Bias regime away from bear when macro bottom signals fire.
+                    # This prevents Victoria from going heavily short in structural
+                    # bull market bottoms (e.g. MVRV Z-Score < 1.2, aSOPR < 1.0).
+                    if regime in ("bear", "BEAR"):
+                        regime = "sideways"
+                        signals["_regime_macro_corrected"] = True
+                        logger.info(
+                            "MacroBias regime correction: bear → sideways "
+                            "(score=%.3f mvrv=%.3f asopr=%.3f bottom_signals=active)",
+                            _macro_bias.score,
+                            _macro_bias.mvrv_proxy,
+                            _macro_bias.asopr_proxy,
+                        )
+        except Exception as exc:
+            logger.debug("macro bottom-signal bias failed: %s", exc)
 
         # 1c. basic_signals disagreement tracking
         # Log when basic_signals diverges from the consensus of other signals so we

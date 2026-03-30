@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -341,6 +342,152 @@ default_modifier = RegimeAwareSignalModifier()
 
 
 # ---------------------------------------------------------------------------
+# BottomSignalDetector — Glassnode-proxy macro bottom signals
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class MacroBias:
+    """Result of bottom-signal analysis.
+
+    score:                 float in [-1, +1].  Positive = macro bullish (bottom
+                           signals active); negative = macro bearish.
+    bottom_signals_active: True when at least 2 of 3 individual bottom signals
+                           are firing.  Used to bias the regime away from bear.
+    mvrv_proxy:           price / MA(365d).  < 1.0 ≈ MVRV Z-Score low (cheap).
+    asopr_proxy:          7d return.  < 0 ≈ aSOPR < 1 (sellers underwater).
+    exchange_reserve_proxy: stablecoin-dominance proxy.  < 0 = stablecoins
+                           shrinking as % of total (capital rotating into crypto).
+    """
+
+    score: float = 0.0
+    bottom_signals_active: bool = False
+    mvrv_proxy: float = 1.0
+    asopr_proxy: float = 0.0
+    exchange_reserve_proxy: float = 0.0
+
+
+class BottomSignalDetector:
+    """
+    Approximates Glassnode on-chain bottom signals using free OHLCV data.
+
+    Signals approximated
+    --------------------
+    1. **MVRV Z-Score proxy** — price / MA(365d).
+       Real MVRV = market_cap / realised_cap (i.e. coins valued at purchase
+       price).  Realised cap ≈ long-term average price × supply, so
+       price / MA(365d) is a valid proxy.
+       * proxy < 1.0  → price below long-term average → MVRV Z-Score likely
+                         in bottom range (< 1.5)           → +1 bottom signal
+       * proxy < 0.85 → deep discount (strong signal)      → +1 extra weight
+
+    2. **aSOPR proxy** — 7d return vs 30d baseline.
+       aSOPR < 1.0 means coins are being moved at a loss.  If the 7-day
+       price change is negative (−%) the cohort of recent buyers is selling
+       at a loss, approximating aSOPR < 1.0.
+       * 7d_return < 0 AND 30d_return < 0  → aSOPR < 1 signal  → +1 bottom
+
+    3. **Exchange reserve proxy** — stablecoin dominance delta.
+       When stablecoins decline as a fraction of crypto market cap, capital
+       is rotating *back into* BTC/ETH — exchange reserves are effectively
+       declining.  Without real stablecoin data we use the ratio of BTC's
+       14-day return vs 30-day return.
+       * 14d_return > 30d_return (recent acceleration) → +1 bottom signal
+
+    Composite score
+    ---------------
+    score = tanh(sum_of_weighted_signals / normaliser)
+
+    Usage::
+
+        detector = BottomSignalDetector()
+        closes = [95000.0, 96000.0, ...]  # BTC hourly closes, most recent last
+        bias = detector.compute(closes)
+        # bias.score ∈ [-1, +1];  bias.bottom_signals_active = True if bottoming
+    """
+
+    # Minimum history length before we emit a non-neutral result
+    MIN_CANDLES = 30
+
+    def compute(self, closes: list[float]) -> MacroBias:
+        """Compute macro bias from a closing price series (ascending order)."""
+        if not closes or len(closes) < self.MIN_CANDLES:
+            return MacroBias()
+
+        arr = np.array(closes, dtype=float)
+        arr = arr[arr > 0]  # strip zeros
+        n = len(arr)
+        if n < self.MIN_CANDLES:
+            return MacroBias()
+
+        price = float(arr[-1])
+        signals_fired: list[float] = []
+
+        # ── Signal 1: MVRV Z-Score proxy ────────────────────────────────────
+        mvrv_proxy = 1.0
+        window_365 = min(365, n)
+        ma365 = float(np.mean(arr[-window_365:]))
+        if ma365 > 0:
+            mvrv_proxy = price / ma365
+        s1 = 0.0
+        if mvrv_proxy < 1.0:
+            # Price is below long-term average — strong bottom territory
+            s1 = min(1.0, (1.0 - mvrv_proxy) * 3.0)  # scale: 0.33 below → 1.0
+        elif mvrv_proxy < 1.2:
+            # Slightly above realized value — mild bullish bias
+            s1 = 0.2
+        signals_fired.append(s1)
+
+        # ── Signal 2: aSOPR proxy ────────────────────────────────────────────
+        asopr_proxy = 0.0
+        s2 = 0.0
+        if n >= 30:
+            p7_ago = float(arr[-min(7, n)])
+            p30_ago = float(arr[-min(30, n)])
+            ret7 = (price - p7_ago) / p7_ago if p7_ago > 0 else 0.0
+            ret30 = (price - p30_ago) / p30_ago if p30_ago > 0 else 0.0
+            asopr_proxy = ret7
+            if ret7 < 0 and ret30 < 0:
+                # Both 7d and 30d negative → sellers underwater → aSOPR < 1
+                s2 = min(1.0, abs(ret7) * 5.0)
+            elif ret7 < 0:
+                s2 = min(0.5, abs(ret7) * 3.0)
+        signals_fired.append(s2)
+
+        # ── Signal 3: Exchange reserve proxy (momentum acceleration) ────────
+        exch_reserve_proxy = 0.0
+        s3 = 0.0
+        if n >= 30:
+            p14_ago = float(arr[-min(14, n)])
+            ret14 = (price - p14_ago) / p14_ago if p14_ago > 0 else 0.0
+            p30_ago = float(arr[-min(30, n)])
+            ret30 = (price - p30_ago) / p30_ago if p30_ago > 0 else 0.0
+            exch_reserve_proxy = ret14 - ret30
+            if ret14 > ret30:
+                # 14d outpacing 30d → short-term recovery signal
+                s3 = min(1.0, (ret14 - ret30) * 4.0)
+        signals_fired.append(s3)
+
+        # ── Composite score ──────────────────────────────────────────────────
+        # Weights: MVRV (0.45) is most reliable proxy, aSOPR (0.35), exch (0.20)
+        weights = [0.45, 0.35, 0.20]
+        raw = sum(w * s for w, s in zip(weights, signals_fired))
+        score = float(np.tanh(raw * 2.0))  # amplify and squash to [-1, 1]
+
+        # bottom_signals_active: two of three individual signals > 0.15
+        n_active = sum(1 for s in signals_fired if s > 0.15)
+        bottom_active = n_active >= 2
+
+        return MacroBias(
+            score=round(score, 4),
+            bottom_signals_active=bottom_active,
+            mvrv_proxy=round(mvrv_proxy, 4),
+            asopr_proxy=round(asopr_proxy, 4),
+            exchange_reserve_proxy=round(exch_reserve_proxy, 4),
+        )
+
+
+# ---------------------------------------------------------------------------
 # HMMRegimeDetector — 3-state HMM regime detector
 # ---------------------------------------------------------------------------
 
@@ -377,7 +524,24 @@ class HMMRegimeDetector:
     def regime_probs(self) -> list[float]:
         return self._regime_probs
 
-    def update(self, market_data: dict[str, Any]) -> dict[str, Any]:
+    def update(
+        self,
+        market_data: dict[str, Any],
+        macro_bias: "MacroBias | None" = None,
+    ) -> dict[str, Any]:
+        """Update the regime estimate from market data.
+
+        Parameters
+        ----------
+        market_data:
+            Dict keyed by ticker symbol (e.g. "BTCUSDT") containing
+            "close" and "volume" lists (ascending order).
+        macro_bias:
+            Optional result from :class:`BottomSignalDetector`.  When
+            provided and ``bottom_signals_active`` is True, the bear
+            probability is reduced to prevent false bear calls during
+            macro-bottom conditions (e.g. MVRV Z-Score < 1.2, aSOPR < 1).
+        """
         features = self._extract_features(market_data)
         if features is None:
             return self._fallback_result()
@@ -395,9 +559,69 @@ class HMMRegimeDetector:
             result = self._predict_hmm()
         else:
             result = self._rule_based(ret, vol)
+
+        # Apply macro bias post-processing when bottom signals are active.
+        if macro_bias is not None and macro_bias.bottom_signals_active:
+            result = self._apply_macro_bias(result, macro_bias)
+
         self._current_regime = result["regime"]
         self._regime_probs = result["probs"]
         return result
+
+    def _apply_macro_bias(
+        self,
+        result: dict[str, Any],
+        bias: "MacroBias",
+    ) -> dict[str, Any]:
+        """
+        Reduce bear probability when macro bottom signals are active.
+
+        Logic
+        -----
+        * The bias score ∈ [0, 1] (only called when bottom_signals_active).
+        * We attenuate the bear component by ``bear_reduction`` and
+          redistribute the freed probability to sideways (not bull) so that
+          we don't over-commit in the absence of positive price momentum.
+        * The regime label is re-derived from the adjusted probabilities.
+        """
+        probs = list(result.get("probs", [1 / 3, 1 / 3, 1 / 3]))
+        if len(probs) < 3:
+            return result
+
+        bear_reduction = min(0.5, bias.score * 0.5)  # max 50% bear attenuation
+        bull_p, bear_p, side_p = probs[0], probs[1], probs[2]
+
+        freed = bear_p * bear_reduction
+        bear_p_new = bear_p - freed
+        side_p_new = side_p + freed  # redistribute to sideways (cautious, not aggressive)
+
+        new_probs = [bull_p, bear_p_new, side_p_new]
+        total = sum(new_probs)
+        if total > 0:
+            new_probs = [p / total for p in new_probs]
+
+        # Re-derive regime label
+        regime_map = {0: BULL, 1: BEAR, 2: SIDEWAYS}
+        best_idx = int(np.argmax(new_probs))
+        new_regime = regime_map[best_idx]
+
+        updated = dict(result)
+        updated["probs"] = new_probs
+        updated["regime"] = new_regime
+        updated["confidence"] = float(new_probs[best_idx])
+        updated["macro_bias_score"] = bias.score
+        updated["macro_bottom_active"] = True
+
+        if new_regime != result.get("regime"):
+            logger.debug(
+                "MacroBias regime correction: %s → %s (score=%.3f, mvrv=%.3f)",
+                result.get("regime"),
+                new_regime,
+                bias.score,
+                bias.mvrv_proxy,
+            )
+
+        return updated
 
     def _extract_features(self, market_data: dict[str, Any]) -> tuple[float, float, float] | None:
         btc_data: dict[str, Any] | None = None

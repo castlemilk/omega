@@ -9,6 +9,9 @@ import {
   Cpu,
   Brain,
   Clock,
+  Radio,
+  TrendingUp,
+  TrendingDown,
 } from "lucide-react";
 const BASE = "";
 
@@ -314,6 +317,241 @@ function MemoryStatsCard({ stats }: { stats: MemoryStats }) {
   );
 }
 
+// ── Heartbeat / Control Plane Types ───────────────────────────────────────
+
+interface HeartbeatNode {
+  node_id: string;
+  node_type: string;
+  health: "healthy" | "degraded" | "stale" | "dead" | "unknown";
+  last_seen: string;
+  metrics: Record<string, string>;
+  blockers: string[];
+  stale: boolean;
+}
+
+interface TrainingDiagnostics {
+  node_id: string;
+  cycle: number;
+  regime: string;
+  active_signals: number;
+  total_signals: number;
+  sit_out: boolean;
+  sit_out_reason: string;
+  open_trades: number;
+  closed_trades: number;
+  pnl: number;
+  longs: number;
+  shorts: number;
+  blockers: string[];
+  ticker_convictions: Record<string, number>;
+  timestamp: string;
+}
+
+const HEALTH_COLOR: Record<string, string> = {
+  healthy: "text-green-400",
+  degraded: "text-yellow-400",
+  stale: "text-orange-400",
+  dead: "text-red-400",
+  unknown: "text-gray-500",
+};
+
+const HEALTH_BG: Record<string, string> = {
+  healthy: "bg-green-900/20 border-green-800/40",
+  degraded: "bg-yellow-900/20 border-yellow-800/40",
+  stale: "bg-orange-900/20 border-orange-800/40",
+  dead: "bg-red-900/20 border-red-800/40",
+  unknown: "bg-gray-800 border-gray-700",
+};
+
+function timeSince(iso: string): string {
+  if (!iso) return "never";
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  return `${Math.floor(diff / 3600)}h ago`;
+}
+
+function HeartbeatNodeCard({ node }: { node: HeartbeatNode }) {
+  const health = node.stale ? "stale" : node.health;
+  return (
+    <div className={`rounded-xl border p-3 space-y-2 ${HEALTH_BG[health] ?? HEALTH_BG.unknown}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Radio size={12} className={HEALTH_COLOR[health]} />
+          <span className="font-mono text-xs text-white truncate max-w-[140px]">{node.node_id}</span>
+        </div>
+        <span className={`text-xs font-semibold uppercase ${HEALTH_COLOR[health]}`}>{health}</span>
+      </div>
+      <div className="flex justify-between text-xs">
+        <span className="text-gray-500">{node.node_type || "node"}</span>
+        <span className="font-mono text-gray-400">{timeSince(node.last_seen)}</span>
+      </div>
+      {node.blockers.length > 0 && (
+        <div className="space-y-0.5">
+          {node.blockers.slice(0, 2).map((b, i) => (
+            <p key={i} className="text-xs text-orange-400 font-mono truncate">
+              ⚠ {b}
+            </p>
+          ))}
+        </div>
+      )}
+      {node.metrics.cycle && (
+        <div className="flex gap-3 text-xs text-gray-500 font-mono">
+          <span>cycle {node.metrics.cycle}</span>
+          {node.metrics.regime && <span>· {node.metrics.regime}</span>}
+          {node.metrics.pnl && (
+            <span className={parseFloat(node.metrics.pnl) >= 0 ? "text-green-400" : "text-red-400"}>
+              · ${parseFloat(node.metrics.pnl).toFixed(2)}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrainingDiagnosticsCard({ diag }: { diag: TrainingDiagnostics | null }) {
+  if (!diag) {
+    return (
+      <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 text-center text-sm text-gray-600">
+        No training diagnostics — start a training run
+      </div>
+    );
+  }
+  const pnlPositive = diag.pnl >= 0;
+  const regimeColor =
+    diag.regime === "bull" ? "text-green-400"
+      : diag.regime === "bear" ? "text-red-400"
+      : "text-yellow-400";
+  return (
+    <div className="bg-gray-800 border border-gray-700 rounded-xl p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+          Training Loop · Live
+        </h3>
+        <span className="text-xs font-mono text-gray-500">{formatTime(diag.timestamp)}</span>
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-2xl font-bold text-white font-mono">#{diag.cycle}</p>
+          <p className="text-xs text-gray-500">Cycle</p>
+        </div>
+        <div>
+          <p className={`text-2xl font-bold font-mono ${pnlPositive ? "text-green-400" : "text-red-400"}`}>
+            {pnlPositive ? "+" : ""}${diag.pnl.toFixed(2)}
+          </p>
+          <p className="text-xs text-gray-500">Realised PnL</p>
+        </div>
+        <div>
+          <p className={`text-xl font-bold font-mono uppercase ${regimeColor}`}>{diag.regime || "—"}</p>
+          <p className="text-xs text-gray-500">Regime</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-4 gap-2 text-xs border-t border-gray-700 pt-2">
+        <div>
+          <p className="text-gray-500">Signals</p>
+          <p className="font-mono text-gray-300">{diag.active_signals}/{diag.total_signals}</p>
+        </div>
+        <div>
+          <p className="text-gray-500">Trades</p>
+          <p className="font-mono text-gray-300">{diag.open_trades} open</p>
+        </div>
+        <div>
+          <p className="text-gray-500">Direction</p>
+          <div className="flex gap-1 items-center">
+            <TrendingUp size={10} className="text-green-400" />
+            <span className="font-mono text-green-400">{diag.longs}</span>
+            <TrendingDown size={10} className="text-red-400 ml-1" />
+            <span className="font-mono text-red-400">{diag.shorts}</span>
+          </div>
+        </div>
+        <div>
+          <p className="text-gray-500">Sit-out</p>
+          <p className={`font-mono ${diag.sit_out ? "text-orange-400" : "text-green-400"}`}>
+            {diag.sit_out ? diag.sit_out_reason || "yes" : "no"}
+          </p>
+        </div>
+      </div>
+      {diag.blockers.length > 0 && (
+        <div className="border-t border-gray-700 pt-2 space-y-1">
+          {diag.blockers.map((b, i) => (
+            <p key={i} className="text-xs font-mono text-orange-400">⚠ {b}</p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NodeHeartbeatPanel() {
+  const [nodes, setNodes] = useState<HeartbeatNode[]>([]);
+  const [diag, setDiag] = useState<TrainingDiagnostics | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  async function fetchHeartbeats() {
+    try {
+      const [nodesRes, diagRes] = await Promise.all([
+        fetch(`${BASE}/api/v1/nodes`),
+        fetch(`${BASE}/api/v1/diagnostics`),
+      ]);
+      if (nodesRes.ok) setNodes(await nodesRes.json());
+      if (diagRes.ok) {
+        const d = await diagRes.json();
+        if (d.available !== false) setDiag(d);
+      }
+      setLastUpdated(new Date());
+    } catch {
+      // silently swallow — control plane may not be running
+    }
+  }
+
+  useEffect(() => {
+    fetchHeartbeats();
+    const id = setInterval(fetchHeartbeats, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  const liveCount = nodes.filter((n) => !n.stale && n.health === "healthy").length;
+  const staleCount = nodes.filter((n) => n.stale || n.health === "stale").length;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Radio size={14} className="text-indigo-400" />
+          <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+            Node Heartbeats
+          </h2>
+          {nodes.length > 0 && (
+            <span className="text-xs text-gray-600">
+              {liveCount} live · {staleCount} stale
+            </span>
+          )}
+        </div>
+        {lastUpdated && (
+          <span className="text-xs text-gray-600 font-mono">
+            {timeSince(lastUpdated.toISOString())}
+          </span>
+        )}
+      </div>
+
+      <TrainingDiagnosticsCard diag={diag} />
+
+      {nodes.length > 0 ? (
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {nodes.map((n) => (
+            <HeartbeatNodeCard key={n.node_id} node={n} />
+          ))}
+        </div>
+      ) : (
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 text-center text-sm text-gray-600">
+          No nodes reporting — Go control plane may not be running
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 
 const EMPTY_RESPONSE: ServicesResponse = {
@@ -451,6 +689,9 @@ export default function SystemHealth() {
 
           {/* Signal health */}
           <SignalHealthTable signals={data.signal_health ?? []} />
+
+          {/* Node heartbeats + training diagnostics */}
+          <NodeHeartbeatPanel />
         </>
       )}
     </div>
