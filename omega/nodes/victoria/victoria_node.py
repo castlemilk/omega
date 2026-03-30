@@ -77,6 +77,7 @@ from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
+from omega.nodes.victoria.hmm_regime import HMMRegimeDetector
 from omega.nodes.victoria.regime_detector import BottomSignalDetector
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
@@ -109,6 +110,8 @@ SIGNAL_NAMES = [
     "smart_money",  # Binance top-trader position consensus
     "finbert_sentiment",  # Keyword-based crypto news sentiment (recency-weighted)
     "whale_flow",  # Exchange inflow/outflow whale pressure signal
+    "hmm_regime",  # 3-state Gaussian HMM on raw returns (bull/bear/sideways)
+    "hmm_wasserstein_divergence",  # Disagreement between HMM and Wasserstein — regime transition indicator
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -175,6 +178,9 @@ class VictoriaNode(Node):
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
+
+        # HMM regime detector — 3-state Gaussian HMM on raw BTC returns (Wave 1)
+        self._hmm_regime = HMMRegimeDetector(window=120, refit_every=20)
 
         # Wasserstein-based regime detector (augments VRP-based regime)
         self._wasserstein_regime = WassersteinRegimeDetector(window=50, min_samples=20)
@@ -1744,6 +1750,72 @@ class VictoriaNode(Node):
                 "raw": v.raw,
             }
 
+        def _hmm_regime(acc: dict, ctx: dict) -> dict:
+            r = self._hmm_regime.update(ctx["market_data"])
+            return {
+                "current_state": r.current_state,
+                "state_probs": r.state_probs,
+                "transition_matrix": r.transition_matrix,
+                "state_duration": r.state_duration,
+                "fit_quality": r.fit_quality,
+                "bull_prob": r.bull_prob,
+                "bear_prob": r.bear_prob,
+                "sideways_prob": r.sideways_prob,
+                # Expose a scalar value for use by consumers that expect a "value" key
+                # (positive = bull, negative = bear, 0 = sideways)
+                "value": r.bull_prob - r.bear_prob,
+                "confidence": max(r.state_probs) if r.fit_quality > 0 else 0.0,
+            }
+
+        def _hmm_wasserstein_divergence(acc: dict, ctx: dict) -> dict:
+            """
+            Regime transition indicator: L1 distance between HMM and Wasserstein
+            probability vectors over [bull, bear, sideways].
+
+            When both detectors agree → distance ≈ 0 (stable regime).
+            When they conflict     → distance > 0 (transition in progress).
+
+            The value is normalised to [0, 1] (max L1 distance between two
+            3-element probability vectors is 2, but in practice ≤ 1 for
+            non-extreme cases).  We sign it by HMM direction (positive when
+            HMM is more bullish than Wasserstein) so the signal has directionality.
+            """
+            hmm_out = acc.get("hmm_regime")
+            w_out = acc.get("wasserstein_regime")
+
+            if not isinstance(hmm_out, dict) or not isinstance(w_out, dict):
+                return {"value": 0.0, "confidence": 0.0, "l1_distance": 0.0}
+
+            hmm_vec = [
+                float(hmm_out.get("bull_prob", 1 / 3)),
+                float(hmm_out.get("bear_prob", 1 / 3)),
+                float(hmm_out.get("sideways_prob", 1 / 3)),
+            ]
+            w_vec = [
+                float(w_out.get("bull_prob", 1 / 3)),
+                float(w_out.get("bear_prob", 1 / 3)),
+                float(w_out.get("sideways_prob", 1 / 3)),
+            ]
+
+            l1 = sum(abs(a - b) for a, b in zip(hmm_vec, w_vec))
+            # Direction: positive when HMM is more bullish than Wasserstein
+            direction = hmm_vec[0] - w_vec[0]  # bull_prob difference
+            signed_value = l1 * (1.0 if direction >= 0 else -1.0)
+
+            # Confidence proportional to how well each model is fitted
+            hmm_fit_q = float(hmm_out.get("fit_quality", 0.0))
+            w_conf = float(w_out.get("confidence", 0.0))
+            confidence = 0.5 * (min(1.0, abs(hmm_fit_q) / 3.0) + w_conf)
+
+            return {
+                "value": round(signed_value, 4),
+                "confidence": round(confidence, 4),
+                "l1_distance": round(l1, 4),
+                "hmm_state": hmm_out.get("current_state", "unknown"),
+                "wasserstein_state": w_out.get("regime", "unknown"),
+                "conflict": hmm_out.get("current_state") != w_out.get("regime"),
+            }
+
         # ── DAG topology ──────────────────────────────────────────────
         #
         #   Wave 0 (roots):
@@ -1753,18 +1825,19 @@ class VictoriaNode(Node):
         #   Wave 1 (parallel, all depend on market_data_signal):
         #     basic_signals, order_flow, cross_asset, microstructure,
         #     sentiment, vrp, onchain, long_short_ratio, btc_dominance,
-        #     carry, pairs, momentum_factor
+        #     carry, pairs, momentum_factor, hmm_regime  ← new
         #
         #   Wave 2 (parallel, depend on cross_asset / wave-1 signals):
         #     rmt_signal, spectral_graph   ← need full signal vector
         #     wasserstein_regime           ← needs full signal vector
         #
         #   Wave 3 (serial, depends on all wave-2 outputs):
-        #     curvature_signal  ← geodesic curvature of trajectory on unit hypersphere
+        #     curvature_signal           ← geodesic curvature of trajectory
+        #     hmm_wasserstein_divergence ← regime conflict indicator  ← new
 
         wave1_deps = ["market_data_signal"]
         wave2_deps = ["cross_asset", "basic_signals", "sentiment"]  # representative
-        wave3_deps = ["rmt_signal", "spectral_graph", "wasserstein_regime"]
+        wave3_deps = ["rmt_signal", "spectral_graph", "wasserstein_regime", "hmm_regime"]
 
         dag_nodes: list[SignalNode] = [
             # Wave 0
@@ -1871,6 +1944,12 @@ class VictoriaNode(Node):
                 fn=_whale_flow,
                 description="Exchange inflow/outflow whale pressure (10-min cached)",
             ),
+            SignalNode(
+                "hmm_regime",
+                deps=wave1_deps,
+                fn=_hmm_regime,
+                description="3-state Gaussian HMM on raw BTC returns (bull/bear/sideways)",
+            ),
             # Wave 2
             SignalNode(
                 "rmt_signal",
@@ -1896,6 +1975,12 @@ class VictoriaNode(Node):
                 deps=wave3_deps,
                 fn=_curvature,
                 description="Geodesic curvature — trajectory smoothness on unit hypersphere",
+            ),
+            SignalNode(
+                "hmm_wasserstein_divergence",
+                deps=["hmm_regime", "wasserstein_regime"],
+                fn=_hmm_wasserstein_divergence,
+                description="Regime transition indicator — L1 distance between HMM and Wasserstein regime probs",
             ),
         ]
 
@@ -1932,6 +2017,8 @@ class VictoriaNode(Node):
             "rmt_signal",
             "spectral_graph",
             "curvature_signal",
+            "hmm_regime",
+            "hmm_wasserstein_divergence",
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
@@ -1966,6 +2053,33 @@ class VictoriaNode(Node):
                 w_out.get("bear_prob", 0.0),
                 w_out.get("sideways_prob", 0.0),
                 regime,
+            )
+
+        # HMM regime metadata
+        hmm_out = acc.get("hmm_regime")
+        if isinstance(hmm_out, dict):
+            signals["_regime_hmm"] = hmm_out.get("current_state", "unknown")
+            signals["_regime_hmm_duration"] = hmm_out.get("state_duration", 0)
+            signals["_regime_hmm_fit_quality"] = round(hmm_out.get("fit_quality", 0.0), 4)
+            logger.info(
+                "hmm_regime state=%s duration=%d fit_quality=%.4f "
+                "(bull=%.3f bear=%.3f side=%.3f)",
+                hmm_out.get("current_state"),
+                hmm_out.get("state_duration", 0),
+                hmm_out.get("fit_quality", 0.0),
+                hmm_out.get("bull_prob", 0.0),
+                hmm_out.get("bear_prob", 0.0),
+                hmm_out.get("sideways_prob", 0.0),
+            )
+
+        # HMM/Wasserstein divergence — flag regime transitions
+        div_out = acc.get("hmm_wasserstein_divergence")
+        if isinstance(div_out, dict) and div_out.get("conflict"):
+            logger.info(
+                "regime conflict: hmm=%s wasserstein=%s l1=%.3f — transition likely",
+                div_out.get("hmm_state"),
+                div_out.get("wasserstein_state"),
+                div_out.get("l1_distance", 0.0),
             )
 
         # Emit DAG timing metadata for observability
