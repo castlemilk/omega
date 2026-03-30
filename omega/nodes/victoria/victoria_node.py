@@ -79,6 +79,7 @@ from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
 from omega.nodes.victoria.regime_detector import BottomSignalDetector
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
+from omega.nodes.victoria.wavelet_signal import WaveletSignal
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
 
 credentials.register(
@@ -109,6 +110,7 @@ SIGNAL_NAMES = [
     "smart_money",  # Binance top-trader position consensus
     "finbert_sentiment",  # Keyword-based crypto news sentiment (recency-weighted)
     "whale_flow",  # Exchange inflow/outflow whale pressure signal
+    "wavelet",  # DWT timescale decomposition — trend/cycle/noise sub-signals
 ]
 
 # Map VRP regime to DynamicWeightAllocator regime strings
@@ -172,6 +174,9 @@ class VictoriaNode(Node):
         self._finbert_sentiment = FinBertSentimentSignal()
         # Whale flow signal — exchange inflow/outflow pressure (10-min cached)
         self._whale_flow = WhaleFlowSignal()
+
+        # Wavelet DWT decomposition — trend/cycle/noise timescale signal
+        self._wavelet_signal = WaveletSignal()
 
         # Dynamic weight allocator
         self._weight_allocator = DynamicWeightAllocator(signal_names=SIGNAL_NAMES)
@@ -1686,6 +1691,15 @@ class VictoriaNode(Node):
                 "raw": v.raw,
             }
 
+        def _wavelet(acc: dict, ctx: dict) -> dict:
+            v = self._wavelet_signal.compute(ctx["market_data"])
+            return {
+                "value": v.value,
+                "confidence": v.confidence,
+                "regime_tag": v.regime_tag,
+                "raw": v.raw,
+            }
+
         def _rmt_signal(acc: dict, ctx: dict) -> dict:
             signal_vec = {
                 name: float(acc[name].get("value", 0.0))
@@ -1871,6 +1885,12 @@ class VictoriaNode(Node):
                 fn=_whale_flow,
                 description="Exchange inflow/outflow whale pressure (10-min cached)",
             ),
+            SignalNode(
+                "wavelet",
+                deps=wave1_deps,
+                fn=_wavelet,
+                description="DWT timescale decomposition — trend/cycle/noise sub-signals",
+            ),
             # Wave 2
             SignalNode(
                 "rmt_signal",
@@ -1932,6 +1952,7 @@ class VictoriaNode(Node):
             "rmt_signal",
             "spectral_graph",
             "curvature_signal",
+            "wavelet",
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
