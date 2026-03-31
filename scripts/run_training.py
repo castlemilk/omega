@@ -371,11 +371,32 @@ def print_training_diagnostics(victoria, strategy, cycle: int, engine) -> None:
 # Main training loop
 # ---------------------------------------------------------------------------
 
+_META_HARNESS_INTERVAL = 50  # run meta-harness every N training cycles
+
+
+def run_meta_harness_iteration(log: logging.Logger, n_eval_cycles: int = 30) -> None:
+    """Run one meta-harness Propose → Evaluate → Store iteration."""
+    try:
+        from omega.core.meta_harness import MetaHarness
+        use_llm = os.environ.get("OMEGA_META_LLM", "0") == "1"
+        harness = MetaHarness(n_eval_cycles=n_eval_cycles, live=False, use_llm=use_llm)
+        iteration = harness.run_iteration()
+        log.info(
+            "Meta-harness iter %d complete: score=%.4f  %s",
+            iteration.iteration_id,
+            iteration.score,
+            iteration.metrics_summary(),
+        )
+    except Exception as exc:
+        log.warning("Meta-harness iteration failed: %s", exc)
+
+
 def run(
     version: str,
     n_cycles: int = 100,
     sleep_seconds: float = 30.0,
     log_interval: int = 5,
+    meta_harness: bool = False,
 ) -> dict:
     log = logging.getLogger(f"training.{version}")
 
@@ -643,6 +664,11 @@ def run(
                     breaker_str,
                 )
 
+            # Meta-harness: run after every N cycles if enabled
+            if meta_harness and cycle_num % _META_HARNESS_INTERVAL == 0:
+                log.info("Triggering meta-harness at cycle %d", cycle_num)
+                run_meta_harness_iteration(log)
+
             if i < n_cycles - 1:
                 time.sleep(sleep_seconds)
 
@@ -759,6 +785,16 @@ if __name__ == "__main__":
     parser.add_argument("--cycles", type=int, default=100, help="Number of training cycles")
     parser.add_argument("--sleep", type=float, default=30.0, help="Seconds between cycles")
     parser.add_argument("--log-interval", type=int, default=5, help="Log every N cycles")
+    parser.add_argument(
+        "--meta-harness",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable Meta-Harness self-improvement loop. "
+            f"Runs strategy optimization every {_META_HARNESS_INTERVAL} cycles. "
+            "Set OMEGA_META_LLM=1 to enable LLM-powered proposals."
+        ),
+    )
     args = parser.parse_args()
 
     version = _resolve_version(args.version)
@@ -769,4 +805,5 @@ if __name__ == "__main__":
         n_cycles=args.cycles,
         sleep_seconds=args.sleep,
         log_interval=args.log_interval,
+        meta_harness=args.meta_harness,
     )
