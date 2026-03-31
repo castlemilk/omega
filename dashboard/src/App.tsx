@@ -26,18 +26,13 @@ import VictoriaPortfolio from "./pages/VictoriaPortfolio";
 import VictoriaSignals from "./pages/VictoriaSignals";
 import VictoriaTrades from "./pages/VictoriaTrades";
 import VictoriaBacktest from "./pages/VictoriaBacktest";
-import PolymarketOverview from "./pages/PolymarketOverview";
-import PolymarketMarkets from "./pages/PolymarketMarkets";
-import PolymarketEdges from "./pages/PolymarketEdges";
-import PolymarketWeather from "./pages/PolymarketWeather";
-import PolymarketBets from "./pages/PolymarketBets";
-import PolymarketPositions from "./pages/PolymarketPositions";
 import SystemHealth from "./pages/SystemHealth";
 import PerformanceMetrics from "./pages/PerformanceMetrics";
 import ErrorLog from "./pages/ErrorLog";
 import PipelineView from "./pages/PipelineView";
 import Training from "./pages/Training";
 import SignalHealth from "./pages/SignalHealth";
+import ControlPlane from "./pages/ControlPlane";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealthProto | null>(null);
@@ -132,13 +127,8 @@ export default function App() {
                     </ErrorBoundary>
                   }
                 />
-                <Route path="/polymarket" element={<PolymarketOverview />} />
-                <Route path="/polymarket/markets" element={<PolymarketMarkets />} />
-                <Route path="/polymarket/edges" element={<PolymarketEdges />} />
-                <Route path="/polymarket/weather" element={<PolymarketWeather />} />
-                <Route path="/polymarket/bets" element={<PolymarketBets />} />
-                <Route path="/polymarket/positions" element={<PolymarketPositions />} />
-                {/* Observability */}
+                {/* Platform */}
+                <Route path="/control-plane" element={<ControlPlane />} />
                 <Route path="/health" element={<SystemHealth />} />
                 <Route path="/perf" element={<PerformanceMetrics />} />
                 <Route path="/errors" element={<ErrorLog />} />
