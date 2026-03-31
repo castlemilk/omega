@@ -236,7 +236,7 @@ class SignalGenerationNode(Node):
             if sma_short is not None and sma_long is not None and sma_long != 0:
                 raw_ratio = (sma_short - sma_long) / sma_long
                 # Scale so a 2% deviation → signal ≈ 0.5; clip to [-1, 1]
-                ts["sma_crossover"] = max(-1.0, min(1.0, raw_ratio * 25.0))
+                ts["sma_crossover"] = max(-1.0, min(1.0, raw_ratio * 10.0))
                 ts["sma_short"] = sma_short
                 ts["sma_long"] = sma_long
 

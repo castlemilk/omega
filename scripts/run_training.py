@@ -151,6 +151,14 @@ def _get_data_freshness(victoria) -> float:
 
 
 def _get_regime(victoria) -> str:
+    # Primary: read from last computed signals (set by WassersteinRegimeDetector)
+    try:
+        regime = (victoria._last_signals or {}).get("_regime")
+        if regime and regime not in ("", "unknown"):
+            return str(regime)
+    except Exception:
+        pass
+    # Fallback: legacy regime_detector attribute (not present in VictoriaNode)
     try:
         return victoria._regime_detector.current_regime
     except Exception:
@@ -170,24 +178,24 @@ def _query_semantic_count(data_dir: Path) -> int:
 
 
 def _count_active_signals(signals: dict) -> int:
-    """Count non-metadata signal keys (tickers with a dict value)."""
+    """Count non-metadata signal keys that have a dict value with a 'value' field."""
     return sum(
         1 for k, v in signals.items()
-        if not k.startswith("_") and isinstance(v, dict)
+        if not k.startswith("_") and isinstance(v, dict) and "value" in v
     )
 
 
 def _extract_cycle_conviction(signals: dict) -> str:
-    """Return the most common conviction level across all tickers, or 'n/a'."""
+    """Return the most common conviction level across all signals, or 'n/a'."""
     try:
         from omega.nodes.victoria.strategy import score_to_conviction
         levels: list[str] = []
         for k, v in signals.items():
             if k.startswith("_") or not isinstance(v, dict):
                 continue
-            composite = v.get("composite")
-            if composite is not None:
-                levels.append(score_to_conviction(float(composite)).name)
+            score = v.get("composite") if "composite" in v else v.get("value")
+            if score is not None:
+                levels.append(score_to_conviction(float(score)).name)
         if not levels:
             return "n/a"
         return max(set(levels), key=levels.count)
@@ -196,11 +204,11 @@ def _extract_cycle_conviction(signals: dict) -> str:
 
 
 def _get_composite_score(signals: dict) -> float | None:
-    """Mean composite score across all non-metadata tickers."""
+    """Mean value across all non-metadata signals."""
     scores = [
-        float(v["composite"])
+        float(v.get("composite", v["value"]))
         for k, v in signals.items()
-        if not k.startswith("_") and isinstance(v, dict) and "composite" in v
+        if not k.startswith("_") and isinstance(v, dict) and ("composite" in v or "value" in v)
     ]
     return sum(scores) / len(scores) if scores else None
 
@@ -254,8 +262,8 @@ def print_training_diagnostics(victoria, strategy, cycle: int, engine) -> None:
     else:
         conf = 0.0
         try:
-            probs = victoria._wasserstein_regime._regime_probs
-            conf = max(probs) if probs else 0.0
+            # Wasserstein confidence is stored in _last_signals after each compute cycle
+            conf = float(signals_cache.get("_regime_w_confidence", 0.0))
         except Exception:
             pass
         label_colour = _GREEN if regime_upper == "BULL" else (_RED if regime_upper == "BEAR" else _YELLOW)
@@ -271,12 +279,14 @@ def print_training_diagnostics(victoria, strategy, cycle: int, engine) -> None:
     print(_diag_line("DATA FRESH:", fresh_str))
 
     # ── Active signals ────────────────────────────────────────────────────
-    ticker_signals = {
+    # _last_signals has signal-type keys (basic_signals, order_flow, etc.) each
+    # with a "value" field — count those with non-zero value as "active".
+    signal_type_dicts = {
         k: v for k, v in signals_cache.items()
-        if not k.startswith("_") and isinstance(v, dict)
+        if not k.startswith("_") and isinstance(v, dict) and "value" in v
     }
-    active = sum(1 for v in ticker_signals.values() if v.get("composite") is not None)
-    total = len(ticker_signals)
+    active = sum(1 for v in signal_type_dicts.values() if v.get("value") != 0.0)
+    total = len(signal_type_dicts)
     sig_str = f"{active}/{total} active" if total > 0 else f"{_YELLOW}none yet{_R}"
     print(_diag_line("SIGNALS:", sig_str))
 
@@ -297,9 +307,12 @@ def print_training_diagnostics(victoria, strategy, cycle: int, engine) -> None:
         sit_str = "strategy n/a"
     print(_diag_line("SIT-OUT:", sit_str))
 
-    # ── Per-ticker conviction ─────────────────────────────────────────────
+    # ── Per-ticker conviction — read from basic_signals sub-dicts ─────────
     conv_parts: list[str] = []
-    for sym, data in ticker_signals.items():
+    basic = signals_cache.get("basic_signals") or {}
+    for sym, data in basic.items():
+        if not isinstance(data, dict):
+            continue
         composite = data.get("composite")
         if composite is None:
             continue
@@ -346,9 +359,9 @@ def print_training_diagnostics(victoria, strategy, cycle: int, engine) -> None:
     if freshness > MAX_STALE_MINUTES:
         blockers.append(f"Data freshness >{freshness:.1f}min")
     composites = [
-        float(v.get("composite", 0.0))
-        for v in ticker_signals.values()
-        if v.get("composite") is not None
+        float(data.get("composite", 0.0))
+        for data in basic.values()
+        if isinstance(data, dict) and data.get("composite") is not None
     ]
     if composites and all(abs(c) < 0.05 for c in composites):
         blockers.append("No conviction above threshold (all HOLD)")
@@ -557,7 +570,7 @@ def run(
             # ── Signal metrics ────────────────────────────────────────────
             last_signals: dict = {}
             try:
-                last_signals = getattr(result, "signals", {}) or {}
+                last_signals = getattr(victoria, "_last_signals", {}) or {}
             except Exception:
                 pass
 
