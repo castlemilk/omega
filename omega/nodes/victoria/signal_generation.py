@@ -33,6 +33,32 @@ def _safe_mean(values: list[float | None], n: int) -> float | None:
     return sum(clean) / len(clean) if clean else None
 
 
+def _momentum_composite(directional: list[float], prices: list[float]) -> float:
+    """
+    Momentum-weighted composite signal.
+
+    Signals that agree with the recent 5-day price direction receive 2x weight;
+    counter-trend signals receive 1x weight.  This prevents mean-reversion
+    signals (RSI, BB) from fully cancelling trend signals (SMA, MACD) in
+    ranging or weakly-trending markets, producing near-zero composites that
+    never escape the HOLD zone.
+
+    In truly flat markets (recent_dir=0 or zero net price change) falls back
+    to a simple mean — the market should correctly be HOLD in that case.
+    """
+    if not directional:
+        return 0.0
+    if len(prices) >= 6 and prices[-6] != 0:
+        recent_dir = 1.0 if prices[-1] > prices[-6] else -1.0
+    else:
+        recent_dir = 0.0
+    if recent_dir == 0.0:
+        return sum(directional) / len(directional)
+    wsum = sum(v * (2.0 if v * recent_dir > 0.0 else 1.0) for v in directional)
+    wtotal = sum(2.0 if v * recent_dir > 0.0 else 1.0 for v in directional)
+    return wsum / wtotal if wtotal > 0 else 0.0
+
+
 class SignalGenerationNode(Node):
     """
     Computes quantitative trading signals from OHLCV market data.
@@ -311,12 +337,13 @@ class SignalGenerationNode(Node):
                     ts["vol_regime_signal"] = 0.1
                 # "normal": no signal added (neutral, does not shift composite)
 
-            # Composite signal: mean of all directional signals
+            # Composite signal: momentum-weighted mean of all directional signals.
+            # Direction-aligned signals get 2x weight; counter-trend signals get 1x.
             directional = [
                 v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
             ]
             if directional:
-                ts["composite"] = sum(directional) / len(directional)
+                ts["composite"] = _momentum_composite(directional, prices)
 
             # Trend-adaptive dampening: in strong directional trends, mean-reversion
             # signals (RSI, BB) become deeply oversold/overbought but the trend persists.
@@ -348,7 +375,7 @@ class SignalGenerationNode(Node):
                         v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
                     ]
                     if _dir2:
-                        ts["composite"] = sum(_dir2) / len(_dir2)
+                        ts["composite"] = _momentum_composite(_dir2, prices)
 
             ts["price"] = prices[-1] if prices else None
             ts["ticker"] = ticker
@@ -381,14 +408,14 @@ class SignalGenerationNode(Node):
                     btc_sig = signals.get("BTCUSDT", {}).get("composite", 0.0)
                     if btc_sig != 0 and beta > 0:
                         ts["btc_beta_signal"] = min(1.0, max(-1.0, btc_sig * min(beta, 2.0) / 2.0))
-                        # Recompute composite with BTC beta signal
+                        # Recompute composite with BTC beta signal (momentum-weighted)
                         dir_vals = [
                             v
                             for k, v in ts.items()
                             if k.endswith("_signal") or k == "sma_crossover"
                         ]
                         if dir_vals:
-                            ts["composite"] = sum(dir_vals) / len(dir_vals)
+                            ts["composite"] = _momentum_composite(dir_vals, asset_prices)
 
         # Debug: log composite spread so we can verify cross-ticker differentiation
         _composites = [

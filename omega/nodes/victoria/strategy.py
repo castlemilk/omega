@@ -735,6 +735,12 @@ class StrategyNode(Node):
                 logger.debug("Skipping %s (trading blacklist)", ticker)
                 continue
             c = convictions.get(ticker, ConvictionLevel.HOLD)
+            # Hard gate: HOLD conviction never generates a trade proposal.
+            # This is explicit to make the invariant auditable — previously HOLD
+            # fell through both branches silently; V32 diagnostics showed trades
+            # firing against HOLD-level composites via edge cases in the filter stack.
+            if c == ConvictionLevel.HOLD:
+                continue
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
                 if ticker in _LONG_BLACKLIST:
                     logger.debug("Skipping %s (long blacklist)", ticker)
