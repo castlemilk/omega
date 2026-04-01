@@ -23,6 +23,7 @@ import {
   AlertTriangle,
   Settings,
   Network,
+  BarChart3,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -46,7 +47,6 @@ const NAV_SECTIONS = [
     items: [
       { to: "/signals", icon: Activity, label: "Signal Health" },
       { to: "/victoria/signals", icon: Zap, label: "Victoria Signals" },
-      { to: "/decisions", icon: Network, label: "Decision Trace" },
     ],
   },
   {
@@ -76,6 +76,14 @@ const NAV_SECTIONS = [
       { to: "/alignment", icon: Shield, label: "Alignment" },
       { to: "/goals", icon: Target, label: "Goals" },
       { to: "/challenges", icon: AlertTriangle, label: "Challenges" },
+    ],
+  },
+  {
+    label: "Observability",
+    items: [
+      { to: "/decisions", icon: Network, label: "Decision Trace" },
+      { to: "/node-health", icon: HeartPulse, label: "Node Health" },
+      { to: "/trade-analysis", icon: BarChart3, label: "Trade Analysis" },
     ],
   },
   {
