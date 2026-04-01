@@ -80,17 +80,18 @@ class SignalGenerationNode(Node):
         self._macd_fast = 12
         self._macd_slow = 26
         self._macd_signal_period = 9
-        # V38: trend-following signals only. RSI + BB are mean-reversion indicators
-        # that fight the trend in bearish markets — they caused 83% HOLD in V37 by
-        # pulling composites toward 0 (SMA says -0.35 SELL, BB says +0.40 BUY → net ~-0.10 HOLD).
-        # Keeping MACD + zscore + btc_beta + vol_regime (all trend-confirming).
+        # V39: SMA-only. Multi-signal ensemble (V37/V38) pulled composites into
+        # HOLD zone (77-83% HOLD) because MACD/btc_beta/zscore offset SMA in a
+        # mixed-signal environment. V36 SMA-only had PF=1.62, WR=26.5%, +$76 with
+        # 50% trades blocked by time_filter. V39 restores SMA-only to recover that
+        # signal quality while the time_filter is now fully disabled (< 0).
         self._use_rsi = False
-        self._use_macd = True
+        self._use_macd = False
         self._use_bb = False
-        self._use_zscore = True
-        self._use_btc_beta = True
-        self._use_volume_zscore = True
-        self._use_vol_regime = True
+        self._use_zscore = False
+        self._use_btc_beta = False
+        self._use_volume_zscore = False
+        self._use_vol_regime = False
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
