@@ -56,6 +56,7 @@ from omega.nodes.victoria.curvature_signal import GeodesicCurvatureSignal
 from omega.nodes.victoria.data_ingestion import DataIngestionNode
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 from omega.nodes.victoria.finbert_sentiment import FinBertSentimentSignal
+from omega.nodes.victoria.hmm_regime import HMMRegimeDetector
 from omega.nodes.victoria.market_data_signals import MarketDataSignal
 from omega.nodes.victoria.momentum_factor import CrossSectionalMomentumSignal
 from omega.nodes.victoria.news_projection import NewsProjectionLayer
@@ -78,8 +79,6 @@ from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 from omega.nodes.victoria.strategy import StrategyNode
 from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 from omega.nodes.victoria.vrp_signal import VRPSignalNode
-from omega.nodes.victoria.hmm_regime import HMMRegimeDetector
-from omega.nodes.victoria.regime_detector import BottomSignalDetector
 from omega.nodes.victoria.wasserstein_regime import WassersteinRegimeDetector
 from omega.nodes.victoria.wavelet_signal import WaveletSignal
 from omega.nodes.victoria.whale_signal import WhaleFlowSignal
@@ -1815,7 +1814,7 @@ class VictoriaNode(Node):
                 float(w_out.get("sideways_prob", 1 / 3)),
             ]
 
-            l1 = sum(abs(a - b) for a, b in zip(hmm_vec, w_vec))
+            l1 = sum(abs(a - b) for a, b in zip(hmm_vec, w_vec, strict=False))
             # Direction: positive when HMM is more bullish than Wasserstein
             direction = hmm_vec[0] - w_vec[0]  # bull_prob difference
             signed_value = l1 * (1.0 if direction >= 0 else -1.0)
@@ -2087,8 +2086,7 @@ class VictoriaNode(Node):
             signals["_regime_hmm_duration"] = hmm_out.get("state_duration", 0)
             signals["_regime_hmm_fit_quality"] = round(hmm_out.get("fit_quality", 0.0), 4)
             logger.info(
-                "hmm_regime state=%s duration=%d fit_quality=%.4f "
-                "(bull=%.3f bear=%.3f side=%.3f)",
+                "hmm_regime state=%s duration=%d fit_quality=%.4f (bull=%.3f bear=%.3f side=%.3f)",
                 hmm_out.get("current_state"),
                 hmm_out.get("state_duration", 0),
                 hmm_out.get("fit_quality", 0.0),

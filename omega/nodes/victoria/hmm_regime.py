@@ -41,7 +41,7 @@ from __future__ import annotations
 
 import logging
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -122,7 +122,7 @@ class _NumpyGMM:
         self.weights_: np.ndarray | None = None  # (K,)
         self._log_likelihood: float = -np.inf
 
-    def fit(self, X: np.ndarray) -> "_NumpyGMM":
+    def fit(self, X: np.ndarray) -> _NumpyGMM:
         """
         Fit GMM to 1-D data X using EM with k-means++ initialisation.
 
@@ -174,9 +174,7 @@ class _NumpyGMM:
             (
                 weights[None, :]
                 * (
-                    np.exp(
-                        -0.5 * (X[:, None] - means[None, :]) ** 2 / vars_[None, :]
-                    )
+                    np.exp(-0.5 * (X[:, None] - means[None, :]) ** 2 / vars_[None, :])
                     / np.sqrt(2 * np.pi * vars_[None, :])
                 )
             ).sum(axis=1)
@@ -334,7 +332,11 @@ class HMMRegimeDetector:
 
         return HMMRegimeResult(
             current_state=self._current_state,
-            state_probs=[self._last_probs[BULL], self._last_probs[BEAR], self._last_probs[SIDEWAYS]],
+            state_probs=[
+                self._last_probs[BULL],
+                self._last_probs[BEAR],
+                self._last_probs[SIDEWAYS],
+            ],
             transition_matrix=transmat_flat,
             state_duration=self._state_duration,
             fit_quality=self._fit_quality,
@@ -424,7 +426,7 @@ class HMMRegimeDetector:
         if _HMMLEARN_AVAILABLE and isinstance(self._model, _hmmlearn_hmm.GaussianHMM):
             # Use the posterior for the full sequence, take the last step
             try:
-                log_probs, posteriors = self._model.score_samples(returns.reshape(-1, 1))
+                _log_probs, posteriors = self._model.score_samples(returns.reshape(-1, 1))
                 raw_probs = posteriors[-1]  # (n_states,)
             except Exception:
                 # Fallback to single-point scoring

@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -50,7 +49,7 @@ class FeedbackRecord:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "FeedbackRecord":
+    def from_dict(cls, d: dict[str, Any]) -> FeedbackRecord:
         return cls(
             iteration_id=int(d["iteration_id"]),
             feedback_text=str(d["feedback_text"]),
@@ -64,11 +63,11 @@ class FeedbackRecord:
 class DirectionalGuidance:
     """Derived guidance: what to do more of, what to stop doing."""
 
-    do_more: list[str]   # patterns correlated with positive score deltas
+    do_more: list[str]  # patterns correlated with positive score deltas
     stop_doing: list[str]  # patterns correlated with negative score deltas
-    neutral: list[str]   # patterns with mixed results
-    confidence: float    # 0–1; higher when more data supports each direction
-    based_on_n: int      # number of feedback records used
+    neutral: list[str]  # patterns with mixed results
+    confidence: float  # 0–1; higher when more data supports each direction
+    based_on_n: int  # number of feedback records used
 
     def summary(self) -> str:
         lines = [f"Directional guidance (n={self.based_on_n}, conf={self.confidence:.2f}):"]
@@ -242,9 +241,7 @@ class FeedbackDescent:
 
     # ------------------------------------------------------------------ Internal
 
-    def _extract_patterns(
-        self, records: list[FeedbackRecord], label: str
-    ) -> list[str]:
+    def _extract_patterns(self, records: list[FeedbackRecord], label: str) -> list[str]:
         """
         Extract the most common themes from a set of feedback texts.
         Simple keyword/phrase frequency — no external NLP dependency.
@@ -258,8 +255,8 @@ class FeedbackDescent:
             words = r.feedback_text.lower().split()
             # Slide a 2-gram window
             for i in range(len(words) - 1):
-                bigram = f"{words[i]} {words[i+1]}"
-                if all(len(w) > 3 for w in [words[i], words[i+1]]):
+                bigram = f"{words[i]} {words[i + 1]}"
+                if all(len(w) > 3 for w in [words[i], words[i + 1]]):
                     phrase_counts[bigram] = phrase_counts.get(bigram, 0) + 1
             # Also track single meaningful words
             for w in words:
@@ -309,4 +306,6 @@ class FeedbackDescent:
         imp_words = word_set(improvements)
         reg_words = word_set(regressions)
         shared = imp_words & reg_words
-        return [f"'{w}' appears in both improved and regressed iterations" for w in list(shared)[:3]]
+        return [
+            f"'{w}' appears in both improved and regressed iterations" for w in list(shared)[:3]
+        ]

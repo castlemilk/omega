@@ -36,12 +36,11 @@ import csv
 import json
 import logging
 import os
-import shutil
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -53,10 +52,10 @@ _BASE_DIR = Path("data/meta_harness")
 # Composite score weights (must sum to 1.0)
 # ---------------------------------------------------------------------------
 _W_SHARPE = 0.30
-_W_DRAWDOWN = 0.20       # scored as (1 - abs(max_drawdown))
+_W_DRAWDOWN = 0.20  # scored as (1 - abs(max_drawdown))
 _W_HIT_RATE = 0.20
 _W_PROFIT_FACTOR = 0.15
-_W_LONG_RATIO = 0.15     # penalises all-short / all-long bias
+_W_LONG_RATIO = 0.15  # penalises all-short / all-long bias
 
 
 # ---------------------------------------------------------------------------
@@ -69,21 +68,19 @@ class StrategyIteration:
     """Represents one iteration of the meta-harness loop."""
 
     iteration_id: int
-    parent_id: Optional[int]                      # None for seed iteration
-    changes_description: str                       # textual WHY
-    code_diff: str                                 # what changed (param diff)
-    metrics: dict[str, float]                      # sharpe, drawdown, hit_rate, …
-    trade_log_path: str                            # path to full trades.csv
-    score: float                                   # composite score
-    timestamp: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    parent_id: int | None  # None for seed iteration
+    changes_description: str  # textual WHY
+    code_diff: str  # what changed (param diff)
+    metrics: dict[str, float]  # sharpe, drawdown, hit_rate, …
+    trade_log_path: str  # path to full trades.csv
+    score: float  # composite score
+    timestamp: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "StrategyIteration":
+    def from_dict(cls, d: dict[str, Any]) -> StrategyIteration:
         return cls(
             iteration_id=int(d["iteration_id"]),
             parent_id=d.get("parent_id"),
@@ -110,11 +107,11 @@ class StrategyIteration:
 class StrategyProposal:
     """A proposed change to the strategy configuration."""
 
-    category: str     # "signal_weight" | "conviction" | "risk" | "signal_toggle" | "regime"
-    param_path: str   # dotted param key e.g. "dynamic_weights.ema_alpha"
+    category: str  # "signal_weight" | "conviction" | "risk" | "signal_toggle" | "regime"
+    param_path: str  # dotted param key e.g. "dynamic_weights.ema_alpha"
     old_value: Any
     new_value: Any
-    rationale: str    # textual WHY (from heuristic or LLM)
+    rationale: str  # textual WHY (from heuristic or LLM)
     confidence: float  # 0–1
 
 
@@ -240,9 +237,7 @@ class StrategyFileSystem:
             trades_path.write_text("no_trades\n")
 
         # Metrics JSON
-        (d / "metrics.json").write_text(
-            json.dumps(iteration.metrics, indent=2)
-        )
+        (d / "metrics.json").write_text(json.dumps(iteration.metrics, indent=2))
 
         # Rationale markdown
         rationale_md = f"# Iteration {iteration.iteration_id} Rationale\n\n"
@@ -276,7 +271,9 @@ class StrategyFileSystem:
 
         logger.info(
             "Saved iteration %d → %s  (score=%.4f)",
-            iteration.iteration_id, d, iteration.score,
+            iteration.iteration_id,
+            d,
+            iteration.score,
         )
         return d
 
@@ -318,7 +315,7 @@ class StrategyFileSystem:
             )
         return iterations
 
-    def get_best_iteration(self) -> Optional[StrategyIteration]:
+    def get_best_iteration(self) -> StrategyIteration | None:
         """Return the iteration with the highest composite score."""
         if not self._index:
             return None
@@ -417,6 +414,7 @@ class MetaProposer:
         """Initialise the LLM brain adapter."""
         try:
             from omega.core.brain import AnthropicBrain, BrainConfig, NoBrain
+
             provider = os.environ.get("OMEGA_META_LLM_PROVIDER", "anthropic")
             if provider == "anthropic":
                 cfg = BrainConfig(provider="anthropic", max_tokens=2048, temperature=0.3)
@@ -484,35 +482,43 @@ class MetaProposer:
             last = history[-1]
             hit_rate = last.metrics.get("hit_rate", 0.5)
             if hit_rate < 0.45:
-                candidates.append(StrategyProposal(
-                    category="conviction",
-                    param_path="strategy.conviction_threshold_buy",
-                    old_value=snapshot.get("strategy", {}).get("conviction_threshold_buy", 0.2),
-                    new_value=round(
-                        float(snapshot.get("strategy", {}).get("conviction_threshold_buy", 0.2))
-                        - 0.05,
-                        3,
-                    ),
-                    rationale="",  # filled by LLM or heuristic_rationale
-                    confidence=0.7,
-                ))
+                candidates.append(
+                    StrategyProposal(
+                        category="conviction",
+                        param_path="strategy.conviction_threshold_buy",
+                        old_value=snapshot.get("strategy", {}).get(
+                            "conviction_threshold_buy", 0.2
+                        ),
+                        new_value=round(
+                            float(
+                                snapshot.get("strategy", {}).get("conviction_threshold_buy", 0.2)
+                            )
+                            - 0.05,
+                            3,
+                        ),
+                        rationale="",  # filled by LLM or heuristic_rationale
+                        confidence=0.7,
+                    )
+                )
 
         # Pattern 2: Long/short imbalance
         long_ratios = [it.metrics.get("long_ratio", 0.5) for it in recent]
         avg_long_ratio = float(np.mean(long_ratios)) if long_ratios else 0.5
         if avg_long_ratio < 0.3:
-            candidates.append(StrategyProposal(
-                category="conviction",
-                param_path="strategy.conviction_threshold_buy",
-                old_value=snapshot.get("strategy", {}).get("conviction_threshold_buy", 0.2),
-                new_value=round(
-                    float(snapshot.get("strategy", {}).get("conviction_threshold_buy", 0.2))
-                    - 0.03,
-                    3,
-                ),
-                rationale="",
-                confidence=0.65,
-            ))
+            candidates.append(
+                StrategyProposal(
+                    category="conviction",
+                    param_path="strategy.conviction_threshold_buy",
+                    old_value=snapshot.get("strategy", {}).get("conviction_threshold_buy", 0.2),
+                    new_value=round(
+                        float(snapshot.get("strategy", {}).get("conviction_threshold_buy", 0.2))
+                        - 0.03,
+                        3,
+                    ),
+                    rationale="",
+                    confidence=0.65,
+                )
+            )
 
         # Pattern 3: High drawdown → tighten stop loss
         drawdowns = [abs(it.metrics.get("drawdown", 0.0)) for it in recent]
@@ -520,28 +526,32 @@ class MetaProposer:
         if avg_dd > 0.05:
             current_sl = float(snapshot.get("risk", {}).get("stop_loss_pct", 0.02))
             tighter = round(max(current_sl - 0.005, 0.01), 3)
-            candidates.append(StrategyProposal(
-                category="risk",
-                param_path="risk.stop_loss_pct",
-                old_value=current_sl,
-                new_value=tighter,
-                rationale="",
-                confidence=0.60,
-            ))
+            candidates.append(
+                StrategyProposal(
+                    category="risk",
+                    param_path="risk.stop_loss_pct",
+                    old_value=current_sl,
+                    new_value=tighter,
+                    rationale="",
+                    confidence=0.60,
+                )
+            )
 
         # Pattern 4: Low profit factor → widen signal weight range
         pfs = [it.metrics.get("profit_factor", 1.0) for it in recent]
         avg_pf = float(np.mean(pfs)) if pfs else 1.0
         if avg_pf < 1.2:
             current_alpha = float(snapshot.get("dynamic_weights", {}).get("ema_alpha", 0.3))
-            candidates.append(StrategyProposal(
-                category="signal_weight",
-                param_path="dynamic_weights.ema_alpha",
-                old_value=current_alpha,
-                new_value=round(min(current_alpha + 0.05, 0.6), 2),
-                rationale="",
-                confidence=0.55,
-            ))
+            candidates.append(
+                StrategyProposal(
+                    category="signal_weight",
+                    param_path="dynamic_weights.ema_alpha",
+                    old_value=current_alpha,
+                    new_value=round(min(current_alpha + 0.05, 0.6), 2),
+                    rationale="",
+                    confidence=0.55,
+                )
+            )
 
         # Pattern 5: Positive trend → amplify by nudging current best param
         if trend > 0.005:
@@ -651,7 +661,7 @@ class MetaProposer:
         history_summary = self._format_history_for_llm(history[-10:])
 
         candidates_text = "\n".join(
-            f"{i+1}. [{c.category}] {c.param_path}: {c.old_value} → {c.new_value} "
+            f"{i + 1}. [{c.category}] {c.param_path}: {c.old_value} → {c.new_value} "
             f"(heuristic conf={c.confidence:.2f})"
             for i, c in enumerate(candidates)
         )
@@ -756,7 +766,7 @@ class MetaEvaluator:
     def evaluate(
         self,
         proposal: StrategyProposal,
-        parent_iteration: Optional[StrategyIteration],
+        parent_iteration: StrategyIteration | None,
         current_snapshot: dict[str, Any],
         iteration_id: int,
     ) -> tuple[StrategyIteration, list[dict[str, Any]]]:
@@ -775,9 +785,7 @@ class MetaEvaluator:
 
         score = compute_score(metrics)
 
-        diff_text = (
-            f"{proposal.param_path}: {proposal.old_value!r} → {proposal.new_value!r}"
-        )
+        diff_text = f"{proposal.param_path}: {proposal.old_value!r} → {proposal.new_value!r}"
 
         iteration = StrategyIteration(
             iteration_id=iteration_id,
@@ -797,6 +805,7 @@ class MetaEvaluator:
     ) -> dict[str, Any]:
         """Return a new snapshot with the proposal applied."""
         import copy
+
         new = copy.deepcopy(snapshot)
         parts = proposal.param_path.split(".")
         if len(parts) == 2:
@@ -860,15 +869,17 @@ class MetaEvaluator:
         except Exception as exc:
             logger.debug("Could not apply snapshot to node: %s", exc)
 
-    def _compute_metrics_from_engine(
-        self, engine: Any
-    ) -> dict[str, float]:
+    def _compute_metrics_from_engine(self, engine: Any) -> dict[str, float]:
         """Extract standardised metrics from a PaperTradingEngine."""
         trades = list(engine.closed_trades)
         if not trades:
             return {
-                "sharpe": 0.0, "drawdown": 0.0, "hit_rate": 0.0,
-                "pnl": 0.0, "profit_factor": 0.0, "trade_count": 0,
+                "sharpe": 0.0,
+                "drawdown": 0.0,
+                "hit_rate": 0.0,
+                "pnl": 0.0,
+                "profit_factor": 0.0,
+                "trade_count": 0,
                 "long_ratio": 0.5,
             }
 
@@ -881,7 +892,8 @@ class MetaEvaluator:
         pnl_arr = np.array(pnls)
         sharpe = (
             float(np.mean(pnl_arr) / (np.std(pnl_arr) + 1e-8) * np.sqrt(252))
-            if len(pnl_arr) > 1 else 0.0
+            if len(pnl_arr) > 1
+            else 0.0
         )
 
         # Drawdown: peak-to-trough on cumulative PnL
@@ -906,15 +918,13 @@ class MetaEvaluator:
     def _synthetic_evaluation(
         self,
         proposal: StrategyProposal,
-        parent: Optional[StrategyIteration],
+        parent: StrategyIteration | None,
     ) -> tuple[dict[str, float], list[dict[str, Any]]]:
         """
         Synthetic evaluation for testing/CI — generates plausible metrics
         based on the proposal without running live trading.
         """
-        rng = np.random.default_rng(
-            hash(f"{proposal.param_path}{proposal.new_value}") % (2**32)
-        )
+        rng = np.random.default_rng(hash(f"{proposal.param_path}{proposal.new_value}") % (2**32))
 
         # Base metrics from parent, or defaults
         if parent is not None:
@@ -1027,8 +1037,11 @@ class MetaHarness:
         proposal = self._proposer.propose(self._current_snapshot)
         logger.info(
             "Proposal: [%s] %s: %s → %s  (conf=%.2f)",
-            proposal.category, proposal.param_path,
-            proposal.old_value, proposal.new_value, proposal.confidence,
+            proposal.category,
+            proposal.param_path,
+            proposal.old_value,
+            proposal.new_value,
+            proposal.confidence,
         )
 
         # EVALUATE
@@ -1063,13 +1076,17 @@ class MetaHarness:
             self._consecutive_regressions = 0
             logger.info(
                 "Iteration %d IMPROVED score %.4f → %.4f. Applying change.",
-                iteration_id, parent_score, iteration.score,
+                iteration_id,
+                parent_score,
+                iteration.score,
             )
         else:
             self._consecutive_regressions += 1
             logger.info(
                 "Iteration %d REGRESSED score %.4f → %.4f (consecutive=%d).",
-                iteration_id, parent_score, iteration.score,
+                iteration_id,
+                parent_score,
+                iteration.score,
                 self._consecutive_regressions,
             )
             if self._consecutive_regressions >= self._MAX_CONSECUTIVE_REGRESSIONS:
@@ -1105,7 +1122,8 @@ class MetaHarness:
             self._consecutive_regressions = 0
             logger.info(
                 "REVERTED to best iteration %d (score=%.4f)",
-                best.iteration_id, best.score,
+                best.iteration_id,
+                best.score,
             )
         else:
             logger.warning("Could not load snapshot for iteration %d", best.iteration_id)

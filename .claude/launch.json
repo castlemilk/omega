@@ -27,10 +27,10 @@
     },
     {
       "name": "dashboard-dev",
-      "runtimeExecutable": "/Users/benebsworth/.nvm/versions/node/v22.9.0/bin/npm",
-      "runtimeArgs": ["run", "dev", "--", "--port", "5179"],
-      "cwd": "dashboard",
-      "port": 5179,
+      "runtimeExecutable": "/Users/benebsworth/projects/omega/dashboard/node_modules/.bin/vite",
+      "runtimeArgs": ["--port", "5178"],
+      "cwd": "/Users/benebsworth/projects/omega/dashboard",
+      "port": 5178,
       "autoPort": false
     },
     {

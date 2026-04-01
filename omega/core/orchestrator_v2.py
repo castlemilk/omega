@@ -1027,7 +1027,9 @@ class OmegaOrchestrator:
             if result.error_count > 0:
                 blockers.append(f"{result.error_count} cycle errors")
             if result.adversarial_flags:
-                blockers.extend(str(f) for f in result.adversarial_flags[:3])  # limit to 3 for brevity
+                blockers.extend(
+                    str(f) for f in result.adversarial_flags[:3]
+                )  # limit to 3 for brevity
             self._heartbeat.send_diagnostics(
                 node_id=f"orchestrator.{self.name}",
                 cycle=cycle_num,

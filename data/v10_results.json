@@ -1,11 +1,11 @@
 {
   "version": "v10",
   "run": {
-    "date": "2026-03-28T13:04:15.758423+00:00",
+    "date": "2026-03-29T00:35:07.477414+00:00",
     "cycles": 200,
     "sleep_seconds": 30.0,
-    "elapsed_s": 7265.5,
-    "avg_cycle_s": 36.328,
+    "elapsed_s": 7114.7,
+    "avg_cycle_s": 35.573,
     "cg_key_used": true,
     "db_url_used": true
   },
@@ -17,80 +17,16 @@
     "normal": 200
   },
   "trades": {
-    "total_closed": 16,
+    "total_closed": 0,
     "long_trades": 0,
-    "short_trades": 16,
+    "short_trades": 0,
     "open_positions": 0,
-    "win_rate": 0.5,
-    "total_pnl_usd": 67.22,
-    "realised_pnl_engine": 67.22,
-    "gross_profit": 76.41,
-    "gross_loss": 9.19,
-    "profit_factor": 8.316
+    "win_rate": 0.0,
+    "total_pnl_usd": 0,
+    "realised_pnl_engine": 0.0,
+    "gross_profit": 0,
+    "gross_loss": 0,
+    "profit_factor": null
   },
-  "per_symbol": {
-    "DOTUSDT": {
-      "trades": 1,
-      "longs": 0,
-      "shorts": 1,
-      "pnl": 20.54,
-      "win_rate": 1.0
-    },
-    "ADAUSDT": {
-      "trades": 2,
-      "longs": 0,
-      "shorts": 2,
-      "pnl": 16.06,
-      "win_rate": 0.5
-    },
-    "AVAXUSDT": {
-      "trades": 2,
-      "longs": 0,
-      "shorts": 2,
-      "pnl": 15.13,
-      "win_rate": 0.5
-    },
-    "LINKUSDT": {
-      "trades": 2,
-      "longs": 0,
-      "shorts": 2,
-      "pnl": 7.81,
-      "win_rate": 0.5
-    },
-    "SOLUSDT": {
-      "trades": 2,
-      "longs": 0,
-      "shorts": 2,
-      "pnl": 4.01,
-      "win_rate": 0.5
-    },
-    "BNBUSDT": {
-      "trades": 2,
-      "longs": 0,
-      "shorts": 2,
-      "pnl": 2.4,
-      "win_rate": 0.5
-    },
-    "XRPUSDT": {
-      "trades": 2,
-      "longs": 0,
-      "shorts": 2,
-      "pnl": 0.99,
-      "win_rate": 0.5
-    },
-    "ETHUSDT": {
-      "trades": 2,
-      "longs": 0,
-      "shorts": 2,
-      "pnl": 0.27,
-      "win_rate": 0.5
-    },
-    "MATICUSDT": {
-      "trades": 1,
-      "longs": 0,
-      "shorts": 1,
-      "pnl": 0.0,
-      "win_rate": 0.0
-    }
-  }
+  "per_symbol": {}
 }
