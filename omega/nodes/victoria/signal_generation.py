@@ -80,11 +80,13 @@ class SignalGenerationNode(Node):
         self._macd_fast = 12
         self._macd_slow = 26
         self._macd_signal_period = 9
-        # V37: enable all signals from cycle 1 — progressive unlock via improve()
-        # was never triggered because TPE params don't include "iteration".
-        self._use_rsi = True
+        # V38: trend-following signals only. RSI + BB are mean-reversion indicators
+        # that fight the trend in bearish markets — they caused 83% HOLD in V37 by
+        # pulling composites toward 0 (SMA says -0.35 SELL, BB says +0.40 BUY → net ~-0.10 HOLD).
+        # Keeping MACD + zscore + btc_beta + vol_regime (all trend-confirming).
+        self._use_rsi = False
         self._use_macd = True
-        self._use_bb = True
+        self._use_bb = False
         self._use_zscore = True
         self._use_btc_beta = True
         self._use_volume_zscore = True
