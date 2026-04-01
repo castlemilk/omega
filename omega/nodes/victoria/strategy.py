@@ -19,6 +19,7 @@ from enum import IntEnum
 from typing import Any
 
 from omega.core.actions import NodeAction
+from omega.core.decision_snapshot import TickerDecision, build_ticker_decision
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.risk_manager import PositionRiskManager
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
@@ -149,6 +150,8 @@ class StrategyNode(Node):
 
         # --- Portfolio risk manager (drawdown, correlation, vol, time, heat) ---
         self._risk = PositionRiskManager()
+        # Last cycle's per-ticker decision trace (populated by _construct_portfolio)
+        self._last_ticker_decisions: dict[str, "TickerDecision"] = {}
         # Optional RMT denoiser reference for correlation-based position limits.
         # Set via set_rmt_denoiser() after construction (avoids circular imports).
         self._rmt_denoiser: Any = None
@@ -669,6 +672,7 @@ class StrategyNode(Node):
         sit_out_reason, sit_out_size_mult = self._check_sit_out(signals, market_data)
         if sit_out_reason == "vol_low":
             self._sit_out_vol_low_count += 1
+            self._last_ticker_decisions = {}  # no per-ticker decisions on sit-out
             logger.info("Market dead-calm (vol < 20th pct) — sitting out entirely this cycle")
             return {
                 "weights": {},
@@ -713,6 +717,8 @@ class StrategyNode(Node):
 
         # Screen tickers that have non-HOLD conviction above signal threshold
         # and apply the full conviction filter stack.
+        # Simultaneously build TickerDecision records for every tradeable ticker
+        # (including filtered ones) to power the decision trace dashboard.
         long_candidates: dict[str, Any] = {}
         proposals_this_cycle = 0
         filtered_this_cycle = 0
@@ -720,6 +726,16 @@ class StrategyNode(Node):
         regime_blocked_shorts = 0
 
         short_candidates: dict[str, Any] = {}
+        ticker_decisions: dict[str, TickerDecision] = {}
+
+        # Compute basket mean composite for demeaning
+        _basket_composites = [
+            float(sig.get("composite", 0.0))
+            for t, sig in signals.items()
+            if not t.startswith("_") and not t.startswith("adv_")
+            and isinstance(sig, dict) and sig.get("composite") is not None
+        ]
+        _basket_mean = sum(_basket_composites) / len(_basket_composites) if _basket_composites else 0.0
 
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
@@ -734,42 +750,175 @@ class StrategyNode(Node):
             if ticker in _TRADING_BLACKLIST:
                 logger.debug("Skipping %s (trading blacklist)", ticker)
                 continue
+
+            raw_composite = float(sig.get("composite", 0.0))
             c = convictions.get(ticker, ConvictionLevel.HOLD)
+            w_conv = self._compute_weighted_conviction(sig)
+            signal_traces = sig.get("_traces", [])
+
             # Hard gate: HOLD conviction never generates a trade proposal.
             # This is explicit to make the invariant auditable — previously HOLD
             # fell through both branches silently; V32 diagnostics showed trades
             # firing against HOLD-level composites via edge cases in the filter stack.
             if c == ConvictionLevel.HOLD:
+                ticker_decisions[ticker] = build_ticker_decision(
+                    ticker=ticker,
+                    signal_traces=signal_traces,
+                    raw_composite=raw_composite,
+                    basket_mean=_basket_mean,
+                    conviction=c.name,
+                    conviction_score=w_conv,
+                    proposal="NONE",
+                    filters_applied=["conviction_gate:hold→no_proposal"],
+                    final_action="HOLD",
+                )
                 continue
+
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
                 if ticker in _LONG_BLACKLIST:
                     logger.debug("Skipping %s (long blacklist)", ticker)
+                    ticker_decisions[ticker] = build_ticker_decision(
+                        ticker=ticker,
+                        signal_traces=signal_traces,
+                        raw_composite=raw_composite,
+                        basket_mean=_basket_mean,
+                        conviction=c.name,
+                        conviction_score=w_conv,
+                        proposal="LONG",
+                        filters_applied=["long_blacklist:blocked"],
+                        final_action="FILTERED",
+                        filter_reason="long_blacklist",
+                    )
                     continue
                 if sig.get("composite", 0.0) <= self._signal_threshold:
+                    ticker_decisions[ticker] = build_ticker_decision(
+                        ticker=ticker,
+                        signal_traces=signal_traces,
+                        raw_composite=raw_composite,
+                        basket_mean=_basket_mean,
+                        conviction=c.name,
+                        conviction_score=w_conv,
+                        proposal="LONG",
+                        filters_applied=[f"signal_threshold:blocked({raw_composite:.3f}<={self._signal_threshold:.3f})"],
+                        final_action="FILTERED",
+                        filter_reason="signal_threshold",
+                    )
                     continue
                 proposals_this_cycle += 1
+                filters_log = [f"conviction_gate:{c.name}→long_proposal", f"signal_threshold:pass({raw_composite:.3f}>{self._signal_threshold:.3f})"]
                 if _block_longs:
                     regime_blocked_longs += 1
+                    filters_log.append(f"regime_block:blocked({_regime_hmm},conf={_regime_confidence:.2f})")
+                    ticker_decisions[ticker] = build_ticker_decision(
+                        ticker=ticker,
+                        signal_traces=signal_traces,
+                        raw_composite=raw_composite,
+                        basket_mean=_basket_mean,
+                        conviction=c.name,
+                        conviction_score=w_conv,
+                        proposal="LONG",
+                        filters_applied=filters_log,
+                        final_action="FILTERED",
+                        filter_reason=f"regime_block:{_regime_hmm}",
+                    )
                     continue
+                filters_log.append("regime_block:pass")
                 passes, reason = self._passes_conviction_filters(sig, current_cycle)
                 if not passes:
                     filtered_this_cycle += 1
+                    filters_log.append(f"ring1_gate:blocked({reason})")
                     logger.debug("Filtered %s (long): %s", ticker, reason)
+                    ticker_decisions[ticker] = build_ticker_decision(
+                        ticker=ticker,
+                        signal_traces=signal_traces,
+                        raw_composite=raw_composite,
+                        basket_mean=_basket_mean,
+                        conviction=c.name,
+                        conviction_score=w_conv,
+                        proposal="LONG",
+                        filters_applied=filters_log,
+                        final_action="FILTERED",
+                        filter_reason=reason,
+                    )
                     continue
+                filters_log.append(f"ring1_gate:pass")
                 long_candidates[ticker] = sig
+                ticker_decisions[ticker] = build_ticker_decision(
+                    ticker=ticker,
+                    signal_traces=signal_traces,
+                    raw_composite=raw_composite,
+                    basket_mean=_basket_mean,
+                    conviction=c.name,
+                    conviction_score=w_conv,
+                    proposal="LONG",
+                    filters_applied=filters_log,
+                    final_action="TRADE",
+                )
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
+                    ticker_decisions[ticker] = build_ticker_decision(
+                        ticker=ticker,
+                        signal_traces=signal_traces,
+                        raw_composite=raw_composite,
+                        basket_mean=_basket_mean,
+                        conviction=c.name,
+                        conviction_score=w_conv,
+                        proposal="SHORT",
+                        filters_applied=[f"signal_threshold:blocked({raw_composite:.3f}>=-{self._signal_threshold:.3f})"],
+                        final_action="FILTERED",
+                        filter_reason="signal_threshold",
+                    )
                     continue
                 proposals_this_cycle += 1
+                filters_log = [f"conviction_gate:{c.name}→short_proposal", f"signal_threshold:pass({raw_composite:.3f}<-{self._signal_threshold:.3f})"]
                 if _block_shorts:
                     regime_blocked_shorts += 1
+                    filters_log.append(f"regime_block:blocked({_regime_hmm},conf={_regime_confidence:.2f})")
+                    ticker_decisions[ticker] = build_ticker_decision(
+                        ticker=ticker,
+                        signal_traces=signal_traces,
+                        raw_composite=raw_composite,
+                        basket_mean=_basket_mean,
+                        conviction=c.name,
+                        conviction_score=w_conv,
+                        proposal="SHORT",
+                        filters_applied=filters_log,
+                        final_action="FILTERED",
+                        filter_reason=f"regime_block:{_regime_hmm}",
+                    )
                     continue
+                filters_log.append("regime_block:pass")
                 passes, reason = self._passes_conviction_filters(sig, current_cycle)
                 if not passes:
                     filtered_this_cycle += 1
+                    filters_log.append(f"ring1_gate:blocked({reason})")
                     logger.debug("Filtered %s (short): %s", ticker, reason)
+                    ticker_decisions[ticker] = build_ticker_decision(
+                        ticker=ticker,
+                        signal_traces=signal_traces,
+                        raw_composite=raw_composite,
+                        basket_mean=_basket_mean,
+                        conviction=c.name,
+                        conviction_score=w_conv,
+                        proposal="SHORT",
+                        filters_applied=filters_log,
+                        final_action="FILTERED",
+                        filter_reason=reason,
+                    )
                     continue
+                filters_log.append(f"ring1_gate:pass")
                 short_candidates[ticker] = sig
+                ticker_decisions[ticker] = build_ticker_decision(
+                    ticker=ticker,
+                    signal_traces=signal_traces,
+                    raw_composite=raw_composite,
+                    basket_mean=_basket_mean,
+                        conviction=c.name,
+                    conviction_score=w_conv,
+                    proposal="SHORT",
+                    filters_applied=filters_log,
+                    final_action="TRADE",
+                )
 
         if regime_blocked_longs or regime_blocked_shorts:
             logger.info(
@@ -784,6 +933,8 @@ class StrategyNode(Node):
         self._proposals_filtered += (
             filtered_this_cycle + regime_blocked_longs + regime_blocked_shorts
         )
+        # Make ticker_decisions available for snapshot assembly in the training loop
+        self._last_ticker_decisions = ticker_decisions
 
         # No candidates: either all filtered by conviction or no conviction signals at all.
         # Do NOT fall back to weak signals — the filter's purpose is to reduce trade count.

@@ -55,6 +55,9 @@ func (h *DashboardHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/dashboard/obs/errors", h.handleObsErrors)
 	mux.HandleFunc("/api/v1/dashboard/obs/pipeline", h.handleObsPipeline)
 	mux.HandleFunc("/api/v1/dashboard/obs/pipeline/", h.handleObsPipeline)
+	// Decision trace endpoints
+	mux.HandleFunc("/api/v1/dashboard/decisions", h.handleDecisions)
+	mux.HandleFunc("/api/v1/dashboard/decisions/", h.handleDecision)
 }
 
 // ── JSON response types (mirror web/dashboard/src/lib/api.ts) ─────────────────

@@ -480,6 +480,73 @@ func (v *VictoriaDB) GetAvgSignalQuality() (float64, error) {
 	return avg, nil
 }
 
+// ── Decision Snapshots ────────────────────────────────────────────────────────
+
+// DecisionSnapshotRow is a lightweight DB row from victoria_decision_snapshots.
+type DecisionSnapshotRow struct {
+	ID         int64
+	Cycle      int
+	Version    string
+	Regime     string
+	SitOut     string
+	Payload    json.RawMessage
+	RecordedAt string
+}
+
+// GetDecisionSnapshots returns the latest N decision snapshots ordered by cycle desc.
+// Returns an empty slice (not nil) and no error if the table doesn't exist yet.
+func (v *VictoriaDB) GetDecisionSnapshots(limit int) ([]*DecisionSnapshotRow, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := v.db.Query(`
+		SELECT id, cycle, version, regime, sit_out, payload::text, recorded_at::text
+		FROM victoria_decision_snapshots
+		ORDER BY cycle DESC
+		LIMIT $1`, limit)
+	if err != nil {
+		// Table may not exist yet — return empty rather than error
+		return []*DecisionSnapshotRow{}, nil
+	}
+	defer rows.Close() //nolint:errcheck,gosec
+	var out []*DecisionSnapshotRow
+	for rows.Next() {
+		r := &DecisionSnapshotRow{}
+		var payloadStr string
+		if err := rows.Scan(&r.ID, &r.Cycle, &r.Version, &r.Regime,
+			&r.SitOut, &payloadStr, &r.RecordedAt); err != nil {
+			continue
+		}
+		r.Payload = json.RawMessage(payloadStr)
+		out = append(out, r)
+	}
+	if out == nil {
+		out = []*DecisionSnapshotRow{}
+	}
+	return out, nil
+}
+
+// GetDecisionSnapshotByCycle returns the snapshot for a specific cycle.
+// Returns nil, nil if not found.
+func (v *VictoriaDB) GetDecisionSnapshotByCycle(cycle int) (*DecisionSnapshotRow, error) {
+	r := &DecisionSnapshotRow{}
+	var payloadStr string
+	err := v.db.QueryRow(`
+		SELECT id, cycle, version, regime, sit_out, payload::text, recorded_at::text
+		FROM victoria_decision_snapshots
+		WHERE cycle = $1
+		ORDER BY id DESC LIMIT 1`, cycle).Scan(
+		&r.ID, &r.Cycle, &r.Version, &r.Regime, &r.SitOut, &payloadStr, &r.RecordedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	r.Payload = json.RawMessage(payloadStr)
+	return r, nil
+}
+
 // itoa converts int to string for query building (avoids fmt import).
 func itoa(n int) string {
 	if n == 0 {
