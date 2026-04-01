@@ -77,6 +77,64 @@ func (NodeHealth) EnumDescriptor() ([]byte, []int) {
 	return file_omega_v1_heartbeat_service_proto_rawDescGZIP(), []int{0}
 }
 
+type NodeLifecycleState int32
+
+const (
+	NodeLifecycleState_NODE_LIFECYCLE_STATE_UNSPECIFIED NodeLifecycleState = 0
+	NodeLifecycleState_NODE_LIFECYCLE_STATE_STARTING    NodeLifecycleState = 1
+	NodeLifecycleState_NODE_LIFECYCLE_STATE_WARMING_UP  NodeLifecycleState = 2
+	NodeLifecycleState_NODE_LIFECYCLE_STATE_RUNNING     NodeLifecycleState = 3
+	NodeLifecycleState_NODE_LIFECYCLE_STATE_DEGRADED    NodeLifecycleState = 4
+	NodeLifecycleState_NODE_LIFECYCLE_STATE_STOPPED     NodeLifecycleState = 5
+)
+
+// Enum value maps for NodeLifecycleState.
+var (
+	NodeLifecycleState_name = map[int32]string{
+		0: "NODE_LIFECYCLE_STATE_UNSPECIFIED",
+		1: "NODE_LIFECYCLE_STATE_STARTING",
+		2: "NODE_LIFECYCLE_STATE_WARMING_UP",
+		3: "NODE_LIFECYCLE_STATE_RUNNING",
+		4: "NODE_LIFECYCLE_STATE_DEGRADED",
+		5: "NODE_LIFECYCLE_STATE_STOPPED",
+	}
+	NodeLifecycleState_value = map[string]int32{
+		"NODE_LIFECYCLE_STATE_UNSPECIFIED": 0,
+		"NODE_LIFECYCLE_STATE_STARTING":    1,
+		"NODE_LIFECYCLE_STATE_WARMING_UP":  2,
+		"NODE_LIFECYCLE_STATE_RUNNING":     3,
+		"NODE_LIFECYCLE_STATE_DEGRADED":    4,
+		"NODE_LIFECYCLE_STATE_STOPPED":     5,
+	}
+)
+
+func (x NodeLifecycleState) Enum() *NodeLifecycleState {
+	p := new(NodeLifecycleState)
+	*p = x
+	return p
+}
+
+func (x NodeLifecycleState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (NodeLifecycleState) Descriptor() protoreflect.EnumDescriptor {
+	return file_omega_v1_heartbeat_service_proto_enumTypes[1].Descriptor()
+}
+
+func (NodeLifecycleState) Type() protoreflect.EnumType {
+	return &file_omega_v1_heartbeat_service_proto_enumTypes[1]
+}
+
+func (x NodeLifecycleState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use NodeLifecycleState.Descriptor instead.
+func (NodeLifecycleState) EnumDescriptor() ([]byte, []int) {
+	return file_omega_v1_heartbeat_service_proto_rawDescGZIP(), []int{1}
+}
+
 // Heartbeat is sent by any node (Python signal nodes, Go services, etc.) to
 // report that it is alive and describe its current operational state.
 type Heartbeat struct {
@@ -650,6 +708,413 @@ func (x *GetDiagnosticsRequest) GetNodeId() string {
 	return ""
 }
 
+// NodeLifecycleEvent records a single state transition for a node.
+type NodeLifecycleEvent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	FromState     NodeLifecycleState     `protobuf:"varint,2,opt,name=from_state,json=fromState,proto3,enum=omega.v1.NodeLifecycleState" json:"from_state,omitempty"`
+	ToState       NodeLifecycleState     `protobuf:"varint,3,opt,name=to_state,json=toState,proto3,enum=omega.v1.NodeLifecycleState" json:"to_state,omitempty"`
+	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeLifecycleEvent) Reset() {
+	*x = NodeLifecycleEvent{}
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeLifecycleEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeLifecycleEvent) ProtoMessage() {}
+
+func (x *NodeLifecycleEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeLifecycleEvent.ProtoReflect.Descriptor instead.
+func (*NodeLifecycleEvent) Descriptor() ([]byte, []int) {
+	return file_omega_v1_heartbeat_service_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *NodeLifecycleEvent) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *NodeLifecycleEvent) GetFromState() NodeLifecycleState {
+	if x != nil {
+		return x.FromState
+	}
+	return NodeLifecycleState_NODE_LIFECYCLE_STATE_UNSPECIFIED
+}
+
+func (x *NodeLifecycleEvent) GetToState() NodeLifecycleState {
+	if x != nil {
+		return x.ToState
+	}
+	return NodeLifecycleState_NODE_LIFECYCLE_STATE_UNSPECIFIED
+}
+
+func (x *NodeLifecycleEvent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *NodeLifecycleEvent) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+// DecisionSnapshot is a per-cycle JSON blob from a Python node, stored verbatim.
+type DecisionSnapshot struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	Cycle         int32                  `protobuf:"varint,2,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	Timestamp     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	SnapshotJson  string                 `protobuf:"bytes,4,opt,name=snapshot_json,json=snapshotJson,proto3" json:"snapshot_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecisionSnapshot) Reset() {
+	*x = DecisionSnapshot{}
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecisionSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecisionSnapshot) ProtoMessage() {}
+
+func (x *DecisionSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecisionSnapshot.ProtoReflect.Descriptor instead.
+func (*DecisionSnapshot) Descriptor() ([]byte, []int) {
+	return file_omega_v1_heartbeat_service_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *DecisionSnapshot) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *DecisionSnapshot) GetCycle() int32 {
+	if x != nil {
+		return x.Cycle
+	}
+	return 0
+}
+
+func (x *DecisionSnapshot) GetTimestamp() *timestamppb.Timestamp {
+	if x != nil {
+		return x.Timestamp
+	}
+	return nil
+}
+
+func (x *DecisionSnapshot) GetSnapshotJson() string {
+	if x != nil {
+		return x.SnapshotJson
+	}
+	return ""
+}
+
+// NodeHealthScore holds the 0–100 composite score and each component score.
+type NodeHealthScore struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	NodeId             string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	TotalScore         int32                  `protobuf:"varint,2,opt,name=total_score,json=totalScore,proto3" json:"total_score,omitempty"`                         // 0–100
+	HeartbeatFreshness int32                  `protobuf:"varint,3,opt,name=heartbeat_freshness,json=heartbeatFreshness,proto3" json:"heartbeat_freshness,omitempty"` // 0–20
+	ErrorRate          int32                  `protobuf:"varint,4,opt,name=error_rate,json=errorRate,proto3" json:"error_rate,omitempty"`                            // 0–20
+	TradeActivity      int32                  `protobuf:"varint,5,opt,name=trade_activity,json=tradeActivity,proto3" json:"trade_activity,omitempty"`                // 0–20
+	SignalDiversity    int32                  `protobuf:"varint,6,opt,name=signal_diversity,json=signalDiversity,proto3" json:"signal_diversity,omitempty"`          // 0–20
+	RegimeStability    int32                  `protobuf:"varint,7,opt,name=regime_stability,json=regimeStability,proto3" json:"regime_stability,omitempty"`          // 0–20
+	State              string                 `protobuf:"bytes,8,opt,name=state,proto3" json:"state,omitempty"`                                                      // "healthy" | "degraded" | "critical"
+	ComputedAt         *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=computed_at,json=computedAt,proto3" json:"computed_at,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *NodeHealthScore) Reset() {
+	*x = NodeHealthScore{}
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeHealthScore) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeHealthScore) ProtoMessage() {}
+
+func (x *NodeHealthScore) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeHealthScore.ProtoReflect.Descriptor instead.
+func (*NodeHealthScore) Descriptor() ([]byte, []int) {
+	return file_omega_v1_heartbeat_service_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *NodeHealthScore) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *NodeHealthScore) GetTotalScore() int32 {
+	if x != nil {
+		return x.TotalScore
+	}
+	return 0
+}
+
+func (x *NodeHealthScore) GetHeartbeatFreshness() int32 {
+	if x != nil {
+		return x.HeartbeatFreshness
+	}
+	return 0
+}
+
+func (x *NodeHealthScore) GetErrorRate() int32 {
+	if x != nil {
+		return x.ErrorRate
+	}
+	return 0
+}
+
+func (x *NodeHealthScore) GetTradeActivity() int32 {
+	if x != nil {
+		return x.TradeActivity
+	}
+	return 0
+}
+
+func (x *NodeHealthScore) GetSignalDiversity() int32 {
+	if x != nil {
+		return x.SignalDiversity
+	}
+	return 0
+}
+
+func (x *NodeHealthScore) GetRegimeStability() int32 {
+	if x != nil {
+		return x.RegimeStability
+	}
+	return 0
+}
+
+func (x *NodeHealthScore) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *NodeHealthScore) GetComputedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ComputedAt
+	}
+	return nil
+}
+
+type PlatformAlert struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	NodeId        string                 `protobuf:"bytes,1,opt,name=node_id,json=nodeId,proto3" json:"node_id,omitempty"`
+	AlertType     string                 `protobuf:"bytes,2,opt,name=alert_type,json=alertType,proto3" json:"alert_type,omitempty"` // "STALE_NODE" | "DEGRADED_HEALTH" | "NO_TRADES"
+	Message       string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	TriggeredAt   *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=triggered_at,json=triggeredAt,proto3" json:"triggered_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlatformAlert) Reset() {
+	*x = PlatformAlert{}
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlatformAlert) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlatformAlert) ProtoMessage() {}
+
+func (x *PlatformAlert) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlatformAlert.ProtoReflect.Descriptor instead.
+func (*PlatformAlert) Descriptor() ([]byte, []int) {
+	return file_omega_v1_heartbeat_service_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *PlatformAlert) GetNodeId() string {
+	if x != nil {
+		return x.NodeId
+	}
+	return ""
+}
+
+func (x *PlatformAlert) GetAlertType() string {
+	if x != nil {
+		return x.AlertType
+	}
+	return ""
+}
+
+func (x *PlatformAlert) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *PlatformAlert) GetTriggeredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.TriggeredAt
+	}
+	return nil
+}
+
+type PlatformStatus struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Nodes         []*NodeHealthScore     `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
+	Alerts        []*PlatformAlert       `protobuf:"bytes,2,rep,name=alerts,proto3" json:"alerts,omitempty"`
+	TotalTrades   int32                  `protobuf:"varint,3,opt,name=total_trades,json=totalTrades,proto3" json:"total_trades,omitempty"`
+	TotalPnl      float64                `protobuf:"fixed64,4,opt,name=total_pnl,json=totalPnl,proto3" json:"total_pnl,omitempty"`
+	UptimeSeconds float64                `protobuf:"fixed64,5,opt,name=uptime_seconds,json=uptimeSeconds,proto3" json:"uptime_seconds,omitempty"`
+	AsOf          *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=as_of,json=asOf,proto3" json:"as_of,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PlatformStatus) Reset() {
+	*x = PlatformStatus{}
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PlatformStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PlatformStatus) ProtoMessage() {}
+
+func (x *PlatformStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_heartbeat_service_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PlatformStatus.ProtoReflect.Descriptor instead.
+func (*PlatformStatus) Descriptor() ([]byte, []int) {
+	return file_omega_v1_heartbeat_service_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PlatformStatus) GetNodes() []*NodeHealthScore {
+	if x != nil {
+		return x.Nodes
+	}
+	return nil
+}
+
+func (x *PlatformStatus) GetAlerts() []*PlatformAlert {
+	if x != nil {
+		return x.Alerts
+	}
+	return nil
+}
+
+func (x *PlatformStatus) GetTotalTrades() int32 {
+	if x != nil {
+		return x.TotalTrades
+	}
+	return 0
+}
+
+func (x *PlatformStatus) GetTotalPnl() float64 {
+	if x != nil {
+		return x.TotalPnl
+	}
+	return 0
+}
+
+func (x *PlatformStatus) GetUptimeSeconds() float64 {
+	if x != nil {
+		return x.UptimeSeconds
+	}
+	return 0
+}
+
+func (x *PlatformStatus) GetAsOf() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AsOf
+	}
+	return nil
+}
+
 var File_omega_v1_heartbeat_service_proto protoreflect.FileDescriptor
 
 const file_omega_v1_heartbeat_service_proto_rawDesc = "" +
@@ -709,14 +1174,59 @@ const file_omega_v1_heartbeat_service_proto_rawDesc = "" +
 	"\x1aListHeartbeatNodesResponse\x122\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x1c.omega.v1.NodeStatusResponseR\x05nodes\"0\n" +
 	"\x15GetDiagnosticsRequest\x12\x17\n" +
-	"\anode_id\x18\x01 \x01(\tR\x06nodeId*\x89\x01\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\"\xf5\x01\n" +
+	"\x12NodeLifecycleEvent\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12;\n" +
+	"\n" +
+	"from_state\x18\x02 \x01(\x0e2\x1c.omega.v1.NodeLifecycleStateR\tfromState\x127\n" +
+	"\bto_state\x18\x03 \x01(\x0e2\x1c.omega.v1.NodeLifecycleStateR\atoState\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x128\n" +
+	"\ttimestamp\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\"\xa0\x01\n" +
+	"\x10DecisionSnapshot\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x14\n" +
+	"\x05cycle\x18\x02 \x01(\x05R\x05cycle\x128\n" +
+	"\ttimestamp\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\ttimestamp\x12#\n" +
+	"\rsnapshot_json\x18\x04 \x01(\tR\fsnapshotJson\"\xeb\x02\n" +
+	"\x0fNodeHealthScore\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1f\n" +
+	"\vtotal_score\x18\x02 \x01(\x05R\n" +
+	"totalScore\x12/\n" +
+	"\x13heartbeat_freshness\x18\x03 \x01(\x05R\x12heartbeatFreshness\x12\x1d\n" +
+	"\n" +
+	"error_rate\x18\x04 \x01(\x05R\terrorRate\x12%\n" +
+	"\x0etrade_activity\x18\x05 \x01(\x05R\rtradeActivity\x12)\n" +
+	"\x10signal_diversity\x18\x06 \x01(\x05R\x0fsignalDiversity\x12)\n" +
+	"\x10regime_stability\x18\a \x01(\x05R\x0fregimeStability\x12\x14\n" +
+	"\x05state\x18\b \x01(\tR\x05state\x12;\n" +
+	"\vcomputed_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"computedAt\"\xa0\x01\n" +
+	"\rPlatformAlert\x12\x17\n" +
+	"\anode_id\x18\x01 \x01(\tR\x06nodeId\x12\x1d\n" +
+	"\n" +
+	"alert_type\x18\x02 \x01(\tR\talertType\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12=\n" +
+	"\ftriggered_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vtriggeredAt\"\x8a\x02\n" +
+	"\x0ePlatformStatus\x12/\n" +
+	"\x05nodes\x18\x01 \x03(\v2\x19.omega.v1.NodeHealthScoreR\x05nodes\x12/\n" +
+	"\x06alerts\x18\x02 \x03(\v2\x17.omega.v1.PlatformAlertR\x06alerts\x12!\n" +
+	"\ftotal_trades\x18\x03 \x01(\x05R\vtotalTrades\x12\x1b\n" +
+	"\ttotal_pnl\x18\x04 \x01(\x01R\btotalPnl\x12%\n" +
+	"\x0euptime_seconds\x18\x05 \x01(\x01R\ruptimeSeconds\x12/\n" +
+	"\x05as_of\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x04asOf*\x89\x01\n" +
 	"\n" +
 	"NodeHealth\x12\x1b\n" +
 	"\x17NODE_HEALTH_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13NODE_HEALTH_HEALTHY\x10\x01\x12\x18\n" +
 	"\x14NODE_HEALTH_DEGRADED\x10\x02\x12\x15\n" +
 	"\x11NODE_HEALTH_STALE\x10\x03\x12\x14\n" +
-	"\x10NODE_HEALTH_DEAD\x10\x042\x98\x03\n" +
+	"\x10NODE_HEALTH_DEAD\x10\x04*\xe9\x01\n" +
+	"\x12NodeLifecycleState\x12$\n" +
+	" NODE_LIFECYCLE_STATE_UNSPECIFIED\x10\x00\x12!\n" +
+	"\x1dNODE_LIFECYCLE_STATE_STARTING\x10\x01\x12#\n" +
+	"\x1fNODE_LIFECYCLE_STATE_WARMING_UP\x10\x02\x12 \n" +
+	"\x1cNODE_LIFECYCLE_STATE_RUNNING\x10\x03\x12!\n" +
+	"\x1dNODE_LIFECYCLE_STATE_DEGRADED\x10\x04\x12 \n" +
+	"\x1cNODE_LIFECYCLE_STATE_STOPPED\x10\x052\x98\x03\n" +
 	"\x10HeartbeatService\x12<\n" +
 	"\rSendHeartbeat\x12\x13.omega.v1.Heartbeat\x1a\x16.omega.v1.HeartbeatAck\x12P\n" +
 	"\x17SendTrainingDiagnostics\x12\x1d.omega.v1.TrainingDiagnostics\x1a\x16.omega.v1.HeartbeatAck\x12J\n" +
@@ -737,49 +1247,64 @@ func file_omega_v1_heartbeat_service_proto_rawDescGZIP() []byte {
 	return file_omega_v1_heartbeat_service_proto_rawDescData
 }
 
-var file_omega_v1_heartbeat_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_omega_v1_heartbeat_service_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_omega_v1_heartbeat_service_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_omega_v1_heartbeat_service_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_omega_v1_heartbeat_service_proto_goTypes = []any{
 	(NodeHealth)(0),                    // 0: omega.v1.NodeHealth
-	(*Heartbeat)(nil),                  // 1: omega.v1.Heartbeat
-	(*TrainingDiagnostics)(nil),        // 2: omega.v1.TrainingDiagnostics
-	(*HeartbeatAck)(nil),               // 3: omega.v1.HeartbeatAck
-	(*NodeStatusRequest)(nil),          // 4: omega.v1.NodeStatusRequest
-	(*NodeStatusResponse)(nil),         // 5: omega.v1.NodeStatusResponse
-	(*ListHeartbeatNodesRequest)(nil),  // 6: omega.v1.ListHeartbeatNodesRequest
-	(*ListHeartbeatNodesResponse)(nil), // 7: omega.v1.ListHeartbeatNodesResponse
-	(*GetDiagnosticsRequest)(nil),      // 8: omega.v1.GetDiagnosticsRequest
-	nil,                                // 9: omega.v1.Heartbeat.MetricsEntry
-	nil,                                // 10: omega.v1.TrainingDiagnostics.TickerConvictionsEntry
-	nil,                                // 11: omega.v1.NodeStatusResponse.MetricsEntry
-	(*timestamppb.Timestamp)(nil),      // 12: google.protobuf.Timestamp
+	(NodeLifecycleState)(0),            // 1: omega.v1.NodeLifecycleState
+	(*Heartbeat)(nil),                  // 2: omega.v1.Heartbeat
+	(*TrainingDiagnostics)(nil),        // 3: omega.v1.TrainingDiagnostics
+	(*HeartbeatAck)(nil),               // 4: omega.v1.HeartbeatAck
+	(*NodeStatusRequest)(nil),          // 5: omega.v1.NodeStatusRequest
+	(*NodeStatusResponse)(nil),         // 6: omega.v1.NodeStatusResponse
+	(*ListHeartbeatNodesRequest)(nil),  // 7: omega.v1.ListHeartbeatNodesRequest
+	(*ListHeartbeatNodesResponse)(nil), // 8: omega.v1.ListHeartbeatNodesResponse
+	(*GetDiagnosticsRequest)(nil),      // 9: omega.v1.GetDiagnosticsRequest
+	(*NodeLifecycleEvent)(nil),         // 10: omega.v1.NodeLifecycleEvent
+	(*DecisionSnapshot)(nil),           // 11: omega.v1.DecisionSnapshot
+	(*NodeHealthScore)(nil),            // 12: omega.v1.NodeHealthScore
+	(*PlatformAlert)(nil),              // 13: omega.v1.PlatformAlert
+	(*PlatformStatus)(nil),             // 14: omega.v1.PlatformStatus
+	nil,                                // 15: omega.v1.Heartbeat.MetricsEntry
+	nil,                                // 16: omega.v1.TrainingDiagnostics.TickerConvictionsEntry
+	nil,                                // 17: omega.v1.NodeStatusResponse.MetricsEntry
+	(*timestamppb.Timestamp)(nil),      // 18: google.protobuf.Timestamp
 }
 var file_omega_v1_heartbeat_service_proto_depIdxs = []int32{
-	12, // 0: omega.v1.Heartbeat.timestamp:type_name -> google.protobuf.Timestamp
+	18, // 0: omega.v1.Heartbeat.timestamp:type_name -> google.protobuf.Timestamp
 	0,  // 1: omega.v1.Heartbeat.health:type_name -> omega.v1.NodeHealth
-	9,  // 2: omega.v1.Heartbeat.metrics:type_name -> omega.v1.Heartbeat.MetricsEntry
-	10, // 3: omega.v1.TrainingDiagnostics.ticker_convictions:type_name -> omega.v1.TrainingDiagnostics.TickerConvictionsEntry
-	12, // 4: omega.v1.TrainingDiagnostics.timestamp:type_name -> google.protobuf.Timestamp
-	12, // 5: omega.v1.HeartbeatAck.server_time:type_name -> google.protobuf.Timestamp
+	15, // 2: omega.v1.Heartbeat.metrics:type_name -> omega.v1.Heartbeat.MetricsEntry
+	16, // 3: omega.v1.TrainingDiagnostics.ticker_convictions:type_name -> omega.v1.TrainingDiagnostics.TickerConvictionsEntry
+	18, // 4: omega.v1.TrainingDiagnostics.timestamp:type_name -> google.protobuf.Timestamp
+	18, // 5: omega.v1.HeartbeatAck.server_time:type_name -> google.protobuf.Timestamp
 	0,  // 6: omega.v1.NodeStatusResponse.health:type_name -> omega.v1.NodeHealth
-	12, // 7: omega.v1.NodeStatusResponse.last_seen:type_name -> google.protobuf.Timestamp
-	11, // 8: omega.v1.NodeStatusResponse.metrics:type_name -> omega.v1.NodeStatusResponse.MetricsEntry
-	5,  // 9: omega.v1.ListHeartbeatNodesResponse.nodes:type_name -> omega.v1.NodeStatusResponse
-	1,  // 10: omega.v1.HeartbeatService.SendHeartbeat:input_type -> omega.v1.Heartbeat
-	2,  // 11: omega.v1.HeartbeatService.SendTrainingDiagnostics:input_type -> omega.v1.TrainingDiagnostics
-	4,  // 12: omega.v1.HeartbeatService.GetNodeStatus:input_type -> omega.v1.NodeStatusRequest
-	6,  // 13: omega.v1.HeartbeatService.ListNodes:input_type -> omega.v1.ListHeartbeatNodesRequest
-	8,  // 14: omega.v1.HeartbeatService.GetDiagnostics:input_type -> omega.v1.GetDiagnosticsRequest
-	3,  // 15: omega.v1.HeartbeatService.SendHeartbeat:output_type -> omega.v1.HeartbeatAck
-	3,  // 16: omega.v1.HeartbeatService.SendTrainingDiagnostics:output_type -> omega.v1.HeartbeatAck
-	5,  // 17: omega.v1.HeartbeatService.GetNodeStatus:output_type -> omega.v1.NodeStatusResponse
-	7,  // 18: omega.v1.HeartbeatService.ListNodes:output_type -> omega.v1.ListHeartbeatNodesResponse
-	2,  // 19: omega.v1.HeartbeatService.GetDiagnostics:output_type -> omega.v1.TrainingDiagnostics
-	15, // [15:20] is the sub-list for method output_type
-	10, // [10:15] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	18, // 7: omega.v1.NodeStatusResponse.last_seen:type_name -> google.protobuf.Timestamp
+	17, // 8: omega.v1.NodeStatusResponse.metrics:type_name -> omega.v1.NodeStatusResponse.MetricsEntry
+	6,  // 9: omega.v1.ListHeartbeatNodesResponse.nodes:type_name -> omega.v1.NodeStatusResponse
+	1,  // 10: omega.v1.NodeLifecycleEvent.from_state:type_name -> omega.v1.NodeLifecycleState
+	1,  // 11: omega.v1.NodeLifecycleEvent.to_state:type_name -> omega.v1.NodeLifecycleState
+	18, // 12: omega.v1.NodeLifecycleEvent.timestamp:type_name -> google.protobuf.Timestamp
+	18, // 13: omega.v1.DecisionSnapshot.timestamp:type_name -> google.protobuf.Timestamp
+	18, // 14: omega.v1.NodeHealthScore.computed_at:type_name -> google.protobuf.Timestamp
+	18, // 15: omega.v1.PlatformAlert.triggered_at:type_name -> google.protobuf.Timestamp
+	12, // 16: omega.v1.PlatformStatus.nodes:type_name -> omega.v1.NodeHealthScore
+	13, // 17: omega.v1.PlatformStatus.alerts:type_name -> omega.v1.PlatformAlert
+	18, // 18: omega.v1.PlatformStatus.as_of:type_name -> google.protobuf.Timestamp
+	2,  // 19: omega.v1.HeartbeatService.SendHeartbeat:input_type -> omega.v1.Heartbeat
+	3,  // 20: omega.v1.HeartbeatService.SendTrainingDiagnostics:input_type -> omega.v1.TrainingDiagnostics
+	5,  // 21: omega.v1.HeartbeatService.GetNodeStatus:input_type -> omega.v1.NodeStatusRequest
+	7,  // 22: omega.v1.HeartbeatService.ListNodes:input_type -> omega.v1.ListHeartbeatNodesRequest
+	9,  // 23: omega.v1.HeartbeatService.GetDiagnostics:input_type -> omega.v1.GetDiagnosticsRequest
+	4,  // 24: omega.v1.HeartbeatService.SendHeartbeat:output_type -> omega.v1.HeartbeatAck
+	4,  // 25: omega.v1.HeartbeatService.SendTrainingDiagnostics:output_type -> omega.v1.HeartbeatAck
+	6,  // 26: omega.v1.HeartbeatService.GetNodeStatus:output_type -> omega.v1.NodeStatusResponse
+	8,  // 27: omega.v1.HeartbeatService.ListNodes:output_type -> omega.v1.ListHeartbeatNodesResponse
+	3,  // 28: omega.v1.HeartbeatService.GetDiagnostics:output_type -> omega.v1.TrainingDiagnostics
+	24, // [24:29] is the sub-list for method output_type
+	19, // [19:24] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_heartbeat_service_proto_init() }
@@ -792,8 +1317,8 @@ func file_omega_v1_heartbeat_service_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_heartbeat_service_proto_rawDesc), len(file_omega_v1_heartbeat_service_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   11,
+			NumEnums:      2,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
