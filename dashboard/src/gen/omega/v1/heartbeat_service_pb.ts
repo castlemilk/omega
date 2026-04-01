@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file omega/v1/heartbeat_service.proto.
  */
 export const file_omega_v1_heartbeat_service: GenFile = /*@__PURE__*/
-  fileDesc("CiBvbWVnYS92MS9oZWFydGJlYXRfc2VydmljZS5wcm90bxIIb21lZ2EudjEi+QEKCUhlYXJ0YmVhdBIPCgdub2RlX2lkGAEgASgJEhEKCW5vZGVfdHlwZRgCIAEoCRItCgl0aW1lc3RhbXAYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiQKBmhlYWx0aBgEIAEoDjIULm9tZWdhLnYxLk5vZGVIZWFsdGgSMQoHbWV0cmljcxgFIAMoCzIgLm9tZWdhLnYxLkhlYXJ0YmVhdC5NZXRyaWNzRW50cnkSEAoIYmxvY2tlcnMYBiADKAkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi4gMKE1RyYWluaW5nRGlhZ25vc3RpY3MSDwoHbm9kZV9pZBgBIAEoCRINCgVjeWNsZRgCIAEoBRIOCgZyZWdpbWUYAyABKAkSHgoWZGF0YV9mcmVzaG5lc3Nfc2Vjb25kcxgEIAEoAhIWCg5hY3RpdmVfc2lnbmFscxgFIAEoBRIVCg10b3RhbF9zaWduYWxzGAYgASgFEg8KB3NpdF9vdXQYByABKAgSFgoOc2l0X291dF9yZWFzb24YCCABKAkSEwoLb3Blbl90cmFkZXMYCSABKAUSFQoNY2xvc2VkX3RyYWRlcxgKIAEoBRILCgNwbmwYCyABKAISDQoFbG9uZ3MYDCABKAUSDgoGc2hvcnRzGA0gASgFEhAKCGJsb2NrZXJzGA4gAygJElAKEnRpY2tlcl9jb252aWN0aW9ucxgPIAMoCzI0Lm9tZWdhLnYxLlRyYWluaW5nRGlhZ25vc3RpY3MuVGlja2VyQ29udmljdGlvbnNFbnRyeRItCgl0aW1lc3RhbXAYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wGjgKFlRpY2tlckNvbnZpY3Rpb25zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASJVCgxIZWFydGJlYXRBY2sSFAoMYWNrbm93bGVkZ2VkGAEgASgIEi8KC3NlcnZlcl90aW1lGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIkChFOb2RlU3RhdHVzUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJIpoCChJOb2RlU3RhdHVzUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRIRCglub2RlX3R5cGUYAiABKAkSJAoGaGVhbHRoGAMgASgOMhQub21lZ2EudjEuTm9kZUhlYWx0aBItCglsYXN0X3NlZW4YBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjoKB21ldHJpY3MYBSADKAsyKS5vbWVnYS52MS5Ob2RlU3RhdHVzUmVzcG9uc2UuTWV0cmljc0VudHJ5EhAKCGJsb2NrZXJzGAYgAygJEg0KBXN0YWxlGAcgASgIGi4KDE1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjIKGUxpc3RIZWFydGJlYXROb2Rlc1JlcXVlc3QSFQoNaGVhbHRoX2ZpbHRlchgBIAEoCSJJChpMaXN0SGVhcnRiZWF0Tm9kZXNSZXNwb25zZRIrCgVub2RlcxgBIAMoCzIcLm9tZWdhLnYxLk5vZGVTdGF0dXNSZXNwb25zZSIoChVHZXREaWFnbm9zdGljc1JlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCSqJAQoKTm9kZUhlYWx0aBIbChdOT0RFX0hFQUxUSF9VTlNQRUNJRklFRBAAEhcKE05PREVfSEVBTFRIX0hFQUxUSFkQARIYChROT0RFX0hFQUxUSF9ERUdSQURFRBACEhUKEU5PREVfSEVBTFRIX1NUQUxFEAMSFAoQTk9ERV9IRUFMVEhfREVBRBAEMpgDChBIZWFydGJlYXRTZXJ2aWNlEjwKDVNlbmRIZWFydGJlYXQSEy5vbWVnYS52MS5IZWFydGJlYXQaFi5vbWVnYS52MS5IZWFydGJlYXRBY2sSUAoXU2VuZFRyYWluaW5nRGlhZ25vc3RpY3MSHS5vbWVnYS52MS5UcmFpbmluZ0RpYWdub3N0aWNzGhYub21lZ2EudjEuSGVhcnRiZWF0QWNrEkoKDUdldE5vZGVTdGF0dXMSGy5vbWVnYS52MS5Ob2RlU3RhdHVzUmVxdWVzdBocLm9tZWdhLnYxLk5vZGVTdGF0dXNSZXNwb25zZRJWCglMaXN0Tm9kZXMSIy5vbWVnYS52MS5MaXN0SGVhcnRiZWF0Tm9kZXNSZXF1ZXN0GiQub21lZ2EudjEuTGlzdEhlYXJ0YmVhdE5vZGVzUmVzcG9uc2USUAoOR2V0RGlhZ25vc3RpY3MSHy5vbWVnYS52MS5HZXREaWFnbm9zdGljc1JlcXVlc3QaHS5vbWVnYS52MS5UcmFpbmluZ0RpYWdub3N0aWNzQpwBCgxjb20ub21lZ2EudjFCFUhlYXJ0YmVhdFNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
+  fileDesc("CiBvbWVnYS92MS9oZWFydGJlYXRfc2VydmljZS5wcm90bxIIb21lZ2EudjEi+QEKCUhlYXJ0YmVhdBIPCgdub2RlX2lkGAEgASgJEhEKCW5vZGVfdHlwZRgCIAEoCRItCgl0aW1lc3RhbXAYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiQKBmhlYWx0aBgEIAEoDjIULm9tZWdhLnYxLk5vZGVIZWFsdGgSMQoHbWV0cmljcxgFIAMoCzIgLm9tZWdhLnYxLkhlYXJ0YmVhdC5NZXRyaWNzRW50cnkSEAoIYmxvY2tlcnMYBiADKAkaLgoMTWV0cmljc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEi4gMKE1RyYWluaW5nRGlhZ25vc3RpY3MSDwoHbm9kZV9pZBgBIAEoCRINCgVjeWNsZRgCIAEoBRIOCgZyZWdpbWUYAyABKAkSHgoWZGF0YV9mcmVzaG5lc3Nfc2Vjb25kcxgEIAEoAhIWCg5hY3RpdmVfc2lnbmFscxgFIAEoBRIVCg10b3RhbF9zaWduYWxzGAYgASgFEg8KB3NpdF9vdXQYByABKAgSFgoOc2l0X291dF9yZWFzb24YCCABKAkSEwoLb3Blbl90cmFkZXMYCSABKAUSFQoNY2xvc2VkX3RyYWRlcxgKIAEoBRILCgNwbmwYCyABKAISDQoFbG9uZ3MYDCABKAUSDgoGc2hvcnRzGA0gASgFEhAKCGJsb2NrZXJzGA4gAygJElAKEnRpY2tlcl9jb252aWN0aW9ucxgPIAMoCzI0Lm9tZWdhLnYxLlRyYWluaW5nRGlhZ25vc3RpY3MuVGlja2VyQ29udmljdGlvbnNFbnRyeRItCgl0aW1lc3RhbXAYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wGjgKFlRpY2tlckNvbnZpY3Rpb25zRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASJVCgxIZWFydGJlYXRBY2sSFAoMYWNrbm93bGVkZ2VkGAEgASgIEi8KC3NlcnZlcl90aW1lGAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCIkChFOb2RlU3RhdHVzUmVxdWVzdBIPCgdub2RlX2lkGAEgASgJIpoCChJOb2RlU3RhdHVzUmVzcG9uc2USDwoHbm9kZV9pZBgBIAEoCRIRCglub2RlX3R5cGUYAiABKAkSJAoGaGVhbHRoGAMgASgOMhQub21lZ2EudjEuTm9kZUhlYWx0aBItCglsYXN0X3NlZW4YBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjoKB21ldHJpY3MYBSADKAsyKS5vbWVnYS52MS5Ob2RlU3RhdHVzUmVzcG9uc2UuTWV0cmljc0VudHJ5EhAKCGJsb2NrZXJzGAYgAygJEg0KBXN0YWxlGAcgASgIGi4KDE1ldHJpY3NFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjIKGUxpc3RIZWFydGJlYXROb2Rlc1JlcXVlc3QSFQoNaGVhbHRoX2ZpbHRlchgBIAEoCSJJChpMaXN0SGVhcnRiZWF0Tm9kZXNSZXNwb25zZRIrCgVub2RlcxgBIAMoCzIcLm9tZWdhLnYxLk5vZGVTdGF0dXNSZXNwb25zZSIoChVHZXREaWFnbm9zdGljc1JlcXVlc3QSDwoHbm9kZV9pZBgBIAEoCSLGAQoSTm9kZUxpZmVjeWNsZUV2ZW50Eg8KB25vZGVfaWQYASABKAkSMAoKZnJvbV9zdGF0ZRgCIAEoDjIcLm9tZWdhLnYxLk5vZGVMaWZlY3ljbGVTdGF0ZRIuCgh0b19zdGF0ZRgDIAEoDjIcLm9tZWdhLnYxLk5vZGVMaWZlY3ljbGVTdGF0ZRIOCgZyZWFzb24YBCABKAkSLQoJdGltZXN0YW1wGAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJ4ChBEZWNpc2lvblNuYXBzaG90Eg8KB25vZGVfaWQYASABKAkSDQoFY3ljbGUYAiABKAUSLQoJdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIVCg1zbmFwc2hvdF9qc29uGAQgASgJIvQBCg9Ob2RlSGVhbHRoU2NvcmUSDwoHbm9kZV9pZBgBIAEoCRITCgt0b3RhbF9zY29yZRgCIAEoBRIbChNoZWFydGJlYXRfZnJlc2huZXNzGAMgASgFEhIKCmVycm9yX3JhdGUYBCABKAUSFgoOdHJhZGVfYWN0aXZpdHkYBSABKAUSGAoQc2lnbmFsX2RpdmVyc2l0eRgGIAEoBRIYChByZWdpbWVfc3RhYmlsaXR5GAcgASgFEg0KBXN0YXRlGAggASgJEi8KC2NvbXB1dGVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJ3Cg1QbGF0Zm9ybUFsZXJ0Eg8KB25vZGVfaWQYASABKAkSEgoKYWxlcnRfdHlwZRgCIAEoCRIPCgdtZXNzYWdlGAMgASgJEjAKDHRyaWdnZXJlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAizwEKDlBsYXRmb3JtU3RhdHVzEigKBW5vZGVzGAEgAygLMhkub21lZ2EudjEuTm9kZUhlYWx0aFNjb3JlEicKBmFsZXJ0cxgCIAMoCzIXLm9tZWdhLnYxLlBsYXRmb3JtQWxlcnQSFAoMdG90YWxfdHJhZGVzGAMgASgFEhEKCXRvdGFsX3BubBgEIAEoARIWCg51cHRpbWVfc2Vjb25kcxgFIAEoARIpCgVhc19vZhgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAqiQEKCk5vZGVIZWFsdGgSGwoXTk9ERV9IRUFMVEhfVU5TUEVDSUZJRUQQABIXChNOT0RFX0hFQUxUSF9IRUFMVEhZEAESGAoUTk9ERV9IRUFMVEhfREVHUkFERUQQAhIVChFOT0RFX0hFQUxUSF9TVEFMRRADEhQKEE5PREVfSEVBTFRIX0RFQUQQBCrpAQoSTm9kZUxpZmVjeWNsZVN0YXRlEiQKIE5PREVfTElGRUNZQ0xFX1NUQVRFX1VOU1BFQ0lGSUVEEAASIQodTk9ERV9MSUZFQ1lDTEVfU1RBVEVfU1RBUlRJTkcQARIjCh9OT0RFX0xJRkVDWUNMRV9TVEFURV9XQVJNSU5HX1VQEAISIAocTk9ERV9MSUZFQ1lDTEVfU1RBVEVfUlVOTklORxADEiEKHU5PREVfTElGRUNZQ0xFX1NUQVRFX0RFR1JBREVEEAQSIAocTk9ERV9MSUZFQ1lDTEVfU1RBVEVfU1RPUFBFRBAFMpgDChBIZWFydGJlYXRTZXJ2aWNlEjwKDVNlbmRIZWFydGJlYXQSEy5vbWVnYS52MS5IZWFydGJlYXQaFi5vbWVnYS52MS5IZWFydGJlYXRBY2sSUAoXU2VuZFRyYWluaW5nRGlhZ25vc3RpY3MSHS5vbWVnYS52MS5UcmFpbmluZ0RpYWdub3N0aWNzGhYub21lZ2EudjEuSGVhcnRiZWF0QWNrEkoKDUdldE5vZGVTdGF0dXMSGy5vbWVnYS52MS5Ob2RlU3RhdHVzUmVxdWVzdBocLm9tZWdhLnYxLk5vZGVTdGF0dXNSZXNwb25zZRJWCglMaXN0Tm9kZXMSIy5vbWVnYS52MS5MaXN0SGVhcnRiZWF0Tm9kZXNSZXF1ZXN0GiQub21lZ2EudjEuTGlzdEhlYXJ0YmVhdE5vZGVzUmVzcG9uc2USUAoOR2V0RGlhZ25vc3RpY3MSHy5vbWVnYS52MS5HZXREaWFnbm9zdGljc1JlcXVlc3QaHS5vbWVnYS52MS5UcmFpbmluZ0RpYWdub3N0aWNzQpwBCgxjb20ub21lZ2EudjFCFUhlYXJ0YmVhdFNlcnZpY2VQcm90b1ABWjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxogIDT1hYqgIIT21lZ2EuVjHKAghPbWVnYVxWMeICFE9tZWdhXFYxXEdQQk1ldGFkYXRh6gIJT21lZ2E6OlYxYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * Heartbeat is sent by any node (Python signal nodes, Go services, etc.) to
@@ -304,6 +304,228 @@ export const GetDiagnosticsRequestSchema: GenMessage<GetDiagnosticsRequest> = /*
   messageDesc(file_omega_v1_heartbeat_service, 7);
 
 /**
+ * NodeLifecycleEvent records a single state transition for a node.
+ *
+ * @generated from message omega.v1.NodeLifecycleEvent
+ */
+export type NodeLifecycleEvent = Message<"omega.v1.NodeLifecycleEvent"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+
+  /**
+   * @generated from field: omega.v1.NodeLifecycleState from_state = 2;
+   */
+  fromState: NodeLifecycleState;
+
+  /**
+   * @generated from field: omega.v1.NodeLifecycleState to_state = 3;
+   */
+  toState: NodeLifecycleState;
+
+  /**
+   * @generated from field: string reason = 4;
+   */
+  reason: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp timestamp = 5;
+   */
+  timestamp?: Timestamp;
+};
+
+/**
+ * Describes the message omega.v1.NodeLifecycleEvent.
+ * Use `create(NodeLifecycleEventSchema)` to create a new message.
+ */
+export const NodeLifecycleEventSchema: GenMessage<NodeLifecycleEvent> = /*@__PURE__*/
+  messageDesc(file_omega_v1_heartbeat_service, 8);
+
+/**
+ * DecisionSnapshot is a per-cycle JSON blob from a Python node, stored verbatim.
+ *
+ * @generated from message omega.v1.DecisionSnapshot
+ */
+export type DecisionSnapshot = Message<"omega.v1.DecisionSnapshot"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+
+  /**
+   * @generated from field: int32 cycle = 2;
+   */
+  cycle: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp timestamp = 3;
+   */
+  timestamp?: Timestamp;
+
+  /**
+   * @generated from field: string snapshot_json = 4;
+   */
+  snapshotJson: string;
+};
+
+/**
+ * Describes the message omega.v1.DecisionSnapshot.
+ * Use `create(DecisionSnapshotSchema)` to create a new message.
+ */
+export const DecisionSnapshotSchema: GenMessage<DecisionSnapshot> = /*@__PURE__*/
+  messageDesc(file_omega_v1_heartbeat_service, 9);
+
+/**
+ * NodeHealthScore holds the 0–100 composite score and each component score.
+ *
+ * @generated from message omega.v1.NodeHealthScore
+ */
+export type NodeHealthScore = Message<"omega.v1.NodeHealthScore"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+
+  /**
+   * 0–100
+   *
+   * @generated from field: int32 total_score = 2;
+   */
+  totalScore: number;
+
+  /**
+   * 0–20
+   *
+   * @generated from field: int32 heartbeat_freshness = 3;
+   */
+  heartbeatFreshness: number;
+
+  /**
+   * 0–20
+   *
+   * @generated from field: int32 error_rate = 4;
+   */
+  errorRate: number;
+
+  /**
+   * 0–20
+   *
+   * @generated from field: int32 trade_activity = 5;
+   */
+  tradeActivity: number;
+
+  /**
+   * 0–20
+   *
+   * @generated from field: int32 signal_diversity = 6;
+   */
+  signalDiversity: number;
+
+  /**
+   * 0–20
+   *
+   * @generated from field: int32 regime_stability = 7;
+   */
+  regimeStability: number;
+
+  /**
+   * "healthy" | "degraded" | "critical"
+   *
+   * @generated from field: string state = 8;
+   */
+  state: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp computed_at = 9;
+   */
+  computedAt?: Timestamp;
+};
+
+/**
+ * Describes the message omega.v1.NodeHealthScore.
+ * Use `create(NodeHealthScoreSchema)` to create a new message.
+ */
+export const NodeHealthScoreSchema: GenMessage<NodeHealthScore> = /*@__PURE__*/
+  messageDesc(file_omega_v1_heartbeat_service, 10);
+
+/**
+ * @generated from message omega.v1.PlatformAlert
+ */
+export type PlatformAlert = Message<"omega.v1.PlatformAlert"> & {
+  /**
+   * @generated from field: string node_id = 1;
+   */
+  nodeId: string;
+
+  /**
+   * "STALE_NODE" | "DEGRADED_HEALTH" | "NO_TRADES"
+   *
+   * @generated from field: string alert_type = 2;
+   */
+  alertType: string;
+
+  /**
+   * @generated from field: string message = 3;
+   */
+  message: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp triggered_at = 4;
+   */
+  triggeredAt?: Timestamp;
+};
+
+/**
+ * Describes the message omega.v1.PlatformAlert.
+ * Use `create(PlatformAlertSchema)` to create a new message.
+ */
+export const PlatformAlertSchema: GenMessage<PlatformAlert> = /*@__PURE__*/
+  messageDesc(file_omega_v1_heartbeat_service, 11);
+
+/**
+ * @generated from message omega.v1.PlatformStatus
+ */
+export type PlatformStatus = Message<"omega.v1.PlatformStatus"> & {
+  /**
+   * @generated from field: repeated omega.v1.NodeHealthScore nodes = 1;
+   */
+  nodes: NodeHealthScore[];
+
+  /**
+   * @generated from field: repeated omega.v1.PlatformAlert alerts = 2;
+   */
+  alerts: PlatformAlert[];
+
+  /**
+   * @generated from field: int32 total_trades = 3;
+   */
+  totalTrades: number;
+
+  /**
+   * @generated from field: double total_pnl = 4;
+   */
+  totalPnl: number;
+
+  /**
+   * @generated from field: double uptime_seconds = 5;
+   */
+  uptimeSeconds: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp as_of = 6;
+   */
+  asOf?: Timestamp;
+};
+
+/**
+ * Describes the message omega.v1.PlatformStatus.
+ * Use `create(PlatformStatusSchema)` to create a new message.
+ */
+export const PlatformStatusSchema: GenMessage<PlatformStatus> = /*@__PURE__*/
+  messageDesc(file_omega_v1_heartbeat_service, 12);
+
+/**
  * @generated from enum omega.v1.NodeHealth
  */
 export enum NodeHealth {
@@ -338,6 +560,47 @@ export enum NodeHealth {
  */
 export const NodeHealthSchema: GenEnum<NodeHealth> = /*@__PURE__*/
   enumDesc(file_omega_v1_heartbeat_service, 0);
+
+/**
+ * @generated from enum omega.v1.NodeLifecycleState
+ */
+export enum NodeLifecycleState {
+  /**
+   * @generated from enum value: NODE_LIFECYCLE_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: NODE_LIFECYCLE_STATE_STARTING = 1;
+   */
+  STARTING = 1,
+
+  /**
+   * @generated from enum value: NODE_LIFECYCLE_STATE_WARMING_UP = 2;
+   */
+  WARMING_UP = 2,
+
+  /**
+   * @generated from enum value: NODE_LIFECYCLE_STATE_RUNNING = 3;
+   */
+  RUNNING = 3,
+
+  /**
+   * @generated from enum value: NODE_LIFECYCLE_STATE_DEGRADED = 4;
+   */
+  DEGRADED = 4,
+
+  /**
+   * @generated from enum value: NODE_LIFECYCLE_STATE_STOPPED = 5;
+   */
+  STOPPED = 5,
+}
+
+/**
+ * Describes the enum omega.v1.NodeLifecycleState.
+ */
+export const NodeLifecycleStateSchema: GenEnum<NodeLifecycleState> = /*@__PURE__*/
+  enumDesc(file_omega_v1_heartbeat_service, 1);
 
 /**
  * @generated from service omega.v1.HeartbeatService

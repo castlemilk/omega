@@ -84,6 +84,69 @@ message GetDiagnosticsRequest {
   string node_id = 1;  // optional: empty returns the most-recently-seen diagnostics
 }
 
+// ── Node lifecycle ────────────────────────────────────────────────────────────
+
+enum NodeLifecycleState {
+  NODE_LIFECYCLE_STATE_UNSPECIFIED = 0;
+  NODE_LIFECYCLE_STATE_STARTING    = 1;
+  NODE_LIFECYCLE_STATE_WARMING_UP  = 2;
+  NODE_LIFECYCLE_STATE_RUNNING     = 3;
+  NODE_LIFECYCLE_STATE_DEGRADED    = 4;
+  NODE_LIFECYCLE_STATE_STOPPED     = 5;
+}
+
+// NodeLifecycleEvent records a single state transition for a node.
+message NodeLifecycleEvent {
+  string                    node_id    = 1;
+  NodeLifecycleState        from_state = 2;
+  NodeLifecycleState        to_state   = 3;
+  string                    reason     = 4;
+  google.protobuf.Timestamp timestamp  = 5;
+}
+
+// ── Decision trace ────────────────────────────────────────────────────────────
+
+// DecisionSnapshot is a per-cycle JSON blob from a Python node, stored verbatim.
+message DecisionSnapshot {
+  string                    node_id       = 1;
+  int32                     cycle         = 2;
+  google.protobuf.Timestamp timestamp     = 3;
+  string                    snapshot_json = 4;
+}
+
+// ── Health scoring ────────────────────────────────────────────────────────────
+
+// NodeHealthScore holds the 0–100 composite score and each component score.
+message NodeHealthScore {
+  string node_id               = 1;
+  int32  total_score           = 2;   // 0–100
+  int32  heartbeat_freshness   = 3;   // 0–20
+  int32  error_rate            = 4;   // 0–20
+  int32  trade_activity        = 5;   // 0–20
+  int32  signal_diversity      = 6;   // 0–20
+  int32  regime_stability      = 7;   // 0–20
+  string state                 = 8;   // "healthy" | "degraded" | "critical"
+  google.protobuf.Timestamp computed_at = 9;
+}
+
+// ── Platform status ───────────────────────────────────────────────────────────
+
+message PlatformAlert {
+  string                    node_id      = 1;
+  string                    alert_type   = 2;  // "STALE_NODE" | "DEGRADED_HEALTH" | "NO_TRADES"
+  string                    message      = 3;
+  google.protobuf.Timestamp triggered_at = 4;
+}
+
+message PlatformStatus {
+  repeated NodeHealthScore  nodes          = 1;
+  repeated PlatformAlert    alerts         = 2;
+  int32                     total_trades   = 3;
+  double                    total_pnl      = 4;
+  double                    uptime_seconds = 5;
+  google.protobuf.Timestamp as_of          = 6;
+}
+
 // ── Service ───────────────────────────────────────────────────────────────────
 
 service HeartbeatService {
