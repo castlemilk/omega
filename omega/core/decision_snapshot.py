@@ -21,7 +21,6 @@ import json
 import logging
 import os
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -156,7 +155,7 @@ class DecisionSnapshot:
         return d
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "DecisionSnapshot":
+    def from_dict(cls, d: dict[str, Any]) -> DecisionSnapshot:
         """Deserialise from a dict (as loaded from JSONL)."""
         per_ticker_raw = d.pop("per_ticker", {})
         snap = cls(**{k: v for k, v in d.items() if k != "per_ticker"})
@@ -208,15 +207,13 @@ class DecisionWriter:
         self._db_url: str | None = db_url or os.environ.get("DATABASE_URL")
         self._path = Path(output_dir) / f"{version}_decisions.jsonl"
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._fh = open(self._path, "a")  # noqa: WPS515
+        self._fh = open(self._path, "a")
         self._db_ready = False
 
         if self._db_url and _PSYCOPG2_AVAILABLE:
             self._ensure_table()
         else:
-            logger.info(
-                "DecisionWriter: no DB configured — writing JSONL only to %s", self._path
-            )
+            logger.info("DecisionWriter: no DB configured — writing JSONL only to %s", self._path)
 
     def _ensure_table(self) -> None:
         """Create the table if it doesn't exist (idempotent)."""
@@ -276,10 +273,10 @@ class DecisionWriter:
             logger.debug("DecisionWriter: DB write failed: %s", exc)
 
     def close(self) -> None:
-        try:
+        import contextlib
+
+        with contextlib.suppress(Exception):
             self._fh.close()
-        except Exception:
-            pass
 
 
 # ---------------------------------------------------------------------------

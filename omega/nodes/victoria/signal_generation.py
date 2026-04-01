@@ -323,13 +323,12 @@ class SignalGenerationNode(Node):
                     position_desc = f"near upper band (bb_pos={bb_pos:.2f})"
                 else:
                     position_desc = f"mid-band (bb_pos={bb_pos:.2f})"
-                rationale = (
-                    f"Price={price:.4f} {position_desc} "
-                    f"mid={bb_mid:.4f} → {v:+.3f}"
-                )
+                rationale = f"Price={price:.4f} {position_desc} mid={bb_mid:.4f} → {v:+.3f}"
                 inputs = {
-                    "price": price, "bb_mid": bb_mid,
-                    "bb_upper": bb_upper, "bb_lower": bb_lower,
+                    "price": price,
+                    "bb_mid": bb_mid,
+                    "bb_upper": bb_upper,
+                    "bb_lower": bb_lower,
                     "bb_pos": bb_pos,
                 }
             else:
@@ -357,9 +356,7 @@ class SignalGenerationNode(Node):
             v = ts["volume_signal"]
             if vol_z is not None:
                 price_dir = "up" if sma_dir > 0 else "down"
-                rationale = (
-                    f"Volume_z={vol_z:.2f} with price trending {price_dir} → {v:+.3f}"
-                )
+                rationale = f"Volume_z={vol_z:.2f} with price trending {price_dir} → {v:+.3f}"
                 inputs = {"volume_zscore": vol_z, "price_direction": sma_dir}
             else:
                 rationale = f"Volume signal → {v:+.3f}"
@@ -383,9 +380,7 @@ class SignalGenerationNode(Node):
         if "btc_beta_signal" in ts:
             beta = ts.get("btc_beta", 0.0)
             v = ts["btc_beta_signal"]
-            rationale = (
-                f"BTC_beta={beta:.2f} x BTC_composite → amplified_signal {v:+.3f}"
-            )
+            rationale = f"BTC_beta={beta:.2f} x BTC_composite → amplified_signal {v:+.3f}"
             inputs = {"btc_beta": beta}
             traces.append(SignalTrace("btc_beta_signal", v, rationale, inputs))
 

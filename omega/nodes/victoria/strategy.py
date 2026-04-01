@@ -151,7 +151,7 @@ class StrategyNode(Node):
         # --- Portfolio risk manager (drawdown, correlation, vol, time, heat) ---
         self._risk = PositionRiskManager()
         # Last cycle's per-ticker decision trace (populated by _construct_portfolio)
-        self._last_ticker_decisions: dict[str, "TickerDecision"] = {}
+        self._last_ticker_decisions: dict[str, TickerDecision] = {}
         # Optional RMT denoiser reference for correlation-based position limits.
         # Set via set_rmt_denoiser() after construction (avoids circular imports).
         self._rmt_denoiser: Any = None
@@ -732,10 +732,14 @@ class StrategyNode(Node):
         _basket_composites = [
             float(sig.get("composite", 0.0))
             for t, sig in signals.items()
-            if not t.startswith("_") and not t.startswith("adv_")
-            and isinstance(sig, dict) and sig.get("composite") is not None
+            if not t.startswith("_")
+            and not t.startswith("adv_")
+            and isinstance(sig, dict)
+            and sig.get("composite") is not None
         ]
-        _basket_mean = sum(_basket_composites) / len(_basket_composites) if _basket_composites else 0.0
+        _basket_mean = (
+            sum(_basket_composites) / len(_basket_composites) if _basket_composites else 0.0
+        )
 
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
@@ -799,16 +803,23 @@ class StrategyNode(Node):
                         conviction=c.name,
                         conviction_score=w_conv,
                         proposal="LONG",
-                        filters_applied=[f"signal_threshold:blocked({raw_composite:.3f}<={self._signal_threshold:.3f})"],
+                        filters_applied=[
+                            f"signal_threshold:blocked({raw_composite:.3f}<={self._signal_threshold:.3f})"
+                        ],
                         final_action="FILTERED",
                         filter_reason="signal_threshold",
                     )
                     continue
                 proposals_this_cycle += 1
-                filters_log = [f"conviction_gate:{c.name}→long_proposal", f"signal_threshold:pass({raw_composite:.3f}>{self._signal_threshold:.3f})"]
+                filters_log = [
+                    f"conviction_gate:{c.name}→long_proposal",
+                    f"signal_threshold:pass({raw_composite:.3f}>{self._signal_threshold:.3f})",
+                ]
                 if _block_longs:
                     regime_blocked_longs += 1
-                    filters_log.append(f"regime_block:blocked({_regime_hmm},conf={_regime_confidence:.2f})")
+                    filters_log.append(
+                        f"regime_block:blocked({_regime_hmm},conf={_regime_confidence:.2f})"
+                    )
                     ticker_decisions[ticker] = build_ticker_decision(
                         ticker=ticker,
                         signal_traces=signal_traces,
@@ -841,7 +852,7 @@ class StrategyNode(Node):
                         filter_reason=reason,
                     )
                     continue
-                filters_log.append(f"ring1_gate:pass")
+                filters_log.append("ring1_gate:pass")
                 long_candidates[ticker] = sig
                 ticker_decisions[ticker] = build_ticker_decision(
                     ticker=ticker,
@@ -864,16 +875,23 @@ class StrategyNode(Node):
                         conviction=c.name,
                         conviction_score=w_conv,
                         proposal="SHORT",
-                        filters_applied=[f"signal_threshold:blocked({raw_composite:.3f}>=-{self._signal_threshold:.3f})"],
+                        filters_applied=[
+                            f"signal_threshold:blocked({raw_composite:.3f}>=-{self._signal_threshold:.3f})"
+                        ],
                         final_action="FILTERED",
                         filter_reason="signal_threshold",
                     )
                     continue
                 proposals_this_cycle += 1
-                filters_log = [f"conviction_gate:{c.name}→short_proposal", f"signal_threshold:pass({raw_composite:.3f}<-{self._signal_threshold:.3f})"]
+                filters_log = [
+                    f"conviction_gate:{c.name}→short_proposal",
+                    f"signal_threshold:pass({raw_composite:.3f}<-{self._signal_threshold:.3f})",
+                ]
                 if _block_shorts:
                     regime_blocked_shorts += 1
-                    filters_log.append(f"regime_block:blocked({_regime_hmm},conf={_regime_confidence:.2f})")
+                    filters_log.append(
+                        f"regime_block:blocked({_regime_hmm},conf={_regime_confidence:.2f})"
+                    )
                     ticker_decisions[ticker] = build_ticker_decision(
                         ticker=ticker,
                         signal_traces=signal_traces,
@@ -906,14 +924,14 @@ class StrategyNode(Node):
                         filter_reason=reason,
                     )
                     continue
-                filters_log.append(f"ring1_gate:pass")
+                filters_log.append("ring1_gate:pass")
                 short_candidates[ticker] = sig
                 ticker_decisions[ticker] = build_ticker_decision(
                     ticker=ticker,
                     signal_traces=signal_traces,
                     raw_composite=raw_composite,
                     basket_mean=_basket_mean,
-                        conviction=c.name,
+                    conviction=c.name,
                     conviction_score=w_conv,
                     proposal="SHORT",
                     filters_applied=filters_log,

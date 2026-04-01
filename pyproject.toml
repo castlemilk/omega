@@ -82,6 +82,10 @@ ignore = [
     "E501",   # line too long — handled by formatter
     "B008",   # do not perform function calls in default arguments
     "SIM108", # ternary operator — sometimes less readable
+    "RUF001", # ambiguous unicode in strings — intentional math notation (–, ×, −, etc.)
+    "RUF002", # ambiguous unicode in docstrings — intentional math notation (–, α, σ, etc.)
+    "RUF003", # ambiguous unicode in comments — intentional math notation
+    "SIM115", # context manager for open() — not always appropriate for long-lived handles
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -89,6 +93,7 @@ ignore = [
 "omega/nodes/polymarket/vol_arb.py" = ["N803", "N806", "RUF002"]
 "omega/nodes/victoria/spectral_signals.py" = ["N806"]
 "omega/nodes/victoria/carry_signals.py" = ["RUF002"]
+"omega/nodes/victoria/hmm_regime.py" = ["N803", "N806"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["omega"]
