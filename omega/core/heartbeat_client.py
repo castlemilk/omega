@@ -128,6 +128,42 @@ class HeartbeatClient:
         }
         return self._post("/api/v1/diagnostics", payload)
 
+    def post_decision(
+        self,
+        node_id: str,
+        cycle: int,
+        snapshot_json: str,
+    ) -> bool:
+        """POST a per-cycle decision snapshot to the Go control plane.
+
+        snapshot_json should be the JSON-serialised DecisionSnapshot from
+        omega.core.decision_snapshot.  Returns True on success.
+        """
+        payload: dict[str, Any] = {
+            "cycle": cycle,
+            "snapshot_json": snapshot_json,
+        }
+        return self._post(f"/api/v1/nodes/{node_id}/decisions", payload)
+
+    def report_lifecycle(
+        self,
+        node_id: str,
+        from_state: str,
+        to_state: str,
+        reason: str = "",
+    ) -> bool:
+        """POST a lifecycle state transition to the Go control plane.
+
+        States: STARTING | WARMING_UP | RUNNING | DEGRADED | STOPPED
+        Returns True on success.
+        """
+        payload: dict[str, Any] = {
+            "from_state": from_state,
+            "to_state": to_state,
+            "reason": reason,
+        }
+        return self._post(f"/api/v1/nodes/{node_id}/lifecycle", payload)
+
     # ── Internal ──────────────────────────────────────────────────────────────
 
     def _post(self, path: str, payload: dict[str, Any]) -> bool:

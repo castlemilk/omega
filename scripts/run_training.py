@@ -474,6 +474,12 @@ def run(
     decision_writer = DecisionWriter(version=version, db_url=db_url or None)
     log.info("Decision snapshots → %s (+ Postgres if configured)", decision_writer.path)
 
+    # ── Heartbeat client ──────────────────────────────────────────────────
+    from omega.core.heartbeat_client import HeartbeatClient
+    hb_client = HeartbeatClient()
+    _hb_node_id = f"victoria_{version}"
+    hb_client.report_lifecycle(_hb_node_id, "STARTING", "RUNNING", "training loop started")
+
     # ── Loop state ────────────────────────────────────────────────────────
     progress: list[dict] = []
     sit_out_counts: dict[str, int] = {
@@ -648,6 +654,17 @@ def run(
                     n_hold=max(0, len(_ticker_decisions) - proposals_gen),
                 )
                 decision_writer.write(snap)
+                # Post decision snapshot to Go control plane (fire-and-forget)
+                try:
+                    import dataclasses as _dc
+                    import json as _json
+                    hb_client.post_decision(
+                        _hb_node_id,
+                        cycle_num,
+                        _json.dumps(_dc.asdict(snap)),
+                    )
+                except Exception:
+                    pass
             except Exception as _snap_exc:
                 log.debug("Decision snapshot error (non-fatal): %s", _snap_exc)
 
@@ -730,6 +747,7 @@ def run(
     finally:
         metrics_fh.close()
         decision_writer.close()
+        hb_client.report_lifecycle(_hb_node_id, "RUNNING", "STOPPED", "training loop completed")
 
     # ── Final results ─────────────────────────────────────────────────────
     total_elapsed = time.perf_counter() - total_start
