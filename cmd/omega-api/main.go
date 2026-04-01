@@ -260,7 +260,15 @@ func main() {
 	// plane read/write the same store instance.
 	hbStore := hbsvc.New()
 	hbHandler := hbsvc.NewHandler(hbStore)
-	cpHandler := controlplane.New(hbStore, logger)
+
+	lifecycleStore := hbsvc.NewLifecycleStore()
+	decisionStore := hbsvc.NewDecisionStore()
+	healthScorer := observability.NewNodeHealthScorer()
+
+	cpHandler := controlplane.New(hbStore, logger).
+		WithLifecycleStore(lifecycleStore).
+		WithDecisionStore(decisionStore).
+		WithScorer(healthScorer)
 
 	// ── Coordination handler ───────────────────────────────────────────────────
 	var coordH *coordination.Handler
