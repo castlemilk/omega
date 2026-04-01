@@ -395,12 +395,6 @@ function FunnelSummary({ payload }: { payload: DecisionPayload }) {
     filterReasons[key] = (filterReasons[key] || 0) + 1;
   }
 
-  const funnelData = [
-    { stage: "Total", count: total, color: "#6b7280" },
-    { stage: "Proposed", count: traded + filtered, color: "#60a5fa" },
-    { stage: "Passed filters", count: traded, color: "#22c55e" },
-  ];
-
   return (
     <div className="mb-6">
       <h3 className="text-sm font-semibold text-gray-300 mb-2">Filter Funnel</h3>

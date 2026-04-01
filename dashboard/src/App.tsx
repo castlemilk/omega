@@ -33,6 +33,8 @@ import SignalHealth from "./pages/SignalHealth";
 import ControlPlane from "./pages/ControlPlane";
 import Settings from "./pages/Settings";
 import DecisionTrace from "./pages/DecisionTrace";
+import NodeHealth from "./pages/NodeHealth";
+import TradeAnalysis from "./pages/TradeAnalysis";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealthProto | null>(null);
@@ -143,6 +145,10 @@ export default function App() {
                 <Route path="/alignment" element={<Alignment />} />
                 <Route path="/goals" element={<Goals />} />
                 <Route path="/challenges" element={<Challenges />} />
+
+                {/* Observability */}
+                <Route path="/node-health" element={<NodeHealth />} />
+                <Route path="/trade-analysis" element={<TradeAnalysis />} />
 
                 {/* System */}
                 <Route path="/issues" element={<Issues />} />
