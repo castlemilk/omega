@@ -27,12 +27,11 @@ import VictoriaSignals from "./pages/VictoriaSignals";
 import VictoriaTrades from "./pages/VictoriaTrades";
 import VictoriaBacktest from "./pages/VictoriaBacktest";
 import SystemHealth from "./pages/SystemHealth";
-import PerformanceMetrics from "./pages/PerformanceMetrics";
-import ErrorLog from "./pages/ErrorLog";
 import PipelineView from "./pages/PipelineView";
 import Training from "./pages/Training";
 import SignalHealth from "./pages/SignalHealth";
 import ControlPlane from "./pages/ControlPlane";
+import Settings from "./pages/Settings";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealthProto | null>(null);
@@ -74,19 +73,27 @@ export default function App() {
             <HealthBanner />
             <main className="flex-1 overflow-auto p-6">
               <Routes>
+                {/* Overview */}
                 <Route path="/" element={<Dashboard health={health} />} />
                 <Route path="/projects" element={<Projects />} />
-                <Route path="/nodes" element={<Nodes />} />
-                <Route path="/traces" element={<Traces />} />
-                <Route path="/metrics" element={<Metrics />} />
-                <Route path="/issues" element={<Issues />} />
-                <Route path="/memory" element={<Memory />} />
+
+                {/* Training */}
+                <Route path="/training" element={<Training />} />
                 <Route path="/convergence" element={<Convergence />} />
-                <Route path="/alignment" element={<Alignment />} />
-                <Route path="/adversarial" element={<Adversarial />} />
-                <Route path="/goals" element={<Goals />} />
-                <Route path="/challenges" element={<Challenges />} />
-                <Route path="/improvements" element={<Improvements />} />
+                <Route path="/metrics" element={<Metrics />} />
+
+                {/* Signals */}
+                <Route path="/signals" element={<SignalHealth />} />
+                <Route
+                  path="/victoria/signals"
+                  element={
+                    <ErrorBoundary fallbackLabel="VictoriaSignals">
+                      <VictoriaSignals />
+                    </ErrorBoundary>
+                  }
+                />
+
+                {/* Strategy */}
                 <Route
                   path="/victoria"
                   element={
@@ -100,14 +107,6 @@ export default function App() {
                   element={
                     <ErrorBoundary fallbackLabel="VictoriaPortfolio">
                       <VictoriaPortfolio />
-                    </ErrorBoundary>
-                  }
-                />
-                <Route
-                  path="/victoria/signals"
-                  element={
-                    <ErrorBoundary fallbackLabel="VictoriaSignals">
-                      <VictoriaSignals />
                     </ErrorBoundary>
                   }
                 />
@@ -127,14 +126,25 @@ export default function App() {
                     </ErrorBoundary>
                   }
                 />
-                {/* Platform */}
+
+                {/* Control Plane */}
+                <Route path="/nodes" element={<Nodes />} />
                 <Route path="/control-plane" element={<ControlPlane />} />
                 <Route path="/health" element={<SystemHealth />} />
-                <Route path="/perf" element={<PerformanceMetrics />} />
-                <Route path="/errors" element={<ErrorLog />} />
-                <Route path="/training" element={<Training />} />
-                <Route path="/signals" element={<SignalHealth />} />
+                <Route path="/traces" element={<Traces />} />
                 <Route path="/projects/:id/pipeline" element={<PipelineView />} />
+
+                {/* Intelligence */}
+                <Route path="/improvements" element={<Improvements />} />
+                <Route path="/memory" element={<Memory />} />
+                <Route path="/adversarial" element={<Adversarial />} />
+                <Route path="/alignment" element={<Alignment />} />
+                <Route path="/goals" element={<Goals />} />
+                <Route path="/challenges" element={<Challenges />} />
+
+                {/* System */}
+                <Route path="/issues" element={<Issues />} />
+                <Route path="/settings" element={<Settings />} />
               </Routes>
             </main>
           </div>

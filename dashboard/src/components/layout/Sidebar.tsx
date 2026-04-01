@@ -1,58 +1,86 @@
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
-  Server,
+  FolderOpen,
+  Radio,
   TrendingUp,
-  History,
-  Swords,
-  Terminal,
-  Activity,
-  PieChart,
   Zap,
+  Activity,
+  BarChart2,
+  Terminal,
+  PieChart,
   List,
   FlaskConical,
-  Radio,
+  Server,
   Cpu,
+  HeartPulse,
+  GitBranch,
+  History,
+  Swords,
+  Brain,
+  Target,
+  Shield,
+  AlertTriangle,
+  Settings,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
   {
     label: "Overview",
     items: [
-      { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-    ],
-  },
-  {
-    label: "Trading",
-    items: [
-      { to: "/victoria", icon: Terminal, label: "Victoria" },
-      { to: "/victoria/portfolio", icon: PieChart, label: "Portfolio" },
-      { to: "/victoria/trades", icon: List, label: "Trades" },
-      { to: "/victoria/signals", icon: Zap, label: "Signals" },
-      { to: "/victoria/backtest", icon: FlaskConical, label: "Backtest" },
+      { to: "/", icon: LayoutDashboard, label: "Home" },
+      { to: "/projects", icon: FolderOpen, label: "Projects" },
     ],
   },
   {
     label: "Training",
     items: [
-      { to: "/training", icon: Radio, label: "Training" },
+      { to: "/training", icon: Radio, label: "Live Feed" },
       { to: "/convergence", icon: TrendingUp, label: "Cycles" },
+      { to: "/metrics", icon: BarChart2, label: "Metrics" },
     ],
   },
   {
-    label: "Platform",
+    label: "Signals",
+    items: [
+      { to: "/signals", icon: Activity, label: "Signal Health" },
+      { to: "/victoria/signals", icon: Zap, label: "Victoria Signals" },
+    ],
+  },
+  {
+    label: "Strategy",
+    items: [
+      { to: "/victoria", icon: Terminal, label: "Overview" },
+      { to: "/victoria/portfolio", icon: PieChart, label: "Portfolio" },
+      { to: "/victoria/trades", icon: List, label: "Trades" },
+      { to: "/victoria/backtest", icon: FlaskConical, label: "Backtest" },
+    ],
+  },
+  {
+    label: "Control Plane",
     items: [
       { to: "/nodes", icon: Server, label: "Nodes" },
       { to: "/control-plane", icon: Cpu, label: "Control Plane" },
-      { to: "/health", icon: Activity, label: "System Health" },
+      { to: "/health", icon: HeartPulse, label: "System Health" },
+      { to: "/traces", icon: GitBranch, label: "Traces" },
     ],
   },
   {
     label: "Intelligence",
     items: [
-      { to: "/improvements", icon: History, label: "Improvements" },
+      { to: "/improvements", icon: History, label: "Self-Improvement" },
+      { to: "/memory", icon: Brain, label: "Memory" },
       { to: "/adversarial", icon: Swords, label: "Adversarial" },
-      { to: "/convergence", icon: TrendingUp, label: "Convergence" },
+      { to: "/alignment", icon: Shield, label: "Alignment" },
+      { to: "/goals", icon: Target, label: "Goals" },
+      { to: "/challenges", icon: AlertTriangle, label: "Challenges" },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { to: "/issues", icon: AlertTriangle, label: "Issues" },
+      { to: "/settings", icon: Settings, label: "Settings" },
     ],
   },
 ];
@@ -78,7 +106,7 @@ export default function Sidebar() {
             <NavLink
               key={`${section.label}-${to}`}
               to={to}
-              end={to === "/" || to === "/victoria" || to === "/convergence"}
+              end={to === "/" || to === "/victoria"}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
