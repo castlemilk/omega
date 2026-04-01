@@ -434,8 +434,9 @@ class StrategyNode(Node):
           3. Weighted conviction — IC-weighted composite exceeds threshold
           4. Regime / volatility — higher bar in high-vol regime
         """
-        # 1. Time filter
-        if cycle - self._last_trade_cycle < 2:
+        # 1. Time filter — removed in V37 (was blocking 50% of proposals due to
+        # alternating cycle cooldown; position deduplication handles re-entry risk)
+        if cycle - self._last_trade_cycle < 1:
             return False, "time_filter"
 
         # 2. Agreement ratio (base threshold, tightened in high-vol)

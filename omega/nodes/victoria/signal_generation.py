@@ -80,13 +80,15 @@ class SignalGenerationNode(Node):
         self._macd_fast = 12
         self._macd_slow = 26
         self._macd_signal_period = 9
-        self._use_rsi = False
-        self._use_macd = False
-        self._use_bb = False
-        self._use_zscore = False
-        self._use_btc_beta = False
-        self._use_volume_zscore = False
-        self._use_vol_regime = False
+        # V37: enable all signals from cycle 1 — progressive unlock via improve()
+        # was never triggered because TPE params don't include "iteration".
+        self._use_rsi = True
+        self._use_macd = True
+        self._use_bb = True
+        self._use_zscore = True
+        self._use_btc_beta = True
+        self._use_volume_zscore = True
+        self._use_vol_regime = True
         self._execution_count = 0
         self._error_count = 0
         self._total_latency_ms = 0.0
