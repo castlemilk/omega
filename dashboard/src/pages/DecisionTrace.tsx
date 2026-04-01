@@ -660,8 +660,8 @@ export default function DecisionTrace() {
       {/* Error state */}
       {error && (
         <div className="mb-4 px-4 py-3 bg-red-900/30 border border-red-700 rounded-lg text-sm text-red-300">
-          {error.includes("404") || error.includes("Failed")
-            ? "No decision data yet — start a training run and decision traces will appear here."
+          {error.includes("404") || error.includes("Failed") || error.includes("500")
+            ? "No decision data yet — start a training run (`python scripts/run_training.py`) and decision traces will appear here."
             : error}
         </div>
       )}
