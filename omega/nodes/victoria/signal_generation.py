@@ -23,6 +23,7 @@ import uuid
 from typing import Any
 
 from omega.core.actions import NodeAction
+from omega.core.decision_snapshot import SignalTrace
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
@@ -91,6 +92,8 @@ class SignalGenerationNode(Node):
         self._total_latency_ms = 0.0
         self._signals_generated = 0
         self._last_signal_coverage = 0.0
+        # Populated each call to _compute_all_signals; keyed by ticker
+        self._last_signal_traces: dict[str, list[SignalTrace]] = {}
 
     # ------------------------------------------------------------------ Node interface
 
@@ -240,8 +243,157 @@ class SignalGenerationNode(Node):
 
     # ------------------------------------------------------------------ signal computation
 
+    @staticmethod
+    def _build_traces_from_ts(ts: dict[str, Any]) -> list[SignalTrace]:
+        """
+        Build SignalTrace records from an already-computed ticker signal dict.
+
+        Called after all signals are computed for a ticker so the raw indicator
+        values (rsi, macd, bb_upper, etc.) are available alongside the signal values.
+        """
+        traces: list[SignalTrace] = []
+
+        # SMA crossover
+        if "sma_crossover" in ts:
+            sma_s = ts.get("sma_short")
+            sma_l = ts.get("sma_long")
+            v = ts["sma_crossover"]
+            direction = "bullish" if v > 0 else ("bearish" if v < 0 else "neutral")
+            if sma_s is not None and sma_l is not None:
+                ratio = (sma_s - sma_l) / sma_l if sma_l != 0 else 0.0
+                rationale = (
+                    f"SMA_short={sma_s:.4f} vs SMA_long={sma_l:.4f} "
+                    f"ratio={ratio:+.4f} → {direction} {v:+.3f}"
+                )
+                inputs: dict[str, Any] = {"sma_short": sma_s, "sma_long": sma_l, "ratio": ratio}
+            else:
+                rationale = f"SMA crossover → {direction} {v:+.3f}"
+                inputs = {}
+            traces.append(SignalTrace("sma_crossover", v, rationale, inputs))
+
+        # RSI
+        if "rsi_signal" in ts:
+            rsi = ts.get("rsi")
+            v = ts["rsi_signal"]
+            if rsi is not None:
+                if rsi < 30:
+                    condition = f"oversold (RSI={rsi:.1f} < 30)"
+                elif rsi > 70:
+                    condition = f"overbought (RSI={rsi:.1f} > 70)"
+                else:
+                    condition = f"neutral (RSI={rsi:.1f})"
+                rationale = f"RSI={rsi:.1f} {condition} → {v:+.3f}"
+                inputs = {"rsi": rsi, "oversold_threshold": 30, "overbought_threshold": 70}
+            else:
+                rationale = f"RSI signal → {v:+.3f}"
+                inputs = {}
+            traces.append(SignalTrace("rsi_signal", v, rationale, inputs))
+
+        # MACD
+        if "macd_crossover" in ts:
+            macd = ts.get("macd")
+            sig_line = ts.get("macd_signal_line")
+            v = ts["macd_crossover"]
+            if macd is not None and sig_line is not None:
+                hist = macd - sig_line
+                direction = "bullish" if hist > 0 else "bearish"
+                rationale = (
+                    f"MACD={macd:.5f} vs signal={sig_line:.5f} "
+                    f"hist={hist:+.5f} → {direction} {v:+.3f}"
+                )
+                inputs = {"macd": macd, "signal_line": sig_line, "histogram": hist}
+            else:
+                rationale = f"MACD crossover → {v:+.3f}"
+                inputs = {}
+            traces.append(SignalTrace("macd_crossover", v, rationale, inputs))
+
+        # Bollinger Bands
+        if "bb_signal" in ts:
+            price = ts.get("price")
+            bb_mid = ts.get("bb_mid")
+            bb_upper = ts.get("bb_upper")
+            bb_lower = ts.get("bb_lower")
+            v = ts["bb_signal"]
+            if price is not None and bb_mid is not None and bb_upper is not None:
+                band_half = bb_upper - bb_mid
+                bb_pos = (price - bb_mid) / band_half if band_half != 0 else 0.0
+                if bb_pos < -0.5:
+                    position_desc = f"near lower band (bb_pos={bb_pos:.2f})"
+                elif bb_pos > 0.5:
+                    position_desc = f"near upper band (bb_pos={bb_pos:.2f})"
+                else:
+                    position_desc = f"mid-band (bb_pos={bb_pos:.2f})"
+                rationale = (
+                    f"Price={price:.4f} {position_desc} "
+                    f"mid={bb_mid:.4f} → {v:+.3f}"
+                )
+                inputs = {
+                    "price": price, "bb_mid": bb_mid,
+                    "bb_upper": bb_upper, "bb_lower": bb_lower,
+                    "bb_pos": bb_pos,
+                }
+            else:
+                rationale = f"BB position → {v:+.3f}"
+                inputs = {}
+            traces.append(SignalTrace("bb_signal", v, rationale, inputs))
+
+        # Z-score momentum
+        if "zscore_signal" in ts:
+            zscore = ts.get("zscore")
+            v = ts["zscore_signal"]
+            if zscore is not None:
+                direction = "momentum" if zscore > 0 else "mean-reversion"
+                rationale = f"Z-score={zscore:.2f} ({direction}) → {v:+.3f}"
+                inputs = {"zscore": zscore}
+            else:
+                rationale = f"Z-score signal → {v:+.3f}"
+                inputs = {}
+            traces.append(SignalTrace("zscore_signal", v, rationale, inputs))
+
+        # Volume signal
+        if "volume_signal" in ts:
+            vol_z = ts.get("volume_zscore")
+            sma_dir = ts.get("sma_crossover", 0.0)
+            v = ts["volume_signal"]
+            if vol_z is not None:
+                price_dir = "up" if sma_dir > 0 else "down"
+                rationale = (
+                    f"Volume_z={vol_z:.2f} with price trending {price_dir} → {v:+.3f}"
+                )
+                inputs = {"volume_zscore": vol_z, "price_direction": sma_dir}
+            else:
+                rationale = f"Volume signal → {v:+.3f}"
+                inputs = {}
+            traces.append(SignalTrace("volume_signal", v, rationale, inputs))
+
+        # Volatility regime
+        if "vol_regime_signal" in ts:
+            regime = ts.get("vol_regime", "unknown")
+            recent_vol = ts.get("recent_vol_ann", 0.0)
+            long_vol = ts.get("long_vol_ann", 0.0)
+            v = ts["vol_regime_signal"]
+            rationale = (
+                f"Vol_regime={regime} (recent_ann={recent_vol:.3f} "
+                f"long_ann={long_vol:.3f}) → {v:+.3f}"
+            )
+            inputs = {"vol_regime": regime, "recent_vol_ann": recent_vol, "long_vol_ann": long_vol}
+            traces.append(SignalTrace("vol_regime_signal", v, rationale, inputs))
+
+        # BTC beta signal
+        if "btc_beta_signal" in ts:
+            beta = ts.get("btc_beta", 0.0)
+            v = ts["btc_beta_signal"]
+            rationale = (
+                f"BTC_beta={beta:.2f} x BTC_composite → amplified_signal {v:+.3f}"
+            )
+            inputs = {"btc_beta": beta}
+            traces.append(SignalTrace("btc_beta_signal", v, rationale, inputs))
+
+        return traces
+
     def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
+        self._last_signal_traces = {}
 
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
@@ -435,6 +587,16 @@ class SignalGenerationNode(Node):
                 min(_vals),
                 max(_vals),
             )
+
+        # Build signal traces after all signals (including BTC beta) are finalised.
+        # Store both in self._last_signal_traces (for external access) and as
+        # ts["_traces"] so strategy.py can embed them in TickerDecision objects
+        # without needing a reference back to this node.
+        for ticker, ts in signals.items():
+            if not ticker.startswith("_"):
+                traces = self._build_traces_from_ts(ts)
+                self._last_signal_traces[ticker] = traces
+                ts["_traces"] = traces  # embedded for strategy.py
 
         return signals
 

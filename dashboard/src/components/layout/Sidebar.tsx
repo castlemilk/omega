@@ -22,6 +22,7 @@ import {
   Shield,
   AlertTriangle,
   Settings,
+  Network,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -45,6 +46,7 @@ const NAV_SECTIONS = [
     items: [
       { to: "/signals", icon: Activity, label: "Signal Health" },
       { to: "/victoria/signals", icon: Zap, label: "Victoria Signals" },
+      { to: "/decisions", icon: Network, label: "Decision Trace" },
     ],
   },
   {

@@ -32,6 +32,7 @@ import Training from "./pages/Training";
 import SignalHealth from "./pages/SignalHealth";
 import ControlPlane from "./pages/ControlPlane";
 import Settings from "./pages/Settings";
+import DecisionTrace from "./pages/DecisionTrace";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealthProto | null>(null);
@@ -84,6 +85,7 @@ export default function App() {
 
                 {/* Signals */}
                 <Route path="/signals" element={<SignalHealth />} />
+                <Route path="/decisions" element={<DecisionTrace />} />
                 <Route
                   path="/victoria/signals"
                   element={

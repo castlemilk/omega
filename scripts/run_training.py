@@ -469,6 +469,11 @@ def run(
     metrics_jsonl.parent.mkdir(parents=True, exist_ok=True)
     metrics_fh = open(metrics_jsonl, "w")  # noqa: WPS515
 
+    # ── Decision snapshot writer ──────────────────────────────────────────
+    from omega.core.decision_snapshot import DecisionSnapshot, DecisionWriter
+    decision_writer = DecisionWriter(version=version, db_url=db_url or None)
+    log.info("Decision snapshots → %s (+ Postgres if configured)", decision_writer.path)
+
     # ── Loop state ────────────────────────────────────────────────────────
     progress: list[dict] = []
     sit_out_counts: dict[str, int] = {
@@ -609,6 +614,43 @@ def run(
             metrics_fh.write(json.dumps(metric_row) + "\n")
             metrics_fh.flush()
 
+            # ── Decision snapshot ─────────────────────────────────────────
+            try:
+                from omega.core.decision_snapshot import DecisionSnapshot
+                _regime_conf = 0.0
+                _regime_w_bear = -1.0
+                _regime_w_bull = -1.0
+                try:
+                    _regime_conf = float(last_signals.get("_regime_w_confidence", 0.0))
+                    _regime_w_bear = float(last_signals.get("_regime_w_bear_prob", last_signals.get("_regime_w_bear", -1.0)))
+                    _regime_w_bull = float(last_signals.get("_regime_w_bull_prob", last_signals.get("_regime_w_bull", -1.0)))
+                except Exception:
+                    pass
+                _ticker_decisions = getattr(strat, "_last_ticker_decisions", {}) if strat else {}
+                _fiedler_scale = getattr(strat, "_last_fiedler_scale", 1.0) if strat else 1.0
+                _fiedler_tag = getattr(strat, "_last_fiedler_tag", "warmup") if strat else "warmup"
+                snap = DecisionSnapshot(
+                    cycle=cycle_num,
+                    timestamp=datetime.now(UTC).isoformat(),
+                    version=version,
+                    regime=regime,
+                    regime_confidence=_regime_conf,
+                    regime_hmm=str(last_signals.get("_regime_hmm", last_signals.get("_regime", "unknown"))),
+                    regime_w_bear=_regime_w_bear,
+                    regime_w_bull=_regime_w_bull,
+                    sit_out_reason=sit_out_reason,
+                    sit_out_size_mult=1.0 if sit_out_reason == "normal" else (0.0 if sit_out_reason == "vol_low" else 0.5),
+                    fiedler_scale=_fiedler_scale,
+                    fiedler_regime=_fiedler_tag,
+                    per_ticker=_ticker_decisions,
+                    n_trades=len(new_closed),
+                    n_filtered=proposals_filt,
+                    n_hold=max(0, len(_ticker_decisions) - proposals_gen),
+                )
+                decision_writer.write(snap)
+            except Exception as _snap_exc:
+                log.debug("Decision snapshot error (non-fatal): %s", _snap_exc)
+
             # ── Watchdog ──────────────────────────────────────────────────
             watchdog.record_cycle(
                 had_trade=bool(new_closed),
@@ -687,6 +729,7 @@ def run(
 
     finally:
         metrics_fh.close()
+        decision_writer.close()
 
     # ── Final results ─────────────────────────────────────────────────────
     total_elapsed = time.perf_counter() - total_start
