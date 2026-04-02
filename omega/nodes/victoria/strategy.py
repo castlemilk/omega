@@ -8,6 +8,7 @@ Improvement arc:
   v1.1 — Momentum-weighted portfolio (weight ∝ composite signal strength)
   v1.2 — Risk-parity-weighted portfolio (weight ∝ 1/volatility)
   v1.3 — Signal threshold tuning based on backtest Sharpe feedback
+  v1.4 — Relative conviction thresholds: scale by basket composite std (V45)
 """
 
 import logging
@@ -681,6 +682,44 @@ class StrategyNode(Node):
         # NORMAL → balanced (0.10 each).
         self._apply_regime_adaptive_thresholds(signals)
 
+        # --- Relative conviction threshold calibration (V45) ---
+        # After cross-sectional demeaning, composites are typically 0.01–0.05 in magnitude.
+        # Absolute thresholds (±0.20 HOLD band, 0.10 weighted-conviction gate) swallow the
+        # entire range and produce 99% HOLD cycles.  Scale ALL thresholds proportionally to
+        # the basket composite std so that 0.5σ → BUY regardless of absolute scale.
+        _composites_for_std = [
+            float(sig["composite"])
+            for t, sig in signals.items()
+            if not t.startswith("_") and isinstance(sig, dict) and "composite" in sig
+        ]
+        if len(_composites_for_std) >= 2:
+            _c_mean = sum(_composites_for_std) / len(_composites_for_std)
+            _basket_std = math.sqrt(
+                sum((v - _c_mean) ** 2 for v in _composites_for_std) / len(_composites_for_std)
+            )
+        else:
+            _basket_std = 0.20  # fallback: no rescaling
+        _basket_std = max(_basket_std, 0.005)  # floor prevents degenerate rescaling
+
+        # Normalisation factor: composite × _cs_norm before score_to_conviction so that
+        # ±0.5σ → ±0.20 (BUY/SELL boundary) and ±1.5σ → ±0.60 (STRONG_BUY/SELL).
+        _cs_norm = 0.4 / _basket_std
+
+        # Scale secondary gate thresholds by the same factor (preserves regime ratios).
+        _thresh_scale = _basket_std / 0.20
+        self._weighted_conviction_threshold = 0.10 * _thresh_scale
+        self._long_conviction_threshold *= _thresh_scale
+        self._short_conviction_threshold *= _thresh_scale
+
+        logger.info(
+            "V45 relative thresholds: basket_std=%.4f cs_norm=%.2f "
+            "long_thresh=%.4f short_thresh=%.4f wc_thresh=%.4f",
+            _basket_std, _cs_norm,
+            self._long_conviction_threshold,
+            self._short_conviction_threshold,
+            self._weighted_conviction_threshold,
+        )
+
         # Compute conviction for every ticker with a composite score
         # Skip metadata keys (_regime_probs, _regime_hmm, etc.)
         convictions: dict[str, ConvictionLevel] = {}
@@ -689,7 +728,7 @@ class StrategyNode(Node):
                 continue
             composite = sig.get("composite")
             if composite is not None:
-                convictions[ticker] = score_to_conviction(float(composite))
+                convictions[ticker] = score_to_conviction(float(composite) * _cs_norm)
 
         # --- Regime directional filter ---
         # Block longs in confirmed bear regimes and shorts in confirmed bull regimes.
@@ -1082,13 +1121,26 @@ class StrategyNode(Node):
 
     def _rank_signals(self, signals: dict[str, Any]) -> list[dict[str, Any]]:
         """Rank tickers by composite signal strength, including conviction."""
+        # Recompute basket std for relative normalisation (mirrors _construct_portfolio).
+        _vals = [
+            float(sig["composite"])
+            for t, sig in signals.items()
+            if not t.startswith("_") and isinstance(sig, dict) and "composite" in sig
+        ]
+        if len(_vals) >= 2:
+            _m = sum(_vals) / len(_vals)
+            _std = math.sqrt(sum((v - _m) ** 2 for v in _vals) / len(_vals))
+        else:
+            _std = 0.20
+        _rank_cs_norm = 0.4 / max(_std, 0.005)
+
         ranked = []
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
                 continue
             composite = sig.get("composite")
             if composite is not None:
-                conviction = score_to_conviction(float(composite))
+                conviction = score_to_conviction(float(composite) * _rank_cs_norm)
                 ranked.append(
                     {
                         "ticker": ticker,
