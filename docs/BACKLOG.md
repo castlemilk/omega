@@ -5,6 +5,88 @@
 
 ---
 
+## Priorities as of 2026-04-02
+
+### P0 — Blocking training profitability
+
+| Item | Context |
+|------|---------|
+| 🔴 Fix conviction calibration (relative thresholds) | After cross-sectional demeaning, composite magnitudes are ~0.01–0.05. Absolute thresholds from pre-V35 era cause all signals to HOLD. Must use proportional/percentile-based thresholds. V43 added regime-adaptive thresholds as the right structure — wire fully. |
+| 🔴 Consistently profitable training across regimes | V35 hit +$151 (breakthrough). V36–V44 over-iterated and broke config. Need systematic regime-by-regime validation before each version bump. |
+
+### P1 — High-value next steps
+
+| Item | Context |
+|------|---------|
+| 🟠 TimesFM integration | Google time-series foundation model. Not installed. Install + wire as a `timeseries_forecast` signal replacement. Reference: `docs/ideas/` |
+| 🟠 Wasserstein K-means regime detector | Better than HMM for non-Gaussian regimes. Research saved in `docs/ideas/`. Replace or supplement `hmm_regime.py`. |
+| 🟠 Wire dashboard to real API endpoints | 27 pages exist but most consume mock data. Priority pages: DecisionTrace, NodeHealth, TradeAnalysis, VictoriaTrades. |
+| 🟠 Meta-Harness → decision traces self-improvement loop | `omega/core/meta_harness.py` exists but not wired to decision trace snapshots. Connect so harness can learn from actual decision outcomes. |
+
+### P2 — Architecture improvements
+
+| Item | Context |
+|------|---------|
+| 🟡 Node memory index (codedb-inspired) | Per-node memory index using vector embeddings for semantic retrieval. Research in `docs/ideas/2026-03-31-meta-harness-self-improvement.md`. |
+| 🟡 Qlib signal factor library | Microsoft Qlib has pre-built alpha factors. Evaluate for signals that gap-fill current 18-signal stack. |
+| 🟡 Signal regression test coverage | `tests/test_signal_integrity.py` added in V44. Extend to cover all 18 signals and edge cases (zero-data, stale data, regime transitions). |
+
+---
+
+## Session: 2026-04-02 (V23→V44, Observability, Decision Traceability)
+
+### Completed ✅
+
+#### Training Progression (V24 → V44)
+| Run | Key Addition | Result |
+|-----|-------------|--------|
+| V24–V34 | Incremental signal tuning | Gradual improvement |
+| **V35** | **Cross-sectional demeaning introduced** | **BREAKTHROUGH: +$151 PnL, bidirectional trades** |
+| V36 | Signal weight tuning | Broke V35 demeaning config |
+| V37 | Enabled all signals from cycle 1, removed time-filter | Degraded |
+| V38 | Apply trend-following config to main project | Partial recovery |
+| V39 | SMA-only + full time-filter removal | Degraded |
+| V40 | Raise Fiedler scale floor 0.25→0.50 | Minor fix |
+| V41 | Hard restore V35 signal+strategy | Back to V35 baseline |
+| V42 | Incremental on V41 | Exploration |
+| V43 | Regime-adaptive conviction thresholds | Right structural fix, partial recovery |
+| V44 | Signal integrity + smoke test suite | Regression prevention |
+
+#### Decision Traceability System (1,597 lines)
+| Item | Notes |
+|------|-------|
+| ✅ `internal/heartbeat/decisions.go` | DecisionStore bounded queue for decision trace snapshots |
+| ✅ `internal/heartbeat/lifecycle.go` | LifecycleStore ring buffer for node state transitions |
+| ✅ `internal/observability/node_health_scorer.go` | 5-component 0–100 composite health score |
+| ✅ 7 REST endpoints in control plane | `/lifecycle`, `/decisions`, `/health-score`, `/platform-status`, + 3 more |
+| ✅ Python `HeartbeatClient.post_decision()` | Wired into training loop for live decision reporting |
+| ✅ Python `HeartbeatClient.report_lifecycle()` | Node state transitions reported from Python side |
+
+#### Dashboard Observability Pages
+| Item | Notes |
+|------|-------|
+| ✅ `DecisionTrace` page | Full waterfall visualization of decision chains |
+| ✅ `NodeHealth` page | Per-node health score timeline + component breakdown |
+| ✅ `TradeAnalysis` page | Trade outcome attribution + signal contribution |
+| ✅ 3 observability gap fixes | Empty state handling, real timestamp formatting, signal attribution |
+
+#### Node Observability Go Infrastructure (2,130 lines)
+| Item | Notes |
+|------|-------|
+| ✅ Proto messages | lifecycle, decision, health-score, platform-status messages added |
+| ✅ Control plane wiring | Lifecycle/decision stores + health scorer integrated into handler |
+| ✅ Signal integrity test suite | `tests/test_signal_integrity.py` + smoke tests for V35 regression prevention |
+
+#### Research Docs Saved
+| Item | Notes |
+|------|-------|
+| ✅ Wasserstein K-means regime detector | Better than HMM for non-Gaussian crypto regimes |
+| ✅ TimesFM (Google) foundation model | Zero-shot time-series forecasting, P1 integration target |
+| ✅ Claude memory architecture | Node memory index concept (codedb-inspired) |
+| ✅ Qlib (Microsoft) | Quant research framework signals/factors reference |
+
+---
+
 ## Session: 2026-03-28 (Epic Session — 50+ Items, V16→V23, $0→+$67 PnL)
 
 ### Completed ✅ — Full Session Summary
