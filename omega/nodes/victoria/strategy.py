@@ -486,7 +486,9 @@ class StrategyNode(Node):
                 regime_hmm,
             )
 
-    def _passes_conviction_filters(self, sig: dict, cycle: int, direction: str = "long") -> tuple[bool, str]:
+    def _passes_conviction_filters(
+        self, sig: dict, cycle: int, direction: str = "long"
+    ) -> tuple[bool, str]:
         """
         Return (passes, reason) for the full conviction filter stack.
 
@@ -826,7 +828,9 @@ class StrategyNode(Node):
                 if _block_longs:
                     regime_blocked_longs += 1
                     continue
-                passes, reason = self._passes_conviction_filters(sig, current_cycle, direction="long")
+                passes, reason = self._passes_conviction_filters(
+                    sig, current_cycle, direction="long"
+                )
                 if not passes:
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (long): %s", ticker, reason)
@@ -839,7 +843,9 @@ class StrategyNode(Node):
                 if _block_shorts:
                     regime_blocked_shorts += 1
                     continue
-                passes, reason = self._passes_conviction_filters(sig, current_cycle, direction="short")
+                passes, reason = self._passes_conviction_filters(
+                    sig, current_cycle, direction="short"
+                )
                 if not passes:
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (short): %s", ticker, reason)
