@@ -468,20 +468,24 @@ class StrategyNode(Node):
     @staticmethod
     def _fiedler_size_scale(zscore: float, regime_tag: str) -> float:
         """
-        Convert Fiedler z-score to a position size multiplier in [0.25, 1.0].
+        Convert Fiedler z-score to a position size multiplier in [0.50, 1.0].
 
         Interpretation:
           - "warmup"     → 1.0 (no history yet; don't penalise)
-          - "fragmented" → 0.25 (graph disconnected; maximum stress)
-          - Otherwise: linear decay from 1.0 at z=0 down to 0.25 at z≤−5
-            scale = 1.0 + 0.15 * zscore, clamped to [0.25, 1.0]
+          - "fragmented" → 0.50 (graph disconnected; half-size, not zero)
+          - Otherwise: linear decay from 1.0 at z=0 down to 0.50 at z≤−5
+            scale = 1.0 + 0.10 * zscore, clamped to [0.50, 1.0]
             Consensus (z > 0) is capped at 1.0 — no leverage bonus.
+
+        V40 fix: floor raised from 0.25 to 0.50. The old 0.25 floor reduced
+        equal-weighted positions below the 5% paper-trading minimum threshold,
+        causing zero trades after cycle ~15 in single-signal (SMA-only) runs.
         """
         if regime_tag == "warmup":
             return 1.0
         if regime_tag == "fragmented":
-            return 0.25
-        return max(0.25, min(1.0, 1.0 + 0.15 * zscore))
+            return 0.50
+        return max(0.50, min(1.0, 1.0 + 0.10 * zscore))
 
     def _build_spectral_vector(self, signals: dict[str, Any]) -> dict[str, float]:
         """
