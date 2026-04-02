@@ -129,6 +129,13 @@ class StrategyNode(Node):
         # are smaller in magnitude than raw composites, so the old 0.20 bar
         # would have blocked all trades even when genuine spread exists.
         self._weighted_conviction_threshold: float = 0.10
+        # Per-direction regime-adaptive conviction thresholds.
+        # Set each cycle by _apply_regime_adaptive_thresholds() based on detected regime:
+        #   CRISIS/BEAR  → long=0.20 (suppressed), short=0.05 (permissive)
+        #   BULL         → long=0.05 (permissive), short=0.20 (suppressed)
+        #   NORMAL/other → long=0.10, short=0.10  (balanced)
+        self._long_conviction_threshold: float = 0.10
+        self._short_conviction_threshold: float = 0.10
         # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
         self._signal_ics: dict[str, float] = {}
         # Tracking counters
@@ -183,6 +190,8 @@ class StrategyNode(Node):
                 "backtest_count": self._backtest_count,
                 "agreement_ratio_threshold": self._agreement_ratio_threshold,
                 "weighted_conviction_threshold": self._weighted_conviction_threshold,
+                "long_conviction_threshold": self._long_conviction_threshold,
+                "short_conviction_threshold": self._short_conviction_threshold,
                 "signal_ic_count": len(self._signal_ics),
                 "sit_out_regime": self._sit_out_regime_count,
                 "sit_out_vol_low": self._sit_out_vol_low_count,
@@ -426,7 +435,58 @@ class StrategyNode(Node):
             return float(signals_dict.get("composite", 0.0))
         return weighted_sum / total_ic
 
-    def _passes_conviction_filters(self, sig: dict, cycle: int) -> tuple[bool, str]:
+    def _apply_regime_adaptive_thresholds(self, signals: dict) -> None:
+        """Set per-direction conviction thresholds based on detected market regime.
+
+        Called once per cycle at the start of _construct_portfolio so that long
+        and short candidates are evaluated against regime-appropriate bars:
+
+          CRISIS/BEAR  (bear_prob ≥ 0.55 or HMM == "bear")
+            → long_threshold = 0.20  (longs heavily suppressed)
+            → short_threshold = 0.05 (shorts very permissive — trade the trend)
+
+          BULL         (bull_prob ≥ 0.55 or HMM == "bull")
+            → long_threshold = 0.05  (longs very permissive)
+            → short_threshold = 0.20 (shorts suppressed)
+
+          HIGH_VOL / NORMAL / unknown
+            → balanced thresholds: long = short = 0.10
+            (position size is already reduced 50% by the sit-out filter)
+        """
+        bear_prob = float(signals.get("_regime_w_bear_prob", -1.0))
+        bull_prob = float(signals.get("_regime_w_bull_prob", -1.0))
+        regime_hmm = str(signals.get("_regime_hmm", "")).lower()
+
+        if bear_prob >= 0.55 or (bear_prob < 0.0 and regime_hmm == "bear"):
+            self._long_conviction_threshold = 0.20
+            self._short_conviction_threshold = 0.05
+            logger.info(
+                "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s) "
+                "→ long_thresh=0.20, short_thresh=0.05",
+                max(bear_prob, 0.0),
+                regime_hmm,
+            )
+        elif bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull"):
+            self._long_conviction_threshold = 0.05
+            self._short_conviction_threshold = 0.20
+            logger.info(
+                "Regime-adaptive: BULL (bull_prob=%.2f, hmm=%s) "
+                "→ long_thresh=0.05, short_thresh=0.20",
+                max(bull_prob, 0.0),
+                regime_hmm,
+            )
+        else:
+            self._long_conviction_threshold = 0.10
+            self._short_conviction_threshold = 0.10
+            logger.debug(
+                "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
+                "→ long_thresh=0.10, short_thresh=0.10",
+                max(bear_prob, 0.0),
+                max(bull_prob, 0.0),
+                regime_hmm,
+            )
+
+    def _passes_conviction_filters(self, sig: dict, cycle: int, direction: str = "long") -> tuple[bool, str]:
         """
         Return (passes, reason) for the full conviction filter stack.
 
@@ -450,14 +510,18 @@ class StrategyNode(Node):
         if _total > 0 and ratio < agreement_threshold:
             return False, f"agreement_ratio({ratio:.2f}<{agreement_threshold:.2f})"
 
-        # 3. Weighted conviction
+        # 3. Weighted conviction — use per-direction regime-adaptive threshold.
+        # _apply_regime_adaptive_thresholds() sets these each cycle before the
+        # per-ticker loop so CRISIS → lower short bar, BULL → lower long bar.
         w_conv = self._compute_weighted_conviction(sig)
-        # In high-vol regime, use a tighter conviction threshold
-        conv_threshold = (
-            self._weighted_conviction_threshold * 1.5
-            if vol_regime == "high"
-            else self._weighted_conviction_threshold
+        base_threshold = (
+            self._long_conviction_threshold
+            if direction == "long"
+            else self._short_conviction_threshold
         )
+        # In high per-ticker vol regime, tighten by 1.25x (less aggressive than old 1.5x
+        # — regime-adaptive base already accounts for market-level volatility direction).
+        conv_threshold = base_threshold * 1.25 if vol_regime == "high" else base_threshold
         if abs(w_conv) < conv_threshold:
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
 
@@ -609,6 +673,12 @@ class StrategyNode(Node):
         """
         current_cycle = self._execution_count
 
+        # Set per-direction conviction thresholds based on current regime.
+        # CRISIS/BEAR → shorts get lower bar (0.05), longs get higher bar (0.20).
+        # BULL → longs get lower bar (0.05), shorts get higher bar (0.20).
+        # NORMAL → balanced (0.10 each).
+        self._apply_regime_adaptive_thresholds(signals)
+
         # Compute conviction for every ticker with a composite score
         # Skip metadata keys (_regime_probs, _regime_hmm, etc.)
         convictions: dict[str, ConvictionLevel] = {}
@@ -756,7 +826,7 @@ class StrategyNode(Node):
                 if _block_longs:
                     regime_blocked_longs += 1
                     continue
-                passes, reason = self._passes_conviction_filters(sig, current_cycle)
+                passes, reason = self._passes_conviction_filters(sig, current_cycle, direction="long")
                 if not passes:
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (long): %s", ticker, reason)
@@ -769,7 +839,7 @@ class StrategyNode(Node):
                 if _block_shorts:
                     regime_blocked_shorts += 1
                     continue
-                passes, reason = self._passes_conviction_filters(sig, current_cycle)
+                passes, reason = self._passes_conviction_filters(sig, current_cycle, direction="short")
                 if not passes:
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (short): %s", ticker, reason)
