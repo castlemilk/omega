@@ -62,6 +62,98 @@ interface RegimeStat {
   totalPnl: number;
 }
 
+// ── Signal profile computation from decision snapshots ────────────────────────
+
+interface DecisionSignalTrace {
+  signal_name: string;
+  raw_value: number;
+}
+
+interface DecisionPerTicker {
+  ticker: string;
+  signal_traces: DecisionSignalTrace[];
+  final_action: string; // TRADE | FILTERED | HOLD | SIT_OUT
+}
+
+interface DecisionPayloadLite {
+  per_ticker: Record<string, DecisionPerTicker>;
+}
+
+interface DecisionRowLite {
+  payload: DecisionPayloadLite;
+}
+
+async function fetchSignalProfiles(trades: Trade[]): Promise<SignalProfile[]> {
+  try {
+    const res = await fetch("/api/v1/dashboard/decisions?limit=200");
+    if (!res.ok) return [];
+    const json = await res.json();
+    const decisions: DecisionRowLite[] = json.decisions ?? [];
+    if (decisions.length === 0) return [];
+
+    // Build trade winner set by sym (case-insensitive), using most-recent PnL
+    const winnerByTicker: Record<string, boolean> = {};
+    for (const t of trades) {
+      const sym = t.sym.replace("/USDT", "").replace("USDT", "").toUpperCase();
+      // If multiple trades, use last seen (array is sorted newest-first)
+      if (!(sym in winnerByTicker)) {
+        winnerByTicker[sym] = t.pnl > 0;
+      }
+    }
+
+    // Aggregate signal values split by traded-winner vs traded-loser (from PnL)
+    // Fallback: if no PnL data available, split by TRADE vs HOLD/FILTERED action
+    const hasPnlData = Object.keys(winnerByTicker).length > 0;
+    const winnerSignals: Record<string, number[]> = {};
+    const loserSignals: Record<string, number[]> = {};
+
+    for (const dec of decisions) {
+      for (const td of Object.values(dec.payload.per_ticker)) {
+        if (td.signal_traces.length === 0) continue;
+        const sym = td.ticker.replace("/USDT", "").replace("USDT", "").toUpperCase();
+        let isWinner: boolean | null = null;
+
+        if (hasPnlData && sym in winnerByTicker) {
+          isWinner = winnerByTicker[sym];
+        } else if (!hasPnlData) {
+          // Proxy: TRADE = "winner", HOLD/FILTERED = "loser"
+          isWinner = td.final_action === "TRADE";
+        }
+
+        if (isWinner === null) continue;
+        const bucket = isWinner ? winnerSignals : loserSignals;
+        for (const trace of td.signal_traces) {
+          if (!bucket[trace.signal_name]) bucket[trace.signal_name] = [];
+          bucket[trace.signal_name].push(trace.raw_value);
+        }
+      }
+    }
+
+    const allSignals = new Set([...Object.keys(winnerSignals), ...Object.keys(loserSignals)]);
+    if (allSignals.size === 0) return [];
+
+    const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+
+    return [...allSignals].map((sig) => {
+      const wVals = winnerSignals[sig] ?? [];
+      const lVals = loserSignals[sig] ?? [];
+      const wAvg = wVals.length > 0 ? avg(wVals) : 0;
+      const lAvg = lVals.length > 0 ? avg(lVals) : 0;
+      // Correlation proxy: normalized difference
+      const range = Math.max(Math.abs(wAvg), Math.abs(lAvg), 0.001);
+      const correlation = Math.max(-1, Math.min(1, (wAvg - lAvg) / range));
+      return {
+        signal: sig.replace("_signal", "").replace(/_/g, "_").toUpperCase(),
+        winnerAvg: +wAvg.toFixed(3),
+        loserAvg: +lAvg.toFixed(3),
+        correlation: +correlation.toFixed(3),
+      };
+    }).sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+  } catch {
+    return [];
+  }
+}
+
 // ── Mock data ──────────────────────────────────────────────────────────────────
 
 function buildMockTrades(): Trade[] {
@@ -412,11 +504,12 @@ export default function TradeAnalysis() {
     setLoading(true);
 
     // Try victoria API, fall back to mock
+    let activeTrades: Trade[] = MOCK_TRADES;
     try {
       const tradesResult = await fetchTrades();
 
       if (!tradesResult.fromMock && tradesResult.trades.length > 0) {
-        const mapped: Trade[] = tradesResult.trades.map((t) => ({
+        activeTrades = tradesResult.trades.map((t) => ({
           ts: t.ts,
           sym: t.sym,
           side: t.side as "LONG" | "SHORT",
@@ -427,20 +520,23 @@ export default function TradeAnalysis() {
           slippage: t.slippage,
           duration: t.duration,
         }));
-        setTrades(mapped);
+        setTrades(activeTrades);
         setFromMock(false);
       } else {
         setTrades(MOCK_TRADES);
         setFromMock(true);
       }
-
-      // Signal profiles require winner/loser correlation with decision snapshots
-      // Fall back to mock profiles until that join is available from the API
-      setSignalProfiles(MOCK_SIGNAL_PROFILES);
     } catch {
       setTrades(MOCK_TRADES);
-      setSignalProfiles(MOCK_SIGNAL_PROFILES);
       setFromMock(true);
+    }
+
+    // Compute signal profiles from decision snapshot data (real when available)
+    try {
+      const realProfiles = await fetchSignalProfiles(activeTrades);
+      setSignalProfiles(realProfiles.length > 0 ? realProfiles : MOCK_SIGNAL_PROFILES);
+    } catch {
+      setSignalProfiles(MOCK_SIGNAL_PROFILES);
     }
 
     setLoading(false);

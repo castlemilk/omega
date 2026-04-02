@@ -553,12 +553,34 @@ function CycleListRow({ row, onClick }: { row: DecisionRow; onClick: () => void 
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 
+const REGIME_FILTERS = ["ALL", "BULL", "BEAR", "SIDEWAYS"] as const;
+const ACTION_FILTERS = ["ALL", "HAS_TRADES", "SIT_OUT", "NO_TRADES"] as const;
+type RegimeFilter = (typeof REGIME_FILTERS)[number];
+type ActionFilter = (typeof ACTION_FILTERS)[number];
+
+function applyFilters(
+  rows: DecisionRow[],
+  regime: RegimeFilter,
+  action: ActionFilter
+): DecisionRow[] {
+  return rows.filter((d) => {
+    const p = d.payload;
+    if (regime !== "ALL" && (p.regime || "").toUpperCase() !== regime) return false;
+    if (action === "HAS_TRADES" && p.n_trades === 0) return false;
+    if (action === "SIT_OUT" && (!p.sit_out_reason || p.sit_out_reason === "normal")) return false;
+    if (action === "NO_TRADES" && p.n_trades > 0) return false;
+    return true;
+  });
+}
+
 export default function DecisionTrace() {
   const [decisions, setDecisions] = useState<DecisionRow[]>([]);
   const [selected, setSelected] = useState<DecisionRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [limit, setLimit] = useState(50);
+  const [regimeFilter, setRegimeFilter] = useState<RegimeFilter>("ALL");
+  const [actionFilter, setActionFilter] = useState<ActionFilter>("ALL");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -676,21 +698,71 @@ export default function DecisionTrace() {
         </div>
       )}
 
-      {/* Cycle list */}
+      {/* Filter bar */}
       {decisions.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-3">
-            <Filter className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-xs text-gray-500">
-              {decisions.length} cycle{decisions.length !== 1 ? "s" : ""} — click to drill into the
-              reasoning chain
-            </span>
+        <div className="flex flex-wrap items-center gap-3 mb-4 px-1">
+          <div className="flex items-center gap-1.5">
+            <Filter className="w-3 h-3 text-gray-500" />
+            <span className="text-xs text-gray-500 font-medium">Regime</span>
+            <div className="flex gap-1">
+              {REGIME_FILTERS.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRegimeFilter(r)}
+                  className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+                    regimeFilter === r
+                      ? "bg-indigo-600 border-indigo-500 text-white"
+                      : "bg-surface-800 border-surface-600 text-gray-400 hover:text-white hover:border-surface-500"
+                  }`}
+                >
+                  {r === "ALL" ? "All" : r.charAt(0) + r.slice(1).toLowerCase()}
+                </button>
+              ))}
+            </div>
           </div>
-          {decisions.map((row) => (
-            <CycleListRow key={row.id} row={row} onClick={() => setSelected(row)} />
-          ))}
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-500 font-medium">Action</span>
+            <div className="flex gap-1">
+              {ACTION_FILTERS.map((a) => (
+                <button
+                  key={a}
+                  onClick={() => setActionFilter(a)}
+                  className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+                    actionFilter === a
+                      ? "bg-indigo-600 border-indigo-500 text-white"
+                      : "bg-surface-800 border-surface-600 text-gray-400 hover:text-white hover:border-surface-500"
+                  }`}
+                >
+                  {a === "ALL" ? "All" : a === "HAS_TRADES" ? "Has Trades" : a === "SIT_OUT" ? "Sit-Out" : "No Trades"}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Cycle list */}
+      {decisions.length > 0 && (() => {
+        const filtered = applyFilters(decisions, regimeFilter, actionFilter);
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs text-gray-500">
+                {filtered.length} of {decisions.length} cycle{decisions.length !== 1 ? "s" : ""} — click to drill into the
+                reasoning chain
+              </span>
+            </div>
+            {filtered.length === 0 && (
+              <p className="text-sm text-gray-500 italic py-4 text-center">
+                No cycles match the current filters.
+              </p>
+            )}
+            {filtered.map((row) => (
+              <CycleListRow key={row.id} row={row} onClick={() => setSelected(row)} />
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

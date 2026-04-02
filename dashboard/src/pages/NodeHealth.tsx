@@ -60,6 +60,40 @@ interface Alert {
   triggered_at: string;
 }
 
+// ── REST dashboard node shape ──────────────────────────────────────────────────
+
+interface DashNode {
+  id: string;
+  name: string;
+  strategy: string;
+  status: string;
+  health_score: number;
+  health_state: string;
+  last_heartbeat: string;
+  last_execution: string;
+  performance: {
+    avg_duration_ms: number;
+    success_rate: number;
+    total_executions: number;
+  };
+}
+
+function dashNodeToSnapshot(n: DashNode): NodeSnapshot {
+  return {
+    nodeId: n.id,
+    name: n.name,
+    version: n.strategy || "",
+    health: n.health_score || n.performance?.success_rate || 0,
+    status: n.health_state || n.status || "unknown",
+    avgLatencyMs: n.performance?.avg_duration_ms ?? 0,
+    p95LatencyMs: 0,
+    errorRate: Math.max(0, 1 - (n.performance?.success_rate ?? 1)),
+    executionsTotal: n.performance?.total_executions ?? 0,
+    improvementCount: 0,
+    lastUpdated: n.last_heartbeat || n.last_execution || undefined,
+  };
+}
+
 // ── Mock data ──────────────────────────────────────────────────────────────────
 
 const MOCK_NODES: NodeSnapshot[] = [
@@ -410,7 +444,8 @@ export default function NodeHealth() {
   const load = useCallback(async () => {
     setLoading(true);
 
-    // Try Connect-RPC first, fall back to mock
+    // 1. Try Connect-RPC first
+    let gotReal = false;
     try {
       const res = await client.listNodes({});
       const mapped: NodeSnapshot[] = res.nodes.map((n) => ({
@@ -434,11 +469,31 @@ export default function NodeHealth() {
       if (mapped.length > 0) {
         setNodes(mapped);
         setFromMock(false);
-      } else {
-        setNodes(MOCK_NODES);
-        setFromMock(true);
+        gotReal = true;
       }
     } catch {
+      // fall through to REST
+    }
+
+    // 2. Fall back to REST dashboard endpoint
+    if (!gotReal) {
+      try {
+        const r = await fetch(`${BASE}/api/v1/dashboard/nodes`);
+        if (r.ok) {
+          const json: DashNode[] = await r.json();
+          if (json.length > 0) {
+            setNodes(json.map(dashNodeToSnapshot));
+            setFromMock(false);
+            gotReal = true;
+          }
+        }
+      } catch {
+        // fall through to mock
+      }
+    }
+
+    // 3. Last resort: mock
+    if (!gotReal) {
       setNodes(MOCK_NODES);
       setFromMock(true);
     }
