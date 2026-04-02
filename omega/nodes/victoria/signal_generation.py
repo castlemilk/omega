@@ -23,7 +23,6 @@ import uuid
 from typing import Any
 
 from omega.core.actions import NodeAction
-from omega.core.decision_snapshot import SignalTrace
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
@@ -34,30 +33,27 @@ def _safe_mean(values: list[float | None], n: int) -> float | None:
     return sum(clean) / len(clean) if clean else None
 
 
-def _momentum_composite(directional: list[float], prices: list[float]) -> float:
+def _balanced_composite(directional: list[float]) -> float:
     """
-    Momentum-weighted composite signal.
+    Balanced composite signal using a trimmed mean.
 
-    Signals that agree with the recent 5-day price direction receive 2x weight;
-    counter-trend signals receive 1x weight.  This prevents mean-reversion
-    signals (RSI, BB) from fully cancelling trend signals (SMA, MACD) in
-    ranging or weakly-trending markets, producing near-zero composites that
-    never escape the HOLD zone.
+    Equal treatment of all sub-signals regardless of recent price direction.
+    Trimming the top/bottom 20% removes outlier signals that would skew the
+    composite without adding directional information.
 
-    In truly flat markets (recent_dir=0 or zero net price change) falls back
-    to a simple mean — the market should correctly be HOLD in that case.
+    Previous approach (momentum-weighted 2x/1x) created a structural bias:
+    in a bear market, bearish signals got 2x weight, pushing all composites
+    negative and preventing long trades regardless of per-ticker oversold
+    conditions. A symmetric aggregation lets each ticker's signal mix determine
+    direction independently.
     """
     if not directional:
         return 0.0
-    if len(prices) >= 6 and prices[-6] != 0:
-        recent_dir = 1.0 if prices[-1] > prices[-6] else -1.0
-    else:
-        recent_dir = 0.0
-    if recent_dir == 0.0:
+    if len(directional) < 4:
         return sum(directional) / len(directional)
-    wsum = sum(v * (2.0 if v * recent_dir > 0.0 else 1.0) for v in directional)
-    wtotal = sum(2.0 if v * recent_dir > 0.0 else 1.0 for v in directional)
-    return wsum / wtotal if wtotal > 0 else 0.0
+    n_trim = max(1, len(directional) // 5)
+    trimmed = sorted(directional)[n_trim:-n_trim]
+    return sum(trimmed) / len(trimmed) if trimmed else sum(directional) / len(directional)
 
 
 class SignalGenerationNode(Node):
@@ -80,11 +76,6 @@ class SignalGenerationNode(Node):
         self._macd_fast = 12
         self._macd_slow = 26
         self._macd_signal_period = 9
-        # V39: SMA-only. Multi-signal ensemble (V37/V38) pulled composites into
-        # HOLD zone (77-83% HOLD) because MACD/btc_beta/zscore offset SMA in a
-        # mixed-signal environment. V36 SMA-only had PF=1.62, WR=26.5%, +$76 with
-        # 50% trades blocked by time_filter. V39 restores SMA-only to recover that
-        # signal quality while the time_filter is now fully disabled (< 0).
         self._use_rsi = False
         self._use_macd = False
         self._use_bb = False
@@ -97,8 +88,6 @@ class SignalGenerationNode(Node):
         self._total_latency_ms = 0.0
         self._signals_generated = 0
         self._last_signal_coverage = 0.0
-        # Populated each call to _compute_all_signals; keyed by ticker
-        self._last_signal_traces: dict[str, list[SignalTrace]] = {}
 
     # ------------------------------------------------------------------ Node interface
 
@@ -248,152 +237,8 @@ class SignalGenerationNode(Node):
 
     # ------------------------------------------------------------------ signal computation
 
-    @staticmethod
-    def _build_traces_from_ts(ts: dict[str, Any]) -> list[SignalTrace]:
-        """
-        Build SignalTrace records from an already-computed ticker signal dict.
-
-        Called after all signals are computed for a ticker so the raw indicator
-        values (rsi, macd, bb_upper, etc.) are available alongside the signal values.
-        """
-        traces: list[SignalTrace] = []
-
-        # SMA crossover
-        if "sma_crossover" in ts:
-            sma_s = ts.get("sma_short")
-            sma_l = ts.get("sma_long")
-            v = ts["sma_crossover"]
-            direction = "bullish" if v > 0 else ("bearish" if v < 0 else "neutral")
-            if sma_s is not None and sma_l is not None:
-                ratio = (sma_s - sma_l) / sma_l if sma_l != 0 else 0.0
-                rationale = (
-                    f"SMA_short={sma_s:.4f} vs SMA_long={sma_l:.4f} "
-                    f"ratio={ratio:+.4f} → {direction} {v:+.3f}"
-                )
-                inputs: dict[str, Any] = {"sma_short": sma_s, "sma_long": sma_l, "ratio": ratio}
-            else:
-                rationale = f"SMA crossover → {direction} {v:+.3f}"
-                inputs = {}
-            traces.append(SignalTrace("sma_crossover", v, rationale, inputs))
-
-        # RSI
-        if "rsi_signal" in ts:
-            rsi = ts.get("rsi")
-            v = ts["rsi_signal"]
-            if rsi is not None:
-                if rsi < 30:
-                    condition = f"oversold (RSI={rsi:.1f} < 30)"
-                elif rsi > 70:
-                    condition = f"overbought (RSI={rsi:.1f} > 70)"
-                else:
-                    condition = f"neutral (RSI={rsi:.1f})"
-                rationale = f"RSI={rsi:.1f} {condition} → {v:+.3f}"
-                inputs = {"rsi": rsi, "oversold_threshold": 30, "overbought_threshold": 70}
-            else:
-                rationale = f"RSI signal → {v:+.3f}"
-                inputs = {}
-            traces.append(SignalTrace("rsi_signal", v, rationale, inputs))
-
-        # MACD
-        if "macd_crossover" in ts:
-            macd = ts.get("macd")
-            sig_line = ts.get("macd_signal_line")
-            v = ts["macd_crossover"]
-            if macd is not None and sig_line is not None:
-                hist = macd - sig_line
-                direction = "bullish" if hist > 0 else "bearish"
-                rationale = (
-                    f"MACD={macd:.5f} vs signal={sig_line:.5f} "
-                    f"hist={hist:+.5f} → {direction} {v:+.3f}"
-                )
-                inputs = {"macd": macd, "signal_line": sig_line, "histogram": hist}
-            else:
-                rationale = f"MACD crossover → {v:+.3f}"
-                inputs = {}
-            traces.append(SignalTrace("macd_crossover", v, rationale, inputs))
-
-        # Bollinger Bands
-        if "bb_signal" in ts:
-            price = ts.get("price")
-            bb_mid = ts.get("bb_mid")
-            bb_upper = ts.get("bb_upper")
-            bb_lower = ts.get("bb_lower")
-            v = ts["bb_signal"]
-            if price is not None and bb_mid is not None and bb_upper is not None:
-                band_half = bb_upper - bb_mid
-                bb_pos = (price - bb_mid) / band_half if band_half != 0 else 0.0
-                if bb_pos < -0.5:
-                    position_desc = f"near lower band (bb_pos={bb_pos:.2f})"
-                elif bb_pos > 0.5:
-                    position_desc = f"near upper band (bb_pos={bb_pos:.2f})"
-                else:
-                    position_desc = f"mid-band (bb_pos={bb_pos:.2f})"
-                rationale = f"Price={price:.4f} {position_desc} mid={bb_mid:.4f} → {v:+.3f}"
-                inputs = {
-                    "price": price,
-                    "bb_mid": bb_mid,
-                    "bb_upper": bb_upper,
-                    "bb_lower": bb_lower,
-                    "bb_pos": bb_pos,
-                }
-            else:
-                rationale = f"BB position → {v:+.3f}"
-                inputs = {}
-            traces.append(SignalTrace("bb_signal", v, rationale, inputs))
-
-        # Z-score momentum
-        if "zscore_signal" in ts:
-            zscore = ts.get("zscore")
-            v = ts["zscore_signal"]
-            if zscore is not None:
-                direction = "momentum" if zscore > 0 else "mean-reversion"
-                rationale = f"Z-score={zscore:.2f} ({direction}) → {v:+.3f}"
-                inputs = {"zscore": zscore}
-            else:
-                rationale = f"Z-score signal → {v:+.3f}"
-                inputs = {}
-            traces.append(SignalTrace("zscore_signal", v, rationale, inputs))
-
-        # Volume signal
-        if "volume_signal" in ts:
-            vol_z = ts.get("volume_zscore")
-            sma_dir = ts.get("sma_crossover", 0.0)
-            v = ts["volume_signal"]
-            if vol_z is not None:
-                price_dir = "up" if sma_dir > 0 else "down"
-                rationale = f"Volume_z={vol_z:.2f} with price trending {price_dir} → {v:+.3f}"
-                inputs = {"volume_zscore": vol_z, "price_direction": sma_dir}
-            else:
-                rationale = f"Volume signal → {v:+.3f}"
-                inputs = {}
-            traces.append(SignalTrace("volume_signal", v, rationale, inputs))
-
-        # Volatility regime
-        if "vol_regime_signal" in ts:
-            regime = ts.get("vol_regime", "unknown")
-            recent_vol = ts.get("recent_vol_ann", 0.0)
-            long_vol = ts.get("long_vol_ann", 0.0)
-            v = ts["vol_regime_signal"]
-            rationale = (
-                f"Vol_regime={regime} (recent_ann={recent_vol:.3f} "
-                f"long_ann={long_vol:.3f}) → {v:+.3f}"
-            )
-            inputs = {"vol_regime": regime, "recent_vol_ann": recent_vol, "long_vol_ann": long_vol}
-            traces.append(SignalTrace("vol_regime_signal", v, rationale, inputs))
-
-        # BTC beta signal
-        if "btc_beta_signal" in ts:
-            beta = ts.get("btc_beta", 0.0)
-            v = ts["btc_beta_signal"]
-            rationale = f"BTC_beta={beta:.2f} x BTC_composite → amplified_signal {v:+.3f}"
-            inputs = {"btc_beta": beta}
-            traces.append(SignalTrace("btc_beta_signal", v, rationale, inputs))
-
-        return traces
-
     def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
-        self._last_signal_traces = {}
 
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
@@ -471,9 +316,13 @@ class SignalGenerationNode(Node):
                 vol_z = self._compute_zscore_series(vols, 20)
                 if vol_z is not None:
                     ts["volume_zscore"] = vol_z
-                    # High volume z-score in direction of price = momentum confirmation
-                    price_dir = 1.0 if ts.get("sma_crossover", 0) > 0 else -1.0
-                    ts["volume_signal"] = min(1.0, max(-1.0, vol_z / 2.0)) * price_dir
+                    # Volume z-score as a standalone mean-reversion signal:
+                    # unusually high volume → price likely to revert → bearish bias
+                    # unusually low volume → low conviction move → mild bullish bias
+                    # NOT tied to SMA direction; that coupling amplified any existing
+                    # directional bias (in a down-SMA market, high vol became doubly
+                    # bearish, in an up-SMA market, low vol became doubly bullish).
+                    ts["volume_signal"] = max(-1.0, min(1.0, -vol_z / 2.0))
 
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
@@ -481,53 +330,22 @@ class SignalGenerationNode(Node):
                 ts["vol_regime"] = regime  # "high" | "normal" | "low"
                 ts["recent_vol_ann"] = recent_vol
                 ts["long_vol_ann"] = long_vol
-                # Vol regime signal: high-vol is bearish (IC -0.389), low-vol slightly bullish.
-                # Symmetric so it does not create a directional bias by itself.
-                if regime == "high":
-                    ts["vol_regime_signal"] = -0.2
-                elif regime == "low":
+                # Vol regime signal: only fire in low-vol (mean-reversion opportunity).
+                # High vol does NOT produce a directional signal — it's a risk
+                # management cue handled by the sit-out filter, not a bearish signal.
+                # Adding -0.2 for every high-vol period created a structural bearish
+                # tilt since crypto is almost always in "high vol".
+                if regime == "low":
                     ts["vol_regime_signal"] = 0.1
-                # "normal": no signal added (neutral, does not shift composite)
+                # "high" and "normal": no directional signal (sit-out handles risk)
 
-            # Composite signal: momentum-weighted mean of all directional signals.
-            # Direction-aligned signals get 2x weight; counter-trend signals get 1x.
+            # Composite signal: trimmed mean of all directional signals.
+            # Equal weighting prevents directional bias (see _balanced_composite).
             directional = [
                 v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
             ]
             if directional:
-                ts["composite"] = _momentum_composite(directional, prices)
-
-            # Trend-adaptive dampening: in strong directional trends, mean-reversion
-            # signals (RSI, BB) become deeply oversold/overbought but the trend persists.
-            # Dampening prevents them from cancelling trend signals and collapsing the
-            # composite toward HOLD when there is a clear directional opportunity.
-            _sma_dir = ts.get("sma_crossover", 0.0)
-            _trend_str = abs(_sma_dir)
-            if _trend_str > 0.5:
-                # Dampen factor: 1.0 at strength=0.5 → 0.3 at strength=1.0.
-                # Floor at 0.3 (not 0.0) so mean-reversion signals are reduced
-                # but never eliminated.  RSI/BB differ between tickers even in
-                # a uniform downtrend (some are more oversold than others), and
-                # zeroing them out collapses all composites to the same value,
-                # which is the root cause of the rank-staircase pattern.
-                _dampen = max(0.3, 1.0 - (_trend_str - 0.5) * 2.0)
-                _changed = False
-                if _sma_dir < 0:  # downtrend: dampen bullish (positive) mean-reversion
-                    for _mr in ("rsi_signal", "bb_signal"):
-                        if ts.get(_mr, 0.0) > 0:
-                            ts[_mr] = ts[_mr] * _dampen
-                            _changed = True
-                else:  # uptrend: dampen bearish (negative) mean-reversion
-                    for _mr in ("rsi_signal", "bb_signal"):
-                        if ts.get(_mr, 0.0) < 0:
-                            ts[_mr] = ts[_mr] * _dampen
-                            _changed = True
-                if _changed:
-                    _dir2 = [
-                        v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
-                    ]
-                    if _dir2:
-                        ts["composite"] = _momentum_composite(_dir2, prices)
+                ts["composite"] = _balanced_composite(directional)
 
             ts["price"] = prices[-1] if prices else None
             ts["ticker"] = ticker
@@ -567,9 +385,38 @@ class SignalGenerationNode(Node):
                             if k.endswith("_signal") or k == "sma_crossover"
                         ]
                         if dir_vals:
-                            ts["composite"] = _momentum_composite(dir_vals, asset_prices)
+                            ts["composite"] = _balanced_composite(dir_vals)
 
-        # Debug: log composite spread so we can verify cross-ticker differentiation
+        # Cross-sectional demeaning: subtract the basket mean from every composite so
+        # each ticker's score reflects its RELATIVE position within the basket, not the
+        # absolute market direction.
+        #
+        # Why this matters: when MACD or SMA are structurally negative for all tickers
+        # (e.g. a sustained bear trend), the untreated mean composite can be -0.3 across
+        # all 10 assets.  Every ticker then gets SELL conviction and the system produces
+        # 0 longs / N shorts — it can never buy relative outperformers.  Demeaning shifts
+        # the best performer to composite > 0 (long candidate) and the worst to composite
+        # < 0 (short candidate), making the strategy market-neutral by construction and
+        # guaranteeing directional balance across any basket of ≥ 3 tickers.
+        _cs_raw = [
+            (t, s)
+            for t, s in signals.items()
+            if isinstance(s, dict) and "composite" in s and not t.startswith("_")
+        ]
+        if len(_cs_raw) >= 3:
+            _cs_vals = [s["composite"] for _, s in _cs_raw]
+            _basket_mean = sum(_cs_vals) / len(_cs_vals)
+            for _t, _ts in _cs_raw:
+                _ts["composite"] = _ts["composite"] - _basket_mean
+            _demeaned = [s["composite"] for _, s in _cs_raw]
+            logger.debug(
+                "cross-sectional demean: basket_mean=%.3f → demeaned range=[%.3f, %.3f]",
+                _basket_mean,
+                min(_demeaned),
+                max(_demeaned),
+            )
+
+        # Log composite spread for monitoring
         _composites = [
             (t, s.get("composite", 0.0))
             for t, s in signals.items()
@@ -587,16 +434,6 @@ class SignalGenerationNode(Node):
                 min(_vals),
                 max(_vals),
             )
-
-        # Build signal traces after all signals (including BTC beta) are finalised.
-        # Store both in self._last_signal_traces (for external access) and as
-        # ts["_traces"] so strategy.py can embed them in TickerDecision objects
-        # without needing a reference back to this node.
-        for ticker, ts in signals.items():
-            if not ticker.startswith("_"):
-                traces = self._build_traces_from_ts(ts)
-                self._last_signal_traces[ticker] = traces
-                ts["_traces"] = traces  # embedded for strategy.py
 
         return signals
 
