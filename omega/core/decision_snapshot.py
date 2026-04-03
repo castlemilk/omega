@@ -111,6 +111,13 @@ class TickerDecision:
     filter_reason: str = ""
     """If FILTERED: the specific gate that blocked, e.g. 'agreement_ratio(0.45<0.60)'"""
 
+    # V45 relative conviction thresholds (scaled to basket std each cycle)
+    conviction_threshold_buy: float = 0.0
+    """Demeaned composite must exceed this for BUY conviction (= 0.5 * basket_std)."""
+
+    conviction_threshold_sell: float = 0.0
+    """Demeaned composite must be below this for SELL conviction (= -0.5 * basket_std)."""
+
 
 # ---------------------------------------------------------------------------
 # DecisionSnapshot — one cycle's full decision context
@@ -340,6 +347,8 @@ def build_ticker_decision(
     filters_applied: list[str],
     final_action: str,
     filter_reason: str = "",
+    conviction_threshold_buy: float = 0.0,
+    conviction_threshold_sell: float = 0.0,
 ) -> TickerDecision:
     """Convenience constructor — computes demeaned_composite automatically."""
     return TickerDecision(
@@ -354,4 +363,6 @@ def build_ticker_decision(
         filters_applied=filters_applied,
         final_action=final_action,
         filter_reason=filter_reason,
+        conviction_threshold_buy=conviction_threshold_buy,
+        conviction_threshold_sell=conviction_threshold_sell,
     )

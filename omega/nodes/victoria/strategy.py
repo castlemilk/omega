@@ -20,6 +20,7 @@ from enum import IntEnum
 from typing import Any
 
 from omega.core.actions import NodeAction
+from omega.core.decision_snapshot import SignalTrace, TickerDecision
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.risk_manager import PositionRiskManager
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
@@ -154,6 +155,9 @@ class StrategyNode(Node):
         # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
         self._vol_low_threshold: float = 0.20  # percentile below which vol is "dead-calm"
         self._vol_high_threshold: float = 0.80  # percentile above which vol is "chaotic"
+
+        # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
+        self._last_ticker_decisions: dict[str, TickerDecision] = {}
 
         # --- Spectral graph / Fiedler position size modifier ---
         self._spectral = SpectralGraphSignal(window=30)
@@ -675,6 +679,7 @@ class StrategyNode(Node):
           - Time filter: no new positions within 2 cycles of last trade
         """
         current_cycle = self._execution_count
+        self._last_ticker_decisions = {}  # reset each cycle
 
         # Set per-direction conviction thresholds based on current regime.
         # CRISIS/BEAR → shorts get lower bar (0.05), longs get higher bar (0.20).
@@ -1087,6 +1092,130 @@ class StrategyNode(Node):
 
         # Also run a quick backtest
         bt = self._backtest(signals, market_data)
+
+        # ── Build per-ticker decision traces for full tensor observability ──
+        # Done before updating _last_trade_cycle so time-filter check is consistent.
+        # _raw_composite / _basket_mean are stored by signal_generation.py before demeaning.
+        _buy_threshold_raw = 0.2 / _cs_norm  # composite > this → BUY conviction
+        _ticker_decisions: dict[str, TickerDecision] = {}
+        for _td_ticker, _td_sig in signals.items():
+            if _td_ticker.startswith("_") or _td_ticker.startswith("adv_") or not isinstance(_td_sig, dict):
+                continue
+            if "composite" not in _td_sig:
+                continue
+
+            _td_signal_traces = [
+                SignalTrace(
+                    signal_name=_k,
+                    raw_value=float(_td_sig[_k]),
+                    rationale_text="",
+                    inputs_used={
+                        ik: _td_sig[ik]
+                        for ik in (
+                            # include the raw indicator values for context
+                            {"sma_crossover": ["sma_short", "sma_long"],
+                             "rsi_signal": ["rsi"],
+                             "macd_crossover": ["macd", "macd_signal_line"],
+                             "bb_signal": ["bb_upper", "bb_lower", "bb_mid"],
+                             "zscore_signal": ["zscore"],
+                             "volume_signal": ["volume_zscore"],
+                             "btc_beta_signal": ["btc_beta"],
+                             "vol_regime_signal": ["vol_regime", "recent_vol_ann"],
+                            }.get(_k, [])
+                        )
+                        if ik in _td_sig and isinstance(_td_sig[ik], (int, float, str))
+                    },
+                )
+                for _k, _v in _td_sig.items()
+                if (_k.endswith("_signal") or _k == "sma_crossover") and isinstance(_v, (int, float))
+            ]
+
+            _td_demeaned = float(_td_sig.get("composite", 0.0))
+            _td_raw = float(_td_sig.get("_raw_composite", _td_demeaned))
+            _td_bm = float(_td_sig.get("_basket_mean", 0.0))
+            _td_c = convictions.get(_td_ticker, ConvictionLevel.HOLD)
+            _td_filters: list[str] = []
+            _td_proposal = "NONE"
+            _td_final = "HOLD"
+            _td_reason = ""
+
+            if _td_ticker in _TRADING_BLACKLIST:
+                _td_filters.append("blacklist:skip")
+                _td_final = "HOLD"
+                _td_reason = "blacklist"
+            elif _td_c == ConvictionLevel.HOLD:
+                _td_filters.append(f"conviction_gate:hold(score={_td_demeaned * _cs_norm:.3f})")
+            elif _td_c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
+                if _td_ticker in _LONG_BLACKLIST:
+                    _td_filters.append("long_blacklist:skip")
+                    _td_final = "FILTERED"
+                    _td_reason = "long_blacklist"
+                elif _td_demeaned <= self._signal_threshold:
+                    _td_filters.append(f"signal_threshold:skip(composite={_td_demeaned:.4f}<={self._signal_threshold:.4f})")
+                    _td_final = "FILTERED"
+                    _td_reason = "signal_threshold"
+                else:
+                    _td_proposal = "LONG"
+                    if _block_longs:
+                        _td_filters.append(f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})")
+                        _td_final = "FILTERED"
+                        _td_reason = f"regime_block({_regime_hmm})"
+                    else:
+                        _td_passes, _td_filter_reason = self._passes_conviction_filters(
+                            _td_sig, current_cycle, "long"
+                        )
+                        if not _td_passes:
+                            _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
+                            _td_final = "FILTERED"
+                            _td_reason = _td_filter_reason
+                        else:
+                            _td_filters.append("conviction_filters:pass")
+                            _td_final = "TRADE" if _td_ticker in weights else "FILTERED"
+                            if _td_final == "FILTERED":
+                                _td_reason = "position_limit"
+            elif _td_c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
+                if _td_demeaned >= -self._signal_threshold:
+                    _td_filters.append("signal_threshold:skip")
+                    _td_final = "FILTERED"
+                    _td_reason = "signal_threshold"
+                else:
+                    _td_proposal = "SHORT"
+                    if _block_shorts:
+                        _td_filters.append(f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})")
+                        _td_final = "FILTERED"
+                        _td_reason = f"regime_block({_regime_hmm})"
+                    else:
+                        _td_passes, _td_filter_reason = self._passes_conviction_filters(
+                            _td_sig, current_cycle, "short"
+                        )
+                        if not _td_passes:
+                            _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
+                            _td_final = "FILTERED"
+                            _td_reason = _td_filter_reason
+                        else:
+                            _td_filters.append("conviction_filters:pass")
+                            _td_final = "TRADE" if _td_ticker in weights else "FILTERED"
+                            if _td_final == "FILTERED":
+                                _td_reason = "position_limit"
+
+            _ticker_decisions[_td_ticker] = TickerDecision(
+                ticker=_td_ticker,
+                signal_traces=_td_signal_traces,
+                raw_composite=_td_raw,
+                basket_mean=_td_bm,
+                demeaned_composite=_td_demeaned,
+                conviction=_td_c.name,
+                conviction_score=_td_demeaned * _cs_norm,
+                conviction_threshold_buy=_buy_threshold_raw,
+                conviction_threshold_sell=-_buy_threshold_raw,
+                proposal=_td_proposal,
+                filters_applied=_td_filters,
+                final_action=_td_final,
+                filter_reason=_td_reason,
+            )
+
+        self._last_ticker_decisions = _ticker_decisions
+        # ── end decision traces ──────────────────────────────────────────────
 
         # Record cycle as having produced trades (for time filter)
         if weights:

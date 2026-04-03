@@ -407,6 +407,8 @@ class SignalGenerationNode(Node):
             _cs_vals = [s["composite"] for _, s in _cs_raw]
             _basket_mean = sum(_cs_vals) / len(_cs_vals)
             for _t, _ts in _cs_raw:
+                _ts["_raw_composite"] = _ts["composite"]  # preserve pre-demean value
+                _ts["_basket_mean"] = _basket_mean
                 _ts["composite"] = _ts["composite"] - _basket_mean
             _demeaned = [s["composite"] for _, s in _cs_raw]
             logger.debug(
