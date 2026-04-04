@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 omega.nodes.victoria.strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -9,13 +10,15 @@ Improvement arc:
   v1.2 — Risk-parity-weighted portfolio (weight ∝ 1/volatility)
   v1.3 — Signal threshold tuning based on backtest Sharpe feedback
   v1.4 — Relative conviction thresholds: scale by basket composite std (V45)
+  v1.5 — Lower conviction multiplier 0.5σ→0.3σ, floor 0.005→0.010 (V48)
 """
 
 import logging
 import math
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+UTC = timezone.utc
 from enum import IntEnum
 from typing import Any
 
@@ -704,11 +707,12 @@ class StrategyNode(Node):
             )
         else:
             _basket_std = 0.20  # fallback: no rescaling
-        _basket_std = max(_basket_std, 0.005)  # floor prevents degenerate rescaling
+        _basket_std = max(_basket_std, 0.010)  # floor prevents degenerate rescaling (V48: 0.005→0.010)
 
         # Normalisation factor: composite × _cs_norm before score_to_conviction so that
-        # ±0.5σ → ±0.20 (BUY/SELL boundary) and ±1.5σ → ±0.60 (STRONG_BUY/SELL).
-        _cs_norm = 0.4 / _basket_std
+        # ±0.3σ → ±0.20 (BUY/SELL boundary) and ±0.9σ → ±0.60 (STRONG_BUY/SELL).
+        # V48: widened bands from 0.5σ→0.3σ to reduce HOLD cycles (V47 had 66% HOLD).
+        _cs_norm = 0.20 / (0.3 * _basket_std)
 
         # Scale secondary gate thresholds by the same factor (preserves regime ratios).
         _thresh_scale = _basket_std / 0.20
