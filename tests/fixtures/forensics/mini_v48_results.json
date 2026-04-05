@@ -1,0 +1,9 @@
+{
+  "version": "mini_v48",
+  "run": {"date": "2026-04-04T00:00:00+00:00", "cycles": 10, "sleep_seconds": 1.0, "elapsed_s": 10, "avg_cycle_s": 1.0, "cg_key_used": false, "db_url_used": false},
+  "preflight": {"ok": true, "warnings": []},
+  "intelligence": {"improve_calls": 0, "semantic_patterns_db": 0, "semantic_patterns_node": 0},
+  "observability": {"metrics_jsonl": "/tmp/mini_v48.jsonl", "total_zero_trade_cycles": 7, "max_zero_streak": 4, "ring1_pass_rate_final": 1.0, "conviction_filter_rate": 0.58, "circuit_breaker_trips": 0, "final_vol_low_threshold": 0.2},
+  "filters": {"stale_data": 0, "vol_low": 0, "vol_high": 0, "regime_uncertain": 0, "normal": 10},
+  "trades": {"total_closed": 2, "long_trades": 1, "short_trades": 1, "open_positions": 0, "win_rate": 0.5, "total_pnl_usd": 15.0, "realised_pnl_engine": 15.0, "gross_profit": 20.0, "gross_loss": 5.0, "profit_factor": 4.0}
+}

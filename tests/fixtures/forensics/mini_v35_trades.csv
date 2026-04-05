@@ -1,0 +1,7 @@
+cycle,timestamp,symbol,side,size,entry_price,exit_price,pnl,slippage,hold_cycles,conviction,regime,sit_out_reason
+1,2026-04-01T00:00:01+00:00,BTCUSDT,long,100,40000,40500,50.0,0,2,0.35,bull,normal
+2,2026-04-01T00:00:02+00:00,ETHUSDT,long,100,2000,2030,30.0,0,2,0.28,bull,normal
+3,2026-04-01T00:00:03+00:00,BTCUSDT,short,100,40500,40200,30.0,0,2,0.31,chop,normal
+4,2026-04-01T00:00:04+00:00,SOLUSDT,long,100,100,101,10.0,0,2,0.22,bull,normal
+5,2026-04-01T00:00:05+00:00,ETHUSDT,short,100,2030,2025,-5.0,0,2,0.19,bear,normal
+6,2026-04-01T00:00:06+00:00,BTCUSDT,long,100,40200,40260,5.0,0,2,0.18,chop,normal
