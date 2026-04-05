@@ -1,0 +1,2337 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-04-05T15:22:32.671162+00:00",
+  "status": "ok",
+  "baselines": {
+    "v35": {
+      "version": "v35_extended",
+      "pnl": 159.24,
+      "trades": 249,
+      "win_rate": 0.245,
+      "long_trades": 0,
+      "short_trades": 249,
+      "profit_factor": 1.357,
+      "zero_trade_cycles": 290,
+      "conviction_filter_rate": 0.499001996007984,
+      "source": "data/v35_extended_results.json"
+    },
+    "v48": {
+      "version": "v48",
+      "pnl": 31.97,
+      "trades": 103,
+      "win_rate": 0.3107,
+      "long_trades": 69,
+      "short_trades": 34,
+      "profit_factor": 1.34,
+      "zero_trade_cycles": 115,
+      "conviction_filter_rate": 0.5828524046434495,
+      "source": "data/v48_results.json"
+    }
+  },
+  "conviction_histogram": {
+    "v35": {
+      "hold_threshold": 0.2,
+      "trade_band_count": 0,
+      "hold_band_count": 249,
+      "trade_band_pct": 0.0,
+      "hold_band_pct": 1.0,
+      "min_conviction": 0.08333333333333333,
+      "max_conviction": 0.09999999999999999,
+      "mean_conviction": 0.08393574297188755
+    },
+    "v48": {
+      "hold_threshold": 0.2,
+      "trade_band_count": 0,
+      "hold_band_count": 103,
+      "trade_band_pct": 0.0,
+      "hold_band_pct": 1.0,
+      "min_conviction": 0.052320833605539956,
+      "max_conviction": 0.1,
+      "mean_conviction": 0.06500742800302674
+    }
+  },
+  "signal_contribution_delta_proxy": {
+    "per_symbol": {
+      "LINKUSDT": 10.611699999999999,
+      "MATICUSDT": 0.0,
+      "ADAUSDT": -93.48459999999999,
+      "ETHUSDT": -0.3360000000000014,
+      "DOTUSDT": -44.067600000000006
+    },
+    "per_side": {
+      "long": 10.275699999999999,
+      "short": -137.5521999999999
+    },
+    "note": "Phase 1 proxy \u2014 per-symbol PnL delta, not per-signal weight delta."
+  },
+  "skipped_trades": [
+    {
+      "cycle": 6,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 6,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 11.9142,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 7,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 15.4799,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 10,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 11,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 7.9523,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 12,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -7.7519,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 15,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.9793,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 16,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 17,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.09999999999999999,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 18,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3174,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 22,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 24,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.4599,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 25,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -9.9562,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 30,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 32,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4549,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 32,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.6295,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 37,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 40,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 41,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3161,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 44,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.4599,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 46,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 9.9522,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 48,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 50,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4549,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 52,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 56,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3214,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 57,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.4599,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 58,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 61,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3201,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 64,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4549,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 66,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 67,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.6428,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 71,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 16.5937,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 73,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 74,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.47,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 76,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 78,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.6507,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 80,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.475,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 82,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 84,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 84,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 89,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 90,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 93,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.6507,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 95,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -12.9601,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 95,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 96,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.328,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 100,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 9.98,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 102,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -12.94,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 102,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 105,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.6613,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 106,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4599,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 107,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 108,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 112,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.6667,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 113,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 19.3949,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 114,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 117,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 118,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 123,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 123,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.336,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 126,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -19.4401,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 127,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 16.6867,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 130,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 131,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -19.3949,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 133,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.6881,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 135,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 138,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.6827,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 140,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4499,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 142,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 145,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 12.9099,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 146,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.6881,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 147,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 151,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 10.0402,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 152,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 153,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 156,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3508,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 157,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 160,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 12.9299,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 162,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 16.7471,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 164,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 164,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 19.425,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 168,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 13.4246,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 168,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 170,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 173,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 176,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 176,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -19.4704,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 179,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 182,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 182,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 183,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.475,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 189,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 32.4002,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 189,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 190,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 20.1613,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 193,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 194,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 196,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -10.1051,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 200,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5053,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 200,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 200,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3643,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 205,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.5003,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 205,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.7259,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 208,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 208,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -13.0107,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 210,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3656,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 212,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 214,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 215,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 218,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -10.0929,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 219,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 222,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 222,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 225,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 228,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 229,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.4901,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 230,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -10.0806,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 233,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4851,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 234,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3562,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 235,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 239,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 240,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 241,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 252,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 252,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.7204,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 253,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 256,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 256,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3575,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 260,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 260,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 263,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 264,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 266,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3575,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 271,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 272,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -13.0107,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 276,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3562,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 277,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 278,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4952,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 283,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.715,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 284,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 284,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5003,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 287,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3548,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 288,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 290,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 291,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -12.9904,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 294,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 296,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 10.0482,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 298,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 298,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 302,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 303,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 10.0604,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 305,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 12.9702,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 307,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 307,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.715,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 310,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 310,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 312,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -12.9904,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 314,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 314,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 318,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 320,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 12.9702,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 322,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 324,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 325,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 328,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 330,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 331,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 340,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 341,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.4952,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 344,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3562,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 344,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 348,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 19.5008,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 350,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 10.1092,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 352,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 352,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 19.5465,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 356,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -10.1215,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 356,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 357,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -13.0617,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 360,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5206,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 362,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 364,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.7395,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 366,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 367,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 369,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 373,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 374,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5155,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 377,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 378,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 378,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 382,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.5104,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 383,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 383,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 386,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 388,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5155,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 389,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -13.5062,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 391,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 392,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 394,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 6.7422,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 394,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 401,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 16.8691,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 403,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 404,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 26.0417,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 404,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -13.5227,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 409,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 409,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 410,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3752,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 414,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.5308,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 414,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 10.1215,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 418,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 419,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 422,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.7558,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 423,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 424,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 428,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 6.5359,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 428,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -13.5007,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 429,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 432,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 433,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 436,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.7367,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 439,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 440,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 441,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 444,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 444,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3656,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 448,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5359,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 448,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3643,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 452,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 456,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 13.0617,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 456,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 13.4517,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 460,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 462,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -3.3684,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 464,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5411,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 465,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 468,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -13.0719,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 470,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 472,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 474,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 474,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -6.7367,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 478,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 479,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3656,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 480,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 488,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": 3.3684,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 489,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -6.5206,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 490,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 492,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 495,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 496,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 496,
+      "symbol": "ADAUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.08333333333333333,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    }
+  ],
+  "hypotheses": [
+    {
+      "rank": 1,
+      "claim": "247 baseline trades were skipped by V48, representing $159.25 of the $127.27 PnL gap (100% coverage). Most were profitable baseline entries below V48's current threshold.",
+      "confidence": 0.8999999999999999,
+      "evidence_refs": [
+        "skipped_trades",
+        "baselines"
+      ]
+    },
+    {
+      "rank": 2,
+      "claim": "Per-symbol PnL loss is concentrated in ADAUSDT: $-93.48 delta (73% of the total gap). Targeted signal re-weighting for this symbol is a cheap first fix.",
+      "confidence": 0.5907225583405358,
+      "evidence_refs": [
+        "signal_contribution_delta_proxy"
+      ]
+    },
+    {
+      "rank": 3,
+      "claim": "Conviction magnitudes collapsed: V48 mean conviction (0.065) is 0.77x V35 (0.084). The HOLD band is now 100% of trades vs 100% in V35, consistent with post-demean thresholds not tracking signal magnitude.",
+      "confidence": 0.5255095898203992,
+      "evidence_refs": [
+        "conviction_histogram",
+        "observability.conviction_filter_rate"
+      ]
+    }
+  ],
+  "regime_breakdown": {
+    "crisis": {
+      "v35_pnl": 25.10589999999999,
+      "v48_pnl": -1.5799999999999983,
+      "delta": -26.68589999999999
+    },
+    "high_vol": {
+      "v35_pnl": -65.3406,
+      "v48_pnl": 17.058699999999998,
+      "delta": 82.3993
+    },
+    "normal": {
+      "v35_pnl": 199.47979999999998,
+      "v48_pnl": 16.4899,
+      "delta": -182.98989999999998
+    }
+  }
+}
