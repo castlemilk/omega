@@ -42,12 +42,10 @@ def compute_signal_delta_proxy(baseline: RunArtifacts, target: RunArtifacts) -> 
 
     return SignalDeltaProxy(
         per_symbol_delta={
-            s: target_by_symbol.get(s, 0.0) - baseline_by_symbol.get(s, 0.0)
-            for s in all_symbols
+            s: target_by_symbol.get(s, 0.0) - baseline_by_symbol.get(s, 0.0) for s in all_symbols
         },
         per_side_delta={
-            s: target_by_side.get(s, 0.0) - baseline_by_side.get(s, 0.0)
-            for s in all_sides
+            s: target_by_side.get(s, 0.0) - baseline_by_side.get(s, 0.0) for s in all_sides
         },
         baseline_version=baseline.version,
         target_version=target.version,

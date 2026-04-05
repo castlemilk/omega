@@ -121,7 +121,9 @@ def rank_hypotheses(
 
     claim, conf = _conviction_hypothesis(v35, v48, v35_histogram, v48_histogram)
     if claim:
-        candidates.append((claim, conf, ["conviction_histogram", "observability.conviction_filter_rate"]))
+        candidates.append(
+            (claim, conf, ["conviction_histogram", "observability.conviction_filter_rate"])
+        )
 
     claim, conf = _skipped_trades_hypothesis(skipped, v35, v48)
     if claim:

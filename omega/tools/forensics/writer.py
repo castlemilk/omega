@@ -151,9 +151,15 @@ def write_forensics_markdown(
     lines.append("")
     lines.append("| Band | V35 | V48 |")
     lines.append("|---|---|---|")
-    lines.append(f"| HOLD (< 0.20) | {v35_histogram.hold_band_pct:.0%} | {v48_histogram.hold_band_pct:.0%} |")
-    lines.append(f"| Trade (>= 0.20) | {v35_histogram.trade_band_pct:.0%} | {v48_histogram.trade_band_pct:.0%} |")
-    lines.append(f"| Mean conviction | {v35_histogram.mean_conviction:.3f} | {v48_histogram.mean_conviction:.3f} |")
+    lines.append(
+        f"| HOLD (< 0.20) | {v35_histogram.hold_band_pct:.0%} | {v48_histogram.hold_band_pct:.0%} |"
+    )
+    lines.append(
+        f"| Trade (>= 0.20) | {v35_histogram.trade_band_pct:.0%} | {v48_histogram.trade_band_pct:.0%} |"
+    )
+    lines.append(
+        f"| Mean conviction | {v35_histogram.mean_conviction:.3f} | {v48_histogram.mean_conviction:.3f} |"
+    )
     lines.append("")
     lines.append("## Top-3 Hypotheses")
     lines.append("")
