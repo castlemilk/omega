@@ -247,6 +247,43 @@ class VictoriaNode(Node):
         for skill in victoria_skills():
             self._skill_framework.register_skill(skill)
 
+        # IC persistence — push allocator IC EMAs to strategy every N cycles
+        # and persist to disk so learned weights survive restarts.
+        _data_dir = os.environ.get("OMEGA_DATA_DIR", "./data")
+        self._ic_persist_path: str = os.path.join(_data_dir, "signal_ics.json")
+        self._ic_persist_interval: int = 10  # write to disk every 10 cycles
+
+        # Bootstrap strategy IC weights from previous run if file exists
+        try:
+            with open(self._ic_persist_path) as _f:
+                _loaded_ics: dict[str, float] = json.load(_f)
+            if _loaded_ics:
+                self._strategy.update_signal_ics(_loaded_ics)
+                logger.info(
+                    "Loaded %d IC weights from %s", len(_loaded_ics), self._ic_persist_path
+                )
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            pass  # first run or corrupt file — start with equal weights
+
+    # ------------------------------------------------------------------
+    # IC wiring helpers
+    # ------------------------------------------------------------------
+
+    def _push_ics_to_strategy(self, ic_ema: dict[str, float]) -> None:
+        """Push allocator IC EMAs to StrategyNode and persist to disk every N cycles."""
+        try:
+            self._strategy.update_signal_ics(ic_ema)
+        except Exception as exc:
+            logger.debug("IC push to strategy failed: %s", exc)
+
+        if self._total_cycles_run % self._ic_persist_interval == 0:
+            try:
+                os.makedirs(os.path.dirname(self._ic_persist_path) or ".", exist_ok=True)
+                with open(self._ic_persist_path, "w") as _f:
+                    json.dump({k: round(v, 6) for k, v in ic_ema.items()}, _f, indent=2)
+            except OSError as exc:
+                logger.debug("IC persist failed: %s", exc)
+
     # ------------------------------------------------------------------
     # Node interface
     # ------------------------------------------------------------------
@@ -577,7 +614,11 @@ class VictoriaNode(Node):
         db_url : str | None
             Postgres connection URL. Falls back to DATABASE_URL env var.
         """
-        import psycopg
+        try:
+            import psycopg
+        except ImportError:
+            logger.debug("persist_signals: psycopg not available — signal persistence skipped")
+            return
 
         url = db_url or os.getenv("DATABASE_URL")
         if not url:
@@ -1326,6 +1367,9 @@ class VictoriaNode(Node):
                 if name.startswith("_") or not isinstance(signals[name], dict):
                     continue
                 signals[name]["ic"] = round(alloc.ic_ema.get(name, 0.0), 6)
+            # Push IC EMAs to StrategyNode so _compute_weighted_conviction uses
+            # learned weights instead of falling back to raw composite.
+            self._push_ics_to_strategy(alloc.ic_ema)
         except Exception as exc:
             logger.debug("weight allocation failed, using equal weights: %s", exc)
 
@@ -2181,6 +2225,7 @@ class VictoriaNode(Node):
                 if name.startswith("_") or not isinstance(signals[name], dict):
                     continue
                 signals[name]["ic"] = round(alloc.ic_ema.get(name, 0.0), 6)
+            self._push_ics_to_strategy(alloc.ic_ema)
         except Exception as exc:
             logger.debug("weight allocation failed, using equal weights: %s", exc)
 
