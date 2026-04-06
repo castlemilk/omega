@@ -137,11 +137,12 @@ class StrategyNode(Node):
         self._weighted_conviction_threshold: float = 0.10
         # Per-direction regime-adaptive conviction thresholds.
         # Set each cycle by _apply_regime_adaptive_thresholds() based on detected regime:
-        #   CRISIS/BEAR  → long=0.20 (suppressed), short=0.05 (permissive)
+        #   CRISIS/BEAR  → long=0.99 (hard block), short=0.05 (permissive)
         #   BULL         → long=0.05 (permissive), short=0.20 (suppressed)
-        #   NORMAL/other → long=0.10, short=0.10  (balanced)
+        #   NORMAL/other → long=0.10, short=0.05  (balanced)
         self._long_conviction_threshold: float = 0.10
         self._short_conviction_threshold: float = 0.10
+        self._in_crisis_regime: bool = False  # set each cycle; prevents scale-down of 0.99 block
         # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
         self._signal_ics: dict[str, float] = {}
         # Tracking counters
@@ -474,6 +475,8 @@ class StrategyNode(Node):
         is_crisis = bear_prob >= 0.55 or (bear_prob < 0.0 and regime_hmm == "bear") or regime_hmm == "crisis"
         is_bull = (bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")) and not is_crisis
 
+        self._in_crisis_regime = is_crisis  # used after basket-std scaling to re-apply block
+
         if is_crisis:
             # V53: raise to 0.99 to hard-block all longs in crisis.
             # V52 post-mortem: 22 crisis longs → -$100.62 (ETH/AVAX momentum chasing).
@@ -754,6 +757,13 @@ class StrategyNode(Node):
         self._weighted_conviction_threshold = 0.10 * _thresh_scale
         self._long_conviction_threshold *= _thresh_scale
         self._short_conviction_threshold *= _thresh_scale
+
+        # V53 fix: crisis long block must survive basket-std scaling.
+        # _apply_regime_adaptive_thresholds() sets long_thresh to 0.99 (block) in crisis.
+        # But `*= _thresh_scale` can reduce 0.99 to ~0.05 in low-vol markets, defeating
+        # the block. Re-apply the unscaled value when we know we're in crisis.
+        if self._in_crisis_regime:
+            self._long_conviction_threshold = 0.99
 
         logger.info(
             "V45 relative thresholds: basket_std=%.4f cs_norm=%.2f "
