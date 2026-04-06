@@ -484,11 +484,18 @@ class StrategyNode(Node):
                 regime_hmm,
             )
         else:
+            # V49 surgical fix (2026-04-06): short threshold lowered from 0.10 to 0.05
+            # in normal regime. Motivation: data/v35-v48-forensics.json — V48 lost $137.55
+            # in short trades, 144% concentrated in normal regime, 73% in ADAUSDT alone.
+            # The 0.10 threshold was above both V35 and V48 post-demean mean conviction
+            # distributions (~0.07-0.08), gating virtually all short entries. Lowering
+            # to 0.05 mirrors the crisis-regime short bias without touching longs or
+            # other regimes. See docs/training/v35-v48-forensics.md.
             self._long_conviction_threshold = 0.10
-            self._short_conviction_threshold = 0.10
+            self._short_conviction_threshold = 0.05
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.10, short_thresh=0.10",
+                "→ long_thresh=0.10, short_thresh=0.05 (V49 fix)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,
