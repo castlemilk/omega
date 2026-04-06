@@ -465,7 +465,12 @@ class StrategyNode(Node):
         bull_prob = float(signals.get("_regime_w_bull_prob", -1.0))
         regime_hmm = str(signals.get("_regime_hmm", "")).lower()
 
-        if bear_prob >= 0.55 or (bear_prob < 0.0 and regime_hmm == "bear"):
+        # V53: also treat HMM vol-regime "crisis" as crisis even if Wasserstein is flat
+        # (Wasserstein can return 1/3 priors when its signal keys don't match the signal dict).
+        is_crisis = bear_prob >= 0.55 or (bear_prob < 0.0 and regime_hmm == "bear") or regime_hmm == "crisis"
+        is_bull = (bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")) and not is_crisis
+
+        if is_crisis:
             self._long_conviction_threshold = 0.20
             self._short_conviction_threshold = 0.05
             logger.info(
@@ -474,7 +479,7 @@ class StrategyNode(Node):
                 max(bear_prob, 0.0),
                 regime_hmm,
             )
-        elif bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull"):
+        elif is_bull:
             self._long_conviction_threshold = 0.05
             self._short_conviction_threshold = 0.20
             logger.info(
@@ -485,10 +490,10 @@ class StrategyNode(Node):
             )
         else:
             self._long_conviction_threshold = 0.10
-            self._short_conviction_threshold = 0.10
+            self._short_conviction_threshold = 0.05
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.10, short_thresh=0.10 (balanced)",
+                "→ long_thresh=0.10, short_thresh=0.05 (balanced)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,
@@ -706,10 +711,22 @@ class StrategyNode(Node):
                 sum((v - _c_mean) ** 2 for v in _composites_for_std) / len(_composites_for_std)
             )
         else:
+            _c_mean = 0.0
             _basket_std = 0.20  # fallback: no rescaling
         _basket_std = max(
             _basket_std, 0.010
         )  # floor prevents degenerate rescaling (V48: 0.005→0.010)
+
+        # V53: basket-direction guard — when the entire basket is trending down strongly,
+        # cross-sectional demeaning makes "less bearish" look like BUY but it isn't.
+        # Suppress longs when basket_mean < -0.10 (broadly declining market).
+        _basket_mean = _c_mean if len(_composites_for_std) >= 2 else 0.0
+        _suppress_longs_basket = _basket_mean < -0.10
+        if _suppress_longs_basket:
+            logger.info(
+                "V53 basket-direction: basket_mean=%.3f < -0.10 → longs suppressed this cycle",
+                _basket_mean,
+            )
 
         # Normalisation factor: composite × _cs_norm before score_to_conviction so that
         # ±0.3σ → ±0.20 (BUY/SELL boundary) and ±0.9σ → ±0.60 (STRONG_BUY/SELL).
@@ -878,6 +895,14 @@ class StrategyNode(Node):
                 proposals_this_cycle += 1
                 if _block_longs:
                     regime_blocked_longs += 1
+                    continue
+                # V53: basket-direction guard — suppress longs in a broadly declining market
+                if _suppress_longs_basket:
+                    filtered_this_cycle += 1
+                    logger.debug(
+                        "Filtered %s (long): basket_direction(mean=%.3f<-0.10)",
+                        ticker, _basket_mean,
+                    )
                     continue
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="long", ticker=ticker

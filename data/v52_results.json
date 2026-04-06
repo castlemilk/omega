@@ -1,0 +1,51 @@
+{
+  "version": "v52",
+  "run": {
+    "date": "2026-04-06T10:06:27.936533+00:00",
+    "cycles": 200,
+    "sleep_seconds": 10.0,
+    "elapsed_s": 2670.5,
+    "avg_cycle_s": 13.352,
+    "cg_key_used": true,
+    "db_url_used": true
+  },
+  "preflight": {
+    "ok": false,
+    "warnings": [
+      "Missing Python packages: ['ccxt']. Some signals may be unavailable. Run: pip install -r requirements.txt"
+    ]
+  },
+  "intelligence": {
+    "improve_calls": 1,
+    "semantic_patterns_db": 2,
+    "semantic_patterns_node": 0
+  },
+  "observability": {
+    "metrics_jsonl": "/tmp/v52_metrics.jsonl",
+    "total_zero_trade_cycles": 132,
+    "max_zero_streak": 4,
+    "ring1_pass_rate_final": 1.0,
+    "conviction_filter_rate": 0.5932480454868515,
+    "circuit_breaker_trips": 0,
+    "final_vol_low_threshold": 0.2
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 0,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 200
+  },
+  "trades": {
+    "total_closed": 85,
+    "long_trades": 49,
+    "short_trades": 36,
+    "open_positions": 3,
+    "win_rate": 0.2471,
+    "total_pnl_usd": -55.9,
+    "realised_pnl_engine": -55.9,
+    "gross_profit": 77.99,
+    "gross_loss": 133.89,
+    "profit_factor": 0.583
+  }
+}
