@@ -26,7 +26,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-TRADE_COUNT_FLOOR = 50
+# Lowered from 50 → 20 after V49 run showed 100-cycle zero streak from
+# low market signal dispersion (2026-04-06). 20 trades is still meaningful
+# signal; 50 was too aggressive for 200-cycle runs on quiet market days.
+# V48 had 103 trades but ran on a more volatile day (2026-04-04).
+TRADE_COUNT_FLOOR = 20
 
 
 @dataclass

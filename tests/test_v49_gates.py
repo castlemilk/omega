@@ -98,7 +98,7 @@ def test_gate_fails_trade_count_floor(tmp_path: Path):
     v48 = tmp_path / "v48_results.json"
     v49 = tmp_path / "v49_results.json"
     _write_results(v48, pnl=32.0, trades=103, max_dd=10.0)
-    _write_results(v49, pnl=100.0, trades=30, max_dd=5.0)  # beats pnl but only 30 trades
+    _write_results(v49, pnl=100.0, trades=15, max_dd=5.0)  # beats pnl but only 15 trades (< 20 floor)
     v48t = tmp_path / "v48_trades.csv"
     v49t = tmp_path / "v49_trades.csv"
     _write_trades(v48t, [("BTCUSDT", "long", 32.0, "normal")])
