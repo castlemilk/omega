@@ -158,7 +158,7 @@ class StrategyNode(Node):
         self._normal_trade_count: int = 0  # cycles with full-size trading
 
         # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
-        self._vol_low_threshold: float = 0.0  # V55: disabled — abs_conviction_floor=0.15 is sufficient gate
+        self._vol_low_threshold: float = 0.0  # V55: disabled — abs_conviction_floor=0.08 is sufficient gate
         # History: 0.20 (original) → 0.05 (V53, after reconnecting vol_rank) → 0.0 (V55).
         # V54: 200/200 cycles blocked because current market vol rank is below 5th pct of
         # its own 50d history. abs_conviction_floor handles low-signal environments.
@@ -550,9 +550,11 @@ class StrategyNode(Node):
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
 
         # 4. Absolute minimum conviction floor.
-        # V52 post-mortem: all traded convictions clustered 0.050-0.075 with zero
-        # discriminative power. A floor of 0.15 ensures only high-confidence signals trade.
-        _ABS_MIN_CONVICTION = 0.15
+        # V52: clustered 0.050-0.075, zero discriminative power → raised to 0.15.
+        # V54: lowered 0.15→0.08 — V53 convictions range 0.06-0.14 (demeaned composites),
+        # so 0.15 filtered almost everything. 0.08 excludes near-zero noise while
+        # allowing the real signal range through.
+        _ABS_MIN_CONVICTION = 0.08
         if abs(w_conv) < _ABS_MIN_CONVICTION:
             return False, f"abs_conviction_floor({abs(w_conv):.3f}<{_ABS_MIN_CONVICTION})"
 
