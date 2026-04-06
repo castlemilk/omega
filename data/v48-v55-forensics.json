@@ -1,0 +1,960 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-04-06T23:04:17.802724+00:00",
+  "status": "ok",
+  "baselines": {
+    "v35": {
+      "version": "v48",
+      "pnl": 31.97,
+      "trades": 103,
+      "win_rate": 0.3107,
+      "long_trades": 69,
+      "short_trades": 34,
+      "profit_factor": 1.34,
+      "zero_trade_cycles": 115,
+      "conviction_filter_rate": 0.5828524046434495,
+      "source": "data/v35_extended_results.json"
+    },
+    "v48": {
+      "version": "v55",
+      "pnl": -92.58,
+      "trades": 99,
+      "win_rate": 0.1616,
+      "long_trades": 89,
+      "short_trades": 10,
+      "profit_factor": 0.54,
+      "zero_trade_cycles": 114,
+      "conviction_filter_rate": 0.7358540630182421,
+      "source": "data/v48_results.json"
+    }
+  },
+  "conviction_histogram": {
+    "v35": {
+      "hold_threshold": 0.2,
+      "trade_band_count": 0,
+      "hold_band_count": 103,
+      "trade_band_pct": 0.0,
+      "hold_band_pct": 1.0,
+      "min_conviction": 0.052320833605539956,
+      "max_conviction": 0.1,
+      "mean_conviction": 0.06500742800302674
+    },
+    "v48": {
+      "hold_threshold": 0.2,
+      "trade_band_count": 0,
+      "hold_band_count": 99,
+      "trade_band_pct": 0.0,
+      "hold_band_pct": 1.0,
+      "min_conviction": 0.05021641197774048,
+      "max_conviction": 0.13846153846153847,
+      "mean_conviction": 0.08126490412847143
+    }
+  },
+  "signal_contribution_delta_proxy": {
+    "per_symbol": {
+      "LINKUSDT": -40.15219999999999,
+      "ETHUSDT": -10.201999999999988,
+      "MATICUSDT": 0.0,
+      "DOTUSDT": -30.3977,
+      "AVAXUSDT": -43.795
+    },
+    "per_side": {
+      "short": -30.3977,
+      "long": -94.14919999999998
+    },
+    "note": "Phase 1 proxy \u2014 per-symbol PnL delta, not per-signal weight delta."
+  },
+  "skipped_trades": [
+    {
+      "cycle": 4,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.06923076923076923,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 9,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.06923076923076923,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 10,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": -15.9702,
+      "baseline_conviction": 0.06923076923076923,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 12,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -2.562,
+      "baseline_conviction": 0.06923076923076923,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 16,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.06666666666666667,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 17,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -6.5759,
+      "baseline_conviction": 0.1,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 18,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.06666666666666667,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 18,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.06666666666666667,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 20,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 3.1276,
+      "baseline_conviction": 0.08333333333333334,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 20,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 6.4226,
+      "baseline_conviction": 0.05555555555555556,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 26,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.1138,
+      "baseline_conviction": 0.05840428422625787,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 27,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.05840428422625787,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 29,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05489974259341236,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 30,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 8.798,
+      "baseline_conviction": 0.05489974259341236,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 32,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.364,
+      "baseline_conviction": 0.08300453738409942,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 34,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.05533635825606628,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 36,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05585237547262863,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 37,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 4.4825,
+      "baseline_conviction": 0.05585237547262863,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 37,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.7687,
+      "baseline_conviction": 0.08303751910466893,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 38,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.059623245068420115,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 43,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.0558,
+      "baseline_conviction": 0.057225344566171524,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 44,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": -6.6027,
+      "baseline_conviction": 0.05717941119482089,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 46,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 1.1927,
+      "baseline_conviction": 0.056922278374154395,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 50,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.2799,
+      "baseline_conviction": 0.05744666356318054,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 50,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": -6.6336,
+      "baseline_conviction": 0.05744666356318054,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 55,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 6.6915,
+      "baseline_conviction": 0.057881550520874576,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 57,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 1.6354,
+      "baseline_conviction": 0.057881550520874576,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 61,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0399,
+      "baseline_conviction": 0.08182799511894953,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 62,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.053671855896976116,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 65,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.053671855896976116,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 65,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 9.5408,
+      "baseline_conviction": 0.0825275560227734,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 66,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 2.5723,
+      "baseline_conviction": 0.0825275560227734,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 68,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.057759759857741816,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 72,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05280030017782273,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 72,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05280030017782273,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 72,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.6469,
+      "baseline_conviction": 0.08304190345344407,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 76,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 9.5788,
+      "baseline_conviction": 0.08295222518543212,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 78,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05247196154726482,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 81,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05247196154726482,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 82,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -2.2669,
+      "baseline_conviction": 0.08314926912618123,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 83,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": -6.6928,
+      "baseline_conviction": 0.05802622543409307,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 87,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.052320833605539956,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 88,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.052320833605539956,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 90,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 2.4633,
+      "baseline_conviction": 0.08721499967335207,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 95,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.06001821800883911,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 96,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.1461,
+      "baseline_conviction": 0.06001821800883911,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 97,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05235268141896864,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 98,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 4.1916,
+      "baseline_conviction": 0.05235268141896864,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 101,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.05791575295388342,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 102,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 1.8925,
+      "baseline_conviction": 0.08271246303514143,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 104,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.053220600042602685,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 104,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.053220600042602685,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 106,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 2.2508,
+      "baseline_conviction": 0.085640478924061,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 110,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -2.6863,
+      "baseline_conviction": 0.08493608152682276,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 111,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.053805774278215215,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 112,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 4.3148,
+      "baseline_conviction": 0.053805774278215215,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 113,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.05852269507565025,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 118,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -1.1126,
+      "baseline_conviction": 0.05860979999320861,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 119,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": -6.751,
+      "baseline_conviction": 0.058531409168081486,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 121,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 4.3661,
+      "baseline_conviction": 0.054445227134970436,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 121,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.054445227134970436,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 122,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 6.5495,
+      "baseline_conviction": 0.05671890848411478,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 126,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.4142,
+      "baseline_conviction": 0.08507836272617218,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 127,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": 4.3548,
+      "baseline_conviction": 0.05426128467964752,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 127,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05426128467964752,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 130,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": -6.5272,
+      "baseline_conviction": 0.056590972256281985,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 132,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.3138,
+      "baseline_conviction": 0.05859136797886035,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 134,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.06098479277583316,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 136,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05449972967216606,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 137,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05449972967216606,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 140,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.5766,
+      "baseline_conviction": 0.08460032439340073,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 140,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.0548129438585557,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 142,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 6.4838,
+      "baseline_conviction": 0.05614964491315543,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 143,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.0548129438585557,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 148,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.044,
+      "baseline_conviction": 0.09042565770026603,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 148,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05501256632225636,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 149,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05501256632225636,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 150,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.06028729347087163,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 156,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.08035714285714285,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 160,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.05797709966977225,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 162,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 6.6969,
+      "baseline_conviction": 0.058061828322677186,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 168,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.6686,
+      "baseline_conviction": 0.08078366248699327,
+      "baseline_regime": "high_vol",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 170,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.08090118506544626,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 170,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.05482879288353992,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 172,
+      "symbol": "DOTUSDT",
+      "side": "short",
+      "baseline_pnl": -8.8149,
+      "baseline_conviction": 0.05482879288353992,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 173,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.08453849425776265,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 178,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.3179,
+      "baseline_conviction": 0.08163650075414781,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 178,
+      "symbol": "MATICUSDT",
+      "side": "short",
+      "baseline_pnl": -0.0,
+      "baseline_conviction": 0.054014467137994245,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 184,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 0.0,
+      "baseline_conviction": 0.08221085944447351,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 185,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 0.6001,
+      "baseline_conviction": 0.08221085944447351,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 192,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": -0.8922,
+      "baseline_conviction": 0.05914330182933707,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 192,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": -6.8137,
+      "baseline_conviction": 0.05914330182933707,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 197,
+      "symbol": "LINKUSDT",
+      "side": "long",
+      "baseline_pnl": 9.3797,
+      "baseline_conviction": 0.08132231534999844,
+      "baseline_regime": "crisis",
+      "reason": "present_in_v35_absent_in_v48"
+    },
+    {
+      "cycle": 199,
+      "symbol": "ETHUSDT",
+      "side": "long",
+      "baseline_pnl": 1.504,
+      "baseline_conviction": 0.08132231534999844,
+      "baseline_regime": "normal",
+      "reason": "present_in_v35_absent_in_v48"
+    }
+  ],
+  "hypotheses": [
+    {
+      "rank": 1,
+      "claim": "Per-symbol PnL loss is concentrated in AVAXUSDT: $-43.80 delta (35% of the total gap). Targeted signal re-weighting for this symbol is a cheap first fix.",
+      "confidence": 0.3609755118426335,
+      "evidence_refs": [
+        "signal_contribution_delta_proxy"
+      ]
+    },
+    {
+      "rank": 2,
+      "claim": "94 baseline trades were skipped by V48, representing $25.81 of the $124.55 PnL gap (21% coverage). Most were profitable baseline entries below V48's current threshold.",
+      "confidence": 0.3450767563227619,
+      "evidence_refs": [
+        "skipped_trades",
+        "baselines"
+      ]
+    },
+    {
+      "rank": 3,
+      "claim": "Conviction magnitudes collapsed: V48 mean conviction (0.081) is 1.25x V35 (0.065). The HOLD band is now 100% of trades vs 100% in V35, consistent with post-demean thresholds not tracking signal magnitude.",
+      "confidence": 0.3,
+      "evidence_refs": [
+        "conviction_histogram",
+        "observability.conviction_filter_rate"
+      ]
+    }
+  ],
+  "regime_breakdown": {
+    "crisis": {
+      "v35_pnl": -1.5799999999999983,
+      "v48_pnl": -1.5372999999999974,
+      "delta": 0.04270000000000085
+    },
+    "high_vol": {
+      "v35_pnl": 17.058699999999998,
+      "v48_pnl": -32.2981,
+      "delta": -49.35679999999999
+    },
+    "normal": {
+      "v35_pnl": 16.4899,
+      "v48_pnl": -58.742899999999985,
+      "delta": -75.23279999999998
+    }
+  }
+}
