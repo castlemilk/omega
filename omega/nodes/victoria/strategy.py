@@ -31,8 +31,9 @@ from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 logger = logging.getLogger("omega.nodes.victoria.strategy")
 
 # Symbols excluded from trading (still used as regime/signal indicators).
-# BTC has a 27.8% win rate — used only as a market regime indicator.
-_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
+# BTC: 27.8% win rate — regime indicator only.
+# MATICUSDT: stale-price bug — exit_price == entry_price (0 PnL) on 100% of trades.
+_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "MATICUSDT"})
 
 # Symbols excluded from LONG positions only (shorts still permitted).
 # Only BTC excluded: used purely as regime indicator with <28% win rate.
@@ -471,11 +472,13 @@ class StrategyNode(Node):
         is_bull = (bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")) and not is_crisis
 
         if is_crisis:
-            self._long_conviction_threshold = 0.20
+            # V53: raise to 0.99 to hard-block all longs in crisis.
+            # V52 post-mortem: 22 crisis longs → -$100.62 (ETH/AVAX momentum chasing).
+            self._long_conviction_threshold = 0.99
             self._short_conviction_threshold = 0.05
             logger.info(
                 "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.20, short_thresh=0.05",
+                "→ long_thresh=0.99 (blocked), short_thresh=0.05",
                 max(bear_prob, 0.0),
                 regime_hmm,
             )
@@ -539,6 +542,13 @@ class StrategyNode(Node):
         conv_threshold = base_threshold * 1.25 if vol_regime == "high" else base_threshold
         if abs(w_conv) < conv_threshold:
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
+
+        # 4. Absolute minimum conviction floor.
+        # V52 post-mortem: all traded convictions clustered 0.050-0.075 with zero
+        # discriminative power. A floor of 0.15 ensures only high-confidence signals trade.
+        _ABS_MIN_CONVICTION = 0.15
+        if abs(w_conv) < _ABS_MIN_CONVICTION:
+            return False, f"abs_conviction_floor({abs(w_conv):.3f}<{_ABS_MIN_CONVICTION})"
 
         return True, "pass"
 
@@ -644,8 +654,11 @@ class StrategyNode(Node):
             if not isinstance(data, dict):
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
-            if len(prices) >= 101:
-                vol_rank = self._vol_percentile_rank(prices, window=20, lookback=100)
+            # V53: lowered from 101 to 50 — default fetch returns 90 bars so 101 was
+            # never met, making vol_rank always None (dead no-op filter).
+            # lookback=50 is sufficient for reliable percentile estimation.
+            if len(prices) >= 50:
+                vol_rank = self._vol_percentile_rank(prices, window=20, lookback=50)
                 break
 
         if vol_rank is not None:
@@ -918,6 +931,13 @@ class StrategyNode(Node):
                 proposals_this_cycle += 1
                 if _block_shorts:
                     regime_blocked_shorts += 1
+                    continue
+                # V53: DOTUSDT shows 7% WR on shorts in normal regime (-$21.51, 13 trades).
+                # Gate normal-regime shorts until a validated short signal is developed.
+                # Crisis/bear shorts remain permitted (short_thresh=0.05 is intentionally low).
+                if ticker == "DOTUSDT" and _regime_hmm not in ("bear", "crisis"):
+                    filtered_this_cycle += 1
+                    logger.debug("Filtered DOTUSDT (short): no_edge_normal_regime")
                     continue
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="short", ticker=ticker

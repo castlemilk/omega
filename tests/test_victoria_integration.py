@@ -602,3 +602,82 @@ class TestRegimeAwareWeightIntegration:
 
         assert btc["dominant_signal"] == "sma_crossover"
         assert eth["dominant_signal"] == "rsi_signal"
+
+
+# ---------------------------------------------------------------------------
+# V53 regression tests — crisis long suppression + conviction floor
+# ---------------------------------------------------------------------------
+
+
+class TestV53Regressions:
+    """Regression tests for V53 surgical fixes.
+
+    V52 post-mortem identified:
+    - 22 crisis longs → -$100.62 (ETH/AVAX momentum chasing in bear market)
+    - All convictions 0.050-0.075 with zero discriminative power
+    - MATICUSDT 27 zero-PnL trades (stale-price bug)
+    - DOTUSDT 13 normal-regime shorts, 7% WR → -$21.51
+    """
+
+    def setup_method(self):
+        from omega.nodes.victoria.strategy import StrategyNode
+
+        self.strat = StrategyNode()
+
+    def test_crisis_regime_blocks_all_longs(self):
+        """Crisis regime threshold 0.99 should block any realistic long conviction."""
+        # Simulate crisis regime signal dict
+        crisis_signals = {
+            "_regime_w_bear_prob": 0.70,
+            "_regime_w_bull_prob": 0.10,
+            "_regime_hmm": "crisis",
+        }
+        self.strat._apply_regime_adaptive_thresholds(crisis_signals)
+        # Even a strong IC-weighted conviction of 0.80 should not exceed 0.99 threshold
+        assert self.strat._long_conviction_threshold == 0.99
+        assert self.strat._short_conviction_threshold == 0.05
+
+    def test_hmm_crisis_label_triggers_crisis_threshold(self):
+        """HMM label 'crisis' alone (Wasserstein flat) should trigger crisis gate."""
+        flat_wasserstein = {
+            "_regime_w_bear_prob": 0.333,  # stuck at prior
+            "_regime_w_bull_prob": 0.333,
+            "_regime_hmm": "crisis",
+        }
+        self.strat._apply_regime_adaptive_thresholds(flat_wasserstein)
+        assert self.strat._long_conviction_threshold == 0.99, (
+            "HMM 'crisis' label should trigger 0.99 long threshold even when "
+            "Wasserstein is stuck at 1/3 priors"
+        )
+
+    def test_abs_conviction_floor_blocks_low_conviction(self):
+        """Trades with |w_conv| < 0.15 must be rejected regardless of direction."""
+        # Set normal regime thresholds
+        normal_signals = {
+            "_regime_w_bear_prob": 0.20,
+            "_regime_w_bull_prob": 0.20,
+            "_regime_hmm": "normal",
+        }
+        self.strat._apply_regime_adaptive_thresholds(normal_signals)
+        self.strat._last_trade_cycle = -5  # bypass time filter
+
+        # Signal with very low conviction (V52 range: 0.05-0.075)
+        low_conv_sig = {
+            "composite": 0.30,
+            "sma_crossover": 0.08,
+            "vol_regime": "normal",
+            "_ic_weights": {},
+        }
+        passes, reason = self.strat._passes_conviction_filters(
+            low_conv_sig, cycle=10, direction="long"
+        )
+        assert not passes
+        assert "abs_conviction_floor" in reason or "weighted_conviction" in reason
+
+    def test_maticusdt_not_in_trading_universe(self):
+        """MATICUSDT must be in trading blacklist (zero-PnL stale-price bug)."""
+        from omega.nodes.victoria.strategy import _TRADING_BLACKLIST
+
+        assert "MATICUSDT" in _TRADING_BLACKLIST, (
+            "MATICUSDT must be blacklisted — exit_price == entry_price on 100% of V52 trades"
+        )
