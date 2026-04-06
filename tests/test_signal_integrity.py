@@ -533,15 +533,15 @@ class TestRegimeAdaptivity:
         return signals
 
     def test_normal_regime_thresholds(self):
-        """NORMAL regime: long=0.10, short=0.05 (V49 fix — data/v35-v48-forensics.json)."""
+        """NORMAL regime: long=0.10, short=0.10 (balanced — V50 revert of V49 0.05 fix)."""
         node = StrategyNode()
         node._apply_regime_adaptive_thresholds(
             {"_regime_w_bear_prob": 0.25, "_regime_w_bull_prob": 0.30}
         )
         assert node._long_conviction_threshold == 0.10
-        assert node._short_conviction_threshold == 0.05, (
+        assert node._short_conviction_threshold == 0.10, (
             f"Normal short threshold={node._short_conviction_threshold} "
-            f"(expected 0.05 — V49 fix for ADAUSDT regression, see forensics)"
+            f"(expected 0.10 — V50 revert, V49 0.05 caused normal-regime collapse)"
         )
 
     def test_bear_regime_suppresses_longs_permits_shorts(self):
