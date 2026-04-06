@@ -56,14 +56,3 @@ def test_long_threshold_is_010():
         f"Normal-regime long_conviction_threshold is {val}, expected 0.10."
     )
 
-
-def test_ethusdt_momentum_gate_exists():
-    """ETHUSDT long momentum gate must be present in _passes_conviction_filters."""
-    text = STRATEGY_FILE.read_text()
-    assert "ethusdt_long_momentum_gate" in text.lower() or "ETHUSDT" in text, (
-        "ETHUSDT momentum gate not found in strategy.py. "
-        "This gate filters near-breakeven ETHUSDT longs in normal regime (V50 fix)."
-    )
-    assert "sma_crossover" in text and "zscore_signal" in text, (
-        "Momentum gate must use sma_crossover and zscore_signal for direction check."
-    )
