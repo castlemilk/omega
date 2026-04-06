@@ -30,11 +30,6 @@ from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
 
-# IC_WEIGHTS_ENABLED controls whether learned IC weights modify _compute_weighted_conviction.
-# Set False (V51) to isolate whether IC wiring caused the V50 normal-regime collapse.
-# When False, conviction falls back to raw composite (equal signal weighting).
-IC_WEIGHTS_ENABLED: bool = False
-
 # Symbols excluded from trading (still used as regime/signal indicators).
 # BTC has a 27.8% win rate — used only as a market regime indicator.
 _TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
@@ -424,10 +419,6 @@ class StrategyNode(Node):
         If no ICs have been loaded, falls back to the raw composite score so
         the filter still runs with equal weighting.
         """
-        # Feature flag: bypass IC weighting, fall back to equal-weight composite.
-        if not IC_WEIGHTS_ENABLED:
-            return float(signals_dict.get("composite", 0.0))
-
         if not self._signal_ics:
             return float(signals_dict.get("composite", 0.0))
 
@@ -493,10 +484,6 @@ class StrategyNode(Node):
                 regime_hmm,
             )
         else:
-            # V50 revert (2026-04-06): V49 lowered short_threshold to 0.05 to admit more
-            # shorts in normal regime, but V49 training showed normal-regime collapse
-            # (-$10.98 vs V48 +$16.49). The ETHUSDT momentum gate (V50) is the targeted
-            # fix for near-breakeven longs; shorts remain at 0.10 balanced threshold.
             self._long_conviction_threshold = 0.10
             self._short_conviction_threshold = 0.10
             logger.debug(
@@ -921,27 +908,6 @@ class StrategyNode(Node):
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (long): %s", ticker, reason)
                     continue
-                # ETHUSDT momentum gate (V50): block longs in normal regime without
-                # momentum confirmation. V48 had 31 near-breakeven ETHUSDT longs that
-                # dragged performance. Momentum signals are required in normal regime;
-                # bear/bull regimes are already filtered by the regime directional block.
-                if ticker == "ETHUSDT":
-                    _is_normal = not (
-                        (_regime_w_bear >= 0.55 if _use_continuous_regime else False)
-                        or (_regime_w_bull >= 0.55 if _use_continuous_regime else False)
-                        or (_regime_hmm in ("bear", "bull") and _regime_confidence >= 0.35)
-                    )
-                    if _is_normal:
-                        _sma = float(sig.get("sma_crossover") or 0.0)
-                        _zscore = float(sig.get("zscore_signal") or 0.0)
-                        if _sma <= 0 and _zscore <= 0:
-                            filtered_this_cycle += 1
-                            logger.debug(
-                                "Filtered ETHUSDT (long): ethusdt_momentum_gate "
-                                "(sma_crossover=%.3f, zscore_signal=%.3f)",
-                                _sma, _zscore,
-                            )
-                            continue
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
