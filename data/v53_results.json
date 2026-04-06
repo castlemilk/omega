@@ -1,0 +1,49 @@
+{
+  "version": "v53",
+  "run": {
+    "date": "2026-04-06T11:29:25.441211+00:00",
+    "cycles": 200,
+    "sleep_seconds": 10.0,
+    "elapsed_s": 2661.1,
+    "avg_cycle_s": 13.306,
+    "cg_key_used": true,
+    "db_url_used": true
+  },
+  "preflight": {
+    "ok": true,
+    "warnings": []
+  },
+  "intelligence": {
+    "improve_calls": 1,
+    "semantic_patterns_db": 2,
+    "semantic_patterns_node": 0
+  },
+  "observability": {
+    "metrics_jsonl": "/tmp/v53_metrics.jsonl",
+    "total_zero_trade_cycles": 185,
+    "max_zero_streak": 153,
+    "ring1_pass_rate_final": 1.0,
+    "conviction_filter_rate": 0.7243389719165708,
+    "circuit_breaker_trips": 0,
+    "final_vol_low_threshold": 0.05
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 166,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 34
+  },
+  "trades": {
+    "total_closed": 20,
+    "long_trades": 19,
+    "short_trades": 1,
+    "open_positions": 0,
+    "win_rate": 0.15,
+    "total_pnl_usd": -63.3,
+    "realised_pnl_engine": -63.3,
+    "gross_profit": 21.73,
+    "gross_loss": 85.02,
+    "profit_factor": 0.256
+  }
+}
