@@ -158,10 +158,10 @@ class StrategyNode(Node):
         self._normal_trade_count: int = 0  # cycles with full-size trading
 
         # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
-        self._vol_low_threshold: float = 0.05  # percentile below which vol is "dead-calm"
-        # V53: lowered from 0.20 to 0.05 — reconnecting vol_rank revealed current market
-        # sits below the 20th percentile, blocking all trades. 5th percentile = truly
-        # dead-calm (e.g., exchange halt, data gap), not just a quiet trending market.
+        self._vol_low_threshold: float = 0.0  # V55: disabled — abs_conviction_floor=0.15 is sufficient gate
+        # History: 0.20 (original) → 0.05 (V53, after reconnecting vol_rank) → 0.0 (V55).
+        # V54: 200/200 cycles blocked because current market vol rank is below 5th pct of
+        # its own 50d history. abs_conviction_floor handles low-signal environments.
         self._vol_high_threshold: float = 0.80  # percentile above which vol is "chaotic"
 
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
