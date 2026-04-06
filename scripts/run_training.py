@@ -39,6 +39,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from omega.eval.v49_gates import check_v49_gates  # noqa: E402, I001
+
 
 # ---------------------------------------------------------------------------
 # .env loader (must run before any omega imports)
@@ -87,6 +89,25 @@ def _resolve_version(requested: str | None) -> str:
         return prev
     _VERSION_FILE.write_text("v1")
     return "v1"
+
+
+def _find_baseline_version(current: str) -> str | None:
+    """Find the previous numeric-suffix version with results + trades artifacts."""
+    import re as _re
+
+    m = _re.match(r"^(?P<prefix>[^\d]*)(?P<num>\d+)(?P<suffix>.*)$", current)
+    if not m:
+        return None
+    prefix = m.group("prefix")
+    num = int(m.group("num"))
+    suffix = m.group("suffix")
+    for candidate_num in range(num - 1, 0, -1):
+        label = f"{prefix}{candidate_num}{suffix}"
+        results = DATA_DIR / f"{label}_results.json"
+        trades = DATA_DIR / f"{label}_trades.csv"
+        if results.exists() and trades.exists():
+            return label
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -812,6 +833,44 @@ def run(
 
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2)
+
+    # V49 hard gates — compare this run against the previous version.
+    baseline_label = _find_baseline_version(version)
+    if baseline_label is not None:
+        baseline_results = DATA_DIR / f"{baseline_label}_results.json"
+        baseline_trades = DATA_DIR / f"{baseline_label}_trades.csv"
+        gate_out = DATA_DIR / f"{version}_gate_result.json"
+        try:
+            gate_result = check_v49_gates(
+                v49_results=results_file,
+                v49_trades=trades_csv,
+                v48_results=baseline_results,
+                v48_trades=baseline_trades,
+                out_path=gate_out,
+            )
+            if gate_result.passed:
+                log.info(
+                    "%s gates PASSED vs %s (all %d checks green)",
+                    version.upper(),
+                    baseline_label,
+                    len(gate_result.gates),
+                )
+            else:
+                log.error(
+                    "%s gates FAILED vs %s — %d failures:",
+                    version.upper(),
+                    baseline_label,
+                    len(gate_result.failures),
+                )
+                for f in gate_result.failures:
+                    log.error("  ✗ %s", f)
+                log.error("Gate report: %s", gate_out)
+        except Exception as exc:
+            log.exception("V49 gate check crashed: %s", exc)
+    else:
+        log.warning(
+            "%s: no baseline version found for gate comparison", version.upper()
+        )
 
     log.info("")
     log.info("=" * 70)
