@@ -532,14 +532,17 @@ class TestRegimeAdaptivity:
         signals["_regime_probs"] = [bull_prob, bear_prob, max(0.0, 1.0 - bull_prob - bear_prob)]
         return signals
 
-    def test_normal_regime_thresholds_balanced(self):
-        """NORMAL regime: long and short thresholds must be equal (0.10 each)."""
+    def test_normal_regime_thresholds(self):
+        """NORMAL regime: long=0.10, short=0.05 (V49 fix — data/v35-v48-forensics.json)."""
         node = StrategyNode()
         node._apply_regime_adaptive_thresholds(
             {"_regime_w_bear_prob": 0.25, "_regime_w_bull_prob": 0.30}
         )
         assert node._long_conviction_threshold == 0.10
-        assert node._short_conviction_threshold == 0.10
+        assert node._short_conviction_threshold == 0.05, (
+            f"Normal short threshold={node._short_conviction_threshold} "
+            f"(expected 0.05 — V49 fix for ADAUSDT regression, see forensics)"
+        )
 
     def test_bear_regime_suppresses_longs_permits_shorts(self):
         """Bug 6 (V40-V42): BEAR regime must lower short bar, not block everything."""
