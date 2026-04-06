@@ -1,0 +1,51 @@
+{
+  "version": "v54",
+  "run": {
+    "date": "2026-04-06T12:38:11.087278+00:00",
+    "cycles": 200,
+    "sleep_seconds": 10.0,
+    "elapsed_s": 2705.7,
+    "avg_cycle_s": 13.529,
+    "cg_key_used": true,
+    "db_url_used": true
+  },
+  "preflight": {
+    "ok": false,
+    "warnings": [
+      "Missing Python packages: ['ccxt']. Some signals may be unavailable. Run: pip install -r requirements.txt"
+    ]
+  },
+  "intelligence": {
+    "improve_calls": 1,
+    "semantic_patterns_db": 2,
+    "semantic_patterns_node": 0
+  },
+  "observability": {
+    "metrics_jsonl": "/tmp/v54_metrics.jsonl",
+    "total_zero_trade_cycles": 200,
+    "max_zero_streak": 200,
+    "ring1_pass_rate_final": 1.0,
+    "conviction_filter_rate": null,
+    "circuit_breaker_trips": 0,
+    "final_vol_low_threshold": 0.05
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 200,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 0
+  },
+  "trades": {
+    "total_closed": 0,
+    "long_trades": 0,
+    "short_trades": 0,
+    "open_positions": 0,
+    "win_rate": 0.0,
+    "total_pnl_usd": 0,
+    "realised_pnl_engine": 0.0,
+    "gross_profit": 0,
+    "gross_loss": 0,
+    "profit_factor": null
+  }
+}
