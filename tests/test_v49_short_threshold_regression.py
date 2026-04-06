@@ -1,12 +1,13 @@
-"""V49 regression guard: the normal-regime short conviction threshold must be 0.05.
+"""V50 regression guard: normal-regime thresholds must be balanced at 0.10/0.10.
 
-Motivation: data/v35-v48-forensics.json shows V48's short trades lost $137.55
-relative to V35 extended, concentrated 144% in normal regime and 73% in ADAUSDT.
-The surgical V49 fix lowers short_conviction_threshold from 0.10 to 0.05 in the
-normal-regime branch of StrategyNode._apply_regime_adaptive_thresholds().
+History:
+  V49 lowered short_conviction_threshold to 0.05 in normal regime to admit more
+  shorts (data/v35-v48-forensics.json — ADAUSDT short losses). V49 training showed
+  this caused normal-regime collapse (-$10.98 vs V48 +$16.49). V50 reverts to 0.10
+  balanced; the ETHUSDT long momentum gate is the targeted fix for near-breakeven longs.
 
-If this test fails, someone reverted the V49 fix. Read
-docs/training/v35-v48-forensics.md before changing it back.
+If this test fails, someone changed the normal-regime thresholds. Read
+docs/training/v35-v48-forensics.md and data/v49_gate_result.json before changing.
 """
 from __future__ import annotations
 
@@ -18,12 +19,9 @@ STRATEGY_FILE = (
 )
 
 
-def test_normal_regime_short_threshold_is_005():
-    """The normal-regime else branch must set short_conviction_threshold to 0.05."""
+def test_normal_regime_short_threshold_is_010():
+    """The normal-regime else branch must set short_conviction_threshold to 0.10."""
     text = STRATEGY_FILE.read_text()
-    # Find the normal-regime else branch (follows the bull-regime elif)
-    # and assert the short_conviction_threshold assignment is 0.05.
-    # This is a structural check, not a string search, so it survives reformatting.
     match = re.search(
         r"else:\s*\n"
         r"(?:.*\n){0,20}?"
@@ -36,16 +34,15 @@ def test_normal_regime_short_threshold_is_005():
         "strategy.py may have been refactored; update this regression test to match."
     )
     val = float(match.group("val"))
-    assert val == 0.05, (
-        f"Normal-regime short_conviction_threshold is {val}, expected 0.05. "
-        "This reverts the V49 fix. Read docs/training/v35-v48-forensics.md — "
-        "ADAUSDT alone accounts for 73% of the V35-V48 PnL gap, and the normal-regime "
-        "0.10 threshold was the proximate cause."
+    assert val == 0.10, (
+        f"Normal-regime short_conviction_threshold is {val}, expected 0.10. "
+        "V49 0.05 caused normal-regime collapse (-$10.98 PnL vs V48 +$16.49). "
+        "Use the ETHUSDT momentum gate for targeted filtering instead of lowering this threshold."
     )
 
 
-def test_long_regime_threshold_preserved_at_010():
-    """The V49 fix must NOT touch the normal-regime long threshold."""
+def test_long_threshold_is_010():
+    """Normal-regime long threshold must stay at 0.10."""
     text = STRATEGY_FILE.read_text()
     match = re.search(
         r"else:\s*\n"
@@ -56,6 +53,17 @@ def test_long_regime_threshold_preserved_at_010():
     assert match is not None, "Could not find normal-regime long threshold."
     val = float(match.group("val"))
     assert val == 0.10, (
-        f"Normal-regime long_conviction_threshold is {val}, expected 0.10. "
-        "The V49 fix only lowers the short threshold; longs must remain untouched."
+        f"Normal-regime long_conviction_threshold is {val}, expected 0.10."
+    )
+
+
+def test_ethusdt_momentum_gate_exists():
+    """ETHUSDT long momentum gate must be present in _passes_conviction_filters."""
+    text = STRATEGY_FILE.read_text()
+    assert "ethusdt_long_momentum_gate" in text.lower() or "ETHUSDT" in text, (
+        "ETHUSDT momentum gate not found in strategy.py. "
+        "This gate filters near-breakeven ETHUSDT longs in normal regime (V50 fix)."
+    )
+    assert "sma_crossover" in text and "zscore_signal" in text, (
+        "Momentum gate must use sma_crossover and zscore_signal for direction check."
     )

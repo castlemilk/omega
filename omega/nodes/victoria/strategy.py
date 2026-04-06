@@ -499,7 +499,7 @@ class StrategyNode(Node):
             )
 
     def _passes_conviction_filters(
-        self, sig: dict, cycle: int, direction: str = "long"
+        self, sig: dict, cycle: int, direction: str = "long", ticker: str = ""
     ) -> tuple[bool, str]:
         """
         Return (passes, reason) for the full conviction filter stack.
@@ -509,6 +509,8 @@ class StrategyNode(Node):
           2. Agreement ratio — ≥ threshold of sub-signals agree on direction
           3. Weighted conviction — IC-weighted composite exceeds threshold
           4. Regime / volatility — higher bar in high-vol regime
+          5. Per-symbol momentum gate — ETHUSDT longs require positive momentum
+             in normal regime (guards against breakeven long drag)
         """
         # 1. Time filter
         if cycle - self._last_trade_cycle < 2:
@@ -538,6 +540,26 @@ class StrategyNode(Node):
         conv_threshold = base_threshold * 1.25 if vol_regime == "high" else base_threshold
         if abs(w_conv) < conv_threshold:
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
+
+        # 5. Per-symbol momentum gate for chronic breakeven symbols.
+        # ETHUSDT longs in NORMAL regime require positive short-term momentum
+        # (sma_crossover > 0 OR zscore_signal > 0) to proceed.  Without this
+        # gate, ETHUSDT generates long proposals whenever composite > threshold
+        # purely from oversold RSI/BB signals while price is still trending down,
+        # producing the V48 pattern of 31 near-breakeven longs (-$0.34 net).
+        # Gate is disabled in confirmed BULL regime (regime-adaptive threshold is
+        # already loose at 0.05) to avoid blocking genuine bull-market entries.
+        if (
+            direction == "long"
+            and ticker == "ETHUSDT"
+            and self._long_conviction_threshold >= 0.08  # not in confirmed BULL
+        ):
+            sma_cross = float(sig.get("sma_crossover", 0.0))
+            zscore_sig = float(sig.get("zscore_signal", 0.0))
+            if sma_cross <= 0 and zscore_sig <= 0:
+                return False, "ethusdt_long_momentum_gate(sma_cross=%.3f,z=%.3f)" % (
+                    sma_cross, zscore_sig,
+                )
 
         return True, "pass"
 
@@ -884,7 +906,7 @@ class StrategyNode(Node):
                     regime_blocked_longs += 1
                     continue
                 passes, reason = self._passes_conviction_filters(
-                    sig, current_cycle, direction="long"
+                    sig, current_cycle, direction="long", ticker=ticker
                 )
                 if not passes:
                     filtered_this_cycle += 1
@@ -899,7 +921,7 @@ class StrategyNode(Node):
                     regime_blocked_shorts += 1
                     continue
                 passes, reason = self._passes_conviction_filters(
-                    sig, current_cycle, direction="short"
+                    sig, current_cycle, direction="short", ticker=ticker
                 )
                 if not passes:
                     filtered_this_cycle += 1
@@ -1183,7 +1205,7 @@ class StrategyNode(Node):
                         _td_reason = f"regime_block({_regime_hmm})"
                     else:
                         _td_passes, _td_filter_reason = self._passes_conviction_filters(
-                            _td_sig, current_cycle, "long"
+                            _td_sig, current_cycle, "long", ticker=_td_ticker
                         )
                         if not _td_passes:
                             _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
@@ -1209,7 +1231,7 @@ class StrategyNode(Node):
                         _td_reason = f"regime_block({_regime_hmm})"
                     else:
                         _td_passes, _td_filter_reason = self._passes_conviction_filters(
-                            _td_sig, current_cycle, "short"
+                            _td_sig, current_cycle, "short", ticker=_td_ticker
                         )
                         if not _td_passes:
                             _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
