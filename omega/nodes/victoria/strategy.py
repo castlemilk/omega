@@ -1173,12 +1173,20 @@ class StrategyNode(Node):
                 total_s = sum(inv_vol_s.values())
                 short_base = {ticker: v / total_s for ticker, v in inv_vol_s.items()}
 
-        # Apply conviction size multipliers; shorts get negative weights
+        # Apply conviction size multipliers and continuous conviction scaling.
+        # V65: also scale by (w_conv / 0.25) clamped to [0.5, 2.0] — V63 showed
+        # winner/loser conviction virtually identical (0.2338 vs 0.2346) because
+        # the discrete ConvictionLevel multiplier doesn't capture magnitude within
+        # a level.  This continuous factor rewards genuinely high-conviction signals.
         raw_weights: dict[str, float] = {}
         for ticker, w in long_base.items():
-            raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker])
+            _w_conv = abs(self._compute_weighted_conviction(long_candidates[ticker]))
+            _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
+            raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
         for ticker, w in short_base.items():
-            raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker])
+            _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
+            _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
+            raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
         _kelly_scale = self._kelly_fraction()
