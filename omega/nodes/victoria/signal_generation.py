@@ -48,6 +48,12 @@ try:
 except ImportError:
     _HAS_DXY = False
 
+try:
+    from omega.nodes.victoria.signals.vix_signal import VIXSignal as _VIXSignal
+    _HAS_VIX = True
+except ImportError:
+    _HAS_VIX = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 
@@ -142,6 +148,14 @@ class SignalGenerationNode(Node):
         if _HAS_DXY:
             try:
                 self._dxy_signal = _DXYSignal(window=20)
+            except Exception:
+                pass
+
+        # VIX risk-off signal (market-level, applied to all tickers)
+        self._vix_signal: Any | None = None
+        if _HAS_VIX:
+            try:
+                self._vix_signal = _VIXSignal(window=30)
             except Exception:
                 pass
 
@@ -327,6 +341,13 @@ class SignalGenerationNode(Node):
             except Exception as _exc:
                 logger.debug("DXYSignal compute error: %s", _exc)
 
+        _vix_val: float = 0.0
+        if self._vix_signal is not None:
+            try:
+                _vix_val = self._vix_signal.compute()
+            except Exception as _exc:
+                logger.debug("VIXSignal compute error: %s", _exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -425,6 +446,8 @@ class SignalGenerationNode(Node):
                 ts["fear_greed_signal"] = _fear_greed_val
             if _dxy_val != 0.0:
                 ts["dxy_signal"] = _dxy_val
+            if _vix_val != 0.0:
+                ts["vix_signal"] = _vix_val
 
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
