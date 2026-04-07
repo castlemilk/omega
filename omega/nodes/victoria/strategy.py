@@ -29,6 +29,11 @@ Improvement arc:
           (36 trades, 30% WR in normal) — marginal short signals not credible in normal regime.
           DOT high_vol/crisis shorts remain active via lower thresholds in those branches.
           ETH longs stay fully enabled (50% WR, +$21.83 in V59 — no high_vol blacklist).
+  v2.1 — V63 WR improvements: (a) Blacklist MATICUSDT (16 zero-PnL trades in V62).
+          (b) Absolute min conviction floor 0.12 — filters bottom third of marginal signals
+          (trade distribution shows 0.06–0.14; floor removes low-conviction entries regardless
+          of regime). (c+d) Multi-cycle confirmation: only enter when current direction matches
+          previous cycle's direction — prevents whipsaw entries on single-cycle spikes.
 """
 
 import logging
@@ -50,7 +55,8 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 
 # Symbols excluded from trading (still used as regime/signal indicators).
 # BTC has a 27.8% win rate — used only as a market regime indicator.
-_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
+# MATICUSDT: V62 post-mortem — 16 zero-PnL trades wasting capacity; signal not credible.
+_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "MATICUSDT"})
 
 # Symbols excluded from LONG positions only (shorts still permitted).
 # BTC: regime indicator only, <28% win rate.
@@ -166,6 +172,11 @@ class StrategyNode(Node):
         # Tracking counters
         self._proposals_generated: int = 0  # tickers that passed basic conviction screen
         self._proposals_filtered: int = 0  # tickers blocked by conviction filters
+        # Absolute minimum conviction floor (V63): reject any signal below this regardless
+        # of regime-adaptive thresholds.  Trade distribution shows most entries at 0.06–0.14;
+        # raising from the implicit ~0.08 floor to 0.12 filters the bottom third of marginal
+        # signals without touching the regime-adaptive logic.
+        self._abs_min_conviction: float = 0.12
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
 
@@ -178,6 +189,12 @@ class StrategyNode(Node):
         # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
         self._vol_low_threshold: float = 0.20  # percentile below which vol is "dead-calm"
         self._vol_high_threshold: float = 0.80  # percentile above which vol is "chaotic"
+
+        # --- Multi-cycle confirmation (V63): track last 2 signal directions per symbol ---
+        # Only enter a trade when the current direction matches the previous cycle's direction.
+        # Prevents whipsaw entries on single-cycle signal spikes.
+        # Values: "long" | "short" | "hold"
+        self._signal_history: dict[str, list[str]] = {}
 
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
@@ -567,6 +584,10 @@ class StrategyNode(Node):
         # _apply_regime_adaptive_thresholds() sets these each cycle before the
         # per-ticker loop so CRISIS → lower short bar, BULL → lower long bar.
         w_conv = self._compute_weighted_conviction(sig)
+        # 3a. Absolute minimum conviction floor (V63): reject below 0.12 regardless of regime.
+        # Filters the bottom third of marginal signals (trade distribution: 0.06–0.14 typical).
+        if abs(w_conv) < self._abs_min_conviction:
+            return False, f"abs_min_conviction({abs(w_conv):.2f}<{self._abs_min_conviction:.2f})"
         base_threshold = (
             self._long_conviction_threshold
             if direction == "long"
@@ -916,12 +937,27 @@ class StrategyNode(Node):
             # fell through both branches silently; V32 diagnostics showed trades
             # firing against HOLD-level composites via edge cases in the filter stack.
             if c == ConvictionLevel.HOLD:
+                # Record neutral direction for multi-cycle history
+                _hist = self._signal_history.setdefault(ticker, [])
+                _hist.append("hold")
+                if len(_hist) > 2:
+                    self._signal_history[ticker] = _hist[-2:]
                 continue
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
                 if ticker in _LONG_BLACKLIST:
                     logger.debug("Skipping %s (long blacklist)", ticker)
                     continue
                 if sig.get("composite", 0.0) <= self._signal_threshold:
+                    continue
+                # Multi-cycle confirmation (V63 C+D): only enter if last cycle was also long.
+                # Prevents whipsaw entries on single-cycle signal spikes.
+                _prev_hist = self._signal_history.get(ticker, [])
+                _hist = self._signal_history.setdefault(ticker, [])
+                _hist.append("long")
+                if len(_hist) > 2:
+                    self._signal_history[ticker] = _hist[-2:]
+                if not _prev_hist or _prev_hist[-1] != "long":
+                    logger.debug("Multi-cycle: %s long — no prior long confirmation, skipping", ticker)
                     continue
                 proposals_this_cycle += 1
                 if _block_longs:
@@ -937,6 +973,15 @@ class StrategyNode(Node):
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
+                    continue
+                # Multi-cycle confirmation (V63 C+D): only enter if last cycle was also short.
+                _prev_hist = self._signal_history.get(ticker, [])
+                _hist = self._signal_history.setdefault(ticker, [])
+                _hist.append("short")
+                if len(_hist) > 2:
+                    self._signal_history[ticker] = _hist[-2:]
+                if not _prev_hist or _prev_hist[-1] != "short":
+                    logger.debug("Multi-cycle: %s short — no prior short confirmation, skipping", ticker)
                     continue
                 proposals_this_cycle += 1
                 if _block_shorts:
