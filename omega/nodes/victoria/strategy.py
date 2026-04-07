@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 omega.nodes.victoria.strategy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,14 +46,20 @@ Improvement arc:
           was 15T all-long, avg_win $9 vs avg_loss -$28 (3:1 ratio), -$159 total.  Crisis
           ETH longs remain enabled ($+6.35 in V65, still positive).  Also suppress BNB longs
           in normal regime (V65 BNB:normal: 6T 1W 17% WR, -$18.78).
+  v2.4 — V70 fix: crisis + extreme fear (FGI > 0.25) raises short_thresh 0.02→0.10.
+          V69 post-mortem: 50 cycles at crisis short_thresh=0.02 with FGI=11 (extreme fear)
+          → -$179 losses: SOL/XRP/BNB shorts squeezed in a bounce.  When FGI signals
+          contrarian-bullish (> 0.25) the market is panicking and prices may bounce violently;
+          0.02 is dangerously permissive.  Raise to normal threshold (0.10) to require stronger
+          conviction before shorting into a potential bottom.  Crisis short_thresh=0.02 retained
+          when FGI is neutral/bearish (≤ 0.25) to preserve V65's edge.
 """
 
 import logging
 import math
 import time
 import uuid
-from datetime import datetime, timezone
-UTC = timezone.utc
+from datetime import UTC, datetime
 from enum import IntEnum
 from typing import Any
 
@@ -225,6 +232,7 @@ class StrategyNode(Node):
         # --- Kelly position sizing (V64) ---
         # Track rolling trade outcomes to compute win_rate, avg_win, avg_loss
         from collections import deque
+
         self._trade_history: deque = deque(maxlen=50)
         self._kelly_min_trades: int = 10  # minimum trades before using Kelly
 
@@ -558,26 +566,53 @@ class StrategyNode(Node):
 
         # V53: also treat HMM vol-regime "crisis" as crisis even if Wasserstein is flat
         # (Wasserstein can return 1/3 priors when its signal keys don't match the signal dict).
-        is_crisis = bear_prob >= 0.55 or (bear_prob < 0.0 and regime_hmm == "bear") or regime_hmm == "crisis" or regime_label == "crisis"
-        is_bull = (bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")) and not is_crisis
+        is_crisis = (
+            bear_prob >= 0.55
+            or (bear_prob < 0.0 and regime_hmm == "bear")
+            or regime_hmm == "crisis"
+            or regime_label == "crisis"
+        )
+        is_bull = (
+            bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")
+        ) and not is_crisis
 
         # V60: detect high_vol from consolidated _regime label (VRP FEAR maps to "high_vol").
         # _regime_hmm only carries "bull"/"bear"/"sideways" — never "high_vol".
-        is_high_vol = regime_label == "high_vol" and not is_crisis and not is_bull
+        # is_high_vol computed per-ticker in _passes_conviction_filters as _is_high_vol
 
         if is_crisis:
             # V53: raise to 0.99 to hard-block all longs in crisis.
             # V52 post-mortem: 22 crisis longs → -$100.62 (ETH/AVAX momentum chasing).
             # V65: lower short_thresh 0.05→0.02 — V63 shorts earned $7.63/trade vs
             # $0.97/trade for longs; crisis regime inherently favors shorts.
+            # V70: when Fear&Greed signals extreme fear (> 0.25, contrarian bullish),
+            # raise short_thresh to 0.10 — panicking markets bounce violently; 0.02 lets
+            # in marginal shorts that get squeezed.  V69: -$179 in 50 cycles (FGI=11).
+            _fg_val = next(
+                (v.get("fear_greed_signal", 0.0)
+                 for k, v in signals.items()
+                 if not k.startswith("_") and isinstance(v, dict)
+                 and "fear_greed_signal" in v),
+                0.0,
+            ) or 0.0
             self._long_conviction_threshold = 0.99
-            self._short_conviction_threshold = 0.02
-            logger.info(
-                "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.99, short_thresh=0.02",
-                max(bear_prob, 0.0),
-                regime_hmm,
-            )
+            if _fg_val > 0.25:
+                self._short_conviction_threshold = 0.10
+                logger.info(
+                    "Regime-adaptive: CRISIS/BEAR+EXTREME_FEAR (bear_prob=%.2f, fear_greed=%.3f) "
+                    "→ long_thresh=0.99, short_thresh=0.10 (bounce guard, V70)",
+                    max(bear_prob, 0.0),
+                    _fg_val,
+                )
+            else:
+                self._short_conviction_threshold = 0.02
+                logger.info(
+                    "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s, fear_greed=%.3f) "
+                    "→ long_thresh=0.99, short_thresh=0.02",
+                    max(bear_prob, 0.0),
+                    regime_hmm,
+                    _fg_val,
+                )
         elif is_bull:
             self._long_conviction_threshold = 0.05
             self._short_conviction_threshold = 0.20
@@ -825,7 +860,10 @@ class StrategyNode(Node):
         _composites_for_std = [
             float(sig["composite"])
             for t, sig in signals.items()
-            if not t.startswith("_") and not t.startswith("adv_") and isinstance(sig, dict) and "composite" in sig
+            if not t.startswith("_")
+            and not t.startswith("adv_")
+            and isinstance(sig, dict)
+            and "composite" in sig
         ]
         if len(_composites_for_std) >= 2:
             _c_mean = sum(_composites_for_std) / len(_composites_for_std)
@@ -834,7 +872,9 @@ class StrategyNode(Node):
             )
         else:
             _basket_std = 0.20  # fallback: no rescaling
-        _basket_std = max(_basket_std, 0.010)  # floor prevents degenerate rescaling (V48: 0.005→0.010)
+        _basket_std = max(
+            _basket_std, 0.010
+        )  # floor prevents degenerate rescaling (V48: 0.005→0.010)
 
         # Normalisation factor: composite × _cs_norm before score_to_conviction so that
         # ±0.3σ → ±0.20 (BUY/SELL boundary) and ±0.9σ → ±0.60 (STRONG_BUY/SELL).
@@ -850,7 +890,8 @@ class StrategyNode(Node):
         logger.info(
             "V45 relative thresholds: basket_std=%.4f cs_norm=%.2f "
             "long_thresh=%.4f short_thresh=%.4f wc_thresh=%.4f",
-            _basket_std, _cs_norm,
+            _basket_std,
+            _cs_norm,
             self._long_conviction_threshold,
             self._short_conviction_threshold,
             self._weighted_conviction_threshold,
@@ -1009,7 +1050,9 @@ class StrategyNode(Node):
                 # V66 hard block caused trade count to drop 42→17 (gate failure: req ≥20).
                 # High-conviction ETH longs (≥0.20) still permitted in normal regime.
                 if ticker == "ETHUSDT" and _is_high_vol:
-                    logger.info("ETH long suppressed in high_vol regime (V65)", )
+                    logger.info(
+                        "ETH long suppressed in high_vol regime (V65)",
+                    )
                     continue
                 if ticker == "ETHUSDT" and _is_normal:
                     _eth_conv = abs(self._compute_weighted_conviction(sig))
@@ -1034,7 +1077,9 @@ class StrategyNode(Node):
                 if len(_hist) > 2:
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "long":
-                    logger.debug("Multi-cycle: %s long — no prior long confirmation, skipping", ticker)
+                    logger.debug(
+                        "Multi-cycle: %s long — no prior long confirmation, skipping", ticker
+                    )
                     continue
                 proposals_this_cycle += 1
                 if _block_longs:
@@ -1058,7 +1103,9 @@ class StrategyNode(Node):
                 if len(_hist) > 2:
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "short":
-                    logger.debug("Multi-cycle: %s short — no prior short confirmation, skipping", ticker)
+                    logger.debug(
+                        "Multi-cycle: %s short — no prior short confirmation, skipping", ticker
+                    )
                     continue
                 proposals_this_cycle += 1
                 if _block_shorts:
@@ -1208,14 +1255,18 @@ class StrategyNode(Node):
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
             _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
-            raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+            raw_weights[ticker] = (
+                -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+            )
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
         _kelly_scale = self._kelly_fraction()
         self._last_kelly_scale: float = _kelly_scale  # expose for observability
         if _kelly_scale != 1.0:
             raw_weights = {t: w * _kelly_scale for t, w in raw_weights.items()}
-            logger.info("Kelly sizing: scale=%.3f (n_trades=%d)", _kelly_scale, len(self._trade_history))
+            logger.info(
+                "Kelly sizing: scale=%.3f (n_trades=%d)", _kelly_scale, len(self._trade_history)
+            )
 
         # Apply continuous regime scaling: bear_prob reduces longs, bull_prob reduces shorts
         if _use_continuous_regime:
@@ -1291,7 +1342,11 @@ class StrategyNode(Node):
         _buy_threshold_raw = 0.2 / _cs_norm  # composite > this → BUY conviction
         _ticker_decisions: dict[str, TickerDecision] = {}
         for _td_ticker, _td_sig in signals.items():
-            if _td_ticker.startswith("_") or _td_ticker.startswith("adv_") or not isinstance(_td_sig, dict):
+            if (
+                _td_ticker.startswith("_")
+                or _td_ticker.startswith("adv_")
+                or not isinstance(_td_sig, dict)
+            ):
                 continue
             if "composite" not in _td_sig:
                 continue
@@ -1305,21 +1360,23 @@ class StrategyNode(Node):
                         ik: _td_sig[ik]
                         for ik in (
                             # include the raw indicator values for context
-                            {"sma_crossover": ["sma_short", "sma_long"],
-                             "rsi_signal": ["rsi"],
-                             "macd_crossover": ["macd", "macd_signal_line"],
-                             "bb_signal": ["bb_upper", "bb_lower", "bb_mid"],
-                             "zscore_signal": ["zscore"],
-                             "volume_signal": ["volume_zscore"],
-                             "btc_beta_signal": ["btc_beta"],
-                             "vol_regime_signal": ["vol_regime", "recent_vol_ann"],
+                            {
+                                "sma_crossover": ["sma_short", "sma_long"],
+                                "rsi_signal": ["rsi"],
+                                "macd_crossover": ["macd", "macd_signal_line"],
+                                "bb_signal": ["bb_upper", "bb_lower", "bb_mid"],
+                                "zscore_signal": ["zscore"],
+                                "volume_signal": ["volume_zscore"],
+                                "btc_beta_signal": ["btc_beta"],
+                                "vol_regime_signal": ["vol_regime", "recent_vol_ann"],
                             }.get(_k, [])
                         )
                         if ik in _td_sig and isinstance(_td_sig[ik], (int, float, str))
                     },
                 )
                 for _k, _v in _td_sig.items()
-                if (_k.endswith("_signal") or _k == "sma_crossover") and isinstance(_v, (int, float))
+                if (_k.endswith("_signal") or _k == "sma_crossover")
+                and isinstance(_v, (int, float))
             ]
 
             _td_demeaned = float(_td_sig.get("composite", 0.0))
@@ -1343,13 +1400,17 @@ class StrategyNode(Node):
                     _td_final = "FILTERED"
                     _td_reason = "long_blacklist"
                 elif _td_demeaned <= self._signal_threshold:
-                    _td_filters.append(f"signal_threshold:skip(composite={_td_demeaned:.4f}<={self._signal_threshold:.4f})")
+                    _td_filters.append(
+                        f"signal_threshold:skip(composite={_td_demeaned:.4f}<={self._signal_threshold:.4f})"
+                    )
                     _td_final = "FILTERED"
                     _td_reason = "signal_threshold"
                 else:
                     _td_proposal = "LONG"
                     if _block_longs:
-                        _td_filters.append(f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})")
+                        _td_filters.append(
+                            f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})"
+                        )
                         _td_final = "FILTERED"
                         _td_reason = f"regime_block({_regime_hmm})"
                     else:
@@ -1373,7 +1434,9 @@ class StrategyNode(Node):
                 else:
                     _td_proposal = "SHORT"
                     if _block_shorts:
-                        _td_filters.append(f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})")
+                        _td_filters.append(
+                            f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})"
+                        )
                         _td_final = "FILTERED"
                         _td_reason = f"regime_block({_regime_hmm})"
                     else:
