@@ -36,6 +36,18 @@ try:
 except ImportError:
     _HAS_FUNDING_RATE = False
 
+try:
+    from omega.nodes.victoria.signals.fear_greed import FearGreedSignal as _FearGreedSignal
+    _HAS_FEAR_GREED = True
+except ImportError:
+    _HAS_FEAR_GREED = False
+
+try:
+    from omega.nodes.victoria.signals.dxy_signal import DXYSignal as _DXYSignal
+    _HAS_DXY = True
+except ImportError:
+    _HAS_DXY = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 
@@ -114,6 +126,22 @@ class SignalGenerationNode(Node):
         if _HAS_FUNDING_RATE:
             try:
                 self._funding_signal = _FundingRateSignal(window=30)
+            except Exception:
+                pass
+
+        # Fear & Greed contrarian signal (market-level, applied to all tickers)
+        self._fear_greed_signal: Any | None = None
+        if _HAS_FEAR_GREED:
+            try:
+                self._fear_greed_signal = _FearGreedSignal(window=30)
+            except Exception:
+                pass
+
+        # DXY/BTC correlation signal (market-level, applied to all tickers)
+        self._dxy_signal: Any | None = None
+        if _HAS_DXY:
+            try:
+                self._dxy_signal = _DXYSignal(window=20)
             except Exception:
                 pass
 
@@ -284,6 +312,21 @@ class SignalGenerationNode(Node):
     def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
 
+        # Market-level cross-asset signals — computed once and applied to all tickers.
+        _fear_greed_val: float = 0.0
+        if self._fear_greed_signal is not None:
+            try:
+                _fear_greed_val = self._fear_greed_signal.compute()
+            except Exception as _exc:
+                logger.debug("FearGreedSignal compute error: %s", _exc)
+
+        _dxy_val: float = 0.0
+        if self._dxy_signal is not None:
+            try:
+                _dxy_val = self._dxy_signal.compute(market_data)
+            except Exception as _exc:
+                logger.debug("DXYSignal compute error: %s", _exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -376,6 +419,12 @@ class SignalGenerationNode(Node):
                         ts["funding_rate_signal"] = fr_signal
                 except Exception:
                     pass
+
+            # Cross-asset market-level signals (pre-computed above, applied to every ticker)
+            if _fear_greed_val != 0.0:
+                ts["fear_greed_signal"] = _fear_greed_val
+            if _dxy_val != 0.0:
+                ts["dxy_signal"] = _dxy_val
 
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
