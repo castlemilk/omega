@@ -530,16 +530,19 @@ class PaperTradingEngine:
             pos["mfe"] = max(float(pos.get("mfe", 0.0)), unrealized)
 
             # Check exit conditions
-            exit_at_cycle = int(pos.get("exit_at_cycle", current_cycle))
+            # V65: asymmetric hold limits — cut losers fast, let winners run.
+            # Losers (unrealized < 0) close at max 4 cycles; winners extend to 10.
+            cycle_opened = int(pos.get("cycle_opened", current_cycle))
+            age = current_cycle - cycle_opened
             roi = unrealized / size if size > 0 else 0.0
+            _max_hold = 4 if unrealized < 0 else 10
 
             should_close = False
             close_reason = ""
-            if current_cycle >= exit_at_cycle:
+            if age >= _max_hold:
                 should_close = True
-                cycle_opened = int(pos.get("cycle_opened", current_cycle))
-                age = current_cycle - cycle_opened
-                close_reason = f"time_exit(age={age})"
+                _exit_type = "loss_cut" if unrealized < 0 else "profit_run"
+                close_reason = f"time_exit(age={age},{_exit_type})"
             elif roi < stop_loss_pct:
                 should_close = True
                 close_reason = f"stop_loss(roi={roi:.3f})"
@@ -549,8 +552,6 @@ class PaperTradingEngine:
 
             # Realise PnL
             self._realised_pnl += unrealized
-            cycle_opened = int(pos.get("cycle_opened", current_cycle))
-            age = current_cycle - cycle_opened
             close_rec: dict[str, Any] = {
                 "trade_id": pos.get("trade_id"),
                 "cycle_id": cycle_id,
