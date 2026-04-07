@@ -170,9 +170,9 @@ class StrategyNode(Node):
         self._weighted_conviction_threshold: float = 0.10
         # Per-direction regime-adaptive conviction thresholds.
         # Set each cycle by _apply_regime_adaptive_thresholds() based on detected regime:
-        #   CRISIS/BEAR  → long=0.20 (suppressed), short=0.05 (permissive)
+        #   CRISIS/BEAR  → long=0.99 (hard-blocked), short=0.02 (permissive, V65)
         #   BULL         → long=0.05 (permissive), short=0.20 (suppressed)
-        #   NORMAL/other → long=0.10, short=0.10  (balanced)
+        #   NORMAL/other → long=0.13, short=0.10  (V59/V61)
         self._long_conviction_threshold: float = 0.10
         self._short_conviction_threshold: float = 0.10
         # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
@@ -564,11 +564,13 @@ class StrategyNode(Node):
         if is_crisis:
             # V53: raise to 0.99 to hard-block all longs in crisis.
             # V52 post-mortem: 22 crisis longs → -$100.62 (ETH/AVAX momentum chasing).
+            # V65: lower short_thresh 0.05→0.02 — V63 shorts earned $7.63/trade vs
+            # $0.97/trade for longs; crisis regime inherently favors shorts.
             self._long_conviction_threshold = 0.99
-            self._short_conviction_threshold = 0.05
+            self._short_conviction_threshold = 0.02
             logger.info(
                 "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.99, short_thresh=0.05",
+                "→ long_thresh=0.99, short_thresh=0.02",
                 max(bear_prob, 0.0),
                 regime_hmm,
             )
