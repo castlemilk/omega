@@ -1005,9 +1005,21 @@ class StrategyNode(Node):
                 # V65: suppress ETHUSDT longs in high_vol regime.
                 # V66: extend to normal regime — V65 ETH:normal 15T all-long avg_loss -$28
                 # vs avg_win $9 (3:1 ratio), -$159 net. Crisis longs remain enabled (+$6).
-                if ticker == "ETHUSDT" and (_is_high_vol or _is_normal):
-                    logger.info("ETH long suppressed in %s regime (V66)", _regime_consolidated)
+                # V68: replace full normal-regime suppression with 0.20 conviction floor —
+                # V66 hard block caused trade count to drop 42→17 (gate failure: req ≥20).
+                # High-conviction ETH longs (≥0.20) still permitted in normal regime.
+                if ticker == "ETHUSDT" and _is_high_vol:
+                    logger.info("ETH long suppressed in high_vol regime (V65)", )
                     continue
+                if ticker == "ETHUSDT" and _is_normal:
+                    _eth_conv = abs(self._compute_weighted_conviction(sig))
+                    if _eth_conv < 0.20:
+                        logger.info(
+                            "ETH long suppressed in normal regime (V68 conviction floor: "
+                            "%.3f < 0.20)",
+                            _eth_conv,
+                        )
+                        continue
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 if ticker == "BNBUSDT" and _is_normal:
                     logger.info("BNB long suppressed in normal regime (V66)")
