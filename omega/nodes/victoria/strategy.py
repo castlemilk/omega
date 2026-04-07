@@ -11,6 +11,24 @@ Improvement arc:
   v1.3 — Signal threshold tuning based on backtest Sharpe feedback
   v1.4 — Relative conviction thresholds: scale by basket composite std (V45)
   v1.5 — Lower conviction multiplier 0.5σ→0.3σ, floor 0.005→0.010 (V48)
+  v1.6 — Blacklist AVAXUSDT (27 losing longs in V55); restore DOT normal-regime shorts (V56)
+  v1.7 — Freeze weighting at "equal" (V57): v1.1/v1.2 momentum/risk-parity upgrades caused
+          extreme zero_streaks (182/200 in V56) when the improvement engine triggered mid-run.
+          V56 analysis: 8 trades opened before improvement (WR=62.5%), zero after. Root cause:
+          risk_parity + continuous-regime scaling produces near-zero weights post-improvement.
+          Frozen at equal weighting; v1.3 signal_threshold tightening also disabled.
+  v1.8 — Fix adv_* basket_std inflation (V58): adapt_signals() injects adv_spectral_graph
+          (raw Fiedler z-score, ±5+) into the basket used for _cs_norm scaling.  Once the
+          SpectralGraphSignal exits its 15-cycle warmup, the inflated basket_std collapses
+          _cs_norm, mapping all per-ticker composites to HOLD.  Fix: exclude adv_* synthetic
+          aggregates from basket_std computation.  Root cause of V49–V57 zero_streak.
+  v1.9 — Blacklist LINKUSDT longs (V59): V58 produced 30 LINK longs, -$34.95 — the entire
+          loss for the run.  DOT shorts remain enabled (+$9.63).  Normal regime long threshold
+          raised 0.10→0.13 to filter borderline long signals (V58 normal WR=37%).
+  v2.0 — Raise normal short_thresh 0.05→0.10 (V61): V59 DOT normal shorts lost -$28.93
+          (36 trades, 30% WR in normal) — marginal short signals not credible in normal regime.
+          DOT high_vol/crisis shorts remain active via lower thresholds in those branches.
+          ETH longs stay fully enabled (50% WR, +$21.83 in V59 — no high_vol blacklist).
 """
 
 import logging
@@ -35,9 +53,11 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 _TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
 
 # Symbols excluded from LONG positions only (shorts still permitted).
-# Only BTC excluded: used purely as regime indicator with <28% win rate.
-# ETH longs re-enabled — signal system determines direction per cycle.
-_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
+# BTC: regime indicator only, <28% win rate.
+# LINKUSDT: V58 post-mortem — 30 longs, -$34.95 (all loss from normal/high_vol longs).
+#   DOT shorts remain allowed (+$9.63 in V58 shorts are similar signal pattern).
+#   The LINK long signal appears systematically mis-calibrated post basket_std fix.
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "LINKUSDT"})
 
 
 # ---------------------------------------------------------------------------
@@ -344,6 +364,9 @@ class StrategyNode(Node):
         return self._risk.is_halted()
 
     def improve(self, feedback: dict[str, Any]) -> bool:
+        # V57 froze this at equal weighting to diagnose V56's zero_streak. V58 post-mortem:
+        # the zero_streak was caused by adv_spectral_graph inflating basket_std (fixed above),
+        # not by the weighting upgrade. Re-enable the improvement arc.
         changed = False
         iteration = feedback.get("iteration", 0)
 
@@ -484,11 +507,16 @@ class StrategyNode(Node):
                 regime_hmm,
             )
         else:
-            self._long_conviction_threshold = 0.10
+            # V59: raise normal long_thresh 0.10→0.13 — V58 had 37% WR on normal longs.
+            # V61: raise normal short_thresh 0.05→0.10 — V59 DOT normal shorts lost -$28.93
+            #   (36 trades, 30% WR); marginal short signals not credible in normal regime.
+            #   DOT high_vol/crisis shorts remain active via lower thresholds in those branches.
+            #   ETH longs stay fully enabled (no high_vol blacklist — V59 ETH WR=50%).
+            self._long_conviction_threshold = 0.13
             self._short_conviction_threshold = 0.10
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.10, short_thresh=0.10",
+                "→ long_thresh=0.13, short_thresh=0.10 (V61)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,
@@ -695,10 +723,18 @@ class StrategyNode(Node):
         # Absolute thresholds (±0.20 HOLD band, 0.10 weighted-conviction gate) swallow the
         # entire range and produce 99% HOLD cycles.  Scale ALL thresholds proportionally to
         # the basket composite std so that 0.5σ → BUY regardless of absolute scale.
+        #
+        # V58: exclude adv_* synthetic aggregates from basket_std computation.
+        # adv_order_flow, adv_cross_asset, adv_spectral_graph etc. are created by
+        # adapt_signals() from signal category "value" fields.  SpectralGraphSignal
+        # outputs raw Fiedler z-scores (unclamped, can be ±5+), which inflate
+        # basket_std once the 15-cycle warmup ends — collapsing _cs_norm and
+        # making every per-ticker composite map to HOLD.  Only real per-ticker
+        # composites (ETHUSDT, DOTUSDT, etc.) should anchor the basket std.
         _composites_for_std = [
             float(sig["composite"])
             for t, sig in signals.items()
-            if not t.startswith("_") and isinstance(sig, dict) and "composite" in sig
+            if not t.startswith("_") and not t.startswith("adv_") and isinstance(sig, dict) and "composite" in sig
         ]
         if len(_composites_for_std) >= 2:
             _c_mean = sum(_composites_for_std) / len(_composites_for_std)
