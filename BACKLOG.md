@@ -6,7 +6,7 @@
 > Architecture target state: `docs/architecture/agent-intelligence-architecture.md`.
 > Research pipeline: `docs/research/`.
 
-**Last updated:** 2026-04-08
+**Last updated:** 2026-04-08 (V71)
 **Current training version:** V66 (in progress)
 **Last completed:** V65 (-$212.93, 33% WR — ETH:normal long bias in downtrend; fixed in V66)
 **Next training target:** V67 (yield curve + signal decay wired)
@@ -61,7 +61,7 @@
 
 - [x] **VIX signal** — CBOE `^VIX` via yfinance; threshold + z-score modes; capitulation reversal at VIX>35 for 3+ days `signals/vix_signal.py` (V66)
 - [x] **Yield curve signal** — FRED `DGS2`/`DGS10` 2s10s spread; inversion/steepening/shock modes; 4h cache `signals/yield_curve.py` (V67)
-- [ ] **SPY correlation signal** — BTC/SPY 20d rolling Pearson; fires when corr > 0.6 and SPY falling. Best as regime filter. **Priority: Medium**
+- [x] **SPY correlation signal** — BTC/SPY 20d rolling Pearson; fires when corr > 0.4; 4h SPY momentum → risk-on +0.3 / risk-off -0.3 `signals/spy_signal.py` (V71)
 - [ ] **Gold signal** — BTC/XAU co-movement as inflation-hedge regime identifier. yfinance `GC=F`. **Priority: Low**
 - [ ] **Exchange flow signal (live)** — Wire Glassnode/CryptoQuant API; stub exists at `signals/exchange_flow.py`. Requires API key (`GLASSNODE_API_KEY`). **Priority: High when key available**
 - [ ] **Unusual Whales live data** — Complete `unusual_whales_node.py` once API key obtained. Options flow + dark pool alpha. **Priority: High when key available**
