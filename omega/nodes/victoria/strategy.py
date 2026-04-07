@@ -34,6 +34,13 @@ Improvement arc:
           (trade distribution shows 0.06–0.14; floor removes low-conviction entries regardless
           of regime). (c+d) Multi-cycle confirmation: only enter when current direction matches
           previous cycle's direction — prevents whipsaw entries on single-cycle spikes.
+  v2.2 — V65 improvements: (a) Suppress ETHUSDT longs in high_vol regime — V63 deep
+          analysis: all 5 worst trades were ETH longs, $-27 to $-10 each. (b) Crisis short
+          threshold 0.05→0.02 to capture more shorts in bear market (shorts 8x more profitable
+          per trade in V63: $7.63 vs $0.97). (c) Conviction-weighted sizing: continuous scale
+          by (w_conv/0.25) ∈ [0.5, 2.0] — V63 showed zero spread between winner/loser
+          conviction; this differentiates position size by actual conviction magnitude.
+          (d) Asymmetric hold: losers capped at 4 cycles, winners run to 10.
 """
 
 import logging
@@ -790,6 +797,11 @@ class StrategyNode(Node):
         # NORMAL → balanced (0.10 each).
         self._apply_regime_adaptive_thresholds(signals)
 
+        # V65: detect high_vol for per-ticker regime filters (ETH long suppression).
+        # Use the consolidated _regime label — _regime_hmm never carries "high_vol".
+        _regime_consolidated = str(signals.get("_regime", "")).lower()
+        _is_high_vol = _regime_consolidated == "high_vol"
+
         # --- Relative conviction threshold calibration (V45) ---
         # After cross-sectional demeaning, composites are typically 0.01–0.05 in magnitude.
         # Absolute thresholds (±0.20 HOLD band, 0.10 weighted-conviction gate) swallow the
@@ -982,6 +994,11 @@ class StrategyNode(Node):
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
                 if ticker in _LONG_BLACKLIST:
                     logger.debug("Skipping %s (long blacklist)", ticker)
+                    continue
+                # V65: suppress ETHUSDT longs in high_vol regime — V63 all 5 worst trades
+                # were ETH longs in high_vol/normal (-$27 to -$10). Short ETH remains open.
+                if ticker == "ETHUSDT" and _is_high_vol:
+                    logger.info("ETH long suppressed in high_vol regime (V65)")
                     continue
                 if sig.get("composite", 0.0) <= self._signal_threshold:
                     continue
