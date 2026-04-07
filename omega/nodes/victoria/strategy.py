@@ -46,12 +46,11 @@ Improvement arc:
           was 15T all-long, avg_win $9 vs avg_loss -$28 (3:1 ratio), -$159 total.  Crisis
           ETH longs remain enabled ($+6.35 in V65, still positive).  Also suppress BNB longs
           in normal regime (V65 BNB:normal: 6T 1W 17% WR, -$18.78).
-  v2.4 — V71 fix: crisis + extreme fear (FGI > 0.25) creates cross-signal intelligence:
-          extreme fear = contrarian long opportunity + suppress shorts (bounce guard).
-          long_thresh: 0.99 → 0.30 (enable longs when market is panicking — bounce alpha).
-          short_thresh: 0.02 → 0.06 (raise bar, not 0.10 — keep some short capacity).
-          V70 had it backwards: 0.99 long blocked all bounce longs while 0.10 short was
-          too aggressive; FGI z-score ≈ 0 (market stuck in fear) meant guard never fired.
+  v2.4 — V72 post-mortem: V71's long=0.30 in crisis+extreme_fear was wrong.
+          Longs opened at 0.30 in crisis regime close later in "normal" regime and
+          book as normal-regime losses (V71 normal: -$145.61, V70 partial: -$43).
+          Reverting to hard-block on longs (0.99) and raising short_thresh to 0.10
+          (bounce guard) when FGI > 0.25 to filter out panic-shorts on true bounces.
           When FGI ≤ 0.25: revert to V65 defaults (long=0.99 hard-block, short=0.02).
 """
 
@@ -585,9 +584,10 @@ class StrategyNode(Node):
             # V52 post-mortem: 22 crisis longs → -$100.62 (ETH/AVAX momentum chasing).
             # V65: lower short_thresh 0.05→0.02 — V63 shorts earned $7.63/trade vs
             # $0.97/trade for longs; crisis regime inherently favors shorts.
-            # V71: cross-signal intelligence — extreme fear (FGI > 0.25) = bounce opportunity.
-            # When FGI contrarian signal is bullish: enable longs (0.30) and moderate shorts
-            # (0.06). When neutral/bearish: hard-block longs (0.99) and permissive shorts (0.02).
+            # V72: hard-block longs in all crisis scenarios; bounce guard raises short_thresh
+            # when FGI > 0.25 (extreme fear = contrarian signal = panic-short suppression).
+            # V71 mistake: enabling longs at 0.30 in crisis — those longs close in "normal"
+            # regime and appear as normal-regime losses (-$145.61). Keep longs blocked.
             _fg_val = next(
                 (v.get("fear_greed_signal", 0.0)
                  for k, v in signals.items()
@@ -595,18 +595,17 @@ class StrategyNode(Node):
                  and "fear_greed_signal" in v),
                 0.0,
             ) or 0.0
+            self._long_conviction_threshold = 0.99
             if _fg_val > 0.25:
-                # Extreme fear = contrarian long opportunity; bounce likely; suppress shorts
-                self._long_conviction_threshold = 0.30
-                self._short_conviction_threshold = 0.06
+                # Bounce guard: extreme fear → suppress new shorts (raise bar to 0.10)
+                self._short_conviction_threshold = 0.10
                 logger.info(
                     "Regime-adaptive: CRISIS/BEAR+EXTREME_FEAR (bear_prob=%.2f, fear_greed=%.3f) "
-                    "→ long_thresh=0.30, short_thresh=0.06 (bounce guard, V71)",
+                    "→ long_thresh=0.99 (hard-block), short_thresh=0.10 (bounce guard, V72)",
                     max(bear_prob, 0.0),
                     _fg_val,
                 )
             else:
-                self._long_conviction_threshold = 0.99
                 self._short_conviction_threshold = 0.02
                 logger.info(
                     "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s, fear_greed=%.3f) "
