@@ -532,6 +532,16 @@ def run(
     _hb_node_id = f"victoria_{version}"
     hb_client.report_lifecycle(_hb_node_id, "STARTING", "RUNNING", "training loop started")
 
+    # ── Signal IC decay detector ──────────────────────────────────────────
+    try:
+        from omega.nodes.victoria.signal_decay import SignalDecayDetector
+        _decay_detector: "SignalDecayDetector | None" = SignalDecayDetector()
+        _decay_detector.load()
+        log.info("SignalDecayDetector: loaded from %s", _decay_detector._path)
+    except Exception as _sd_exc:
+        log.debug("SignalDecayDetector unavailable (non-fatal): %s", _sd_exc)
+        _decay_detector = None
+
     # ── Loop state ────────────────────────────────────────────────────────
     progress: list[dict] = []
     sit_out_counts: dict[str, int] = {
@@ -754,6 +764,39 @@ def run(
                         "ml_weights": _ml_weights_snap,
                     }) + "\n")
                 trade_details_fh.flush()
+
+            # ── Signal IC decay detection ─────────────────────────────────
+            if new_closed and _decay_detector is not None:
+                try:
+                    for _td_trade in new_closed:
+                        _td_sym = _td_trade.get("sym", _td_trade.get("symbol", ""))
+                        _td_side = _td_trade.get("side", "long")
+                        _td_entry = float(_td_trade.get("entry_price", 0.0))
+                        _td_exit = float(_td_trade.get("exit_price", 0.0))
+                        if _td_entry > 0 and _td_exit > 0:
+                            if _td_side == "long":
+                                _fwd_return = (_td_exit - _td_entry) / _td_entry
+                            else:
+                                _fwd_return = (_td_entry - _td_exit) / _td_entry
+                        else:
+                            _td_pnl = float(_td_trade.get("pnl", 0.0))
+                            _td_size = float(_td_trade.get("size", 1.0)) or 1.0
+                            _fwd_return = _td_pnl / _td_size
+                        _td_sig_dict = last_signals.get(_td_sym) or {}
+                        _decay_detector.update(
+                            _td_sig_dict, _fwd_return,
+                            symbol=_td_sym, side=_td_side,
+                        )
+                    _decay_warnings = _decay_detector.log_warnings()
+                    if _decay_warnings:
+                        log.warning(
+                            "IC decay alerts cycle=%d: %s",
+                            cycle_num,
+                            json.dumps(_decay_warnings),
+                        )
+                    _decay_detector.persist()
+                except Exception as _dc_exc:
+                    log.debug("SignalDecayDetector update error (non-fatal): %s", _dc_exc)
 
             # ── Structured JSONL metric line ──────────────────────────────
             metric_row: dict = {
