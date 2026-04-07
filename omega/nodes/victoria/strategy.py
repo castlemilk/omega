@@ -1190,6 +1190,7 @@ class StrategyNode(Node):
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
         _kelly_scale = self._kelly_fraction()
+        self._last_kelly_scale: float = _kelly_scale  # expose for observability
         if _kelly_scale != 1.0:
             raw_weights = {t: w * _kelly_scale for t, w in raw_weights.items()}
             logger.info("Kelly sizing: scale=%.3f (n_trades=%d)", _kelly_scale, len(self._trade_history))
