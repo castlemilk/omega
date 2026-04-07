@@ -38,6 +38,7 @@ const NAV_SECTIONS = [
     label: "Training",
     items: [
       { to: "/training", icon: Radio, label: "Live Feed" },
+      { to: "/training/analysis", icon: BarChart2, label: "Analysis" },
       { to: "/convergence", icon: TrendingUp, label: "Cycles" },
       { to: "/metrics", icon: BarChart2, label: "Metrics" },
     ],

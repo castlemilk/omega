@@ -29,6 +29,7 @@ import VictoriaBacktest from "./pages/VictoriaBacktest";
 import SystemHealth from "./pages/SystemHealth";
 import PipelineView from "./pages/PipelineView";
 import Training from "./pages/Training";
+import TrainingAnalysis from "./pages/TrainingAnalysis";
 import SignalHealth from "./pages/SignalHealth";
 import ControlPlane from "./pages/ControlPlane";
 import Settings from "./pages/Settings";
@@ -82,6 +83,7 @@ export default function App() {
 
                 {/* Training */}
                 <Route path="/training" element={<Training />} />
+                <Route path="/training/analysis" element={<TrainingAnalysis />} />
                 <Route path="/convergence" element={<Convergence />} />
                 <Route path="/metrics" element={<Metrics />} />
 
