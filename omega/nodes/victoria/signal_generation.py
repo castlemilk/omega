@@ -60,6 +60,12 @@ try:
 except ImportError:
     _HAS_YIELD_CURVE = False
 
+try:
+    from omega.nodes.victoria.signals.spy_signal import SPYSignal as _SPYSignal
+    _HAS_SPY = True
+except ImportError:
+    _HAS_SPY = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 
@@ -170,6 +176,14 @@ class SignalGenerationNode(Node):
         if _HAS_YIELD_CURVE:
             try:
                 self._yield_curve_signal = _YieldCurveSignal()
+            except Exception:
+                pass
+
+        # SPY/BTC co-movement signal — risk-on/off overlay (market-level)
+        self._spy_signal: Any | None = None
+        if _HAS_SPY:
+            try:
+                self._spy_signal = _SPYSignal(window=20)
             except Exception:
                 pass
 
@@ -369,6 +383,13 @@ class SignalGenerationNode(Node):
             except Exception as _exc:
                 logger.warning("YieldCurveSignal compute error: %s", _exc)
 
+        _spy_val: float = 0.0
+        if self._spy_signal is not None:
+            try:
+                _spy_val = self._spy_signal.compute(market_data)
+            except Exception as _exc:
+                logger.warning("SPYSignal compute error: %s", _exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -471,6 +492,8 @@ class SignalGenerationNode(Node):
                 ts["vix_signal"] = _vix_val
             if _yield_curve_val != 0.0:
                 ts["yield_curve_signal"] = _yield_curve_val
+            if _spy_val != 0.0:
+                ts["spy_signal"] = _spy_val
 
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
