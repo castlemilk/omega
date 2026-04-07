@@ -41,6 +41,10 @@ Improvement arc:
           by (w_conv/0.25) ∈ [0.5, 2.0] — V63 showed zero spread between winner/loser
           conviction; this differentiates position size by actual conviction magnitude.
           (d) Asymmetric hold: losers capped at 4 cycles, winners run to 10.
+  v2.3 — V66 improvements: Extend ETH long suppression to normal regime — V65 ETH:normal
+          was 15T all-long, avg_win $9 vs avg_loss -$28 (3:1 ratio), -$159 total.  Crisis
+          ETH longs remain enabled ($+6.35 in V65, still positive).  Also suppress BNB longs
+          in normal regime (V65 BNB:normal: 6T 1W 17% WR, -$18.78).
 """
 
 import logging
@@ -799,10 +803,11 @@ class StrategyNode(Node):
         # NORMAL → balanced (0.10 each).
         self._apply_regime_adaptive_thresholds(signals)
 
-        # V65: detect high_vol for per-ticker regime filters (ETH long suppression).
+        # V65/V66: detect regime for per-ticker filters (ETH/BNB long suppression).
         # Use the consolidated _regime label — _regime_hmm never carries "high_vol".
         _regime_consolidated = str(signals.get("_regime", "")).lower()
         _is_high_vol = _regime_consolidated == "high_vol"
+        _is_normal = _regime_consolidated == "normal"
 
         # --- Relative conviction threshold calibration (V45) ---
         # After cross-sectional demeaning, composites are typically 0.01–0.05 in magnitude.
@@ -997,10 +1002,15 @@ class StrategyNode(Node):
                 if ticker in _LONG_BLACKLIST:
                     logger.debug("Skipping %s (long blacklist)", ticker)
                     continue
-                # V65: suppress ETHUSDT longs in high_vol regime — V63 all 5 worst trades
-                # were ETH longs in high_vol/normal (-$27 to -$10). Short ETH remains open.
-                if ticker == "ETHUSDT" and _is_high_vol:
-                    logger.info("ETH long suppressed in high_vol regime (V65)")
+                # V65: suppress ETHUSDT longs in high_vol regime.
+                # V66: extend to normal regime — V65 ETH:normal 15T all-long avg_loss -$28
+                # vs avg_win $9 (3:1 ratio), -$159 net. Crisis longs remain enabled (+$6).
+                if ticker == "ETHUSDT" and (_is_high_vol or _is_normal):
+                    logger.info("ETH long suppressed in %s regime (V66)", _regime_consolidated)
+                    continue
+                # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
+                if ticker == "BNBUSDT" and _is_normal:
+                    logger.info("BNB long suppressed in normal regime (V66)")
                     continue
                 if sig.get("composite", 0.0) <= self._signal_threshold:
                     continue
