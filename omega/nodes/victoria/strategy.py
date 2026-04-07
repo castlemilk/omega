@@ -487,17 +487,32 @@ class StrategyNode(Node):
         bear_prob = float(signals.get("_regime_w_bear_prob", -1.0))
         bull_prob = float(signals.get("_regime_w_bull_prob", -1.0))
         regime_hmm = str(signals.get("_regime_hmm", "")).lower()
+        # _regime is the consolidated label (includes VRP "high_vol", HMM-derived "crisis", etc.)
+        # _regime_hmm is the raw HMM label (only "bull"/"bear"/"sideways").
+        # Use _regime for high_vol detection since that's where the VRP FEAR→high_vol mapping lands.
+        regime_label = str(signals.get("_regime", "")).lower()
 
-        if bear_prob >= 0.55 or (bear_prob < 0.0 and regime_hmm == "bear"):
-            self._long_conviction_threshold = 0.20
+        # V53: also treat HMM vol-regime "crisis" as crisis even if Wasserstein is flat
+        # (Wasserstein can return 1/3 priors when its signal keys don't match the signal dict).
+        is_crisis = bear_prob >= 0.55 or (bear_prob < 0.0 and regime_hmm == "bear") or regime_hmm == "crisis" or regime_label == "crisis"
+        is_bull = (bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")) and not is_crisis
+
+        # V60: detect high_vol from consolidated _regime label (VRP FEAR maps to "high_vol").
+        # _regime_hmm only carries "bull"/"bear"/"sideways" — never "high_vol".
+        is_high_vol = regime_label == "high_vol" and not is_crisis and not is_bull
+
+        if is_crisis:
+            # V53: raise to 0.99 to hard-block all longs in crisis.
+            # V52 post-mortem: 22 crisis longs → -$100.62 (ETH/AVAX momentum chasing).
+            self._long_conviction_threshold = 0.99
             self._short_conviction_threshold = 0.05
             logger.info(
                 "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.20, short_thresh=0.05",
+                "→ long_thresh=0.99, short_thresh=0.05",
                 max(bear_prob, 0.0),
                 regime_hmm,
             )
-        elif bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull"):
+        elif is_bull:
             self._long_conviction_threshold = 0.05
             self._short_conviction_threshold = 0.20
             logger.info(
