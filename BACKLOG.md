@@ -6,7 +6,7 @@
 > Architecture target state: `docs/architecture/agent-intelligence-architecture.md`.
 > Research pipeline: `docs/research/`.
 
-**Last updated:** 2026-04-07
+**Last updated:** 2026-04-08
 **Current training version:** V66 (in progress)
 **Last completed:** V65 (-$212.93, 33% WR — ETH:normal long bias in downtrend; fixed in V66)
 **Next training target:** V67 (yield curve + signal decay wired)
@@ -152,6 +152,7 @@
 - [x] **Training preflight checks** — data freshness, DB, signal imports validated before start `training_preflight.py` (V30)
 - [x] **`print_training_diagnostics()`** — cycle-0 + every-10-cycle blocker analysis `run_training.py` (V30)
 - [x] **Forensics tool** — `run_diff.py` two-run comparison: per-symbol PnL delta, conviction histogram, hypotheses `omega/tools/forensics/`
+- [x] **Performance attribution** — PnL decomposed into alpha/beta/timing/selection; auto-generated after each training run → `data/{version}_attribution.json` `omega/nodes/victoria/performance_attribution.py` (V70+)
 - [x] **V49 hard gates** — 6 gates (PnL, regime parity, drawdown, trade count, signal integrity, audit) `eval/v49_gates.py`
 - [x] **OTel tracing** — `internal/telemetry/` distributed traces → Tempo → Grafana `make otel-up`
 - [x] **Prometheus metrics** — `internal/observability/metrics.go` + Grafana dashboards `monitoring/grafana/`
@@ -194,6 +195,7 @@
 - [x] **Go ↔ Python bridge** — `internal/bridge/pipeline_client.go` + `omega/bridge/pipeline_server.py`
 - [x] **Auth middleware** — JWT + API key `internal/auth/`
 - [x] **SSE streaming** — `internal/api/sse.go` server-sent events for dashboard live feed
+- [x] **Training progress SSE stream** — `GET /api/v1/training/stream?version=vN` polls JSONL every 2s, streams new rows as SSE events, sends `complete` event when `results.json` appears `internal/handler/training_handler.go` (V70+)
 - [x] **Terminal service** — `internal/terminal/` PTY-based shell execution via gRPC
 
 ### Pending [ ]
