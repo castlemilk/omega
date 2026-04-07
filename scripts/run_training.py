@@ -468,6 +468,7 @@ def run(
     progress_file = DATA_DIR / f"{version}_progress.json"
     results_file = DATA_DIR / f"{version}_results.json"
     signal_contribs_jsonl = DATA_DIR / f"{version}_signal_contribs.jsonl"
+    trade_details_jsonl = Path(f"/tmp/{version}_trade_details.jsonl")
 
     db_url = os.environ.get("DATABASE_URL", "")
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
@@ -518,6 +519,7 @@ def run(
     # ── Metrics JSONL file (opened once, flushed each cycle) ──────────────
     metrics_jsonl.parent.mkdir(parents=True, exist_ok=True)
     metrics_fh = open(metrics_jsonl, "w")  # noqa: WPS515
+    trade_details_fh = open(trade_details_jsonl, "w")  # noqa: WPS515
 
     # ── Decision snapshot writer ──────────────────────────────────────────
     from omega.core.decision_snapshot import DecisionSnapshot, DecisionWriter
@@ -652,6 +654,7 @@ def run(
             _basket_std, _basket_mean = _get_basket_stats(last_signals)
 
             # ── Signal contribution capture ───────────────────────────────
+            _ticker_decs: dict = {}
             if new_closed and strat is not None:
                 _ticker_decs = getattr(strat, "_last_ticker_decisions", {})
                 if _ticker_decs:
@@ -683,6 +686,75 @@ def run(
                                     ],
                                 }) + "\n")
 
+            # ── Per-trade signal waterfall → /tmp/{version}_trade_details.jsonl ──
+            # Full sub-signal values, ML weights, Kelly scale, filters per closed trade.
+            if new_closed:
+                _kelly_scale_cur = 1.0
+                _ml_weights_snap: dict | None = None
+                if strat is not None:
+                    try:
+                        _kelly_scale_cur = strat._kelly_fraction()
+                    except Exception:
+                        pass
+                    _combiner_obj = getattr(strat, "_combiner", None)
+                    if _combiner_obj is not None and getattr(_combiner_obj, "_weights", None) is not None:
+                        try:
+                            from omega.nodes.victoria.ml_combiner import SIGNAL_KEYS as _SK
+                            _ml_weights_snap = {k: round(float(w), 6) for k, w in zip(_SK, _combiner_obj._weights)}
+                        except Exception:
+                            pass
+
+                for _trade in new_closed:
+                    _sym = _trade.get("sym", _trade.get("symbol", ""))
+                    _sym_sig: dict = last_signals.get(_sym) or {}
+                    _td2 = _ticker_decs.get(_sym)
+
+                    def _sf(key: str) -> "float | None":
+                        v = _sym_sig.get(key)
+                        return round(float(v), 6) if v is not None else None
+
+                    trade_details_fh.write(json.dumps({
+                        "cycle": cycle_num,
+                        "ts": datetime.now(UTC).isoformat(),
+                        "version": version,
+                        "symbol": _sym,
+                        "side": _trade.get("side", ""),
+                        "pnl": round(float(_trade.get("pnl", 0.0)), 4),
+                        "size": round(float(_trade.get("size", 0.0)), 4),
+                        "hold_cycles": _trade.get("hold_cycles", _trade.get("age_cycles")),
+                        "regime": regime,
+                        "signals": {
+                            "rsi": _sf("rsi"),
+                            "rsi_signal": _sf("rsi_signal"),
+                            "macd_crossover": _sf("macd_crossover"),
+                            "sma_crossover": _sf("sma_crossover"),
+                            "zscore_signal": _sf("zscore_signal"),
+                            "volume_signal": _sf("volume_signal"),
+                            "bb_signal": _sf("bb_signal"),
+                            "vol_regime_signal": _sf("vol_regime_signal"),
+                            "btc_beta_signal": _sf("btc_beta_signal"),
+                            "funding_rate_signal": _sf("funding_rate_signal"),
+                            "fear_greed_signal": _sf("fear_greed_signal"),
+                            "dxy_signal": _sf("dxy_signal"),
+                        },
+                        "composite": _sf("composite"),
+                        "raw_composite": _sf("_raw_composite"),
+                        "composite_method": _sym_sig.get("composite_method", "equal_weight"),
+                        "basket_std": round(_basket_std, 6),
+                        "basket_mean": round(_basket_mean, 6),
+                        "conviction": str(_td2.conviction) if _td2 else str(_trade.get("conviction", "")),
+                        "conviction_score": round(float(_td2.conviction_score), 6) if _td2 else None,
+                        "filters_applied": list(_td2.filters_applied) if _td2 else [],
+                        "signal_traces": [
+                            {"name": st.signal_name, "value": round(float(st.raw_value), 4), "weight": round(float(st.weight_applied), 4)}
+                            for st in _td2.signal_traces
+                        ] if _td2 else [],
+                        "kelly_scale": round(_kelly_scale_cur, 4),
+                        "fiedler_scale": round(getattr(strat, "_last_fiedler_scale", 1.0), 4) if strat else None,
+                        "ml_weights": _ml_weights_snap,
+                    }) + "\n")
+                trade_details_fh.flush()
+
             # ── Structured JSONL metric line ──────────────────────────────
             metric_row: dict = {
                 "cycle": cycle_num,
@@ -708,9 +780,42 @@ def run(
                 "regime_consolidated": str(last_signals.get("_regime", "")),
                 "stale_symbols": ["ALL"] if sit_out_reason == "stale_data" else [],
                 "active_filters": _get_active_filters(sit_out_reason, proposals_gen, proposals_filt),
+                "fear_greed_signal": next(
+                    (v.get("fear_greed_signal") for k, v in last_signals.items()
+                     if isinstance(v, dict) and not k.startswith("_") and not k.startswith("adv_")
+                     and v.get("fear_greed_signal") is not None),
+                    None,
+                ),
+                "funding_rate_btc": (last_signals.get("BTCUSDT") or {}).get("funding_rate_signal"),
+                "dxy_signal": next(
+                    (v.get("dxy_signal") for k, v in last_signals.items()
+                     if isinstance(v, dict) and not k.startswith("_") and not k.startswith("adv_")
+                     and v.get("dxy_signal") is not None),
+                    None,
+                ),
             }
             metrics_fh.write(json.dumps(metric_row) + "\n")
             metrics_fh.flush()
+
+            # ── ML combiner weight snapshot every 20 cycles ───────────────
+            if cycle_num % 20 == 0 and strat is not None:
+                _snap_combiner = getattr(strat, "_combiner", None)
+                if _snap_combiner is not None and getattr(_snap_combiner, "_weights", None) is not None:
+                    try:
+                        from omega.nodes.victoria.ml_combiner import SIGNAL_KEYS as _SK2
+                        metrics_fh.write(json.dumps({
+                            "type": "ml_weights_snapshot",
+                            "cycle": cycle_num,
+                            "ts": datetime.now(UTC).isoformat(),
+                            "version": version,
+                            "signal_keys": _SK2,
+                            "weights": [round(float(w), 6) for w in _snap_combiner._weights],
+                            "intercept": round(float(_snap_combiner._intercept), 6),
+                            "n_samples": len(_snap_combiner._buffer),
+                        }) + "\n")
+                        metrics_fh.flush()
+                    except Exception:
+                        pass
 
             # Zero-streak alert: dump basket diagnostics when stuck
             if watchdog.consecutive_zero_trade_cycles > 15:
@@ -855,6 +960,7 @@ def run(
 
     finally:
         metrics_fh.close()
+        trade_details_fh.close()
         decision_writer.close()
         hb_client.report_lifecycle(_hb_node_id, "RUNNING", "STOPPED", "training loop completed")
 
