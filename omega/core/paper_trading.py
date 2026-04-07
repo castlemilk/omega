@@ -533,11 +533,12 @@ class PaperTradingEngine:
 
             # Check exit conditions
             # V65: asymmetric hold limits — cut losers fast, let winners run.
-            # Losers (unrealized < 0) close at max 4 cycles; winners extend to 10.
+            # V73: raise loser max_hold 4→6 — V71 analysis: winners held 10 cycles avg,
+            # losers averaged 4.6; 6-cycle floor gives losing trades more room to recover.
             cycle_opened = int(pos.get("cycle_opened", current_cycle))
             age = current_cycle - cycle_opened
             roi = unrealized / size if size > 0 else 0.0
-            _max_hold = 4 if unrealized < 0 else 10
+            _max_hold = 6 if unrealized < 0 else 10
 
             should_close = False
             close_reason = ""

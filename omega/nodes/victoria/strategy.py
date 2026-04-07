@@ -52,6 +52,11 @@ Improvement arc:
           Reverting to hard-block on longs (0.99) and raising short_thresh to 0.10
           (bounce guard) when FGI > 0.25 to filter out panic-shorts on true bounces.
           When FGI ≤ 0.25: revert to V65 defaults (long=0.99 hard-block, short=0.02).
+  v2.5 — V73 fixes: (a) Suppress SOLUSDT shorts in normal regime — V71: 10 SOL normal
+          shorts, 0 wins (0% WR), -$78.87. (b) Increase loser max_hold 4→6 cycles —
+          V71 winners held 10 cycles avg, losers 4.6; 6-cycle floor gives more room to
+          recover. (c) Blacklist XRPUSDT — V71: 6T 1W 17% WR -$44.91; V72: 8T 2W 25%
+          WR -$105.30 — signal consistently wrong across two runs.
 """
 
 import logging
@@ -74,6 +79,8 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 # BTC has a 27.8% win rate — used only as a market regime indicator.
 # DOTUSDT: V61 — 12.5% WR, -$33.89; blacklisting projected +$47.44.
 # MATICUSDT: V62 post-mortem — 16 zero-PnL trades wasting capacity; signal not credible.
+# XRPUSDT: V73 post-mortem — V71: 6T 1W 17% WR -$44.91; V72: 8T 2W 25% WR -$105.30.
+#   XRP signal consistently wrong across two independent runs; removing from rotation.
 _TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT"})
 
 # Symbols excluded from LONG positions only (shorts still permitted).
@@ -1116,6 +1123,11 @@ class StrategyNode(Node):
                 proposals_this_cycle += 1
                 if _block_shorts:
                     regime_blocked_shorts += 1
+                    continue
+                # V73: suppress SOLUSDT shorts in normal regime — V71: 10T 0W 0% WR -$78.87.
+                if ticker == "SOLUSDT" and _is_normal:
+                    logger.info("SOL short suppressed in normal regime (V73)")
+                    filtered_this_cycle += 1
                     continue
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="short"
