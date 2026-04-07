@@ -227,19 +227,13 @@ class VIXSignal:
                 logger.debug("VIXSignal: empty VIX data from yfinance")
                 return self._vix_cache  # stale on failure
 
-            # yfinance returns a DataFrame; extract Close column
+            # yfinance >= 1.x returns MultiIndex DataFrame from download();
+            # ["Close"] yields a DataFrame (not Series). squeeze() to Series.
             if hasattr(raw, "columns"):
-                # Handle multi-level columns (yfinance >= 0.2)
-                if hasattr(raw.columns, "get_level_values"):
-                    try:
-                        close_col = raw["Close"]
-                        if hasattr(close_col, "iloc"):
-                            prices = [float(p) for p in close_col.dropna().tolist() if p > 0]
-                        else:
-                            prices = [float(close_col)] if float(close_col) > 0 else []
-                    except (KeyError, TypeError):
-                        prices = []
-                else:
+                try:
+                    close_col = raw["Close"].squeeze()
+                    prices = [float(p) for p in close_col.dropna().tolist() if p > 0]
+                except (KeyError, TypeError):
                     prices = []
             else:
                 prices = []
