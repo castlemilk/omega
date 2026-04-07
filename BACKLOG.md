@@ -7,8 +7,9 @@
 > Research pipeline: `docs/research/`.
 
 **Last updated:** 2026-04-07
-**Current training version:** V64 (complete, -$30.94, 37% WR)
-**Next training target:** V65 (improvements committed, not yet run)
+**Current training version:** V66 (in progress)
+**Last completed:** V65 (-$212.93, 33% WR — ETH:normal long bias in downtrend; fixed in V66)
+**Next training target:** V67 (yield curve + signal decay wired)
 
 ---
 
@@ -58,8 +59,8 @@
 
 ### Pending [ ]
 
-- [ ] **VIX signal** — CBOE `^VIX` via yfinance; threshold + mean-reversion overlay. See `docs/research/cross-asset-signals.md §2`. Free data, easy implementation. **Priority: High** (clear threshold logic, medium alpha, no API key)
-- [ ] **Yield curve signal** — FRED `DGS2`/`DGS10` 2s10s spread; steepening after inversion = bullish. FRED connector already exists in `omega/integrations/connectors/fred.py`. **Priority: Medium**
+- [x] **VIX signal** — CBOE `^VIX` via yfinance; threshold + z-score modes; capitulation reversal at VIX>35 for 3+ days `signals/vix_signal.py` (V66)
+- [x] **Yield curve signal** — FRED `DGS2`/`DGS10` 2s10s spread; inversion/steepening/shock modes; 4h cache `signals/yield_curve.py` (V67)
 - [ ] **SPY correlation signal** — BTC/SPY 20d rolling Pearson; fires when corr > 0.6 and SPY falling. Best as regime filter. **Priority: Medium**
 - [ ] **Gold signal** — BTC/XAU co-movement as inflation-hedge regime identifier. yfinance `GC=F`. **Priority: Low**
 - [ ] **Exchange flow signal (live)** — Wire Glassnode/CryptoQuant API; stub exists at `signals/exchange_flow.py`. Requires API key (`GLASSNODE_API_KEY`). **Priority: High when key available**
@@ -86,6 +87,7 @@
 - [x] **Signal waterfall logging** — per-trade sub-signal values to `/tmp/{version}_trade_details.jsonl` (V65)
 - [x] **ML weight snapshots** — every-20-cycle combiner weight dump to metrics JSONL (V65)
 - [x] **Cross-asset signals in metric row** — fear_greed, funding_rate, dxy per cycle (V65)
+- [x] **Rolling IC per signal (SignalDecayDetector)** — 20-trade Pearson IC, decay/anti-predictive warnings, persists to `data/signal_ic_history.json` `signal_decay.py` (V67)
 
 ### Pending [ ]
 
