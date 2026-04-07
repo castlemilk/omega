@@ -211,6 +211,41 @@ class StrategyNode(Node):
         # Set via set_rmt_denoiser() after construction (avoids circular imports).
         self._rmt_denoiser: Any = None
 
+        # --- Kelly position sizing (V64) ---
+        # Track rolling trade outcomes to compute win_rate, avg_win, avg_loss
+        from collections import deque
+        self._trade_history: deque = deque(maxlen=50)
+        self._kelly_min_trades: int = 10  # minimum trades before using Kelly
+
+    # ------------------------------------------------------------------ Kelly sizing
+
+    def _kelly_fraction(self) -> float:
+        """
+        Compute half-Kelly fraction from recent trade history.
+
+        kelly_f = (win_rate * avg_win - (1-win_rate) * avg_loss) / avg_win
+        Returns half-Kelly: kelly_f * 0.5, clipped to [0.2, 2.0] so it
+        acts as a multiplier on base position size.
+        Returns 1.0 (no adjustment) when insufficient history.
+        """
+        wins = [pnl for pnl in self._trade_history if pnl > 0]
+        losses = [abs(pnl) for pnl in self._trade_history if pnl < 0]
+        n = len(self._trade_history)
+        if n < self._kelly_min_trades or not wins or not losses:
+            return 1.0
+        win_rate = len(wins) / n
+        avg_win = sum(wins) / len(wins)
+        avg_loss = sum(losses) / len(losses)
+        if avg_win == 0:
+            return 1.0
+        kelly_f = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
+        half_kelly = kelly_f * 0.5
+        return max(0.2, min(2.0, half_kelly))
+
+    def record_trade_pnl(self, pnl: float) -> None:
+        """Record a closed trade's PnL for Kelly sizing."""
+        self._trade_history.append(pnl)
+
     # ------------------------------------------------------------------ Node interface
 
     def get_state(self) -> NodeState:
@@ -1126,6 +1161,12 @@ class StrategyNode(Node):
         for ticker, w in short_base.items():
             raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker])
 
+        # Kelly scaling: adjust all weights by half-Kelly fraction
+        _kelly_scale = self._kelly_fraction()
+        if _kelly_scale != 1.0:
+            raw_weights = {t: w * _kelly_scale for t, w in raw_weights.items()}
+            logger.info("Kelly sizing: scale=%.3f (n_trades=%d)", _kelly_scale, len(self._trade_history))
+
         # Apply continuous regime scaling: bear_prob reduces longs, bull_prob reduces shorts
         if _use_continuous_regime:
             for ticker in list(raw_weights.keys()):
@@ -1332,6 +1373,7 @@ class StrategyNode(Node):
             "fiedler_scale": round(_fiedler_scale, 4),
             "fiedler_regime": _spectral_val.regime_tag,
             "fiedler_zscore": round(float(_spectral_val.value), 4),
+            "kelly_scale": round(_kelly_scale, 4),
             "convictions": {t: convictions[t].name for t in weights},
             "conviction_distribution": conviction_dist,
             "top_picks": self._rank_signals(signals)[:5],

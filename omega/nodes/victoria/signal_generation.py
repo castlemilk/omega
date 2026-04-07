@@ -25,6 +25,17 @@ from typing import Any
 from omega.core.actions import NodeAction
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 
+try:
+    from omega.nodes.victoria.ml_combiner import SignalCombiner
+except ImportError:
+    SignalCombiner = None  # type: ignore[assignment,misc]
+
+try:
+    from omega.nodes.victoria.signals.funding_rate import FundingRateSignal as _FundingRateSignal
+    _HAS_FUNDING_RATE = True
+except ImportError:
+    _HAS_FUNDING_RATE = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 
@@ -88,6 +99,23 @@ class SignalGenerationNode(Node):
         self._total_latency_ms = 0.0
         self._signals_generated = 0
         self._last_signal_coverage = 0.0
+
+        # ML signal combiner — replaces equal-weight composite when trained
+        self._combiner: "SignalCombiner | None" = None
+        try:
+            if SignalCombiner is not None:
+                self._combiner = SignalCombiner()
+                self._combiner.load("data/signal_weights.json")
+        except Exception:
+            pass
+
+        # Funding rate signal
+        self._funding_signal: Any | None = None
+        if _HAS_FUNDING_RATE:
+            try:
+                self._funding_signal = _FundingRateSignal(window=30)
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------ Node interface
 
@@ -190,6 +218,22 @@ class SignalGenerationNode(Node):
             "signals_generated": float(self._signals_generated),
             "indicator_count": float(self._indicator_count()),
         }
+
+    def update_combiner(self, signals_dict: dict[str, Any], realized_pnl: float) -> None:
+        """
+        Update the ML signal combiner with a realized PnL observation.
+
+        Call this after a trade closes with the per-ticker signals dict that
+        generated the trade and the actual PnL.  The combiner refits its Ridge
+        weights online and persists the updated model to data/signal_weights.json.
+        """
+        if self._combiner is None:
+            return
+        try:
+            self._combiner.update(signals_dict, realized_pnl)
+            self._combiner.persist("data/signal_weights.json")
+        except Exception as exc:
+            logger.warning("update_combiner: failed to update or persist: %s", exc)
 
     def improve(self, feedback: dict[str, Any]) -> bool:
         changed = False
@@ -324,6 +368,15 @@ class SignalGenerationNode(Node):
                     # bearish, in an up-SMA market, low vol became doubly bullish).
                     ts["volume_signal"] = max(-1.0, min(1.0, -vol_z / 2.0))
 
+            # Funding rate signal
+            if self._funding_signal is not None:
+                try:
+                    fr_signal = self._funding_signal.compute(ticker)
+                    if fr_signal != 0.0:
+                        ts["funding_rate_signal"] = fr_signal
+                except Exception:
+                    pass
+
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
                 regime, recent_vol, long_vol = self._compute_vol_regime(prices)
@@ -346,6 +399,15 @@ class SignalGenerationNode(Node):
             ]
             if directional:
                 ts["composite"] = _balanced_composite(directional)
+
+            # ML combiner: replace balanced_mean when trained
+            if self._combiner is not None:
+                ml_score = self._combiner.predict(ts)
+                if ml_score is not None:
+                    ts["composite"] = ml_score
+                    ts["composite_method"] = "ml"
+                else:
+                    ts["composite_method"] = "equal_weight"
 
             ts["price"] = prices[-1] if prices else None
             ts["ticker"] = ticker
