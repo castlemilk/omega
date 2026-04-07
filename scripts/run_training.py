@@ -1109,6 +1109,25 @@ def run(
             "%s: no baseline version found for gate comparison", version.upper()
         )
 
+    # Performance attribution report
+    try:
+        from omega.nodes.victoria.performance_attribution import PerformanceAttribution
+        if trades_csv.exists():
+            attr = PerformanceAttribution(trades_csv)
+            attr_result = attr.compute()
+            attr_path = DATA_DIR / f"{version}_attribution.json"
+            attr.save(attr_path)
+            log.info(
+                "Attribution — alpha: $%+.2f  beta: $%+.2f  timing: $%+.2f  selection: $%+.2f",
+                attr_result["components"]["alpha"],
+                attr_result["components"]["beta"],
+                attr_result["components"]["timing"],
+                attr_result["components"]["selection"],
+            )
+            log.info("Attribution report  : %s", attr_path)
+    except Exception as exc:
+        log.warning("Performance attribution failed (non-fatal): %s", exc)
+
     log.info("")
     log.info("=" * 70)
     log.info(
