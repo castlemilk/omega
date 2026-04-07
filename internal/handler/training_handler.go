@@ -40,6 +40,7 @@ func (h *TrainingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/training/snapshot", h.handleSnapshot)
 	mux.HandleFunc("/api/v1/training/snapshots", h.handleListSnapshots)
 	mux.HandleFunc("/api/v1/training/jsonl", h.handleJSONL)
+	mux.HandleFunc("/api/v1/training/stream", h.handleVersionStream)
 }
 
 // ── JSON types ────────────────────────────────────────────────────────────────
@@ -487,6 +488,96 @@ func (h *TrainingHandler) handleJSONL(w http.ResponseWriter, r *http.Request) {
 		rows = []json.RawMessage{}
 	}
 	writeJSON(w, rows)
+}
+
+// handleVersionStream is an SSE endpoint that streams per-cycle JSONL metrics
+// for a specific training version in real time.
+// Query param: version (e.g. "?version=v70"). Returns 400 if missing.
+// Emits raw JSONL lines as SSE data events and a final "complete" event once
+// the results file appears in progressDir.
+func (h *TrainingHandler) handleVersionStream(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	version := r.URL.Query().Get("version")
+	if version == "" {
+		http.Error(w, "version query param required", http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	// Send initial connected event.
+	connected, _ := json.Marshal(map[string]string{
+		"version": version,
+		"message": "stream connected",
+	})
+	fmt.Fprintf(w, "event: connected\ndata: %s\n\n", connected) //nolint:errcheck
+	flusher.Flush()
+
+	jsonlPath := fmt.Sprintf("/tmp/%s_metrics.jsonl", version)
+	resultsPath := filepath.Join(h.progressDir, version+"_results.json")
+
+	var lastOffset int64
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			// Read new bytes from the JSONL file starting at lastOffset.
+			f, err := os.Open(jsonlPath) //nolint:gosec
+			if err == nil {
+				fi, statErr := f.Stat()
+				if statErr == nil && fi.Size() > lastOffset {
+					if _, seekErr := f.Seek(lastOffset, 0); seekErr == nil {
+						buf := make([]byte, fi.Size()-lastOffset)
+						n, readErr := f.Read(buf)
+						if readErr == nil || n > 0 {
+							lastOffset += int64(n)
+							for _, line := range bytes.Split(buf[:n], []byte("\n")) {
+								line = bytes.TrimSpace(line)
+								if len(line) == 0 {
+									continue
+								}
+								if !json.Valid(line) {
+									continue
+								}
+								fmt.Fprintf(w, "data: %s\n\n", line) //nolint:errcheck
+							}
+							flusher.Flush()
+						}
+					}
+				}
+				f.Close() //nolint:errcheck
+			}
+
+			// Check if the training run has finished (results file present).
+			if _, err := os.Stat(resultsPath); err == nil {
+				complete, _ := json.Marshal(map[string]string{
+					"version": version,
+					"message": "training complete",
+				})
+				fmt.Fprintf(w, "event: complete\ndata: %s\n\n", complete) //nolint:errcheck
+				flusher.Flush()
+				return
+			}
+		}
+	}
 }
 
 // ── String helpers ────────────────────────────────────────────────────────────
