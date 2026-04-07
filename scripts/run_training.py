@@ -30,6 +30,7 @@ import argparse
 import csv
 import json
 import logging
+import math
 import os
 import sys
 import time
@@ -247,6 +248,33 @@ def _get_proposals_stats(strat) -> tuple[int, int]:
         return 0, 0
 
 
+def _get_basket_stats(signals: dict) -> tuple[float, float]:
+    """Return (basket_std, basket_mean) excluding adv_* synthetic aggregates (mirrors strategy.py logic)."""
+    composites = [
+        float(sig["composite"])
+        for t, sig in signals.items()
+        if not t.startswith("_") and not t.startswith("adv_")
+           and isinstance(sig, dict) and "composite" in sig
+    ]
+    if len(composites) >= 2:
+        mean = sum(composites) / len(composites)
+        std = math.sqrt(sum((v - mean) ** 2 for v in composites) / len(composites))
+        return max(std, 0.010), mean
+    return 0.20, 0.0
+
+
+def _get_active_filters(sit_out_reason: str, proposals_gen: int, proposals_filt: int) -> list[str]:
+    """Return list of filter names that fired this cycle."""
+    filters: list[str] = []
+    if sit_out_reason != "normal":
+        filters.append(sit_out_reason)
+    if proposals_gen > 0 and proposals_filt > 0:
+        filters.append(f"conviction_filter({proposals_filt}/{proposals_gen})")
+    elif proposals_gen == 0 and proposals_filt == 0:
+        filters.append("no_proposals")
+    return filters
+
+
 # ANSI colour helpers (no external deps)
 _R = "\033[0m"
 _BOLD = "\033[1m"
@@ -439,6 +467,7 @@ def run(
     trades_csv = DATA_DIR / f"{version}_trades.csv"
     progress_file = DATA_DIR / f"{version}_progress.json"
     results_file = DATA_DIR / f"{version}_results.json"
+    signal_contribs_jsonl = DATA_DIR / f"{version}_signal_contribs.jsonl"
 
     db_url = os.environ.get("DATABASE_URL", "")
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
@@ -619,6 +648,41 @@ def run(
                 else ("TRADE" if new_closed else "HOLD")
             )
 
+            # ── Basket stats (computed once; reused in JSONL + signal contribs) ──
+            _basket_std, _basket_mean = _get_basket_stats(last_signals)
+
+            # ── Signal contribution capture ───────────────────────────────
+            if new_closed and strat is not None:
+                _ticker_decs = getattr(strat, "_last_ticker_decisions", {})
+                if _ticker_decs:
+                    with open(signal_contribs_jsonl, "a") as _scf:
+                        for _trade in new_closed:
+                            _sym = _trade.get("sym", _trade.get("symbol", ""))
+                            _td = _ticker_decs.get(_sym)
+                            if _td is not None:
+                                _scf.write(json.dumps({
+                                    "cycle": cycle_num,
+                                    "ts": datetime.now(UTC).isoformat(),
+                                    "symbol": _sym,
+                                    "side": _trade.get("side", ""),
+                                    "pnl": round(float(_trade.get("pnl", 0.0)), 4),
+                                    "basket_std": round(_basket_std, 6),
+                                    "basket_mean": round(_basket_mean, 6),
+                                    "raw_composite": round(float(_td.raw_composite), 6),
+                                    "demeaned_composite": round(float(_td.demeaned_composite), 6),
+                                    "conviction": str(_td.conviction),
+                                    "conviction_score": round(float(_td.conviction_score), 6),
+                                    "filters_applied": list(_td.filters_applied),
+                                    "signal_traces": [
+                                        {
+                                            "name": st.signal_name,
+                                            "value": round(float(st.raw_value), 4),
+                                            "weight": round(float(st.weight_applied), 4),
+                                        }
+                                        for st in _td.signal_traces
+                                    ],
+                                }) + "\n")
+
             # ── Structured JSONL metric line ──────────────────────────────
             metric_row: dict = {
                 "cycle": cycle_num,
@@ -637,9 +701,33 @@ def run(
                 "elapsed_s": round(cycle_elapsed, 3),
                 "breaker_tripped": breaker.tripped if breaker else False,
                 "vol_low_threshold": getattr(strat, "_vol_low_threshold", None),
+                "basket_std": round(_basket_std, 6),
+                "basket_mean": round(_basket_mean, 6),
+                "zero_streak": watchdog.consecutive_zero_trade_cycles,
+                "regime_hmm": str(last_signals.get("_regime_hmm", "")),
+                "regime_consolidated": str(last_signals.get("_regime", "")),
+                "stale_symbols": ["ALL"] if sit_out_reason == "stale_data" else [],
+                "active_filters": _get_active_filters(sit_out_reason, proposals_gen, proposals_filt),
             }
             metrics_fh.write(json.dumps(metric_row) + "\n")
             metrics_fh.flush()
+
+            # Zero-streak alert: dump basket diagnostics when stuck
+            if watchdog.consecutive_zero_trade_cycles > 15:
+                _per_sym = {
+                    t: round(float(sig.get("composite", 0.0)), 4)
+                    for t, sig in last_signals.items()
+                    if not t.startswith("_") and not t.startswith("adv_")
+                       and isinstance(sig, dict) and "composite" in sig
+                }
+                log.warning(
+                    "ZERO_STREAK_ALERT cycle=%d streak=%d basket_std=%.4f basket_mean=%.4f composites=%s",
+                    cycle_num,
+                    watchdog.consecutive_zero_trade_cycles,
+                    _basket_std,
+                    _basket_mean,
+                    json.dumps(_per_sym),
+                )
 
             # ── Decision snapshot ─────────────────────────────────────────
             try:

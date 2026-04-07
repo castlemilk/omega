@@ -3,6 +3,7 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -38,6 +39,7 @@ func (h *TrainingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/training/events/stream", h.handleStream)
 	mux.HandleFunc("/api/v1/training/snapshot", h.handleSnapshot)
 	mux.HandleFunc("/api/v1/training/snapshots", h.handleListSnapshots)
+	mux.HandleFunc("/api/v1/training/jsonl", h.handleJSONL)
 }
 
 // ── JSON types ────────────────────────────────────────────────────────────────
@@ -427,6 +429,64 @@ func (h *TrainingHandler) handleListSnapshots(w http.ResponseWriter, r *http.Req
 	}
 
 	writeJSON(w, snaps)
+}
+
+// handleJSONL serves the raw JSONL metrics for a training version as a JSON array.
+// Query param: version (e.g. "v61"). Falls back to the most-recently-modified progress file.
+func (h *TrainingHandler) handleJSONL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	version := r.URL.Query().Get("version")
+	if version == "" {
+		// Infer from most-recently-modified {version}_progress.json in progressDir.
+		entries, err := os.ReadDir(h.progressDir)
+		if err == nil {
+			var latest string
+			var latestMod int64
+			for _, e := range entries {
+				if !strings.HasSuffix(e.Name(), "_progress.json") {
+					continue
+				}
+				info, err := e.Info()
+				if err != nil {
+					continue
+				}
+				if info.ModTime().UnixNano() > latestMod {
+					latestMod = info.ModTime().UnixNano()
+					latest = strings.TrimSuffix(e.Name(), "_progress.json")
+				}
+			}
+			version = latest
+		}
+	}
+	if version == "" {
+		writeJSON(w, []json.RawMessage{})
+		return
+	}
+
+	jsonlPath := fmt.Sprintf("/tmp/%s_metrics.jsonl", version)
+	data, err := os.ReadFile(jsonlPath) //nolint:gosec
+	if err != nil {
+		writeJSON(w, []json.RawMessage{})
+		return
+	}
+
+	var rows []json.RawMessage
+	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
+		if len(line) == 0 {
+			continue
+		}
+		if !json.Valid(line) {
+			continue
+		}
+		rows = append(rows, json.RawMessage(line))
+	}
+	if rows == nil {
+		rows = []json.RawMessage{}
+	}
+	writeJSON(w, rows)
 }
 
 // ── String helpers ────────────────────────────────────────────────────────────
