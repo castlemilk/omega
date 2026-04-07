@@ -16,6 +16,7 @@ Improvement arc:
   v1.3 — Parameter tuning based on signal quality feedback
 """
 
+import contextlib
 import logging
 import math
 import time
@@ -32,30 +33,35 @@ except ImportError:
 
 try:
     from omega.nodes.victoria.signals.funding_rate import FundingRateSignal as _FundingRateSignal
+
     _HAS_FUNDING_RATE = True
 except ImportError:
     _HAS_FUNDING_RATE = False
 
 try:
     from omega.nodes.victoria.signals.fear_greed import FearGreedSignal as _FearGreedSignal
+
     _HAS_FEAR_GREED = True
 except ImportError:
     _HAS_FEAR_GREED = False
 
 try:
     from omega.nodes.victoria.signals.dxy_signal import DXYSignal as _DXYSignal
+
     _HAS_DXY = True
 except ImportError:
     _HAS_DXY = False
 
 try:
     from omega.nodes.victoria.signals.vix_signal import VIXSignal as _VIXSignal
+
     _HAS_VIX = True
 except ImportError:
     _HAS_VIX = False
 
 try:
     from omega.nodes.victoria.signals.yield_curve import YieldCurveSignal as _YieldCurveSignal
+
     _HAS_YIELD_CURVE = True
 except ImportError:
     _HAS_YIELD_CURVE = False
@@ -131,7 +137,7 @@ class SignalGenerationNode(Node):
         self._last_signal_coverage = 0.0
 
         # ML signal combiner — replaces equal-weight composite when trained
-        self._combiner: "SignalCombiner | None" = None
+        self._combiner: SignalCombiner | None = None
         try:
             if SignalCombiner is not None:
                 self._combiner = SignalCombiner()
@@ -142,42 +148,32 @@ class SignalGenerationNode(Node):
         # Funding rate signal
         self._funding_signal: Any | None = None
         if _HAS_FUNDING_RATE:
-            try:
+            with contextlib.suppress(Exception):
                 self._funding_signal = _FundingRateSignal(window=30)
-            except Exception:
-                pass
 
         # Fear & Greed contrarian signal (market-level, applied to all tickers)
         self._fear_greed_signal: Any | None = None
         if _HAS_FEAR_GREED:
-            try:
+            with contextlib.suppress(Exception):
                 self._fear_greed_signal = _FearGreedSignal(window=30)
-            except Exception:
-                pass
 
         # DXY/BTC correlation signal (market-level, applied to all tickers)
         self._dxy_signal: Any | None = None
         if _HAS_DXY:
-            try:
+            with contextlib.suppress(Exception):
                 self._dxy_signal = _DXYSignal(window=20)
-            except Exception:
-                pass
 
         # VIX risk-off signal (market-level, applied to all tickers)
         self._vix_signal: Any | None = None
         if _HAS_VIX:
-            try:
+            with contextlib.suppress(Exception):
                 self._vix_signal = _VIXSignal(window=30)
-            except Exception:
-                pass
 
         # Yield curve signal — 2s10s spread via FRED (market-level)
         self._yield_curve_signal: Any | None = None
         if _HAS_YIELD_CURVE:
-            try:
+            with contextlib.suppress(Exception):
                 self._yield_curve_signal = _YieldCurveSignal()
-            except Exception:
-                pass
 
         # SPY/BTC co-movement signal — risk-on/off overlay (market-level)
         self._spy_signal: Any | None = None

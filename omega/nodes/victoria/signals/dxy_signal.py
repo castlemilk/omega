@@ -43,13 +43,14 @@ from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.dxy_signal")
 
-_CORR_THRESHOLD = -0.5     # only fire when 20d rolling correlation is below this
-_WINDOW = 20               # days of DXY/BTC price history for correlation
-_DXY_CACHE_TTL = 3600      # 1 hour — DXY price data cached between cycles
+_CORR_THRESHOLD = -0.5  # only fire when 20d rolling correlation is below this
+_WINDOW = 20  # days of DXY/BTC price history for correlation
+_DXY_CACHE_TTL = 3600  # 1 hour — DXY price data cached between cycles
 
 
 try:
     import yfinance as yf
+
     _HAS_YFINANCE = True
 except ImportError:
     _HAS_YFINANCE = False
@@ -67,7 +68,7 @@ def _pearson(xs: list[float], ys: list[float]) -> float | None:
     xs, ys = xs[-n:], ys[-n:]
     mx = sum(xs) / n
     my = sum(ys) / n
-    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
     denom_x = math.sqrt(sum((x - mx) ** 2 for x in xs))
     denom_y = math.sqrt(sum((y - my) ** 2 for y in ys))
     if denom_x == 0 or denom_y == 0:
@@ -122,23 +123,27 @@ class DXYSignal:
             (dxy_prices[i] - dxy_prices[i - 1]) / dxy_prices[i - 1]
             for i in range(1, len(dxy_prices))
             if dxy_prices[i - 1] != 0
-        ][-self._window:]
+        ][-self._window :]
         btc_rets = [
             (btc_prices[i] - btc_prices[i - 1]) / btc_prices[i - 1]
             for i in range(1, len(btc_prices))
             if btc_prices[i - 1] != 0
-        ][-self._window:]
+        ][-self._window :]
 
         corr = _pearson(dxy_rets, btc_rets)
         if corr is None or corr >= _CORR_THRESHOLD:
             # Correlation too weak — no reliable cross-asset signal
-            logger.debug("DXYSignal: corr=%.3f above threshold %.2f — neutral", corr or 0.0, _CORR_THRESHOLD)
+            logger.debug(
+                "DXYSignal: corr=%.3f above threshold %.2f — neutral", corr or 0.0, _CORR_THRESHOLD
+            )
             return 0.0
 
         # DXY direction: 5-day return of DXY (recent momentum)
         if len(dxy_prices) < 5:
             return 0.0
-        dxy_5d_ret = (dxy_prices[-1] - dxy_prices[-5]) / dxy_prices[-5] if dxy_prices[-5] != 0 else 0.0
+        dxy_5d_ret = (
+            (dxy_prices[-1] - dxy_prices[-5]) / dxy_prices[-5] if dxy_prices[-5] != 0 else 0.0
+        )
 
         # Signal strength scales with how far correlation exceeds threshold and DXY move size
         # corr is negative (e.g. -0.7); excess = corr - threshold = -0.7 - (-0.5) = -0.2
@@ -164,7 +169,9 @@ class DXYSignal:
 
         try:
             ticker = yf.Ticker("DX-Y.NYB")
-            hist = ticker.history(period=f"{self._window + 5}d", interval="1d", timeout=self._timeout)
+            hist = ticker.history(
+                period=f"{self._window + 5}d", interval="1d", timeout=self._timeout
+            )
             if hist.empty:
                 logger.debug("DXYSignal: empty DXY history from yfinance")
                 return self._dxy_cache  # stale on failure

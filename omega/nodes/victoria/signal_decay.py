@@ -72,17 +72,16 @@ Persisted to `data/signal_ic_history.json`. Structure:
 import json
 import logging
 import math
-import os
 from collections import deque
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signal_decay")
 
 _DEFAULT_PATH = "data/signal_ic_history.json"
-_WINDOW = 20           # rolling window size
-_MIN_OBS = 5           # minimum observations before reporting IC
+_WINDOW = 20  # rolling window size
+_MIN_OBS = 5  # minimum observations before reporting IC
 _ACTIVE_THRESHOLD = 0.05
 _ANTI_PRED_THRESHOLD = -0.05
 
@@ -104,14 +103,14 @@ _TRACKED_SIGNALS = {
 }
 
 
-def _pearson(xs: list[float], ys: list[float]) -> Optional[float]:
+def _pearson(xs: list[float], ys: list[float]) -> float | None:
     """Pearson correlation of two equal-length sequences. None if insufficient variance."""
     n = len(xs)
     if n < 2:
         return None
     mx = sum(xs) / n
     my = sum(ys) / n
-    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
     var_x = sum((x - mx) ** 2 for x in xs)
     var_y = sum((y - my) ** 2 for y in ys)
     denom = math.sqrt(var_x * var_y)
@@ -125,16 +124,14 @@ class _SignalRecord:
 
     __slots__ = ("name", "obs")
 
-    def __init__(self, name: str, obs: Optional[list[tuple[float, float]]] = None) -> None:
+    def __init__(self, name: str, obs: list[tuple[float, float]] | None = None) -> None:
         self.name = name
-        self.obs: deque[tuple[float, float]] = deque(
-            obs or [], maxlen=_WINDOW
-        )
+        self.obs: deque[tuple[float, float]] = deque(obs or [], maxlen=_WINDOW)
 
     def add(self, signal_val: float, forward_return: float) -> None:
         self.obs.append((signal_val, forward_return))
 
-    def ic(self) -> Optional[float]:
+    def ic(self) -> float | None:
         if len(self.obs) < _MIN_OBS:
             return None
         xs = [o[0] for o in self.obs]
@@ -213,7 +210,7 @@ class SignalDecayDetector:
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
             payload = {
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(UTC).isoformat(),
                 "signals": {name: rec.to_dict() for name, rec in self._records.items()},
             }
             self._path.write_text(json.dumps(payload, indent=2))
@@ -258,7 +255,10 @@ class SignalDecayDetector:
         if recorded:
             logger.debug(
                 "SignalDecayDetector: recorded %d signal obs (symbol=%s side=%s fwd=%.4f)",
-                recorded, symbol, side, forward_return,
+                recorded,
+                symbol,
+                side,
+                forward_return,
             )
 
     # ------------------------------------------------------------------ reporting
@@ -279,16 +279,24 @@ class SignalDecayDetector:
                 logger.warning(
                     "SignalDecay [ANTI-PREDICTIVE] %s: IC=%.3f (n=%d) — "
                     "signal is systematically wrong; consider disabling",
-                    name, ic, len(rec.obs),
+                    name,
+                    ic,
+                    len(rec.obs),
                 )
-                warnings.append({"signal": name, "ic": ic, "status": status, "n_obs": len(rec.obs)})
+                warnings.append(
+                    {"signal": name, "ic": ic, "status": status, "n_obs": len(rec.obs)}
+                )
             elif status == "decaying":
                 logger.warning(
-                    "SignalDecay [DECAYING] %s: IC=%.3f (n=%d) — "
-                    "below useful threshold (%.2f)",
-                    name, ic, len(rec.obs), _ACTIVE_THRESHOLD,
+                    "SignalDecay [DECAYING] %s: IC=%.3f (n=%d) — below useful threshold (%.2f)",
+                    name,
+                    ic,
+                    len(rec.obs),
+                    _ACTIVE_THRESHOLD,
                 )
-                warnings.append({"signal": name, "ic": ic, "status": status, "n_obs": len(rec.obs)})
+                warnings.append(
+                    {"signal": name, "ic": ic, "status": status, "n_obs": len(rec.obs)}
+                )
         return warnings
 
     def summary(self) -> dict[str, Any]:
@@ -303,15 +311,11 @@ class SignalDecayDetector:
             }
         return out
 
-    def ic_for(self, signal_name: str) -> Optional[float]:
+    def ic_for(self, signal_name: str) -> float | None:
         """Return current IC for a specific signal, or None if insufficient data."""
         rec = self._records.get(signal_name)
         return rec.ic() if rec is not None else None
 
     def all_statuses(self) -> dict[str, str]:
         """Return {signal_name: status} for all tracked signals with enough data."""
-        return {
-            name: rec.status()
-            for name, rec in self._records.items()
-            if rec.ic() is not None
-        }
+        return {name: rec.status() for name, rec in self._records.items() if rec.ic() is not None}

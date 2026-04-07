@@ -28,11 +28,11 @@ Historical context:
   - Works best as a filter/overlay; not standalone directional alpha.
 """
 
+import json
 import logging
 import math
 import time
 import urllib.request
-import json
 from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.fear_greed")
@@ -54,8 +54,8 @@ class FearGreedSignal:
     def __init__(self, window: int = 30, timeout: float = 5.0) -> None:
         self._window = window
         self._timeout = timeout
-        self._cache: list[float] = []           # last `window` daily values
-        self._cache_ts: float = 0.0             # unix timestamp of last fetch
+        self._cache: list[float] = []  # last `window` daily values
+        self._cache_ts: float = 0.0  # unix timestamp of last fetch
         self._last_signal: float = 0.0
 
     def compute(self) -> float:

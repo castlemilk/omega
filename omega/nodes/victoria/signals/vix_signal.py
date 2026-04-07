@@ -50,15 +50,16 @@ from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.vix_signal")
 
-_VIX_CACHE_TTL = 3600      # 1 hour
+_VIX_CACHE_TTL = 3600  # 1 hour
 _RISK_OFF_THRESHOLD = 25.0  # VIX level above which risk-off signal fires
 _CAPITULATION_THRESHOLD = 35.0  # VIX level for capitulation signal
-_CAPITULATION_DAYS = 3     # consecutive days above capitulation threshold for reversal
-_WINDOW = 30               # days of VIX history for z-score baseline
+_CAPITULATION_DAYS = 3  # consecutive days above capitulation threshold for reversal
+_WINDOW = 30  # days of VIX history for z-score baseline
 
 
 try:
     import yfinance as yf
+
     _HAS_YFINANCE = True
 except ImportError:
     _HAS_YFINANCE = False
@@ -123,8 +124,7 @@ class VIXSignal:
 
         self._last_signal = final
         logger.info(
-            "VIXSignal: vix=%.2f z=%.2f threshold_sig=%.3f zscore_sig=%.3f "
-            "mode=%s final=%.3f",
+            "VIXSignal: vix=%.2f z=%.2f threshold_sig=%.3f zscore_sig=%.3f mode=%s final=%.3f",
             vix_level,
             vix_zscore,
             threshold_signal,
@@ -242,7 +242,7 @@ class VIXSignal:
                 logger.debug("VIXSignal: insufficient VIX data (n=%d)", len(prices))
                 return self._vix_cache
 
-            self._vix_cache = prices[-self._window:]
+            self._vix_cache = prices[-self._window :]
             self._vix_cache_ts = now
             logger.debug(
                 "VIXSignal: fetched %d VIX prices (latest=%.2f)",

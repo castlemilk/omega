@@ -41,6 +41,8 @@ func (h *TrainingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/training/snapshots", h.handleListSnapshots)
 	mux.HandleFunc("/api/v1/training/jsonl", h.handleJSONL)
 	mux.HandleFunc("/api/v1/training/stream", h.handleVersionStream)
+	mux.HandleFunc("/api/v1/training/versions", h.handleVersions)
+	mux.HandleFunc("/api/v1/training/compare", h.handleCompare)
 }
 
 // ── JSON types ────────────────────────────────────────────────────────────────
@@ -578,6 +580,158 @@ func (h *TrainingHandler) handleVersionStream(w http.ResponseWriter, r *http.Req
 			}
 		}
 	}
+}
+
+// ── Versions / Compare ───────────────────────────────────────────────────────
+
+// trainingVersionInfo holds the normalised summary extracted from a v*_results.json file.
+type trainingVersionInfo struct {
+	Version     string  `json:"version"`
+	TotalPnL    float64 `json:"total_pnl"`
+	TotalTrades int     `json:"total_trades"`
+	WinRate     float64 `json:"win_rate"`
+	SharpeRatio float64 `json:"sharpe_ratio"`
+}
+
+// trainingCompareResponse is the response for the compare endpoint.
+type trainingCompareResponse struct {
+	Base            string  `json:"base"`
+	Target          string  `json:"target"`
+	PnLDelta        float64 `json:"pnl_delta"`
+	WinRateDelta    float64 `json:"win_rate_delta"`
+	TradeCountDelta int     `json:"trade_count_delta"`
+	SharpeDelta     float64 `json:"sharpe_delta"`
+	Verdict         string  `json:"verdict"`
+}
+
+// rawResults is a permissive struct that can decode both old and new results.json formats.
+type rawResults struct {
+	Version string `json:"version"`
+	Trades  struct {
+		TotalClosed int     `json:"total_closed"`
+		WinRate     float64 `json:"win_rate"`
+		TotalPnLUSD float64 `json:"total_pnl_usd"`
+	} `json:"trades"`
+	Eval struct {
+		SharpeRatio float64 `json:"sharpe_ratio"`
+	} `json:"eval"`
+}
+
+// parseResultsFile reads a v*_results.json file and normalises it into a trainingVersionInfo.
+func parseResultsFile(path, versionHint string) (*trainingVersionInfo, error) {
+	data, err := os.ReadFile(path) //nolint:gosec
+	if err != nil {
+		return nil, err
+	}
+	var r rawResults
+	if err := json.Unmarshal(data, &r); err != nil {
+		return nil, err
+	}
+	version := r.Version
+	if version == "" {
+		version = versionHint
+	}
+	return &trainingVersionInfo{
+		Version:     version,
+		TotalPnL:    r.Trades.TotalPnLUSD,
+		TotalTrades: r.Trades.TotalClosed,
+		WinRate:     r.Trades.WinRate,
+		SharpeRatio: r.Eval.SharpeRatio,
+	}, nil
+}
+
+// handleVersions scans progressDir for v*_results.json and returns version summaries.
+func (h *TrainingHandler) handleVersions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	entries, err := os.ReadDir(h.progressDir)
+	if err != nil {
+		http.Error(w, "failed to read data directory", http.StatusInternalServerError)
+		return
+	}
+
+	var versions []trainingVersionInfo
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, "_results.json") {
+			continue
+		}
+		versionHint := strings.TrimSuffix(name, "_results.json")
+		if !strings.HasPrefix(versionHint, "v") {
+			continue
+		}
+		info, err := parseResultsFile(filepath.Join(h.progressDir, name), versionHint)
+		if err != nil {
+			continue
+		}
+		versions = append(versions, *info)
+	}
+
+	if versions == nil {
+		versions = []trainingVersionInfo{}
+	}
+
+	writeJSON(w, map[string]any{"versions": versions})
+}
+
+// handleCompare reads two results files and returns a delta comparison.
+// Query params: base=<version> target=<version>  (e.g. ?base=v63&target=v71)
+func (h *TrainingHandler) handleCompare(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	baseVer := r.URL.Query().Get("base")
+	targetVer := r.URL.Query().Get("target")
+	if baseVer == "" || targetVer == "" {
+		http.Error(w, "base and target query params are required", http.StatusBadRequest)
+		return
+	}
+
+	basePath := filepath.Join(h.progressDir, baseVer+"_results.json")
+	baseInfo, err := parseResultsFile(basePath, baseVer)
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("base version %q not found", baseVer), http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to read base results", http.StatusInternalServerError)
+		return
+	}
+
+	targetPath := filepath.Join(h.progressDir, targetVer+"_results.json")
+	targetInfo, err := parseResultsFile(targetPath, targetVer)
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("target version %q not found", targetVer), http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to read target results", http.StatusInternalServerError)
+		return
+	}
+
+	pnlDelta := targetInfo.TotalPnL - baseInfo.TotalPnL
+	verdict := "neutral"
+	switch {
+	case pnlDelta > 0:
+		verdict = "improved"
+	case pnlDelta < 0:
+		verdict = "regressed"
+	}
+
+	writeJSON(w, trainingCompareResponse{
+		Base:            baseVer,
+		Target:          targetVer,
+		PnLDelta:        pnlDelta,
+		WinRateDelta:    targetInfo.WinRate - baseInfo.WinRate,
+		TradeCountDelta: targetInfo.TotalTrades - baseInfo.TotalTrades,
+		SharpeDelta:     targetInfo.SharpeRatio - baseInfo.SharpeRatio,
+		Verdict:         verdict,
+	})
 }
 
 // ── String helpers ────────────────────────────────────────────────────────────

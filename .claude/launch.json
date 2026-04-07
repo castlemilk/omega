@@ -27,9 +27,9 @@
     },
     {
       "name": "dashboard-dev",
-      "runtimeExecutable": "/Users/benebsworth/projects/omega/dashboard/node_modules/.bin/vite",
+      "runtimeExecutable": "node_modules/.bin/vite",
       "runtimeArgs": ["--port", "5178"],
-      "cwd": "/Users/benebsworth/projects/omega/dashboard",
+      "cwd": "dashboard",
       "port": 5178,
       "autoPort": false
     },

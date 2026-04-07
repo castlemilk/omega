@@ -49,6 +49,12 @@ SIGNAL_KEYS: list[str] = [
     "bb_signal",
     "vol_regime_signal",
     "btc_beta_signal",
+    # Cross-asset market-level signals (V64-V67)
+    "funding_rate_signal",
+    "fear_greed_signal",
+    "dxy_signal",
+    "vix_signal",
+    "yield_curve_signal",
 ]
 
 _ALPHA = 1.0  # Ridge regularisation strength
@@ -127,9 +133,7 @@ def _gauss_jordan_inverse(M: list[list[float]]) -> list[list[float]] | None:
     return [row[n:] for row in aug]
 
 
-def _pure_python_ridge(
-    X: list[list[float]], y: list[float], alpha: float
-) -> list[float] | None:
+def _pure_python_ridge(X: list[list[float]], y: list[float], alpha: float) -> list[float] | None:
     """
     Closed-form Ridge regression without numpy.
     Returns weight vector w of length n_features, or None on failure.
@@ -149,9 +153,7 @@ def _pure_python_ridge(
         return None
 
 
-def _numpy_ridge(
-    X: list[list[float]], y: list[float], alpha: float
-) -> list[float] | None:
+def _numpy_ridge(X: list[list[float]], y: list[float], alpha: float) -> list[float] | None:
     """Closed-form Ridge using numpy for speed and numerical stability."""
     try:
         Xnp = np.array(X, dtype=float)
@@ -261,9 +263,7 @@ class SignalCombiner:
                 "weights": self._weights,
                 "intercept": self._intercept,
                 "n_samples": len(self._buffer),
-                "buffer": [
-                    {"x": list(x), "y": y} for x, y in self._buffer
-                ],
+                "buffer": [{"x": list(x), "y": y} for x, y in self._buffer],
             }
             with open(path, "w") as fh:
                 json.dump(payload, fh, indent=2)

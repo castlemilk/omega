@@ -47,6 +47,7 @@ omega/core/cross_node_memory.py
 omega/core/cycle.py
 omega/core/dag_pipeline.py
 omega/core/data_resilience.py
+omega/core/decision_snapshot.py
 omega/core/degradation.py
 omega/core/deterministic_compiler.py
 omega/core/domain.py
@@ -123,6 +124,7 @@ omega/eval/sharpe.py
 omega/eval/signal_adapter.py
 omega/eval/significance.py
 omega/eval/tpe_eval.py
+omega/eval/v49_gates.py
 omega/examples/__init__.py
 omega/examples/calculator_improvement.py
 omega/examples/victoria_main.py
@@ -207,6 +209,15 @@ omega/nodes/victoria/wasserstein_regime.py
 omega/nodes/victoria/wavelet_signal.py
 omega/nodes/victoria/whale_signal.py
 omega/nodes/victoria/generated/__init__.py
+omega/tools/__init__.py
+omega/tools/forensics/__init__.py
+omega/tools/forensics/conviction_histogram.py
+omega/tools/forensics/hypothesis_ranker.py
+omega/tools/forensics/loader.py
+omega/tools/forensics/run_diff.py
+omega/tools/forensics/signal_delta.py
+omega/tools/forensics/skipped_trades.py
+omega/tools/forensics/writer.py
 tests/test_ablation.py
 tests/test_accuracy_fixes.py
 tests/test_action_contracts.py
@@ -252,6 +263,13 @@ tests/test_errors.py
 tests/test_eval_metrics.py
 tests/test_evaluator.py
 tests/test_feedback_descent.py
+tests/test_forensics_cli.py
+tests/test_forensics_conviction_histogram.py
+tests/test_forensics_hypothesis_ranker.py
+tests/test_forensics_loader.py
+tests/test_forensics_signal_delta.py
+tests/test_forensics_skipped_trades.py
+tests/test_forensics_writer.py
 tests/test_goals.py
 tests/test_hmm_regime.py
 tests/test_improvement_engine.py
@@ -274,6 +292,7 @@ tests/test_orchestrator_v2.py
 tests/test_overfitting_gate.py
 tests/test_polymarket_weather.py
 tests/test_project_config.py
+tests/test_quick_smoke.py
 tests/test_regime_handler.py
 tests/test_research_integration.py
 tests/test_ring1_eval.py
@@ -285,6 +304,7 @@ tests/test_self_repair.py
 tests/test_sharpe.py
 tests/test_signal_adapter.py
 tests/test_signal_integration.py
+tests/test_signal_integrity.py
 tests/test_signal_retirement.py
 tests/test_signals_advanced.py
 tests/test_significance.py
@@ -297,6 +317,9 @@ tests/test_task_scheduler.py
 tests/test_ticket3_adversarial_wiring.py
 tests/test_ticket5_data_pipeline_integrity.py
 tests/test_tpe_eval.py
+tests/test_v49_gate_wiring.py
+tests/test_v49_gates.py
+tests/test_v49_short_threshold_regression.py
 tests/test_vector_memory.py
 tests/test_verification_gates.py
 tests/test_victoria_eval.py

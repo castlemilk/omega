@@ -94,6 +94,9 @@ ignore = [
 "omega/nodes/victoria/spectral_signals.py" = ["N806"]
 "omega/nodes/victoria/carry_signals.py" = ["RUF002"]
 "omega/nodes/victoria/hmm_regime.py" = ["N803", "N806"]
+"omega/nodes/victoria/ml_combiner.py" = ["N803", "N806"]
+# strategy.py: __future__ + long docstring triggers E402 for all subsequent imports
+"omega/nodes/victoria/strategy.py" = ["E402"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["omega"]

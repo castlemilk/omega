@@ -539,6 +539,7 @@ class PaperTradingEngine:
 
             should_close = False
             close_reason = ""
+            mfe = float(pos.get("mfe", 0.0))
             if age >= _max_hold:
                 should_close = True
                 _exit_type = "loss_cut" if unrealized < 0 else "profit_run"
@@ -546,6 +547,12 @@ class PaperTradingEngine:
             elif roi < stop_loss_pct:
                 should_close = True
                 close_reason = f"stop_loss(roi={roi:.3f})"
+            elif mfe > size * 0.005 and unrealized < 0.5 * mfe:
+                # Trailing stop: close if we give back more than 50% of peak MFE.
+                # Only fires when MFE is meaningful (>0.5% of position size) to
+                # avoid triggering on noise from tiny early gains.
+                should_close = True
+                close_reason = f"trailing_stop(mfe={mfe:.2f},unreal={unrealized:.2f})"
 
             if not should_close:
                 continue

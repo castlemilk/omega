@@ -9,7 +9,7 @@
 **Last updated:** 2026-04-08 (V71)
 **Current training version:** V66 (in progress)
 **Last completed:** V65 (-$212.93, 33% WR — ETH:normal long bias in downtrend; fixed in V66)
-**Next training target:** V67 (yield curve + signal decay wired)
+**Next training target:** V67 (yield curve + signal decay + ML combiner expansion + trailing stop-loss)
 
 ---
 
@@ -91,7 +91,7 @@
 
 ### Pending [ ]
 
-- [ ] **ML combiner feature expansion** — Add `fear_greed_signal`, `dxy_signal`, `funding_rate_signal` to `SIGNAL_KEYS` in `ml_combiner.py`. Currently only has 8 keys; cross-asset signals are excluded. **Priority: High** (already in pipeline, needs one-line change)
+- [x] **ML combiner feature expansion** — Added `funding_rate_signal`, `fear_greed_signal`, `dxy_signal`, `vix_signal`, `yield_curve_signal` to `SIGNAL_KEYS` in `ml_combiner.py`. All 5 cross-asset market-level signals now feed Ridge regression (V67)
 - [ ] **Per-regime ML weights** — Train separate Ridge models per regime (crisis/normal/high_vol) rather than pooled. Crisis regime signals differ fundamentally from normal. **Priority: Medium**
 - [ ] **Signal IC backtesting** — Offline IC analysis over historical training runs; identify which signals contributed alpha across which regimes. Use `data/v*_signal_contribs.jsonl` files. **Priority: Medium**
 - [ ] **Wasserstein K-means regime detector** — Better than HMM for non-Gaussian crypto regimes. Research saved in `docs/ideas/`. **Priority: Medium**
@@ -129,7 +129,7 @@
 
 ### Pending [ ]
 
-- [ ] **Trailing stop-loss** — instead of fixed -2% ROI floor, trail at 50% of MFE. Prevents giving back large winners. Requires tracking MFE per position (already stored in `pos["mfe"]`). **Priority: High**
+- [x] **Trailing stop-loss** — trail at 50% of MFE; fires when unrealized < 0.5×MFE and MFE > 0.5% of size. Prevents giving back large winners. `paper_trading.py` `mark_to_market()` (V67)
 - [ ] **Per-symbol blacklist auto-update** — when a symbol generates 3+ consecutive losses, auto-add to a session blacklist. Currently manual. **Priority: Medium**
 - [ ] **Regime-specific max hold** — tighter hold limit in crisis (max 3 cycles) since crisis is high-velocity. Currently uniform. **Priority: Medium**
 - [ ] **Portfolio heat limit** — if total open notional > X% of capital, block new entries until positions close. Currently unlimited open count within max_positions. **Priority: Medium**

@@ -53,7 +53,6 @@ Caching: 4-hour TTL (FRED data updates daily; intraday re-fetches are wasted cal
 """
 
 import logging
-import math
 import os
 import time
 import urllib.error
@@ -63,13 +62,13 @@ from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.yield_curve")
 
-_CACHE_TTL = 4 * 3600          # 4 hours
+_CACHE_TTL = 4 * 3600  # 4 hours
 _FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 _SERIES_2Y = "DGS2"
 _SERIES_10Y = "DGS10"
-_SHOCK_THRESHOLD_BP = 15.0     # 10Y day-over-day move (basis points) to trigger shock
-_INVERSION_MILD_BP = -20.0     # above this: mild inversion
-_STEEPEN_MIN_DAYS = 30         # minimum days inverted before steepening signal fires
+_SHOCK_THRESHOLD_BP = 15.0  # 10Y day-over-day move (basis points) to trigger shock
+_INVERSION_MILD_BP = -20.0  # above this: mild inversion
+_STEEPEN_MIN_DAYS = 30  # minimum days inverted before steepening signal fires
 _TIMEOUT = 10.0
 
 
@@ -93,6 +92,7 @@ def _fetch_fred(series_id: str, api_key: str, n_obs: int = 90) -> list[float]:
         req = urllib.request.Request(url, headers={"User-Agent": "omega-victoria/1.0"})
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
             import json as _json
+
             data = _json.loads(resp.read().decode())
         observations = data.get("observations", [])
         values: list[float] = []
@@ -205,8 +205,10 @@ class YieldCurveSignal:
             shock_bp = (self._rates_10y[-1] - self._rates_10y[-2]) * 100.0
 
         shock_sig = self._shock_signal(shock_bp)
-        mode = "shock" if abs(shock_sig) > 0 else (
-            "steepening" if signal > 0 else ("inversion" if signal < 0 else "neutral")
+        mode = (
+            "shock"
+            if abs(shock_sig) > 0
+            else ("steepening" if signal > 0 else ("inversion" if signal < 0 else "neutral"))
         )
 
         return {
@@ -241,15 +243,17 @@ class YieldCurveSignal:
 
         # Steepening from inversion
         steepen_sig = 0.0
-        if self._was_inverted and not currently_inverted:
-            if self._days_inverted >= _STEEPEN_MIN_DAYS:
-                steepen_sig = 0.4
-                logger.info(
-                    "YieldCurveSignal: steepening from inversion after %d days "
-                    "(spread=%.1fbp)",
-                    self._days_inverted,
-                    spread_bp,
-                )
+        if (
+            self._was_inverted
+            and not currently_inverted
+            and self._days_inverted >= _STEEPEN_MIN_DAYS
+        ):
+            steepen_sig = 0.4
+            logger.info(
+                "YieldCurveSignal: steepening from inversion after %d days (spread=%.1fbp)",
+                self._days_inverted,
+                spread_bp,
+            )
 
         self._was_inverted = currently_inverted
 
@@ -269,8 +273,14 @@ class YieldCurveSignal:
         logger.info(
             "YieldCurveSignal: r10=%.3f r2=%.3f spread=%.1fbp shock=%.1fbp "
             "inv_sig=%.3f shock_sig=%.3f steep_sig=%.3f final=%.3f",
-            r10, r2, spread_bp, shock_bp,
-            inversion_sig, shock_sig, steepen_sig, final,
+            r10,
+            r2,
+            spread_bp,
+            shock_bp,
+            inversion_sig,
+            shock_sig,
+            steepen_sig,
+            final,
         )
         return final
 

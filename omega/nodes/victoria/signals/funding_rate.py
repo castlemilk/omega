@@ -18,7 +18,6 @@ Falls back to 0.0 if:
 import logging
 import math
 from collections import deque
-from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.funding_rate")
 
