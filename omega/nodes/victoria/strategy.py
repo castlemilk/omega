@@ -74,7 +74,7 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 # BTC has a 27.8% win rate — used only as a market regime indicator.
 # DOTUSDT: V61 — 12.5% WR, -$33.89; blacklisting projected +$47.44.
 # MATICUSDT: V62 post-mortem — 16 zero-PnL trades wasting capacity; signal not credible.
-_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "DOTUSDT", "MATICUSDT"})
+_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT"})
 
 # Symbols excluded from LONG positions only (shorts still permitted).
 # BTC: regime indicator only, <28% win rate.
@@ -1107,6 +1107,11 @@ class StrategyNode(Node):
                     logger.debug(
                         "Multi-cycle: %s short — no prior short confirmation, skipping", ticker
                     )
+                    continue
+                # V73: suppress SOLUSDT shorts in normal regime — V72 normal SOLUSDT shorts
+                # showed mixed results and XRPUSDT blacklist reduces basket, so be selective.
+                if ticker == "SOLUSDT" and _is_normal:
+                    logger.info("SOL short suppressed in normal regime (V73)")
                     continue
                 proposals_this_cycle += 1
                 if _block_shorts:

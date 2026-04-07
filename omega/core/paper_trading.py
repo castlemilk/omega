@@ -63,8 +63,10 @@ _MIN_POSITION_FRACTION = 0.05
 _MIN_POSITION_FRACTION_EFFECTIVE = _MIN_POSITION_FRACTION - 1e-9
 
 # Randomized hold window (cycles) — avoids systematic trend alignment
-_EXIT_CYCLES_MIN = 3
-_EXIT_CYCLES_MAX = 7
+# V73: raised min from 3→6 — short holds (4 cycles) in V72 showed -$105 on XRP/BNB;
+# forcing longer hold gives trend more time to play out and reduces whipsaw exits.
+_EXIT_CYCLES_MIN = 6
+_EXIT_CYCLES_MAX = 10
 
 
 def _rand_exit_cycles() -> int:
