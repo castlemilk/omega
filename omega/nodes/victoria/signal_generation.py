@@ -54,6 +54,12 @@ try:
 except ImportError:
     _HAS_VIX = False
 
+try:
+    from omega.nodes.victoria.signals.yield_curve import YieldCurveSignal as _YieldCurveSignal
+    _HAS_YIELD_CURVE = True
+except ImportError:
+    _HAS_YIELD_CURVE = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 
@@ -156,6 +162,14 @@ class SignalGenerationNode(Node):
         if _HAS_VIX:
             try:
                 self._vix_signal = _VIXSignal(window=30)
+            except Exception:
+                pass
+
+        # Yield curve signal — 2s10s spread via FRED (market-level)
+        self._yield_curve_signal: Any | None = None
+        if _HAS_YIELD_CURVE:
+            try:
+                self._yield_curve_signal = _YieldCurveSignal()
             except Exception:
                 pass
 
@@ -348,6 +362,13 @@ class SignalGenerationNode(Node):
             except Exception as _exc:
                 logger.debug("VIXSignal compute error: %s", _exc)
 
+        _yield_curve_val: float = 0.0
+        if self._yield_curve_signal is not None:
+            try:
+                _yield_curve_val = self._yield_curve_signal.compute()
+            except Exception as _exc:
+                logger.debug("YieldCurveSignal compute error: %s", _exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -448,6 +469,8 @@ class SignalGenerationNode(Node):
                 ts["dxy_signal"] = _dxy_val
             if _vix_val != 0.0:
                 ts["vix_signal"] = _vix_val
+            if _yield_curve_val != 0.0:
+                ts["yield_curve_signal"] = _yield_curve_val
 
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
