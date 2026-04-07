@@ -62,8 +62,8 @@ try:
     _HAS_YFINANCE = True
 except ImportError:
     _HAS_YFINANCE = False
-    logger.debug(
-        "yfinance not installed — VIXSignal will use stub VIX=20.0. "
+    logger.warning(
+        "VIXSignal unavailable: yfinance not installed (returning 0.0). "
         "Run `pip install yfinance` to activate."
     )
 
@@ -96,6 +96,9 @@ class VIXSignal:
               Positive = capitulation reversal signal
               0.0 = neutral or stale data
         """
+        if not _HAS_YFINANCE:
+            return 0.0
+
         now = time.time()
         if now - self._vix_cache_ts < _VIX_CACHE_TTL and self._vix_cache:
             return self._last_signal
@@ -255,7 +258,7 @@ class VIXSignal:
             return self._vix_cache
 
         except Exception as exc:
-            logger.debug("VIXSignal: yfinance fetch failed: %s", exc)
+            logger.warning("VIXSignal: yfinance fetch failed: %s", exc)
             return self._vix_cache  # return stale cache on error
 
     def _threshold_signal(self, vix_prices: list[float]) -> float:

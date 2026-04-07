@@ -53,8 +53,8 @@ try:
     _HAS_YFINANCE = True
 except ImportError:
     _HAS_YFINANCE = False
-    logger.debug(
-        "yfinance not installed — DXYSignal is a stub. "
+    logger.warning(
+        "DXYSignal unavailable: yfinance not installed (returning 0.0). "
         "Run `pip install yfinance` to activate."
     )
 
@@ -176,5 +176,5 @@ class DXYSignal:
             logger.debug("DXYSignal: fetched %d DXY prices (latest=%.3f)", len(prices), prices[-1])
             return self._dxy_cache
         except Exception as exc:
-            logger.debug("DXYSignal: yfinance fetch failed: %s", exc)
+            logger.warning("DXYSignal: yfinance fetch failed: %s", exc)
             return self._dxy_cache  # return stale cache on error

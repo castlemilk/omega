@@ -107,7 +107,7 @@ class FearGreedSignal:
                 return []
             return values[-self._window :]
         except Exception as exc:
-            logger.debug("FearGreedSignal: fetch failed: %s", exc)
+            logger.warning("FearGreedSignal: fetch failed: %s", exc)
             return []
 
     def _z_to_signal(self, values: list[float]) -> float:

@@ -346,28 +346,28 @@ class SignalGenerationNode(Node):
             try:
                 _fear_greed_val = self._fear_greed_signal.compute()
             except Exception as _exc:
-                logger.debug("FearGreedSignal compute error: %s", _exc)
+                logger.warning("FearGreedSignal compute error: %s", _exc)
 
         _dxy_val: float = 0.0
         if self._dxy_signal is not None:
             try:
                 _dxy_val = self._dxy_signal.compute(market_data)
             except Exception as _exc:
-                logger.debug("DXYSignal compute error: %s", _exc)
+                logger.warning("DXYSignal compute error: %s", _exc)
 
         _vix_val: float = 0.0
         if self._vix_signal is not None:
             try:
                 _vix_val = self._vix_signal.compute()
             except Exception as _exc:
-                logger.debug("VIXSignal compute error: %s", _exc)
+                logger.warning("VIXSignal compute error: %s", _exc)
 
         _yield_curve_val: float = 0.0
         if self._yield_curve_signal is not None:
             try:
                 _yield_curve_val = self._yield_curve_signal.compute()
             except Exception as _exc:
-                logger.debug("YieldCurveSignal compute error: %s", _exc)
+                logger.warning("YieldCurveSignal compute error: %s", _exc)
 
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
