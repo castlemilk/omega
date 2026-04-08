@@ -1215,25 +1215,33 @@ class StrategyNode(Node):
                 # V68: replace full normal-regime suppression with 0.20 conviction floor —
                 # V66 hard block caused trade count to drop 42→17 (gate failure: req ≥20).
                 # High-conviction ETH longs (≥0.20) still permitted in normal regime.
+                # V90: re-enable ETH longs in high_vol with 0.11 conviction gate — V89 found
+                # ETH composite peaks at +0.14 only in high_vol (blocked), and drops to +0.06
+                # in normal (too weak). V65 hard block predates 2-cycle confirmation and
+                # abs_min_conviction (0.06); with those guards in place, w_conv >= 0.11 is
+                # sufficient quality gate. ETH at +0.14 composite → w_conv ~0.11-0.12 → passes.
                 if ticker == "ETHUSDT" and _is_high_vol:
-                    logger.info(
-                        "ETH long suppressed in high_vol regime (V65)",
-                    )
-                    continue
+                    _eth_conv_hv = abs(self._compute_weighted_conviction(sig))
+                    if _eth_conv_hv < 0.11:
+                        logger.info(
+                            "ETH long suppressed in high_vol regime (V90 conviction floor: "
+                            "%.3f < 0.11)",
+                            _eth_conv_hv,
+                        )
+                        continue
                 if ticker == "ETHUSDT" and _is_normal:
                     _eth_conv = abs(self._compute_weighted_conviction(sig))
-                    if _eth_conv < 0.09:
+                    if _eth_conv < 0.07:
                         logger.info(
-                            "ETH long suppressed in normal regime (V89 conviction floor: "
-                            "%.3f < 0.09)",
+                            "ETH long suppressed in normal regime (V90 conviction floor: "
+                            "%.3f < 0.07)",
                             _eth_conv,
                         )
                         continue
-                    # V89: floor lowered 0.12→0.09 — V81 set 0.12 to prevent low-conviction
-                    # ETH longs (-$28/loss vs $9/win). Post-crash IC weights penalize bullish
-                    # sub-signals, pushing IC-weighted w_conv to ~0.10-0.11 even when raw
-                    # composite is +0.14. With 2-cycle confirmation and abs_min_conviction (0.06)
-                    # still in place, 0.09 is sufficient quality gate for recovery-phase longs.
+                    # V90: normal floor lowered 0.09→0.07 — post-crash ETH composites at
+                    # +0.06-0.08 in normal regime, below 0.09 floor. 0.07 captures these while
+                    # still requiring 2-cycle confirmation (or bypass at w_conv >= 0.09).
+                    # High_vol floor set to 0.11 (re-enabled from V65 hard-block).
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
                 # normal long_thresh=0.15 (scaled), BNB longs only trigger on genuine signals.
