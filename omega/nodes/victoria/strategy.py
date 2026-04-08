@@ -85,6 +85,11 @@ Improvement arc:
           suppression after V89's crisis-reset fix. Streak resets in crisis, re-accumulates in
           normal recovery (30 cycles), then suppresses at bear=0.31 (above 0.25). At 0.40,
           recovery is not suppressed; genuine bear (>0.40) still triggers.
+  v3.0 — V95 fix: Gate regime_hmm/regime_label "crisis" paths with bear_prob >= 0.45.
+          HMM transitions slowly and stays "crisis" for 30+ cycles post-crash while
+          bear_prob=0.31–0.38 (probability model prices recovery). V94 was no-op (same code
+          as V93). V95 requires bear_prob >= 0.45 for HMM/label-based crisis to block longs;
+          bear_prob >= 0.65 still triggers hard lock unconditionally.
 """
 
 import logging
@@ -661,11 +666,17 @@ class StrategyNode(Node):
         # +0.19 BUY (strongest signal) exactly when bear_prob crosses 0.55, but longs are
         # blocked. Genuine crashes (initial shock) push bear_prob to 0.70+. Raising to 0.65
         # allows recovery longs at bear_prob 0.55–0.64 while keeping hard lock for ≥0.65.
+        # V95: gate regime_hmm/regime_label "crisis" paths with bear_prob >= 0.45.
+        # Root cause: HMM transitions slowly; post-April-7-crash HMM stays "crisis" for 30+
+        # cycles while bear_prob=0.31–0.38 (market probability already pricing recovery).
+        # Requiring bear_prob >= 0.45 for HMM/label-based crisis ensures the probability
+        # model confirms genuine crisis before blocking all longs. bear_prob >= 0.65 still
+        # hard-blocks unconditionally. This replaces V94 (no-op — same code as V93).
         is_crisis = (
             bear_prob >= 0.65
             or (bear_prob < 0.0 and regime_hmm == "bear")
-            or regime_hmm == "crisis"
-            or regime_label == "crisis"
+            or (regime_hmm == "crisis" and bear_prob >= 0.45)
+            or (regime_label == "crisis" and bear_prob >= 0.45)
         )
         self._is_crisis = is_crisis
         is_bull = (
