@@ -742,15 +742,17 @@ class StrategyNode(Node):
         if cycle - self._last_trade_cycle < 2:
             return False, "time_filter"
 
-        # 2. Agreement ratio (base threshold, tightened in high-vol)
+        # 2. Agreement ratio (disabled in V84)
+        # V83 post-mortem: hardcoded 0.7 agreement threshold for vol_regime="high" was
+        # blocking ALL trades in the post-crash recovery period. Sub-signals are mixed
+        # (momentum BUY vs macro bearish SELL) even when composite direction is clear.
+        # V55 disabled agreement_ratio universally (abs_conviction is the quality gate);
+        # V84 restores that — use self._agreement_ratio_threshold (0.0 = disabled) only.
+        # The 1.25x conviction multiplier for vol_regime="high" still applies below.
         vol_regime = sig.get("vol_regime", "normal")
-        agreement_threshold = 0.7 if vol_regime == "high" else self._agreement_ratio_threshold
         ratio, _agreeing, _total = self._compute_agreement_ratio(sig)
-        # Skip agreement ratio when there are no directional sub-signals (e.g. synthetic
-        # adv_* tickers that carry only a composite value).  The composite itself serves
-        # as the sole direction indicator in that case.
-        if _total > 0 and ratio < agreement_threshold:
-            return False, f"agreement_ratio({ratio:.2f}<{agreement_threshold:.2f})"
+        if _total > 0 and ratio < self._agreement_ratio_threshold:
+            return False, f"agreement_ratio({ratio:.2f}<{self._agreement_ratio_threshold:.2f})"
 
         # 3. Weighted conviction — use per-direction regime-adaptive threshold.
         # _apply_regime_adaptive_thresholds() sets these each cycle before the
