@@ -81,6 +81,30 @@ class FundingRateSignal:
             result[sym] = self.compute(sym)
         return result
 
+    def _fetch_all_rates(self, symbols: list[str]) -> dict[str, float | None]:
+        """Fetch raw funding rates for all symbols, warn on any failure.
+
+        Network or API errors are logged at WARNING level so they surface in
+        training logs (not silently swallowed at DEBUG).
+        """
+        rates: dict[str, float | None] = {}
+        for sym in symbols:
+            try:
+                rate = self._get_cached_rate(sym)
+                if rate is None:
+                    logger.warning(
+                        "FundingRateSignal: failed to fetch funding rate for %s "
+                        "(all sources exhausted or network error)",
+                        sym,
+                    )
+                rates[sym] = rate
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "FundingRateSignal: unexpected error fetching %s: %s", sym, exc
+                )
+                rates[sym] = None
+        return rates
+
     def _get_cached_rate(self, symbol: str) -> float | None:
         """Read funding rate from MacroDataCache (OKX → CoinGecko → None)."""
         if self._cache is None:
