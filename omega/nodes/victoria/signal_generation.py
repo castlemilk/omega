@@ -78,6 +78,12 @@ try:
 except ImportError:
     _HAS_MANIFOLD = False
 
+try:
+    from omega.nodes.victoria.geometry.ollivier_ricci import OllivierRicciCurvature as _OllivierRicci
+    _HAS_ORC = True
+except ImportError:
+    _HAS_ORC = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 
@@ -194,6 +200,14 @@ class SignalGenerationNode(Node):
         if _HAS_MANIFOLD:
             try:
                 self._market_manifold = _MarketManifold(window=30, min_samples=10)
+            except Exception:
+                pass
+
+        # Graph geometry: Ollivier-Ricci curvature on correlation network
+        self._orc: Any | None = None
+        if _HAS_ORC:
+            try:
+                self._orc = _OllivierRicci(window=30, corr_threshold=0.4)
             except Exception:
                 pass
 
@@ -418,6 +432,24 @@ class SignalGenerationNode(Node):
             except Exception as _exc:
                 logger.warning("MarketManifold compute error: %s", _exc)
 
+        # Ollivier-Ricci curvature on the asset correlation network (basket-level signal)
+        _orc_val: float = 0.0
+        if self._orc is not None:
+            try:
+                _orc_state = self._orc.update(market_data)
+                if _orc_state is not None and _orc_state.confidence >= 0.3:
+                    _orc_val = _orc_state.signal
+                    logger.debug(
+                        "ORC: mean_kappa=%.3f regime=%s signal=%.3f n_edges=%d conf=%.2f",
+                        _orc_state.mean_curvature,
+                        _orc_state.regime,
+                        _orc_val,
+                        _orc_state.n_edges,
+                        _orc_state.confidence,
+                    )
+            except Exception as _exc:
+                logger.warning("ORC compute error: %s", _exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -524,6 +556,8 @@ class SignalGenerationNode(Node):
                 ts["spy_signal"] = _spy_val
             if _ricci_val != 0.0:
                 ts["ricci_curvature_signal"] = _ricci_val
+            if _orc_val != 0.0:
+                ts["ollivier_ricci_signal"] = _orc_val
 
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
