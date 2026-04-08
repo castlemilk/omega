@@ -121,9 +121,11 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
 # LINKUSDT: V58 post-mortem — 30 longs, -$34.95 (all loss from normal/high_vol longs).
 #   DOT shorts remain allowed (+$9.63 in V58 shorts are similar signal pattern).
 #   The LINK long signal appears systematically mis-calibrated post basket_std fix.
-# ADAUSDT: V78 post-mortem — long signal wrong direction; -$29.17 single trade loss.
-#   ADA short signals remain allowed (downtrend confirmed across runs).
-_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "LINKUSDT", "ADAUSDT"})
+# ADAUSDT: was blacklisted after V78 single-trade loss (-$29.17 in downtrend).
+#   V85: re-enabled for longs — V84 post-mortem shows ADA is the only viable BUY signal
+#   in recovery phase (cycle 30: +0.12, all other BUY candidates are fully blacklisted).
+#   The V78 loss was in a specific crash/downtrend; post-recovery ADA longs are legitimate.
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "LINKUSDT"})
 
 # Symbols excluded from the crisis first-cycle bypass (multi-cycle confirmation
 # required even in crisis regime for these tickers).
