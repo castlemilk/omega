@@ -92,9 +92,13 @@ class PaperTradingEngine:
         self,
         initial_capital: float = 100_000.0,
         db_url: str | None = None,
+        max_portfolio_exposure: float = 0.80,
+        max_position_per_symbol: float = 0.15,
     ) -> None:
         self.initial_capital = initial_capital
         self._db_url: str | None = db_url or os.environ.get("DATABASE_URL")
+        self._max_portfolio_exposure = max_portfolio_exposure
+        self._max_position_per_symbol = max_position_per_symbol
 
         # In-memory state
         # {symbol: {"side": "long"|"short", "size": float, "entry": float, ...}}
@@ -110,6 +114,9 @@ class PaperTradingEngine:
 
         # Conviction filter counter: how many low-conviction trades were skipped
         self.conviction_skipped: int = 0
+
+        # Portfolio cap counter: how many trades were skipped due to exposure limits
+        self.portfolio_cap_skipped: int = 0
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -131,6 +138,34 @@ class PaperTradingEngine:
             return float(c)
         except (TypeError, ValueError):
             return 0.0
+
+    def _total_open_notional(self) -> float:
+        """Sum of all open position notional values."""
+        return sum(
+            pos.get("size", 0.0)
+            for pos in self._positions.values()
+        )
+
+    def _check_portfolio_limits(self, symbol: str, notional: float) -> tuple[bool, str]:
+        """
+        Return (allowed, reason).
+        Checks:
+        1. Adding `notional` would not exceed max_portfolio_exposure * initial_capital
+        2. Symbol's new notional would not exceed max_position_per_symbol * initial_capital
+        """
+        max_total = self._max_portfolio_exposure * self.initial_capital
+        current_total = self._total_open_notional()
+        if current_total + notional > max_total:
+            return False, f"portfolio exposure cap: {current_total + notional:.0f} > {max_total:.0f}"
+
+        # Per-symbol: existing + new
+        existing_sym = self._positions.get(symbol, {})
+        existing_notional = existing_sym.get("size", 0.0)
+        max_sym = self._max_position_per_symbol * self.initial_capital
+        if existing_notional + notional > max_sym:
+            return False, f"symbol cap {symbol}: {existing_notional + notional:.0f} > {max_sym:.0f}"
+
+        return True, ""
 
     # ------------------------------------------------------------------
     # Public API
@@ -198,6 +233,7 @@ class PaperTradingEngine:
                 "avg_mfe": 0.0,
                 "calmar_ratio": 0.0,
                 "conviction_skipped": self.conviction_skipped,
+                "portfolio_cap_skipped": self.portfolio_cap_skipped,
             }
 
         pnls = [float(t.get("pnl", 0.0)) for t in trades]
@@ -254,6 +290,7 @@ class PaperTradingEngine:
             "avg_mfe": round(avg_mfe, 2),
             "calmar_ratio": round(calmar, 4),
             "conviction_skipped": self.conviction_skipped,
+            "portfolio_cap_skipped": self.portfolio_cap_skipped,
         }
 
     def execute_proposals(
@@ -341,6 +378,13 @@ class PaperTradingEngine:
 
             new_side = "long" if weight > 0 else "short"
             size = raw_size_fraction * self.initial_capital
+
+            # Portfolio risk checks: total exposure cap + per-symbol cap
+            allowed, cap_reason = self._check_portfolio_limits(symbol, size)
+            if not allowed:
+                self.portfolio_cap_skipped += 1
+                logger.debug("portfolio cap skip: %s", cap_reason)
+                continue
 
             # Entry price: ALWAYS use current market price (close[-1]).
             # Never use close[-6] or any historical offset — that bakes in past
