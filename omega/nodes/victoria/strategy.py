@@ -735,11 +735,15 @@ class StrategyNode(Node):
         # _apply_regime_adaptive_thresholds() sets these each cycle before the
         # per-ticker loop so CRISIS → lower short bar, BULL → lower long bar.
         w_conv = self._compute_weighted_conviction(sig)
-        # 3a. Absolute minimum conviction floor (V63): reject below 0.12 regardless of regime.
-        # Filters the bottom third of marginal signals (trade distribution: 0.06–0.14 typical).
-        # V77: abs_min_conviction globally lowered to 0.02 (matches crisis short_thresh);
-        # crisis shorts use the global floor — composite IS already the bypass gate.
-        _effective_floor = self._abs_min_conviction
+        # 3a. Absolute minimum conviction floor: regime-dependent (V80 fix).
+        # Normal/high_vol: use abs_min_conviction (0.07) — calibrated on V78 non-crisis data.
+        # Crisis shorts: use crisis short_thresh (0.04) — the 0.07 floor was negating the V77
+        # crisis bypass. V79 post-mortem: 19-cycle zero streak in sustained crisis because all
+        # signals with w_conv 0.04–0.07 were blocked by the 0.07 floor despite the 0.04 threshold.
+        if self._is_crisis and direction == "short":
+            _effective_floor = self._short_conviction_threshold  # 0.04 in crisis
+        else:
+            _effective_floor = self._abs_min_conviction  # 0.07 in normal/high_vol
         if abs(w_conv) < _effective_floor:
             return False, f"abs_min_conviction({abs(w_conv):.2f}<{_effective_floor:.2f})"
         base_threshold = (
@@ -1014,7 +1018,7 @@ class StrategyNode(Node):
                 _regime_w_bull,
             )
         else:
-            # Fallback: binary block at 35% threshold
+            # Fallback: binary block at 35% threshold (no Wasserstein probs available)
             _regime_confidence_threshold = 0.35
             _block_longs = (
                 _regime_hmm == "bear" and _regime_confidence >= _regime_confidence_threshold
@@ -1022,6 +1026,12 @@ class StrategyNode(Node):
             _block_shorts = (
                 _regime_hmm == "bull" and _regime_confidence >= _regime_confidence_threshold
             )
+        # V80: crisis regime always hard-blocks longs regardless of the regime detection path.
+        # In production (continuous-regime), long_thresh=0.99 is the effective block.
+        # In tests/binary-fallback (no Wasserstein probs), _block_longs must be forced True
+        # so composite=1.0 doesn't slip through the 0.99 threshold.
+        if self._is_crisis:
+            _block_longs = True
 
         # --- Fiedler spectral position size modifier (computed early for all paths) ---
         # λ₂ of the signal correlation graph Laplacian — low = signals fragmenting.
