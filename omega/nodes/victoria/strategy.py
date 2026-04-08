@@ -1088,7 +1088,14 @@ class StrategyNode(Node):
         # bear_prob sat at 0.29–0.30. The standard threshold 0.10 allowed 7 losing longs in
         # "normal" regime before the HMM finally labelled the crash as "crisis" at cycle ~130.
         # Sustained fragmentation + moderate bear = early crash indicator the HMM misses.
-        if _spectral_val.regime_tag == "fragmented":
+        # V89: reset streak when HMM labels crisis — Fiedler is an EARLY WARNING system for
+        # pre-crisis detection. Once HMM reaches crisis, _block_longs handles long suppression.
+        # Accumulating the streak through crisis then carrying it into recovery causes the
+        # post-crash normal phase to inherit a stale 30+ cycle streak, locking long_thresh at
+        # 0.25 indefinitely and producing zero trades in recovery. Reset each crisis cycle.
+        if self._is_crisis:
+            self._fiedler_fragmented_streak = 0
+        elif _spectral_val.regime_tag == "fragmented":
             self._fiedler_fragmented_streak += 1
         else:
             self._fiedler_fragmented_streak = 0
