@@ -27,6 +27,8 @@ Usage::
     waterfall = tracer.get_waterfall(root_ctx.trace_id)
 """
 
+from __future__ import annotations
+
 import logging
 import time
 import uuid
@@ -61,7 +63,7 @@ class TraceContext:
         """W3C traceparent header value: ``00-<trace_id>-<span_id>-01``."""
         return f"00-{self.trace_id}-{self.span_id}-01"
 
-    def child(self, new_span_id: str) -> "TraceContext":
+    def child(self, new_span_id: str) -> TraceContext:
         """Create a child context with this span as parent."""
         return TraceContext(
             trace_id=self.trace_id,
@@ -71,7 +73,7 @@ class TraceContext:
         )
 
     @classmethod
-    def from_traceparent(cls, header: str, cycle: int = 0) -> "TraceContext | None":
+    def from_traceparent(cls, header: str, cycle: int = 0) -> TraceContext | None:
         """Parse a W3C traceparent header and return a TraceContext.
 
         Returns None if the header is absent or malformed.  The resulting

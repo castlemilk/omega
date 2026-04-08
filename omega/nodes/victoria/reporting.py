@@ -10,6 +10,8 @@ Improvement arc:
   v1.3 — Market regime commentary: vol regime, correlation warnings
 """
 
+from __future__ import annotations
+
 import logging
 import time
 import uuid

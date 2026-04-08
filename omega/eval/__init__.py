@@ -30,6 +30,8 @@ compute_sortino_ratio : Sharpe using only downside deviation.
 build_eval_report     : Build complete EvalReport from returns.
 """
 
+from __future__ import annotations
+
 from omega.eval.backtest_bridge import (
     BacktestMode,
     BacktestResult,

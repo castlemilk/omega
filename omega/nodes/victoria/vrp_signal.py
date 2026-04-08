@@ -18,6 +18,8 @@ Regime classification (VRP z-score):
 Capabilities: ["compute_vrp", "vrp_regime"]
 """
 
+from __future__ import annotations
+
 import logging
 import math
 import time

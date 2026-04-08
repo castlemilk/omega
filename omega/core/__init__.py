@@ -1,5 +1,7 @@
 """omega.core — contracts, orchestration, evaluation, memory, feedback."""
 
+from __future__ import annotations
+
 from omega.core.adversarial import (
     AdversarialPressure,
     AdversarialReport,

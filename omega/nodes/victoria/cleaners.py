@@ -8,6 +8,8 @@ LintNode    — data quality checker (NaN detection, missing fields, error rates
 DataIntegrityNode — freshness + completeness + volume sanity checker
 """
 
+from __future__ import annotations
+
 import time
 import uuid
 from abc import abstractmethod

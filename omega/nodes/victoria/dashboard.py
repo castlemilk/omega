@@ -18,6 +18,8 @@ and reported through the standard issue/triage system — they don't crash the
 pipeline.
 """
 
+from __future__ import annotations
+
 import time
 import urllib.error
 import urllib.request

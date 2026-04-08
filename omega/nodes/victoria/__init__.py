@@ -17,6 +17,8 @@ Nodes:
   - ConvergenceMonitorNode  : tracks long-term convergence of the self-improvement loop
 """
 
+from __future__ import annotations
+
 from omega.nodes.victoria.cleaners import DataIntegrityNode, LintNode
 from omega.nodes.victoria.dashboard import DashboardNode
 from omega.nodes.victoria.data_ingestion import DataIngestionNode

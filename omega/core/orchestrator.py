@@ -13,6 +13,8 @@ Responsibilities
 - Log every decision and outcome for post-hoc analysis.
 """
 
+from __future__ import annotations
+
 import logging
 import time
 from dataclasses import dataclass, field

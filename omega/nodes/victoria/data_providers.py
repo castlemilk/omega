@@ -17,6 +17,8 @@ All providers:
   - Include 1-minute TTL in-memory cache
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os

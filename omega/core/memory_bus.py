@@ -30,7 +30,16 @@ import logging
 import os
 import time
 import uuid
-from enum import StrEnum
+
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+
+    class StrEnum(str, Enum):  # type: ignore[no-redef]  # noqa: UP042
+        pass
+
+
 from typing import Any
 
 logger = logging.getLogger("omega.core.memory_bus")

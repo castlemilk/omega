@@ -6,6 +6,8 @@ In-memory node registry.
 Nodes register themselves here; the orchestrator queries by capability.
 """
 
+from __future__ import annotations
+
 import logging
 
 from omega.core.node import Node, NodeState

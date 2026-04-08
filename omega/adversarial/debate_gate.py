@@ -40,7 +40,16 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from enum import StrEnum
+
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+
+    class StrEnum(str, Enum):  # type: ignore[no-redef]  # noqa: UP042
+        pass
+
+
 from typing import Any, ClassVar
 
 from omega.math.bayesian import bayesian_update

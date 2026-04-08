@@ -11,6 +11,8 @@ Improvement arc:
   v1.4 — Multi-persona risk debate (V-TR4): Aggressive / Conservative / Neutral consensus
 """
 
+from __future__ import annotations
+
 import logging
 import math
 import time

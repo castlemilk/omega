@@ -15,11 +15,13 @@ Design intent
 - Node       : abstract base class — implement this to join the network
 """
 
+from __future__ import annotations
+
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar, Optional
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from omega.core.brain import BrainAdapter, BrainConfig, BrainResponse
@@ -112,7 +114,7 @@ class Node(ABC):
     # their content is injected into BrainRequest.domain_context.
     skill_tags: ClassVar[list[str]] = []
 
-    def __init__(self, brain_config: Optional["BrainConfig"] = None) -> None:
+    def __init__(self, brain_config: BrainConfig | None = None) -> None:
         from omega.core.brain import BrainConfig as BrainConfigCls
         from omega.core.brain import create_brain
 
@@ -132,13 +134,13 @@ class Node(ABC):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _create_brain(config: "BrainConfig") -> "BrainAdapter":
+    def _create_brain(config: BrainConfig) -> BrainAdapter:
         """Factory: create a BrainAdapter from a BrainConfig."""
         from omega.core.brain import create_brain
 
         return create_brain(config)
 
-    def set_brain_config(self, config: "BrainConfig") -> None:
+    def set_brain_config(self, config: BrainConfig) -> None:
         """
         Swap the brain adapter at runtime.
 
@@ -154,7 +156,7 @@ class Node(ABC):
         metrics: dict[str, float] | None = None,
         memories: list[dict] | None = None,
         trace_id: str = "",
-    ) -> "BrainResponse":
+    ) -> BrainResponse:
         """
         Ask the brain for a decision.
 
@@ -325,7 +327,7 @@ class Node(ABC):
     # State tensor (optional — override to participate in attention routing)
     # ------------------------------------------------------------------
 
-    def get_state_tensor(self) -> "StateTensor | None":
+    def get_state_tensor(self) -> StateTensor | None:
         """
         Return a StateTensor snapshot for attention-based routing.
 
@@ -373,7 +375,7 @@ class RoleNode(Node):
         output = role.execute(NodeInput(action="research", parameters={}))
     """
 
-    def __init__(self, role_name: str, capability_nodes: list["Node"]) -> None:
+    def __init__(self, role_name: str, capability_nodes: list[Node]) -> None:
         import uuid
 
         self._node_id = str(uuid.uuid4())

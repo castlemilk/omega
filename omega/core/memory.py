@@ -30,6 +30,8 @@ Human-mind analogues:
   Pruning        ≈ forgetting curve / synaptic pruning
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import time
@@ -380,7 +382,7 @@ class MemoryKernel:
 
     # ------------------------------------------------------------------ NodeMemory factory
 
-    def get_node_memory(self, node_name: str) -> "NodeMemory":
+    def get_node_memory(self, node_name: str) -> NodeMemory:
         """Return a NodeMemory facade scoped to this node's namespace."""
         return NodeMemory(kernel=self, namespace=node_name)
 

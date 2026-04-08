@@ -10,6 +10,8 @@ Classes:
   - ConvergenceMonitorNode  : tracks long-term convergence using EMA, regression, plateau detection
 """
 
+from __future__ import annotations
+
 import time
 import uuid
 from typing import Any

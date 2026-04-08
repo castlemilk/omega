@@ -12,6 +12,8 @@ Responsibilities
 - Generate human-readable evaluation reports.
 """
 
+from __future__ import annotations
+
 import logging
 import math
 from dataclasses import dataclass, field
@@ -61,7 +63,7 @@ class GoalSpec:
         direction: str = "minimize",
         weight: float = 1.0,
         threshold: float | None = None,
-    ) -> "GoalSpec":
+    ) -> GoalSpec:
         self.metrics.append(MetricSpec(name, direction, weight, threshold))
         return self
 

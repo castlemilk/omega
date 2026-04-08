@@ -21,6 +21,8 @@ Improvement arc:
   v1.4 — Bybit fallback enabled for failed pairs
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import time

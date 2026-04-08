@@ -12,6 +12,8 @@ All feedback is stored in the MemoryKernel as high-importance episodes and
 influences the next improvement cycle.
 """
 
+from __future__ import annotations
+
 import logging
 import select
 import sys

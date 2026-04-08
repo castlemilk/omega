@@ -13,6 +13,8 @@ Deribit public endpoint (no auth required):
   ?currency=BTC&kind=option
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import math

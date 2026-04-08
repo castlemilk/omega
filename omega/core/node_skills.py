@@ -27,7 +27,16 @@ import uuid
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
+
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+
+    class StrEnum(str, Enum):  # type: ignore[no-redef]  # noqa: UP042
+        pass
+
+
 from typing import Any, ClassVar
 
 logger = logging.getLogger("omega.core.node_skills")

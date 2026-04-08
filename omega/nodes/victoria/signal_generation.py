@@ -16,6 +16,8 @@ Improvement arc:
   v1.3 — Parameter tuning based on signal quality feedback
 """
 
+from __future__ import annotations
+
 import contextlib
 import logging
 import math

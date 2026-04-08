@@ -14,6 +14,8 @@ Reports which signals are predictive vs. noise per regime.
 skill_tags = ["deep-research"]
 """
 
+from __future__ import annotations
+
 import logging
 import math
 import time

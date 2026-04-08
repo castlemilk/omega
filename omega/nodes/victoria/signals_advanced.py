@@ -12,6 +12,8 @@ Signal classes:
 Each signal returns a SignalValue with value, confidence, and regime_tag.
 """
 
+from __future__ import annotations
+
 import json
 import math
 import statistics

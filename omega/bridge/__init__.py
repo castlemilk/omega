@@ -1,5 +1,7 @@
 """omega.bridge — Python clients for Go Connect-RPC services + Python pipeline server."""
 
+from __future__ import annotations
+
 from omega.bridge.adversarial_client import AdversarialServiceClient, AdversarialServiceError
 from omega.bridge.autonomy_client import AutonomyServiceClient, AutonomyServiceError
 from omega.bridge.improvement_client import ImprovementServiceClient, ImprovementServiceError

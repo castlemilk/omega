@@ -225,7 +225,12 @@ class StrategyNode(Node):
         self._normal_trade_count: int = 0  # cycles with full-size trading
 
         # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
-        self._vol_low_threshold: float = 0.20  # percentile below which vol is "dead-calm"
+        self._vol_low_threshold: float = (
+            0.0  # V55: disabled — abs_conviction_floor=0.15 is sufficient gate
+        )
+        # History: 0.20 (original) → 0.05 (V53, after reconnecting vol_rank) → 0.0 (V55).
+        # V54: 200/200 cycles blocked because current market vol rank is below 5th pct of
+        # its own 50d history. abs_conviction_floor handles low-signal environments.
         self._vol_high_threshold: float = 0.80  # percentile above which vol is "chaotic"
 
         # --- Multi-cycle confirmation (V63): track last 2 signal directions per symbol ---
@@ -708,6 +713,14 @@ class StrategyNode(Node):
         if abs(w_conv) < conv_threshold:
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
 
+        # 4. Absolute minimum conviction floor.
+        # V52 post-mortem: all traded convictions clustered 0.050-0.075 with zero
+        # discriminative power. A floor of 0.15 ensures only high-confidence signals trade.
+        abs_min_conviction = 0.15
+        if abs(w_conv) < abs_min_conviction:
+            return False, f"abs_conviction_floor({abs(w_conv):.3f}<{abs_min_conviction})"
+
+
         return True, "pass"
 
     # ------------------------------------------------------------------ spectral / Fiedler
@@ -1135,6 +1148,15 @@ class StrategyNode(Node):
                 proposals_this_cycle += 1
                 if _block_longs:
                     regime_blocked_longs += 1
+                    continue
+                # V53: basket-direction guard — suppress longs in a broadly declining market
+                if _suppress_longs_basket:
+                    filtered_this_cycle += 1
+                    logger.debug(
+                        "Filtered %s (long): basket_direction(mean=%.3f<-0.10)",
+                        ticker,
+                        _basket_mean,
+                    )
                     continue
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="long"
