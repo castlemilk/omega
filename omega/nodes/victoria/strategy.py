@@ -57,6 +57,15 @@ Improvement arc:
           V71 winners held 10 cycles avg, losers 4.6; 6-cycle floor gives more room to
           recover. (c) Blacklist XRPUSDT — V71: 6T 1W 17% WR -$44.91; V72: 8T 2W 25%
           WR -$105.30 — signal consistently wrong across two runs.
+  v2.6 — V75 fixes: (a) Ricci crash-proximity gate (signal_generation.py): suppress
+          positive Ricci mean-reversion signal when market is closer to crash reference
+          than rally reference — V74 post-mortem: ricci=+0.78 during April 2026 crash
+          overrode fear_greed(-0.43)+VIX(-0.32), flipping BTC conviction from SELL to BUY.
+          Dampening factor = geo_dist_crash/geo_dist_rally (0=fully suppressed at crash).
+          (b) Fiedler-fragmented+bear gate: when Fiedler signals fragmented for ≥30 cycles
+          AND bear_prob>0.25, raise long_conviction_threshold 0.10→0.25. V74 had Fiedler
+          fragmented from cycle 15 with bear_prob 0.29–0.30; standard 0.10 threshold
+          allowed 7 losing longs before HMM reached crisis label at cycle ~130.
 """
 
 import logging
@@ -220,6 +229,9 @@ class StrategyNode(Node):
         # Prevents whipsaw entries on single-cycle signal spikes.
         # Values: "long" | "short" | "hold"
         self._signal_history: dict[str, list[str]] = {}
+        # V75: track consecutive cycles where Fiedler regime is "fragmented"
+        # Sustained fragmentation + moderate bear_prob = elevated crash risk ahead of HMM label
+        self._fiedler_fragmented_streak: int = 0
 
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
@@ -965,6 +977,32 @@ class StrategyNode(Node):
         _fiedler_scale = self._fiedler_size_scale(_spectral_val.value, _spectral_val.regime_tag)
         self._last_fiedler_scale = _fiedler_scale
         self._last_fiedler_tag = _spectral_val.regime_tag
+
+        # V75: Fiedler-fragmented streak tracker + elevated long threshold.
+        # When signals are persistently fragmented (30+ consecutive cycles) AND bear_prob is
+        # moderately elevated (>0.25), raise the long conviction threshold from 0.10 to 0.25.
+        # V74 post-mortem: Fiedler was "fragmented" (scale=0.25) from cycle 15 onwards while
+        # bear_prob sat at 0.29–0.30. The standard threshold 0.10 allowed 7 losing longs in
+        # "normal" regime before the HMM finally labelled the crash as "crisis" at cycle ~130.
+        # Sustained fragmentation + moderate bear = early crash indicator the HMM misses.
+        if _spectral_val.regime_tag == "fragmented":
+            self._fiedler_fragmented_streak += 1
+        else:
+            self._fiedler_fragmented_streak = 0
+
+        _fiedler_bear_long_suppress = (
+            self._fiedler_fragmented_streak >= 30 and bear_prob > 0.25
+        )
+        if _fiedler_bear_long_suppress and not is_crisis:
+            self._long_conviction_threshold = max(
+                self._long_conviction_threshold, 0.25
+            )
+            logger.info(
+                "V75: Fiedler-fragmented(%d cycles)+bear(%.2f) → long_thresh raised to %.2f",
+                self._fiedler_fragmented_streak,
+                bear_prob,
+                self._long_conviction_threshold,
+            )
 
         # --- Sit-out filter ---
         sit_out_reason, sit_out_size_mult = self._check_sit_out(signals, market_data)
