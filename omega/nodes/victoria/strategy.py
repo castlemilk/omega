@@ -1260,12 +1260,21 @@ class StrategyNode(Node):
                     # produce per-symbol demeaned composites near -0.05 to -0.04 (above -0.06),
                     # silently blocking the bypass. The short_thresh=0.04 gate (V79) is the
                     # real filter; conviction level (SELL/STRONG_SELL) is sufficient gating.
+                    # V82: restore raw composite gate at <= -0.10 — V81 post-mortem: AVAX/LINK
+                    # with composites -0.07 to -0.09 passed SELL conviction but prices bounced
+                    # (crisis regime with mean-reverting tickers). -0.10 floor filters marginal
+                    # bear signals; genuinely crisis-aligned shorts have composites ≤ -0.12+.
                     _c_val = convictions.get(ticker, ConvictionLevel.HOLD)
-                    if self._is_crisis and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
+                    _raw_composite = sig.get("composite", 0.0)
+                    if (self._is_crisis
+                            and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
+                            and _raw_composite <= -0.10):
                         logger.debug(
-                            "Multi-cycle: %s crisis short — bypassing confirmation (conviction=%s)",
+                            "Multi-cycle: %s crisis short — bypassing confirmation "
+                            "(conviction=%s, composite=%.3f)",
                             ticker,
                             _c_val.name,
+                            _raw_composite,
                         )
                     else:
                         logger.debug(
@@ -1455,6 +1464,13 @@ class StrategyNode(Node):
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
         _kelly_scale = self._kelly_fraction()
+        # V82: crisis regime reduces position sizes by 50% — V81 post-mortem showed crisis
+        # shorts (AVAX/LINK) losing -$40+ when the bypass fires on marginal signals.
+        # Crisis markets have high mean-reversion risk; smaller positions limit damage
+        # while still participating in genuine directional moves.
+        if self._is_crisis:
+            _kelly_scale *= 0.5
+            logger.info("Crisis half-Kelly: scale * 0.5 = %.3f", _kelly_scale)
         self._last_kelly_scale: float = _kelly_scale  # expose for observability
         if _kelly_scale != 1.0:
             raw_weights = {t: w * _kelly_scale for t, w in raw_weights.items()}
