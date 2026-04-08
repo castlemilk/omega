@@ -71,6 +71,11 @@ class FearGreedSignal:
 
         values = self._fetch()
         if not values:
+            logger.warning(
+                "FearGreedSignal: fetch returned no data — returning %s (cache_age=%.0fs)",
+                "stale=%.3f" % self._last_signal if self._cache else "0.0 (cold cache)",
+                now - self._cache_ts,
+            )
             return self._last_signal  # stale cache on failure
 
         self._cache = values
