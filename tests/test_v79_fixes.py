@@ -116,6 +116,44 @@ class TestAbsMinConviction:
 # ---------------------------------------------------------------------------
 
 
+class TestSidewaysIsNormal:
+    """V79 Fix 4: _is_normal includes 'sideways' (HMM label for normal market).
+
+    Previously SOL/BNB/ETH suppressions were bypassed when Wasserstein regime
+    returned 'sideways' instead of 'normal'.
+    """
+
+    def test_sol_short_blocked_in_sideways_regime(self):
+        """SOL short must be blocked when _regime='sideways' (HMM normal label)."""
+        node = StrategyNode()
+        # Provide prior-cycle short history via _signal_history to pass multi-cycle check
+        node._signal_history["SOLUSDT"] = ["short"]
+        sigs = {
+            "_regime_hmm": "sideways",
+            "_regime": "sideways",
+            "SOLUSDT": {"composite": -1.0},
+        }
+        result = node._construct_portfolio(sigs, {})
+        weights = result.get("weights", {})
+        assert "SOLUSDT" not in weights, (
+            "SOL short must be blocked in 'sideways' regime (maps to normal)"
+        )
+
+    def test_bnb_long_blocked_in_sideways_regime(self):
+        """BNB long must be blocked when _regime='sideways'."""
+        node = StrategyNode()
+        sigs = {
+            "_regime_hmm": "sideways",
+            "_regime": "sideways",
+            "BNBUSDT": {"composite": 1.0},
+        }
+        result = node._construct_portfolio(sigs, {})
+        weights = result.get("weights", {})
+        assert weights.get("BNBUSDT", 0) <= 0, (
+            "BNB long must be blocked in 'sideways' regime"
+        )
+
+
 class TestFREDPermFailedSuppression:
     """V79 Fix 3: HTTP 400 from FRED marks series unavailable for the session."""
 

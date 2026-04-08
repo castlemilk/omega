@@ -887,7 +887,10 @@ class StrategyNode(Node):
         # Use the consolidated _regime label — _regime_hmm never carries "high_vol".
         _regime_consolidated = str(signals.get("_regime", "")).lower()
         _is_high_vol = _regime_consolidated == "high_vol"
-        _is_normal = _regime_consolidated == "normal"
+        # V79: include "sideways" (HMM label for normal market) in the is_normal check.
+        # Previously "sideways" ≠ "normal" so SOL/BNB/ETH suppressions were bypassed
+        # when Wasserstein regime returned "sideways" instead of "normal".
+        _is_normal = _regime_consolidated in ("normal", "sideways")
 
         # --- Relative conviction threshold calibration (V45) ---
         # After cross-sectional demeaning, composites are typically 0.01–0.05 in magnitude.
