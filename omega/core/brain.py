@@ -206,6 +206,123 @@ class BrainAdapter(ABC):
         """Human-readable name for logging / StateStore records."""
         return type(self).__name__
 
+    def evaluate_signal_quality(
+        self,
+        signal_name: str,
+        ic_history: list[float],
+        recent_pnl: float = 0.0,
+        n_trades: int = 0,
+    ) -> dict[str, Any]:
+        """
+        Evaluate whether a signal is still providing edge and recommend action.
+
+        Parameters
+        ----------
+        signal_name  : Signal identifier (e.g. "ricci_curvature_signal").
+        ic_history   : List of per-cycle IC values, most recent last.
+        recent_pnl   : Cumulative PnL attributed to this signal (recent window).
+        n_trades     : Number of trades influenced by this signal.
+
+        Returns
+        -------
+        dict with keys:
+          quality       — "active" | "decaying" | "falsified" | "warmup"
+          recommendation — "keep" | "reduce_weight" | "remove" | "monitor"
+          confidence    — float 0..1
+          reasoning     — human-readable explanation
+          ic_mean       — mean IC over the provided history
+          ic_trend      — "improving" | "stable" | "degrading"
+        """
+        # Default IC-threshold implementation (used by NoBrain and as fallback)
+        return _evaluate_signal_quality_rule_based(
+            signal_name=signal_name,
+            ic_history=ic_history,
+            recent_pnl=recent_pnl,
+            n_trades=n_trades,
+        )
+
+
+def _evaluate_signal_quality_rule_based(
+    signal_name: str,
+    ic_history: list[float],
+    recent_pnl: float,
+    n_trades: int,
+) -> dict[str, Any]:
+    """
+    Rule-based signal quality assessment using IC thresholds.
+
+    IC thresholds (annualised IC ~ signal-to-noise):
+      ic > 0.05   → active / credible edge
+      0.01-0.05   → weak but potentially worth monitoring
+      -0.01-0.01  → noise / warmup
+      ic < -0.01  → falsified / persistently wrong
+    """
+    if not ic_history:
+        return {
+            "quality": "warmup",
+            "recommendation": "monitor",
+            "confidence": 0.0,
+            "reasoning": f"{signal_name}: no IC history available",
+            "ic_mean": 0.0,
+            "ic_trend": "stable",
+        }
+
+    recent = ic_history[-10:] if len(ic_history) >= 10 else ic_history
+    ic_mean = sum(recent) / len(recent)
+    confidence = min(1.0, len(ic_history) / 30.0)
+
+    # Trend: compare first half vs second half of recent window
+    if len(recent) >= 4:
+        mid = len(recent) // 2
+        first_half = sum(recent[:mid]) / mid
+        second_half = sum(recent[mid:]) / (len(recent) - mid)
+        delta = second_half - first_half
+        if delta > 0.01:
+            ic_trend = "improving"
+        elif delta < -0.01:
+            ic_trend = "degrading"
+        else:
+            ic_trend = "stable"
+    else:
+        ic_trend = "stable"
+
+    # Quality classification
+    if len(ic_history) < 5:
+        quality = "warmup"
+        recommendation = "monitor"
+        reasoning = f"{signal_name}: accumulating history ({len(ic_history)} cycles)"
+    elif ic_mean > 0.05:
+        quality = "active"
+        recommendation = "keep"
+        reasoning = f"{signal_name}: strong IC={ic_mean:.3f}, trend={ic_trend}"
+    elif ic_mean > 0.01:
+        quality = "active"
+        recommendation = "keep" if ic_trend != "degrading" else "reduce_weight"
+        reasoning = f"{signal_name}: moderate IC={ic_mean:.3f}, trend={ic_trend}"
+    elif ic_mean > -0.01:
+        quality = "warmup"
+        recommendation = "monitor"
+        reasoning = f"{signal_name}: IC near zero ({ic_mean:.3f}), insufficient edge"
+    else:
+        quality = "falsified"
+        recommendation = "remove" if ic_mean < -0.05 else "reduce_weight"
+        reasoning = f"{signal_name}: negative IC={ic_mean:.3f}, signal is anti-predictive"
+
+    # PnL override: strong positive PnL despite weak IC → keep monitoring
+    if recent_pnl > 50.0 and n_trades >= 3 and quality in ("warmup", "falsified"):
+        quality = "active"
+        recommendation = "monitor"
+        reasoning += f" (override: recent_pnl=+${recent_pnl:.0f})"
+
+    return {
+        "quality": quality,
+        "recommendation": recommendation,
+        "confidence": confidence,
+        "reasoning": reasoning,
+        "ic_mean": round(ic_mean, 4),
+        "ic_trend": ic_trend,
+    }
+
 
 # ---------------------------------------------------------------------------
 # NoBrain — default, pure rule-based, zero latency, no cost
@@ -400,6 +517,59 @@ class AnthropicBrain(BrainAdapter):
                 reasoning=f"AnthropicBrain: could not parse JSON response: {text[:200]}",
                 confidence=0.0,
             )
+
+    def evaluate_signal_quality(
+        self,
+        signal_name: str,
+        ic_history: list[float],
+        recent_pnl: float = 0.0,
+        n_trades: int = 0,
+    ) -> dict[str, Any]:
+        """LLM-backed signal quality evaluation; falls back to rule-based if unavailable."""
+        if not self._api_key or not ic_history:
+            return _evaluate_signal_quality_rule_based(
+                signal_name, ic_history, recent_pnl, n_trades
+            )
+
+        ic_mean = sum(ic_history[-10:]) / min(10, len(ic_history))
+        ic_str = ", ".join(f"{v:.3f}" for v in ic_history[-10:])
+
+        prompt = (
+            f"You are evaluating the quality of a trading signal called '{signal_name}'.\n\n"
+            f"Recent IC history (last {min(10, len(ic_history))} cycles): [{ic_str}]\n"
+            f"Mean IC: {ic_mean:.4f}\n"
+            f"Recent attributed PnL: ${recent_pnl:.2f}\n"
+            f"Trade count influenced: {n_trades}\n\n"
+            "Classify signal quality and recommend action. Respond with JSON only:\n"
+            '{"quality": "active|decaying|falsified|warmup", '
+            '"recommendation": "keep|reduce_weight|remove|monitor", '
+            '"confidence": 0.0-1.0, '
+            '"reasoning": "1-2 sentence explanation", '
+            '"ic_mean": float, '
+            '"ic_trend": "improving|stable|degrading"}'
+        )
+
+        try:
+            raw = self.consult(prompt, tier=ModelTier.QUICK)
+            if raw:
+                if "```" in raw:
+                    raw = raw.split("```")[1].lstrip("json").strip()
+                data = json.loads(raw)
+                return {
+                    "quality": str(data.get("quality", "warmup")),
+                    "recommendation": str(data.get("recommendation", "monitor")),
+                    "confidence": float(data.get("confidence", 0.0)),
+                    "reasoning": str(data.get("reasoning", "")),
+                    "ic_mean": float(data.get("ic_mean", ic_mean)),
+                    "ic_trend": str(data.get("ic_trend", "stable")),
+                }
+        except Exception:
+            pass
+
+        # Fallback to rule-based
+        return _evaluate_signal_quality_rule_based(
+            signal_name, ic_history, recent_pnl, n_trades
+        )
 
     def provider_name(self) -> str:
         return "anthropic"
