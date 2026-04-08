@@ -43,6 +43,7 @@ func (h *TrainingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/training/stream", h.handleVersionStream)
 	mux.HandleFunc("/api/v1/training/versions", h.handleVersions)
 	mux.HandleFunc("/api/v1/training/compare", h.handleCompare)
+	mux.HandleFunc("/api/v1/training/trade-details", h.handleTradeDetails)
 }
 
 // ── JSON types ────────────────────────────────────────────────────────────────
@@ -732,6 +733,68 @@ func (h *TrainingHandler) handleCompare(w http.ResponseWriter, r *http.Request) 
 		SharpeDelta:     targetInfo.SharpeRatio - baseInfo.SharpeRatio,
 		Verdict:         verdict,
 	})
+}
+
+// handleTradeDetails serves per-trade signal waterfall records from
+// /tmp/{version}_trade_details.jsonl written by run_training.py.
+// Query param: version (e.g. "?version=v70"). If omitted, the most recent
+// version is auto-detected from the progress directory.
+func (h *TrainingHandler) handleTradeDetails(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	version := r.URL.Query().Get("version")
+	if version == "" {
+		// Auto-detect latest version from progressDir (same logic as handleJSONL).
+		entries, err := os.ReadDir(h.progressDir)
+		if err == nil {
+			var latest string
+			var latestMod int64
+			for _, e := range entries {
+				if e.IsDir() || !strings.HasSuffix(e.Name(), "_progress.json") {
+					continue
+				}
+				info, err := e.Info()
+				if err != nil {
+					continue
+				}
+				if info.ModTime().UnixNano() > latestMod {
+					latestMod = info.ModTime().UnixNano()
+					latest = strings.TrimSuffix(e.Name(), "_progress.json")
+				}
+			}
+			version = latest
+		}
+	}
+	if version == "" {
+		writeJSON(w, []json.RawMessage{})
+		return
+	}
+
+	jsonlPath := fmt.Sprintf("/tmp/%s_trade_details.jsonl", version)
+	data, err := os.ReadFile(jsonlPath) //nolint:gosec
+	if err != nil {
+		writeJSON(w, []json.RawMessage{})
+		return
+	}
+
+	var rows []json.RawMessage
+	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
+		if len(line) == 0 {
+			continue
+		}
+		if !json.Valid(line) {
+			continue
+		}
+		rows = append(rows, json.RawMessage(line))
+	}
+	if rows == nil {
+		rows = []json.RawMessage{}
+	}
+	writeJSON(w, rows)
 }
 
 // ── String helpers ────────────────────────────────────────────────────────────

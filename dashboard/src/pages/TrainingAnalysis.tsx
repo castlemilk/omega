@@ -86,6 +86,248 @@ interface RecentTrade {
   regime?: string;
 }
 
+// ── TradeRecord — richer shape from /tmp/{version}_trade_details.jsonl ────────
+
+interface SignalTrace {
+  name: string;
+  value: number;
+  weight: number;
+}
+
+interface TradeRecord {
+  cycle: number;
+  ts: string;
+  version: string;
+  symbol: string;
+  side: string;
+  pnl: number;
+  size: number;
+  hold_cycles: number | null;
+  regime: string;
+  signals: Record<string, number | null>;
+  composite: number | null;
+  raw_composite: number | null;
+  composite_method: string;
+  basket_std: number;
+  basket_mean: number;
+  conviction: string;
+  conviction_score: number | null;
+  filters_applied: string[];
+  signal_traces: SignalTrace[];
+  kelly_scale: number;
+  fiedler_scale: number | null;
+  ml_weights: Record<string, number> | null;
+}
+
+// ── SignalEntry for waterfall bars ────────────────────────────────────────────
+
+interface SignalEntry {
+  key: string;
+  value: number;
+  weight?: number;
+  isComposite?: boolean;
+}
+
+// ── Inline div-based signal waterfall (no Recharts) ──────────────────────────
+
+function SignalWaterfall({ trade }: { trade: TradeRecord }) {
+  const signals: SignalEntry[] = [];
+
+  // Prefer signal_traces if available (have weights)
+  if (trade.signal_traces && trade.signal_traces.length > 0) {
+    for (const st of trade.signal_traces) {
+      signals.push({ key: st.name, value: st.value, weight: st.weight });
+    }
+  } else {
+    // Fall back to trade.signals flat map
+    for (const [k, v] of Object.entries(trade.signals)) {
+      if (v !== null && v !== undefined) {
+        signals.push({ key: k, value: v });
+      }
+    }
+  }
+
+  // Append composite entry
+  if (trade.composite !== null && trade.composite !== undefined) {
+    signals.push({ key: "composite", value: trade.composite, isComposite: true });
+  }
+
+  if (signals.length === 0) {
+    return (
+      <p className="text-xs text-gray-500 py-2">No signal detail available for this trade.</p>
+    );
+  }
+
+  // Sort: composite last, rest by absolute value descending
+  signals.sort((a, b) => {
+    if (a.isComposite) return 1;
+    if (b.isComposite) return -1;
+    return Math.abs(b.value) - Math.abs(a.value);
+  });
+
+  // Scale: clamp to [-1, 1] for bar width
+  const maxAbs = Math.max(...signals.filter((s) => !s.isComposite).map((s) => Math.abs(s.value)), 1e-6);
+
+  return (
+    <div className="space-y-1">
+      {signals.map((sig) => {
+        const norm = Math.min(Math.abs(sig.value) / maxAbs, 1);
+        const pct = norm * 45; // max 45% of half-width
+        const isPos = sig.value >= 0;
+        return (
+          <div key={sig.key} className="flex items-center gap-2">
+            <span
+              className={`w-36 text-xs text-right truncate shrink-0 ${
+                sig.isComposite ? "text-indigo-300 font-semibold" : "text-gray-400"
+              }`}
+              title={sig.key}
+            >
+              {sig.key}
+            </span>
+            {/* Centered bar */}
+            <div className="relative flex-1 h-4 bg-gray-900 rounded overflow-hidden">
+              <div
+                className={isPos ? "bg-green-500" : "bg-red-500"}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  bottom: 0,
+                  left: isPos ? "50%" : `${50 - pct}%`,
+                  width: `${pct}%`,
+                  opacity: sig.isComposite ? 1 : 0.75,
+                }}
+              />
+              {/* Centre line */}
+              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-600" />
+            </div>
+            <span className="w-14 text-xs text-right font-mono tabular-nums text-gray-300 shrink-0">
+              {sig.value.toFixed(3)}
+            </span>
+            {sig.weight !== undefined && (
+              <span className="w-10 text-xs text-right font-mono tabular-nums text-gray-600 shrink-0">
+                w={sig.weight.toFixed(2)}
+              </span>
+            )}
+          </div>
+        );
+      })}
+      <p className="text-[10px] text-gray-600 pt-1">
+        Green = bullish · Red = bearish · Bars scaled to largest absolute signal
+      </p>
+    </div>
+  );
+}
+
+// ── TradeDetailPanel — shown below the trades table when a row is selected ────
+
+function TradeDetailPanel({
+  trade,
+  onClose,
+}: {
+  trade: TradeRecord;
+  onClose: () => void;
+}) {
+  const compositeMethodColors: Record<string, string> = {
+    ml: "bg-indigo-900/60 text-indigo-300 border-indigo-700",
+    ic_weighted: "bg-amber-900/60 text-amber-300 border-amber-700",
+    equal_weight: "bg-gray-700 text-gray-400 border-gray-600",
+  };
+  const methodClass =
+    compositeMethodColors[trade.composite_method] ?? "bg-gray-700 text-gray-400 border-gray-600";
+
+  return (
+    <div className="mt-3 p-4 bg-gray-800 rounded-lg border border-indigo-700/40 space-y-3">
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-semibold text-gray-200">
+              Trade Detail —{" "}
+              <span
+                className={
+                  trade.side === "long" ? "text-green-400" : "text-red-400"
+                }
+              >
+                {trade.side.toUpperCase()}
+              </span>{" "}
+              {trade.symbol}
+            </h3>
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono border ${methodClass}`}
+            >
+              {trade.composite_method}
+            </span>
+            <span
+              className={`text-xs font-mono font-semibold ${
+                trade.pnl >= 0 ? "text-green-400" : "text-red-400"
+              }`}
+            >
+              {trade.pnl >= 0 ? "+" : ""}${trade.pnl.toFixed(2)}
+            </span>
+          </div>
+          <p className="text-[10px] text-gray-500 font-mono">
+            {new Date(trade.ts).toLocaleString()} · regime: {trade.regime || "—"} ·
+            hold: {trade.hold_cycles ?? "—"}c · kelly: {trade.kelly_scale.toFixed(3)}
+            {trade.fiedler_scale !== null && ` · fiedler: ${trade.fiedler_scale.toFixed(3)}`}
+          </p>
+          {trade.filters_applied.length > 0 && (
+            <p className="text-[10px] text-gray-600 font-mono">
+              filters: {trade.filters_applied.join(", ")}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="p-1.5 rounded text-gray-500 hover:text-gray-300 hover:bg-gray-700 transition-colors shrink-0"
+          title="Close detail"
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Stats strip */}
+      <div className="flex gap-4 text-xs font-mono text-gray-400 flex-wrap">
+        {trade.composite !== null && (
+          <span>composite: <span className="text-white">{trade.composite.toFixed(4)}</span></span>
+        )}
+        {trade.raw_composite !== null && (
+          <span>raw: <span className="text-gray-300">{trade.raw_composite.toFixed(4)}</span></span>
+        )}
+        {trade.conviction_score !== null && (
+          <span>conviction_score: <span className="text-indigo-300">{trade.conviction_score.toFixed(4)}</span></span>
+        )}
+        <span>basket_std: <span className="text-amber-400">{trade.basket_std.toFixed(4)}</span></span>
+      </div>
+
+      {/* Signal waterfall */}
+      <div>
+        <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">
+          Signal Waterfall
+        </p>
+        <SignalWaterfall trade={trade} />
+      </div>
+
+      {/* ML weights mini-table (if present) */}
+      {trade.ml_weights && Object.keys(trade.ml_weights).length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-1">
+            ML Weights Snapshot
+          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+            {Object.entries(trade.ml_weights)
+              .sort(([, a], [, b]) => b - a)
+              .map(([k, v]) => (
+                <span key={k} className="text-[10px] font-mono text-gray-500">
+                  {k}: <span className="text-gray-300">{(v * 100).toFixed(1)}%</span>
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Signal weights (router_weights.json shape) ────────────────────────────────
 
 interface RouterWeights {
@@ -893,9 +1135,11 @@ function SignalWaterfallPanel({
 function TradesTable({
   metrics,
   rows,
+  tradeDetails,
 }: {
   metrics: TrainingMetrics | null;
   rows: MetricRow[];
+  tradeDetails: TradeRecord[];
 }) {
   const [selectedTrade, setSelectedTrade] = useState<RecentTrade | null>(null);
 
@@ -906,6 +1150,24 @@ function TradesTable({
       prev && prev.ts === trade.ts && prev.sym === trade.sym ? null : trade
     );
   }
+
+  // Find the matching TradeRecord for the selected RecentTrade by symbol + proximity in time
+  const selectedDetail: TradeRecord | null = selectedTrade
+    ? (() => {
+        const selTs = new Date(selectedTrade.ts).getTime();
+        let best: TradeRecord | null = null;
+        let bestDiff = Infinity;
+        for (const td of tradeDetails) {
+          if (td.symbol !== selectedTrade.sym && td.symbol !== selectedTrade.sym.replace("USDT", "")) continue;
+          const diff = Math.abs(new Date(td.ts).getTime() - selTs);
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            best = td;
+          }
+        }
+        return best;
+      })()
+    : null;
 
   return (
     <div className="space-y-3">
@@ -981,7 +1243,16 @@ function TradesTable({
         </div>
       </div>
 
-      {selectedTrade && (
+      {/* Prefer rich TradeDetailPanel when trade_details data is available */}
+      {selectedTrade && selectedDetail && (
+        <TradeDetailPanel
+          trade={selectedDetail}
+          onClose={() => setSelectedTrade(null)}
+        />
+      )}
+
+      {/* Fall back to the Recharts-based waterfall when no trade_details data */}
+      {selectedTrade && !selectedDetail && (
         <SignalWaterfallPanel
           trade={selectedTrade}
           rows={rows}
@@ -1030,6 +1301,7 @@ function TabBar({
 export default function TrainingAnalysis() {
   const [rows, setRows] = useState<MetricRow[]>([]);
   const [metrics, setMetrics] = useState<TrainingMetrics | null>(null);
+  const [tradeDetails, setTradeDetails] = useState<TradeRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [version, setVersion] = useState<string>("");
@@ -1037,9 +1309,11 @@ export default function TrainingAnalysis() {
 
   async function fetchAll() {
     try {
-      const [jsonlRes, metRes] = await Promise.all([
-        fetch(`${BASE}/api/v1/training/jsonl${version ? `?version=${version}` : ""}`),
+      const vq = version ? `?version=${version}` : "";
+      const [jsonlRes, metRes, tdRes] = await Promise.all([
+        fetch(`${BASE}/api/v1/training/jsonl${vq}`),
         fetch(`${BASE}/api/v1/training/metrics`),
+        fetch(`${BASE}/api/v1/training/trade-details${vq}`),
       ]);
       if (jsonlRes.ok) {
         const arr: MetricRow[] = await jsonlRes.json();
@@ -1049,6 +1323,10 @@ export default function TrainingAnalysis() {
         }
       }
       if (metRes.ok) setMetrics(await metRes.json());
+      if (tdRes.ok) {
+        const tdArr: TradeRecord[] = await tdRes.json();
+        setTradeDetails(tdArr);
+      }
       setLastUpdated(new Date());
     } catch {
       // swallow — training server may not be running
@@ -1061,6 +1339,7 @@ export default function TrainingAnalysis() {
     fetchAll();
     const id = setInterval(fetchAll, 8000);
     return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version]);
 
   const latestRow = rows[rows.length - 1];
@@ -1166,7 +1445,7 @@ export default function TrainingAnalysis() {
           {activeTab === "signals" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <NewSignalsPanel rows={rows} />
-              <TradesTable metrics={metrics} rows={rows} />
+              <TradesTable metrics={metrics} rows={rows} tradeDetails={tradeDetails} />
             </div>
           )}
 
@@ -1175,7 +1454,7 @@ export default function TrainingAnalysis() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <MLCombinerWeightsPanel />
               <div className="space-y-4">
-                <TradesTable metrics={metrics} rows={rows} />
+                <TradesTable metrics={metrics} rows={rows} tradeDetails={tradeDetails} />
               </div>
             </div>
           )}
