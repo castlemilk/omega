@@ -24,6 +24,7 @@ import {
   Settings,
   Network,
   BarChart3,
+  GitMerge,
 } from "lucide-react";
 
 const NAV_SECTIONS = [
@@ -57,6 +58,7 @@ const NAV_SECTIONS = [
       { to: "/victoria/portfolio", icon: PieChart, label: "Portfolio" },
       { to: "/victoria/trades", icon: List, label: "Trades" },
       { to: "/victoria/backtest", icon: FlaskConical, label: "Backtest" },
+      { to: "/victoria/geometry", icon: GitMerge, label: "Geometry" },
     ],
   },
   {

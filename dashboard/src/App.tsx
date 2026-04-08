@@ -36,6 +36,7 @@ import Settings from "./pages/Settings";
 import DecisionTrace from "./pages/DecisionTrace";
 import NodeHealth from "./pages/NodeHealth";
 import TradeAnalysis from "./pages/TradeAnalysis";
+import GeometryView from "./pages/GeometryView";
 
 export default function App() {
   const [health, setHealth] = useState<SystemHealthProto | null>(null);
@@ -151,6 +152,7 @@ export default function App() {
                 {/* Observability */}
                 <Route path="/node-health" element={<NodeHealth />} />
                 <Route path="/trade-analysis" element={<TradeAnalysis />} />
+                <Route path="/victoria/geometry" element={<GeometryView />} />
 
                 {/* System */}
                 <Route path="/issues" element={<Issues />} />
