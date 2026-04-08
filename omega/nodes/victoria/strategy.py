@@ -105,12 +105,12 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 #   shorts -$4.10. V78: normal -$4.30 + crisis -$8.89. No winning SOL short across any regime;
 #   signal consistently wrong direction. Removing entirely from trading rotation.
 _TRADING_BLACKLIST: frozenset[str] = frozenset(
-    # SOLUSDT removed from blacklist (V80 fix): V80 blacklisted it based on V78 losses,
-    # but V78 lacked the crisis short bypass. Now with bypass restored (V79), SOL shorts
-    # are the primary crisis short signal and the main source of the zero-candidate streak.
-    # V79 logs confirm composites={SOLUSDT: -0.06} while all other tradeable tickers show
-    # BUY/HOLD — removing SOL from blacklist restores the crisis short candidate pool.
-    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT"}
+    # V81: SOLUSDT re-blacklisted — V80 run confirmed SOL short signals are wrong-direction.
+    # Two crisis shorts lost -$5.92 and -$24.40 (price went up both times despite negative
+    # composite -0.06). The bypass fix doesn't help when the underlying signal direction is wrong.
+    # The V79 zero-streak was caused by blacklisting SOL (removing only valid short candidate)
+    # but the real fix is to generate normal/high_vol longs instead of crisis shorts.
+    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT"}
 )
 
 # Symbols excluded from LONG positions only (shorts still permitted).
@@ -237,11 +237,13 @@ class StrategyNode(Node):
         # V79: raised 0.02→0.06 — V78 marginal ETH/BNB shorts entered at 0.064 conviction
         # and lost $0.5-$3.8 each; 0.02 floor was too permissive after _thresh_scale lowered
         # short_thresh to ~0.05 in low-basket-std markets.
-        # V80: raised 0.06→0.07 — V78 analysis: all winning trades had conviction ≥ 0.078
-        # (BNB +$17.54/+$17.95, AVAX +$13.44). All 0.06–0.069 conviction trades were losses
-        # (AVAX -$6.71, BNB x4 ~-$3 each, ETH x2 ~-$1 each). 0.07 floor blocks all these
-        # sub-threshold losers without sacrificing any identified winners.
-        self._abs_min_conviction: float = 0.07
+        # V80: raised 0.06→0.07 — V78 analysis: all winning trades had conviction ≥ 0.078.
+        # V81: lowered 0.07→0.06 — V80 run generated only high_vol shorts (all negative);
+        # no normal/high_vol longs were generated because 0.07 floor combined with
+        # basket_std scaling made long_thresh effectively 0.055 (very close to abs_min).
+        # V78's winning floor was 0.078 but that was a bear market; current bull market
+        # requires accepting slightly weaker long conviction to generate any entries.
+        self._abs_min_conviction: float = 0.06
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
@@ -1180,26 +1182,27 @@ class StrategyNode(Node):
                     continue
                 if ticker == "ETHUSDT" and _is_normal:
                     _eth_conv = abs(self._compute_weighted_conviction(sig))
-                    if _eth_conv < 0.20:
+                    if _eth_conv < 0.12:
                         logger.info(
-                            "ETH long suppressed in normal regime (V68 conviction floor: "
-                            "%.3f < 0.20)",
+                            "ETH long suppressed in normal regime (V81 conviction floor: "
+                            "%.3f < 0.12)",
                             _eth_conv,
                         )
                         continue
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
-                if ticker == "BNBUSDT" and _is_normal:
-                    logger.info("BNB long suppressed in normal regime (V66)")
-                    continue
+                # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
+                # normal long_thresh=0.15 (scaled), BNB longs only trigger on genuine signals.
+                # BNB at 0.019 composite in bull market should be tradeable.
                 if sig.get("composite", 0.0) <= self._signal_threshold:
                     continue
                 # Multi-cycle confirmation (V63 C+D): only enter if last cycle was also long.
                 # Prevents whipsaw entries on single-cycle signal spikes.
-                # V79: bypass confirmation for high-conviction longs (w_conv >= 0.20) —
-                # V78 had 38+ cycle zero streaks in normal regime because positive composites
-                # (0.10-0.16) never hit consecutive BUY cycles on the same ticker. At 0.15
-                # long_thresh, a w_conv >= 0.20 is a strong enough signal to act without
-                # needing 2-cycle confirmation (the higher bar prevents whipsaws).
+                # V79: bypass confirmation for high-conviction longs (w_conv >= 0.20).
+                # V81: lower bypass to 0.12 — V80 logs show ETH/BNB/AVAX w_conv ≈ 0.06-0.10
+                # in normal regime, never reaching 0.20. With basket_std ≈ 0.07 and
+                # long_thresh*scale ≈ 0.055, a w_conv of 0.12 (2.2x threshold) is a
+                # credible signal. V80's 35-cycle zero streak in normal was caused by this
+                # bypass being unreachable at current market conviction levels.
                 _prev_hist = self._signal_history.get(ticker, [])
                 _hist = self._signal_history.setdefault(ticker, [])
                 _hist.append("long")
@@ -1207,9 +1210,9 @@ class StrategyNode(Node):
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "long":
                     _wconv_long = abs(self._compute_weighted_conviction(sig))
-                    if _wconv_long >= 0.20:
+                    if _wconv_long >= 0.12:
                         logger.debug(
-                            "Multi-cycle: %s long — bypassing confirmation (w_conv=%.3f >= 0.20)",
+                            "Multi-cycle: %s long — bypassing confirmation (w_conv=%.3f >= 0.12)",
                             ticker,
                             _wconv_long,
                         )
