@@ -267,7 +267,13 @@ class StrategyNode(Node):
         # basket_std scaling made long_thresh effectively 0.055 (very close to abs_min).
         # V78's winning floor was 0.078 but that was a bear market; current bull market
         # requires accepting slightly weaker long conviction to generate any entries.
-        self._abs_min_conviction: float = 0.06
+        # V93: lowered 0.06→0.02 — post-crash recovery IC-weighted w_conv clusters at 0.02-0.04
+        # (below 0.06 floor). abs_min was raised 0.02→0.06 in V81 for V78/V80 normal markets;
+        # current basket_std=0.048 (vs V81 baseline ~0.20) makes the scaled long_thresh=0.017
+        # already stricter than the abs_min. Lowering to 0.02 defers quality gating to the
+        # IC-weighted conviction check (weighted_conviction >= long_thresh) which is now the
+        # binding constraint.
+        self._abs_min_conviction: float = 0.02
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
