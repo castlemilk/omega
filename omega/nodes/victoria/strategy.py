@@ -1009,16 +1009,16 @@ class StrategyNode(Node):
             self._fiedler_fragmented_streak = 0
 
         _fiedler_bear_long_suppress = (
-            self._fiedler_fragmented_streak >= 30 and bear_prob > 0.25
+            self._fiedler_fragmented_streak >= 30 and _regime_w_bear > 0.25
         )
-        if _fiedler_bear_long_suppress and not is_crisis:
+        if _fiedler_bear_long_suppress and not self._is_crisis:
             self._long_conviction_threshold = max(
                 self._long_conviction_threshold, 0.25
             )
             logger.info(
                 "V75: Fiedler-fragmented(%d cycles)+bear(%.2f) → long_thresh raised to %.2f",
                 self._fiedler_fragmented_streak,
-                bear_prob,
+                _regime_w_bear,
                 self._long_conviction_threshold,
             )
 
