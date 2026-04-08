@@ -39,8 +39,9 @@ Final signal clamped to [-0.6, 0.4].
 
 ## Data source
 
-FRED API — series `DGS2` (2Y constant maturity) and `DGS10` (10Y constant maturity).
-Requires env var `FRED_API_KEY` or falls back to public `DEMO_KEY` (rate-limited).
+MacroDataCache → FRED series `DGS2` (2Y constant maturity) and `DGS10` (10Y).
+Data is fetched once and cached in SQLite (data/macro_cache.db) with a 4-hour TTL,
+eliminating per-cycle FRED API calls.
 
 ## Output
 
@@ -48,68 +49,16 @@ float in [-0.6, 0.4]:
   -0.6 = deeply inverted / major rate shock (strongly bearish for crypto)
   +0.4 = steepening from inversion (early rate-cut cycle, bullish)
    0.0 = neutral (upright curve, no shock)
-
-Caching: 4-hour TTL (FRED data updates daily; intraday re-fetches are wasted calls).
 """
 
 import logging
-import os
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
 from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.yield_curve")
 
-_CACHE_TTL = 4 * 3600  # 4 hours
-_FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
-_SERIES_2Y = "DGS2"
-_SERIES_10Y = "DGS10"
-_SHOCK_THRESHOLD_BP = 15.0  # 10Y day-over-day move (basis points) to trigger shock
-_INVERSION_MILD_BP = -20.0  # above this: mild inversion
-_STEEPEN_MIN_DAYS = 30  # minimum days inverted before steepening signal fires
-_TIMEOUT = 10.0
-
-
-def _fetch_fred(series_id: str, api_key: str, n_obs: int = 90) -> list[float]:
-    """
-    Fetch the last *n_obs* observations for a FRED series.
-
-    Returns a list of floats (rate in percent, e.g. 4.23 means 4.23%).
-    Missing / non-numeric values ("." placeholder) are skipped.
-    Returns [] on any error.
-    """
-    params = {
-        "series_id": series_id,
-        "api_key": api_key,
-        "file_type": "json",
-        "sort_order": "desc",
-        "limit": str(n_obs),
-    }
-    url = _FRED_BASE + "?" + urllib.parse.urlencode(params)
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "omega-victoria/1.0"})
-        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
-            import json as _json
-
-            data = _json.loads(resp.read().decode())
-        observations = data.get("observations", [])
-        values: list[float] = []
-        for obs in observations:
-            raw = obs.get("value", ".")
-            if raw == ".":
-                continue
-            try:
-                values.append(float(raw))
-            except ValueError:
-                continue
-        # FRED returns desc order; reverse so index 0 = oldest
-        values.reverse()
-        return values
-    except Exception as exc:
-        logger.debug("YieldCurveSignal: FRED fetch failed (series=%s): %s", series_id, exc)
-        return []
+_SHOCK_THRESHOLD_BP = 15.0   # 10Y day-over-day move (basis points) to trigger shock
+_INVERSION_MILD_BP = -20.0   # above this: mild inversion
+_STEEPEN_MIN_DAYS = 30       # minimum days inverted before steepening signal fires
 
 
 class YieldCurveSignal:
@@ -119,26 +68,25 @@ class YieldCurveSignal:
     Fires bearish when the curve is inverted, bullish when steepening from
     inversion, and a shock signal on sudden large 10Y rate moves.
 
-    Uses the FRED API (series DGS2 / DGS10). Requires FRED_API_KEY env var;
-    falls back to DEMO_KEY (rate-limited to ~1 req/min per IP).
+    Reads from MacroDataCache (SQLite, data/macro_cache.db) — FRED series
+    DGS2 and DGS10. Cache has a 4-hour TTL, so FRED is called at most once
+    per 4 hours regardless of how many training cycles run.
 
-    Returns 0.0 if FRED is unavailable or no data can be fetched.
+    Returns 0.0 if no data is available in the cache.
     """
 
-    def __init__(self, timeout: float = _TIMEOUT) -> None:
-        self._timeout = timeout
-        self._api_key = os.environ.get("FRED_API_KEY", "DEMO_KEY")
+    def __init__(self) -> None:
+        # Lazy-imported to avoid circular imports at module load
+        self._cache = None
 
-        # Cache: (rates_2y, rates_10y, fetch_ts)
-        self._rates_2y: list[float] = []
-        self._rates_10y: list[float] = []
-        self._cache_ts: float = 0.0
-
-        # State for steepening detection
+        # State for steepening detection (maintained across calls)
         self._days_inverted: int = 0
         self._was_inverted: bool = False
-
         self._last_signal: float = 0.0
+
+        # Last loaded rates (from cache)
+        self._rates_2y: list[float] = []
+        self._rates_10y: list[float] = []
 
     # ------------------------------------------------------------------ public
 
@@ -152,20 +100,15 @@ class YieldCurveSignal:
             Positive = bullish (steepening from inversion or rate relief).
             0.0 = neutral / data unavailable.
         """
-        now = time.time()
-        if now - self._cache_ts < _CACHE_TTL and (self._rates_2y or self._rates_10y):
-            return self._last_signal
-
-        rates_2y = _fetch_fred(_SERIES_2Y, self._api_key)
-        rates_10y = _fetch_fred(_SERIES_10Y, self._api_key)
+        rates_2y = self._load_rates("DGS2")
+        rates_10y = self._load_rates("DGS10")
 
         if not rates_2y or not rates_10y:
-            logger.debug("YieldCurveSignal: no FRED data available, returning stale signal")
+            logger.debug("YieldCurveSignal: no data in cache, returning stale signal")
             return self._last_signal
 
         self._rates_2y = rates_2y
         self._rates_10y = rates_10y
-        self._cache_ts = now
 
         signal = self._compute_signal()
         self._last_signal = signal
@@ -222,6 +165,13 @@ class YieldCurveSignal:
         }
 
     # ------------------------------------------------------------------ internals
+
+    def _load_rates(self, series_id: str) -> list[float]:
+        """Read rate values from the macro data cache."""
+        if self._cache is None:
+            from omega.nodes.victoria.data_cache import get_cache
+            self._cache = get_cache()
+        return self._cache.get_values(series_id, lookback_days=90)
 
     def _compute_signal(self) -> float:
         r10 = self._rates_10y[-1]
@@ -320,11 +270,3 @@ class YieldCurveSignal:
             return -(0.3 + magnitude)
         else:
             return 0.3 + magnitude
-
-    def _normalize(self, value: float, lo: float, hi: float) -> float:
-        """Linear normalize value from [lo, hi] to [-1, 1]."""
-        if hi == lo:
-            return 0.0
-        mid = (hi + lo) / 2.0
-        half = (hi - lo) / 2.0
-        return max(-1.0, min(1.0, (value - mid) / half))
