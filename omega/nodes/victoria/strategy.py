@@ -118,16 +118,19 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
     #   crisis short -$13.75 (V85), high_vol short -$13.87 (V85). One profitable trade
     #   is insufficient to offset 4 losing trades. LINK is mean-reverting in $9.01-$9.10
     #   range; both long and short signals are wrong-direction in current market conditions.
-    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT", "LINKUSDT"}
+    # V87: BNBUSDT fully blacklisted — 3/3 short losses in V86 first 40 cycles (-$53.82).
+    #   BNB is in post-crash recovery (rising from $602→$604 range); shorting is consistently
+    #   wrong-direction. BNB long signals are untested; removing entirely until trend clears.
+    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT", "LINKUSDT", "BNBUSDT"}
 )
 
 # Symbols excluded from LONG positions only (shorts still permitted).
 # BTC: regime indicator only, <28% win rate.
-# ADAUSDT: was blacklisted after V78 single-trade loss (-$29.17 in downtrend).
-#   V85: re-enabled for longs — V84 post-mortem shows ADA is the only viable BUY signal
-#   in recovery phase (cycle 30: +0.12, all other BUY candidates are fully blacklisted).
-#   The V78 loss was in a specific crash/downtrend; post-recovery ADA longs are legitimate.
-_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
+# ADAUSDT: V78 post-mortem — long signal wrong direction in downtrend (-$29.17).
+#   V85-V86 confirmation: 3/3 ADA longs losing in V86 first 40 cycles (-$53.46).
+#   ADA is trending down post-crash; the signal fires BUY but price keeps falling.
+#   Re-blacklisting after V85/V86 evidence. ADA shorts remain allowed.
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "ADAUSDT"})
 
 # Symbols excluded from the crisis first-cycle bypass (multi-cycle confirmation
 # required even in crisis regime for these tickers).
