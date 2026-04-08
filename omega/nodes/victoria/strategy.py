@@ -1236,6 +1236,9 @@ class StrategyNode(Node):
                 # long_thresh*scale ≈ 0.055, a w_conv of 0.12 (2.2x threshold) is a
                 # credible signal. V80's 35-cycle zero streak in normal was caused by this
                 # bypass being unreachable at current market conviction levels.
+                # V88: lower bypass to 0.09 — V87 had 167-cycle max zero streak with bypass
+                # at 0.12. Post-crash recovery composites cluster 0.03–0.10; 0.09 is still
+                # 1.65x the scaled long_thresh (~0.055), a credible quality floor.
                 _prev_hist = self._signal_history.get(ticker, [])
                 _hist = self._signal_history.setdefault(ticker, [])
                 _hist.append("long")
@@ -1243,9 +1246,9 @@ class StrategyNode(Node):
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "long":
                     _wconv_long = abs(self._compute_weighted_conviction(sig))
-                    if _wconv_long >= 0.12:
+                    if _wconv_long >= 0.09:
                         logger.debug(
-                            "Multi-cycle: %s long — bypassing confirmation (w_conv=%.3f >= 0.12)",
+                            "Multi-cycle: %s long — bypassing confirmation (w_conv=%.3f >= 0.09)",
                             ticker,
                             _wconv_long,
                         )
@@ -1297,8 +1300,13 @@ class StrategyNode(Node):
                     # with composites -0.07 to -0.09 passed SELL conviction but prices bounced
                     # (crisis regime with mean-reverting tickers). -0.10 floor filters marginal
                     # bear signals; genuinely crisis-aligned shorts have composites ≤ -0.12+.
+                    # V88: add normal-regime short bypass at w_conv >= 0.09 — mirrors the long
+                    # bypass logic. V87 ADA short worked via 2-cycle confirmation (cycles 28-29);
+                    # a w_conv >= 0.09 gate allows first-cycle entry for credible short signals
+                    # in normal regime without waiting for confirmation (1.65x short_thresh floor).
                     _c_val = convictions.get(ticker, ConvictionLevel.HOLD)
                     _raw_composite = sig.get("composite", 0.0)
+                    _wconv_short = abs(self._compute_weighted_conviction(sig))
                     if (self._is_crisis
                             and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
                             and _raw_composite <= -0.10
@@ -1309,6 +1317,14 @@ class StrategyNode(Node):
                             ticker,
                             _c_val.name,
                             _raw_composite,
+                        )
+                    elif (not self._is_crisis
+                            and _wconv_short >= 0.09):
+                        logger.debug(
+                            "Multi-cycle: %s normal short — bypassing confirmation "
+                            "(w_conv=%.3f >= 0.09)",
+                            ticker,
+                            _wconv_short,
                         )
                     else:
                         logger.debug(
