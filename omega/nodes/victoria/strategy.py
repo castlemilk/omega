@@ -232,7 +232,11 @@ class StrategyNode(Node):
         # V79: raised 0.02→0.06 — V78 marginal ETH/BNB shorts entered at 0.064 conviction
         # and lost $0.5-$3.8 each; 0.02 floor was too permissive after _thresh_scale lowered
         # short_thresh to ~0.05 in low-basket-std markets.
-        self._abs_min_conviction: float = 0.06
+        # V80: raised 0.06→0.07 — V78 analysis: all winning trades had conviction ≥ 0.078
+        # (BNB +$17.54/+$17.95, AVAX +$13.44). All 0.06–0.069 conviction trades were losses
+        # (AVAX -$6.71, BNB x4 ~-$3 each, ETH x2 ~-$1 each). 0.07 floor blocks all these
+        # sub-threshold losers without sacrificing any identified winners.
+        self._abs_min_conviction: float = 0.07
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
@@ -657,10 +661,14 @@ class StrategyNode(Node):
                     _fg_val,
                 )
             else:
-                self._short_conviction_threshold = 0.02
+                # V79: raise crisis short_thresh 0.02→0.04 — V78 crisis shorts lost on
+                # dead-cat bounces (SOL +0.1% during "crisis" cycles 90-105). 0.02 is too
+                # permissive; 0.04 still captures genuine crisis shorts while filtering
+                # near-zero composites that reflect noise, not real bearish momentum.
+                self._short_conviction_threshold = 0.04
                 logger.info(
                     "Regime-adaptive: CRISIS/BEAR (bear_prob=%.2f, hmm=%s, fear_greed=%.3f) "
-                    "→ long_thresh=0.99, short_thresh=0.02",
+                    "→ long_thresh=0.99, short_thresh=0.04",
                     max(bear_prob, 0.0),
                     regime_hmm,
                     _fg_val,
@@ -680,7 +688,10 @@ class StrategyNode(Node):
             #   (36 trades, 30% WR); marginal short signals not credible in normal regime.
             #   DOT high_vol/crisis shorts remain active via lower thresholds in those branches.
             #   ETH longs stay fully enabled (no high_vol blacklist — V59 ETH WR=50%).
-            self._long_conviction_threshold = 0.13
+            # V79: raise normal long_thresh 0.13→0.15 — V78 ADA long had w_conv=0.141
+            #   (barely above 0.13) and lost -$29.17; raising to 0.15 filters that entry
+            #   while preserving the winning ADA long at w_conv=0.254.
+            self._long_conviction_threshold = 0.15
             self._short_conviction_threshold = 0.10
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "

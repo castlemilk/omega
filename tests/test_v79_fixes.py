@@ -82,11 +82,11 @@ class TestADALongBlacklist:
 class TestAbsMinConviction:
     """V79 Fix 2: abs_min_conviction floor is 0.06."""
 
-    def test_abs_min_conviction_is_0_06(self):
-        """StrategyNode._abs_min_conviction must be 0.06."""
+    def test_abs_min_conviction_is_at_least_0_06(self):
+        """StrategyNode._abs_min_conviction must be ≥ 0.06 (V79 floor, V80 raised to 0.07)."""
         node = StrategyNode()
-        assert node._abs_min_conviction == 0.06, (
-            f"Expected _abs_min_conviction=0.06, got {node._abs_min_conviction}"
+        assert node._abs_min_conviction >= 0.06, (
+            f"Expected _abs_min_conviction≥0.06, got {node._abs_min_conviction}"
         )
 
     def test_conviction_below_0_06_blocked(self):
