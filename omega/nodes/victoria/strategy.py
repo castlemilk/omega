@@ -723,11 +723,16 @@ class StrategyNode(Node):
             #   ADAUSDT is in _LONG_BLACKLIST and AVAXUSDT is in _TRADING_BLACKLIST, removing
             #   the previously troublesome longs (ADA -$29.17, AVAX -$15.28). With those
             #   filtered structurally, 0.10 lets ETH/BNB longs through (V75 ETH long WR=67%).
-            self._long_conviction_threshold = 0.10
+            # V88: lower normal long_thresh 0.10→0.07 — V87 zero_streak=122 at cycle 100;
+            #   ETH conviction hovers at +0.02–0.07 in post-crash recovery but never reached
+            #   0.10. With BNB/LINK/AVAX/SOL blacklisted, ETH is the sole long candidate.
+            #   V87 ETH winning long opened at ~0.07 conviction. Lowering bar to 0.07 captures
+            #   the recovery-phase ETH longs that 0.10 misses.
+            self._long_conviction_threshold = 0.07
             self._short_conviction_threshold = 0.08
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.10, short_thresh=0.08 (V83)",
+                "→ long_thresh=0.07, short_thresh=0.08 (V88)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,
