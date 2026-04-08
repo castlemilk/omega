@@ -742,15 +742,15 @@ class StrategyNode(Node):
         # _apply_regime_adaptive_thresholds() sets these each cycle before the
         # per-ticker loop so CRISIS → lower short bar, BULL → lower long bar.
         w_conv = self._compute_weighted_conviction(sig)
-        # 3a. Absolute minimum conviction floor: regime-dependent (V80 fix).
-        # Normal/high_vol: use abs_min_conviction (0.07) — calibrated on V78 non-crisis data.
-        # Crisis shorts: use crisis short_thresh (0.04) — the 0.07 floor was negating the V77
+        # 3a. Absolute minimum conviction floor: regime-dependent (V80/V81 fix).
+        # Normal/high_vol: use abs_min_conviction (0.06 as of V81) — calibrated on V78/V80 data.
+        # Crisis shorts: use crisis short_thresh (0.04) — the floor was negating the V77
         # crisis bypass. V79 post-mortem: 19-cycle zero streak in sustained crisis because all
-        # signals with w_conv 0.04–0.07 were blocked by the 0.07 floor despite the 0.04 threshold.
+        # signals with w_conv 0.04–0.07 were blocked by the floor despite the 0.04 threshold.
         if self._is_crisis and direction == "short":
             _effective_floor = self._short_conviction_threshold  # 0.04 in crisis
         else:
-            _effective_floor = self._abs_min_conviction  # 0.07 in normal/high_vol
+            _effective_floor = self._abs_min_conviction  # 0.06 in normal/high_vol (V81)
         if abs(w_conv) < _effective_floor:
             return False, f"abs_min_conviction({abs(w_conv):.2f}<{_effective_floor:.2f})"
         base_threshold = (

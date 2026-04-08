@@ -139,18 +139,27 @@ class TestSidewaysIsNormal:
             "SOL short must be blocked in 'sideways' regime (maps to normal)"
         )
 
-    def test_bnb_long_blocked_in_sideways_regime(self):
-        """BNB long must be blocked when _regime='sideways'."""
+    def test_eth_low_conviction_long_blocked_in_sideways_regime(self):
+        """ETH long with w_conv < 0.12 must be blocked in 'sideways' regime.
+
+        V81 lowered ETH normal long floor from 0.20 → 0.12. The _is_normal check
+        must include 'sideways' so the 0.12 floor applies in sideways just as in normal.
+
+        With basket_std fallback=0.20, cs_norm=3.33: composite=0.065 × 3.33 = 0.217 → BUY.
+        w_conv = 0.065 < 0.12 → ETH conviction floor blocks it in normal/sideways.
+        """
         node = StrategyNode()
         sigs = {
             "_regime_hmm": "sideways",
             "_regime": "sideways",
-            "BNBUSDT": {"composite": 1.0},
+            "ETHUSDT": {"composite": 0.065},
         }
+        node._signal_history["ETHUSDT"] = ["long"]  # pass multi-cycle confirmation
         result = node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
-        assert weights.get("BNBUSDT", 0) <= 0, (
-            "BNB long must be blocked in 'sideways' regime"
+        assert weights.get("ETHUSDT", 0) <= 0, (
+            "ETH long with w_conv=0.065 < 0.12 must be blocked in 'sideways' regime "
+            "(V81 ETH conviction floor applies to both normal and sideways via _is_normal)"
         )
 
 
