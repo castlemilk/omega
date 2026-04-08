@@ -221,6 +221,9 @@ class MacroDataCache:
         observations = _fetch_fred_observations(series_id, self._api_key, n_obs=120)
         if not observations:
             logger.warning("MacroDataCache: no data returned for %s", series_id)
+            # Write a sentinel so _is_macro_stale returns False for _MACRO_STALE_HOURS,
+            # preventing repeated failed fetches every cycle.
+            self._record_failed_fetch(series_id)
             return
 
         now_iso = datetime.now(UTC).isoformat()
@@ -244,6 +247,20 @@ class MacroDataCache:
             observations[-1]["value"],
         )
 
+    def _record_failed_fetch(self, series_id: str) -> None:
+        """Insert a sentinel row so _is_macro_stale won't retry for _MACRO_STALE_HOURS."""
+        now_iso = datetime.now(UTC).isoformat()
+        with self._lock:
+            self._conn.execute(
+                """
+                INSERT INTO macro_cache (series_id, date, value, fetched_at)
+                VALUES (?, '__failed__', 0.0, ?)
+                ON CONFLICT(series_id, date) DO UPDATE SET fetched_at = excluded.fetched_at
+                """,
+                (series_id, now_iso),
+            )
+            self._conn.commit()
+
     # ── Read from cache ────────────────────────────────────────────────────────
 
     def _read_macro(self, series_id: str, lookback_days: int) -> list[dict[str, Any]]:
@@ -251,7 +268,7 @@ class MacroDataCache:
         rows = self._conn.execute(
             """
             SELECT date, value FROM macro_cache
-            WHERE series_id = ? AND date >= ?
+            WHERE series_id = ? AND date >= ? AND date != '__failed__'
             ORDER BY date ASC
             """,
             (series_id, cutoff),
