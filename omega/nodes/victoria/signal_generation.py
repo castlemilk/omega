@@ -115,6 +115,76 @@ def _balanced_composite(directional: list[float]) -> float:
     return sum(trimmed) / len(trimmed) if trimmed else sum(directional) / len(directional)
 
 
+_ANTI_PRED_IC_THRESHOLD = -0.05
+_ACTIVE_IC_THRESHOLD = 0.05
+_IC_WEIGHTED_MIN_SIGNALS = 3
+
+
+def _ic_weighted_composite(
+    signals_dict: dict,
+    decay_detector: Any,  # SignalDecayDetector | None — lazy-typed to avoid circular import
+) -> tuple[float, str]:
+    """
+    IC-weighted composite signal.
+
+    Uses per-signal Information Coefficient values from SignalDecayDetector to
+    assign weights proportional to each signal's historical predictive power.
+
+    Weight rules:
+      - IC is None (no history): weight = 0.5 (neutral/uncertain)
+      - IC < -0.05 (anti-predictive): weight = 0.0 (excluded)
+      - 0 <= IC < 0.05 (weak): weight = max(0.1, IC / 0.05)
+      - IC >= 0.05 (active): weight = IC / 0.05 (scale proportionally)
+
+    Falls back to _balanced_composite (equal-weight) when:
+      - decay_detector is None, or
+      - fewer than 3 signals have IC data
+    """
+    if decay_detector is None:
+        signal_vals = [
+            v for k, v in signals_dict.items() if k.endswith("_signal") or k == "sma_crossover"
+        ]
+        return _balanced_composite(signal_vals), "equal_weight"
+
+    weights: list[float] = []
+    values: list[float] = []
+    n_with_ic = 0
+
+    for key, val in signals_dict.items():
+        if not (key.endswith("_signal") or key == "sma_crossover"):
+            continue
+        ic = decay_detector.ic_for(key)
+        if ic is not None:
+            n_with_ic += 1
+            if ic < _ANTI_PRED_IC_THRESHOLD:
+                w = 0.0
+            elif ic < _ACTIVE_IC_THRESHOLD:
+                w = max(0.1, ic / _ACTIVE_IC_THRESHOLD)
+            else:
+                w = ic / _ACTIVE_IC_THRESHOLD
+        else:
+            w = 0.5  # neutral weight for signals without IC history
+        weights.append(w)
+        values.append(float(val))
+
+    if n_with_ic < _IC_WEIGHTED_MIN_SIGNALS:
+        signal_vals = [
+            v for k, v in signals_dict.items() if k.endswith("_signal") or k == "sma_crossover"
+        ]
+        return _balanced_composite(signal_vals), "equal_weight"
+
+    total_w = sum(weights)
+    if total_w == 0.0:
+        signal_vals = [
+            v for k, v in signals_dict.items() if k.endswith("_signal") or k == "sma_crossover"
+        ]
+        return _balanced_composite(signal_vals), "equal_weight"
+
+    weighted_mean = sum(w * v for w, v in zip(weights, values)) / total_w
+    clamped = max(-1.0, min(1.0, weighted_mean))
+    return clamped, "ic_weighted"
+
+
 class SignalGenerationNode(Node):
     """
     Computes quantitative trading signals from OHLCV market data.
@@ -156,6 +226,9 @@ class SignalGenerationNode(Node):
                 self._combiner.load("data/signal_weights.json")
         except Exception:
             pass
+
+        # IC-weighted composite: decay detector loaded lazily on first use
+        self._decay_detector: Any | None = None
 
         # Funding rate signal
         self._funding_signal: Any | None = None
@@ -375,8 +448,26 @@ class SignalGenerationNode(Node):
 
     # ------------------------------------------------------------------ signal computation
 
+    def load_decay_detector(self) -> None:
+        """Lazily load SignalDecayDetector for IC-weighted composite computation.
+
+        Uses a deferred import to avoid circular imports. Silently skips if the
+        IC history file does not exist or the import fails.
+        """
+        try:
+            from omega.nodes.victoria.signal_decay import SignalDecayDetector  # noqa: PLC0415
+
+            self._decay_detector = SignalDecayDetector()
+            self._decay_detector.load()
+        except Exception:
+            pass
+
     def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
+
+        # Ensure IC-weighted composite has decay detector loaded (no-op if already set)
+        if self._decay_detector is None:
+            self.load_decay_detector()
 
         # Market-level cross-asset signals — computed once and applied to all tickers.
         _fear_greed_val: float = 0.0
@@ -593,22 +684,23 @@ class SignalGenerationNode(Node):
                     ts["vol_regime_signal"] = 0.1
                 # "high" and "normal": no directional signal (sit-out handles risk)
 
-            # Composite signal: trimmed mean of all directional signals.
-            # Equal weighting prevents directional bias (see _balanced_composite).
+            # IC-weighted composite — falls back to equal-weight when IC data is sparse.
+            # Uses per-signal Information Coefficient from SignalDecayDetector to
+            # up-weight historically predictive signals and exclude anti-predictive ones.
             directional = [
                 v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
             ]
             if directional:
-                ts["composite"] = _balanced_composite(directional)
+                ic_composite, ic_method = _ic_weighted_composite(ts, self._decay_detector)
+                ts["composite"] = ic_composite
+                ts["composite_method"] = ic_method
 
-            # ML combiner: replace balanced_mean when trained
+            # ML combiner: replace IC-weighted composite when trained (ML wins)
             if self._combiner is not None:
                 ml_score = self._combiner.predict(ts)
                 if ml_score is not None:
                     ts["composite"] = ml_score
                     ts["composite_method"] = "ml"
-                else:
-                    ts["composite_method"] = "equal_weight"
 
             ts["price"] = prices[-1] if prices else None
             ts["ticker"] = ticker
@@ -641,14 +733,18 @@ class SignalGenerationNode(Node):
                     btc_sig = signals.get("BTCUSDT", {}).get("composite", 0.0)
                     if btc_sig != 0 and beta > 0:
                         ts["btc_beta_signal"] = min(1.0, max(-1.0, btc_sig * min(beta, 2.0) / 2.0))
-                        # Recompute composite with BTC beta signal (momentum-weighted)
+                        # Recompute composite with BTC beta signal (IC-weighted)
                         dir_vals = [
                             v
                             for k, v in ts.items()
                             if k.endswith("_signal") or k == "sma_crossover"
                         ]
                         if dir_vals:
-                            ts["composite"] = _balanced_composite(dir_vals)
+                            btc_ic_composite, btc_ic_method = _ic_weighted_composite(
+                                ts, self._decay_detector
+                            )
+                            ts["composite"] = btc_ic_composite
+                            ts["composite_method"] = btc_ic_method
 
         # Cross-sectional demeaning: subtract the basket mean from every composite so
         # each ticker's score reflects its RELATIVE position within the basket, not the
