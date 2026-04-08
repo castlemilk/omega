@@ -72,6 +72,12 @@ try:
 except ImportError:
     _HAS_SPY = False
 
+try:
+    from omega.nodes.victoria.geometry.market_manifold import MarketManifold as _MarketManifold
+    _HAS_MANIFOLD = True
+except ImportError:
+    _HAS_MANIFOLD = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 
@@ -180,6 +186,14 @@ class SignalGenerationNode(Node):
         if _HAS_SPY:
             try:
                 self._spy_signal = _SPYSignal(window=20)
+            except Exception:
+                pass
+
+        # Information geometry: market manifold (Ricci curvature signal)
+        self._market_manifold: Any | None = None
+        if _HAS_MANIFOLD:
+            try:
+                self._market_manifold = _MarketManifold(window=30, min_samples=10)
             except Exception:
                 pass
 
@@ -386,6 +400,24 @@ class SignalGenerationNode(Node):
             except Exception as _exc:
                 logger.warning("SPYSignal compute error: %s", _exc)
 
+        _ricci_val: float = 0.0
+        _ricci_regime: str = "transitional"
+        if self._market_manifold is not None:
+            try:
+                _manifold_state = self._market_manifold.update(market_data)
+                if _manifold_state is not None and _manifold_state.confidence >= 0.3:
+                    _ricci_val = _manifold_state.signal
+                    _ricci_regime = _manifold_state.regime
+                    logger.debug(
+                        "MarketManifold: ricci=%.3f regime=%s signal=%.3f conf=%.2f",
+                        _manifold_state.ricci,
+                        _ricci_regime,
+                        _ricci_val,
+                        _manifold_state.confidence,
+                    )
+            except Exception as _exc:
+                logger.warning("MarketManifold compute error: %s", _exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -490,6 +522,8 @@ class SignalGenerationNode(Node):
                 ts["yield_curve_signal"] = _yield_curve_val
             if _spy_val != 0.0:
                 ts["spy_signal"] = _spy_val
+            if _ricci_val != 0.0:
+                ts["ricci_curvature_signal"] = _ricci_val
 
             # Volatility regime (annualised vs long-run average)
             if self._use_vol_regime:
