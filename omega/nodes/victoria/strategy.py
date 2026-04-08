@@ -113,25 +113,27 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
     # V83: AVAXUSDT fully blacklisted — 3/3 losing trades across all regimes, both directions:
     #   long -$15.28, crisis short -$13.40, normal short -$13.38. Total -$42.06.
     #   AVAX signal consistently wrong or mean-reverting; neither direction is credible.
-    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT"}
+    # V86: LINKUSDT fully blacklisted — cumulative -$55.73 across all trade types:
+    #   30 longs -$34.95 (V58), crisis short -$6.78 (V81), crisis short +$13.62 (V82),
+    #   crisis short -$13.75 (V85), high_vol short -$13.87 (V85). One profitable trade
+    #   is insufficient to offset 4 losing trades. LINK is mean-reverting in $9.01-$9.10
+    #   range; both long and short signals are wrong-direction in current market conditions.
+    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT", "LINKUSDT"}
 )
 
 # Symbols excluded from LONG positions only (shorts still permitted).
 # BTC: regime indicator only, <28% win rate.
-# LINKUSDT: V58 post-mortem — 30 longs, -$34.95 (all loss from normal/high_vol longs).
-#   DOT shorts remain allowed (+$9.63 in V58 shorts are similar signal pattern).
-#   The LINK long signal appears systematically mis-calibrated post basket_std fix.
 # ADAUSDT: was blacklisted after V78 single-trade loss (-$29.17 in downtrend).
 #   V85: re-enabled for longs — V84 post-mortem shows ADA is the only viable BUY signal
 #   in recovery phase (cycle 30: +0.12, all other BUY candidates are fully blacklisted).
 #   The V78 loss was in a specific crash/downtrend; post-recovery ADA longs are legitimate.
-_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "LINKUSDT"})
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
 
 # Symbols excluded from the crisis first-cycle bypass (multi-cycle confirmation
 # required even in crisis regime for these tickers).
-# LINKUSDT: V81 crisis short -$6.78 without confirmation. Low-conviction entry, wrong direction.
+# Note: LINKUSDT was here but V86 moved it to _TRADING_BLACKLIST (fully removed).
 # Note: AVAXUSDT was here, but V83 moved it to _TRADING_BLACKLIST (fully removed).
-_CRISIS_BYPASS_BLACKLIST: frozenset[str] = frozenset({"LINKUSDT"})
+_CRISIS_BYPASS_BLACKLIST: frozenset[str] = frozenset()
 
 
 # ---------------------------------------------------------------------------
