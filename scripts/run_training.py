@@ -485,6 +485,16 @@ def run(
     from omega.core.training_preflight import StartupPreflight
     preflight = StartupPreflight.run()
 
+    # ── Macro cache warm-up ───────────────────────────────────────────────
+    # Refresh all stale FRED series once at startup so training cycles read
+    # from local SQLite (zero FRED API calls during the training loop).
+    try:
+        from omega.nodes.victoria.data_cache import MacroDataCache
+        _macro_cache = MacroDataCache()
+        _macro_cache.warm_up()
+    except Exception as _cache_exc:
+        log.warning("Macro cache warm-up failed (non-fatal): %s", _cache_exc)
+
     # ── Node / engine setup ───────────────────────────────────────────────
     from omega.core.orchestrator_v2 import OmegaOrchestrator
     from omega.core.paper_trading import PaperTradingEngine
