@@ -502,9 +502,19 @@ def run(
     from omega.nodes.victoria.victoria_node import VictoriaNode
     from omega.nodes.shared.semantic_memory import SemanticMemoryNode
     from omega.core.improvement_engine import SyntheticEvaluator
+    from omega.core.adversarial_v2 import AdversarialPressureV2
 
     victoria = VictoriaNode()
-    orch = OmegaOrchestrator(name=f"{version}_training")
+    # V86: raise Ring 1 block threshold from 1.0 → 2.0 for training.
+    # V85 post-mortem: Ring 1 was blocking ALL trades in normal/recovery regime because
+    # max_disagreement (1.0–1.5) exceeded learned_threshold (1.030). In post-crash recovery,
+    # signal disagreement is EXPECTED (momentum BUY vs macro/fear SELL) — this is not noise
+    # but a genuine market phase divergence. The strategy's own conviction filters
+    # (threshold, abs_min, multi-cycle) are the quality gate.
+    # Setting ring1_threshold=2.0 means only extreme disagreement (>2x pairwise distance)
+    # blocks trades; the typical post-crash 1.0–1.5 range passes through.
+    _training_adversarial = AdversarialPressureV2(ring1_threshold=2.0)
+    orch = OmegaOrchestrator(name=f"{version}_training", adversarial=_training_adversarial)
     orch.register_node(victoria)
     orch._improvement_engine.set_evaluator(SyntheticEvaluator())
     log.info("ImprovementEngine: SyntheticEvaluator injected")
