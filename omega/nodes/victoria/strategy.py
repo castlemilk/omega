@@ -642,8 +642,13 @@ class StrategyNode(Node):
 
         # V53: also treat HMM vol-regime "crisis" as crisis even if Wasserstein is flat
         # (Wasserstein can return 1/3 priors when its signal keys don't match the signal dict).
+        # V91: raise bear_prob crisis threshold 0.55→0.65 — April 2026 post-crash recovery
+        # has bear_prob oscillating 0.55–0.62, triggering false crisis labels. ETH shows
+        # +0.19 BUY (strongest signal) exactly when bear_prob crosses 0.55, but longs are
+        # blocked. Genuine crashes (initial shock) push bear_prob to 0.70+. Raising to 0.65
+        # allows recovery longs at bear_prob 0.55–0.64 while keeping hard lock for ≥0.65.
         is_crisis = (
-            bear_prob >= 0.55
+            bear_prob >= 0.65
             or (bear_prob < 0.0 and regime_hmm == "bear")
             or regime_hmm == "crisis"
             or regime_label == "crisis"
