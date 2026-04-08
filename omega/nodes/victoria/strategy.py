@@ -72,6 +72,11 @@ Improvement arc:
           entered at conviction 0.064 (barely above 0.02 floor) and lost $0.5-$3.8 each;
           the basket_std scaling reduced short_thresh to ~0.05, making the 0.02 floor
           the de-facto gate. 0.06 floor ensures minimum signal quality.
+          (c) _is_normal includes 'sideways' — Wasserstein HMM returns 'sideways' for
+          normal market; previously bypassed SOL/BNB/ETH suppressions.
+  v2.8 — V80 fix: Blacklist SOLUSDT entirely — V73: 10T 0W -$78.87 (normal shorts).
+          V77: 4T -$4.10 (normal). V78: 2T -$13.19 (normal + crisis). No winning SOL
+          short across any regime over 3+ training runs; signal consistently wrong.
 """
 
 import logging
@@ -96,7 +101,12 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 # MATICUSDT: V62 post-mortem — 16 zero-PnL trades wasting capacity; signal not credible.
 # XRPUSDT: V73 post-mortem — V71: 6T 1W 17% WR -$44.91; V72: 8T 2W 25% WR -$105.30.
 #   XRP signal consistently wrong across two independent runs; removing from rotation.
-_TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT"})
+# SOLUSDT: V80 post-mortem — V73 suppressed normal shorts (10T 0W -$78.87). V77: 4 normal
+#   shorts -$4.10. V78: normal -$4.30 + crisis -$8.89. No winning SOL short across any regime;
+#   signal consistently wrong direction. Removing entirely from trading rotation.
+_TRADING_BLACKLIST: frozenset[str] = frozenset(
+    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT"}
+)
 
 # Symbols excluded from LONG positions only (shorts still permitted).
 # BTC: regime indicator only, <28% win rate.

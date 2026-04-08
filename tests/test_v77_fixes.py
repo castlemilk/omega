@@ -61,7 +61,7 @@ class TestCrisisShortBypass:
         Before fix: multi-cycle check blocks first-cycle shorts in all regimes.
         After fix: bypass when is_crisis AND composite < -0.06.
         """
-        sigs = _crisis_signals("SOLUSDT", composite=-1.0)
+        sigs = _crisis_signals("ETHUSDT", composite=-1.0)
         result = self.node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         # Without the fix this is empty (multi-cycle blocks the first cycle)
@@ -74,7 +74,7 @@ class TestCrisisShortBypass:
 
     def test_normal_regime_short_still_blocked_first_cycle(self):
         """Normal-regime shorts must still require two consecutive cycles."""
-        sigs = _normal_signals("SOLUSDT", composite=-1.0)
+        sigs = _normal_signals("ETHUSDT", composite=-1.0)
         result = self.node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         # Normal shorts need prior-cycle confirmation — first call always empty
@@ -84,7 +84,7 @@ class TestCrisisShortBypass:
 
     def test_crisis_long_hard_blocked(self):
         """Crisis longs remain hard-blocked (long_thresh ≈ 0.99) regardless of composite."""
-        sigs = _crisis_signals("SOLUSDT", composite=1.0)  # strong long signal
+        sigs = _crisis_signals("ETHUSDT", composite=1.0)  # strong long signal
         result = self.node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         # Longs in crisis should never appear (hard-blocked by 0.99 threshold)
@@ -99,7 +99,7 @@ class TestCrisisShortBypass:
         we simulate two more cycles (execution_count += 2) so the time filter clears.
         """
         node = StrategyNode()
-        sigs = _crisis_signals("SOLUSDT", composite=-1.0)
+        sigs = _crisis_signals("ETHUSDT", composite=-1.0)
         # First call: bypass lets it through, sets _last_trade_cycle = 0
         node._construct_portfolio(sigs, {})
         # Advance execution_count by 2 to clear the time filter (requires gap >= 2)
@@ -226,7 +226,7 @@ class TestZeroStreakWatchdog:
             node._construct_portfolio(hold_sigs, {})
 
         # One cycle that produces candidates (crisis short bypass)
-        node._construct_portfolio(_crisis_signals("SOLUSDT", composite=-1.0), {})
+        node._construct_portfolio(_crisis_signals("ETHUSDT", composite=-1.0), {})
 
         # Now run 5 more zero cycles — streak reset means no warning
         caplog.clear()
