@@ -1076,6 +1076,16 @@ class StrategyNode(Node):
         regime_blocked_longs = 0
         regime_blocked_shorts = 0
 
+        # V53: basket-direction guard — suppress longs when market broadly declining.
+        # Use per-ticker composites (excluding metadata and synthetics).
+        _basket_composites = [
+            float(sig["composite"])
+            for t, sig in signals.items()
+            if not t.startswith("_") and not t.startswith("adv_") and isinstance(sig, dict) and "composite" in sig
+        ]
+        _basket_mean = sum(_basket_composites) / len(_basket_composites) if _basket_composites else 0.0
+        _suppress_longs_basket = _basket_mean < -0.10
+
         short_candidates: dict[str, Any] = {}
 
         for ticker, sig in signals.items():
