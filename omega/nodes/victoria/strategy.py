@@ -774,9 +774,14 @@ class StrategyNode(Node):
             if direction == "long"
             else self._short_conviction_threshold
         )
-        # In high per-ticker vol regime, tighten by 1.25x (less aggressive than old 1.5x
-        # — regime-adaptive base already accounts for market-level volatility direction).
-        conv_threshold = base_threshold * 1.25 if vol_regime == "high" else base_threshold
+        # V85: remove per-ticker vol_regime="high" 1.25x multiplier. Post-crash markets have
+        # elevated realized vol on all tickers simultaneously, causing double-filtering:
+        # basket-level "high_vol" regime detection already handles the market-level signal,
+        # and the per-ticker 1.25x raises thresholds (0.08→0.10) above composites that are
+        # still directionally valid (e.g. ETH -0.08 blocked at conv_threshold=0.10).
+        # V84's zero_streak=30 was caused by this multiplier blocking all non-blacklisted
+        # tickers in the post-crash recovery period. Base thresholds are the quality gate.
+        conv_threshold = base_threshold
         if abs(w_conv) < conv_threshold:
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
 
