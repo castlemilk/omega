@@ -77,6 +77,14 @@ Improvement arc:
   v2.8 — V80 fix: Blacklist SOLUSDT entirely — V73: 10T 0W -$78.87 (normal shorts).
           V77: 4T -$4.10 (normal). V78: 2T -$13.19 (normal + crisis). No winning SOL
           short across any regime over 3+ training runs; signal consistently wrong.
+  v2.9 — V92 fixes: (a) Remove ETH absolute conviction floors (normal 0.07, high_vol 0.11)
+          — floors were unscaled absolutes while long_thresh scales with basket_std (0.017-0.024
+          in recovery). ETH composites 0.025-0.063 pass scaled threshold but fail absolute floor.
+          2-cycle confirmation + IC-weighted filter are sufficient protection.
+          (b) Raise Fiedler bear_prob threshold 0.25→0.40 — recovery bear≈0.31 was re-triggering
+          suppression after V89's crisis-reset fix. Streak resets in crisis, re-accumulates in
+          normal recovery (30 cycles), then suppresses at bear=0.31 (above 0.25). At 0.40,
+          recovery is not suppressed; genuine bear (>0.40) still triggers.
 """
 
 import logging
@@ -1105,8 +1113,14 @@ class StrategyNode(Node):
         else:
             self._fiedler_fragmented_streak = 0
 
+        # V92: raise bear_prob threshold 0.25→0.40 — post-crash recovery (bear≈0.31) was
+        # repeatedly triggering Fiedler suppression despite V89's crisis-reset fix. Streak
+        # resets to 0 during crisis then re-accumulates in NORMAL recovery, hitting 30 cycles
+        # again with bear_weight=0.308-0.311 (above 0.25). At 0.40 threshold, recovery phase
+        # (bear<0.40) doesn't suppress; genuine pre-crash bearish conviction (bear>0.40) still
+        # triggers. V74 scenario (bear 0.29-0.30) now protected by 2-cycle confirmation instead.
         _fiedler_bear_long_suppress = (
-            self._fiedler_fragmented_streak >= 30 and _regime_w_bear > 0.25
+            self._fiedler_fragmented_streak >= 30 and _regime_w_bear > 0.40
         )
         if _fiedler_bear_long_suppress and not self._is_crisis:
             self._long_conviction_threshold = max(
@@ -1220,33 +1234,15 @@ class StrategyNode(Node):
                 # V68: replace full normal-regime suppression with 0.20 conviction floor —
                 # V66 hard block caused trade count to drop 42→17 (gate failure: req ≥20).
                 # High-conviction ETH longs (≥0.20) still permitted in normal regime.
-                # V90: re-enable ETH longs in high_vol with 0.11 conviction gate — V89 found
-                # ETH composite peaks at +0.14 only in high_vol (blocked), and drops to +0.06
-                # in normal (too weak). V65 hard block predates 2-cycle confirmation and
-                # abs_min_conviction (0.06); with those guards in place, w_conv >= 0.11 is
-                # sufficient quality gate. ETH at +0.14 composite → w_conv ~0.11-0.12 → passes.
-                if ticker == "ETHUSDT" and _is_high_vol:
-                    _eth_conv_hv = abs(self._compute_weighted_conviction(sig))
-                    if _eth_conv_hv < 0.11:
-                        logger.info(
-                            "ETH long suppressed in high_vol regime (V90 conviction floor: "
-                            "%.3f < 0.11)",
-                            _eth_conv_hv,
-                        )
-                        continue
-                if ticker == "ETHUSDT" and _is_normal:
-                    _eth_conv = abs(self._compute_weighted_conviction(sig))
-                    if _eth_conv < 0.07:
-                        logger.info(
-                            "ETH long suppressed in normal regime (V90 conviction floor: "
-                            "%.3f < 0.07)",
-                            _eth_conv,
-                        )
-                        continue
-                    # V90: normal floor lowered 0.09→0.07 — post-crash ETH composites at
-                    # +0.06-0.08 in normal regime, below 0.09 floor. 0.07 captures these while
-                    # still requiring 2-cycle confirmation (or bypass at w_conv >= 0.09).
-                    # High_vol floor set to 0.11 (re-enabled from V65 hard-block).
+                # V92: remove ETH absolute conviction floors (normal and high_vol).
+                # Root cause: post-crash recovery composites (0.025-0.063) are above the
+                # SCALED long_thresh (0.017-0.024) but below the ABSOLUTE floor (0.07/0.11).
+                # The floor was inconsistently scaled — long_thresh scales with basket_std
+                # but the floor was hardcoded absolute. This caused ETH to always fail the
+                # floor check despite being above the actual quality bar. The 2-cycle
+                # confirmation + IC-weighted conviction filter in _passes_conviction_filters
+                # provide sufficient quality gating without the absolute floor.
+                # V90 comment for history: high_vol floor was 0.11, normal was 0.07.
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
                 # normal long_thresh=0.15 (scaled), BNB longs only trigger on genuine signals.
