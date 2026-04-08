@@ -700,8 +700,14 @@ class StrategyNode(Node):
         w_conv = self._compute_weighted_conviction(sig)
         # 3a. Absolute minimum conviction floor (V63): reject below 0.12 regardless of regime.
         # Filters the bottom third of marginal signals (trade distribution: 0.06–0.14 typical).
-        if abs(w_conv) < self._abs_min_conviction:
-            return False, f"abs_min_conviction({abs(w_conv):.2f}<{self._abs_min_conviction:.2f})"
+        # V77: in crisis regime, lower the floor to 0.06 for shorts — the crisis bypass already
+        # requires composite < -0.06, so the composite IS the gate; don't double-block on floor.
+        _effective_floor = (
+            0.06 if self._is_crisis and direction == "short"
+            else self._abs_min_conviction
+        )
+        if abs(w_conv) < _effective_floor:
+            return False, f"abs_min_conviction({abs(w_conv):.2f}<{_effective_floor:.2f})"
         base_threshold = (
             self._long_conviction_threshold
             if direction == "long"
