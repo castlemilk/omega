@@ -49,6 +49,11 @@ _FRED_TIMEOUT = 15.0
 _MACRO_STALE_HOURS = 4       # FRED data: refresh if older than 4 hours
 _FUNDING_STALE_HOURS = 8     # Funding rates: refresh every 8 hours (settlement cycle)
 
+# Module-level set of FRED series that returned HTTP 4xx this session.
+# Shared across ALL MacroDataCache instances in the same process to prevent
+# repeated failed fetches after DEMO_KEY hits the 30 req/day limit.
+_FRED_PERM_FAILED: set[str] = set()
+
 # FRED series to warm up at training startup
 MACRO_SERIES = ["DGS2", "DGS10", "DTWEXBGS", "VIXCLS"]
 
@@ -218,6 +223,10 @@ class MacroDataCache:
 
     def _refresh_macro(self, series_id: str) -> None:
         """Fetch the last 120 observations from FRED and upsert into cache."""
+        # Skip if FRED returned a 4xx for this series earlier in this session
+        # (_FRED_PERM_FAILED is module-level so shared across all instances).
+        if series_id in _FRED_PERM_FAILED:
+            return
         observations = _fetch_fred_observations(series_id, self._api_key, n_obs=120)
         if not observations:
             logger.warning("MacroDataCache: no data returned for %s", series_id)
@@ -350,6 +359,20 @@ def _fetch_fred_observations(
         result.reverse()  # oldest first
         return result
 
+    except urllib.error.HTTPError as exc:
+        if exc.code in (400, 401, 403):
+            # Permanent client error — mark series as unavailable for this session
+            # to avoid 30-req/day DEMO_KEY exhaustion and log-spam.
+            _FRED_PERM_FAILED.add(series_id)
+            logger.warning(
+                "MacroDataCache: FRED %d for %s — marking unavailable for this session "
+                "(set FRED_API_KEY for full access)",
+                exc.code,
+                series_id,
+            )
+        else:
+            logger.warning("MacroDataCache: FRED fetch failed (series=%s): %s", series_id, exc)
+        return []
     except Exception as exc:
         logger.warning("MacroDataCache: FRED fetch failed (series=%s): %s", series_id, exc)
         return []

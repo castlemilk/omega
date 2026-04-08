@@ -66,6 +66,12 @@ Improvement arc:
           AND bear_prob>0.25, raise long_conviction_threshold 0.10→0.25. V74 had Fiedler
           fragmented from cycle 15 with bear_prob 0.29–0.30; standard 0.10 threshold
           allowed 7 losing longs before HMM reached crisis label at cycle ~130.
+  v2.7 — V79 fixes: (a) Blacklist ADAUSDT longs — V78: ADA long at conviction 0.125
+          lost -$29.17 (signal wrong direction in current regime). ADA shorts remain
+          active. (b) Raise _abs_min_conviction 0.02→0.06 — V78 marginal ETH/BNB shorts
+          entered at conviction 0.064 (barely above 0.02 floor) and lost $0.5-$3.8 each;
+          the basket_std scaling reduced short_thresh to ~0.05, making the 0.02 floor
+          the de-facto gate. 0.06 floor ensures minimum signal quality.
 """
 
 import logging
@@ -97,7 +103,9 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "DOTUSDT", "MATICUSDT
 # LINKUSDT: V58 post-mortem — 30 longs, -$34.95 (all loss from normal/high_vol longs).
 #   DOT shorts remain allowed (+$9.63 in V58 shorts are similar signal pattern).
 #   The LINK long signal appears systematically mis-calibrated post basket_std fix.
-_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "LINKUSDT"})
+# ADAUSDT: V78 post-mortem — long signal wrong direction; -$29.17 single trade loss.
+#   ADA short signals remain allowed (downtrend confirmed across runs).
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "LINKUSDT", "ADAUSDT"})
 
 
 # ---------------------------------------------------------------------------
@@ -211,7 +219,10 @@ class StrategyNode(Node):
         # V77: lowered from 0.12→0.02 — current market composites (0.03–0.05) require this;
         # V75/V76 produced only 2–3 trades with 0.12 floor vs ≥20 gate requirement.
         # Crisis short_thresh=0.02 is already the gating bar; floor matches it.
-        self._abs_min_conviction: float = 0.02
+        # V79: raised 0.02→0.06 — V78 marginal ETH/BNB shorts entered at 0.064 conviction
+        # and lost $0.5-$3.8 each; 0.02 floor was too permissive after _thresh_scale lowered
+        # short_thresh to ~0.05 in low-basket-std markets.
+        self._abs_min_conviction: float = 0.06
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
