@@ -1184,7 +1184,7 @@ class StrategyNode(Node):
                 if len(_hist) > 2:
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "short":
-                    if self._is_crisis and sig.get("composite", 0.0) < -0.06:
+                    if self._is_crisis and sig.get("composite", 0.0) <= -0.06:
                         logger.debug(
                             "Multi-cycle: %s crisis short — bypassing confirmation (composite=%.3f)",
                             ticker,
