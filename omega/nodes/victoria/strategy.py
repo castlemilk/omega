@@ -208,9 +208,10 @@ class StrategyNode(Node):
         self._proposals_filtered: int = 0  # tickers blocked by conviction filters
         # Absolute minimum conviction floor (V63): reject any signal below this regardless
         # of regime-adaptive thresholds.  Trade distribution shows most entries at 0.06–0.14;
-        # V77: lowered from 0.12→0.06 — current market composites (0.04–0.13) require this;
+        # V77: lowered from 0.12→0.02 — current market composites (0.03–0.05) require this;
         # V75/V76 produced only 2–3 trades with 0.12 floor vs ≥20 gate requirement.
-        self._abs_min_conviction: float = 0.06
+        # Crisis short_thresh=0.02 is already the gating bar; floor matches it.
+        self._abs_min_conviction: float = 0.02
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
@@ -700,12 +701,9 @@ class StrategyNode(Node):
         w_conv = self._compute_weighted_conviction(sig)
         # 3a. Absolute minimum conviction floor (V63): reject below 0.12 regardless of regime.
         # Filters the bottom third of marginal signals (trade distribution: 0.06–0.14 typical).
-        # V77: in crisis regime, lower the floor to 0.06 for shorts — the crisis bypass already
-        # requires composite < -0.06, so the composite IS the gate; don't double-block on floor.
-        _effective_floor = (
-            0.06 if self._is_crisis and direction == "short"
-            else self._abs_min_conviction
-        )
+        # V77: abs_min_conviction globally lowered to 0.02 (matches crisis short_thresh);
+        # crisis shorts use the global floor — composite IS already the bypass gate.
+        _effective_floor = self._abs_min_conviction
         if abs(w_conv) < _effective_floor:
             return False, f"abs_min_conviction({abs(w_conv):.2f}<{_effective_floor:.2f})"
         base_threshold = (
