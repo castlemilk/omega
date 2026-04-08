@@ -9,6 +9,7 @@ Abstract DataProvider interface + concrete implementations:
   BybitProvider     — OHLCV klines (alternative to Binance, same pair format)
   FearGreedProvider — Alternative.me Fear & Greed Index (crypto sentiment)
   DefiLlamaProvider — DeFi protocol TVL rankings
+  CoinbaseProvider  — OHLCV candles via Coinbase Advanced Trade public API (4th-priority fallback)
 
 All providers:
   - Zero external dependencies (urllib.request only)
@@ -686,7 +687,7 @@ class DefiLlamaProvider(DataProvider):
 
 
 class CoinbaseProvider(DataProvider):
-    """Fetches OHLCV candles from Coinbase Exchange public API (4th-priority fallback)."""
+    """Fetches OHLCV candles from Coinbase Advanced Trade public API (4th-priority fallback)."""
 
     def __init__(self) -> None:
         self._cache: dict[str, tuple[float, Any]] = {}
@@ -699,12 +700,12 @@ class CoinbaseProvider(DataProvider):
 
     @property
     def description(self) -> str:
-        return "Coinbase Exchange public candles API — OHLCV (4th-priority fallback)"
+        return "Coinbase Advanced Trade public candles API — OHLCV (4th-priority fallback)"
 
     def fetch_klines(
         self, pair: str, interval: str = "1d", limit: int = 90
     ) -> dict[str, Any] | None:
-        """Fetch OHLCV candles from Coinbase Exchange for a single pair."""
+        """Fetch OHLCV candles from Coinbase Advanced Trade API for a single pair."""
         cache_key = f"cb:{pair}:{interval}:{limit}"
         if cache_key in self._cache:
             ts, data = self._cache[cache_key]
@@ -715,32 +716,36 @@ class CoinbaseProvider(DataProvider):
         if not product_id:
             return None
 
-        granularity = _COINBASE_GRANULARITY.get(interval, 86400)
+        granularity = _COINBASE_GRANULARITY.get(interval, "ONE_DAY")
         end = int(time.time())
-        start = end - limit * granularity
+        # Advanced Trade API accepts start/end as Unix timestamps; max 300 candles
+        gran_seconds = {"ONE_DAY": 86400, "ONE_HOUR": 3600, "SIX_HOUR": 21600}.get(granularity, 86400)
+        start = end - limit * gran_seconds
 
         url = (
-            f"{_COINBASE_API}/{product_id}/candles"
+            f"{_COINBASE_AT_API}/{product_id}/candles"
             f"?granularity={granularity}&start={start}&end={end}"
         )
         try:
             req = urllib.request.Request(url, headers=_HEADERS)
             with urllib.request.urlopen(req, timeout=10) as resp:
-                raw = json.loads(resp.read().decode("utf-8"))
+                payload = json.loads(resp.read().decode("utf-8"))
 
-            if not raw or not isinstance(raw, list):
+            # Response: {"candles": [{"start", "low", "high", "open", "close", "volume"}]}
+            # Candles are newest-first; parse and reverse to oldest-first
+            raw = payload.get("candles", [])
+            if not raw:
                 self._total_failed += 1
                 return None
 
-            # Coinbase returns newest-first: [time, low, high, open, close, volume]
             raw = list(reversed(raw))[-limit:]
 
-            timestamps = [int(k[0]) for k in raw]
-            lows = [float(k[1]) for k in raw]
-            highs = [float(k[2]) for k in raw]
-            opens = [float(k[3]) for k in raw]
-            closes = [float(k[4]) for k in raw]
-            volumes = [float(k[5]) for k in raw]
+            timestamps = [int(k["start"]) for k in raw]
+            lows = [float(k["low"]) for k in raw]
+            highs = [float(k["high"]) for k in raw]
+            opens = [float(k["open"]) for k in raw]
+            closes = [float(k["close"]) for k in raw]
+            volumes = [float(k["volume"]) for k in raw]
 
             data = {
                 "meta": {
@@ -787,11 +792,11 @@ class CoinbaseProvider(DataProvider):
 
     def is_available(self) -> bool:
         try:
-            url = f"{_COINBASE_API}/BTC-USD/ticker"
+            url = f"{_COINBASE_AT_API}/BTC-USD"
             req = urllib.request.Request(url, headers=_HEADERS)
             with urllib.request.urlopen(req, timeout=5) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                return "price" in data
+                return "product_id" in data
         except Exception:
             return False
 
@@ -918,7 +923,10 @@ class KrakenProvider(DataProvider):
 
 # ─── CryptoCompare Provider ────────────────────────────────────────────────────
 
-_COINBASE_API = "https://api.exchange.coinbase.com/products"
+# Coinbase Advanced Trade API (public market data — no auth required for candles/products)
+_COINBASE_AT_API = "https://api.coinbase.com/api/v3/brokerage/market/products"
+_COINBASE_API_KEY = os.environ.get("COINBASE_API_KEY")  # loaded for future auth use
+
 _KRAKEN_API = "https://api.kraken.com/0/public"
 
 _COINBASE_PAIRS = {
@@ -941,7 +949,8 @@ _COINBASE_PAIRS = {
     "TRXUSDT": "TRX-USD",
 }
 
-_COINBASE_GRANULARITY = {"1d": 86400, "1h": 3600, "4h": 14400, "1w": 604800}
+# Advanced Trade API uses string granularity names
+_COINBASE_GRANULARITY = {"1d": "ONE_DAY", "1h": "ONE_HOUR", "4h": "SIX_HOUR", "1w": "ONE_DAY"}
 
 _KRAKEN_PAIRS = {
     "BTCUSDT": "XBTUSD",

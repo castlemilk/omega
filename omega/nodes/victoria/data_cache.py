@@ -62,6 +62,16 @@ _OKX_INST_MAP = {
 }
 _OKX_FUNDING_URL = "https://www.okx.com/api/v5/public/funding-rate"
 
+# Coinbase Advanced Trade API — public market data (no auth required)
+_COINBASE_AT_API = "https://api.coinbase.com/api/v3/brokerage/market/products"
+_COINBASE_INTX_MAP = {
+    "BTCUSDT": "BTC-PERP-INTX",
+    "ETHUSDT": "ETH-PERP-INTX",
+    "SOLUSDT": "SOL-PERP-INTX",
+    "LINKUSDT": "LINK-PERP-INTX",
+    "AVAXUSDT": "AVAX-PERP-INTX",
+}
+
 
 # ── Database path ──────────────────────────────────────────────────────────────
 
@@ -251,8 +261,10 @@ class MacroDataCache:
     # ── Funding rate ───────────────────────────────────────────────────────────
 
     def _refresh_funding(self, symbol: str) -> None:
-        """Fetch funding rate from OKX (primary) or CoinGecko (fallback) and upsert."""
+        """Fetch funding rate from OKX → Coinbase INTX → CoinGecko and upsert."""
         rate = _fetch_okx_funding(symbol)
+        if rate is None:
+            rate = _fetch_coinbase_intx_funding(symbol)
         if rate is None:
             rate = _fetch_coingecko_funding(symbol)
         if rate is None:
@@ -362,6 +374,44 @@ def _fetch_okx_funding(symbol: str) -> float | None:
 
     except Exception as exc:
         logger.debug("_fetch_okx_funding: failed for %s: %s", symbol, exc)
+        return None
+
+
+# ── Coinbase INTX funding fallback ────────────────────────────────────────────
+
+def _fetch_coinbase_intx_funding(symbol: str) -> float | None:
+    """
+    Fetch perpetual funding rate from Coinbase INTX via Advanced Trade public API.
+
+    Endpoint: GET /api/v3/brokerage/market/products/{product_id}
+    The funding rate lives at future_product_details.perpetual_details.funding_rate.
+    Public endpoint — no auth required.
+    """
+    product_id = _COINBASE_INTX_MAP.get(symbol)
+    if not product_id:
+        logger.debug("_fetch_coinbase_intx_funding: no INTX mapping for %s", symbol)
+        return None
+
+    url = f"{_COINBASE_AT_API}/{product_id}"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "omega-victoria/1.0", "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=8.0) as resp:
+            data = json.loads(resp.read().decode())
+
+        future_details = data.get("future_product_details", {})
+        perp_details = future_details.get("perpetual_details", {})
+        rate_str = perp_details.get("funding_rate")
+        if rate_str is not None:
+            rate = float(rate_str)
+            logger.debug("_fetch_coinbase_intx_funding: %s = %.6f", symbol, rate)
+            return rate
+        return None
+
+    except Exception as exc:
+        logger.debug("_fetch_coinbase_intx_funding: failed for %s: %s", symbol, exc)
         return None
 
 
