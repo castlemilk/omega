@@ -1222,13 +1222,18 @@ class StrategyNode(Node):
                     continue
                 if ticker == "ETHUSDT" and _is_normal:
                     _eth_conv = abs(self._compute_weighted_conviction(sig))
-                    if _eth_conv < 0.12:
+                    if _eth_conv < 0.09:
                         logger.info(
-                            "ETH long suppressed in normal regime (V81 conviction floor: "
-                            "%.3f < 0.12)",
+                            "ETH long suppressed in normal regime (V89 conviction floor: "
+                            "%.3f < 0.09)",
                             _eth_conv,
                         )
                         continue
+                    # V89: floor lowered 0.12→0.09 — V81 set 0.12 to prevent low-conviction
+                    # ETH longs (-$28/loss vs $9/win). Post-crash IC weights penalize bullish
+                    # sub-signals, pushing IC-weighted w_conv to ~0.10-0.11 even when raw
+                    # composite is +0.14. With 2-cycle confirmation and abs_min_conviction (0.06)
+                    # still in place, 0.09 is sufficient quality gate for recovery-phase longs.
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
                 # normal long_thresh=0.15 (scaled), BNB longs only trigger on genuine signals.
