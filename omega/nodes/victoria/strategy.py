@@ -77,6 +77,16 @@ Improvement arc:
   v2.8 — V80 fix: Blacklist SOLUSDT entirely — V73: 10T 0W -$78.87 (normal shorts).
           V77: 4T -$4.10 (normal). V78: 2T -$13.19 (normal + crisis). No winning SOL
           short across any regime over 3+ training runs; signal consistently wrong.
+  v3.0 — V84 fixes: (a) Cap _thresh_scale at 1.5 — V83 zero-streak (75 cycles) caused by
+          basket_std=0.38 producing _thresh_scale=1.9, inflating crisis long_thresh 0.50→0.95
+          and short_thresh 0.04→0.076 beyond what any composite can reach. Cap at 1.5 prevents
+          threshold inflation while preserving regime-adaptive ratio semantics.
+          (b) Lower crisis long_thresh 0.99→0.50 — 0.99 × _thresh_scale was mathematically
+          impossible (effective ceiling 1.88); 0.50 × 1.5 cap = 0.75 max, allowing through
+          genuinely high-conviction crisis longs while still heavily suppressing marginal entries.
+          (c) Widen crisis short bypass composite gate -0.10→-0.07 — AVAX/LINK (the V82 offenders)
+          are now in _TRADING_BLACKLIST; post-demeaning crisis composites cluster at -0.06 to -0.09,
+          so -0.10 was blocking the bypass for nearly all valid crisis shorts.
   v2.9 — V92 fixes: (a) Remove ETH absolute conviction floors (normal 0.07, high_vol 0.11)
           — floors were unscaled absolutes while long_thresh scales with basket_std (0.017-0.024
           in recovery). ETH composites 0.025-0.063 pass scaled threshold but fail absolute floor.
@@ -248,7 +258,7 @@ class StrategyNode(Node):
         self._weighted_conviction_threshold: float = 0.10
         # Per-direction regime-adaptive conviction thresholds.
         # Set each cycle by _apply_regime_adaptive_thresholds() based on detected regime:
-        #   CRISIS/BEAR  → long=0.99 (hard-blocked), short=0.02 (permissive, V65)
+        #   CRISIS/BEAR  → long=0.50 (heavily suppressed, V84), short=0.04 (permissive)
         #   BULL         → long=0.05 (permissive), short=0.20 (suppressed)
         #   NORMAL/other → long=0.13, short=0.10  (V59/V61)
         self._long_conviction_threshold: float = 0.10
@@ -640,8 +650,8 @@ class StrategyNode(Node):
         and short candidates are evaluated against regime-appropriate bars:
 
           CRISIS/BEAR  (bear_prob ≥ 0.55 or HMM == "bear")
-            → long_threshold = 0.20  (longs heavily suppressed)
-            → short_threshold = 0.05 (shorts very permissive — trade the trend)
+            → long_threshold = 0.50  (longs heavily suppressed; V84: was 0.99 hard-block)
+            → short_threshold = 0.04 (shorts permissive — trade the trend)
 
           BULL         (bull_prob ≥ 0.55 or HMM == "bull")
             → long_threshold = 0.05  (longs very permissive)
@@ -703,7 +713,12 @@ class StrategyNode(Node):
                  and "fear_greed_signal" in v),
                 0.0,
             ) or 0.0
-            self._long_conviction_threshold = 0.99
+            # V84: lower from 0.99 (hard-block) to 0.50 — 0.99 combined with _thresh_scale
+            # inflates to 1.88, making longs mathematically impossible even for exceptionally
+            # strong signals. 0.50 still blocks weak/moderate crisis longs but allows through
+            # genuinely high-conviction signals (FGI=8 confirms real crisis, not detection error).
+            # Post-_thresh_scale cap (1.5): effective ceiling = 0.50 * 1.5 = 0.75.
+            self._long_conviction_threshold = 0.50
             if _fg_val > 0.25:
                 # Bounce guard: extreme fear → suppress new shorts (raise bar to 0.10)
                 self._short_conviction_threshold = 0.10
@@ -1029,7 +1044,11 @@ class StrategyNode(Node):
         _cs_norm = 0.20 / (0.3 * _basket_std)
 
         # Scale secondary gate thresholds by the same factor (preserves regime ratios).
-        _thresh_scale = _basket_std / 0.20
+        # V84: cap _thresh_scale at 1.5 — prevents threshold inflation in high-vol markets.
+        # With basket_std=0.38 (April 2026 crisis), uncapped scale=1.9 inflates crisis
+        # long_thresh from 0.50→0.95 and short_thresh from 0.04→0.076, blocking all trades.
+        # Cap at 1.5 means max 50% above base: long_thresh→0.75, short_thresh→0.06.
+        _thresh_scale = min(_basket_std / 0.20, 1.5)
         self._weighted_conviction_threshold = 0.10 * _thresh_scale
         self._long_conviction_threshold *= _thresh_scale
         self._short_conviction_threshold *= _thresh_scale
@@ -1338,6 +1357,11 @@ class StrategyNode(Node):
                     # with composites -0.07 to -0.09 passed SELL conviction but prices bounced
                     # (crisis regime with mean-reverting tickers). -0.10 floor filters marginal
                     # bear signals; genuinely crisis-aligned shorts have composites ≤ -0.12+.
+                    # V84: relax to -0.07 — with _thresh_scale capped at 1.5 and basket_std≈0.38,
+                    # post-demeaning per-symbol crisis composites cluster at -0.06 to -0.09.
+                    # -0.10 was blocking the bypass for nearly all valid crisis shorts.
+                    # AVAX/LINK are now in _TRADING_BLACKLIST (V83/V86), removing the mean-reverting
+                    # offenders that motivated -0.10 in V82. -0.07 is the V77 sweet spot.
                     # V88: add normal-regime short bypass at w_conv >= 0.09 — mirrors the long
                     # bypass logic. V87 ADA short worked via 2-cycle confirmation (cycles 28-29);
                     # a w_conv >= 0.09 gate allows first-cycle entry for credible short signals
@@ -1347,7 +1371,7 @@ class StrategyNode(Node):
                     _wconv_short = abs(self._compute_weighted_conviction(sig))
                     if (self._is_crisis
                             and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
-                            and _raw_composite <= -0.10
+                            and _raw_composite <= -0.07
                             and ticker not in _CRISIS_BYPASS_BLACKLIST):
                         logger.debug(
                             "Multi-cycle: %s crisis short — bypassing confirmation "
