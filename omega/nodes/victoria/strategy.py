@@ -713,14 +713,6 @@ class StrategyNode(Node):
         if abs(w_conv) < conv_threshold:
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
 
-        # 4. Absolute minimum conviction floor.
-        # V52 post-mortem: all traded convictions clustered 0.050-0.075 with zero
-        # discriminative power. A floor of 0.15 ensures only high-confidence signals trade.
-        abs_min_conviction = 0.15
-        if abs(w_conv) < abs_min_conviction:
-            return False, f"abs_conviction_floor({abs(w_conv):.3f}<{abs_min_conviction})"
-
-
         return True, "pass"
 
     # ------------------------------------------------------------------ spectral / Fiedler
