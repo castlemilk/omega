@@ -213,6 +213,10 @@ class StrategyNode(Node):
         self._abs_min_conviction: float = 0.12
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
+        # Regime state set each cycle by _apply_regime_adaptive_thresholds
+        self._is_crisis: bool = False
+        # Zero-candidate streak: cycles since the last cycle with any trade candidates
+        self._zero_candidate_streak: int = 0
 
         # --- Sit-out filter counters ---
         self._sit_out_regime_count: int = 0  # uncertain regime → 75% size reduction
@@ -590,6 +594,7 @@ class StrategyNode(Node):
             or regime_hmm == "crisis"
             or regime_label == "crisis"
         )
+        self._is_crisis = is_crisis
         is_bull = (
             bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")
         ) and not is_crisis
@@ -1149,10 +1154,17 @@ class StrategyNode(Node):
                 if len(_hist) > 2:
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "short":
-                    logger.debug(
-                        "Multi-cycle: %s short — no prior short confirmation, skipping", ticker
-                    )
-                    continue
+                    if self._is_crisis and sig.get("composite", 0.0) < -0.06:
+                        logger.debug(
+                            "Multi-cycle: %s crisis short — bypassing confirmation (composite=%.3f)",
+                            ticker,
+                            sig["composite"],
+                        )
+                    else:
+                        logger.debug(
+                            "Multi-cycle: %s short — no prior short confirmation, skipping", ticker
+                        )
+                        continue
                 # V73: suppress SOLUSDT shorts in normal regime — V72 normal SOLUSDT shorts
                 # showed mixed results and XRPUSDT blacklist reduces basket, so be selective.
                 if ticker == "SOLUSDT" and _is_normal:
@@ -1193,6 +1205,30 @@ class StrategyNode(Node):
         # No candidates: either all filtered by conviction or no conviction signals at all.
         # Do NOT fall back to weak signals — the filter's purpose is to reduce trade count.
         if not long_candidates and not short_candidates:
+            self._zero_candidate_streak += 1
+            if self._zero_candidate_streak > 30:
+                _composites = {
+                    t: sig.get("composite", 0.0)
+                    for t, sig in signals.items()
+                    if not t.startswith("_") and not t.startswith("adv_") and isinstance(sig, dict)
+                }
+                _cross_asset_nulls = [
+                    k for t, sig in signals.items()
+                    if isinstance(sig, dict)
+                    for k in ("fear_greed_signal", "dxy_signal", "funding_rate_signal")
+                    if sig.get(k, None) in (None, 0.0)
+                ]
+                logger.warning(
+                    "Zero-candidate streak: %d cycles — "
+                    "regime=%s, long_thresh=%.4f, short_thresh=%.4f, "
+                    "composites=%s, cross_asset_null=%s",
+                    self._zero_candidate_streak,
+                    _regime_hmm,
+                    self._long_conviction_threshold,
+                    self._short_conviction_threshold,
+                    {t: round(v, 4) for t, v in _composites.items()} if _composites else "{}",
+                    list(set(_cross_asset_nulls)) if _cross_asset_nulls else "none",
+                )
             conviction_dist = {level.name: 0 for level in ConvictionLevel}
             for c in convictions.values():
                 conviction_dist[c.name] += 1
@@ -1531,6 +1567,7 @@ class StrategyNode(Node):
         # Record cycle as having produced trades (for time filter)
         if weights:
             self._last_trade_cycle = current_cycle
+            self._zero_candidate_streak = 0
 
         return {
             "weights": weights,
