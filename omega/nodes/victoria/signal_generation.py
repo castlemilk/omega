@@ -422,6 +422,25 @@ class SignalGenerationNode(Node):
                 if _manifold_state is not None and _manifold_state.confidence >= 0.3:
                     _ricci_val = _manifold_state.signal
                     _ricci_regime = _manifold_state.regime
+                    # V75: suppress false mean-reversion buy signals when the manifold calls
+                    # "mean_reversion" but actual basket mean return is negative (downtrend).
+                    # V74 post-mortem: ricci generated +0.78 (mean-reversion BUY) during the
+                    # April 2026 crash, overriding fear_greed(-0.43) and VIX(-0.32) sell signals.
+                    # The geo_dist gate is unreliable (FIM flattening at high variance makes
+                    # crash/rally distances similar). Direct check is more robust:
+                    # when regime="mean_reversion" but theta[0] (mean log-return) < 0, the
+                    # manifold is calling "buy the dip" in an actual downtrend — dampen it.
+                    # Gate: scale = max(0, 1 + theta_mu / 0.02), fully suppressed at mu ≤ -0.02.
+                    if _ricci_val > 0.0 and _ricci_regime == "mean_reversion":
+                        _theta_mu = float(_manifold_state.theta[0]) if _manifold_state.theta is not None else 0.0
+                        if _theta_mu < 0.0:
+                            _scale = max(0.0, 1.0 + _theta_mu / 0.02)
+                            _ricci_val *= _scale
+                            logger.info(
+                                "V75: ricci dampened (mean_reversion in downtrend "
+                                "theta_mu=%.4f scale=%.2f → ricci=%.3f)",
+                                _theta_mu, _scale, _ricci_val,
+                            )
                     logger.debug(
                         "MarketManifold: ricci=%.3f regime=%s signal=%.3f conf=%.2f",
                         _manifold_state.ricci,
