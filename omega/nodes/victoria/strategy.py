@@ -691,11 +691,15 @@ class StrategyNode(Node):
             # V79: raise normal long_thresh 0.13→0.15 — V78 ADA long had w_conv=0.141
             #   (barely above 0.13) and lost -$29.17; raising to 0.15 filters that entry
             #   while preserving the winning ADA long at w_conv=0.254.
+            # V79: lower normal short_thresh 0.10→0.08 — V78 had 38-cycle zero streaks in
+            #   normal regime where composites ranged -0.08 to -0.09; lowering captures the
+            #   clean short signals that V61's 0.10 floor was blocking. V78 normal shorts
+            #   had 60%+ WR vs V59's 30% — market is more directionally bearish now.
             self._long_conviction_threshold = 0.15
-            self._short_conviction_threshold = 0.10
+            self._short_conviction_threshold = 0.08
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.13, short_thresh=0.10 (V61)",
+                "→ long_thresh=0.15, short_thresh=0.08 (V79)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,
@@ -1176,16 +1180,29 @@ class StrategyNode(Node):
                     continue
                 # Multi-cycle confirmation (V63 C+D): only enter if last cycle was also long.
                 # Prevents whipsaw entries on single-cycle signal spikes.
+                # V79: bypass confirmation for high-conviction longs (w_conv >= 0.20) —
+                # V78 had 38+ cycle zero streaks in normal regime because positive composites
+                # (0.10-0.16) never hit consecutive BUY cycles on the same ticker. At 0.15
+                # long_thresh, a w_conv >= 0.20 is a strong enough signal to act without
+                # needing 2-cycle confirmation (the higher bar prevents whipsaws).
                 _prev_hist = self._signal_history.get(ticker, [])
                 _hist = self._signal_history.setdefault(ticker, [])
                 _hist.append("long")
                 if len(_hist) > 2:
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "long":
-                    logger.debug(
-                        "Multi-cycle: %s long — no prior long confirmation, skipping", ticker
-                    )
-                    continue
+                    _wconv_long = abs(self._compute_weighted_conviction(sig))
+                    if _wconv_long >= 0.20:
+                        logger.debug(
+                            "Multi-cycle: %s long — bypassing confirmation (w_conv=%.3f >= 0.20)",
+                            ticker,
+                            _wconv_long,
+                        )
+                    else:
+                        logger.debug(
+                            "Multi-cycle: %s long — no prior long confirmation, skipping", ticker
+                        )
+                        continue
                 proposals_this_cycle += 1
                 if _block_longs:
                     regime_blocked_longs += 1
@@ -1217,11 +1234,20 @@ class StrategyNode(Node):
                 if len(_hist) > 2:
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "short":
-                    if self._is_crisis and sig.get("composite", 0.0) <= -0.06:
+                    # V77: crisis short bypass — skip 2-cycle confirmation in crisis regime
+                    # when the per-symbol composite is sufficiently negative.
+                    # V79: relax bypass check from composite<=-0.06 to any SELL/STRONG_SELL
+                    # conviction in crisis. The -0.06 threshold was calibrated for non-demeaned
+                    # composites; after basket demeaning, crisis shorts with basket_mean≈-0.10
+                    # produce per-symbol demeaned composites near -0.05 to -0.04 (above -0.06),
+                    # silently blocking the bypass. The short_thresh=0.04 gate (V79) is the
+                    # real filter; conviction level (SELL/STRONG_SELL) is sufficient gating.
+                    _c_val = convictions.get(ticker, ConvictionLevel.HOLD)
+                    if self._is_crisis and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                         logger.debug(
-                            "Multi-cycle: %s crisis short — bypassing confirmation (composite=%.3f)",
+                            "Multi-cycle: %s crisis short — bypassing confirmation (conviction=%s)",
                             ticker,
-                            sig["composite"],
+                            _c_val.name,
                         )
                     else:
                         logger.debug(
@@ -1230,17 +1256,12 @@ class StrategyNode(Node):
                         continue
                 # V73: suppress SOLUSDT shorts in normal regime — V72 normal SOLUSDT shorts
                 # showed mixed results and XRPUSDT blacklist reduces basket, so be selective.
-                if ticker == "SOLUSDT" and _is_normal:
-                    logger.info("SOL short suppressed in normal regime (V73)")
-                    continue
+                # V79: removed SOL normal short suppression — V78 SOL short cycle 112
+                # (normal regime) was +$8.87; V71's -$78.87 was pre-abs_min_conviction fix.
+                # The current 0.08 short_thresh is now the gate; per-ticker suppression not needed.
                 proposals_this_cycle += 1
                 if _block_shorts:
                     regime_blocked_shorts += 1
-                    continue
-                # V73: suppress SOLUSDT shorts in normal regime — V71: 10T 0W 0% WR -$78.87.
-                if ticker == "SOLUSDT" and _is_normal:
-                    logger.info("SOL short suppressed in normal regime (V73)")
-                    filtered_this_cycle += 1
                     continue
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="short"
