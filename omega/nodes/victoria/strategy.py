@@ -208,9 +208,9 @@ class StrategyNode(Node):
         self._proposals_filtered: int = 0  # tickers blocked by conviction filters
         # Absolute minimum conviction floor (V63): reject any signal below this regardless
         # of regime-adaptive thresholds.  Trade distribution shows most entries at 0.06–0.14;
-        # raising from the implicit ~0.08 floor to 0.12 filters the bottom third of marginal
-        # signals without touching the regime-adaptive logic.
-        self._abs_min_conviction: float = 0.12
+        # V77: lowered from 0.12→0.06 — current market composites (0.04–0.13) require this;
+        # V75/V76 produced only 2–3 trades with 0.12 floor vs ≥20 gate requirement.
+        self._abs_min_conviction: float = 0.06
         # Time filter: don't open new positions within 2 cycles of last trade
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
