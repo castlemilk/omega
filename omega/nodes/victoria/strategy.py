@@ -105,7 +105,12 @@ logger = logging.getLogger("omega.nodes.victoria.strategy")
 #   shorts -$4.10. V78: normal -$4.30 + crisis -$8.89. No winning SOL short across any regime;
 #   signal consistently wrong direction. Removing entirely from trading rotation.
 _TRADING_BLACKLIST: frozenset[str] = frozenset(
-    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT"}
+    # SOLUSDT removed from blacklist (V80 fix): V80 blacklisted it based on V78 losses,
+    # but V78 lacked the crisis short bypass. Now with bypass restored (V79), SOL shorts
+    # are the primary crisis short signal and the main source of the zero-candidate streak.
+    # V79 logs confirm composites={SOLUSDT: -0.06} while all other tradeable tickers show
+    # BUY/HOLD — removing SOL from blacklist restores the crisis short candidate pool.
+    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT"}
 )
 
 # Symbols excluded from LONG positions only (shorts still permitted).
