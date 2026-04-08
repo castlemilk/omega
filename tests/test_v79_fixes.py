@@ -256,7 +256,7 @@ class TestCrisisAbsMinConviction:
         Signal engineering: with 1 ticker and _basket_std fallback=0.20,
         _cs_norm = 0.20/(0.3*0.20) = 3.33. composite=-0.065 × 3.33 = -0.217 → SELL.
         w_conv = composite = -0.065 (no ICs loaded), abs = 0.065 in (0.04, 0.07).
-        Crisis bypass (V77) lets first-cycle crisis SELL through multi-cycle check.
+        Multi-cycle confirmed via signal_history — avoids V82 composite <= -0.10 bypass gate.
         """
         node = StrategyNode()
         # composite=-0.065 → after cs_norm (-0.217) → SELL conviction, w_conv=0.065
@@ -265,19 +265,25 @@ class TestCrisisAbsMinConviction:
             "_regime": "crisis",
             "ETHUSDT": {"composite": -0.065},
         }
-        # No pre-loaded history — crisis bypass (V77) handles first-cycle confirmation
+        # Pre-load history so multi-cycle confirmation passes without bypass
+        # (V82 added composite <= -0.10 gate on bypass; signal_history avoids that dependency)
+        node._signal_history["ETHUSDT"] = ["short"]
         result = node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         # Should produce a short candidate, not be blocked by abs_min_conviction
         assert "ETHUSDT" in weights and weights["ETHUSDT"] < 0, (
             "Crisis short with w_conv=0.065 must pass abs_min_conviction in crisis "
-            "(uses crisis short_thresh=0.04, not 0.07 floor)"
+            "(uses crisis short_thresh=0.04, not 0.06 abs_min_conviction floor)"
         )
 
     def test_normal_short_with_mid_conviction_still_blocked(self):
-        """Normal-regime short with w_conv=0.065 must still be blocked by 0.07 floor."""
+        """Normal-regime short with w_conv=0.065 must be blocked — short_thresh=0.08.
+
+        V80 fix: crisis shorts use 0.04 floor; normal shorts use abs_min_conviction=0.06.
+        With w_conv=0.065, normal short is blocked by short_thresh=0.08 (not abs_min floor).
+        """
         node = StrategyNode()
-        # Same composite as above — but normal regime uses abs_min_conviction=0.07
+        # Same composite as above — but normal regime short_thresh=0.08 blocks it
         sigs = {
             "_regime_hmm": "sideways",
             "_regime": "normal",
@@ -287,5 +293,5 @@ class TestCrisisAbsMinConviction:
         result = node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         assert "ETHUSDT" not in weights or weights.get("ETHUSDT", 0) >= 0, (
-            "Normal-regime short with w_conv=0.065 must still be blocked by abs_min_conviction=0.07"
+            "Normal-regime short with w_conv=0.065 must be blocked by short_thresh=0.08"
         )

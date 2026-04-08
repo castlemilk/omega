@@ -110,7 +110,10 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
     # composite -0.06). The bypass fix doesn't help when the underlying signal direction is wrong.
     # The V79 zero-streak was caused by blacklisting SOL (removing only valid short candidate)
     # but the real fix is to generate normal/high_vol longs instead of crisis shorts.
-    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT"}
+    # V83: AVAXUSDT fully blacklisted — 3/3 losing trades across all regimes, both directions:
+    #   long -$15.28, crisis short -$13.40, normal short -$13.38. Total -$42.06.
+    #   AVAX signal consistently wrong or mean-reverting; neither direction is credible.
+    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT"}
 )
 
 # Symbols excluded from LONG positions only (shorts still permitted).
@@ -121,6 +124,12 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
 # ADAUSDT: V78 post-mortem — long signal wrong direction; -$29.17 single trade loss.
 #   ADA short signals remain allowed (downtrend confirmed across runs).
 _LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "LINKUSDT", "ADAUSDT"})
+
+# Symbols excluded from the crisis first-cycle bypass (multi-cycle confirmation
+# required even in crisis regime for these tickers).
+# LINKUSDT: V81 crisis short -$6.78 without confirmation. Low-conviction entry, wrong direction.
+# Note: AVAXUSDT was here, but V83 moved it to _TRADING_BLACKLIST (fully removed).
+_CRISIS_BYPASS_BLACKLIST: frozenset[str] = frozenset({"LINKUSDT"})
 
 
 # ---------------------------------------------------------------------------
@@ -702,11 +711,16 @@ class StrategyNode(Node):
             #   normal regime where composites ranged -0.08 to -0.09; lowering captures the
             #   clean short signals that V61's 0.10 floor was blocking. V78 normal shorts
             #   had 60%+ WR vs V59's 30% — market is more directionally bearish now.
-            self._long_conviction_threshold = 0.15
+            # V83: lower normal long_thresh 0.15→0.10 — V81/V82 show zero longs in normal
+            #   regime because ETH/BNB/LINK composites cluster at 0.08–0.12 (below 0.15 bar).
+            #   ADAUSDT is in _LONG_BLACKLIST and AVAXUSDT is in _TRADING_BLACKLIST, removing
+            #   the previously troublesome longs (ADA -$29.17, AVAX -$15.28). With those
+            #   filtered structurally, 0.10 lets ETH/BNB longs through (V75 ETH long WR=67%).
+            self._long_conviction_threshold = 0.10
             self._short_conviction_threshold = 0.08
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.15, short_thresh=0.08 (V79)",
+                "→ long_thresh=0.10, short_thresh=0.08 (V83)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,
@@ -1268,7 +1282,8 @@ class StrategyNode(Node):
                     _raw_composite = sig.get("composite", 0.0)
                     if (self._is_crisis
                             and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
-                            and _raw_composite <= -0.10):
+                            and _raw_composite <= -0.10
+                            and ticker not in _CRISIS_BYPASS_BLACKLIST):
                         logger.debug(
                             "Multi-cycle: %s crisis short — bypassing confirmation "
                             "(conviction=%s, composite=%.3f)",
