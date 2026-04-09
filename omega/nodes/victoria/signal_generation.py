@@ -801,6 +801,19 @@ class SignalGenerationNode(Node):
         if _manifold_state is not None and _manifold_state.confidence >= 0.3:
             signals["_ricci_scalar"] = float(_manifold_state.ricci)  # z-scored [-5, 5]
             signals["_geo_dist_crash"] = float(_manifold_state.geo_dist_crash)
+            # V95 Enhancement C: geodesic crash proximity via Fisher-Rao distance to known
+            # crash states.  Lower value = current distribution is more crash-like.
+            try:
+                _theta_mu = float(_manifold_state.theta[0])
+                _theta_var = float(_manifold_state.theta[1])
+                _theta_sigma = math.sqrt(max(_theta_var, 1e-10))
+                _crash_prox = self._market_manifold.crash_proximity_score(_theta_mu, _theta_sigma)
+                if math.isfinite(_crash_prox):
+                    signals["_crash_proximity"] = _crash_prox
+                    logger.debug("V95 crash_proximity=%.4f (theta_mu=%.4f sigma=%.4f)",
+                                 _crash_prox, _theta_mu, _theta_sigma)
+            except Exception as _cp_exc:
+                logger.debug("crash_proximity_score error: %s", _cp_exc)
         if _orc_state is not None and _orc_state.confidence >= 0.3:
             signals["_orc_mean_curvature"] = float(_orc_state.mean_curvature)
 
@@ -808,7 +821,7 @@ class SignalGenerationNode(Node):
         _composites = [
             (t, s.get("composite", 0.0))
             for t, s in signals.items()
-            if s.get("composite") is not None and not t.startswith("_")
+            if isinstance(s, dict) and s.get("composite") is not None and not t.startswith("_")
         ]
         if len(_composites) >= 3:
             _vals = [v for _, v in _composites]
