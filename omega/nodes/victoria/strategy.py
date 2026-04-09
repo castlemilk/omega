@@ -818,10 +818,14 @@ class StrategyNode(Node):
             # Normal composites cluster ±0.04–0.08; 0.08 was blocking all short signals.
             # V86: raise 0.05→0.07 — slight increase to reduce noise shorts; still well below
             #   V84's 0.08 which blocked all shorts entirely.
-            self._short_conviction_threshold = 0.07
+            # V94: lower 0.07→0.05 — V92/V93 generated only 3/6 shorts across 200 cycles.
+            #   Post-mortem: demeaned composites for short candidates cluster at -0.05 to -0.07,
+            #   exactly where the 0.07 floor was blocking them. Lowering to 0.05 captures the
+            #   cross-sectional underperformers that demeaning naturally produces.
+            self._short_conviction_threshold = 0.05
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.07, short_thresh=0.08 (V88)",
+                "→ long_thresh=0.10, short_thresh=0.05 (V94)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,
