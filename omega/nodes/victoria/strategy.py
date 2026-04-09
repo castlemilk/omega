@@ -120,6 +120,12 @@ Improvement arc:
           (b) Keep normal long_thresh at 0.07 — initial V86 raised to 0.10 but caused
           max_zero_streak=150 and only 8 trades. Post-crash composites cluster 0.02–0.09;
           0.10 is above the range for both ETH and ADA. Reverting in V87.
+  v3.3 — V88 fix: Lower multi-cycle confirmation bypass 0.09→0.05 — V86/V87 produced
+          zero_streak=150/167 despite long_thresh=0.07/0.10. Root cause: bypass requires
+          w_conv >= 0.09 for first-cycle entry without prior confirmation; current market
+          composites cluster at 0.02–0.06, never reaching 0.09. Confirmation gate is
+          working as designed but the bypass bar is above the market's conviction range.
+          0.05 is still ~1.4x the effective scaled threshold, a meaningful quality floor.
           (c) Lower normal short_thresh 0.05→0.07 — raising slightly from V85's 0.05 to
           reduce noise shorts; still well below V84's 0.08 which blocked all shorts.
 """
@@ -1339,6 +1345,11 @@ class StrategyNode(Node):
                 # V88: lower bypass to 0.09 — V87 had 167-cycle max zero streak with bypass
                 # at 0.12. Post-crash recovery composites cluster 0.03–0.10; 0.09 is still
                 # 1.65x the scaled long_thresh (~0.055), a credible quality floor.
+                # V88: lower bypass 0.09→0.05 — V86/V87 zero_streak=150/167 with composites
+                # clustering at 0.02–0.06, never reaching 0.09. The confirmation gate
+                # requires two consecutive long signals; at low conviction, this is impossible
+                # without bypass. 0.05 is 1.4x scaled long_thresh (0.07*~0.5=0.035) — still
+                # meaningful quality floor relative to what the market is producing.
                 _prev_hist = self._signal_history.get(ticker, [])
                 _hist = self._signal_history.setdefault(ticker, [])
                 _hist.append("long")
@@ -1346,9 +1357,9 @@ class StrategyNode(Node):
                     self._signal_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "long":
                     _wconv_long = abs(self._compute_weighted_conviction(sig))
-                    if _wconv_long >= 0.09:
+                    if _wconv_long >= 0.05:
                         logger.debug(
-                            "Multi-cycle: %s long — bypassing confirmation (w_conv=%.3f >= 0.09)",
+                            "Multi-cycle: %s long — bypassing confirmation (w_conv=%.3f >= 0.05)",
                             ticker,
                             _wconv_long,
                         )
