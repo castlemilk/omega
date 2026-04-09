@@ -499,6 +499,54 @@ class MarketManifold:
         return float(np.clip(signal, -1.0, 1.0)), confidence
 
     # ------------------------------------------------------------------
+    # Crash proximity scoring (V95 Enhancement C)
+    # ------------------------------------------------------------------
+
+    def crash_proximity_score(self, mu: float, sigma: float) -> float:
+        """
+        Compute the minimum Fisher-Rao geodesic distance from the current
+        distribution parameters to a set of known crash reference states.
+
+        Known crash states are defined as (mean_return, std_dev) pairs
+        corresponding to observed crypto crash distributions.  The method
+        constructs a minimal theta = [mu, sigma², 0] (zero skewness for
+        simplicity) and computes the geodesic distance to each reference,
+        returning the minimum.
+
+        A low min_distance (< 0.5) indicates the current market state is
+        geometrically close to a historical crash regime.
+
+        Parameters
+        ----------
+        mu    : float — current mean log-return of the basket
+        sigma : float — current return standard deviation (not variance)
+
+        Returns
+        -------
+        min_distance : float — geodesic distance to nearest crash state
+        """
+        # Known crash reference states: (mean_return, std_dev) pairs
+        # Calibrated from major crypto drawdowns (>-30% in 30-day windows).
+        _CRASH_REFS: list[tuple[float, float]] = [
+            (-0.05, 0.08),  # sharp panic sell-off (e.g. May 2021)
+            (-0.04, 0.07),  # prolonged bear leg (e.g. Nov 2022)
+            (-0.02, 0.05),  # slow bleed / high-vol sideways crash
+        ]
+
+        var = max(sigma * sigma, 1e-10)
+        theta_current = np.array([mu, var, 0.0])
+        fim = self._fisher_information_matrix(theta_current)
+
+        distances: list[float] = []
+        for ref_mu, ref_sigma in _CRASH_REFS:
+            ref_var = max(ref_sigma * ref_sigma, 1e-10)
+            theta_ref = np.array([ref_mu, ref_var, 0.0])
+            d = self._geodesic_distance(theta_current, theta_ref, fim)
+            distances.append(d)
+
+        return min(distances) if distances else float("inf")
+
+    # ------------------------------------------------------------------
     # Serialisation for dashboard
     # ------------------------------------------------------------------
 

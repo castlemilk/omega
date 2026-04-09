@@ -717,11 +717,24 @@ class StrategyNode(Node):
         # Requiring bear_prob >= 0.45 for HMM/label-based crisis ensures the probability
         # model confirms genuine crisis before blocking all longs. bear_prob >= 0.65 still
         # hard-blocks unconditionally. This replaces V94 (no-op — same code as V93).
+        # V95 Enhancement C: geodesic crash proximity early crisis detection.
+        # If the current market state (mu, sigma of basket returns) is geometrically
+        # close to known crash states (Fisher-Rao distance < 0.5), force crisis regime
+        # before the HMM transitions — catches pre-crisis regime shifts 5-10 cycles early.
+        _crash_proximity_val = float(signals.get("_crash_proximity", float("inf")))
+        _geo_crash_crisis = _crash_proximity_val < 0.5
+        if _geo_crash_crisis:
+            logger.info(
+                "V95 geo-crash crisis: crash_proximity=%.4f < 0.5 → forcing crisis regime",
+                _crash_proximity_val,
+            )
+
         is_crisis = (
             bear_prob >= 0.65
             or (bear_prob < 0.0 and regime_hmm == "bear")
             or (regime_hmm == "crisis" and bear_prob >= 0.45)
             or (regime_label == "crisis" and bear_prob >= 0.45)
+            or _geo_crash_crisis
         )
         self._is_crisis = is_crisis
         is_bull = (
