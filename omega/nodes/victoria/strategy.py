@@ -172,7 +172,9 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
     # V87: BNBUSDT fully blacklisted — 3/3 short losses in V86 first 40 cycles (-$53.82).
     #   BNB is in post-crash recovery (rising from $602→$604 range); shorting is consistently
     #   wrong-direction. BNB long signals are untested; removing entirely until trend clears.
-    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT", "LINKUSDT", "BNBUSDT"}
+    # V93: SUIUSDT fully blacklisted — V92: 2T 0% WR -$9.14. Only 2 trades, both losses.
+    #   SUI signal is noise-level; insufficient data to trust either direction.
+    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT", "LINKUSDT", "BNBUSDT", "SUIUSDT"}
 )
 
 # Symbols excluded from LONG positions only (shorts still permitted).
@@ -1353,8 +1355,12 @@ class StrategyNode(Node):
                 # V92 removed the floor but the directional gate was lost in the same edit.
                 # V84: 4 ETH high_vol longs, 0% WR, -$18.09 — downside momentum in volatile
                 # regimes makes mean-reversion longs consistently wrong.
-                if ticker == "ETHUSDT" and _is_high_vol:
-                    logger.debug("Suppressing %s long in high_vol regime (V85)", ticker)
+                # V93: extend high_vol long suppression from ETH-only → all symbols.
+                # V92 post-mortem: 7 high_vol trades, 0% WR, -$55.88 across ETH/NEAR/ARB/ADA.
+                # Pattern is basket-wide: VRP "high_vol" signals elevated fear + downward
+                # momentum for all correlated assets, not just ETH.
+                if _is_high_vol:
+                    logger.debug("Suppressing %s long in high_vol regime (V93)", ticker)
                     continue
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
