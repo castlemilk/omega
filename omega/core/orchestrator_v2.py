@@ -524,15 +524,23 @@ class OmegaOrchestrator:
                                 if isinstance(raw_result, list):
                                     for item in raw_result:
                                         if isinstance(item, dict) and "weights" in item:
+                                            _conv_scores = item.get("conviction_scores", {})
                                             for sym, w in item["weights"].items():
-                                                proposals.append(
-                                                    {"symbol": sym, "weight": float(w)}
-                                                )
+                                                proposals.append({
+                                                    "symbol": sym,
+                                                    "weight": float(w),
+                                                    "conviction": _conv_scores.get(sym, 0.30),
+                                                })
                                         elif isinstance(item, dict):
                                             proposals.append(item)
                                 elif isinstance(raw_result, dict) and "weights" in raw_result:
+                                    _conv_scores = raw_result.get("conviction_scores", {})
                                     for sym, w in raw_result["weights"].items():
-                                        proposals.append({"symbol": sym, "weight": float(w)})
+                                        proposals.append({
+                                            "symbol": sym,
+                                            "weight": float(w),
+                                            "conviction": _conv_scores.get(sym, 0.30),
+                                        })
                                 elif isinstance(raw_result, dict):
                                     proposals = [raw_result]
                                 if proposals:

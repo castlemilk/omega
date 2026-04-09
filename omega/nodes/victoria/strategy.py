@@ -323,6 +323,9 @@ class StrategyNode(Node):
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
         self._is_crisis: bool = False
+        # Regime transition cooldown: skip new entries for 3 cycles after regime shifts
+        self._last_regime: str = ""
+        self._regime_change_cycle: int = -999
         # Zero-candidate streak: cycles since the last cycle with any trade candidates
         self._zero_candidate_streak: int = 0
 
@@ -1102,6 +1105,22 @@ class StrategyNode(Node):
             self._weighted_conviction_threshold,
         )
 
+        # --- Regime transition cooldown (V92) ---
+        # Skip new entries for 3 cycles after a regime shift to avoid entering on stale signals.
+        _current_regime_for_cooldown = "crisis" if self._is_crisis else _regime_consolidated
+        if (
+            _current_regime_for_cooldown != self._last_regime
+            and self._last_regime != ""
+        ):
+            logger.info(
+                "Regime transition cooldown: %s → %s, skipping entries for 3 cycles",
+                self._last_regime,
+                _current_regime_for_cooldown,
+            )
+            self._regime_change_cycle = current_cycle
+        self._last_regime = _current_regime_for_cooldown
+        _in_cooldown = (current_cycle - self._regime_change_cycle) < 3
+
         # Compute conviction for every ticker with a composite score
         # Skip metadata keys (_regime_probs, _regime_hmm, etc.)
         convictions: dict[str, ConvictionLevel] = {}
@@ -1289,6 +1308,15 @@ class StrategyNode(Node):
             # Skip blacklisted symbols — BTC is a regime indicator, not a trading vehicle
             if ticker in _TRADING_BLACKLIST:
                 logger.debug("Skipping %s (trading blacklist)", ticker)
+                continue
+            # Regime transition cooldown: skip new entries for 3 cycles after regime shift
+            if _in_cooldown:
+                logger.debug(
+                    "Regime cooldown: skipping %s (cycle %d, change at %d)",
+                    ticker,
+                    current_cycle,
+                    self._regime_change_cycle,
+                )
                 continue
             c = convictions.get(ticker, ConvictionLevel.HOLD)
             # Hard gate: HOLD conviction never generates a trade proposal.
@@ -1617,12 +1645,15 @@ class StrategyNode(Node):
         # the discrete ConvictionLevel multiplier doesn't capture magnitude within
         # a level.  This continuous factor rewards genuinely high-conviction signals.
         raw_weights: dict[str, float] = {}
+        _wconv_scores: dict[str, float] = {}  # w_conv per ticker for paper_trading sizing
         for ticker, w in long_base.items():
             _w_conv = abs(self._compute_weighted_conviction(long_candidates[ticker]))
+            _wconv_scores[ticker] = _w_conv
             _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
             raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
+            _wconv_scores[ticker] = _w_conv
             _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
             raw_weights[ticker] = (
                 -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
@@ -1855,6 +1886,7 @@ class StrategyNode(Node):
 
         return {
             "weights": weights,
+            "conviction_scores": {t: _wconv_scores.get(t, 0.30) for t in weights},
             "positions": len(weights),
             "method": self._weighting,
             "signal_threshold": self._signal_threshold,

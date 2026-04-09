@@ -380,7 +380,11 @@ class PaperTradingEngine:
                 continue
 
             new_side = "long" if weight > 0 else "short"
-            size = raw_size_fraction * self.initial_capital
+            # Conviction-proportional sizing: scale down low-conviction trades.
+            # conviction=0.15 → 50% of base size; conviction>=0.30 → full size.
+            _conviction = float(proposal.get("conviction", 0.30))
+            _conv_size_scale = min(_conviction / 0.30, 1.0)
+            size = raw_size_fraction * _conv_size_scale * self.initial_capital
 
             # Portfolio risk checks: total exposure cap + per-symbol cap
             allowed, cap_reason = self._check_portfolio_limits(symbol, size)
