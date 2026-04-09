@@ -117,9 +117,9 @@ Improvement arc:
           were at high conviction (0.125); with abs_min=0.02 and normal long_thresh=0.10,
           only quality signals enter. V85-era comment about "V85-V86 confirmation" was
           written speculatively in a prior session — actual V85 generated 0 ADA trades.
-          (b) Raise normal long_thresh 0.07→0.10 — 0.07 was calibrated for single-symbol
-          (ETH-only) recovery. With ADA re-enabled, a slightly higher bar prevents excessive
-          marginal longs while still capturing genuine multi-symbol conviction.
+          (b) Keep normal long_thresh at 0.07 — initial V86 raised to 0.10 but caused
+          max_zero_streak=150 and only 8 trades. Post-crash composites cluster 0.02–0.09;
+          0.10 is above the range for both ETH and ADA. Reverting in V87.
           (c) Lower normal short_thresh 0.05→0.07 — raising slightly from V85's 0.05 to
           reduce noise shorts; still well below V84's 0.08 which blocked all shorts.
 """
@@ -797,10 +797,12 @@ class StrategyNode(Node):
             #   0.10. With BNB/LINK/AVAX/SOL blacklisted, ETH is the sole long candidate.
             #   V87 ETH winning long opened at ~0.07 conviction. Lowering bar to 0.07 captures
             #   the recovery-phase ETH longs that 0.10 misses.
-            # V86: raise 0.07→0.10 — restoring ADA to universe means multiple symbols compete
-            #   for entries. Slightly higher bar prevents marginal ETH-only longs from dominating
-            #   while still capturing genuine multi-symbol conviction.
-            self._long_conviction_threshold = 0.10
+            # V86: raise 0.07→0.10 — caused max_zero_streak=150, only 8 trades in 200 cycles.
+            #   Reverting: 0.10 was already tried in V83→V88 history and required 0.07 for
+            #   post-crash recovery conviction levels. ADA re-enablement does not change the
+            #   required threshold — ETH/ADA composites both cluster 0.02–0.09 in recovery.
+            # V87: revert to 0.07 — preserves trade volume while ADA diversity is active.
+            self._long_conviction_threshold = 0.07
             # V85: lower 0.08→0.05 — V84 had 0 shorts in 200 cycles (ETH declining -0.43%).
             # Normal composites cluster ±0.04–0.08; 0.08 was blocking all short signals.
             # V86: raise 0.05→0.07 — slight increase to reduce noise shorts; still well below
