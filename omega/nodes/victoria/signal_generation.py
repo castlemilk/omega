@@ -783,6 +783,15 @@ class SignalGenerationNode(Node):
                 min(_demeaned),
                 max(_demeaned),
             )
+            # Per-ticker demean breakdown (info level so it shows in training logs)
+            for _t, _ts in sorted(_cs_raw, key=lambda x: -abs(x[1]["composite"])):
+                logger.info(
+                    "demean[%s]: raw=%.4f → demean=%.4f (basket_mean=%.3f)",
+                    _t,
+                    _ts["_raw_composite"],
+                    _ts["composite"],
+                    _basket_mean,
+                )
 
         # Log composite spread for monitoring
         _composites = [
