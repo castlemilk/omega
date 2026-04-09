@@ -109,6 +109,19 @@ Improvement arc:
           ETH declining -0.43%. Normal-regime composites cluster at ±0.04–0.08; the 0.08
           bar was blocking all short signals. 0.05 captures genuine bearish conviction while
           staying above the abs_min floor (0.02).
+  v3.2 — V86 fixes: Restore symbol diversity to break single-asset ETH concentration.
+          V84: 23/23 trades ETHUSDT. V85: 22/22 trades ETHUSDT. Root cause: _LONG_BLACKLIST
+          blocks ADA longs; _TRADING_BLACKLIST eliminates DOT/SOL/BNB/LINK/AVAX/MATIC/XRP.
+          (a) Remove ADAUSDT from _LONG_BLACKLIST — ADA shorts are already allowed; restoring
+          longs lets ADA participate in both directions. Prior ADA long losses (-$29.17 V78)
+          were at high conviction (0.125); with abs_min=0.02 and normal long_thresh=0.10,
+          only quality signals enter. V85-era comment about "V85-V86 confirmation" was
+          written speculatively in a prior session — actual V85 generated 0 ADA trades.
+          (b) Raise normal long_thresh 0.07→0.10 — 0.07 was calibrated for single-symbol
+          (ETH-only) recovery. With ADA re-enabled, a slightly higher bar prevents excessive
+          marginal longs while still capturing genuine multi-symbol conviction.
+          (c) Lower normal short_thresh 0.05→0.07 — raising slightly from V85's 0.05 to
+          reduce noise shorts; still well below V84's 0.08 which blocked all shorts.
 """
 
 import logging
@@ -158,11 +171,13 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
 
 # Symbols excluded from LONG positions only (shorts still permitted).
 # BTC: regime indicator only, <28% win rate.
-# ADAUSDT: V78 post-mortem — long signal wrong direction in downtrend (-$29.17).
-#   V85-V86 confirmation: 3/3 ADA longs losing in V86 first 40 cycles (-$53.46).
-#   ADA is trending down post-crash; the signal fires BUY but price keeps falling.
-#   Re-blacklisting after V85/V86 evidence. ADA shorts remain allowed.
-_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT", "ADAUSDT"})
+# V86: ADAUSDT removed from _LONG_BLACKLIST — restoring longs to break ETH-only concentration.
+#   V84/V85 both ran 100% ETHUSDT trades. ADA shorts already allowed; enabling longs restores
+#   bidirectional participation. Prior V78 loss (-$29.17) was at conviction 0.125 without
+#   abs_min gating; current quality filters (abs_min=0.02, normal long_thresh=0.10) provide
+#   sufficient protection. The "V85-V86 confirmation" comment in prior session was speculative
+#   — actual V85 generated 0 ADA trades (ADA was long-blacklisted the entire run).
+_LONG_BLACKLIST: frozenset[str] = frozenset({"BTCUSDT"})
 
 # Symbols excluded from the crisis first-cycle bypass (multi-cycle confirmation
 # required even in crisis regime for these tickers).
@@ -782,10 +797,15 @@ class StrategyNode(Node):
             #   0.10. With BNB/LINK/AVAX/SOL blacklisted, ETH is the sole long candidate.
             #   V87 ETH winning long opened at ~0.07 conviction. Lowering bar to 0.07 captures
             #   the recovery-phase ETH longs that 0.10 misses.
-            self._long_conviction_threshold = 0.07
+            # V86: raise 0.07→0.10 — restoring ADA to universe means multiple symbols compete
+            #   for entries. Slightly higher bar prevents marginal ETH-only longs from dominating
+            #   while still capturing genuine multi-symbol conviction.
+            self._long_conviction_threshold = 0.10
             # V85: lower 0.08→0.05 — V84 had 0 shorts in 200 cycles (ETH declining -0.43%).
             # Normal composites cluster ±0.04–0.08; 0.08 was blocking all short signals.
-            self._short_conviction_threshold = 0.05
+            # V86: raise 0.05→0.07 — slight increase to reduce noise shorts; still well below
+            #   V84's 0.08 which blocked all shorts entirely.
+            self._short_conviction_threshold = 0.07
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
                 "→ long_thresh=0.07, short_thresh=0.08 (V88)",
