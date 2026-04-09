@@ -508,6 +508,7 @@ class SignalGenerationNode(Node):
 
         _ricci_val: float = 0.0
         _ricci_regime: str = "transitional"
+        _manifold_state = None  # V95: kept for geo_dist_crash/ricci_scalar injection below
         if self._market_manifold is not None:
             try:
                 _manifold_state = self._market_manifold.update(market_data)
@@ -551,6 +552,7 @@ class SignalGenerationNode(Node):
 
         # Ollivier-Ricci curvature on the asset correlation network (basket-level signal)
         _orc_val: float = 0.0
+        _orc_state = None  # V95: kept for mean_curvature injection below
         if self._orc is not None:
             try:
                 _orc_state = self._orc.update(market_data)
@@ -792,6 +794,15 @@ class SignalGenerationNode(Node):
                     _ts["composite"],
                     _basket_mean,
                 )
+
+        # V95: inject basket-level geometry scalars as signals["_*"] metadata keys.
+        # These are read by strategy.py for Ricci sizing, ORC stress, and geodesic crash
+        # distance — distinct from per-ticker signals (which are never underscore-prefixed).
+        if _manifold_state is not None and _manifold_state.confidence >= 0.3:
+            signals["_ricci_scalar"] = float(_manifold_state.ricci)  # z-scored [-5, 5]
+            signals["_geo_dist_crash"] = float(_manifold_state.geo_dist_crash)
+        if _orc_state is not None and _orc_state.confidence >= 0.3:
+            signals["_orc_mean_curvature"] = float(_orc_state.mean_curvature)
 
         # Log composite spread for monitoring
         _composites = [
