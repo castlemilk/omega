@@ -65,6 +65,9 @@ _COINGECKO_IDS = {
     "AVAXUSDT": "avalanche-2",
     "LINKUSDT": "chainlink",
     "MATICUSDT": "matic-network",
+    "NEARUSDT": "near",
+    "SUIUSDT": "sui",
+    "ARBUSDT": "arbitrum",
 }
 
 _BYBIT_INTERVAL_MAP = {"1d": "D", "1h": "60", "4h": "240", "1w": "W"}
@@ -944,6 +947,8 @@ _COINBASE_PAIRS = {
     "MATICUSDT": "MATIC-USD",
     "ATOMUSDT": "ATOM-USD",
     "NEARUSDT": "NEAR-USD",
+    "SUIUSDT": "SUI-USD",
+    "ARBUSDT": "ARB-USD",
     "LTCUSDT": "LTC-USD",
     "UNIUSDT": "UNI-USD",
     "AAVEUSDT": "AAVE-USD",
@@ -964,11 +969,13 @@ _KRAKEN_PAIRS = {
     "AVAXUSDT": "AVAXUSD",
     "LINKUSDT": "LINKUSD",
     "ATOMUSDT": "ATOMUSD",
+    "NEARUSDT": "NEARUSD",
+    "SUIUSDT": "SUIUSD",
+    "ARBUSDT": "ARBUSD",
     "LTCUSDT": "LTCUSD",
     "UNIUSDT": "UNIUSD",
     "DOGEUSDT": "XDGUSD",
     "TRXUSDT": "TRXUSD",
-    "NEARUSDT": "NEARUSD",
 }
 
 _KRAKEN_INTERVAL = {"1d": 1440, "1h": 60, "4h": 240, "1w": 10080}
@@ -988,6 +995,8 @@ _CRYPTOCOMPARE_SYMBOLS = {
     "MATICUSDT": "MATIC",
     "ATOMUSDT": "ATOM",
     "NEARUSDT": "NEAR",
+    "SUIUSDT": "SUI",
+    "ARBUSDT": "ARB",
     "ALGOUSDT": "ALGO",
     "FILUSDT": "FIL",
     "LTCUSDT": "LTC",
