@@ -70,18 +70,23 @@ except ImportError:
 
 try:
     from omega.nodes.victoria.signals.spy_signal import SPYSignal as _SPYSignal
+
     _HAS_SPY = True
 except ImportError:
     _HAS_SPY = False
 
 try:
     from omega.nodes.victoria.geometry.market_manifold import MarketManifold as _MarketManifold
+
     _HAS_MANIFOLD = True
 except ImportError:
     _HAS_MANIFOLD = False
 
 try:
-    from omega.nodes.victoria.geometry.ollivier_ricci import OllivierRicciCurvature as _OllivierRicci
+    from omega.nodes.victoria.geometry.ollivier_ricci import (
+        OllivierRicciCurvature as _OllivierRicci,
+    )
+
     _HAS_ORC = True
 except ImportError:
     _HAS_ORC = False
@@ -182,7 +187,7 @@ def _ic_weighted_composite(
         ]
         return _balanced_composite(signal_vals), "equal_weight"
 
-    weighted_mean = sum(w * v for w, v in zip(weights, values)) / total_w
+    weighted_mean = sum(w * v for w, v in zip(weights, values, strict=False)) / total_w
     clamped = max(-1.0, min(1.0, weighted_mean))
     return clamped, "ic_weighted"
 
@@ -265,26 +270,20 @@ class SignalGenerationNode(Node):
         # SPY/BTC co-movement signal — risk-on/off overlay (market-level)
         self._spy_signal: Any | None = None
         if _HAS_SPY:
-            try:
+            with contextlib.suppress(Exception):
                 self._spy_signal = _SPYSignal(window=20)
-            except Exception:
-                pass
 
         # Information geometry: market manifold (Ricci curvature signal)
         self._market_manifold: Any | None = None
         if _HAS_MANIFOLD:
-            try:
+            with contextlib.suppress(Exception):
                 self._market_manifold = _MarketManifold(window=30, min_samples=10)
-            except Exception:
-                pass
 
         # Graph geometry: Ollivier-Ricci curvature on correlation network
         self._orc: Any | None = None
         if _HAS_ORC:
-            try:
+            with contextlib.suppress(Exception):
                 self._orc = _OllivierRicci(window=30, corr_threshold=0.4)
-            except Exception:
-                pass
 
     # ------------------------------------------------------------------ Node interface
 
@@ -457,7 +456,7 @@ class SignalGenerationNode(Node):
         IC history file does not exist or the import fails.
         """
         try:
-            from omega.nodes.victoria.signal_decay import SignalDecayDetector  # noqa: PLC0415
+            from omega.nodes.victoria.signal_decay import SignalDecayDetector
 
             self._decay_detector = SignalDecayDetector()
             self._decay_detector.load()
@@ -525,14 +524,20 @@ class SignalGenerationNode(Node):
                     # manifold is calling "buy the dip" in an actual downtrend — dampen it.
                     # Gate: scale = max(0, 1 + theta_mu / 0.02), fully suppressed at mu ≤ -0.02.
                     if _ricci_val > 0.0 and _ricci_regime == "mean_reversion":
-                        _theta_mu = float(_manifold_state.theta[0]) if _manifold_state.theta is not None else 0.0
+                        _theta_mu = (
+                            float(_manifold_state.theta[0])
+                            if _manifold_state.theta is not None
+                            else 0.0
+                        )
                         if _theta_mu < 0.0:
                             _scale = max(0.0, 1.0 + _theta_mu / 0.02)
                             _ricci_val *= _scale
                             logger.info(
                                 "V75: ricci dampened (mean_reversion in downtrend "
                                 "theta_mu=%.4f scale=%.2f → ricci=%.3f)",
-                                _theta_mu, _scale, _ricci_val,
+                                _theta_mu,
+                                _scale,
+                                _ricci_val,
                             )
                     logger.debug(
                         "MarketManifold: ricci=%.3f regime=%s signal=%.3f conf=%.2f",

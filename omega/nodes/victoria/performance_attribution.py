@@ -9,9 +9,8 @@ from __future__ import annotations
 import csv
 import json
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
 
 _BASELINE_CONVICTION = 0.15  # baseline threshold used in conviction filter
 
@@ -206,7 +205,7 @@ class PerformanceAttribution:
             },
             "per_symbol": per_symbol,
             "per_regime": self._per_regime(),
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
         }
 
     def save(self, out_path: str | Path) -> None:

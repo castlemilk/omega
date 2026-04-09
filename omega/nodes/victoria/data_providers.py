@@ -719,7 +719,9 @@ class CoinbaseProvider(DataProvider):
         granularity = _COINBASE_GRANULARITY.get(interval, "ONE_DAY")
         end = int(time.time())
         # Advanced Trade API accepts start/end as Unix timestamps; max 300 candles
-        gran_seconds = {"ONE_DAY": 86400, "ONE_HOUR": 3600, "SIX_HOUR": 21600}.get(granularity, 86400)
+        gran_seconds = {"ONE_DAY": 86400, "ONE_HOUR": 3600, "SIX_HOUR": 21600}.get(
+            granularity, 86400
+        )
         start = end - limit * gran_seconds
 
         url = (

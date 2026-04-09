@@ -100,6 +100,15 @@ Improvement arc:
           bear_prob=0.31–0.38 (probability model prices recovery). V94 was no-op (same code
           as V93). V95 requires bear_prob >= 0.45 for HMM/label-based crisis to block longs;
           bear_prob >= 0.65 still triggers hard lock unconditionally.
+  v3.1 — V85 fixes: (a) Restore ETHUSDT long suppression in high_vol regime — V92 removed the
+          absolute conviction floor but inadvertently also removed the directional gate that
+          V65 introduced. V84: 4 ETH high_vol longs, 0% WR, -$18.09. Re-add the hard block
+          (not just a floor) for ETH longs in high_vol; the downside momentum in volatile
+          regimes is too strong for mean-reversion entries.
+          (b) Lower normal short_thresh 0.08→0.05 — V84 had 0 shorts in 200 cycles despite
+          ETH declining -0.43%. Normal-regime composites cluster at ±0.04–0.08; the 0.08
+          bar was blocking all short signals. 0.05 captures genuine bearish conviction while
+          staying above the abs_min floor (0.02).
 """
 
 import logging
@@ -774,7 +783,9 @@ class StrategyNode(Node):
             #   V87 ETH winning long opened at ~0.07 conviction. Lowering bar to 0.07 captures
             #   the recovery-phase ETH longs that 0.10 misses.
             self._long_conviction_threshold = 0.07
-            self._short_conviction_threshold = 0.08
+            # V85: lower 0.08→0.05 — V84 had 0 shorts in 200 cycles (ETH declining -0.43%).
+            # Normal composites cluster ±0.04–0.08; 0.08 was blocking all short signals.
+            self._short_conviction_threshold = 0.05
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
                 "→ long_thresh=0.07, short_thresh=0.08 (V88)",
@@ -806,7 +817,7 @@ class StrategyNode(Node):
         # V55 disabled agreement_ratio universally (abs_conviction is the quality gate);
         # V84 restores that — use self._agreement_ratio_threshold (0.0 = disabled) only.
         # The 1.25x conviction multiplier for vol_regime="high" still applies below.
-        vol_regime = sig.get("vol_regime", "normal")
+        _vol_regime = sig.get("vol_regime", "normal")
         ratio, _agreeing, _total = self._compute_agreement_ratio(sig)
         if _total > 0 and ratio < self._agreement_ratio_threshold:
             return False, f"agreement_ratio({ratio:.2f}<{self._agreement_ratio_threshold:.2f})"
@@ -1159,9 +1170,7 @@ class StrategyNode(Node):
             self._fiedler_fragmented_streak >= 30 and _regime_w_bear > 0.40
         )
         if _fiedler_bear_long_suppress and not self._is_crisis:
-            self._long_conviction_threshold = max(
-                self._long_conviction_threshold, 0.25
-            )
+            self._long_conviction_threshold = max(self._long_conviction_threshold, 0.25)
             logger.info(
                 "V75: Fiedler-fragmented(%d cycles)+bear(%.2f) → long_thresh raised to %.2f",
                 self._fiedler_fragmented_streak,
@@ -1228,9 +1237,14 @@ class StrategyNode(Node):
         _basket_composites = [
             float(sig["composite"])
             for t, sig in signals.items()
-            if not t.startswith("_") and not t.startswith("adv_") and isinstance(sig, dict) and "composite" in sig
+            if not t.startswith("_")
+            and not t.startswith("adv_")
+            and isinstance(sig, dict)
+            and "composite" in sig
         ]
-        _basket_mean = sum(_basket_composites) / len(_basket_composites) if _basket_composites else 0.0
+        _basket_mean = (
+            sum(_basket_composites) / len(_basket_composites) if _basket_composites else 0.0
+        )
         _suppress_longs_basket = _basket_mean < -0.10
 
         short_candidates: dict[str, Any] = {}
@@ -1279,6 +1293,13 @@ class StrategyNode(Node):
                 # confirmation + IC-weighted conviction filter in _passes_conviction_filters
                 # provide sufficient quality gating without the absolute floor.
                 # V90 comment for history: high_vol floor was 0.11, normal was 0.07.
+                # V85: Restore ETH high_vol long suppression (directional block, not floor).
+                # V92 removed the floor but the directional gate was lost in the same edit.
+                # V84: 4 ETH high_vol longs, 0% WR, -$18.09 — downside momentum in volatile
+                # regimes makes mean-reversion longs consistently wrong.
+                if ticker == "ETHUSDT" and _is_high_vol:
+                    logger.debug("Suppressing %s long in high_vol regime (V85)", ticker)
+                    continue
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
                 # normal long_thresh=0.15 (scaled), BNB longs only trigger on genuine signals.
@@ -1380,8 +1401,7 @@ class StrategyNode(Node):
                             _c_val.name,
                             _raw_composite,
                         )
-                    elif (not self._is_crisis
-                            and _wconv_short >= 0.09):
+                    elif not self._is_crisis and _wconv_short >= 0.09:
                         logger.debug(
                             "Multi-cycle: %s normal short — bypassing confirmation "
                             "(w_conv=%.3f >= 0.09)",
@@ -1436,7 +1456,8 @@ class StrategyNode(Node):
                     if not t.startswith("_") and not t.startswith("adv_") and isinstance(sig, dict)
                 }
                 _cross_asset_nulls = [
-                    k for t, sig in signals.items()
+                    k
+                    for t, sig in signals.items()
                     if isinstance(sig, dict)
                     for k in ("fear_greed_signal", "dxy_signal", "funding_rate_signal")
                     if sig.get(k, None) in (None, 0.0)

@@ -98,10 +98,8 @@ class FundingRateSignal:
                         sym,
                     )
                 rates[sym] = rate
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "FundingRateSignal: unexpected error fetching %s: %s", sym, exc
-                )
+            except Exception as exc:
+                logger.warning("FundingRateSignal: unexpected error fetching %s: %s", sym, exc)
                 rates[sym] = None
         return rates
 
@@ -109,6 +107,7 @@ class FundingRateSignal:
         """Read funding rate from MacroDataCache (OKX → CoinGecko → None)."""
         if self._cache is None:
             from omega.nodes.victoria.data_cache import get_cache
+
             self._cache = get_cache()
         return self._cache.get_funding_rate(symbol)
 

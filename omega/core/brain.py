@@ -567,9 +567,7 @@ class AnthropicBrain(BrainAdapter):
             pass
 
         # Fallback to rule-based
-        return _evaluate_signal_quality_rule_based(
-            signal_name, ic_history, recent_pnl, n_trades
-        )
+        return _evaluate_signal_quality_rule_based(signal_name, ic_history, recent_pnl, n_trades)
 
     def provider_name(self) -> str:
         return "anthropic"

@@ -45,8 +45,8 @@ from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.dxy_signal")
 
-_CORR_THRESHOLD = -0.5   # only fire when 20d rolling correlation is below this
-_WINDOW = 20             # days of dollar/BTC price history for correlation
+_CORR_THRESHOLD = -0.5  # only fire when 20d rolling correlation is below this
+_WINDOW = 20  # days of dollar/BTC price history for correlation
 
 
 def _pearson(xs: list[float], ys: list[float]) -> float | None:
@@ -107,12 +107,12 @@ class DXYSignal:
             (dollar_prices[i] - dollar_prices[i - 1]) / dollar_prices[i - 1]
             for i in range(1, len(dollar_prices))
             if dollar_prices[i - 1] != 0
-        ][-self._window:]
+        ][-self._window :]
         btc_rets = [
             (btc_prices[i] - btc_prices[i - 1]) / btc_prices[i - 1]
             for i in range(1, len(btc_prices))
             if btc_prices[i - 1] != 0
-        ][-self._window:]
+        ][-self._window :]
 
         corr = _pearson(dollar_rets, btc_rets)
         if corr is None or corr >= _CORR_THRESHOLD:
@@ -151,6 +151,7 @@ class DXYSignal:
         """Load FRED DTWEXBGS prices from the macro data cache."""
         if self._cache is None:
             from omega.nodes.victoria.data_cache import get_cache
+
             self._cache = get_cache()
         # DTWEXBGS: Broad Trade-Weighted US Dollar Index (index value, not percent)
         return self._cache.get_values("DTWEXBGS", lookback_days=self._window + 10)

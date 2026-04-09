@@ -70,12 +70,12 @@ logger = logging.getLogger("omega.nodes.victoria.geometry.ollivier_ricci")
 # Constants
 # ---------------------------------------------------------------------------
 
-_WINDOW: int = 30           # rolling window for return history
-_MIN_TICKERS: int = 3       # minimum tickers to build a meaningful network
+_WINDOW: int = 30  # rolling window for return history
+_MIN_TICKERS: int = 3  # minimum tickers to build a meaningful network
 _CORR_THRESHOLD: float = 0.4  # minimum |correlation| to create an edge
 _SIGNAL_SCALE: float = 3.0  # tanh scaling for curvature → signal
-_N_BINS: int = 20           # histogram bins for Wasserstein approximation
-_MIN_SAMPLES: int = 10      # minimum returns before signal activates
+_N_BINS: int = 20  # histogram bins for Wasserstein approximation
+_MIN_SAMPLES: int = 10  # minimum returns before signal activates
 
 
 # ---------------------------------------------------------------------------
@@ -87,12 +87,12 @@ _MIN_SAMPLES: int = 10      # minimum returns before signal activates
 class OrcState:
     """Result of one ORC computation cycle."""
 
-    mean_curvature: float       # mean ORC across all edges
-    n_edges: int                # number of edges in the network
-    n_nodes: int                # number of tickers in the network
-    signal: float               # trading signal ∈ [-1, +1]
-    confidence: float           # 0..1; grows with history length
-    regime: str                 # "stress" | "healthy" | "neutral"
+    mean_curvature: float  # mean ORC across all edges
+    n_edges: int  # number of edges in the network
+    n_nodes: int  # number of tickers in the network
+    signal: float  # trading signal ∈ [-1, +1]
+    confidence: float  # 0..1; grows with history length
+    regime: str  # "stress" | "healthy" | "neutral"
     edge_curvatures: dict[str, float]  # {"{t1}-{t2}": κ} for top/bottom edges
 
 
@@ -182,13 +182,16 @@ class OllivierRicciCurvature:
 
         # Keep only the top/bottom 5 edges by curvature for observability
         sorted_edges = sorted(edge_curvatures.items(), key=lambda kv: kv[1])
-        top_edges = dict(
-            sorted_edges[:3] + sorted_edges[-3:]
-        )
+        top_edges = dict(sorted_edges[:3] + sorted_edges[-3:])
 
         logger.debug(
             "ORC: mean_κ=%.3f n_edges=%d n_nodes=%d regime=%s signal=%.3f conf=%.2f",
-            mean_kappa, len(edge_curvatures), len(tickers), regime, signal, confidence,
+            mean_kappa,
+            len(edge_curvatures),
+            len(tickers),
+            regime,
+            signal,
+            confidence,
         )
 
         return OrcState(
@@ -245,9 +248,7 @@ class OllivierRicciCurvature:
         except Exception:
             return np.eye(n)
 
-    def _build_edges(
-        self, tickers: list[str], corr: np.ndarray
-    ) -> list[tuple[int, int, float]]:
+    def _build_edges(self, tickers: list[str], corr: np.ndarray) -> list[tuple[int, int, float]]:
         """Return list of (i, j, distance) edges where |corr| ≥ threshold."""
         edges: list[tuple[int, int, float]] = []
         n = len(tickers)

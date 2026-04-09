@@ -522,7 +522,17 @@ def run(
     sem_node = SemanticMemoryNode(review_interval=10)
     orch.register_node(sem_node, activate=False)
 
-    engine = PaperTradingEngine(initial_capital=100_000.0, db_url=db_url or None)
+    # V94: strategy normalises weights to sum=1.0, so a single ticker gets weight=1.0.
+    # Default per-symbol cap (0.15) and portfolio cap (0.80) block every trade since
+    # strategy weight 0.25 (after fiedler) * $100k = $25k > 0.15 * $100k = $15k.
+    # Remove paper-trading caps — the strategy's own fiedler/kelly/sit-out risk
+    # controls are the quality gate; don't double-cap here.
+    engine = PaperTradingEngine(
+        initial_capital=100_000.0,
+        db_url=db_url or None,
+        max_position_per_symbol=1.0,
+        max_portfolio_exposure=1.0,
+    )
     orch.set_paper_trading(engine)
 
     _init_trades_csv(trades_csv)

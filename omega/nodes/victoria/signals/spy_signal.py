@@ -38,14 +38,15 @@ from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.spy_signal")
 
-_CORR_THRESHOLD = 0.4      # minimum 20d BTC/SPY correlation to fire
-_WINDOW = 20               # days for correlation calculation
-_SIGNAL_CAP = 0.3          # max signal magnitude — SPY beta, not alpha
-_SPY_CACHE_TTL = 3600      # 1 hour
+_CORR_THRESHOLD = 0.4  # minimum 20d BTC/SPY correlation to fire
+_WINDOW = 20  # days for correlation calculation
+_SIGNAL_CAP = 0.3  # max signal magnitude — SPY beta, not alpha
+_SPY_CACHE_TTL = 3600  # 1 hour
 
 
 try:
     import yfinance as yf
+
     _HAS_YFINANCE = True
 except ImportError:
     _HAS_YFINANCE = False
@@ -63,7 +64,7 @@ def _pearson(xs: list[float], ys: list[float]) -> float | None:
     xs, ys = xs[-n:], ys[-n:]
     mx = sum(xs) / n
     my = sum(ys) / n
-    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
     denom_x = math.sqrt(sum((x - mx) ** 2 for x in xs))
     denom_y = math.sqrt(sum((y - my) ** 2 for y in ys))
     if denom_x == 0 or denom_y == 0:
@@ -119,12 +120,12 @@ class SPYSignal:
             (spy_daily[i] - spy_daily[i - 1]) / spy_daily[i - 1]
             for i in range(1, len(spy_daily))
             if spy_daily[i - 1] != 0
-        ][-self._window:]
+        ][-self._window :]
         btc_rets = [
             (btc_prices[i] - btc_prices[i - 1]) / btc_prices[i - 1]
             for i in range(1, len(btc_prices))
             if btc_prices[i - 1] != 0
-        ][-self._window:]
+        ][-self._window :]
 
         corr = _pearson(spy_rets, btc_rets)
         if corr is None or corr < _CORR_THRESHOLD:
@@ -169,7 +170,9 @@ class SPYSignal:
             return self._spy_daily_cache
         try:
             ticker = yf.Ticker("SPY")
-            hist = ticker.history(period=f"{self._window + 5}d", interval="1d", timeout=self._timeout)
+            hist = ticker.history(
+                period=f"{self._window + 5}d", interval="1d", timeout=self._timeout
+            )
             if hist.empty:
                 return self._spy_daily_cache
             prices = [float(p) for p in hist["Close"].dropna().tolist() if p > 0]
@@ -177,7 +180,9 @@ class SPYSignal:
                 return self._spy_daily_cache
             self._spy_daily_cache = prices
             self._spy_daily_ts = now
-            logger.debug("SPYSignal: fetched %d daily SPY prices (latest=%.2f)", len(prices), prices[-1])
+            logger.debug(
+                "SPYSignal: fetched %d daily SPY prices (latest=%.2f)", len(prices), prices[-1]
+            )
             return self._spy_daily_cache
         except Exception as exc:
             logger.warning("SPYSignal: daily fetch failed: %s", exc)
@@ -200,7 +205,9 @@ class SPYSignal:
                 return self._spy_4h_cache
             self._spy_4h_cache = prices_4h
             self._spy_4h_ts = now
-            logger.debug("SPYSignal: fetched %d 4h SPY bars (latest=%.2f)", len(prices_4h), prices_4h[-1])
+            logger.debug(
+                "SPYSignal: fetched %d 4h SPY bars (latest=%.2f)", len(prices_4h), prices_4h[-1]
+            )
             return self._spy_4h_cache
         except Exception as exc:
             logger.warning("SPYSignal: 4h fetch failed: %s", exc)

@@ -65,12 +65,12 @@ logger = logging.getLogger("omega.nodes.victoria.geometry.market_manifold")
 # Constants
 # ---------------------------------------------------------------------------
 
-_WINDOW = 30          # rolling cycle window for return estimation
-_MIN_SAMPLES = 10     # minimum returns before signal activates
-_MC_SAMPLES = 500     # Monte Carlo samples for FIM estimation
-_FD_EPS = 1e-4        # finite-difference step for Christoffel symbols
-_CURVATURE_THRESHOLD = 0.3   # |R| threshold to emit directional signal
-_SIGNAL_SCALE = 2.0   # tanh scale for signal magnitude
+_WINDOW = 30  # rolling cycle window for return estimation
+_MIN_SAMPLES = 10  # minimum returns before signal activates
+_MC_SAMPLES = 500  # Monte Carlo samples for FIM estimation
+_FD_EPS = 1e-4  # finite-difference step for Christoffel symbols
+_CURVATURE_THRESHOLD = 0.3  # |R| threshold to emit directional signal
+_SIGNAL_SCALE = 2.0  # tanh scale for signal magnitude
 
 # Reference market states (θ = [μ, σ², γ]) — calibrated from crypto crash/rally history
 # Crisis / crash: negative drift, high variance, negative skew (tail risk)
@@ -85,19 +85,20 @@ _REF_NEUTRAL: np.ndarray = np.array([0.0, 0.0003, 0.0])
 # Data types
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ManifoldState:
     """A single point on the market manifold (one cycle snapshot)."""
 
-    theta: np.ndarray                    # [μ, σ², γ] parameter vector
-    fim: np.ndarray                      # 3×3 Fisher Information Matrix
-    ricci: float                         # Ricci scalar curvature
-    geo_dist_crash: float                # geodesic distance to crash reference
-    geo_dist_rally: float                # geodesic distance to rally reference
-    geo_dist_neutral: float              # geodesic distance to neutral reference
-    regime: str                          # "mean_reversion" | "trending" | "transitional"
-    signal: float                        # trading signal ∈ [-1, +1]
-    confidence: float                    # 0..1
+    theta: np.ndarray  # [μ, σ², γ] parameter vector
+    fim: np.ndarray  # 3×3 Fisher Information Matrix
+    ricci: float  # Ricci scalar curvature
+    geo_dist_crash: float  # geodesic distance to crash reference
+    geo_dist_rally: float  # geodesic distance to rally reference
+    geo_dist_neutral: float  # geodesic distance to neutral reference
+    regime: str  # "mean_reversion" | "trending" | "transitional"
+    signal: float  # trading signal ∈ [-1, +1]
+    confidence: float  # 0..1
 
 
 @dataclass
@@ -111,6 +112,7 @@ class _History:
 # ---------------------------------------------------------------------------
 # Core class
 # ---------------------------------------------------------------------------
+
 
 class MarketManifold:
     """
@@ -277,14 +279,14 @@ class MarketManifold:
         We extend with a finite-difference numerical estimate around the
         skewness dimension using a moment-generating function approximation.
         """
-        mu, var, gamma = float(theta[0]), float(theta[1]), float(theta[2])
+        mu, var, _gamma = float(theta[0]), float(theta[1]), float(theta[2])
         var = max(var, 1e-10)
         sigma = math.sqrt(var)
 
         # Closed-form Gaussian FIM block (2×2 in μ, σ²)
-        g00 = 1.0 / var          # ∂μ score²
-        g11 = 1.0 / (2.0 * var * var)   # ∂σ² score²
-        g01 = 0.0                # Gaussian: off-diagonal = 0
+        g00 = 1.0 / var  # ∂μ score²
+        g11 = 1.0 / (2.0 * var * var)  # ∂σ² score²
+        g01 = 0.0  # Gaussian: off-diagonal = 0
 
         # Numerical FIM extension for skewness dimension via Monte Carlo
         # Draw samples from a skew-normal approximation
@@ -293,19 +295,21 @@ class MarketManifold:
         # p(x) ∝ φ(z) [1 + (γ/6) H_3(z)]  where H_3(z) = z³ - 3z
         z = (samples - mu) / (sigma + 1e-10)
         h3 = z**3 - 3 * z
-        dlog_dgamma = h3 / 6.0    # ∂ log p / ∂γ (Gram-Charlier)
+        dlog_dgamma = h3 / 6.0  # ∂ log p / ∂γ (Gram-Charlier)
         dlog_dmu = z / sigma
         dlog_dsig2 = (z**2 - 1.0) / (2.0 * var)
 
-        g22 = float(np.mean(dlog_dgamma**2))   # FIM element for skewness
+        g22 = float(np.mean(dlog_dgamma**2))  # FIM element for skewness
         g02 = float(np.mean(dlog_dmu * dlog_dgamma))
         g12 = float(np.mean(dlog_dsig2 * dlog_dgamma))
 
-        fim = np.array([
-            [g00,  g01,  g02],
-            [g01,  g11,  g12],
-            [g02,  g12,  g22],
-        ])
+        fim = np.array(
+            [
+                [g00, g01, g02],
+                [g01, g11, g12],
+                [g02, g12, g22],
+            ]
+        )
 
         # Regularise for numerical stability
         fim += np.eye(3) * 1e-6
@@ -332,10 +336,12 @@ class MarketManifold:
             return np.zeros((dim, dim, dim))
 
         # Partial derivatives of g via finite differences
-        dg = np.zeros((dim, dim, dim))   # dg[m, i, j] = ∂_m g_{ij}
+        dg = np.zeros((dim, dim, dim))  # dg[m, i, j] = ∂_m g_{ij}
         for m in range(dim):
-            theta_p = theta.copy(); theta_p[m] += _FD_EPS
-            theta_n = theta.copy(); theta_n[m] -= _FD_EPS
+            theta_p = theta.copy()
+            theta_p[m] += _FD_EPS
+            theta_n = theta.copy()
+            theta_n[m] -= _FD_EPS
             gp = self._fisher_information_matrix(theta_p)
             gn = self._fisher_information_matrix(theta_n)
             dg[m] = (gp - gn) / (2.0 * _FD_EPS)
@@ -366,10 +372,12 @@ class MarketManifold:
         gamma0 = self._christoffel(theta)
 
         # Partial derivatives of Christoffel symbols
-        d_gamma = np.zeros((dim, dim, dim, dim))   # d_gamma[m, k, i, j] = ∂_m Γ^k_ij
+        d_gamma = np.zeros((dim, dim, dim, dim))  # d_gamma[m, k, i, j] = ∂_m Γ^k_ij
         for m in range(dim):
-            theta_p = theta.copy(); theta_p[m] += _FD_EPS
-            theta_n = theta.copy(); theta_n[m] -= _FD_EPS
+            theta_p = theta.copy()
+            theta_p[m] += _FD_EPS
+            theta_n = theta.copy()
+            theta_n[m] -= _FD_EPS
             gp = self._christoffel(theta_p)
             gn = self._christoffel(theta_n)
             d_gamma[m] = (gp - gn) / (2.0 * _FD_EPS)
@@ -398,23 +406,23 @@ class MarketManifold:
         except np.linalg.LinAlgError:
             return 0.0
 
-        R = float(np.einsum("jl,jl->", g_inv, ric))
-        if not math.isfinite(R):
+        r_scalar = float(np.einsum("jl,jl->", g_inv, ric))
+        if not math.isfinite(r_scalar):
             return 0.0
 
         # Z-score normalise against rolling history to keep signal stable
-        R = self._normalise_ricci(R)
-        return float(np.clip(R, -5.0, 5.0))
+        r_scalar = self._normalise_ricci(r_scalar)
+        return float(np.clip(r_scalar, -5.0, 5.0))
 
-    def _normalise_ricci(self, R: float) -> float:
+    def _normalise_ricci(self, r_scalar: float) -> float:
         """Z-score normalise R against rolling history."""
         history = list(self._history.ricci)
         if len(history) < 5:
-            return R
+            return r_scalar
         mean = sum(history) / len(history)
         var = sum((x - mean) ** 2 for x in history) / max(1, len(history) - 1)
         std = math.sqrt(var) if var > 0 else 1e-8
-        return (R - mean) / std
+        return (r_scalar - mean) / std
 
     # ------------------------------------------------------------------
     # Geodesic distance (Rao distance approximation)
@@ -502,14 +510,16 @@ class MarketManifold:
         ricci_hist = list(self._history.ricci)
         theta_hist = list(self._history.theta)
         out = []
-        for i, (r, th) in enumerate(zip(ricci_hist[-n:], theta_hist[-n:])):
+        for i, (r, th) in enumerate(zip(ricci_hist[-n:], theta_hist[-n:], strict=False)):
             regime = self._predict_regime(r)
-            out.append({
-                "cycle": i + 1,
-                "ricci": round(r, 4),
-                "mu": round(float(th[0]), 6),
-                "variance": round(float(th[1]), 8),
-                "skewness": round(float(th[2]), 4),
-                "regime": regime,
-            })
+            out.append(
+                {
+                    "cycle": i + 1,
+                    "ricci": round(r, 4),
+                    "mu": round(float(th[0]), 6),
+                    "variance": round(float(th[1]), 8),
+                    "skewness": round(float(th[2]), 4),
+                    "regime": regime,
+                }
+            )
         return out

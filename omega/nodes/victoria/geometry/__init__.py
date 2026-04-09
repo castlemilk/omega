@@ -8,7 +8,7 @@ Exports the primary public interface:
   OllivierRicciCurvature — ORC on the dynamic asset correlation network.
 """
 
-from omega.nodes.victoria.geometry.market_manifold import MarketManifold, ManifoldState
+from omega.nodes.victoria.geometry.market_manifold import ManifoldState, MarketManifold
 from omega.nodes.victoria.geometry.ollivier_ricci import OllivierRicciCurvature, OrcState
 
-__all__ = ["MarketManifold", "ManifoldState", "OllivierRicciCurvature", "OrcState"]
+__all__ = ["ManifoldState", "MarketManifold", "OllivierRicciCurvature", "OrcState"]

@@ -46,8 +46,8 @@ logger = logging.getLogger("omega.nodes.victoria.data_cache")
 
 _FRED_BASE = "https://api.stlouisfed.org/fred/series/observations"
 _FRED_TIMEOUT = 15.0
-_MACRO_STALE_HOURS = 4       # FRED data: refresh if older than 4 hours
-_FUNDING_STALE_HOURS = 8     # Funding rates: refresh every 8 hours (settlement cycle)
+_MACRO_STALE_HOURS = 4  # FRED data: refresh if older than 4 hours
+_FUNDING_STALE_HOURS = 8  # Funding rates: refresh every 8 hours (settlement cycle)
 
 # Module-level set of FRED series that returned HTTP 4xx this session.
 # Shared across ALL MacroDataCache instances in the same process to prevent
@@ -80,12 +80,14 @@ _COINBASE_INTX_MAP = {
 
 # ── Database path ──────────────────────────────────────────────────────────────
 
+
 def _default_db_path() -> Path:
     root = Path(__file__).resolve().parent.parent.parent.parent  # project root
     return root / "data" / "macro_cache.db"
 
 
 # ── MacroDataCache ─────────────────────────────────────────────────────────────
+
 
 class MacroDataCache:
     """
@@ -322,6 +324,7 @@ class MacroDataCache:
 
 # ── FRED fetch helper ──────────────────────────────────────────────────────────
 
+
 def _fetch_fred_observations(
     series_id: str,
     api_key: str,
@@ -380,6 +383,7 @@ def _fetch_fred_observations(
 
 # ── OKX funding fetch helper ───────────────────────────────────────────────────
 
+
 def _fetch_okx_funding(symbol: str) -> float | None:
     """
     Fetch current funding rate from OKX public API.
@@ -418,6 +422,7 @@ def _fetch_okx_funding(symbol: str) -> float | None:
 
 
 # ── Coinbase INTX funding fallback ────────────────────────────────────────────
+
 
 def _fetch_coinbase_intx_funding(symbol: str) -> float | None:
     """

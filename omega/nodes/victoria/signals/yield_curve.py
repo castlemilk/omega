@@ -56,9 +56,9 @@ from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.yield_curve")
 
-_SHOCK_THRESHOLD_BP = 15.0   # 10Y day-over-day move (basis points) to trigger shock
-_INVERSION_MILD_BP = -20.0   # above this: mild inversion
-_STEEPEN_MIN_DAYS = 30       # minimum days inverted before steepening signal fires
+_SHOCK_THRESHOLD_BP = 15.0  # 10Y day-over-day move (basis points) to trigger shock
+_INVERSION_MILD_BP = -20.0  # above this: mild inversion
+_STEEPEN_MIN_DAYS = 30  # minimum days inverted before steepening signal fires
 
 
 class YieldCurveSignal:
@@ -170,6 +170,7 @@ class YieldCurveSignal:
         """Read rate values from the macro data cache."""
         if self._cache is None:
             from omega.nodes.victoria.data_cache import get_cache
+
             self._cache = get_cache()
         return self._cache.get_values(series_id, lookback_days=90)
 

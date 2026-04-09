@@ -141,10 +141,7 @@ class PaperTradingEngine:
 
     def _total_open_notional(self) -> float:
         """Sum of all open position notional values."""
-        return sum(
-            pos.get("size", 0.0)
-            for pos in self._positions.values()
-        )
+        return sum(pos.get("size", 0.0) for pos in self._positions.values())
 
     def _check_portfolio_limits(self, symbol: str, notional: float) -> tuple[bool, str]:
         """
@@ -156,14 +153,20 @@ class PaperTradingEngine:
         max_total = self._max_portfolio_exposure * self.initial_capital
         current_total = self._total_open_notional()
         if current_total + notional > max_total:
-            return False, f"portfolio exposure cap: {current_total + notional:.0f} > {max_total:.0f}"
+            return (
+                False,
+                f"portfolio exposure cap: {current_total + notional:.0f} > {max_total:.0f}",
+            )
 
         # Per-symbol: existing + new
         existing_sym = self._positions.get(symbol, {})
         existing_notional = existing_sym.get("size", 0.0)
         max_sym = self._max_position_per_symbol * self.initial_capital
         if existing_notional + notional > max_sym:
-            return False, f"symbol cap {symbol}: {existing_notional + notional:.0f} > {max_sym:.0f}"
+            return (
+                False,
+                f"symbol cap {symbol}: {existing_notional + notional:.0f} > {max_sym:.0f}",
+            )
 
         return True, ""
 
