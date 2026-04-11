@@ -126,20 +126,43 @@ python scripts/ablate.py --cycles 200 --presets v93_baseline,v97_geometry,observ
 - Build Reason/Remember/Act agent layers in Go
 - Each "desk" = dedicated agent with memory + LLM reasoning
 
-## Next Phase (after V99 confirmed)
+## ✅ Ablation Results (2026-04-11, 100 cycles × 3 presets)
 
-1. **Ablation** — run observability_only + embeddings_only vs baseline (100 cycles each, ~3 hrs):
+Full report: `data/ablation_report.md` · Raw data: `data/ablation_20260411T100444/`
+
+| Preset | PnL | WR | Trades | PF | Zero% | Delta |
+|--------|-----|-----|--------|-----|-------|-------|
+| v93_baseline (control) | -$25.46 | 38% | 21 | 0.80 | 84% | — |
+| observability_only | $0.00 | 0% | 0 | N/A | 100% | +$25.46 (no trades) |
+| **embeddings_only** | **+$51.78** | **33%** | **21** | **1.46** | **85%** | **+$77.24** |
+
+**Winner: `embeddings_only`** (+$77.24 delta, PF 1.46 vs 0.80 baseline)
+
+Key findings:
+- `embeddings_only` (decision_embeddings + llm_trade_review): same trade count as baseline, meaningfully larger average win → PF above 1.0. Ready for 200-cycle validation.
+- `observability_only` caused **complete trading shutdown** — anomaly detector thresholds too aggressive. Signal correlations (SMA↔funding_rate 0.84, Ricci variants -0.99) halted all trades by cycle 38. Needs threshold tuning before production use.
+- All three presets: 100% long-only — short-side conviction thresholds miscalibrated for current NORMAL/HIGH_VOL regime.
+- Note: v93_baseline returned -$25.46 this run (vs +$63 in V99 full run) — 100-cycle window hit a down market segment. Expected variance.
+
+## Next Phase
+
+1. **✅ DONE — Ablation** — see results above
+2. **embeddings_only validation** — run 200 cycles to confirm PF 1.46 holds:
    ```bash
-   python3 scripts/ablate.py --cycles 100 --presets v93_baseline,observability_only,embeddings_only
+   python3 scripts/run_training.py --version v100 --cycles 200 --features embeddings_only
    ```
-2. **Geometry forensics (Track E)** — isolate which V95 modifier causes regression:
-   Run one-modifier-at-a-time with `ablate.py` using inline JSON presets
-3. **LLM retro on V93** — run post-mortem on the champion run:
+3. **observability threshold tuning** — dial down anomaly/correlation thresholds so they warn without blocking; re-ablate:
+   ```bash
+   # After tuning: VICTORIA_FEATURES='{"anomaly_detector":true,"decision_traces":true}'
+   python3 scripts/ablate.py --cycles 100 --presets v93_baseline,observability_tuned
+   ```
+4. **Geometry forensics (Track E)** — isolate which V95 modifier causes regression via per-flag ablation
+5. **LLM retro on V93** — run post-mortem on the champion run:
    ```bash
    python -m omega.nodes.victoria.llm_trade_review --version v93
    ```
-4. **Gate epoch fix** — gate comparator should auto-detect the most recent same-market epoch baseline, not a hardcoded version
-5. **Long-horizon run (Track A)** — 500 cycles once gate comparator is fixed
+6. **Gate epoch fix** — gate comparator should auto-detect same-market epoch baseline, not hardcoded version
+7. **Long-horizon run (Track A)** — 500 cycles once embeddings_only validation passes
 
 ## Recently Shipped (today)
 
@@ -191,5 +214,6 @@ active_basket = {ETH, SOL, BNB, AVAX, LINK, NEAR, ARB, ADA}
 ## Update Log
 - 2026-04-11: TODO.md created. V98 running, V97 regressed, V93 remains champion.
 - 2026-04-11: V99 baseline confirmed (+$63.32, flags OFF). Feature flag harness + ablate.py + docs shipped. 7 worktrees pruned.
+- 2026-04-11: Ablation complete (100 cycles × 3 presets). Winner: embeddings_only (+$51.78, PF 1.46). observability_only needs threshold tuning (total trade shutdown). Full report: data/ablation_report.md.
 </content>
 </invoke>
