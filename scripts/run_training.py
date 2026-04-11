@@ -460,6 +460,7 @@ def run(
     sleep_seconds: float = 30.0,
     log_interval: int = 5,
     meta_harness: bool = False,
+    features: str | None = None,
 ) -> dict:
     log = logging.getLogger(f"training.{version}")
 
@@ -474,12 +475,23 @@ def run(
     db_url = os.environ.get("DATABASE_URL", "")
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
 
+    # ── Feature flags ─────────────────────────────────────────────────────
+    from omega.nodes.victoria.features import VictoriaFeatures
+    if features:
+        os.environ["VICTORIA_FEATURES"] = features
+    _active_features = VictoriaFeatures.from_env()
+
     log.info("=" * 70)
     log.info("Training Run %s — %d cycles  sleep=%.0fs", version, n_cycles, sleep_seconds)
     log.info("CoinGecko key  : %s", cg_key[:12] + "..." if cg_key else "MISSING")
     log.info("Database URL   : %s", db_url[:40] + "..." if db_url else "NOT SET — SQLite fallback")
     log.info("Metrics JSONL  : %s", metrics_jsonl)
     log.info("Log file       : /tmp/%s_training.log", version)
+    _active_flags = _active_features.active_flags()
+    if _active_flags:
+        log.info("Features ON    : %s", ", ".join(_active_flags))
+    else:
+        log.info("Features       : v93_baseline (all OFF)")
     log.info("=" * 70)
 
     # ── Startup preflight ─────────────────────────────────────────────────
@@ -546,6 +558,10 @@ def run(
     breaker = SitOutCircuitBreaker(strat) if strat is not None else None
     if breaker is None:
         log.warning("Strategy node not found on VictoriaNode — circuit breaker disabled")
+
+    # ── Observability init (gated by feature flags) ───────────────────────
+    if strat is not None:
+        strat.init_trace_writer(version, str(DATA_DIR))
 
     # ── Metrics JSONL file (opened once, flushed each cycle) ──────────────
     metrics_jsonl.parent.mkdir(parents=True, exist_ok=True)
@@ -870,6 +886,19 @@ def run(
             }
             metrics_fh.write(json.dumps(metric_row) + "\n")
             metrics_fh.flush()
+
+            # ── Anomaly detector (gated by feature flag) ──────────────────
+            if strat is not None:
+                _pnl_delta = sum(float(t.get("pnl", 0.0)) for t in new_closed)
+                _anomalies = strat.check_anomalies(
+                    cycle=cycle_num,
+                    pnl_delta=_pnl_delta,
+                    n_new_trades=len(new_closed),
+                    zero_streak=watchdog.consecutive_zero_trade_cycles,
+                    basket_std=_basket_std,
+                )
+                for _ev in _anomalies:
+                    log.warning("Anomaly [%s] %s", _ev.metric, _ev.message)
 
             # ── ML combiner weight snapshot every 20 cycles ───────────────
             if cycle_num % 20 == 0 and strat is not None:
@@ -1215,6 +1244,16 @@ if __name__ == "__main__":
             "Set OMEGA_META_LLM=1 to enable LLM-powered proposals."
         ),
     )
+    parser.add_argument(
+        "--features",
+        type=str,
+        default=None,
+        help=(
+            "Feature flags: preset name (v93_baseline, v97_geometry, observability_only, "
+            "embeddings_only, v98_full_obs, v99_full) or JSON dict "
+            '(e.g. \'{"ricci_sizing":true}\'). Default: v93_baseline (all OFF).'
+        ),
+    )
     args = parser.parse_args()
 
     version = _resolve_version(args.version)
@@ -1226,4 +1265,5 @@ if __name__ == "__main__":
         sleep_seconds=args.sleep,
         log_interval=args.log_interval,
         meta_harness=args.meta_harness,
+        features=args.features,
     )

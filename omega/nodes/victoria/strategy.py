@@ -95,11 +95,19 @@ Improvement arc:
           suppression after V89's crisis-reset fix. Streak resets in crisis, re-accumulates in
           normal recovery (30 cycles), then suppresses at bear=0.31 (above 0.25). At 0.40,
           recovery is not suppressed; genuine bear (>0.40) still triggers.
-  v3.0 — V95 fix: Gate regime_hmm/regime_label "crisis" paths with bear_prob >= 0.45.
+  v3.0 — V95 fixes (four changes):
+          (a) Gate regime_hmm/regime_label "crisis" paths with bear_prob >= 0.45.
           HMM transitions slowly and stays "crisis" for 30+ cycles post-crash while
           bear_prob=0.31–0.38 (probability model prices recovery). V94 was no-op (same code
           as V93). V95 requires bear_prob >= 0.45 for HMM/label-based crisis to block longs;
           bear_prob >= 0.65 still triggers hard lock unconditionally.
+          (b) Revert normal short_thresh 0.05→0.07. V94 forensics: fewer shorts (3 vs 6),
+          loss was crisis-labeled longs opened in normal regime that closed on market decline.
+          (c) Geometry signals: ORC stress size mult (kappa>0.1 → 0.6–1.0x), Ricci-weighted
+          long sizing (mean-reversion + crash proximity → up to 30% long size reduction),
+          geodesic crash gate (crash_prox>=0.6 → long_thresh raised up to 40%).
+          (d) Fiedler conviction modulation: fragmented → short_thresh * 0.85 (floor 0.04);
+          consensus (z>1) → both thresholds * 0.90–0.95.
   v3.1 — V85 fixes: (a) Restore ETHUSDT long suppression in high_vol regime — V92 removed the
           absolute conviction floor but inadvertently also removed the directional gate that
           V65 introduced. V84: 4 ETH high_vol longs, 0% WR, -$18.09. Re-add the hard block
@@ -142,6 +150,15 @@ from omega.core.actions import NodeAction
 from omega.core.decision_snapshot import SignalTrace, TickerDecision
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.risk_manager import PositionRiskManager
+from omega.nodes.victoria.anomaly_detector import AnomalyDetector
+from omega.nodes.victoria.decision_trace import (
+    DecisionTrace,
+    TraceWriter,
+    build_explanation,
+)
+from omega.nodes.victoria.features import VictoriaFeatures
+from omega.nodes.victoria.signal_confluence import ConfluenceAnalyzer, ConfluenceResult
+from omega.nodes.victoria.signal_correlation import SignalCorrelationMonitor
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
@@ -355,8 +372,22 @@ class StrategyNode(Node):
         # Sustained fragmentation + moderate bear_prob = elevated crash risk ahead of HMM label
         self._fiedler_fragmented_streak: int = 0
 
+        # --- Feature flags ---
+        self.features: VictoriaFeatures = VictoriaFeatures.from_env()
+
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
+
+        # --- Observability extensions (gated by self.features) ---
+        self._trace_writer: TraceWriter | None = None
+        self._confluence: ConfluenceAnalyzer | None = (
+            ConfluenceAnalyzer() if self.features.signal_confluence else None
+        )
+        self._last_confluence: dict[str, ConfluenceResult] = {}
+        self._corr_monitor: SignalCorrelationMonitor | None = (
+            SignalCorrelationMonitor() if self.features.signal_correlation_monitor else None
+        )
+        self._anomaly_detector: AnomalyDetector | None = None
 
         # --- Spectral graph / Fiedler position size modifier ---
         self._spectral = SpectralGraphSignal(window=30)
@@ -404,6 +435,45 @@ class StrategyNode(Node):
     def record_trade_pnl(self, pnl: float) -> None:
         """Record a closed trade's PnL for Kelly sizing."""
         self._trade_history.append(pnl)
+
+    # ------------------------------------------------------------------ Observability API
+
+    def init_trace_writer(self, version: str, output_dir: str = "data") -> None:
+        """Initialise DecisionTrace writer and AnomalyDetector for this run.
+
+        No-op when decision_traces and anomaly_detector flags are both OFF.
+        Call once from run_training.py after constructing StrategyNode.
+        """
+        if self.features.decision_traces:
+            self._trace_writer = TraceWriter(version=version, output_dir=output_dir)
+            logger.info("StrategyNode: trace writer initialised for %s → %s", version, output_dir)
+        if self.features.anomaly_detector:
+            self._anomaly_detector = AnomalyDetector(version=version)
+
+    def get_corr_matrix(self) -> dict:
+        """Return the most recent signal correlation matrix (for Go API / dashboard)."""
+        if self._corr_monitor is None:
+            return {}
+        return self._corr_monitor.get_matrix()
+
+    def check_anomalies(
+        self,
+        cycle: int,
+        pnl_delta: float,
+        n_new_trades: int,
+        zero_streak: int,
+        basket_std: float = 0.0,
+    ) -> list:
+        """Delegate to AnomalyDetector. Returns list of AnomalyEvent (may be empty)."""
+        if self._anomaly_detector is None:
+            return []
+        return self._anomaly_detector.check(
+            cycle=cycle,
+            pnl_delta=pnl_delta,
+            n_new_trades=n_new_trades,
+            zero_streak=zero_streak,
+            basket_std=basket_std,
+        )
 
     # ------------------------------------------------------------------ Node interface
 
@@ -717,25 +787,22 @@ class StrategyNode(Node):
         # Requiring bear_prob >= 0.45 for HMM/label-based crisis ensures the probability
         # model confirms genuine crisis before blocking all longs. bear_prob >= 0.65 still
         # hard-blocks unconditionally. This replaces V94 (no-op — same code as V93).
-        # V95 Enhancement C: geodesic crash proximity early crisis detection.
-        # If the current market state (mu, sigma of basket returns) is geometrically
-        # close to known crash states (Fisher-Rao distance < 0.5), force crisis regime
-        # before the HMM transitions — catches pre-crisis regime shifts 5-10 cycles early.
-        _crash_proximity_val = float(signals.get("_crash_proximity", float("inf")))
-        _geo_crash_crisis = _crash_proximity_val < 0.5
-        if _geo_crash_crisis:
-            logger.info(
-                "V95 geo-crash crisis: crash_proximity=%.4f < 0.5 → forcing crisis regime",
-                _crash_proximity_val,
+        if self.features.v96_crisis_detection_fix:
+            # elastic-buck: when bear_prob=-1 (unavailable), trust regime label directly.
+            # V95's >= 0.45 gate only applies when bear_prob is actually available.
+            is_crisis = (
+                bear_prob >= 0.65
+                or (bear_prob < 0.0 and (regime_hmm == "bear" or regime_label == "crisis"))
+                or (bear_prob >= 0.0 and regime_hmm == "crisis" and bear_prob >= 0.45)
+                or (bear_prob >= 0.0 and regime_label == "crisis" and bear_prob >= 0.45)
             )
-
-        is_crisis = (
-            bear_prob >= 0.65
-            or (bear_prob < 0.0 and regime_hmm == "bear")
-            or (regime_hmm == "crisis" and bear_prob >= 0.45)
-            or (regime_label == "crisis" and bear_prob >= 0.45)
-            or _geo_crash_crisis
-        )
+        else:
+            is_crisis = (
+                bear_prob >= 0.65
+                or (bear_prob < 0.0 and regime_hmm == "bear")
+                or (regime_hmm == "crisis" and bear_prob >= 0.45)
+                or (regime_label == "crisis" and bear_prob >= 0.45)
+            )
         self._is_crisis = is_crisis
         is_bull = (
             bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")
@@ -835,10 +902,11 @@ class StrategyNode(Node):
             #   Post-mortem: demeaned composites for short candidates cluster at -0.05 to -0.07,
             #   exactly where the 0.07 floor was blocking them. Lowering to 0.05 captures the
             #   cross-sectional underperformers that demeaning naturally produces.
-            # V95: revert 0.05→0.07 — V94 forensics showed the extra 14 sub-0.07 shorts
-            #   netted ~+$14 while thresh_scale deflation in quiet markets produced 31 losing
-            #   crisis longs (-$56). The short_thresh change was not the root cause; reverting
-            #   to reduce noise.
+            # V95: revert 0.05→0.07 — V94 forensics showed only 3 shorts in 200 cycles
+            #   (fewer than V93's 6) and the WR/PnL loss was from crisis-labeled longs
+            #   (opened in normal regime, closed during market decline), not from shorts.
+            #   The short_thresh reduction had no measurable positive effect; reverting to
+            #   V88's stable 0.07 which was specifically calibrated to reduce noise shorts.
             self._short_conviction_threshold = 0.07
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
@@ -847,6 +915,35 @@ class StrategyNode(Node):
                 max(bull_prob, 0.0),
                 regime_hmm,
             )
+
+        # V95: Geodesic crash proximity gate — when the market manifold is closer to
+        # the crash reference state than the rally state, raise long_thresh proportionally.
+        # Geodesic distance is computed in signal_generation.py (MarketManifold) and
+        # injected as _geometry_geo_dist_crash / _geometry_geo_dist_rally in signals.
+        # When crash_dist < rally_dist the market's return distribution is closer to the
+        # crisis regime (negative drift, high variance, negative skew); we suppress longs
+        # without hard-blocking (that's what _block_longs=True does in confirmed crisis).
+        # Crash proximity = 1 - crash_dist/(crash_dist + rally_dist): 1.0 = at crash, 0.0 = at rally.
+        # Raise long_thresh by up to 40% when proximity ≥ 0.6.  Only applies when not already
+        # in hard crisis (where _long_conviction_threshold is already 0.50).
+        if self.features.geodesic_crash_distance and not is_crisis:
+            _geo_crash = float(signals.get("_geometry_geo_dist_crash", -1.0))
+            _geo_rally = float(signals.get("_geometry_geo_dist_rally", -1.0))
+            if _geo_crash >= 0.0 and _geo_rally >= 0.0 and (_geo_crash + _geo_rally) > 1e-6:
+                _crash_prox = 1.0 - _geo_crash / (_geo_crash + _geo_rally)
+                if _crash_prox >= 0.6:
+                    _geo_scale = 1.0 + 0.4 * (_crash_prox - 0.6) / 0.4  # linear 1.0→1.4
+                    _geo_scale = min(_geo_scale, 1.4)
+                    _prev_long = self._long_conviction_threshold
+                    self._long_conviction_threshold *= _geo_scale
+                    logger.info(
+                        "V95 geodesic gate: crash_prox=%.3f geo_scale=%.2f "
+                        "long_thresh %.4f→%.4f",
+                        _crash_prox,
+                        _geo_scale,
+                        _prev_long,
+                        self._long_conviction_threshold,
+                    )
 
     def _passes_conviction_filters(
         self, sig: dict, cycle: int, direction: str = "long"
@@ -880,23 +977,6 @@ class StrategyNode(Node):
         # _apply_regime_adaptive_thresholds() sets these each cycle before the
         # per-ticker loop so CRISIS → lower short bar, BULL → lower long bar.
         w_conv = self._compute_weighted_conviction(sig)
-        # V95 Enhancement D: Fiedler spectral gap conviction modulator.
-        # When raw Fiedler λ₂ < 0.3, the signal correlation graph is fragmented — sub-signals
-        # are not forming a coherent consensus network.  In fragmented markets, conviction scores
-        # are noisy, so we apply a 0.75x multiplier before comparing to thresholds.
-        # Use _last_fiedler_raw stored at top of _construct_portfolio (set each cycle).
-        _fiedler_raw = getattr(self, "_last_fiedler_raw", 1.0)
-        if _fiedler_raw < 0.3:
-            _effective_w_conv = w_conv * 0.75
-            logger.debug(
-                "V95 Fiedler conviction modulator: fiedler_λ₂=%.4f < 0.3 → "
-                "w_conv %.3f → %.3f (×0.75)",
-                _fiedler_raw,
-                w_conv,
-                _effective_w_conv,
-            )
-        else:
-            _effective_w_conv = w_conv
         # 3a. Absolute minimum conviction floor: regime-dependent (V80/V81 fix).
         # Normal/high_vol: use abs_min_conviction (0.06 as of V81) — calibrated on V78/V80 data.
         # Crisis shorts: use crisis short_thresh (0.04) — the floor was negating the V77
@@ -906,8 +986,8 @@ class StrategyNode(Node):
             _effective_floor = self._short_conviction_threshold  # 0.04 in crisis
         else:
             _effective_floor = self._abs_min_conviction  # 0.06 in normal/high_vol (V81)
-        if abs(_effective_w_conv) < _effective_floor:
-            return False, f"abs_min_conviction({abs(_effective_w_conv):.2f}<{_effective_floor:.2f})"
+        if abs(w_conv) < _effective_floor:
+            return False, f"abs_min_conviction({abs(w_conv):.2f}<{_effective_floor:.2f})"
         base_threshold = (
             self._long_conviction_threshold
             if direction == "long"
@@ -921,8 +1001,8 @@ class StrategyNode(Node):
         # V84's zero_streak=30 was caused by this multiplier blocking all non-blacklisted
         # tickers in the post-crash recovery period. Base thresholds are the quality gate.
         conv_threshold = base_threshold
-        if abs(_effective_w_conv) < conv_threshold:
-            return False, f"weighted_conviction({abs(_effective_w_conv):.2f}<{conv_threshold:.2f})"
+        if abs(w_conv) < conv_threshold:
+            return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
 
         return True, "pass"
 
@@ -1072,6 +1152,7 @@ class StrategyNode(Node):
         """
         current_cycle = self._execution_count
         self._last_ticker_decisions = {}  # reset each cycle
+        self._last_confluence = {}  # reset confluence cache each cycle
 
         # Set per-direction conviction thresholds based on current regime.
         # CRISIS/BEAR → shorts get lower bar (0.05), longs get higher bar (0.20).
@@ -1130,11 +1211,7 @@ class StrategyNode(Node):
         # With basket_std=0.38 (April 2026 crisis), uncapped scale=1.9 inflates crisis
         # long_thresh from 0.50→0.95 and short_thresh from 0.04→0.076, blocking all trades.
         # Cap at 1.5 means max 50% above base: long_thresh→0.75, short_thresh→0.06.
-        # V95: add lower floor 0.5 — V94 forensics: basket_std≈0.033 in quiet markets produced
-        # thresh_scale=0.165, deflating crisis long_thresh 0.50→0.083 and allowing low-conviction
-        # trades through the intended 0.50 crisis gate. 31 crisis longs at conviction≈0.083
-        # generated 19% WR, -$56.29. Floor at 0.5 ensures crisis long_thresh ≥ 0.25 always.
-        _thresh_scale = max(min(_basket_std / 0.20, 1.5), 0.5)
+        _thresh_scale = min(_basket_std / 0.20, 1.5)
         self._weighted_conviction_threshold = 0.10 * _thresh_scale
         self._long_conviction_threshold *= _thresh_scale
         self._short_conviction_threshold *= _thresh_scale
@@ -1231,9 +1308,6 @@ class StrategyNode(Node):
         _fiedler_scale = self._fiedler_size_scale(_spectral_val.value, _spectral_val.regime_tag)
         self._last_fiedler_scale = _fiedler_scale
         self._last_fiedler_tag = _spectral_val.regime_tag
-        # V95: store raw Fiedler λ₂ for conviction modulation in _passes_conviction_filters.
-        # Raw value (not z-score): < 0.3 indicates fragmented graph → reduce conviction 25%.
-        self._last_fiedler_raw: float = float(_spectral_val.raw.get("fiedler", 1.0))
 
         # V75: Fiedler-fragmented streak tracker + elevated long threshold.
         # When signals are persistently fragmented (30+ consecutive cycles) AND bear_prob is
@@ -1272,35 +1346,52 @@ class StrategyNode(Node):
                 self._long_conviction_threshold,
             )
 
-        # V95 (d): Fiedler conviction modulation — when signal graph is fragmented/stress
-        # (regime_tag in {"stress","fragmented"}) AND z-score < -1.0, scale all composites
-        # 0.75× before re-scoring convictions.  This ensures low-Fiedler periods reduce the
-        # effective conviction seen by the filter stack, not just position size post-selection.
-        # Rationale: _fiedler_scale already shrinks POSITIONS after selection; this gate
-        # reduces SIGNAL STRENGTH before selection so marginal proposals don't even enter.
-        if (
-            _spectral_val.regime_tag in ("stress", "fragmented")
-            and float(_spectral_val.value) < -1.0
-            and not self._is_crisis  # crisis already handled by _block_longs
-        ):
-            _fiedler_conv_damp = 0.75
-            for _t, _s in signals.items():
-                if not _t.startswith("_") and isinstance(_s, dict) and "composite" in _s:
-                    _s["composite"] = _s["composite"] * _fiedler_conv_damp
-            # Re-score convictions with dampened composites
-            for _t2, _sig2 in signals.items():
-                if _t2.startswith("_") or not isinstance(_sig2, dict):
-                    continue
-                _c2 = _sig2.get("composite")
-                if _c2 is not None:
-                    convictions[_t2] = score_to_conviction(float(_c2) * _cs_norm)
-            logger.info(
-                "V95 Fiedler conviction damp: regime=%s z=%.3f → composites×%.2f, "
-                "convictions recomputed",
-                _spectral_val.regime_tag,
-                float(_spectral_val.value),
-                _fiedler_conv_damp,
-            )
+        # V95: Fiedler conviction modulation — use the spectral graph connectivity to
+        # fine-tune conviction thresholds beyond the coarse fragmented-streak gate above.
+        #
+        # When Fiedler is "fragmented" (z < 0, signals diverging): market is under hidden
+        # stress; lower short_thresh slightly to allow more bearish entries while the graph
+        # is incoherent (directional shorts are more reliable than contrarian longs).
+        # Floor: max(0.04, short_thresh * 0.85) — never below 0.04 (crisis short floor).
+        #
+        # When Fiedler z-score > 1.0 (consensus, signals strongly aligned): the signal
+        # consensus increases confidence in directional moves; lower both thresholds by 10%
+        # to allow more trades when the graph says "agree on a direction".
+        # Cap: consensus can't lower below abs_min_conviction (0.02).
+        #
+        # "warmup" (not enough history yet): no adjustment.
+        if self.features.fiedler_conviction_modulation:
+            _fiedler_z = float(_spectral_val.value)
+            _fiedler_tag = _spectral_val.regime_tag
+            if _fiedler_tag == "fragmented" and not self._is_crisis:
+                # Lower short bar during signal fragmentation — shorts are the safer direction
+                _new_short = max(0.04, self._short_conviction_threshold * 0.85)
+                if _new_short < self._short_conviction_threshold:
+                    logger.info(
+                        "V95 Fiedler modulation: fragmented (z=%.2f) → short_thresh %.4f→%.4f",
+                        _fiedler_z,
+                        self._short_conviction_threshold,
+                        _new_short,
+                    )
+                    self._short_conviction_threshold = _new_short
+            elif _fiedler_tag not in ("warmup", "fragmented") and _fiedler_z > 1.0:
+                # Strong consensus: slightly lower both bars to capture momentum conviction
+                _consensus_scale = max(0.90, 1.0 - 0.05 * min(_fiedler_z - 1.0, 2.0))
+                _new_long = max(self._abs_min_conviction, self._long_conviction_threshold * _consensus_scale)
+                _new_short = max(self._abs_min_conviction, self._short_conviction_threshold * _consensus_scale)
+                if _consensus_scale < 1.0:
+                    logger.debug(
+                        "V95 Fiedler modulation: consensus (z=%.2f scale=%.2f) "
+                        "long %.4f→%.4f short %.4f→%.4f",
+                        _fiedler_z,
+                        _consensus_scale,
+                        self._long_conviction_threshold,
+                        _new_long,
+                        self._short_conviction_threshold,
+                        _new_short,
+                    )
+                    self._long_conviction_threshold = _new_long
+                    self._short_conviction_threshold = _new_short
 
         # --- Sit-out filter ---
         sit_out_reason, sit_out_size_mult = self._check_sit_out(signals, market_data)
@@ -1497,6 +1588,11 @@ class StrategyNode(Node):
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (long): %s", ticker, reason)
                     continue
+                if self.features.signal_confluence and self._confluence is not None:
+                    _cf = self._confluence.analyze(sig, ticker=ticker, direction="long")
+                    self._last_confluence[ticker] = _cf
+                    if _cf.is_uncertain:
+                        logger.debug("Confluence UNCERTAIN %s (long): %s", ticker, _cf.to_log_str())
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
@@ -1543,12 +1639,13 @@ class StrategyNode(Node):
                             _c_val.name,
                             _raw_composite,
                         )
-                    elif not self._is_crisis and _wconv_short >= 0.09:
+                    elif not self._is_crisis and _wconv_short >= (0.07 if self.features.v96_multi_cycle_bypass else 0.09):
                         logger.debug(
                             "Multi-cycle: %s normal short — bypassing confirmation "
-                            "(w_conv=%.3f >= 0.09)",
+                            "(w_conv=%.3f >= %.2f)",
                             ticker,
                             _wconv_short,
+                            0.07 if self.features.v96_multi_cycle_bypass else 0.09,
                         )
                     else:
                         logger.debug(
@@ -1571,6 +1668,11 @@ class StrategyNode(Node):
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (short): %s", ticker, reason)
                     continue
+                if self.features.signal_confluence and self._confluence is not None:
+                    _cf = self._confluence.analyze(sig, ticker=ticker, direction="short")
+                    self._last_confluence[ticker] = _cf
+                    if _cf.is_uncertain:
+                        logger.debug("Confluence UNCERTAIN %s (short): %s", ticker, _cf.to_log_str())
                 short_candidates[ticker] = sig
 
         if regime_blocked_longs or regime_blocked_shorts:
@@ -1730,15 +1832,29 @@ class StrategyNode(Node):
         for ticker, w in long_base.items():
             _w_conv = abs(self._compute_weighted_conviction(long_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
-            _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
-            raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+            if self.features.signal_confluence:
+                _cf = self._last_confluence.get(ticker)
+                _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
+                _cf_size_mult = _cf.size_multiplier if _cf else 1.0
+                _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
+                raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _cf_size_mult
+            else:
+                _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
+                raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
-            _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
-            raw_weights[ticker] = (
-                -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
-            )
+            if self.features.signal_confluence:
+                _cf = self._last_confluence.get(ticker)
+                _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
+                _cf_size_mult = _cf.size_multiplier if _cf else 1.0
+                _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
+                raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _cf_size_mult
+            else:
+                _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
+                raw_weights[ticker] = (
+                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+                )
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
         _kelly_scale = self._kelly_fraction()
@@ -1783,66 +1899,66 @@ class StrategyNode(Node):
                 _spectral_val.regime_tag,
             )
 
-        # ── V95 geometry signal modifiers ────────────────────────────────────
-        # (a) Ricci-weighted position sizing.
-        #     ricci_curvature > 0 → mean-reverting market → reduce size to 0.8x
-        #                            (fading extremes is riskier in choppy markets)
-        #     ricci_curvature < 0 → trending market → increase size to 1.2x
-        #                            (momentum has structural support)
-        #     Uses the z-scored Ricci scalar sign stored as signals["_ricci_scalar"].
-        _ricci_scalar = signals.get("_ricci_scalar")
-        if _ricci_scalar is not None and weights:
-            _rs = float(_ricci_scalar)
-            if _rs > 0:
-                _ricci_size_mult = 0.8  # mean-reverting: reduce
-            elif _rs < 0:
-                _ricci_size_mult = 1.2  # trending: increase
-            else:
-                _ricci_size_mult = 1.0
-            if _ricci_size_mult != 1.0:
-                weights = {t: w * _ricci_size_mult for t, w in weights.items()}
-                logger.info(
-                    "V95 Ricci sizing: scalar=%.3f → %s → size_mult=%.1f",
-                    _rs,
-                    "mean-reverting" if _rs > 0 else "trending",
-                    _ricci_size_mult,
-                )
-
-        # (b) ORC network stress risk-off signal.
-        #     ollivier_ricci_signal < -0.3 means mean_curvature > 0 (positive ORC curvature)
-        #     = correlations converging, diversification breaking down (contagion/stress).
-        #     Apply basket-level 50% position reduction.
-        #     Read the signal value from the first ticker that has it (market-level, same for all).
-        _orc_signal: float | None = None
-        for _ts_val in signals.values():
-            if isinstance(_ts_val, dict) and "ollivier_ricci_signal" in _ts_val:
-                _orc_signal = float(_ts_val["ollivier_ricci_signal"])
-                break
-        if _orc_signal is not None and _orc_signal < -0.3 and weights:
-            _orc_stress_mult = 0.5
-            weights = {t: w * _orc_stress_mult for t, w in weights.items()}
+        # V95: Geometry-based position size modulation.
+        #
+        # (A) ORC stress signal: when mean Ollivier-Ricci curvature > 0.1 (stress regime —
+        # correlated assets share return distributions, signalling contagion), reduce all
+        # position sizes.  The stress multiplier decays linearly from 1.0 at kappa=0.1
+        # to 0.6 at kappa=0.5+ (20% reduction per 0.1 kappa above the threshold).
+        # This is separate from Fiedler — ORC measures cross-asset contagion while Fiedler
+        # measures within-signal-type consensus.
+        #
+        # (B) Ricci-weighted sizing: when the market manifold has high Ricci curvature
+        # (mean-reverting geometry) AND the market is closer to the crash reference than
+        # the rally reference (geo_dist_crash < geo_dist_rally), reduce long position sizes.
+        # This catches the "buying the dip in a crash" failure mode that V75 partially
+        # addressed with the theta_mu dampening of the manifold signal.
+        # Ricci scale for longs: 1.0 - 0.3 * max(0, ricci_raw / 3.0) when approaching crash.
+        _geometry_size_mult = 1.0
+        _orc_kappa = float(signals.get("_geometry_orc_kappa", 0.0))
+        _orc_regime = str(signals.get("_geometry_orc_regime", "neutral"))
+        if self.features.orc_stress_reduction and _orc_regime == "stress" and _orc_kappa > 0.1:
+            _orc_mult = max(0.6, 1.0 - 2.0 * (_orc_kappa - 0.1))
+            _geometry_size_mult *= _orc_mult
             logger.info(
-                "V95 ORC stress: ollivier_ricci_signal=%.3f < -0.3 → risk-off scale 0.50",
-                _orc_signal,
+                "V95 ORC stress: kappa=%.3f regime=%s → size_mult=%.2f",
+                _orc_kappa,
+                _orc_regime,
+                _orc_mult,
             )
 
-        # (c) Geodesic crash proximity.
-        #     _crash_proximity is the minimum Fisher-Rao distance to known crash states.
-        #     Low value (< 0.5) = regime is crash-like → early crisis detection.
-        #     Handled upstream in _apply_regime_adaptive_thresholds (forces regime="crisis").
-        #     Here we also apply a position size reduction when proximity is low.
-        _crash_proximity = signals.get("_crash_proximity")
-        if _crash_proximity is not None and weights:
-            _cp = float(_crash_proximity)
-            if _cp < 3.0:
-                _geo_size_mult = max(0.75, min(1.0, 0.75 + 0.25 * (_cp - 1.0) / 2.0))
-                if _geo_size_mult < 1.0:
-                    weights = {t: w * _geo_size_mult for t, w in weights.items()}
-                    logger.info(
-                        "V95 Crash proximity: dist=%.3f → size_mult=%.3f",
-                        _cp,
-                        _geo_size_mult,
-                    )
+        _ricci_raw = float(signals.get("_geometry_ricci_raw", 0.0))
+        _geo_crash = float(signals.get("_geometry_geo_dist_crash", -1.0))
+        _geo_rally = float(signals.get("_geometry_geo_dist_rally", -1.0))
+        _approaching_crash = (
+            _geo_crash >= 0.0
+            and _geo_rally >= 0.0
+            and (_geo_crash + _geo_rally) > 1e-6
+            and _geo_crash < _geo_rally
+        )
+        if self.features.ricci_sizing and _approaching_crash and _ricci_raw > 0.3 and weights:
+            # Manifold in mean-reversion geometry AND drifting toward crash state:
+            # reduce long position sizes by up to 30%
+            _ricci_long_mult = max(0.7, 1.0 - 0.3 * min(_ricci_raw / 3.0, 1.0))
+            _new_weights: dict[str, float] = {}
+            for _t, _w in weights.items():
+                _new_weights[_t] = _w * _ricci_long_mult if _w > 0 else _w
+            if any(abs(_new_weights[_t]) != abs(weights[_t]) for _t in _new_weights):
+                logger.info(
+                    "V95 Ricci sizing: ricci=%.3f approaching_crash=True → long_mult=%.2f",
+                    _ricci_raw,
+                    _ricci_long_mult,
+                )
+                weights = _new_weights
+
+        if _geometry_size_mult < 1.0 and weights:
+            weights = {t: w * _geometry_size_mult for t, w in weights.items()}
+            logger.info(
+                "V95 geometry size mult=%.3f (orc_kappa=%.3f orc_regime=%s)",
+                _geometry_size_mult,
+                _orc_kappa,
+                _orc_regime,
+            )
 
         # ── Portfolio risk manager (layers 1-5) ─────────────────────────────
         # Build price_histories for vol-scaling from market_data
@@ -2020,6 +2136,73 @@ class StrategyNode(Node):
 
         self._last_ticker_decisions = _ticker_decisions
         # ── end decision traces ──────────────────────────────────────────────
+
+        # ── Signal correlation monitor (gated) ───────────────────────────────
+        if self.features.signal_correlation_monitor and self._corr_monitor is not None:
+            self._corr_monitor.update(current_cycle, signals)
+            if self._trace_writer is not None and self._corr_monitor.get_matrix():
+                self._corr_monitor.save(self._trace_writer._version)
+
+        # ── Extended DecisionTrace persistence (gated) ───────────────────────
+        if self.features.decision_traces and self._trace_writer is not None:
+            import datetime as _dt
+            _now_ts = _dt.datetime.now(_dt.UTC).isoformat()
+            _trace_version = self._trace_writer._version
+            _geo_ricci = float(signals.get("_ricci_scalar", 0.0) or 0.0)
+            _geo_orc = float(signals.get("_orc_mean_curvature", 0.0) or 0.0)
+            _geo_crash_d = float(signals.get("_geo_dist_crash", float("inf")) or float("inf"))
+            _geo_fiedler = float(getattr(self, "_last_fiedler_raw", 1.0))
+            _bear = float(signals.get("_regime_w_bear_prob", -1.0))
+            _bull = float(signals.get("_regime_w_bull_prob", -1.0))
+            _traces: list[DecisionTrace] = []
+            for _tr_ticker, _td in _ticker_decisions.items():
+                _tr_sig = signals.get(_tr_ticker, {})
+                _signal_vals = {
+                    k: float(v)
+                    for k, v in _tr_sig.items()
+                    if (k.endswith("_signal") or k == "sma_crossover")
+                    and isinstance(v, (int, float))
+                }
+                _w_conv = self._compute_weighted_conviction(_tr_sig) if _tr_sig else 0.0
+                _thresh = (
+                    self._long_conviction_threshold
+                    if _td.proposal == "LONG"
+                    else self._short_conviction_threshold
+                )
+                trace = DecisionTrace(
+                    ticker=_tr_ticker,
+                    cycle=current_cycle,
+                    version=_trace_version,
+                    timestamp=_now_ts,
+                    signals=_signal_vals,
+                    raw_composite=_td.raw_composite,
+                    demeaned_composite=_td.demeaned_composite,
+                    basket_mean=_td.basket_mean,
+                    basket_std=_basket_std,
+                    weighted_conviction=_w_conv,
+                    regime=_regime_consolidated,
+                    bear_prob=_bear,
+                    bull_prob=_bull,
+                    thresh_scale=_thresh_scale,
+                    long_thresh=self._long_conviction_threshold,
+                    short_thresh=self._short_conviction_threshold,
+                    abs_min_conviction=self._abs_min_conviction,
+                    ricci_scalar=_geo_ricci,
+                    orc_mean=_geo_orc,
+                    geo_dist_crash=_geo_crash_d,
+                    fiedler_raw=_geo_fiedler,
+                    proposal=_td.proposal,
+                    filters_fired=_td.filters_applied,
+                    blocking_filter=_td.filter_reason,
+                    final_decision=_td.final_action,
+                    threshold_gap=abs(_w_conv) - _thresh,
+                    explanation="",
+                )
+                trace.explanation = build_explanation(trace)
+                _traces.append(trace)
+            if _traces:
+                self._trace_writer.write_many(_traces)
+        # ── end observability ────────────────────────────────────────────────
 
         # Record cycle as having produced trades (for time filter)
         if weights:
