@@ -575,8 +575,12 @@ class SignalGenerationNode(Node):
         if _manifold_state_ref is not None:
             with contextlib.suppress(Exception):
                 signals["_geometry_ricci_raw"] = round(float(_manifold_state_ref.ricci), 4)
-                signals["_geometry_geo_dist_crash"] = round(float(_manifold_state_ref.geo_dist_crash), 4)
-                signals["_geometry_geo_dist_rally"] = round(float(_manifold_state_ref.geo_dist_rally), 4)
+                signals["_geometry_geo_dist_crash"] = round(
+                    float(_manifold_state_ref.geo_dist_crash), 4
+                )
+                signals["_geometry_geo_dist_rally"] = round(
+                    float(_manifold_state_ref.geo_dist_rally), 4
+                )
                 signals["_geometry_manifold_regime"] = _manifold_state_ref.regime
         _orc_state_ref = locals().get("_orc_state")
         if _orc_state_ref is not None and _orc_state_ref.confidence >= 0.3:

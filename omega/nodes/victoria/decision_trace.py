@@ -147,9 +147,7 @@ def build_explanation(trace: DecisionTrace) -> str:
 
     if trace.blocking_filter.startswith("weighted_conviction"):
         gap = trace.threshold_gap
-        thresh = (
-            trace.long_thresh if trace.proposal == "LONG" else trace.short_thresh
-        )
+        thresh = trace.long_thresh if trace.proposal == "LONG" else trace.short_thresh
         return (
             f"{trace.ticker}: {trace.proposal} REJECTED — w_conv={trace.weighted_conviction:+.3f} "
             f"missed threshold {thresh:.3f} by {-gap:.3f} "
@@ -163,7 +161,9 @@ def build_explanation(trace: DecisionTrace) -> str:
         )
 
     if trace.blocking_filter == "time_filter":
-        return f"{trace.ticker}: {trace.proposal} SKIPPED — time filter (too soon after last trade)"
+        return (
+            f"{trace.ticker}: {trace.proposal} SKIPPED — time filter (too soon after last trade)"
+        )
 
     if "regime_block" in trace.blocking_filter:
         return (
@@ -191,7 +191,7 @@ class TraceWriter:
         self._dir = Path(output_dir) / "decision_traces"
         self._dir.mkdir(parents=True, exist_ok=True)
         self._path = self._dir / f"{version}.jsonl"
-        self._fh = open(self._path, "a")  # noqa: SIM115
+        self._fh = open(self._path, "a")
         logger.info("TraceWriter: writing to %s", self._path)
 
     @property

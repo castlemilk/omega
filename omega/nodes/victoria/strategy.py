@@ -191,7 +191,17 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
     #   wrong-direction. BNB long signals are untested; removing entirely until trend clears.
     # V93: SUIUSDT fully blacklisted — V92: 2T 0% WR -$9.14. Only 2 trades, both losses.
     #   SUI signal is noise-level; insufficient data to trust either direction.
-    {"BTCUSDT", "DOTUSDT", "MATICUSDT", "XRPUSDT", "SOLUSDT", "AVAXUSDT", "LINKUSDT", "BNBUSDT", "SUIUSDT"}
+    {
+        "BTCUSDT",
+        "DOTUSDT",
+        "MATICUSDT",
+        "XRPUSDT",
+        "SOLUSDT",
+        "AVAXUSDT",
+        "LINKUSDT",
+        "BNBUSDT",
+        "SUIUSDT",
+    }
 )
 
 # Symbols excluded from LONG positions only (shorts still permitted).
@@ -821,13 +831,19 @@ class StrategyNode(Node):
             # when FGI > 0.25 (extreme fear = contrarian signal = panic-short suppression).
             # V71 mistake: enabling longs at 0.30 in crisis — those longs close in "normal"
             # regime and appear as normal-regime losses (-$145.61). Keep longs blocked.
-            _fg_val = next(
-                (v.get("fear_greed_signal", 0.0)
-                 for k, v in signals.items()
-                 if not k.startswith("_") and isinstance(v, dict)
-                 and "fear_greed_signal" in v),
-                0.0,
-            ) or 0.0
+            _fg_val = (
+                next(
+                    (
+                        v.get("fear_greed_signal", 0.0)
+                        for k, v in signals.items()
+                        if not k.startswith("_")
+                        and isinstance(v, dict)
+                        and "fear_greed_signal" in v
+                    ),
+                    0.0,
+                )
+                or 0.0
+            )
             # V84: lower from 0.99 (hard-block) to 0.50 — 0.99 combined with _thresh_scale
             # inflates to 1.88, making longs mathematically impossible even for exceptionally
             # strong signals. 0.50 still blocks weak/moderate crisis longs but allows through
@@ -937,8 +953,7 @@ class StrategyNode(Node):
                     _prev_long = self._long_conviction_threshold
                     self._long_conviction_threshold *= _geo_scale
                     logger.info(
-                        "V95 geodesic gate: crash_prox=%.3f geo_scale=%.2f "
-                        "long_thresh %.4f→%.4f",
+                        "V95 geodesic gate: crash_prox=%.3f geo_scale=%.2f long_thresh %.4f→%.4f",
                         _crash_prox,
                         _geo_scale,
                         _prev_long,
@@ -1229,10 +1244,7 @@ class StrategyNode(Node):
         # --- Regime transition cooldown (V92) ---
         # Skip new entries for 3 cycles after a regime shift to avoid entering on stale signals.
         _current_regime_for_cooldown = "crisis" if self._is_crisis else _regime_consolidated
-        if (
-            _current_regime_for_cooldown != self._last_regime
-            and self._last_regime != ""
-        ):
+        if _current_regime_for_cooldown != self._last_regime and self._last_regime != "":
             logger.info(
                 "Regime transition cooldown: %s → %s, skipping entries for 3 cycles",
                 self._last_regime,
@@ -1377,8 +1389,12 @@ class StrategyNode(Node):
             elif _fiedler_tag not in ("warmup", "fragmented") and _fiedler_z > 1.0:
                 # Strong consensus: slightly lower both bars to capture momentum conviction
                 _consensus_scale = max(0.90, 1.0 - 0.05 * min(_fiedler_z - 1.0, 2.0))
-                _new_long = max(self._abs_min_conviction, self._long_conviction_threshold * _consensus_scale)
-                _new_short = max(self._abs_min_conviction, self._short_conviction_threshold * _consensus_scale)
+                _new_long = max(
+                    self._abs_min_conviction, self._long_conviction_threshold * _consensus_scale
+                )
+                _new_short = max(
+                    self._abs_min_conviction, self._short_conviction_threshold * _consensus_scale
+                )
                 if _consensus_scale < 1.0:
                     logger.debug(
                         "V95 Fiedler modulation: consensus (z=%.2f scale=%.2f) "
@@ -1592,7 +1608,9 @@ class StrategyNode(Node):
                     _cf = self._confluence.analyze(sig, ticker=ticker, direction="long")
                     self._last_confluence[ticker] = _cf
                     if _cf.is_uncertain:
-                        logger.debug("Confluence UNCERTAIN %s (long): %s", ticker, _cf.to_log_str())
+                        logger.debug(
+                            "Confluence UNCERTAIN %s (long): %s", ticker, _cf.to_log_str()
+                        )
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
@@ -1628,10 +1646,12 @@ class StrategyNode(Node):
                     _c_val = convictions.get(ticker, ConvictionLevel.HOLD)
                     _raw_composite = sig.get("composite", 0.0)
                     _wconv_short = abs(self._compute_weighted_conviction(sig))
-                    if (self._is_crisis
-                            and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
-                            and _raw_composite <= -0.07
-                            and ticker not in _CRISIS_BYPASS_BLACKLIST):
+                    if (
+                        self._is_crisis
+                        and _c_val in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL)
+                        and _raw_composite <= -0.07
+                        and ticker not in _CRISIS_BYPASS_BLACKLIST
+                    ):
                         logger.debug(
                             "Multi-cycle: %s crisis short — bypassing confirmation "
                             "(conviction=%s, composite=%.3f)",
@@ -1639,7 +1659,9 @@ class StrategyNode(Node):
                             _c_val.name,
                             _raw_composite,
                         )
-                    elif not self._is_crisis and _wconv_short >= (0.07 if self.features.v96_multi_cycle_bypass else 0.09):
+                    elif not self._is_crisis and _wconv_short >= (
+                        0.07 if self.features.v96_multi_cycle_bypass else 0.09
+                    ):
                         logger.debug(
                             "Multi-cycle: %s normal short — bypassing confirmation "
                             "(w_conv=%.3f >= %.2f)",
@@ -1672,7 +1694,9 @@ class StrategyNode(Node):
                     _cf = self._confluence.analyze(sig, ticker=ticker, direction="short")
                     self._last_confluence[ticker] = _cf
                     if _cf.is_uncertain:
-                        logger.debug("Confluence UNCERTAIN %s (short): %s", ticker, _cf.to_log_str())
+                        logger.debug(
+                            "Confluence UNCERTAIN %s (short): %s", ticker, _cf.to_log_str()
+                        )
                 short_candidates[ticker] = sig
 
         if regime_blocked_longs or regime_blocked_shorts:
@@ -1837,10 +1861,17 @@ class StrategyNode(Node):
                 _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
                 _cf_size_mult = _cf.size_multiplier if _cf else 1.0
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
-                raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _cf_size_mult
+                raw_weights[ticker] = (
+                    w
+                    * conviction_size_multiplier(convictions[ticker])
+                    * _conv_scale
+                    * _cf_size_mult
+                )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
-                raw_weights[ticker] = w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+                raw_weights[ticker] = (
+                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+                )
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
@@ -1849,7 +1880,12 @@ class StrategyNode(Node):
                 _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
                 _cf_size_mult = _cf.size_multiplier if _cf else 1.0
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
-                raw_weights[ticker] = -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _cf_size_mult
+                raw_weights[ticker] = (
+                    -w
+                    * conviction_size_multiplier(convictions[ticker])
+                    * _conv_scale
+                    * _cf_size_mult
+                )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
                 raw_weights[ticker] = (
@@ -2146,6 +2182,7 @@ class StrategyNode(Node):
         # ── Extended DecisionTrace persistence (gated) ───────────────────────
         if self.features.decision_traces and self._trace_writer is not None:
             import datetime as _dt
+
             _now_ts = _dt.datetime.now(_dt.UTC).isoformat()
             _trace_version = self._trace_writer._version
             _geo_ricci = float(signals.get("_ricci_scalar", 0.0) or 0.0)

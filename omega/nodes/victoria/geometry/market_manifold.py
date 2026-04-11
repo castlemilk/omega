@@ -527,7 +527,7 @@ class MarketManifold:
         """
         # Known crash reference states: (mean_return, std_dev) pairs
         # Calibrated from major crypto drawdowns (>-30% in 30-day windows).
-        _CRASH_REFS: list[tuple[float, float]] = [
+        crash_refs: list[tuple[float, float]] = [
             (-0.05, 0.08),  # sharp panic sell-off (e.g. May 2021)
             (-0.04, 0.07),  # prolonged bear leg (e.g. Nov 2022)
             (-0.02, 0.05),  # slow bleed / high-vol sideways crash
@@ -538,7 +538,7 @@ class MarketManifold:
         fim = self._fisher_information_matrix(theta_current)
 
         distances: list[float] = []
-        for ref_mu, ref_sigma in _CRASH_REFS:
+        for ref_mu, ref_sigma in crash_refs:
             ref_var = max(ref_sigma * ref_sigma, 1e-10)
             theta_ref = np.array([ref_mu, ref_var, 0.0])
             d = self._geodesic_distance(theta_current, theta_ref, fim)

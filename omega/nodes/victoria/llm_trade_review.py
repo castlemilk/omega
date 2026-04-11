@@ -29,7 +29,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from omega.core.llm_shell import invoke as llm_invoke, is_available as llm_available
+from omega.core.llm_shell import invoke as llm_invoke
+from omega.core.llm_shell import is_available as llm_available
 
 logger = logging.getLogger("omega.nodes.victoria.llm_trade_review")
 
@@ -267,9 +268,7 @@ def run_review(
         auto_path = _find_decisions_jsonl(version)
         if auto_path:
             decisions = _load_decisions(auto_path)
-            logger.info(
-                "Auto-detected decisions at %s (%d cycles)", auto_path, len(decisions)
-            )
+            logger.info("Auto-detected decisions at %s (%d cycles)", auto_path, len(decisions))
 
     summaries = _aggregate_by_symbol(trades)
 
@@ -315,7 +314,7 @@ def _rule_based_summary(
     best = sorted(trades, key=lambda t: t.pnl, reverse=True)[:3]
 
     lines = [
-        f"## Summary",
+        "## Summary",
         "",
         f"**Total trades:** {len(trades)} | **Win rate:** {wr:.1%} | **Total PnL:** ${total_pnl:+.2f}",
         "",
@@ -370,9 +369,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(description="LLM post-trade review for Victoria")
     parser.add_argument("--version", required=True, help="Training version e.g. v98")
-    parser.add_argument(
-        "--trades", help="Path to trades CSV (default: data/{version}_trades.csv)"
-    )
+    parser.add_argument("--trades", help="Path to trades CSV (default: data/{version}_trades.csv)")
     parser.add_argument("--decisions", help="Path to decisions JSONL (optional)")
     parser.add_argument("--out", help="Output markdown path")
     args = parser.parse_args()

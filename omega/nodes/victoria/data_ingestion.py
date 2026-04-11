@@ -64,8 +64,8 @@ _BASE_PAIRS = [
     "MATICUSDT",
     # V92: added for basket diversity — all US-accessible via Coinbase/Kraken
     "NEARUSDT",  # Near Protocol — good volume
-    "SUIUSDT",   # Sui — high volume, trending L1
-    "ARBUSDT",   # Arbitrum — L2, strong volume
+    "SUIUSDT",  # Sui — high volume, trending L1
+    "ARBUSDT",  # Arbitrum — L2, strong volume
 ]
 
 _EXTENDED_PAIRS = [

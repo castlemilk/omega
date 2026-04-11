@@ -176,6 +176,7 @@ def _build_node_input(
       ``"src_node.port"`` → ``accumulated["src_node"]["port"]``
       ``"src_node.*"``    → ``accumulated["src_node"]`` (full result dict)
     """
+    from omega.core.actions import NodeAction
     from omega.core.node import NodeInput
 
     parameters: dict[str, Any] = {}
@@ -205,11 +206,14 @@ def _build_node_input(
             else:
                 parameters[conn_str] = src_result
 
-    # Determine action verb from node type
+    # Determine action verb from node type.
+    # Where an enum exists in NodeAction we use it; generic verb labels
+    # (ingest/decide/check_risk/execute/reflect) are project-runner
+    # conventions with no 1:1 NodeAction mapping and remain string literals.
     _action_map = {
         "data_provider": "ingest",
-        "regime_detector": "detect",
-        "signal_generator": "compute_signals",
+        "regime_detector": NodeAction.DETECT.value,
+        "signal_generator": NodeAction.COMPUTE_SIGNALS.value,
         "strategy": "decide",
         "risk_manager": "check_risk",
         "executor": "execute",

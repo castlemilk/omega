@@ -331,7 +331,7 @@ class DecisionEmbedder:
         decisions_path: str | Path,
         trades_csv: str | Path | None = None,
         version: str = "",
-    ) -> "DecisionEmbedder":
+    ) -> DecisionEmbedder:
         """
         Fit from decisions JSONL + optional trades CSV.
         Returns self for chaining.
@@ -351,8 +351,8 @@ class DecisionEmbedder:
 
         return self._fit(records)
 
-    def _fit(self, records: list[EmbeddingRecord]) -> "DecisionEmbedder":
-        X = np.array([r.feature_vector() for r in records], dtype=np.float32)
+    def _fit(self, records: list[EmbeddingRecord]) -> DecisionEmbedder:
+        X = np.array([r.feature_vector() for r in records], dtype=np.float32)  # noqa: N806 — ML convention
 
         if X.shape[0] < self.n_clusters:
             logger.warning(
@@ -363,7 +363,7 @@ class DecisionEmbedder:
             self.n_clusters = max(2, X.shape[0] // 2)
 
         self._scaler = StandardScaler()
-        X_scaled = self._scaler.fit_transform(X)
+        X_scaled = self._scaler.fit_transform(X)  # noqa: N806 — ML convention
 
         self._kmeans = KMeans(
             n_clusters=self.n_clusters,
@@ -373,10 +373,12 @@ class DecisionEmbedder:
         labels = self._kmeans.fit_predict(X_scaled)
 
         # Accumulate per-cluster stats
-        stats: dict[int, ClusterStats] = {i: ClusterStats(cluster_id=i) for i in range(self.n_clusters)}
+        stats: dict[int, ClusterStats] = {
+            i: ClusterStats(cluster_id=i) for i in range(self.n_clusters)
+        }
         proposal_counts: dict[int, dict[str, int]] = {i: {} for i in range(self.n_clusters)}
 
-        for rec, label in zip(records, labels):
+        for rec, label in zip(records, labels, strict=False):
             s = stats[int(label)]
             s.n_total += 1
             s.avg_conviction = (
@@ -459,8 +461,8 @@ class DecisionEmbedder:
         ]
         feature = sig_vec + regime_oh + geo_vec + [conviction_score]
 
-        X = np.array([feature], dtype=np.float32)
-        X_scaled = self._scaler.transform(X)
+        X = np.array([feature], dtype=np.float32)  # noqa: N806 — ML convention
+        X_scaled = self._scaler.transform(X)  # noqa: N806 — ML convention
         label = int(self._kmeans.predict(X_scaled)[0])
         return self._cluster_stats[label].bias
 
@@ -483,8 +485,8 @@ class DecisionEmbedder:
             float(geo.get("ricci", 0.0)),
         ]
         feature = sig_vec + regime_oh + geo_vec + [conviction_score]
-        X = np.array([feature], dtype=np.float32)
-        X_scaled = self._scaler.transform(X)
+        X = np.array([feature], dtype=np.float32)  # noqa: N806 — ML convention
+        X_scaled = self._scaler.transform(X)  # noqa: N806 — ML convention
         label = int(self._kmeans.predict(X_scaled)[0])
         return self._cluster_stats[label]
 
@@ -530,7 +532,7 @@ class DecisionEmbedder:
         logger.info("DecisionEmbedder: saved to %s", path)
 
     @classmethod
-    def load(cls, path: str | Path) -> "DecisionEmbedder":
+    def load(cls, path: str | Path) -> DecisionEmbedder:
         if not _DEPS_AVAILABLE:
             logger.warning("DecisionEmbedder.load: deps unavailable — returning unfitted instance")
             return cls()
@@ -541,9 +543,7 @@ class DecisionEmbedder:
         embedder._kmeans = d["kmeans"]
         embedder._scaler = d["scaler"]
         embedder._fitted = True
-        logger.info(
-            "DecisionEmbedder: loaded from %s (%d clusters)", path, embedder.n_clusters
-        )
+        logger.info("DecisionEmbedder: loaded from %s (%d clusters)", path, embedder.n_clusters)
         return embedder
 
 
@@ -578,17 +578,15 @@ def main() -> None:
     parser.add_argument("--version", required=True, help="Training version e.g. v98")
     parser.add_argument("--decisions", help="Path to decisions JSONL")
     parser.add_argument("--trades", help="Path to trades CSV")
-    parser.add_argument("--out", help="Output model path (default: data/{version}_cluster_model.pkl)")
+    parser.add_argument(
+        "--out", help="Output model path (default: data/{version}_cluster_model.pkl)"
+    )
     parser.add_argument("--clusters", type=int, default=8, help="Number of KMeans clusters")
     args = parser.parse_args()
 
     version = args.version
-    decisions = (
-        Path(args.decisions) if args.decisions else _find_decisions_auto(version)
-    )
-    trades = (
-        Path(args.trades) if args.trades else Path(f"data/{version}_trades.csv")
-    )
+    decisions = Path(args.decisions) if args.decisions else _find_decisions_auto(version)
+    trades = Path(args.trades) if args.trades else Path(f"data/{version}_trades.csv")
     out = Path(args.out) if args.out else Path(f"data/{version}_cluster_model.pkl")
 
     if decisions is None:

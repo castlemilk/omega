@@ -123,20 +123,32 @@ class AnomalyDetector:
         if self._n_checks >= self._min_baseline:
             # Check each metric against its rolling baseline
             anomalies += self._check_metric(
-                cycle, "pnl_per_cycle", pnl_delta, self._pnl,
+                cycle,
+                "pnl_per_cycle",
+                pnl_delta,
+                self._pnl,
                 direction="both",
             )
             anomalies += self._check_metric(
-                cycle, "trades_per_cycle", float(n_new_trades), self._trades,
+                cycle,
+                "trades_per_cycle",
+                float(n_new_trades),
+                self._trades,
                 direction="both",
             )
             anomalies += self._check_metric(
-                cycle, "zero_streak", float(zero_streak), self._zero_streak,
+                cycle,
+                "zero_streak",
+                float(zero_streak),
+                self._zero_streak,
                 direction="high",  # only alert when spike is HIGH (not low)
             )
             if basket_std > 0:
                 anomalies += self._check_metric(
-                    cycle, "basket_std", basket_std, self._basket_std,
+                    cycle,
+                    "basket_std",
+                    basket_std,
+                    self._basket_std,
                     direction="both",
                 )
 
@@ -211,15 +223,17 @@ class AnomalyDetector:
             return []
 
         msg = self._explain(name, value, mean, std, sigma)
-        return [AnomalyEvent(
-            cycle=cycle,
-            metric=name,
-            value=value,
-            mean=mean,
-            std=std,
-            sigma=round(sigma, 2),
-            message=msg,
-        )]
+        return [
+            AnomalyEvent(
+                cycle=cycle,
+                metric=name,
+                value=value,
+                mean=mean,
+                std=std,
+                sigma=round(sigma, 2),
+                message=msg,
+            )
+        ]
 
     @staticmethod
     def _explain(name: str, value: float, mean: float, std: float, sigma: float) -> str:
@@ -234,21 +248,30 @@ class AnomalyDetector:
             return (
                 f"PnL per cycle {direction}: {value:+.2f} is {abs(sigma):.1f}σ from baseline "
                 f"({mean:+.2f}±{std:.2f}). "
-                + ("Unusual loss — check regime or signal direction." if sigma < 0
-                   else "Unusually large gain — may indicate outlier trade.")
+                + (
+                    "Unusual loss — check regime or signal direction."
+                    if sigma < 0
+                    else "Unusually large gain — may indicate outlier trade."
+                )
             )
         if name == "trades_per_cycle":
             return (
                 f"Trade rate {direction}: {value:.0f} trades/cycle is {abs(sigma):.1f}σ from "
                 f"baseline ({mean:.1f}±{std:.1f}). "
-                + ("Check threshold deflation or filter override." if sigma > 0
-                   else "Check threshold inflation or signal failure.")
+                + (
+                    "Check threshold deflation or filter override."
+                    if sigma > 0
+                    else "Check threshold inflation or signal failure."
+                )
             )
         if name == "basket_std":
             return (
                 f"basket_std {direction}: {value:.4f} is {abs(sigma):.1f}σ from baseline "
                 f"({mean:.4f}±{std:.4f}). "
-                + ("Signals may have converged — cs_norm inflated, HOLD cycles likely." if sigma < 0
-                   else "High dispersion — check for outlier ticker or data error.")
+                + (
+                    "Signals may have converged — cs_norm inflated, HOLD cycles likely."
+                    if sigma < 0
+                    else "High dispersion — check for outlier ticker or data error."
+                )
             )
         return f"{name}={value:.3f} is {abs(sigma):.1f}σ from baseline ({mean:.3f}±{std:.3f})"

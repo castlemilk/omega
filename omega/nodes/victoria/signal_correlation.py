@@ -67,7 +67,7 @@ def _pearson(xs: list[float], ys: list[float]) -> float:
         return 0.0
     mx = sum(xs) / n
     my = sum(ys) / n
-    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
     dx = math.sqrt(sum((x - mx) ** 2 for x in xs))
     dy = math.sqrt(sum((y - my) ** 2 for y in ys))
     if dx == 0.0 or dy == 0.0:
@@ -134,9 +134,7 @@ class SignalCorrelationMonitor:
                     signal_counts[s] += 1
 
         snapshot = {
-            s: signal_sums[s] / signal_counts[s]
-            for s in TRACKED_SIGNALS
-            if signal_counts[s] > 0
+            s: signal_sums[s] / signal_counts[s] for s in TRACKED_SIGNALS if signal_counts[s] > 0
         }
         self._history.append(snapshot)
         self._n_updates += 1
@@ -189,8 +187,7 @@ class SignalCorrelationMonitor:
 
         # Only include signals present in at least 50% of observations
         active_signals = [
-            s for s in TRACKED_SIGNALS
-            if sum(1 for obs in history_list if s in obs) >= n * 0.5
+            s for s in TRACKED_SIGNALS if sum(1 for obs in history_list if s in obs) >= n * 0.5
         ]
 
         if len(active_signals) < 2:
@@ -198,8 +195,7 @@ class SignalCorrelationMonitor:
 
         # Build arrays — use 0.0 for missing observations (neutral)
         series: dict[str, list[float]] = {
-            s: [obs.get(s, 0.0) for obs in history_list]
-            for s in active_signals
+            s: [obs.get(s, 0.0) for obs in history_list] for s in active_signals
         }
 
         # Compute lower-triangular pairwise correlations

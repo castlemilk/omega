@@ -24,12 +24,13 @@ Presets
     v98_full_obs          everything that ran in V98 (geometry + observability)
     v99_full              all flags ON
 """
+
 from __future__ import annotations
 
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 
 logger = logging.getLogger("omega.victoria.features")
 
@@ -90,7 +91,7 @@ class VictoriaFeatures:
     # ------------------------------------------------------------------
 
     @classmethod
-    def from_env(cls) -> "VictoriaFeatures":
+    def from_env(cls) -> VictoriaFeatures:
         """Load feature flags from VICTORIA_FEATURES env var.
 
         Accepts a preset name ('v93_baseline') or a JSON dict of flag overrides.
@@ -104,9 +105,11 @@ class VictoriaFeatures:
         try:
             overrides = json.loads(raw)
         except json.JSONDecodeError:
-            logger.warning("VICTORIA_FEATURES=%r is not a preset name or valid JSON — using v93_baseline", raw)
+            logger.warning(
+                "VICTORIA_FEATURES=%r is not a preset name or valid JSON — using v93_baseline", raw
+            )
             return cls()
-        valid = {k for k in asdict(cls()).keys()}
+        valid = set(asdict(cls()))
         filtered = {k: v for k, v in overrides.items() if k in valid}
         unknown = set(overrides) - valid
         if unknown:
@@ -114,7 +117,7 @@ class VictoriaFeatures:
         return cls(**filtered)
 
     @classmethod
-    def preset(cls, name: str) -> "VictoriaFeatures":
+    def preset(cls, name: str) -> VictoriaFeatures:
         if name not in _PRESETS:
             raise ValueError(f"Unknown preset {name!r}. Available: {sorted(_PRESETS)}")
         return _PRESETS[name]
@@ -149,7 +152,7 @@ class VictoriaFeatures:
 # Named presets
 # ---------------------------------------------------------------------------
 
-_PRESETS: dict[str, "VictoriaFeatures"] = {}
+_PRESETS: dict[str, VictoriaFeatures] = {}
 
 # Populated after class definition to allow forward references.
 _PRESETS["v93_baseline"] = VictoriaFeatures()

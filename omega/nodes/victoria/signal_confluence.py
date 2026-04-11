@@ -59,7 +59,7 @@ _DIRECTIONAL_SIGNAL_KEYS = frozenset(
 
 # Thresholds for labelling confluence strength
 STRONG_THRESHOLD: float = 0.65  # score above this → strong confluence → 1.2× conviction
-WEAK_THRESHOLD: float = 0.30    # score below this → uncertain → 0.5× size
+WEAK_THRESHOLD: float = 0.30  # score below this → uncertain → 0.5× size
 
 
 @dataclass
@@ -147,7 +147,7 @@ class ConfluenceAnalyzer:
         # long → we want positive signals; short → we want negative signals
         positive_is_agreeing = direction == "long"
 
-        agreeing: list[tuple[str, float]] = []   # (name, value)
+        agreeing: list[tuple[str, float]] = []  # (name, value)
         dissenting: list[str] = []
         neutral: list[str] = []
 

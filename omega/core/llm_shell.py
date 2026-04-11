@@ -36,7 +36,6 @@ Model tier shorthands (passed through to --model):
 from __future__ import annotations
 
 import logging
-import os
 import shutil
 import subprocess
 from typing import Final

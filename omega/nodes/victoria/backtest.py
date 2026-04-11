@@ -43,9 +43,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import time
-from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -83,9 +81,7 @@ def _fetch_ohlcv(
             if cached.get("_cache_key") == cache_key:
                 age_h = (time.time() - cached.get("_fetched_at", 0)) / 3600
                 if age_h < 6:
-                    logger.info(
-                        "OHLCV cache hit (%d symbols, %.1fh old)", len(symbols), age_h
-                    )
+                    logger.info("OHLCV cache hit (%d symbols, %.1fh old)", len(symbols), age_h)
                     return {k: v for k, v in cached.items() if not k.startswith("_")}
         except Exception as exc:
             logger.warning("Cache read failed, re-fetching: %s", exc)
@@ -183,9 +179,7 @@ def run_backtest(
         if isinstance(d, dict) and (d.get("close") or d.get("adjclose"))
     )
     if series_len < window + step:
-        raise RuntimeError(
-            f"Insufficient data: series_len={series_len}, need >= {window + step}"
-        )
+        raise RuntimeError(f"Insufficient data: series_len={series_len}, need >= {window + step}")
 
     # ── 2. Initialise pipeline components ───────────────────────────────────
     signal_node = SignalGenerationNode()
@@ -199,6 +193,7 @@ def run_backtest(
     # Override exit timing to be deterministic for reproducible backtest results.
     # PaperTradingEngine uses module-level _EXIT_CYCLES_MIN/_MAX constants; patch them.
     import omega.core.paper_trading as _pt_module
+
     _orig_min = _pt_module._EXIT_CYCLES_MIN
     _orig_max = _pt_module._EXIT_CYCLES_MAX
     _pt_module._EXIT_CYCLES_MIN = _BT_HOLD_CYCLES
@@ -274,23 +269,26 @@ def run_backtest(
 
         # Collect newly closed trades
         for t in engine.closed_trades[before_closed:]:
-            trade_log.append({
-                "cycle": cycle,
-                "symbol": t.get("symbol", ""),
-                "side": t.get("side", ""),
-                "pnl": t.get("pnl", 0.0),
-                "conviction": t.get("conviction", 0.0),
-                "regime": signals.get("_regime", "unknown"),
-                "size": t.get("size", 0.0),
-                "hold_cycles": t.get("hold_cycles", 0),
-            })
+            trade_log.append(
+                {
+                    "cycle": cycle,
+                    "symbol": t.get("symbol", ""),
+                    "side": t.get("side", ""),
+                    "pnl": t.get("pnl", 0.0),
+                    "conviction": t.get("conviction", 0.0),
+                    "regime": signals.get("_regime", "unknown"),
+                    "size": t.get("size", 0.0),
+                    "hold_cycles": t.get("hold_cycles", 0),
+                }
+            )
 
         equity = initial_capital + engine.realised_pnl
-        equity_curve.append({"cycle": cycle, "equity": round(equity, 2), "pnl": round(engine.realised_pnl, 2)})
+        equity_curve.append(
+            {"cycle": cycle, "equity": round(equity, 2), "pnl": round(engine.realised_pnl, 2)}
+        )
 
         if verbose and cycle % 10 == 0:
             n_trades = len(engine.closed_trades)
-            wr = engine.win_rate * 100 if hasattr(engine, "win_rate") else 0.0
             logger.info(
                 "BT cycle %3d/%d | equity=$%.0f | closed=%d | pnl=$%+.2f",
                 cycle,
@@ -393,20 +391,22 @@ def run_backtest(
 
 
 def _print_summary(s: dict[str, Any]) -> None:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  BACKTEST RESULTS  —  {s['cycles']} cycles, window={s['window']}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"  Total PnL     : ${s['total_pnl_usd']:+.2f}")
     print(f"  Trades        : {s['total_closed']}  (L:{s['long_trades']} S:{s['short_trades']})")
-    print(f"  Win Rate      : {s['win_rate']*100:.1f}%")
+    print(f"  Win Rate      : {s['win_rate'] * 100:.1f}%")
     print(f"  Profit Factor : {s['profit_factor']:.3f}")
     print(f"  Max Drawdown  : {s['max_drawdown_pct']:.1f}%")
-    print(f"\n  Per Symbol:")
+    print("\n  Per Symbol:")
     for sym, d in s["per_symbol"].items():
-        print(f"    {sym:12s}  {d['trades']:3d}T  ${d['pnl']:+8.2f}  WR={d['win_rate']*100:.0f}%")
-    print(f"\n  Per Regime:")
+        print(
+            f"    {sym:12s}  {d['trades']:3d}T  ${d['pnl']:+8.2f}  WR={d['win_rate'] * 100:.0f}%"
+        )
+    print("\n  Per Regime:")
     for r, d in s["per_regime"].items():
-        print(f"    {r:12s}  {d['trades']:3d}T  ${d['pnl']:+8.2f}  WR={d['win_rate']*100:.0f}%")
+        print(f"    {r:12s}  {d['trades']:3d}T  ${d['pnl']:+8.2f}  WR={d['win_rate'] * 100:.0f}%")
     print()
 
 
@@ -415,11 +415,17 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Victoria historical backtest harness")
     parser.add_argument(
-        "--symbols", nargs="+", default=None,
+        "--symbols",
+        nargs="+",
+        default=None,
         help="Symbols to backtest (default: active basket)",
     )
-    parser.add_argument("--lookback", type=int, default=90, help="OHLCV bars to fetch (default 90)")
-    parser.add_argument("--window", type=int, default=30, help="Rolling signal window (default 30)")
+    parser.add_argument(
+        "--lookback", type=int, default=90, help="OHLCV bars to fetch (default 90)"
+    )
+    parser.add_argument(
+        "--window", type=int, default=30, help="Rolling signal window (default 30)"
+    )
     parser.add_argument("--step", type=int, default=1, help="Candles per cycle step (default 1)")
     parser.add_argument("--capital", type=float, default=100_000.0, help="Initial capital")
     parser.add_argument("--out", type=str, default=None, help="Write results JSON to this path")
