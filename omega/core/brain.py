@@ -382,13 +382,15 @@ confidence=0.0 so the node falls back to its rule-based logic.
 
 class AnthropicBrain(BrainAdapter):
     """
-    Claude adapter via Anthropic Messages API.
+    Claude adapter — shell path first, urllib fallback.
 
-    Requires ANTHROPIC_API_KEY env var (or api_key in extra_config).
-    Falls back gracefully to action="pass" if key is absent.
+    Preferred transport: llm_shell (claude CLI via subprocess).
+      No API key needed — uses existing Claude Code login session.
 
-    Stub status: interface complete, HTTP call implemented.
-    Activate by setting ANTHROPIC_API_KEY.
+    Fallback transport: direct urllib → Anthropic Messages API.
+      Requires ANTHROPIC_API_KEY env var (or api_key in extra_config).
+
+    is_available() returns True if either transport is ready.
     """
 
     API_URL = "https://api.anthropic.com/v1/messages"
@@ -405,42 +407,33 @@ class AnthropicBrain(BrainAdapter):
         self._model = config.model or "claude-sonnet-4-6"
         self._system = config.system_prompt or _ANTHROPIC_SYSTEM
 
+        # Lazy import to avoid hard dep at module load time
+        from omega.core import llm_shell as _llm_shell
+
+        self._shell = _llm_shell
+
     def is_available(self) -> bool:
-        return bool(self._api_key)
+        return self._shell.is_available() or bool(self._api_key)
 
     def think(self, request: BrainRequest) -> BrainResponse:
-        if not self._api_key:
+        if not self.is_available():
             return BrainResponse(
                 action="pass",
-                reasoning="AnthropicBrain: no API key — set ANTHROPIC_API_KEY",
+                reasoning="AnthropicBrain: no CLI or API key available",
                 confidence=0.0,
             )
         try:
             prompt = self._build_prompt(request)
-            payload = {
-                "model": self._model,
-                "max_tokens": self.config.max_tokens,
-                "system": self._system,
-                "messages": [{"role": "user", "content": prompt}],
-            }
-            if self.config.temperature != 1.0:
-                payload["temperature"] = self.config.temperature
-
-            req = urllib.request.Request(
-                self.API_URL,
-                data=json.dumps(payload).encode(),
-                headers={
-                    "Content-Type": "application/json",
-                    "x-api-key": self._api_key,
-                    "anthropic-version": self.ANTHROPIC_VERSION,
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                body = json.loads(resp.read())
-
-            text = body["content"][0]["text"].strip()
-            return self._parse_response(text)
+            raw = self._shell_consult(prompt, tier=ModelTier.QUICK)
+            if not raw:
+                raw = self._urllib_consult(prompt, model=self._model)
+            if not raw:
+                return BrainResponse(
+                    action="pass",
+                    reasoning="AnthropicBrain: both transports returned empty",
+                    confidence=0.0,
+                )
+            return self._parse_response(raw)
 
         except Exception as exc:
             return BrainResponse(
@@ -450,9 +443,26 @@ class AnthropicBrain(BrainAdapter):
             )
 
     def consult(self, prompt: str, tier: ModelTier = ModelTier.QUICK) -> str:
+        """Shell path first, urllib fallback."""
+        result = self._shell_consult(prompt, tier=tier)
+        if result:
+            return result
+        # Fallback: urllib with API key
+        model = self._tier_model(tier) or self._model
+        return self._urllib_consult(prompt, model=model)
+
+    def _shell_consult(self, prompt: str, tier: ModelTier = ModelTier.QUICK) -> str:
+        """Invoke via claude CLI subprocess. Returns "" if unavailable or on error."""
+        if not self._shell.is_available():
+            return ""
+        tier_name = tier.value  # "quick" or "deep"
+        return self._shell.invoke(prompt=prompt, model=tier_name)
+
+    def _urllib_consult(self, prompt: str, model: str = "") -> str:
+        """Direct HTTP call to Anthropic API. Returns "" if no key or on error."""
         if not self._api_key:
             return ""
-        model = self._tier_model(tier) or self._model
+        model = model or self._model
         try:
             payload = {
                 "model": model,
@@ -526,7 +536,7 @@ class AnthropicBrain(BrainAdapter):
         n_trades: int = 0,
     ) -> dict[str, Any]:
         """LLM-backed signal quality evaluation; falls back to rule-based if unavailable."""
-        if not self._api_key or not ic_history:
+        if not self.is_available() or not ic_history:
             return _evaluate_signal_quality_rule_based(
                 signal_name, ic_history, recent_pnl, n_trades
             )
