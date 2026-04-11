@@ -346,9 +346,53 @@ interface SignalLatest {
   cycle: number;
 }
 
+// ── Decision Trace types (Track 1) ───────────────────────────────────────────
+
+interface DecisionTrace {
+  ticker: string;
+  cycle: number;
+  version: string;
+  timestamp: string;
+  signals: Record<string, number>;
+  raw_composite: number;
+  demeaned_composite: number;
+  basket_mean: number;
+  basket_std: number;
+  weighted_conviction: number;
+  regime: string;
+  bear_prob: number;
+  bull_prob: number;
+  thresh_scale: number;
+  long_thresh: number;
+  short_thresh: number;
+  abs_min_conviction: number;
+  ricci_scalar: number;
+  orc_mean: number;
+  geo_dist_crash: number | null;
+  fiedler_raw: number;
+  proposal: string;
+  filters_fired: string[];
+  blocking_filter: string;
+  final_decision: string;
+  threshold_gap: number;
+  explanation: string;
+}
+
+// ── Correlation matrix types (Track 3) ───────────────────────────────────────
+
+interface CorrMatrix {
+  signals: string[];
+  matrix: number[][];
+  n_observations: number;
+  high_corr_pairs: [string, string, number][];
+  low_corr_pairs: [string, string, number][];
+  cycle: number;
+  version?: string;
+}
+
 // ── Tab type ──────────────────────────────────────────────────────────────────
 
-type TabId = "overview" | "signals" | "analysis";
+type TabId = "overview" | "signals" | "analysis" | "decisions" | "correlations";
 
 // ── Symbol colour palette ──────────────────────────────────────────────────────
 
@@ -1265,6 +1309,353 @@ function TradesTable({
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
 
+// ── Decision Replay Panel (Track 1) ──────────────────────────────────────────
+
+function DecisionReplayPanel({ version }: { version: string }) {
+  const [traces, setTraces] = useState<DecisionTrace[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [filterMode, setFilterMode] = useState<"rejected_close" | "all">("rejected_close");
+  const [tickerFilter, setTickerFilter] = useState("");
+  const [selected, setSelected] = useState<DecisionTrace | null>(null);
+
+  useEffect(() => {
+    if (!version) return;
+    setLoading(true);
+    const params = new URLSearchParams({ version, limit: "100" });
+    if (filterMode === "rejected_close") params.set("filter", "rejected_close");
+    if (tickerFilter) params.set("ticker", tickerFilter);
+    fetch(`${BASE}/api/v1/training/decision-traces?${params}`)
+      .then((r) => r.json())
+      .then((d) => setTraces(d.traces ?? []))
+      .catch(() => setTraces([]))
+      .finally(() => setLoading(false));
+  }, [version, filterMode, tickerFilter]);
+
+  const blockingColor = (f: string) => {
+    if (f.startsWith("weighted_conviction")) return "text-orange-400";
+    if (f.startsWith("abs_min")) return "text-yellow-400";
+    if (f === "time_filter") return "text-blue-400";
+    if (f.includes("regime")) return "text-purple-400";
+    return "text-red-400";
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex gap-1">
+          {(["rejected_close", "all"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setFilterMode(m)}
+              className={`px-3 py-1 text-xs rounded transition-colors ${
+                filterMode === m
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-800 text-gray-400 hover:text-white"
+              }`}
+            >
+              {m === "rejected_close" ? "Near-Threshold Rejects" : "All Decisions"}
+            </button>
+          ))}
+        </div>
+        <input
+          className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white placeholder-gray-600 w-28"
+          placeholder="ETHUSDT…"
+          value={tickerFilter}
+          onChange={(e) => setTickerFilter(e.target.value.toUpperCase())}
+        />
+        <span className="text-xs text-gray-600">{traces.length} records</span>
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-gray-500">Loading traces…</p>
+      ) : traces.length === 0 ? (
+        <p className="text-xs text-gray-500">
+          No decision traces found. Run training with <code className="text-indigo-400">init_trace_writer()</code> enabled.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Trace list */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div className="px-4 py-2 border-b border-gray-800 flex items-center justify-between">
+              <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                Decisions
+              </p>
+              <p className="text-xs text-gray-600">{filterMode === "rejected_close" ? "closest rejected" : "all"}</p>
+            </div>
+            <div className="divide-y divide-gray-800 max-h-96 overflow-y-auto">
+              {traces.map((t, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelected(t)}
+                  className={`w-full text-left px-4 py-2 hover:bg-gray-800 transition-colors ${
+                    selected === t ? "bg-gray-800" : ""
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span
+                        className={`text-xs font-mono font-semibold ${
+                          t.proposal === "LONG" ? "text-green-400" :
+                          t.proposal === "SHORT" ? "text-red-400" : "text-gray-500"
+                        }`}
+                      >
+                        {t.proposal || "HOLD"}
+                      </span>
+                      <span className="text-xs text-white truncate">{t.ticker}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-gray-600">c{t.cycle}</span>
+                      <span className={`text-xs font-mono ${blockingColor(t.blocking_filter)}`}>
+                        {t.blocking_filter
+                          ? t.blocking_filter.split("(")[0]
+                          : t.final_decision.toLowerCase()}
+                      </span>
+                      <span className={`text-xs font-mono ${t.threshold_gap < 0 ? "text-red-400" : "text-green-400"}`}>
+                        {t.threshold_gap >= 0 ? "+" : ""}{t.threshold_gap.toFixed(3)}
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Detail panel */}
+          {selected ? (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-white">
+                  {selected.ticker}{" "}
+                  <span className={selected.proposal === "LONG" ? "text-green-400" : "text-red-400"}>
+                    {selected.proposal}
+                  </span>
+                  <span className="text-gray-500 font-normal"> — cycle {selected.cycle}</span>
+                </p>
+                <button onClick={() => setSelected(null)} className="text-gray-600 hover:text-white text-xs">✕</button>
+              </div>
+
+              {/* Explanation */}
+              <p className="text-xs text-gray-300 bg-gray-800 rounded p-2 leading-relaxed">
+                {selected.explanation}
+              </p>
+
+              {/* Key metrics */}
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "w_conv", val: selected.weighted_conviction.toFixed(4) },
+                  { label: "thresh", val: (selected.proposal === "LONG" ? selected.long_thresh : selected.short_thresh).toFixed(4) },
+                  { label: "gap", val: (selected.threshold_gap >= 0 ? "+" : "") + selected.threshold_gap.toFixed(4) },
+                  { label: "regime", val: selected.regime },
+                  { label: "bear_p", val: selected.bear_prob >= 0 ? selected.bear_prob.toFixed(2) : "—" },
+                  { label: "thresh_scale", val: selected.thresh_scale.toFixed(2) },
+                  { label: "fiedler", val: selected.fiedler_raw.toFixed(3) },
+                  { label: "ricci", val: selected.ricci_scalar.toFixed(3) },
+                  { label: "orc", val: selected.orc_mean.toFixed(3) },
+                ].map(({ label, val }) => (
+                  <div key={label} className="bg-gray-800 rounded p-2">
+                    <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
+                    <p className="text-xs font-mono text-white mt-0.5">{val}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Filter chain */}
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Filter chain</p>
+                <div className="space-y-0.5">
+                  {selected.filters_fired.map((f, i) => (
+                    <p key={i} className={`text-xs font-mono ${blockingColor(f)}`}>
+                      {i + 1}. {f}
+                    </p>
+                  ))}
+                  {selected.filters_fired.length === 0 && (
+                    <p className="text-xs text-gray-600">—</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Top signals */}
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Top signals</p>
+                <div className="space-y-0.5">
+                  {Object.entries(selected.signals)
+                    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                    .slice(0, 6)
+                    .map(([k, v]) => {
+                      const pct = Math.min(Math.abs(v) * 45, 45);
+                      const isPos = v >= 0;
+                      return (
+                        <div key={k} className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500 w-28 truncate text-right shrink-0">{k}</span>
+                          <div className="relative flex-1 h-3 bg-gray-800 rounded overflow-hidden">
+                            <div
+                              className={isPos ? "bg-green-500" : "bg-red-500"}
+                              style={{
+                                position: "absolute",
+                                top: 0, bottom: 0,
+                                left: isPos ? "50%" : `${50 - pct}%`,
+                                width: `${pct}%`,
+                                opacity: 0.8,
+                              }}
+                            />
+                          </div>
+                          <span className={`text-xs font-mono w-12 shrink-0 ${isPos ? "text-green-400" : "text-red-400"}`}>
+                            {v >= 0 ? "+" : ""}{v.toFixed(3)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 flex items-center justify-center">
+              <p className="text-xs text-gray-600">Select a decision to inspect</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Correlation Heatmap Panel (Track 3) ───────────────────────────────────────
+
+function corrColor(r: number): string {
+  // Diverging: negative → red, zero → dark, positive → blue
+  if (r > 0.8) return "bg-blue-600";
+  if (r > 0.5) return "bg-blue-700";
+  if (r > 0.2) return "bg-blue-900";
+  if (r > -0.2) return "bg-gray-800";
+  if (r > -0.5) return "bg-red-900";
+  if (r > -0.8) return "bg-red-700";
+  return "bg-red-600";
+}
+
+function CorrelationHeatmapPanel({ version }: { version: string }) {
+  const [corr, setCorr] = useState<CorrMatrix | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!version) return;
+    setLoading(true);
+    fetch(`${BASE}/api/v1/signals/correlation?version=${version}`)
+      .then((r) => r.json())
+      .then((d) => setCorr(d.signals?.length ? d : null))
+      .catch(() => setCorr(null))
+      .finally(() => setLoading(false));
+  }, [version]);
+
+  if (loading) return <p className="text-xs text-gray-500">Loading correlation matrix…</p>;
+  if (!corr || !corr.signals.length) {
+    return (
+      <p className="text-xs text-gray-500">
+        No correlation matrix available. Requires ≥10 cycles of training data with
+        <code className="text-indigo-400 ml-1">SignalCorrelationMonitor</code>.
+      </p>
+    );
+  }
+
+  const shortName = (s: string) =>
+    s.replace("_signal", "").replace("_crossover", "").replace("curvature", "curv");
+
+  return (
+    <div className="space-y-4">
+      {/* Header stats */}
+      <div className="flex flex-wrap gap-3">
+        <div className="bg-gray-800 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-500">Observations</p>
+          <p className="text-sm font-mono text-white">{corr.n_observations}</p>
+        </div>
+        <div className="bg-gray-800 rounded-lg px-3 py-2">
+          <p className="text-xs text-gray-500">Signals tracked</p>
+          <p className="text-sm font-mono text-white">{corr.signals.length}</p>
+        </div>
+        {corr.cycle && (
+          <div className="bg-gray-800 rounded-lg px-3 py-2">
+            <p className="text-xs text-gray-500">Last updated cycle</p>
+            <p className="text-sm font-mono text-white">{corr.cycle}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Anomaly alerts */}
+      {(corr.high_corr_pairs?.length > 0 || corr.low_corr_pairs?.length > 0) && (
+        <div className="space-y-1">
+          {corr.high_corr_pairs?.map(([a, b, r], i) => (
+            <div key={i} className="flex items-center gap-2 bg-blue-950 border border-blue-800 rounded px-3 py-1.5">
+              <span className="text-xs text-blue-400 font-medium">HIGH CORR</span>
+              <span className="text-xs text-gray-300 font-mono">{shortName(a)} ↔ {shortName(b)}</span>
+              <span className="text-xs font-mono text-blue-300 ml-auto">{r.toFixed(2)}</span>
+            </div>
+          ))}
+          {corr.low_corr_pairs?.map(([a, b, r], i) => (
+            <div key={i} className="flex items-center gap-2 bg-red-950 border border-red-800 rounded px-3 py-1.5">
+              <span className="text-xs text-red-400 font-medium">NEG CORR</span>
+              <span className="text-xs text-gray-300 font-mono">{shortName(a)} ↔ {shortName(b)}</span>
+              <span className="text-xs font-mono text-red-300 ml-auto">{r.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Heatmap grid */}
+      <div className="overflow-x-auto">
+        <table className="text-xs border-collapse">
+          <thead>
+            <tr>
+              <th className="w-24" />
+              {corr.signals.map((s) => (
+                <th
+                  key={s}
+                  className="text-gray-500 font-normal px-0.5 pb-1 whitespace-nowrap"
+                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", height: 80 }}
+                >
+                  {shortName(s)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {corr.signals.map((rowSig, i) => (
+              <tr key={rowSig}>
+                <td className="text-gray-500 pr-2 text-right whitespace-nowrap py-0.5">
+                  {shortName(rowSig)}
+                </td>
+                {corr.matrix[i].map((r, j) => (
+                  <td key={j} className="p-0.5">
+                    <div
+                      className={`w-6 h-6 rounded-sm flex items-center justify-center ${corrColor(r)}`}
+                      title={`${corr.signals[i]} ↔ ${corr.signals[j]}: ${r.toFixed(2)}`}
+                    >
+                      <span className="text-white text-xs opacity-80 select-none">
+                        {i === j ? "·" : ""}
+                      </span>
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-2 text-xs text-gray-500">
+        <span>−1</span>
+        {["-0.8", "-0.5", "-0.2", "0", "+0.2", "+0.5", "+0.8", "+1"].map((v, i) => (
+          <div
+            key={i}
+            className={`w-5 h-3 rounded-sm ${corrColor(parseFloat(v))}`}
+          />
+        ))}
+        <span>+1</span>
+      </div>
+    </div>
+  );
+}
+
 function TabBar({
   active,
   onChange,
@@ -1276,6 +1667,8 @@ function TabBar({
     { id: "overview", label: "Overview" },
     { id: "signals", label: "Signal Analysis" },
     { id: "analysis", label: "ML Weights" },
+    { id: "decisions", label: "Decision Replay" },
+    { id: "correlations", label: "Correlations" },
   ];
   return (
     <div className="flex gap-1 border-b border-gray-700 pb-0">
@@ -1455,6 +1848,30 @@ export default function TrainingAnalysis() {
               <MLCombinerWeightsPanel />
               <div className="space-y-4">
                 <TradesTable metrics={metrics} rows={rows} tradeDetails={tradeDetails} />
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Decision Replay */}
+          {activeTab === "decisions" && (
+            <div className="space-y-4">
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+                  Decision Replay — near-threshold rejections
+                </p>
+                <DecisionReplayPanel version={version} />
+              </div>
+            </div>
+          )}
+
+          {/* Tab: Signal Correlations */}
+          {activeTab === "correlations" && (
+            <div className="space-y-4">
+              <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+                <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+                  Signal Correlation Matrix — rolling 50-cycle window
+                </p>
+                <CorrelationHeatmapPanel version={version} />
               </div>
             </div>
           )}
