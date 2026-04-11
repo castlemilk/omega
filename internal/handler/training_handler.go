@@ -44,6 +44,8 @@ func (h *TrainingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/training/versions", h.handleVersions)
 	mux.HandleFunc("/api/v1/training/compare", h.handleCompare)
 	mux.HandleFunc("/api/v1/training/trade-details", h.handleTradeDetails)
+	mux.HandleFunc("/api/v1/training/decision-traces", h.handleDecisionTraces)
+	mux.HandleFunc("/api/v1/signals/correlation", h.handleSignalCorrelation)
 }
 
 // ── JSON types ────────────────────────────────────────────────────────────────
@@ -795,6 +797,170 @@ func (h *TrainingHandler) handleTradeDetails(w http.ResponseWriter, r *http.Requ
 		rows = []json.RawMessage{}
 	}
 	writeJSON(w, rows)
+}
+
+// ── Decision Trace handler ─────────────────────────────────────────────────────
+
+// handleDecisionTraces serves the extended per-cycle decision traces written by
+// strategy.py's TraceWriter to data/decision_traces/{version}.jsonl.
+//
+// Query params:
+//   version  (required) e.g. "v97"
+//   limit    max records to return (default 200)
+//   filter   "rejected_close" — only near-threshold rejections
+//   ticker   filter by specific symbol
+func (h *TrainingHandler) handleDecisionTraces(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	version := r.URL.Query().Get("version")
+	if version == "" {
+		http.Error(w, "version query param required", http.StatusBadRequest)
+		return
+	}
+
+	limitStr := r.URL.Query().Get("limit")
+	limit := 200
+	if limitStr != "" {
+		if n, err := parseInt(limitStr); err == nil && n > 0 {
+			limit = n
+		}
+	}
+
+	filterMode := r.URL.Query().Get("filter") // "rejected_close" or ""
+	tickerFilter := r.URL.Query().Get("ticker")
+
+	tracePath := filepath.Join(h.progressDir, "decision_traces", version+".jsonl")
+	data, err := os.ReadFile(tracePath) //nolint:gosec
+	if err != nil {
+		writeJSON(w, map[string]any{"traces": []json.RawMessage{}, "total": 0})
+		return
+	}
+
+	var rows []json.RawMessage
+	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
+		if len(line) == 0 || !json.Valid(line) {
+			continue
+		}
+
+		// Apply ticker filter without full unmarshal (simple string search)
+		if tickerFilter != "" {
+			if !bytes.Contains(line, []byte(`"`+tickerFilter+`"`)) {
+				continue
+			}
+		}
+
+		// Apply near-threshold filter: unmarshal only needed fields
+		if filterMode == "rejected_close" {
+			var partial struct {
+				FinalDecision  string  `json:"final_decision"`
+				BlockingFilter string  `json:"blocking_filter"`
+				ThresholdGap   float64 `json:"threshold_gap"`
+			}
+			if json.Unmarshal(line, &partial) == nil {
+				if partial.FinalDecision != "FILTERED" {
+					continue
+				}
+				isConvictionBlock := strings.HasPrefix(partial.BlockingFilter, "weighted_conviction") ||
+					strings.HasPrefix(partial.BlockingFilter, "abs_min_conviction")
+				if !isConvictionBlock {
+					continue
+				}
+				if partial.ThresholdGap < -0.03 {
+					continue // too far from threshold to be interesting
+				}
+			}
+		}
+
+		rows = append(rows, json.RawMessage(line))
+		if len(rows) >= limit {
+			break
+		}
+	}
+
+	if rows == nil {
+		rows = []json.RawMessage{}
+	}
+	writeJSON(w, map[string]any{"traces": rows, "total": len(rows)})
+}
+
+// ── Signal Correlation handler ─────────────────────────────────────────────────
+
+// handleSignalCorrelation returns the rolling pairwise signal correlation matrix
+// written by strategy.py's SignalCorrelationMonitor to /tmp/{version}_signal_correlation.json.
+//
+// Query params:
+//   version  (required) e.g. "v97"
+func (h *TrainingHandler) handleSignalCorrelation(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	version := r.URL.Query().Get("version")
+	if version == "" {
+		// Auto-detect latest version
+		entries, err := os.ReadDir(h.progressDir)
+		if err == nil {
+			var latest string
+			var latestMod int64
+			for _, e := range entries {
+				if !strings.HasSuffix(e.Name(), "_progress.json") {
+					continue
+				}
+				info, err := e.Info()
+				if err != nil {
+					continue
+				}
+				if info.ModTime().UnixNano() > latestMod {
+					latestMod = info.ModTime().UnixNano()
+					latest = strings.TrimSuffix(e.Name(), "_progress.json")
+				}
+			}
+			version = latest
+		}
+	}
+
+	if version == "" {
+		writeJSON(w, map[string]any{"signals": []string{}, "matrix": [][]float64{}, "n_observations": 0})
+		return
+	}
+
+	corrPath := fmt.Sprintf("/tmp/%s_signal_correlation.json", version)
+	data, err := os.ReadFile(corrPath) //nolint:gosec
+	if err != nil {
+		writeJSON(w, map[string]any{
+			"signals":        []string{},
+			"matrix":         [][]float64{},
+			"n_observations": 0,
+			"version":        version,
+		})
+		return
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal(data, &result); err != nil {
+		http.Error(w, "failed to parse correlation matrix", http.StatusInternalServerError)
+		return
+	}
+	result["version"] = version
+	writeJSON(w, result)
+}
+
+// parseInt parses a string into an int, returning an error on failure.
+func parseInt(s string) (int, error) {
+	n := 0
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return 0, fmt.Errorf("invalid int: %s", s)
+		}
+		n = n*10 + int(c-'0')
+	}
+	return n, nil
 }
 
 // ── String helpers ────────────────────────────────────────────────────────────
