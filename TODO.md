@@ -10,7 +10,9 @@ Tracking all in-flight work across training iterations, observability, reasoning
 | V92 | +$126.75 | 46% | 76 | 1.49 | Multi-asset breakthrough (NEAR/ARB added) |
 | V75 | +$110.90 | 100% | 3 | ∞ | Crisis only (3 lucky shorts) |
 | V97 | +$94.14 | 32% | ? | ? | Geometry modifiers regressed |
+| V99 | +$63.32 | 39% | 36 | 1.22 | Baseline sanity check — all flags OFF, April crisis market |
 | V63 | +$81.43 | 47% | 36 | 1.71 | Pre-crisis mixed regime |
+| V98 | -$112.02 | 32% | 34 | 0.48 | Full V95 geometry ON — gates failed |
 
 ## Feature Flag Status
 
