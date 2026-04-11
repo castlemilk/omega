@@ -508,7 +508,6 @@ class SignalGenerationNode(Node):
 
         _ricci_val: float = 0.0
         _ricci_regime: str = "transitional"
-        _manifold_state = None  # V95: kept for geo_dist_crash/ricci_scalar injection below
         if self._market_manifold is not None:
             try:
                 _manifold_state = self._market_manifold.update(market_data)
@@ -552,7 +551,6 @@ class SignalGenerationNode(Node):
 
         # Ollivier-Ricci curvature on the asset correlation network (basket-level signal)
         _orc_val: float = 0.0
-        _orc_state = None  # V95: kept for mean_curvature injection below
         if self._orc is not None:
             try:
                 _orc_state = self._orc.update(market_data)
@@ -568,6 +566,23 @@ class SignalGenerationNode(Node):
                     )
             except Exception as _exc:
                 logger.warning("ORC compute error: %s", _exc)
+
+        # Expose geometry state to strategy.py for Ricci-weighted sizing, ORC stress
+        # gating, and geodesic crash proximity modulation.  Injected as _geometry_*
+        # top-level keys so strategy._construct_portfolio can read them alongside
+        # regime metadata without needing ticker context.
+        _manifold_state_ref = locals().get("_manifold_state")
+        if _manifold_state_ref is not None:
+            with contextlib.suppress(Exception):
+                signals["_geometry_ricci_raw"] = round(float(_manifold_state_ref.ricci), 4)
+                signals["_geometry_geo_dist_crash"] = round(float(_manifold_state_ref.geo_dist_crash), 4)
+                signals["_geometry_geo_dist_rally"] = round(float(_manifold_state_ref.geo_dist_rally), 4)
+                signals["_geometry_manifold_regime"] = _manifold_state_ref.regime
+        _orc_state_ref = locals().get("_orc_state")
+        if _orc_state_ref is not None and _orc_state_ref.confidence >= 0.3:
+            with contextlib.suppress(Exception):
+                signals["_geometry_orc_kappa"] = round(float(_orc_state_ref.mean_curvature), 4)
+                signals["_geometry_orc_regime"] = _orc_state_ref.regime
 
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
@@ -794,28 +809,6 @@ class SignalGenerationNode(Node):
                     _ts["composite"],
                     _basket_mean,
                 )
-
-        # V95: inject basket-level geometry scalars as signals["_*"] metadata keys.
-        # These are read by strategy.py for Ricci sizing, ORC stress, and geodesic crash
-        # distance — distinct from per-ticker signals (which are never underscore-prefixed).
-        if _manifold_state is not None and _manifold_state.confidence >= 0.3:
-            signals["_ricci_scalar"] = float(_manifold_state.ricci)  # z-scored [-5, 5]
-            signals["_geo_dist_crash"] = float(_manifold_state.geo_dist_crash)
-            # V95 Enhancement C: geodesic crash proximity via Fisher-Rao distance to known
-            # crash states.  Lower value = current distribution is more crash-like.
-            try:
-                _theta_mu = float(_manifold_state.theta[0])
-                _theta_var = float(_manifold_state.theta[1])
-                _theta_sigma = math.sqrt(max(_theta_var, 1e-10))
-                _crash_prox = self._market_manifold.crash_proximity_score(_theta_mu, _theta_sigma)
-                if math.isfinite(_crash_prox):
-                    signals["_crash_proximity"] = _crash_prox
-                    logger.debug("V95 crash_proximity=%.4f (theta_mu=%.4f sigma=%.4f)",
-                                 _crash_prox, _theta_mu, _theta_sigma)
-            except Exception as _cp_exc:
-                logger.debug("crash_proximity_score error: %s", _cp_exc)
-        if _orc_state is not None and _orc_state.confidence >= 0.3:
-            signals["_orc_mean_curvature"] = float(_orc_state.mean_curvature)
 
         # Log composite spread for monitoring
         _composites = [

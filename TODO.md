@@ -40,12 +40,20 @@ Tracking all in-flight work across training iterations, observability, reasoning
 python scripts/run_training.py --version v99 --cycles 200 --sleep 10 --features v93_baseline
 ```
 
-**Ablation** (compare presets side-by-side — do not run yet):
+**Ablation** (compare presets side-by-side):
 ```bash
+python scripts/ablate.py --cycles 100 --presets v93_baseline,observability_only,embeddings_only
 python scripts/ablate.py --cycles 200 --presets v93_baseline,v97_geometry,observability_only
 ```
 
 ## In Progress
+
+### ✅ V99 — Baseline sanity check (DONE — baseline confirmed clean)
+- Completed 200 cycles, PnL +$63.32, WR 38.9%, 36 trades, PF 1.22
+- Gates FAIL — regime_parity[crisis/high_vol] vs stale v48 baseline (different market epoch)
+- 35 longs / 1 short — April 2026 crisis market (expected short drought)
+- Features log confirmed: "v93_baseline (all flags OFF)" ✓
+- **Conclusion:** V93 code path is intact. Gate comparator uses wrong baseline epoch.
 
 ### ✅ V98 — Full observability launch (DONE — gates FAILED)
 - Completed 200 cycles, PnL -$112, WR 32%, 34 trades
@@ -59,8 +67,8 @@ python scripts/ablate.py --cycles 200 --presets v93_baseline,v97_geometry,observ
 
 ### Track A — Long-horizon training run (500-1000 cycles)
 - **Why:** Every run is ~55 min of live market. ML combiner needs 30+ closed trades before it activates. IC-weighted signals need real history.
-- **How:** `python3 scripts/run_training.py --version v99 --cycles 500 --sleep 10`
-- **Prereq:** V98 must finish first (to validate observability doesn't break)
+- **How:** `python3 scripts/run_training.py --version v100 --cycles 500 --sleep 10 --features v93_baseline`
+- **Prereq:** V99 baseline confirmed clean ✓
 - **Success:** ML combiner becomes active, generates first IC-weighted composite overrides
 - **Owner:** TBD
 
@@ -118,10 +126,28 @@ python scripts/ablate.py --cycles 200 --presets v93_baseline,v97_geometry,observ
 - Build Reason/Remember/Act agent layers in Go
 - Each "desk" = dedicated agent with memory + LLM reasoning
 
+## Next Phase (after V99 confirmed)
+
+1. **Ablation** — run observability_only + embeddings_only vs baseline (100 cycles each, ~3 hrs):
+   ```bash
+   python3 scripts/ablate.py --cycles 100 --presets v93_baseline,observability_only,embeddings_only
+   ```
+2. **Geometry forensics (Track E)** — isolate which V95 modifier causes regression:
+   Run one-modifier-at-a-time with `ablate.py` using inline JSON presets
+3. **LLM retro on V93** — run post-mortem on the champion run:
+   ```bash
+   python -m omega.nodes.victoria.llm_trade_review --version v93
+   ```
+4. **Gate epoch fix** — gate comparator should auto-detect the most recent same-market epoch baseline, not a hardcoded version
+5. **Long-horizon run (Track A)** — 500 cycles once gate comparator is fixed
+
 ## Recently Shipped (today)
 
+- ✅ V99 baseline run — confirmed V93 code path intact with feature flags OFF
 - ✅ Feature flag harness — `omega/nodes/victoria/features.py` + `VictoriaFeatures.from_env()`
 - ✅ `scripts/ablate.py` — multi-preset ablation runner with comparison table
+- ✅ `docs/feature-flags.md` — full flag reference with cost/benefit/when-to-enable
+- ✅ 7 stale worktrees pruned (sad-vaughan, angry-torvalds, vigilant-jennings, elastic-buck, lucid-pascal, hopeful-mendeleev, strange-clarke)
 - ✅ Worktree consolidation — strange-clarke (observability stack), hopeful-mendeleev (LLM/embeddings) cherry-picked to main with feature flags
 - ✅ V98 V95 geometry gated (ricci_sizing, orc_stress_reduction, geodesic_crash_distance, fiedler_conviction_modulation)
 - ✅ V96/V97 fixes gated (v96_crisis_detection_fix, v96_multi_cycle_bypass)
@@ -164,5 +190,6 @@ active_basket = {ETH, SOL, BNB, AVAX, LINK, NEAR, ARB, ADA}
 
 ## Update Log
 - 2026-04-11: TODO.md created. V98 running, V97 regressed, V93 remains champion.
+- 2026-04-11: V99 baseline confirmed (+$63.32, flags OFF). Feature flag harness + ablate.py + docs shipped. 7 worktrees pruned.
 </content>
 </invoke>

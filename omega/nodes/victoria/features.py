@@ -119,9 +119,17 @@ class VictoriaFeatures:
             raise ValueError(f"Unknown preset {name!r}. Available: {sorted(_PRESETS)}")
         return _PRESETS[name]
 
+    # Alias for ergonomic use in tests / notebooks
+    from_preset = preset
+
     def active_flags(self) -> list[str]:
         """Return names of all True flags, sorted."""
         return sorted(k for k, v in asdict(self).items() if v)
+
+    # Alias: enabled() → active_flags()
+    def enabled(self) -> list[str]:
+        """Return names of all True flags (alias for active_flags())."""
+        return self.active_flags()
 
     def log_header(self) -> None:
         """Log a one-line summary of active flags."""
