@@ -139,6 +139,19 @@ class VictoriaFeatures:
     (v106_reinforced preset).
     """
 
+    activation_tracing: bool = False
+    """V107: record full computation graph for every trade entry and exit.
+    Captures per-signal activations (raw_value, reinforcement_weight, ic_weight,
+    final_weight, weighted_value, direction_alignment), composite scores, regime
+    state, filter chain, and outcome attribution.
+    Traces written to data/activation_traces/{version}.jsonl (one JSON per trade close).
+    Completed traces include signals_right/signals_wrong tallies and per-signal PnL
+    attribution from trade_attribution.py.
+    View with: python scripts/view_activations.py --version {version}
+    When to enable: pair with trade_reinforcement for full observability
+    (v107_traced preset).
+    """
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
@@ -283,4 +296,12 @@ _PRESETS["v106_reinforced"] = VictoriaFeatures(
     ws_microstructure=True,
     temporal_memory=True,
     trade_reinforcement=True,
+)
+
+_PRESETS["v107_traced"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
 )
