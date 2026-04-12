@@ -96,15 +96,15 @@ class VictoriaFeatures:
     """
 
     crisis_short_bias: bool = False
-    """V102: exploit fear/volatility regimes instead of hiding from them.
-    In crisis/high_vol:
-      - short_thresh *= 0.6   (easier shorts — lean into downward momentum)
-      - long_thresh  *= 1.5   (harder longs — not blocked, just more selective)
-      - short raw_weight * 1.3 (bigger short bets)
-      - long raw_weight  * 0.5 (smaller long bets)
-      - skip half-Kelly reduction (replaces with per-direction sizing above)
-    In normal regime: short_thresh capped at 0.05 (builds short trade history).
-    Evidence: V75 +$110 from 3 crisis shorts; V101b ADA short +$111 in crisis.
+    """V102: lean into fear in crisis/high_vol regimes.
+    Threshold adjustments (applied after regime-adaptive base, before Fiedler):
+      - short_thresh *= 0.60 (40% lower — more permissive short entry)
+      - long_thresh  *= 1.50 (50% higher — further suppress longs)
+    Size adjustments (applied after raw_weight computation, before Kelly):
+      - short positions * 1.3x
+      - long  positions * 0.5x
+    In normal regime: lower short_thresh to 0.05 (captures cross-sectional underperformers).
+    Motivated by V75: +$110 on 3 pure crisis shorts (+100% WR). V101b: ADA short +$111 in crisis.
     When to enable: pair with decision_embeddings (v102_fear_optimized preset).
     """
 

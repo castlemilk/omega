@@ -354,6 +354,7 @@ class StrategyNode(Node):
         self._last_trade_cycle: int = -999
         # Regime state set each cycle by _apply_regime_adaptive_thresholds
         self._is_crisis: bool = False
+        self._is_high_vol_regime: bool = False
         # Regime transition cooldown: skip new entries for 3 cycles after regime shifts
         self._last_regime: str = ""
         self._regime_change_cycle: int = -999
@@ -838,6 +839,7 @@ class StrategyNode(Node):
                 or (regime_label == "crisis" and bear_prob >= 0.45)
             )
         self._is_crisis = is_crisis
+        self._is_high_vol_regime = (regime_label == "high_vol")
         is_bull = (
             bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")
         ) and not is_crisis
@@ -982,6 +984,32 @@ class StrategyNode(Node):
                         _geo_scale,
                         _prev_long,
                         self._long_conviction_threshold,
+                    )
+
+        # V102: crisis_short_bias threshold layer — applied after all other threshold logic.
+        # In crisis/high_vol: lower short bar 40%, raise long bar 50%.
+        # In normal: cap short_thresh at 0.05 to catch cross-sectional underperformers.
+        if self.features.crisis_short_bias:
+            if self._is_crisis or self._is_high_vol_regime:
+                _old_short = self._short_conviction_threshold
+                _old_long = self._long_conviction_threshold
+                self._short_conviction_threshold = _old_short * 0.60
+                self._long_conviction_threshold = min(_old_long * 1.50, 0.99)
+                logger.info(
+                    "crisis_short_bias: %s → short_thresh %.4f→%.4f, long_thresh %.4f→%.4f",
+                    "crisis" if self._is_crisis else "high_vol",
+                    _old_short,
+                    self._short_conviction_threshold,
+                    _old_long,
+                    self._long_conviction_threshold,
+                )
+            elif not is_bull:  # normal regime
+                _old_short = self._short_conviction_threshold
+                _new_short = min(_old_short, 0.05)
+                if _new_short < _old_short:
+                    self._short_conviction_threshold = _new_short
+                    logger.info(
+                        "crisis_short_bias: normal → short_thresh %.4f→0.05", _old_short
                     )
 
     def _passes_conviction_filters(
@@ -1994,6 +2022,25 @@ class StrategyNode(Node):
                 raw_weights[ticker] = (
                     -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_short_mult
                 )
+
+        # V102: crisis_short_bias size multipliers — scale shorts up (1.3x), longs down (0.5x)
+        # in crisis/high_vol to tilt allocation toward the favored direction.
+        # Applied before Kelly so the Kelly fraction operates on the already-skewed weights.
+        if self.features.crisis_short_bias and (self._is_crisis or _is_high_vol):
+            _csb_n_shorts = sum(1 for w in raw_weights.values() if w < 0)
+            _csb_n_longs = sum(1 for w in raw_weights.values() if w > 0)
+            for _ticker in list(raw_weights.keys()):
+                _w = raw_weights[_ticker]
+                if _w < 0:
+                    raw_weights[_ticker] = _w * 1.3
+                elif _w > 0:
+                    raw_weights[_ticker] = _w * 0.5
+            logger.info(
+                "crisis_short_bias size: %s — %d shorts *1.3, %d longs *0.5",
+                "crisis" if self._is_crisis else "high_vol",
+                _csb_n_shorts,
+                _csb_n_longs,
+            )
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
         _kelly_scale = self._kelly_fraction()

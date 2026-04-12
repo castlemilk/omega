@@ -33,8 +33,10 @@ Tracking all in-flight work across training iterations, observability, reasoning
 | `llm_trade_review` | OFF | Post-trade LLM post-mortem → data/decision_traces/ | hopeful-mendeleev |
 | `v96_crisis_detection_fix` | OFF | bear_prob=-1 → trust regime_label directly | elastic-buck |
 | `v96_multi_cycle_bypass` | OFF | Lower normal-short bypass threshold 0.09→0.07 | lucid-pascal |
+| `crisis_high_vol_long_block` | OFF | Hard-block all longs in crisis/high_vol regime | zen-benz / V101 |
+| `crisis_short_bias` | OFF | crisis/high_vol: short_thresh *0.60, long_thresh *1.50, short size *1.3x, long size *0.5x; normal: short_thresh→0.05 | zen-benz / V102 |
 
-**Presets**: `v93_baseline` (all OFF) · `v97_geometry` · `observability_only` · `embeddings_only` · `v98_full_obs` · `v99_full`
+**Presets**: `v93_baseline` (all OFF) · `v97_geometry` · `observability_only` · `embeddings_only` · `v98_full_obs` · `v99_full` · `v101_regime_safe` · `v102_fear_optimized`
 
 **V99 baseline run** (verify refactor is clean, should match V93):
 ```bash
@@ -163,16 +165,20 @@ Key findings:
    - Fix 1: `crisis_high_vol_long_block` flag + `v101_regime_safe` preset
    - Fix 2: `cluster_bias()` wired into `_passes_conviction_filters`
    - Fix 3: `signal_confluence` warn-only (dropped `size_multiplier=0.5` penalty)
-5. **V101 — Launch training** (V100 is now complete):
+5. **❌ KILLED — V101** — replaced by V102 before running. V101 preset (crisis_high_vol_long_block) simply blocks longs; V102 goes further by also scaling up shorts in fear regimes.
+6. **✅ DONE — V102 crisis_short_bias flag** (`zen-benz` worktree):
+   - `crisis_short_bias`: short_thresh * 0.60, long_thresh * 1.50 in crisis/high_vol; short size * 1.3x, long size * 0.5x; normal short_thresh → 0.05
+   - Preset: `v102_fear_optimized` = `decision_embeddings=True, crisis_short_bias=True`
+   - Motivated by V75: +$110.90 on 3 pure crisis shorts (100% WR, avg +$37/trade)
+7. **V102 — Launch training**:
    ```bash
-   python3 scripts/run_training.py --version v101 --cycles 200 --features v101_regime_safe
-   ```
-   Preset: `decision_embeddings=True, crisis_high_vol_long_block=True`
-   Before launching: fit decision embedder from V100 run:
-   ```bash
+   # Fit embedder from V100 data first (if not already done)
    mkdir -p data/decision_embeddings
    python3 -m omega.nodes.victoria.decision_embeddings --version v100 --out data/decision_embeddings/embedder.pkl
+   # Launch V102
+   python3 scripts/run_training.py --version v102 --cycles 200 --features v102_fear_optimized
    ```
+   Preset: `decision_embeddings=True, crisis_short_bias=True`
 6. **Geometry forensics (Track E)** — isolate which V95 modifier causes regression via per-flag ablation
 7. **LLM retro on V100** — run post-mortem on the embeddings_only run:
    ```bash
@@ -233,5 +239,6 @@ active_basket = {ETH, SOL, BNB, AVAX, LINK, NEAR, ARB, ADA}
 - 2026-04-11: V99 baseline confirmed (+$63.32, flags OFF). Feature flag harness + ablate.py + docs shipped. 7 worktrees pruned.
 - 2026-04-11: Ablation complete (100 cycles × 3 presets). Winner: embeddings_only (+$51.78, PF 1.46). observability_only needs threshold tuning (total trade shutdown). Full report: data/ablation_report.md.
 - 2026-04-12: V100 complete (+$99.76, WR 34%, 38T, PF 1.50, embeddings_only). V101 prep: 3 parallel fixes shipped — crisis_high_vol_long_block flag, cluster_bias() wired, confluence warn-only. Preset: v101_regime_safe.
+- 2026-04-12: V101 killed before launch. V102 crisis_short_bias flag shipped (zen-benz). Preset: v102_fear_optimized (decision_embeddings + crisis_short_bias). Ready to launch 200 cycles.
 </content>
 </invoke>
