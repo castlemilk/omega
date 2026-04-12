@@ -1716,8 +1716,7 @@ class OmegaOrchestrator:
                                                 "pnl": _pnl,
                                                 "side": _side,
                                                 **_contribs,
-                                            }) + "
-")
+                                            }) + "\n")
             except Exception as exc:
                 log.warning("PaperTrading execution failed: %s", exc)
 
