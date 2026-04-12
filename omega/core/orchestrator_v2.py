@@ -526,21 +526,25 @@ class OmegaOrchestrator:
                                         if isinstance(item, dict) and "weights" in item:
                                             _conv_scores = item.get("conviction_scores", {})
                                             for sym, w in item["weights"].items():
-                                                proposals.append({
-                                                    "symbol": sym,
-                                                    "weight": float(w),
-                                                    "conviction": _conv_scores.get(sym, 0.30),
-                                                })
+                                                proposals.append(
+                                                    {
+                                                        "symbol": sym,
+                                                        "weight": float(w),
+                                                        "conviction": _conv_scores.get(sym, 0.30),
+                                                    }
+                                                )
                                         elif isinstance(item, dict):
                                             proposals.append(item)
                                 elif isinstance(raw_result, dict) and "weights" in raw_result:
                                     _conv_scores = raw_result.get("conviction_scores", {})
                                     for sym, w in raw_result["weights"].items():
-                                        proposals.append({
-                                            "symbol": sym,
-                                            "weight": float(w),
-                                            "conviction": _conv_scores.get(sym, 0.30),
-                                        })
+                                        proposals.append(
+                                            {
+                                                "symbol": sym,
+                                                "weight": float(w),
+                                                "conviction": _conv_scores.get(sym, 0.30),
+                                            }
+                                        )
                                 elif isinstance(raw_result, dict):
                                     proposals = [raw_result]
                                 if proposals:
@@ -1676,6 +1680,44 @@ class OmegaOrchestrator:
                                 winning=trade_pnl > 0,
                                 contributing_signals=contributing,
                             )
+                    # V106: trade_reinforcement — call on_trade_close on the signal node's reinforcer.
+                    # The reinforcer snapshots signals per-ticker in signal_generation.py each cycle,
+                    # so it already has entry signals for any ticker that traded this cycle.
+                    with contextlib.suppress(Exception):
+                        for node in self.active_nodes:
+                            _reinf = getattr(node, "_reinforcer", None)
+                            if _reinf is None:
+                                continue
+                            for trade in newly_closed:
+                                _sym = str(trade.get("sym") or trade.get("symbol", ""))
+                                _pnl = float(trade.get("pnl", 0.0))
+                                _side = str(trade.get("side", "long"))
+                                if _sym:
+                                    _reinf.on_trade_close(_sym, _pnl, _side)
+                            # Also run trade attribution (JSONL log) for analysis
+                            from omega.nodes.victoria.trade_attribution import attribute_trade as _attr
+                            import json as _json
+                            from pathlib import Path as _Path
+                            _attr_dir = _Path("data")
+                            _attr_dir.mkdir(exist_ok=True)
+                            _attr_path = _attr_dir / f"{getattr(node, '_version', 'unknown')}_attribution.jsonl"
+                            with open(_attr_path, "a") as _af:
+                                for trade in newly_closed:
+                                    _sym = str(trade.get("sym") or trade.get("symbol", ""))
+                                    _pnl = float(trade.get("pnl", 0.0))
+                                    _side = str(trade.get("side", "long"))
+                                    _snap = _reinf._snapshots.get(_sym, {})
+                                    if _snap:
+                                        _contribs = _attr(_snap, _pnl, _side)
+                                        if _contribs:
+                                            _af.write(_json.dumps({
+                                                "cycle": trade.get("hold_cycles"),
+                                                "ticker": _sym,
+                                                "pnl": _pnl,
+                                                "side": _side,
+                                                **_contribs,
+                                            }) + "
+")
             except Exception as exc:
                 log.warning("PaperTrading execution failed: %s", exc)
 

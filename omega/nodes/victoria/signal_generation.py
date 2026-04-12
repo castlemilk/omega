@@ -101,6 +101,13 @@ except ImportError:
     _HAS_FEATURES = False
 
 try:
+    from omega.nodes.victoria.trade_reinforcement import TradeReinforcer as _TradeReinforcer
+    _HAS_TRADE_REINFORCER = True
+except ImportError:
+    _HAS_TRADE_REINFORCER = False
+    _TradeReinforcer = None
+
+try:
     from omega.nodes.victoria.ws_feeds import create_feed_manager as _create_feed_manager
     _HAS_WS_FEEDS = True
 except ImportError:
@@ -339,6 +346,14 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._adaptive_combiner = _AdaptiveCombiner()
                 logger.info("AdaptiveCombiner initialized")
+
+        # V106 trade_reinforcement: EMA-based per-signal weight adjustments
+        self._reinforcer: Any = None
+        if _HAS_TRADE_REINFORCER and self._features and getattr(self._features, "trade_reinforcement", False):
+            with contextlib.suppress(Exception):
+                self._reinforcer = _TradeReinforcer()
+                self._reinforcer.load()
+                logger.info("TradeReinforcer loaded (n_trades=%d)", self._reinforcer._n_trades)
 
     # ------------------------------------------------------------------ Node interface
 
@@ -818,6 +833,33 @@ class SignalGenerationNode(Node):
             # 1-day return
             if len(prices) >= 2 and prices[-2] != 0:
                 ts["return_1d"] = (prices[-1] - prices[-2]) / prices[-2]
+
+            # V106: trade_reinforcement — snapshot signals and apply EMA weight adjustments.
+            # Snapshot is stored keyed by ticker so TradeReinforcer can retrieve entry signals
+            # at trade close time (called from orchestrator_v2).
+            # Weight adjustments are applied BEFORE composite so the IC/ML combiner sees them.
+            if self._reinforcer is not None:
+                self._reinforcer.snapshot(ticker, ts)
+                _reinf_adjs = self._reinforcer.get_weight_adjustments()
+                if _reinf_adjs:
+                    for _sig_k, _mult in _reinf_adjs.items():
+                        if _sig_k in ts and isinstance(ts[_sig_k], (int, float)):
+                            ts[_sig_k] = float(ts[_sig_k]) * _mult
+                    # Recompute composite with adjusted signal values
+                    _adj_directional = [
+                        v for k, v in ts.items()
+                        if k.endswith("_signal") or k == "sma_crossover"
+                    ]
+                    if _adj_directional and self._adaptive_combiner is not None:
+                        _adj_ic, _adj_method = self._adaptive_combiner.compute_composite(
+                            ts, self._decay_detector
+                        )
+                        ts["composite"] = _adj_ic
+                        ts["composite_method"] = _adj_method + "+reinforced"
+                    elif _adj_directional and self._decay_detector is not None:
+                        _adj_ic, _adj_method = _ic_weighted_composite(ts, self._decay_detector)
+                        ts["composite"] = _adj_ic
+                        ts["composite_method"] = _adj_method + "+reinforced"
 
             signals[ticker] = ts
 
