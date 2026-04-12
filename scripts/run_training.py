@@ -517,6 +517,7 @@ def run(
     from omega.core.adversarial_v2 import AdversarialPressureV2
 
     victoria = VictoriaNode()
+    victoria._version = version  # V107: propagates to tracer file path + orchestrator attribution log
     # V86: raise Ring 1 block threshold from 1.0 → 2.0 for training.
     # V85 post-mortem: Ring 1 was blocking ALL trades in normal/recovery regime because
     # max_disagreement (1.0–1.5) exceeded learned_threshold (1.030). In post-crash recovery,
