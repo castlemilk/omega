@@ -143,6 +143,7 @@ import math
 import time
 import uuid
 from datetime import UTC, datetime
+from pathlib import Path
 from enum import IntEnum
 from typing import Any
 
@@ -151,6 +152,7 @@ from omega.core.decision_snapshot import SignalTrace, TickerDecision
 from omega.core.node import Node, NodeInput, NodeOutput, NodeState
 from omega.core.risk_manager import PositionRiskManager
 from omega.nodes.victoria.anomaly_detector import AnomalyDetector
+from omega.nodes.victoria.decision_embeddings import DecisionEmbedder
 from omega.nodes.victoria.decision_trace import (
     DecisionTrace,
     TraceWriter,
@@ -384,6 +386,28 @@ class StrategyNode(Node):
 
         # --- Feature flags ---
         self.features: VictoriaFeatures = VictoriaFeatures.from_env()
+
+        # --- Decision embedder (loaded once at init if flag is on) ---
+        # Persistence path: data/decision_embeddings/embedder.pkl
+        # Fit with: python -m omega.nodes.victoria.decision_embeddings --version <vN> --out data/decision_embeddings/embedder.pkl
+        self._embedder: DecisionEmbedder | None = None
+        if self.features.decision_embeddings:
+            _embedder_pkl = Path("data/decision_embeddings/embedder.pkl")
+            if _embedder_pkl.exists():
+                try:
+                    self._embedder = DecisionEmbedder.load(_embedder_pkl)
+                except Exception as _e:
+                    logger.warning(
+                        "DecisionEmbedder: failed to load %s: %s — bias=0.0", _embedder_pkl, _e
+                    )
+            else:
+                logger.info(
+                    "DecisionEmbedder: no model at %s — bias=0.0 (first run; "
+                    "fit with: python -m omega.nodes.victoria.decision_embeddings "
+                    "--version <vN> --out %s)",
+                    _embedder_pkl,
+                    _embedder_pkl,
+                )
 
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
@@ -992,6 +1016,27 @@ class StrategyNode(Node):
         # _apply_regime_adaptive_thresholds() sets these each cycle before the
         # per-ticker loop so CRISIS → lower short bar, BULL → lower long bar.
         w_conv = self._compute_weighted_conviction(sig)
+        # 3a-embed: V101 Track C — apply cluster bias from fitted DecisionEmbedder.
+        # bias ∈ [-0.5, +0.5]; adjusted = w_conv * (1.0 + bias).
+        # Falls back to bias=0.0 when no model is loaded (first run or deps missing).
+        if self.features.decision_embeddings and self._embedder is not None:
+            _sig_vals = {k: float(v) for k, v in sig.items() if isinstance(v, (int, float))}
+            _regime_for_embed = "crisis" if self._is_crisis else sig.get("vol_regime", "normal")
+            _bias = self._embedder.cluster_bias(
+                signal_values=_sig_vals,
+                regime=_regime_for_embed,
+                conviction_score=abs(w_conv),
+            )
+            _adjusted = w_conv * (1.0 + _bias)
+            logger.debug(
+                "Embedding bias (%s %s): w_conv=%.4f bias=%.3f → %.4f",
+                sig.get("symbol", "?"),
+                direction,
+                w_conv,
+                _bias,
+                _adjusted,
+            )
+            w_conv = _adjusted
         # 3a. Absolute minimum conviction floor: regime-dependent (V80/V81 fix).
         # Normal/high_vol: use abs_min_conviction (0.06 as of V81) — calibrated on V78/V80 data.
         # Crisis shorts: use crisis short_thresh (0.04) — the floor was negating the V77
