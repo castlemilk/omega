@@ -127,6 +127,18 @@ class VictoriaFeatures:
     When to enable: pair with decision_embeddings (v102_fear_optimized preset).
     """
 
+    trade_reinforcement: bool = False
+    """V106: EMA-based per-signal reinforcement learning from closed trades.
+    After 5+ closed trades, per-signal multipliers [0.2, 1.5] are applied to
+    signal values in signal_generation.py before composite computation.
+    Alignment rule: signals that consistently pointed the right direction get
+    amplified; signals that were systematically wrong get dampened.
+    State persists to data/reinforcement_state.json across runs.
+    Also runs trade_attribution decomposition at each close (JSONL log).
+    When to enable: pair with decision_embeddings + ws_microstructure + temporal_memory
+    (v106_reinforced preset).
+    """
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
@@ -264,4 +276,11 @@ _PRESETS["v103_full"] = VictoriaFeatures(
     ws_microstructure=True,
     temporal_memory=True,
     adaptive_combiner=True,
+)
+
+_PRESETS["v106_reinforced"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
 )
