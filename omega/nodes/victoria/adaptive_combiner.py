@@ -9,7 +9,7 @@ Falls back to equal-weight when < MIN_SIGNALS have IC data.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, ClassVar
 
 logger = logging.getLogger(__name__)
 
@@ -35,12 +35,12 @@ class AdaptiveCombiner:
     """
 
     # IC thresholds
-    ANTI_PRED_THRESHOLD = -0.02   # below this → flip signal
-    WEAK_THRESHOLD = 0.0          # below this but above anti-pred → weight = 0.1
-    ACTIVE_THRESHOLD = 0.05       # above this → weight = IC / 0.05
-    MIN_SIGNALS_FOR_IC = 3        # minimum signals with IC before using adaptive weights
+    ANTI_PRED_THRESHOLD = -0.02  # below this → flip signal
+    WEAK_THRESHOLD = 0.0  # below this but above anti-pred → weight = 0.1
+    ACTIVE_THRESHOLD = 0.05  # above this → weight = IC / 0.05
+    MIN_SIGNALS_FOR_IC = 3  # minimum signals with IC before using adaptive weights
 
-    SIGNAL_FAMILIES = {
+    SIGNAL_FAMILIES: ClassVar[dict[str, list[str]]] = {
         "momentum": ["sma_crossover", "macd_crossover", "zscore_signal"],
         "mean_reversion": ["rsi_signal", "bb_signal"],
         "volatility": ["vol_regime_signal"],
@@ -87,7 +87,7 @@ class AdaptiveCombiner:
                 )
                 weights[key] = -0.3  # flipped contribution
             elif ic < self.WEAK_THRESHOLD:
-                weights[key] = 0.1   # downweighted but kept
+                weights[key] = 0.1  # downweighted but kept
             elif ic < self.ACTIVE_THRESHOLD:
                 weights[key] = max(0.2, ic / self.ACTIVE_THRESHOLD)
             else:
@@ -141,11 +141,8 @@ class AdaptiveCombiner:
     def _get_signal_keys(self, signals_dict: dict) -> list[str]:
         """Get all signal keys from the dict (ends with _signal or is sma_crossover/macd_crossover)."""
         return [
-            k for k in signals_dict
-            if (
-                k.endswith("_signal")
-                or k == "sma_crossover"
-                or k == "macd_crossover"
-            )
+            k
+            for k in signals_dict
+            if (k.endswith("_signal") or k == "sma_crossover" or k == "macd_crossover")
             and isinstance(signals_dict[k], (int, float))
         ]

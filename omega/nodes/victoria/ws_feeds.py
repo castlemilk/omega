@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import math
 import statistics
 import threading
 import time
@@ -48,37 +47,42 @@ try:
     _WEBSOCKETS_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _WEBSOCKETS_AVAILABLE = False
-    logger.warning("ws_feeds: 'websockets' package not available — all microstructure signals will return 0.0")
+    logger.warning(
+        "ws_feeds: 'websockets' package not available — all microstructure signals will return 0.0"
+    )
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 _BINANCE_WS_BASE = "wss://stream.binance.com:9443/stream"
-_RECONNECT_DELAY = 5.0          # seconds between reconnect attempts
-_RING_CAPACITY = 1_000          # ticks per symbol
-_BOOK_DEPTH = 20                # top-N book levels
-_TICK_MOMENTUM_WINDOW = 50      # last N ticks for momentum
-_TRADE_FLOW_WINDOW_SEC = 60.0   # seconds for trade flow / volume profile
-_SPREAD_HISTORY = 100           # ticks to keep for spread z-score
-_VOL_PROFILE_WINDOWS = 10       # number of 60-s windows for avg volume
+_RECONNECT_DELAY = 5.0  # seconds between reconnect attempts
+_RING_CAPACITY = 1_000  # ticks per symbol
+_BOOK_DEPTH = 20  # top-N book levels
+_TICK_MOMENTUM_WINDOW = 50  # last N ticks for momentum
+_TRADE_FLOW_WINDOW_SEC = 60.0  # seconds for trade flow / volume profile
+_SPREAD_HISTORY = 100  # ticks to keep for spread z-score
+_VOL_PROFILE_WINDOWS = 10  # number of 60-s windows for avg volume
 
 
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class Tick:
     """Single aggTrade record."""
+
     price: float
     size: float
-    side: str   # "buy" | "sell"
-    ts: float   # unix timestamp (seconds)
+    side: str  # "buy" | "sell"
+    ts: float  # unix timestamp (seconds)
 
 
 @dataclass
 class BookLevel:
     """One price level in the L2 order book."""
+
     price: float
     size: float
 
@@ -128,6 +132,7 @@ class OrderBook:
 # Per-symbol state
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class _SymbolState:
     ticks: RingBuffer = field(default_factory=RingBuffer)
@@ -156,7 +161,7 @@ _ZERO_SIGNALS: dict[str, float] = {
 class _NoOpWSFeedManager:
     """Returned when ``websockets`` is not importable."""
 
-    def start(self) -> None:  # noqa: D401
+    def start(self) -> None:
         pass
 
     def stop(self) -> None:
@@ -172,6 +177,7 @@ class _NoOpWSFeedManager:
 # ---------------------------------------------------------------------------
 # Main feed manager
 # ---------------------------------------------------------------------------
+
 
 class WSFeedManager:
     """
@@ -249,9 +255,9 @@ class WSFeedManager:
         obi = self._order_book_imbalance(bids, asks)
         tfd = self._trade_flow_direction(ticks)
         ssz = self._spread_zscore(bids, asks, state)
-        vp  = self._volume_profile(ticks)
-        tm  = self._tick_momentum(ticks)
-        lp  = self._liquidation_proximity(obi, tfd)
+        vp = self._volume_profile(ticks)
+        tm = self._tick_momentum(ticks)
+        lp = self._liquidation_proximity(obi, tfd)
 
         return {
             "order_book_imbalance": obi,
@@ -291,7 +297,7 @@ class WSFeedManager:
         recent = [t for t in ticks if t.ts >= cutoff]
         if not recent:
             return 0.0
-        buy_vol  = sum(t.size for t in recent if t.side == "buy")
+        buy_vol = sum(t.size for t in recent if t.side == "buy")
         sell_vol = sum(t.size for t in recent if t.side == "sell")
         total = buy_vol + sell_vol
         if total == 0.0:
@@ -343,7 +349,7 @@ class WSFeedManager:
             return 0.0
 
         now = time.time()
-        window_sec = _TRADE_FLOW_WINDOW_SEC   # 60s
+        window_sec = _TRADE_FLOW_WINDOW_SEC  # 60s
 
         # Current window volume
         cutoff_current = now - window_sec
@@ -353,7 +359,7 @@ class WSFeedManager:
         window_vols: list[float] = []
         for w in range(1, _VOL_PROFILE_WINDOWS + 1):
             w_start = now - (w + 1) * window_sec
-            w_end   = now - w * window_sec
+            w_end = now - w * window_sec
             vol = sum(t.size for t in ticks if w_start <= t.ts < w_end)
             window_vols.append(vol)
 
@@ -429,7 +435,9 @@ class WSFeedManager:
             try:
                 await self._connect_and_consume()
             except Exception as exc:
-                logger.debug("ws_feeds: connection error (%s), reconnecting in %ss", exc, _RECONNECT_DELAY)
+                logger.debug(
+                    "ws_feeds: connection error (%s), reconnecting in %ss", exc, _RECONNECT_DELAY
+                )
             if not self._stop_event.is_set():
                 await asyncio.sleep(_RECONNECT_DELAY)
 
@@ -455,6 +463,7 @@ class WSFeedManager:
         """Parse a combined-stream message and update state."""
         try:
             import json as _json
+
             msg: dict[str, Any] = _json.loads(raw)
         except Exception:
             return
@@ -492,11 +501,11 @@ class WSFeedManager:
         """Push a new Tick onto the ring buffer and mark state as ready."""
         try:
             price = float(data["p"])
-            size  = float(data["q"])
+            size = float(data["q"])
             # m=True → buyer is market maker → seller is aggressor → "sell"
             # m=False → seller is market maker → buyer is aggressor → "buy"
-            side  = "sell" if data.get("m", False) else "buy"
-            ts    = data.get("T", time.time() * 1000) / 1000.0  # ms → s
+            side = "sell" if data.get("m", False) else "buy"
+            ts = data.get("T", time.time() * 1000) / 1000.0  # ms → s
         except (KeyError, ValueError, TypeError):
             return
 
@@ -509,7 +518,8 @@ class WSFeedManager:
 # Module-level factory — returns NoOp if websockets unavailable
 # ---------------------------------------------------------------------------
 
-def create_feed_manager(symbols: list[str]) -> "WSFeedManager | _NoOpWSFeedManager":
+
+def create_feed_manager(symbols: list[str]) -> WSFeedManager | _NoOpWSFeedManager:
     """
     Return a :class:`WSFeedManager` if ``websockets`` is available, otherwise
     a :class:`_NoOpWSFeedManager` that always returns zero signals.

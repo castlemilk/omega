@@ -96,12 +96,14 @@ logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 # V103: optional new-architecture modules — import lazily to preserve V93 baseline
 try:
     from omega.nodes.victoria.features import VictoriaFeatures as _VictoriaFeatures
+
     _HAS_FEATURES = True
 except ImportError:
     _HAS_FEATURES = False
 
 try:
     from omega.nodes.victoria.trade_reinforcement import TradeReinforcer as _TradeReinforcer
+
     _HAS_TRADE_REINFORCER = True
 except ImportError:
     _HAS_TRADE_REINFORCER = False
@@ -109,6 +111,7 @@ except ImportError:
 
 try:
     from omega.nodes.victoria.activation_trace import ActivationTracer as _ActivationTracer
+
     _HAS_ACTIVATION_TRACER = True
 except ImportError:
     _HAS_ACTIVATION_TRACER = False
@@ -116,18 +119,21 @@ except ImportError:
 
 try:
     from omega.nodes.victoria.ws_feeds import create_feed_manager as _create_feed_manager
+
     _HAS_WS_FEEDS = True
 except ImportError:
     _HAS_WS_FEEDS = False
 
 try:
     from omega.nodes.victoria.signal_memory import SignalMemory as _SignalMemory
+
     _HAS_SIGNAL_MEMORY = True
 except ImportError:
     _HAS_SIGNAL_MEMORY = False
 
 try:
     from omega.nodes.victoria.adaptive_combiner import AdaptiveCombiner as _AdaptiveCombiner
+
     _HAS_ADAPTIVE_COMBINER = True
 except ImportError:
     _HAS_ADAPTIVE_COMBINER = False
@@ -329,11 +335,17 @@ class SignalGenerationNode(Node):
 
         # V103 ws_microstructure: background WS feeds for microstructure signals
         self._ws_feeds: Any = None
-        if _HAS_WS_FEEDS and self._features and getattr(self._features, "ws_microstructure", False):
+        if (
+            _HAS_WS_FEEDS
+            and self._features
+            and getattr(self._features, "ws_microstructure", False)
+        ):
             with contextlib.suppress(Exception):
                 from omega.nodes.victoria.strategy import _TRADING_BLACKLIST
+
                 _ws_symbols = [
-                    s for s in ["ETHUSDT", "NEARUSDT", "ARBUSDT", "ADAUSDT", "BTCUSDT"]
+                    s
+                    for s in ["ETHUSDT", "NEARUSDT", "ARBUSDT", "ADAUSDT", "BTCUSDT"]
                     if s not in _TRADING_BLACKLIST
                 ]
                 self._ws_feeds = _create_feed_manager(_ws_symbols)
@@ -342,21 +354,33 @@ class SignalGenerationNode(Node):
 
         # V103 temporal_memory: 20-cycle signal history per ticker
         self._signal_memory: Any = None
-        if _HAS_SIGNAL_MEMORY and self._features and getattr(self._features, "temporal_memory", False):
+        if (
+            _HAS_SIGNAL_MEMORY
+            and self._features
+            and getattr(self._features, "temporal_memory", False)
+        ):
             with contextlib.suppress(Exception):
                 self._signal_memory = _SignalMemory(lookback=20)
                 logger.info("SignalMemory initialized (lookback=20)")
 
         # V103 adaptive_combiner: IC-weighted combiner with signal flipping
         self._adaptive_combiner: Any = None
-        if _HAS_ADAPTIVE_COMBINER and self._features and getattr(self._features, "adaptive_combiner", False):
+        if (
+            _HAS_ADAPTIVE_COMBINER
+            and self._features
+            and getattr(self._features, "adaptive_combiner", False)
+        ):
             with contextlib.suppress(Exception):
                 self._adaptive_combiner = _AdaptiveCombiner()
                 logger.info("AdaptiveCombiner initialized")
 
         # V106 trade_reinforcement: EMA-based per-signal weight adjustments
         self._reinforcer: Any = None
-        if _HAS_TRADE_REINFORCER and self._features and getattr(self._features, "trade_reinforcement", False):
+        if (
+            _HAS_TRADE_REINFORCER
+            and self._features
+            and getattr(self._features, "trade_reinforcement", False)
+        ):
             with contextlib.suppress(Exception):
                 self._reinforcer = _TradeReinforcer()
                 self._reinforcer.load()
@@ -877,8 +901,7 @@ class SignalGenerationNode(Node):
                             ts[_sig_k] = float(ts[_sig_k]) * _mult
                     # Recompute composite with adjusted signal values
                     _adj_directional = [
-                        v for k, v in ts.items()
-                        if k.endswith("_signal") or k == "sma_crossover"
+                        v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
                     ]
                     if _adj_directional and self._adaptive_combiner is not None:
                         _adj_ic, _adj_method = self._adaptive_combiner.compute_composite(

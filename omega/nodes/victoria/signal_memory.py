@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import threading
 from collections import deque
-from typing import Any
+from typing import Any, ClassVar
 
 
 class SignalMemory:
@@ -33,7 +33,7 @@ class SignalMemory:
 
     # Signals tracked for temporal features, keyed by the internal signal name
     # used in self.history.  Maps to the output feature name(s).
-    _TRACKED_SIGNALS = {
+    _TRACKED_SIGNALS: ClassVar[set[str]] = {
         "composite",
         "sma_crossover",
         "funding_rate_signal",
@@ -204,7 +204,7 @@ class SignalMemory:
             return 0.0
         prev, curr = history[-2], history[-1]
         if prev <= 0 and curr > 0:
-            return 1.0   # crossed positive
+            return 1.0  # crossed positive
         if prev >= 0 and curr < 0:
             return -1.0  # crossed negative
         return 0.0
@@ -242,9 +242,7 @@ class SignalMemory:
             Fraction of lookback spent in current regime, in [0, 1].
             0.0 if no regime history.
         """
-        regime_hist = list(
-            self.history.get(ticker, {}).get("_vol_regime_str", [])
-        )
+        regime_hist = list(self.history.get(ticker, {}).get("_vol_regime_str", []))
         if not regime_hist:
             return 0.0
         current_regime = regime_hist[-1]

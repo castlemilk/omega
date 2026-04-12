@@ -143,8 +143,8 @@ import math
 import time
 import uuid
 from datetime import UTC, datetime
-from pathlib import Path
 from enum import IntEnum
+from pathlib import Path
 from typing import Any
 
 from omega.core.actions import NodeAction
@@ -849,7 +849,7 @@ class StrategyNode(Node):
                 or (regime_label == "crisis" and bear_prob >= 0.45)
             )
         self._is_crisis = is_crisis
-        self._is_high_vol_regime = (regime_label == "high_vol")
+        self._is_high_vol_regime = regime_label == "high_vol"
         is_bull = (
             bull_prob >= 0.55 or (bull_prob < 0.0 and regime_hmm == "bull")
         ) and not is_crisis
@@ -1018,9 +1018,7 @@ class StrategyNode(Node):
                 _new_short = min(_old_short, 0.05)
                 if _new_short < _old_short:
                     self._short_conviction_threshold = _new_short
-                    logger.info(
-                        "crisis_short_bias: normal → short_thresh %.4f→0.05", _old_short
-                    )
+                    logger.info("crisis_short_bias: normal → short_thresh %.4f→0.05", _old_short)
 
     def _passes_conviction_filters(
         self, sig: dict, cycle: int, direction: str = "long"
@@ -1744,20 +1742,32 @@ class StrategyNode(Node):
                 # V107: activation_tracing — record entry trace at exact moment of acceptance
                 if self._tracer is not None and self.features.activation_tracing:
                     import contextlib as _cl
+
                     with _cl.suppress(Exception):
-                        from omega.nodes.victoria.activation_trace import build_activation_trace as _bat
+                        from omega.nodes.victoria.activation_trace import (
+                            build_activation_trace as _bat,
+                        )
+
                         _at = _bat(
-                            ticker=ticker, cycle=current_cycle, version=getattr(self, "_version", ""),
-                            direction="long", sig=sig,
+                            ticker=ticker,
+                            cycle=current_cycle,
+                            version=getattr(self, "_version", ""),
+                            direction="long",
+                            sig=sig,
                             weighted_conviction=self._last_w_conv,  # bias-adjusted value from filter
                             long_thresh=self._long_conviction_threshold,
                             short_thresh=self._short_conviction_threshold,
-                            thresh_scale=_thresh_scale, wc_thresh=self._weighted_conviction_threshold,
-                            basket_mean=_basket_mean, basket_std=_basket_std,
-                            regime=_regime_consolidated, bear_prob=float(signals.get("_regime_w_bear_prob", -1)),
+                            thresh_scale=_thresh_scale,
+                            wc_thresh=self._weighted_conviction_threshold,
+                            basket_mean=_basket_mean,
+                            basket_std=_basket_std,
+                            regime=_regime_consolidated,
+                            bear_prob=float(signals.get("_regime_w_bear_prob", -1)),
                             bull_prob=float(signals.get("_regime_w_bull_prob", -1)),
-                            is_crisis=self._is_crisis, is_high_vol=self._is_high_vol_regime,
-                            final_decision="TRADE", conviction_level=c.name,
+                            is_crisis=self._is_crisis,
+                            is_high_vol=self._is_high_vol_regime,
+                            final_decision="TRADE",
+                            conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
                 long_candidates[ticker] = sig
@@ -1849,20 +1859,32 @@ class StrategyNode(Node):
                 # V107: activation_tracing — record entry trace for short
                 if self._tracer is not None and self.features.activation_tracing:
                     import contextlib as _cl
+
                     with _cl.suppress(Exception):
-                        from omega.nodes.victoria.activation_trace import build_activation_trace as _bat
+                        from omega.nodes.victoria.activation_trace import (
+                            build_activation_trace as _bat,
+                        )
+
                         _at = _bat(
-                            ticker=ticker, cycle=current_cycle, version=getattr(self, "_version", ""),
-                            direction="short", sig=sig,
+                            ticker=ticker,
+                            cycle=current_cycle,
+                            version=getattr(self, "_version", ""),
+                            direction="short",
+                            sig=sig,
                             weighted_conviction=self._last_w_conv,  # bias-adjusted value from filter
                             long_thresh=self._long_conviction_threshold,
                             short_thresh=self._short_conviction_threshold,
-                            thresh_scale=_thresh_scale, wc_thresh=self._weighted_conviction_threshold,
-                            basket_mean=_basket_mean, basket_std=_basket_std,
-                            regime=_regime_consolidated, bear_prob=float(signals.get("_regime_w_bear_prob", -1)),
+                            thresh_scale=_thresh_scale,
+                            wc_thresh=self._weighted_conviction_threshold,
+                            basket_mean=_basket_mean,
+                            basket_std=_basket_std,
+                            regime=_regime_consolidated,
+                            bear_prob=float(signals.get("_regime_w_bear_prob", -1)),
                             bull_prob=float(signals.get("_regime_w_bull_prob", -1)),
-                            is_crisis=self._is_crisis, is_high_vol=self._is_high_vol_regime,
-                            final_decision="TRADE", conviction_level=c.name,
+                            is_crisis=self._is_crisis,
+                            is_high_vol=self._is_high_vol_regime,
+                            final_decision="TRADE",
+                            conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
                 short_candidates[ticker] = sig
@@ -2022,9 +2044,9 @@ class StrategyNode(Node):
         raw_weights: dict[str, float] = {}
         _wconv_scores: dict[str, float] = {}  # w_conv per ticker for paper_trading sizing
         # V102: crisis_short_bias per-direction size multipliers (applied before kelly).
-        _csb_fear_regime = (
-            self.features.crisis_short_bias
-            and _regime_consolidated in ("crisis", "high_vol")
+        _csb_fear_regime = self.features.crisis_short_bias and _regime_consolidated in (
+            "crisis",
+            "high_vol",
         )
         _csb_short_mult = 1.3 if _csb_fear_regime else 1.0
         _csb_long_mult = 0.5 if _csb_fear_regime else 1.0
@@ -2044,12 +2066,18 @@ class StrategyNode(Node):
                     )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (
-                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_long_mult
+                    w
+                    * conviction_size_multiplier(convictions[ticker])
+                    * _conv_scale
+                    * _csb_long_mult
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
                 raw_weights[ticker] = (
-                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_long_mult
+                    w
+                    * conviction_size_multiplier(convictions[ticker])
+                    * _conv_scale
+                    * _csb_long_mult
                 )
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
@@ -2066,12 +2094,18 @@ class StrategyNode(Node):
                     )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (
-                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_short_mult
+                    -w
+                    * conviction_size_multiplier(convictions[ticker])
+                    * _conv_scale
+                    * _csb_short_mult
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
                 raw_weights[ticker] = (
-                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_short_mult
+                    -w
+                    * conviction_size_multiplier(convictions[ticker])
+                    * _conv_scale
+                    * _csb_short_mult
                 )
 
         # V102: crisis_short_bias size multipliers — scale shorts up (1.3x), longs down (0.5x)

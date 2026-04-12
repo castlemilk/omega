@@ -49,7 +49,7 @@ from __future__ import annotations
 import json
 import logging
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -368,6 +368,7 @@ class ActivationTracer:
         self._pending.clear()
         if self._fh:
             import contextlib
+
             with contextlib.suppress(Exception):
                 self._fh.close()
             self._fh = None
@@ -419,12 +420,12 @@ def build_activation_trace(
     # so every computed signal is captured, not just the hardcoded _DIRECTIONAL_SIGNALS set.
     activations: list[SignalActivation] = []
     expected_dir = 1 if direction == "long" else -1
-    # _NON_SIGNAL_KEYS: numeric keys in sig that are not directional signals
-    _NON_SIGNAL_KEYS = {"composite", "vol_regime", "vol_rank", "basket_mean", "basket_std"}
+    # _non_signal_keys: numeric keys in sig that are not directional signals
+    _non_signal_keys = {"composite", "vol_regime", "vol_rank", "basket_mean", "basket_std"}
     for name, val in sig.items():
         if name.startswith("_"):
             continue  # internal/meta keys (regime state, reinf_weights, etc.)
-        if name in _NON_SIGNAL_KEYS:
+        if name in _non_signal_keys:
             continue
         if val is None:
             continue
@@ -447,15 +448,17 @@ def build_activation_trace(
         else:
             align = -1 if expected_dir > 0 else 1
 
-        activations.append(SignalActivation(
-            name=name,
-            raw_value=fval,
-            reinforcement_weight=r_weight,
-            ic_weight=ic_weight,
-            final_weight=final_w,
-            weighted_value=weighted_val,
-            direction_alignment=align,
-        ))
+        activations.append(
+            SignalActivation(
+                name=name,
+                raw_value=fval,
+                reinforcement_weight=r_weight,
+                ic_weight=ic_weight,
+                final_weight=final_w,
+                weighted_value=weighted_val,
+                direction_alignment=align,
+            )
+        )
 
     # Sort by abs(weighted_value) descending — most influential first
     activations.sort(key=lambda a: abs(a.weighted_value), reverse=True)

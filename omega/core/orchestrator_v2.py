@@ -1695,12 +1695,19 @@ class OmegaOrchestrator:
                                 if _sym:
                                     _reinf.on_trade_close(_sym, _pnl, _side)
                             # Also run trade attribution (JSONL log) for analysis
-                            from omega.nodes.victoria.trade_attribution import attribute_trade as _attr
                             import json as _json
                             from pathlib import Path as _Path
+
+                            from omega.nodes.victoria.trade_attribution import (
+                                attribute_trade as _attr,
+                            )
+
                             _attr_dir = _Path("data")
                             _attr_dir.mkdir(exist_ok=True)
-                            _attr_path = _attr_dir / f"{getattr(node, '_version', 'unknown')}_attribution.jsonl"
+                            _attr_path = (
+                                _attr_dir
+                                / f"{getattr(node, '_version', 'unknown')}_attribution.jsonl"
+                            )
                             with open(_attr_path, "a") as _af:
                                 for trade in newly_closed:
                                     _sym = str(trade.get("sym") or trade.get("symbol", ""))
@@ -1710,13 +1717,18 @@ class OmegaOrchestrator:
                                     if _snap:
                                         _contribs = _attr(_snap, _pnl, _side)
                                         if _contribs:
-                                            _af.write(_json.dumps({
-                                                "cycle": trade.get("hold_cycles"),
-                                                "ticker": _sym,
-                                                "pnl": _pnl,
-                                                "side": _side,
-                                                **_contribs,
-                                            }) + "\n")
+                                            _af.write(
+                                                _json.dumps(
+                                                    {
+                                                        "cycle": trade.get("hold_cycles"),
+                                                        "ticker": _sym,
+                                                        "pnl": _pnl,
+                                                        "side": _side,
+                                                        **_contribs,
+                                                    }
+                                                )
+                                                + "\n"
+                                            )
                     # V107: activation_tracing — record exit on ActivationTracer
                     with contextlib.suppress(Exception):
                         for node in self.active_nodes:
@@ -1733,7 +1745,10 @@ class OmegaOrchestrator:
                                 _reinf2 = getattr(node, "_reinforcer", None)
                                 _attr2 = {}
                                 if _reinf2 is not None:
-                                    from omega.nodes.victoria.trade_attribution import attribute_trade as _attr_fn
+                                    from omega.nodes.victoria.trade_attribution import (
+                                        attribute_trade as _attr_fn,
+                                    )
+
                                     _snap2 = _reinf2._snapshots.get(_sym, {})
                                     if _snap2:
                                         _attr2 = _attr_fn(_snap2, _pnl, _side)

@@ -79,8 +79,8 @@ logger = logging.getLogger("omega.victoria.trade_reinforcement")
 
 _DEFAULT_PATH = "data/reinforcement_state.json"
 _EMA_ALPHA = 0.1
-_MIN_TRADES = 5           # trades before adjustments activate
-_MULT_SCALE = 0.5         # score * scale → offset from 1.0
+_MIN_TRADES = 5  # trades before adjustments activate
+_MULT_SCALE = 0.5  # score * scale → offset from 1.0
 _MULT_FLOOR = 0.2
 _MULT_CEIL = 1.5
 
@@ -128,7 +128,7 @@ class TradeReinforcer:
 
     def __init__(self, path: str = _DEFAULT_PATH) -> None:
         self._path = Path(path)
-        self._scores: dict[str, float] = {}   # signal_name → EMA score ∈ [-1, 1]
+        self._scores: dict[str, float] = {}  # signal_name → EMA score ∈ [-1, 1]
         self._n_trades: int = 0
         # Last seen signal snapshots per ticker (keyed by ticker symbol)
         self._snapshots: dict[str, dict[str, float]] = {}
@@ -180,8 +180,10 @@ class TradeReinforcer:
         self._snapshots[ticker] = {
             k: float(v)
             for k, v in signals.items()
-            if k in _REINFORCEABLE_SIGNALS and isinstance(v, (int, float))
-            and not math.isnan(float(v)) and not math.isinf(float(v))
+            if k in _REINFORCEABLE_SIGNALS
+            and isinstance(v, (int, float))
+            and not math.isnan(float(v))
+            and not math.isinf(float(v))
         }
 
     # ------------------------------------------------------------------ on_trade_close

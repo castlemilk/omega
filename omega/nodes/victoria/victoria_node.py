@@ -270,6 +270,7 @@ class VictoriaNode(Node):
         # Inject into strategy if not already set
         if tracer is not None and getattr(self._strategy, "_tracer", None) is None:
             import contextlib
+
             with contextlib.suppress(Exception):
                 self._strategy.init_tracer(tracer)
                 self._strategy._version = self._version  # pass training version
@@ -362,6 +363,7 @@ class VictoriaNode(Node):
                 _sig_tracer = getattr(self._signals, "_tracer", None)
                 if _sig_tracer is not None and getattr(self._strategy, "_tracer", None) is None:
                     import contextlib as _cl
+
                     with _cl.suppress(Exception):
                         self._strategy.init_tracer(_sig_tracer)
                         self._strategy._version = self._version
