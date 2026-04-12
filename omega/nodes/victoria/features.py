@@ -95,6 +95,25 @@ class VictoriaFeatures:
     When to enable: pair with decision_embeddings (v101_regime_safe preset).
     """
 
+    ws_microstructure: bool = False
+    """V103: inject 6 real-time microstructure signals from Binance WebSocket feeds.
+    order_book_imbalance, trade_flow_direction, spread_zscore, volume_profile,
+    tick_momentum, liquidation_proximity. Requires websockets package.
+    Degrades to 0.0 if WS unavailable.
+    """
+
+    temporal_memory: bool = False
+    """V103: inject 8 temporal signal features using 20-cycle rolling history.
+    momentum_derivative, funding_derivative, momentum_persistence, regime_duration,
+    momentum_crossover, funding_crossover, conviction_trend, agreement_trend.
+    """
+
+    adaptive_combiner: bool = False
+    """V103: replace static IC-weighted composite with adaptive combiner.
+    Anti-predictive signals (IC < -0.02) are flipped rather than removed.
+    Falls back to equal-weight when insufficient IC data.
+    """
+
     crisis_short_bias: bool = False
     """V102: lean into fear in crisis/high_vol regimes.
     Threshold adjustments (applied after regime-adaptive base, before Fiedler):
@@ -232,4 +251,17 @@ _PRESETS["v101_regime_safe"] = VictoriaFeatures(
 _PRESETS["v102_fear_optimized"] = VictoriaFeatures(
     decision_embeddings=True,
     crisis_short_bias=True,
+)
+
+_PRESETS["v103_alpha"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+)
+
+_PRESETS["v103_full"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    adaptive_combiner=True,
 )

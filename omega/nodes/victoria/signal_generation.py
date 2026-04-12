@@ -93,6 +93,31 @@ except ImportError:
 
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
+# V103: optional new-architecture modules — import lazily to preserve V93 baseline
+try:
+    from omega.nodes.victoria.features import VictoriaFeatures as _VictoriaFeatures
+    _HAS_FEATURES = True
+except ImportError:
+    _HAS_FEATURES = False
+
+try:
+    from omega.nodes.victoria.ws_feeds import create_feed_manager as _create_feed_manager
+    _HAS_WS_FEEDS = True
+except ImportError:
+    _HAS_WS_FEEDS = False
+
+try:
+    from omega.nodes.victoria.signal_memory import SignalMemory as _SignalMemory
+    _HAS_SIGNAL_MEMORY = True
+except ImportError:
+    _HAS_SIGNAL_MEMORY = False
+
+try:
+    from omega.nodes.victoria.adaptive_combiner import AdaptiveCombiner as _AdaptiveCombiner
+    _HAS_ADAPTIVE_COMBINER = True
+except ImportError:
+    _HAS_ADAPTIVE_COMBINER = False
+
 
 def _safe_mean(values: list[float | None], n: int) -> float | None:
     clean = [v for v in values[-n:] if v is not None]
@@ -284,6 +309,36 @@ class SignalGenerationNode(Node):
         if _HAS_ORC:
             with contextlib.suppress(Exception):
                 self._orc = _OllivierRicci(window=30, corr_threshold=0.4)
+
+        # V103: load feature flags + optional new-architecture components
+        self._features: Any = _VictoriaFeatures.from_env() if _HAS_FEATURES else None
+
+        # V103 ws_microstructure: background WS feeds for microstructure signals
+        self._ws_feeds: Any = None
+        if _HAS_WS_FEEDS and self._features and getattr(self._features, "ws_microstructure", False):
+            with contextlib.suppress(Exception):
+                from omega.nodes.victoria.strategy import _TRADING_BLACKLIST
+                _ws_symbols = [
+                    s for s in ["ETHUSDT", "NEARUSDT", "ARBUSDT", "ADAUSDT", "BTCUSDT"]
+                    if s not in _TRADING_BLACKLIST
+                ]
+                self._ws_feeds = _create_feed_manager(_ws_symbols)
+                self._ws_feeds.start()
+                logger.info("WSFeedManager started for %s", _ws_symbols)
+
+        # V103 temporal_memory: 20-cycle signal history per ticker
+        self._signal_memory: Any = None
+        if _HAS_SIGNAL_MEMORY and self._features and getattr(self._features, "temporal_memory", False):
+            with contextlib.suppress(Exception):
+                self._signal_memory = _SignalMemory(lookback=20)
+                logger.info("SignalMemory initialized (lookback=20)")
+
+        # V103 adaptive_combiner: IC-weighted combiner with signal flipping
+        self._adaptive_combiner: Any = None
+        if _HAS_ADAPTIVE_COMBINER and self._features and getattr(self._features, "adaptive_combiner", False):
+            with contextlib.suppress(Exception):
+                self._adaptive_combiner = _AdaptiveCombiner()
+                logger.info("AdaptiveCombiner initialized")
 
     # ------------------------------------------------------------------ Node interface
 
@@ -712,14 +767,41 @@ class SignalGenerationNode(Node):
                     ts["vol_regime_signal"] = 0.1
                 # "high" and "normal": no directional signal (sit-out handles risk)
 
+            # V103: ws_microstructure — inject real-time microstructure signals per ticker
+            if self._ws_feeds is not None:
+                try:
+                    _ms = self._ws_feeds.get_microstructure(ticker)
+                    # Only inject non-zero signals (WS may not have data yet)
+                    for _ms_key, _ms_val in _ms.items():
+                        if _ms_val != 0.0:
+                            ts[_ms_key] = _ms_val
+                except Exception as _ms_exc:
+                    logger.debug("ws_microstructure %s: %s", ticker, _ms_exc)
+
+            # V103: temporal_memory — inject 8 temporal features from signal history
+            if self._signal_memory is not None:
+                try:
+                    self._signal_memory.update(ticker, ts)
+                    _temporal = self._signal_memory.get_temporal_features(ticker)
+                    ts.update(_temporal)
+                except Exception as _tm_exc:
+                    logger.debug("temporal_memory %s: %s", ticker, _tm_exc)
+
             # IC-weighted composite — falls back to equal-weight when IC data is sparse.
+            # V103: adaptive_combiner replaces _ic_weighted_composite when ON.
             # Uses per-signal Information Coefficient from SignalDecayDetector to
             # up-weight historically predictive signals and exclude anti-predictive ones.
             directional = [
                 v for k, v in ts.items() if k.endswith("_signal") or k == "sma_crossover"
             ]
             if directional:
-                ic_composite, ic_method = _ic_weighted_composite(ts, self._decay_detector)
+                if self._adaptive_combiner is not None:
+                    # V103: adaptive IC combiner with signal flipping
+                    ic_composite, ic_method = self._adaptive_combiner.compute_composite(
+                        ts, self._decay_detector
+                    )
+                else:
+                    ic_composite, ic_method = _ic_weighted_composite(ts, self._decay_detector)
                 ts["composite"] = ic_composite
                 ts["composite_method"] = ic_method
 
