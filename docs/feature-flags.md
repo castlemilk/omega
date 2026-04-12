@@ -112,6 +112,7 @@ Requires `claude` CLI in PATH (or `ANTHROPIC_API_KEY` as fallback).
 |------|-------------|--------|
 | `v96_crisis_detection_fix` | When `bear_prob=-1`, trust `regime_label='crisis'` directly instead of the old heuristic | Off pending ablation — potential improvement in bear markets |
 | `v96_multi_cycle_bypass` | Lower normal-short multi-cycle bypass threshold 0.09 → 0.07 | Off pending ablation — may increase short frequency in normal regime |
+| `crisis_high_vol_long_block` | Hard-block all long allocations when regime is `crisis` or `high_vol` (shorts unchanged). Cost: misses recovery longs in post-crash bounce. Benefit: eliminates -$106 combined crisis/high_vol long loss from V99. Enable via `v101_regime_safe` preset. | V101 — targets regime-aware sizing improvement |
 
 ---
 
@@ -125,6 +126,7 @@ Requires `claude` CLI in PATH (or `ANTHROPIC_API_KEY` as fallback).
 | `embeddings_only` | `decision_embeddings`, `llm_trade_review` | LLM + embedding features only |
 | `v98_full_obs` | geometry + observability (8 flags) | Reproduce V98 (warning: -$112 in April crisis market) |
 | `v99_full` | all 12 flags | Full stack. Use only after individual presets are validated. |
+| `v101_regime_safe` | `decision_embeddings`, `crisis_high_vol_long_block` | V101 target: embeddings + regime-safe long blocking |
 
 ---
 

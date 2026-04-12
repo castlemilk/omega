@@ -86,6 +86,15 @@ class VictoriaFeatures:
     v96_multi_cycle_bypass: bool = False
     """lucid-pascal: lower normal-short multi-cycle bypass threshold 0.09→0.07."""
 
+    crisis_high_vol_long_block: bool = False
+    """V101: hard-block all long allocations when regime is crisis OR high_vol.
+    Short-side logic is unchanged. Combats the daily-report finding that normal-regime
+    longs were +$169 but crisis/high_vol combined lost -$106 (V99, 200-cycle run).
+    Cost: misses recovery longs in crisis (high false-positive rate during post-crash bounce).
+    Benefit: eliminates the worst-performing long entries in adverse regimes.
+    When to enable: pair with decision_embeddings (v101_regime_safe preset).
+    """
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
@@ -200,4 +209,9 @@ _PRESETS["v99_full"] = VictoriaFeatures(
     llm_trade_review=True,
     v96_crisis_detection_fix=True,
     v96_multi_cycle_bypass=True,
+)
+
+_PRESETS["v101_regime_safe"] = VictoriaFeatures(
+    decision_embeddings=True,
+    crisis_high_vol_long_block=True,
 )
