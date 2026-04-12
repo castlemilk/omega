@@ -356,6 +356,15 @@ class VictoriaNode(Node):
                 "signalresearch",
             ):
                 result = self._do_compute_signals(inp)
+                # V107: after signals computed, lazy tracer is now initialized.
+                # Inject it into strategy immediately so _construct_portfolio can
+                # record entry traces in the SAME cycle (not after the first close).
+                _sig_tracer = getattr(self._signals, "_tracer", None)
+                if _sig_tracer is not None and getattr(self._strategy, "_tracer", None) is None:
+                    import contextlib as _cl
+                    with _cl.suppress(Exception):
+                        self._strategy.init_tracer(_sig_tracer)
+                        self._strategy._version = self._version
             elif action in (
                 NodeAction.CONSTRUCT_PORTFOLIO.value,
                 NodeAction.STRATEGY.value,
