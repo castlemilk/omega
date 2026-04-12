@@ -1286,6 +1286,34 @@ class StrategyNode(Node):
             self._weighted_conviction_threshold,
         )
 
+        # --- V102: crisis_short_bias threshold adjustments ---
+        # Applied after _thresh_scale so multipliers act on final effective thresholds.
+        if self.features.crisis_short_bias:
+            if _regime_consolidated in ("crisis", "high_vol"):
+                _pre_short = self._short_conviction_threshold
+                _pre_long = self._long_conviction_threshold
+                self._short_conviction_threshold *= 0.6
+                self._long_conviction_threshold *= 1.5
+                logger.info(
+                    "crisis_short_bias: fear regime %s — short_thresh %.4f→%.4f "
+                    "long_thresh %.4f→%.4f",
+                    _regime_consolidated,
+                    _pre_short,
+                    self._short_conviction_threshold,
+                    _pre_long,
+                    self._long_conviction_threshold,
+                )
+            else:
+                # Normal: cap short bar at 0.05 to build short trade history
+                _pre_short = self._short_conviction_threshold
+                _new_short = min(self._short_conviction_threshold, 0.05)
+                if _new_short < _pre_short:
+                    self._short_conviction_threshold = _new_short
+                    logger.debug(
+                        "crisis_short_bias: normal short_thresh %.4f→0.05",
+                        _pre_short,
+                    )
+
         # --- Regime transition cooldown (V92) ---
         # Skip new entries for 3 cycles after a regime shift to avoid entering on stale signals.
         _current_regime_for_cooldown = "crisis" if self._is_crisis else _regime_consolidated
@@ -1914,6 +1942,13 @@ class StrategyNode(Node):
         # a level.  This continuous factor rewards genuinely high-conviction signals.
         raw_weights: dict[str, float] = {}
         _wconv_scores: dict[str, float] = {}  # w_conv per ticker for paper_trading sizing
+        # V102: crisis_short_bias per-direction size multipliers (applied before kelly).
+        _csb_fear_regime = (
+            self.features.crisis_short_bias
+            and _regime_consolidated in ("crisis", "high_vol")
+        )
+        _csb_short_mult = 1.3 if _csb_fear_regime else 1.0
+        _csb_long_mult = 0.5 if _csb_fear_regime else 1.0
         for ticker, w in long_base.items():
             _w_conv = abs(self._compute_weighted_conviction(long_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
@@ -1930,12 +1965,12 @@ class StrategyNode(Node):
                     )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (
-                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_long_mult
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
                 raw_weights[ticker] = (
-                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_long_mult
                 )
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
@@ -1952,12 +1987,12 @@ class StrategyNode(Node):
                     )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (
-                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_short_mult
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
                 raw_weights[ticker] = (
-                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
+                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale * _csb_short_mult
                 )
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
@@ -1966,9 +2001,16 @@ class StrategyNode(Node):
         # shorts (AVAX/LINK) losing -$40+ when the bypass fires on marginal signals.
         # Crisis markets have high mean-reversion risk; smaller positions limit damage
         # while still participating in genuine directional moves.
-        if self._is_crisis:
+        if self._is_crisis and not self.features.crisis_short_bias:
             _kelly_scale *= 0.5
             logger.info("Crisis half-Kelly: scale * 0.5 = %.3f", _kelly_scale)
+        elif self._is_crisis and self.features.crisis_short_bias:
+            logger.info(
+                "Crisis half-Kelly skipped: crisis_short_bias uses per-direction "
+                "sizing (short×%.1f long×%.1f)",
+                _csb_short_mult,
+                _csb_long_mult,
+            )
         self._last_kelly_scale: float = _kelly_scale  # expose for observability
         if _kelly_scale != 1.0:
             raw_weights = {t: w * _kelly_scale for t, w in raw_weights.items()}

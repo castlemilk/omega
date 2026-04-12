@@ -95,6 +95,19 @@ class VictoriaFeatures:
     When to enable: pair with decision_embeddings (v101_regime_safe preset).
     """
 
+    crisis_short_bias: bool = False
+    """V102: exploit fear/volatility regimes instead of hiding from them.
+    In crisis/high_vol:
+      - short_thresh *= 0.6   (easier shorts — lean into downward momentum)
+      - long_thresh  *= 1.5   (harder longs — not blocked, just more selective)
+      - short raw_weight * 1.3 (bigger short bets)
+      - long raw_weight  * 0.5 (smaller long bets)
+      - skip half-Kelly reduction (replaces with per-direction sizing above)
+    In normal regime: short_thresh capped at 0.05 (builds short trade history).
+    Evidence: V75 +$110 from 3 crisis shorts; V101b ADA short +$111 in crisis.
+    When to enable: pair with decision_embeddings (v102_fear_optimized preset).
+    """
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
@@ -214,4 +227,9 @@ _PRESETS["v99_full"] = VictoriaFeatures(
 _PRESETS["v101_regime_safe"] = VictoriaFeatures(
     decision_embeddings=True,
     crisis_high_vol_long_block=True,
+)
+
+_PRESETS["v102_fear_optimized"] = VictoriaFeatures(
+    decision_embeddings=True,
+    crisis_short_bias=True,
 )
