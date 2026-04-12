@@ -108,6 +108,13 @@ except ImportError:
     _TradeReinforcer = None
 
 try:
+    from omega.nodes.victoria.activation_trace import ActivationTracer as _ActivationTracer
+    _HAS_ACTIVATION_TRACER = True
+except ImportError:
+    _HAS_ACTIVATION_TRACER = False
+    _ActivationTracer = None
+
+try:
     from omega.nodes.victoria.ws_feeds import create_feed_manager as _create_feed_manager
     _HAS_WS_FEEDS = True
 except ImportError:
@@ -354,6 +361,14 @@ class SignalGenerationNode(Node):
                 self._reinforcer = _TradeReinforcer()
                 self._reinforcer.load()
                 logger.info("TradeReinforcer loaded (n_trades=%d)", self._reinforcer._n_trades)
+
+        # V107 activation_tracing: full computation-graph trace per trade
+        self._tracer: Any = None
+        if _HAS_ACTIVATION_TRACER and self._features and getattr(self._features, "activation_tracing", False):
+            with contextlib.suppress(Exception):
+                self._tracer = _ActivationTracer(version=self._version)
+                self._tracer.open()
+                logger.info("ActivationTracer writing to %s", self._tracer.path)
 
     # ------------------------------------------------------------------ Node interface
 
@@ -838,9 +853,11 @@ class SignalGenerationNode(Node):
             # Snapshot is stored keyed by ticker so TradeReinforcer can retrieve entry signals
             # at trade close time (called from orchestrator_v2).
             # Weight adjustments are applied BEFORE composite so the IC/ML combiner sees them.
+            # _reinf_weights injected into ts so strategy.py + activation tracer can read them.
             if self._reinforcer is not None:
                 self._reinforcer.snapshot(ticker, ts)
                 _reinf_adjs = self._reinforcer.get_weight_adjustments()
+                ts["_reinf_weights"] = dict(_reinf_adjs)  # empty until 5+ trades
                 if _reinf_adjs:
                     for _sig_k, _mult in _reinf_adjs.items():
                         if _sig_k in ts and isinstance(ts[_sig_k], (int, float)):

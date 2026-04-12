@@ -485,6 +485,10 @@ class StrategyNode(Node):
         if self.features.anomaly_detector:
             self._anomaly_detector = AnomalyDetector(version=version)
 
+    def init_tracer(self, tracer: Any) -> None:
+        """Inject an ActivationTracer (from signal_generation.py via VictoriaNode)."""
+        self._tracer = tracer
+
     def get_corr_matrix(self) -> dict:
         """Return the most recent signal correlation matrix (for Go API / dashboard)."""
         if self._corr_monitor is None:
@@ -1728,6 +1732,26 @@ class StrategyNode(Node):
                         logger.debug(
                             "Confluence UNCERTAIN %s (long): %s", ticker, _cf.to_log_str()
                         )
+                # V107: activation_tracing — record entry trace at exact moment of acceptance
+                if self._tracer is not None and self.features.activation_tracing:
+                    import contextlib as _cl
+                    with _cl.suppress(Exception):
+                        from omega.nodes.victoria.activation_trace import build_activation_trace as _bat
+                        _wc = self._compute_weighted_conviction(sig)
+                        _at = _bat(
+                            ticker=ticker, cycle=current_cycle, version=getattr(self, "_version", ""),
+                            direction="long", sig=sig,
+                            weighted_conviction=_wc,
+                            long_thresh=self._long_conviction_threshold,
+                            short_thresh=self._short_conviction_threshold,
+                            thresh_scale=_thresh_scale, wc_thresh=self._weighted_conviction_threshold,
+                            basket_mean=_basket_mean, basket_std=_basket_std,
+                            regime=_regime_consolidated, bear_prob=float(signals.get("_regime_w_bear_prob", -1)),
+                            bull_prob=float(signals.get("_regime_w_bull_prob", -1)),
+                            is_crisis=self._is_crisis, is_high_vol=self._is_high_vol_regime,
+                            final_decision="TRADE", conviction_level=c.name,
+                        )
+                        self._tracer.record_entry(ticker, _at)
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
@@ -1814,6 +1838,26 @@ class StrategyNode(Node):
                         logger.debug(
                             "Confluence UNCERTAIN %s (short): %s", ticker, _cf.to_log_str()
                         )
+                # V107: activation_tracing — record entry trace for short
+                if self._tracer is not None and self.features.activation_tracing:
+                    import contextlib as _cl
+                    with _cl.suppress(Exception):
+                        from omega.nodes.victoria.activation_trace import build_activation_trace as _bat
+                        _wc = self._compute_weighted_conviction(sig)
+                        _at = _bat(
+                            ticker=ticker, cycle=current_cycle, version=getattr(self, "_version", ""),
+                            direction="short", sig=sig,
+                            weighted_conviction=_wc,
+                            long_thresh=self._long_conviction_threshold,
+                            short_thresh=self._short_conviction_threshold,
+                            thresh_scale=_thresh_scale, wc_thresh=self._weighted_conviction_threshold,
+                            basket_mean=_basket_mean, basket_std=_basket_std,
+                            regime=_regime_consolidated, bear_prob=float(signals.get("_regime_w_bear_prob", -1)),
+                            bull_prob=float(signals.get("_regime_w_bull_prob", -1)),
+                            is_crisis=self._is_crisis, is_high_vol=self._is_high_vol_regime,
+                            final_decision="TRADE", conviction_level=c.name,
+                        )
+                        self._tracer.record_entry(ticker, _at)
                 short_candidates[ticker] = sig
 
         if regime_blocked_longs or regime_blocked_shorts:

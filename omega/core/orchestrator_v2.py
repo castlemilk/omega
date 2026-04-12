@@ -1717,6 +1717,28 @@ class OmegaOrchestrator:
                                                 "side": _side,
                                                 **_contribs,
                                             }) + "\n")
+                    # V107: activation_tracing — record exit on ActivationTracer
+                    with contextlib.suppress(Exception):
+                        for node in self.active_nodes:
+                            _tracer = getattr(node, "_tracer", None)
+                            if _tracer is None:
+                                continue
+                            for trade in newly_closed:
+                                _sym = str(trade.get("sym") or trade.get("symbol", ""))
+                                _pnl = float(trade.get("pnl", 0.0))
+                                _side = str(trade.get("side", "long"))
+                                _hold = int(trade.get("hold_cycles", 0))
+                                _reason = str(trade.get("close_reason", ""))
+                                # Get attribution from reinforcer snapshot if available
+                                _reinf2 = getattr(node, "_reinforcer", None)
+                                _attr2 = {}
+                                if _reinf2 is not None:
+                                    from omega.nodes.victoria.trade_attribution import attribute_trade as _attr_fn
+                                    _snap2 = _reinf2._snapshots.get(_sym, {})
+                                    if _snap2:
+                                        _attr2 = _attr_fn(_snap2, _pnl, _side)
+                                if _sym:
+                                    _tracer.record_exit(_sym, _pnl, _side, _hold, _reason, _attr2)
             except Exception as exc:
                 log.warning("PaperTrading execution failed: %s", exc)
 
