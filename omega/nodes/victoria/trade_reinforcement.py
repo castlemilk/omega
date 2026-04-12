@@ -218,8 +218,10 @@ class TradeReinforcer:
             self._n_trades,
         )
 
+        # Persist after every trade so state survives crashes.
+        # Extra: log top adjustments every 10 trades for visibility.
+        self.persist()
         if self._n_trades % 10 == 0:
-            self.persist()
             self._log_top_adjustments()
 
     # ------------------------------------------------------------------ get_weight_adjustments

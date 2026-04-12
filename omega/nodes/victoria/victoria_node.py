@@ -248,6 +248,29 @@ class VictoriaNode(Node):
             self._skill_framework.register_skill(skill)
 
     # ------------------------------------------------------------------
+    # Reinforcement / activation tracing — expose subsystem handles to orchestrator
+    # ------------------------------------------------------------------
+
+    @property
+    def _reinforcer(self):
+        """Proxy to SignalGenerationNode._reinforcer for orchestrator access."""
+        return getattr(self._signals, "_reinforcer", None)
+
+    @property
+    def _tracer(self):
+        """Proxy to SignalGenerationNode._tracer for orchestrator access.
+        Also wires the tracer into StrategyNode so strategy.py can record entry traces.
+        """
+        tracer = getattr(self._signals, "_tracer", None)
+        # Inject into strategy if not already set
+        if tracer is not None and getattr(self._strategy, "_tracer", None) is None:
+            import contextlib
+            with contextlib.suppress(Exception):
+                self._strategy.init_tracer(tracer)
+                self._strategy._version = self._version  # pass training version
+        return tracer
+
+    # ------------------------------------------------------------------
     # Node interface
     # ------------------------------------------------------------------
 
