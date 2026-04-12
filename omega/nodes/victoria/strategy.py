@@ -1589,10 +1589,21 @@ class StrategyNode(Node):
                 if _is_high_vol:
                     logger.debug("Suppressing %s long in high_vol regime (V93)", ticker)
                     continue
-                # V101: regime-safe flag — hard-block longs in crisis regime when on.
-                # high_vol is already blocked unconditionally above (V93 baseline).
-                if self.features.crisis_high_vol_long_block and self._is_crisis:
-                    logger.debug("Regime-safe: blocking longs in crisis")
+                # V101: regime-safe flag — hard-block longs in crisis OR high_vol when on.
+                # Uses _regime_consolidated (label-based) instead of self._is_crisis
+                # (probabilistic: requires bear_prob>=0.65 or >=0.45 with label).
+                # self._is_crisis can be False when _regime_consolidated=="crisis" and
+                # bear_prob is between 0 and 0.45 — causing longs to slip through.
+                # _regime_consolidated matches exactly what is recorded in trades.csv.
+                if self.features.crisis_high_vol_long_block and _regime_consolidated in (
+                    "crisis",
+                    "high_vol",
+                ):
+                    logger.debug(
+                        "Regime-safe: blocking %s long in %s regime",
+                        ticker,
+                        _regime_consolidated,
+                    )
                     continue
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
