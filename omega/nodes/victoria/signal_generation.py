@@ -362,13 +362,11 @@ class SignalGenerationNode(Node):
                 self._reinforcer.load()
                 logger.info("TradeReinforcer loaded (n_trades=%d)", self._reinforcer._n_trades)
 
-        # V107 activation_tracing: full computation-graph trace per trade
+        # V107 activation_tracing: lazily initialized on first execute() call so that
+        # run_training.py has time to set _version (e.g. "v107") before the tracer
+        # file path is determined. Eager init here would always produce "1.0.jsonl".
         self._tracer: Any = None
-        if _HAS_ACTIVATION_TRACER and self._features and getattr(self._features, "activation_tracing", False):
-            with contextlib.suppress(Exception):
-                self._tracer = _ActivationTracer(version=self._version)
-                self._tracer.open()
-                logger.info("ActivationTracer writing to %s", self._tracer.path)
+        self._tracer_ready: bool = False
 
     # ------------------------------------------------------------------ Node interface
 
@@ -405,6 +403,21 @@ class SignalGenerationNode(Node):
         )
 
     def execute(self, input: NodeInput) -> NodeOutput:
+        # V107: lazy-init activation tracer on first execute so _version has been
+        # set to the training version (e.g. "v107") by run_training.py before the
+        # file path is determined. Eager __init__ always produced "1.0.jsonl".
+        if (
+            not self._tracer_ready
+            and _HAS_ACTIVATION_TRACER
+            and self._features
+            and getattr(self._features, "activation_tracing", False)
+        ):
+            self._tracer_ready = True
+            with contextlib.suppress(Exception):
+                self._tracer = _ActivationTracer(version=self._version)
+                self._tracer.open()
+                logger.info("ActivationTracer lazy-init: writing to %s", self._tracer._path)
+
         t0 = time.perf_counter()
         action = input.action
         params = input.parameters

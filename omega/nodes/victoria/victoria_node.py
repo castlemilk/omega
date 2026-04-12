@@ -259,8 +259,13 @@ class VictoriaNode(Node):
     @property
     def _tracer(self):
         """Proxy to SignalGenerationNode._tracer for orchestrator access.
-        Also wires the tracer into StrategyNode so strategy.py can record entry traces.
+        Also propagates _version and wires the tracer into StrategyNode.
         """
+        # Propagate VictoriaNode._version → _signals._version so the lazy-init
+        # tracer in signal_generation.py uses the training version ("v107"), not "1.0".
+        if hasattr(self._signals, "_version") and self._signals._version != self._version:
+            self._signals._version = self._version
+
         tracer = getattr(self._signals, "_tracer", None)
         # Inject into strategy if not already set
         if tracer is not None and getattr(self._strategy, "_tracer", None) is None:
@@ -327,6 +332,13 @@ class VictoriaNode(Node):
         t0 = time.perf_counter()
         self._execution_count += 1
         action = inp.action
+
+        # Propagate training version to sub-nodes before first execute so that
+        # signal_generation's lazy tracer and strategy use the correct version label.
+        if hasattr(self._signals, "_version") and self._signals._version != self._version:
+            self._signals._version = self._version
+        if hasattr(self._strategy, "_version") and self._strategy._version != self._version:
+            self._strategy._version = self._version
 
         try:
             result: Any
