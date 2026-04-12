@@ -1909,13 +1909,17 @@ class StrategyNode(Node):
             if self.features.signal_confluence:
                 _cf = self._last_confluence.get(ticker)
                 _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
-                _cf_size_mult = _cf.size_multiplier if _cf else 1.0
+                # V101 Fix 3: confluence is observer-only — warn on uncertain signals
+                # but do NOT apply size_multiplier=0.5 penalty (was gating trades).
+                if _cf and _cf.is_uncertain:
+                    logger.warning(
+                        "Confluence uncertain %s (long): %s — proceeding at nominal size",
+                        ticker,
+                        _cf.to_log_str(),
+                    )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (
-                    w
-                    * conviction_size_multiplier(convictions[ticker])
-                    * _conv_scale
-                    * _cf_size_mult
+                    w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
@@ -1928,13 +1932,16 @@ class StrategyNode(Node):
             if self.features.signal_confluence:
                 _cf = self._last_confluence.get(ticker)
                 _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
-                _cf_size_mult = _cf.size_multiplier if _cf else 1.0
+                # V101 Fix 3: same warn-only policy for shorts
+                if _cf and _cf.is_uncertain:
+                    logger.warning(
+                        "Confluence uncertain %s (short): %s — proceeding at nominal size",
+                        ticker,
+                        _cf.to_log_str(),
+                    )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (
-                    -w
-                    * conviction_size_multiplier(convictions[ticker])
-                    * _conv_scale
-                    * _cf_size_mult
+                    -w * conviction_size_multiplier(convictions[ticker]) * _conv_scale
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
