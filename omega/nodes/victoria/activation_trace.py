@@ -415,11 +415,17 @@ def build_activation_trace(
     """
     reinf_weights: dict[str, float] = sig.get("_reinf_weights") or {}
 
-    # Build per-signal activations
+    # Build per-signal activations — iterate ALL non-underscore numeric keys in sig
+    # so every computed signal is captured, not just the hardcoded _DIRECTIONAL_SIGNALS set.
     activations: list[SignalActivation] = []
     expected_dir = 1 if direction == "long" else -1
-    for name in _DIRECTIONAL_SIGNALS:
-        val = sig.get(name)
+    # _NON_SIGNAL_KEYS: numeric keys in sig that are not directional signals
+    _NON_SIGNAL_KEYS = {"composite", "vol_regime", "vol_rank", "basket_mean", "basket_std"}
+    for name, val in sig.items():
+        if name.startswith("_"):
+            continue  # internal/meta keys (regime state, reinf_weights, etc.)
+        if name in _NON_SIGNAL_KEYS:
+            continue
         if val is None:
             continue
         try:

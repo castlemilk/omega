@@ -412,6 +412,9 @@ class StrategyNode(Node):
 
         # --- Activation tracer (V107) — injected via init_tracer() ---
         self._tracer: Any = None
+        # Last bias-adjusted w_conv from _passes_conviction_filters — used by activation trace
+        # so we record the exact conviction value that passed, not a fresh bias-free recompute.
+        self._last_w_conv: float = 0.0
 
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
@@ -1099,6 +1102,9 @@ class StrategyNode(Node):
         if abs(w_conv) < conv_threshold:
             return False, f"weighted_conviction({abs(w_conv):.2f}<{conv_threshold:.2f})"
 
+        # V107: stash the final w_conv (with embedding bias applied) so activation_trace
+        # can use the exact value that passed the filter, not a fresh (bias-free) recompute.
+        self._last_w_conv = w_conv
         return True, "pass"
 
     # ------------------------------------------------------------------ spectral / Fiedler
@@ -1740,11 +1746,10 @@ class StrategyNode(Node):
                     import contextlib as _cl
                     with _cl.suppress(Exception):
                         from omega.nodes.victoria.activation_trace import build_activation_trace as _bat
-                        _wc = self._compute_weighted_conviction(sig)
                         _at = _bat(
                             ticker=ticker, cycle=current_cycle, version=getattr(self, "_version", ""),
                             direction="long", sig=sig,
-                            weighted_conviction=_wc,
+                            weighted_conviction=self._last_w_conv,  # bias-adjusted value from filter
                             long_thresh=self._long_conviction_threshold,
                             short_thresh=self._short_conviction_threshold,
                             thresh_scale=_thresh_scale, wc_thresh=self._weighted_conviction_threshold,
@@ -1846,11 +1851,10 @@ class StrategyNode(Node):
                     import contextlib as _cl
                     with _cl.suppress(Exception):
                         from omega.nodes.victoria.activation_trace import build_activation_trace as _bat
-                        _wc = self._compute_weighted_conviction(sig)
                         _at = _bat(
                             ticker=ticker, cycle=current_cycle, version=getattr(self, "_version", ""),
                             direction="short", sig=sig,
-                            weighted_conviction=_wc,
+                            weighted_conviction=self._last_w_conv,  # bias-adjusted value from filter
                             long_thresh=self._long_conviction_threshold,
                             short_thresh=self._short_conviction_threshold,
                             thresh_scale=_thresh_scale, wc_thresh=self._weighted_conviction_threshold,

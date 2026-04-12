@@ -168,11 +168,15 @@ class TradeReinforcer:
     # ------------------------------------------------------------------ snapshot
 
     def snapshot(self, ticker: str, signals: dict[str, Any]) -> None:
-        """Record the current signal dict for a ticker.
+        """Record entry-time signals for a ticker (first call per position only).
 
-        Called from signal_generation.py after computing per-ticker signals.
-        These are retrieved at trade close to compute signal alignment.
+        Called from signal_generation.py each cycle. Only the FIRST call per
+        ticker is stored — subsequent calls are no-ops so we always have the
+        entry signals, not the most-recent cycle's signals. The snapshot is
+        cleared by on_trade_close() so the next trade starts fresh.
         """
+        if ticker in self._snapshots:
+            return  # entry signals already captured; don't overwrite with later cycles
         self._snapshots[ticker] = {
             k: float(v)
             for k, v in signals.items()
@@ -217,6 +221,9 @@ class TradeReinforcer:
             updated,
             self._n_trades,
         )
+
+        # Clear snapshot so the next trade for this ticker uses fresh entry signals.
+        self._snapshots.pop(ticker, None)
 
         # Persist after every trade so state survives crashes.
         # Extra: log top adjustments every 10 trades for visibility.
