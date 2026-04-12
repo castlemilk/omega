@@ -10,6 +10,7 @@ Tracking all in-flight work across training iterations, observability, reasoning
 | V92 | +$126.75 | 46% | 76 | 1.49 | Multi-asset breakthrough (NEAR/ARB added) |
 | V75 | +$110.90 | 100% | 3 | ∞ | Crisis only (3 lucky shorts) |
 | V97 | +$94.14 | 32% | ? | ? | Geometry modifiers regressed |
+| **V100** | **+$99.76** | **34%** | **38** | **1.50** | embeddings_only — cluster_bias wired, April crisis market |
 | V99 | +$63.32 | 39% | 36 | 1.22 | Baseline sanity check — all flags OFF, April crisis market |
 | V63 | +$81.43 | 47% | 36 | 1.71 | Pre-crisis mixed regime |
 | V98 | -$112.02 | 32% | 34 | 0.48 | Full V95 geometry ON — gates failed |
@@ -47,6 +48,12 @@ python scripts/ablate.py --cycles 200 --presets v93_baseline,v97_geometry,observ
 ```
 
 ## In Progress
+
+### ✅ V100 — embeddings_only 200-cycle validation (DONE)
+- Completed 200 cycles, PnL +$99.76, WR 34.2%, 38 trades, PF 1.50
+- 37 longs / 1 short — embeddings_only preset (decision_embeddings + llm_trade_review)
+- Gates: see data/v100_gate_result.json
+- **Conclusion:** embeddings_only holds at PF 1.50 over 200 cycles. Ready for V101.
 
 ### ✅ V99 — Baseline sanity check (DONE — baseline confirmed clean)
 - Completed 200 cycles, PnL +$63.32, WR 38.9%, 36 trades, PF 1.22
@@ -87,7 +94,8 @@ python scripts/ablate.py --cycles 200 --presets v93_baseline,v97_geometry,observ
 - Per-cluster WR/PnL → `bias` in [-0.5, +0.5] → `adjusted = raw_conviction * (1.0 + bias)`
 - Fit: `python -m omega.nodes.victoria.decision_embeddings --version v98`
 - Requires numpy + scikit-learn (degrades to no-op if absent)
-- **Next:** Wire `cluster_bias()` call into `strategy.py` conviction filter for V100+
+- ✅ **cluster_bias() wired** into `_passes_conviction_filters` (strategy.py). Loads model from
+  `data/decision_embeddings/embedder.pkl` at init; bias=0.0 fallback when absent.
 
 ### Track D — Go WebSocket streaming
 - **Why:** Live dashboard updates. Currently must refresh. Low effort / high QoL.
@@ -147,22 +155,31 @@ Key findings:
 ## Next Phase
 
 1. **✅ DONE — Ablation** — see results above
-2. **embeddings_only validation** — run 200 cycles to confirm PF 1.46 holds:
+2. **✅ DONE — embeddings_only 200-cycle validation** — V100: +$99.76 PnL, WR 34.2%, 38T, PF 1.50
+3. **✅ DONE — observability threshold tuning (V101 Fix 3)** — signal_confluence is now warn-only;
+   removed `size_multiplier=0.5` penalty for uncertain confluence. Re-ablate with `observability_only`
+   after this fix to confirm trade count is restored.
+4. **✅ DONE — V101 regime-safe fixes** (three parallel fixes, code ready):
+   - Fix 1: `crisis_high_vol_long_block` flag + `v101_regime_safe` preset
+   - Fix 2: `cluster_bias()` wired into `_passes_conviction_filters`
+   - Fix 3: `signal_confluence` warn-only (dropped `size_multiplier=0.5` penalty)
+5. **V101 — Launch training** (V100 is now complete):
    ```bash
-   python3 scripts/run_training.py --version v100 --cycles 200 --features embeddings_only
+   python3 scripts/run_training.py --version v101 --cycles 200 --features v101_regime_safe
    ```
-3. **observability threshold tuning** — dial down anomaly/correlation thresholds so they warn without blocking; re-ablate:
+   Preset: `decision_embeddings=True, crisis_high_vol_long_block=True`
+   Before launching: fit decision embedder from V100 run:
    ```bash
-   # After tuning: VICTORIA_FEATURES='{"anomaly_detector":true,"decision_traces":true}'
-   python3 scripts/ablate.py --cycles 100 --presets v93_baseline,observability_tuned
+   mkdir -p data/decision_embeddings
+   python3 -m omega.nodes.victoria.decision_embeddings --version v100 --out data/decision_embeddings/embedder.pkl
    ```
-4. **Geometry forensics (Track E)** — isolate which V95 modifier causes regression via per-flag ablation
-5. **LLM retro on V93** — run post-mortem on the champion run:
+6. **Geometry forensics (Track E)** — isolate which V95 modifier causes regression via per-flag ablation
+7. **LLM retro on V100** — run post-mortem on the embeddings_only run:
    ```bash
-   python -m omega.nodes.victoria.llm_trade_review --version v93
+   python -m omega.nodes.victoria.llm_trade_review --version v100
    ```
-6. **Gate epoch fix** — gate comparator should auto-detect same-market epoch baseline, not hardcoded version
-7. **Long-horizon run (Track A)** — 500 cycles once embeddings_only validation passes
+8. **Gate epoch fix** — gate comparator should auto-detect same-market epoch baseline, not hardcoded version
+9. **Long-horizon run (Track A)** — 500 cycles after V101 validates
 
 ## Recently Shipped (today)
 
@@ -215,5 +232,6 @@ active_basket = {ETH, SOL, BNB, AVAX, LINK, NEAR, ARB, ADA}
 - 2026-04-11: TODO.md created. V98 running, V97 regressed, V93 remains champion.
 - 2026-04-11: V99 baseline confirmed (+$63.32, flags OFF). Feature flag harness + ablate.py + docs shipped. 7 worktrees pruned.
 - 2026-04-11: Ablation complete (100 cycles × 3 presets). Winner: embeddings_only (+$51.78, PF 1.46). observability_only needs threshold tuning (total trade shutdown). Full report: data/ablation_report.md.
+- 2026-04-12: V100 complete (+$99.76, WR 34%, 38T, PF 1.50, embeddings_only). V101 prep: 3 parallel fixes shipped — crisis_high_vol_long_block flag, cluster_bias() wired, confluence warn-only. Preset: v101_regime_safe.
 </content>
 </invoke>
