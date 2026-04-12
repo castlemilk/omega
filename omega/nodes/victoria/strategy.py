@@ -410,6 +410,9 @@ class StrategyNode(Node):
                     _embedder_pkl,
                 )
 
+        # --- Activation tracer (V107) — injected via init_tracer() ---
+        self._tracer: Any = None
+
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
 
