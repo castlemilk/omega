@@ -1544,6 +1544,11 @@ class StrategyNode(Node):
                 if _is_high_vol:
                     logger.debug("Suppressing %s long in high_vol regime (V93)", ticker)
                     continue
+                # V101: regime-safe flag — hard-block longs in crisis regime when on.
+                # high_vol is already blocked unconditionally above (V93 baseline).
+                if self.features.crisis_high_vol_long_block and self._is_crisis:
+                    logger.debug("Regime-safe: blocking longs in crisis")
+                    continue
                 # V66: suppress BNBUSDT longs in normal regime — V65 BNB:normal 6T 1W 17%WR -$18.
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
                 # normal long_thresh=0.15 (scaled), BNB longs only trigger on genuine signals.
