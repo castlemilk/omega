@@ -958,6 +958,9 @@ class SignalGenerationNode(Node):
                     "trade_flow_direction",   # 39.5% → 63.2% after flip (V116 confirmed)
                     # V116 postmortem (38 trades): accuracy below 40%
                     "whale_print",            # 39.3% (n=28) — whale size detection anti-predictive
+                    # v117_postmortem: accuracy below 40%
+                    "momentum_derivative",  # 21.4% (n=14) — v117 postmortem
+                    "volume_profile",  # 26.7% (n=15) — v117 postmortem
                 }
                 for _dead in _DEAD_SIGNALS:
                     if _dead in ts and isinstance(ts[_dead], (int, float)):
