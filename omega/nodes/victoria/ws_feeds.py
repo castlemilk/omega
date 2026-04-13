@@ -63,10 +63,10 @@ _TRADE_FLOW_WINDOW_SEC = 60.0  # seconds for trade flow / volume profile
 _SPREAD_HISTORY = 100  # ticks to keep for spread z-score
 _VOL_PROFILE_WINDOWS = 10  # number of 60-s windows for avg volume
 # Phase 1 expansion
-_TRADE_SIZE_HISTORY = 200   # rolling window for whale-print mean/std
-_WHALE_SIGMA = 2.0          # trades > mean + N*sigma are whale prints
-_VPIN_BUCKET_SIZE = 50      # trades per VPIN bucket
-_VPIN_HISTORY = 20          # completed buckets to keep for rolling VPIN
+_TRADE_SIZE_HISTORY = 200  # rolling window for whale-print mean/std
+_WHALE_SIGMA = 2.0  # trades > mean + N*sigma are whale prints
+_VPIN_BUCKET_SIZE = 50  # trades per VPIN bucket
+_VPIN_HISTORY = 20  # completed buckets to keep for rolling VPIN
 
 
 # ---------------------------------------------------------------------------
@@ -483,7 +483,7 @@ class WSFeedManager:
 
         mean = sum(sizes) / len(sizes)
         variance = sum((s - mean) ** 2 for s in sizes) / max(1, len(sizes) - 1)
-        std = variance ** 0.5
+        std = variance**0.5
         if std == 0.0:
             return 0.0
 

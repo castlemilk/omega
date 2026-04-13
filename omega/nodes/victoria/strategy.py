@@ -1792,11 +1792,13 @@ class StrategyNode(Node):
                         self._tracer.record_entry(ticker, _at)
                 # V117: suppress specific tickers on the long side based on postmortem evidence.
                 # ADAUSDT: 8 of 10 worst losers in V116 were ADA longs (normal regime, -$105).
-                _LONG_SUPPRESSED = {
+                _long_suppressed = {
                     "ADAUSDT",  # V116: 8/10 worst losers, 38.5% WR in normal regime, -$105
                 }
-                if self.features.postmortem_signal_filter and ticker in _LONG_SUPPRESSED:
-                    logger.debug("postmortem_signal_filter: suppressing %s long (evidence-based)", ticker)
+                if self.features.postmortem_signal_filter and ticker in _long_suppressed:
+                    logger.debug(
+                        "postmortem_signal_filter: suppressing %s long (evidence-based)", ticker
+                    )
                     continue
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
@@ -1915,15 +1917,17 @@ class StrategyNode(Node):
                             conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
-                                # V114: suppress specific tickers on the short side based on postmortem evidence.
+                        # V114: suppress specific tickers on the short side based on postmortem evidence.
                 # NEARUSDT: 22 shorts in V113, 27% WR, -$93 PnL — suppressed when filter active.
-                _SHORT_SUPPRESSED = {
-                    "NEARUSDT",   # V113: 22 shorts, 27% WR, -$93 PnL
-                    "ARBUSDT",    # V115: 21 trades 38% WR; 9 of top-10 losers (-$159 gross loss)
+                _short_suppressed = {
+                    "NEARUSDT",  # V113: 22 shorts, 27% WR, -$93 PnL
+                    "ARBUSDT",  # V115: 21 trades 38% WR; 9 of top-10 losers (-$159 gross loss)
                     "ETHUSDT",  # v118: -263.74 PnL → suppress shorts
                 }
-                if self.features.postmortem_signal_filter and ticker in _SHORT_SUPPRESSED:
-                    logger.debug("postmortem_signal_filter: suppressing %s short (evidence-based)", ticker)
+                if self.features.postmortem_signal_filter and ticker in _short_suppressed:
+                    logger.debug(
+                        "postmortem_signal_filter: suppressing %s short (evidence-based)", ticker
+                    )
                     continue
                 short_candidates[ticker] = sig
 

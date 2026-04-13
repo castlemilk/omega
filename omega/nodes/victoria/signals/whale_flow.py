@@ -34,7 +34,6 @@ OKX open interest (no auth required):
 from __future__ import annotations
 
 import logging
-import math
 import time
 from collections import deque
 from typing import Any
@@ -47,7 +46,7 @@ _DEFILLAMA_BRIDGES_URL = "https://bridges.llama.fi/bridgevolume/all?id=1"
 _DEFILLAMA_STABLES_URL = "https://stablecoins.llama.fi/stablecoins?includePrices=false"
 _OKX_OI_URL = "https://www.okx.com/api/v5/public/open-interest?instType=SWAP&instId={sym}-SWAP"
 
-_CACHE_TTL = 900.0   # 15 minutes
+_CACHE_TTL = 900.0  # 15 minutes
 _HTTP_TIMEOUT = 8.0  # seconds
 
 
@@ -55,10 +54,12 @@ _HTTP_TIMEOUT = 8.0  # seconds
 # Small JSON-fetch helper (no extra deps)
 # ---------------------------------------------------------------------------
 
+
 def _fetch_json(url: str) -> Any | None:
     """GET *url*, parse JSON, return parsed object or None on any error."""
     try:
         import json
+
         with urlopen(url, timeout=_HTTP_TIMEOUT) as resp:
             return json.loads(resp.read().decode())
     except (URLError, OSError, ValueError, Exception) as exc:
@@ -69,6 +70,7 @@ def _fetch_json(url: str) -> Any | None:
 # ---------------------------------------------------------------------------
 # WhaleFlowSignals
 # ---------------------------------------------------------------------------
+
 
 class WhaleFlowSignals:
     """
@@ -164,9 +166,7 @@ class WhaleFlowSignals:
 
         vals = [v for _, v in history]
         pct_changes = [
-            (vals[i] - vals[i - 1]) / vals[i - 1]
-            for i in range(1, len(vals))
-            if vals[i - 1] != 0
+            (vals[i] - vals[i - 1]) / vals[i - 1] for i in range(1, len(vals)) if vals[i - 1] != 0
         ]
         if not pct_changes:
             return 0.0

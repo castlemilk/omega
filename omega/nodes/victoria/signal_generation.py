@@ -383,11 +383,7 @@ class SignalGenerationNode(Node):
 
         # V115 whale_flow: DefiLlama bridge + stablecoin + OKX OI signals
         self._whale_flow: Any = None
-        if (
-            _HAS_WHALE_FLOW
-            and self._features
-            and getattr(self._features, "whale_flow", False)
-        ):
+        if _HAS_WHALE_FLOW and self._features and getattr(self._features, "whale_flow", False):
             with contextlib.suppress(Exception):
                 self._whale_flow = _WhaleFlowSignals()
                 logger.info("WhaleFlowSignals initialized")
@@ -864,8 +860,10 @@ class SignalGenerationNode(Node):
                     logger.debug("ws_microstructure %s: %s", ticker, _ms_exc)
 
             # V115 Phase 1: whale_prints — sub-second informed-flow WS signals
-            if self._ws_feeds is not None and self._features and getattr(
-                self._features, "whale_prints", False
+            if (
+                self._ws_feeds is not None
+                and self._features
+                and getattr(self._features, "whale_prints", False)
             ):
                 try:
                     _wp = self._ws_feeds.get_whale_signals(ticker)
@@ -944,20 +942,25 @@ class SignalGenerationNode(Node):
             # at trade close time (called from orchestrator_v2).
             # Weight adjustments are applied BEFORE composite so the IC/ML combiner sees them.
             # _reinf_weights injected into ts so strategy.py + activation tracer can read them.
-                        # V112: postmortem_signal_filter — zero out signals proven consistently wrong
+            # V112: postmortem_signal_filter — zero out signals proven consistently wrong
             # across 124+ trades in V107-V110. Zeroing happens before snapshot so the
             # reinforcer and composite both see the cleansed signal values.
             if self._features and getattr(self._features, "postmortem_signal_filter", False):
-                _DEAD_SIGNALS = {
+                _dead_signals = {
                     # V107-V110 cross-version analysis (124 trades): accuracy 37-44%
-                    "sma_long", "sma_short", "price", "return_1d",
-                    "sma_crossover", "fear_greed_signal", "liquidation_proximity",
+                    "sma_long",
+                    "sma_short",
+                    "price",
+                    "return_1d",
+                    "sma_crossover",
+                    "fear_greed_signal",
+                    "liquidation_proximity",
                     # V115 postmortem (44 trades): accuracy below 40%
-                    "vpin",                  # 37.5% → 51.4% after flip (V116 confirmed)
-                    "ricci_curvature_signal", # 38.1% → 56.8% after flip (V116 confirmed)
-                    "trade_flow_direction",   # 39.5% → 63.2% after flip (V116 confirmed)
+                    "vpin",  # 37.5% → 51.4% after flip (V116 confirmed)
+                    "ricci_curvature_signal",  # 38.1% → 56.8% after flip (V116 confirmed)
+                    "trade_flow_direction",  # 39.5% → 63.2% after flip (V116 confirmed)
                     # V116 postmortem (38 trades): accuracy below 40%
-                    "whale_print",            # 39.3% (n=28) — whale size detection anti-predictive
+                    "whale_print",  # 39.3% (n=28) — whale size detection anti-predictive
                     # v117_postmortem: accuracy below 40%
                     "momentum_derivative",  # 21.4% (n=14) — v117 postmortem
                     "volume_profile",  # 26.7% (n=15) — v117 postmortem
@@ -965,7 +968,7 @@ class SignalGenerationNode(Node):
                     "funding_derivative",  # 25.0% (n=24) — v118 postmortem
                     "momentum_persistence",  # 30.8% (n=26) — v118 postmortem
                 }
-                for _dead in _DEAD_SIGNALS:
+                for _dead in _dead_signals:
                     if _dead in ts and isinstance(ts[_dead], (int, float)):
                         ts[_dead] = -float(ts[_dead])  # flip: anti-predictive → predictive
 
