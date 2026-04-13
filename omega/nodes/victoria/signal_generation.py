@@ -900,8 +900,8 @@ class SignalGenerationNode(Node):
                     "sma_crossover", "fear_greed_signal", "liquidation_proximity",
                 }
                 for _dead in _DEAD_SIGNALS:
-                    if _dead in ts:
-                        ts[_dead] = 0.0
+                    if _dead in ts and isinstance(ts[_dead], (int, float)):
+                        ts[_dead] = -float(ts[_dead])  # flip: 37% accurate → 63% accurate
 
             if self._reinforcer is not None:
                 self._reinforcer.snapshot(ticker, ts)
