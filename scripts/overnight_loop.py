@@ -54,9 +54,11 @@ logger = logging.getLogger("overnight_loop")
 # Constants
 # ---------------------------------------------------------------------------
 
-FLIP_THRESHOLD = 40.0      # signal accuracy below this → flip
-SUPPRESS_THRESHOLD = -30.0  # per-symbol-direction PnL below this → suppress
-MIN_SIGNAL_APPEARANCES = 10 # need at least this many trades to make a call
+FLIP_THRESHOLD = 40.0        # signal accuracy below this → flip
+SUPPRESS_THRESHOLD = -30.0   # per-symbol-direction PnL below this → suppress
+MIN_SIGNAL_APPEARANCES = 50  # GUARDRAIL: need ≥50 trades before flipping any signal
+MIN_SUPPRESS_VERSIONS = 2    # GUARDRAIL: need evidence in ≥2 versions before suppressing
+MIN_ACTIVE_PAIRS = 3         # GUARDRAIL: never suppress if it would leave <3 active sym/dir pairs
 
 CYCLES = 200
 SLEEP = 10
@@ -173,14 +175,13 @@ def get_summary(version: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def read_current_dead_signals() -> set[str]:
-    """Parse current DEAD_SIGNALS from signal_generation.py."""
+    """Parse current _dead_signals from signal_generation.py (linter lowercased it)."""
     src = SIGNAL_GEN.read_text()
-    # Find the _DEAD_SIGNALS block
-    m = re.search(r"_DEAD_SIGNALS\s*=\s*\{([^}]+)\}", src, re.DOTALL)
+    # Match case-insensitively — linter may rename _DEAD_SIGNALS → _dead_signals
+    m = re.search(r"_dead_signals\s*=\s*\{([^}]+)\}", src, re.DOTALL | re.IGNORECASE)
     if not m:
         return set()
     block = m.group(1)
-    # Extract quoted strings
     return set(re.findall(r'"(\w+)"', block))
 
 
@@ -196,7 +197,7 @@ def read_current_suppressed(var_name: str) -> set[str]:
 
 def patch_dead_signals(new_signals: dict[str, str]) -> bool:
     """
-    Add new_signals to _DEAD_SIGNALS in signal_generation.py.
+    Add new_signals to _dead_signals in signal_generation.py.
 
     new_signals: {signal_name: comment_reason}
     Returns True if file was changed.
@@ -205,9 +206,9 @@ def patch_dead_signals(new_signals: dict[str, str]) -> bool:
         return False
 
     src = SIGNAL_GEN.read_text()
-    m = re.search(r"(_DEAD_SIGNALS\s*=\s*\{)([^}]+)(\})", src, re.DOTALL)
+    m = re.search(r"(_dead_signals\s*=\s*\{)([^}]+)(\})", src, re.DOTALL | re.IGNORECASE)
     if not m:
-        logger.error("Could not find _DEAD_SIGNALS block")
+        logger.error("Could not find _dead_signals block")
         return False
 
     prefix, block, suffix = m.group(1), m.group(2), m.group(3)
@@ -416,13 +417,31 @@ def log_iteration(
 # Core decision logic
 # ---------------------------------------------------------------------------
 
+def count_active_pairs(current_short: set[str], current_long: set[str]) -> int:
+    """Count currently active (symbol, direction) pairs after applying suppression."""
+    base_symbols = ["ETHUSDT", "NEARUSDT", "ARBUSDT", "ADAUSDT", "BTCUSDT"]
+    active = 0
+    for sym in base_symbols:
+        if sym not in current_short:
+            active += 1
+        if sym not in current_long:
+            active += 1
+    return active
+
+
 def compute_adjustments(
     version: str,
     scorecard: dict[str, dict],
     symbol_pnl: dict[tuple[str, str], float],
+    all_version_pnls: dict[str, dict[tuple[str, str], float]],
 ) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
     """
-    Compute what to add to DEAD_SIGNALS, SHORT_SUPPRESSED, LONG_SUPPRESSED.
+    Compute what to add to DEAD_SIGNALS, _short_suppressed, _long_suppressed.
+
+    Guardrails:
+      - Signal flip: requires ≥50 appearances in this version
+      - Symbol suppression: requires bad PnL in ≥2 separate versions
+      - Never suppress if it would leave fewer than MIN_ACTIVE_PAIRS active pairs
 
     Returns:
         new_dead_signals: {name: reason}
@@ -430,12 +449,16 @@ def compute_adjustments(
         new_long_suppressed:  {ticker: reason}
     """
     current_dead = read_current_dead_signals()
-    current_short = read_current_suppressed("_SHORT_SUPPRESSED")
-    current_long = read_current_suppressed("_LONG_SUPPRESSED")
+    current_short = read_current_suppressed("_short_suppressed")
+    current_long = read_current_suppressed("_long_suppressed")
 
     new_dead: dict[str, str] = {}
     for sig, d in scorecard.items():
         if d["n"] < MIN_SIGNAL_APPEARANCES:
+            logger.info(
+                "GUARDRAIL skip flip %s — %d appearances (need %d)",
+                sig, d["n"], MIN_SIGNAL_APPEARANCES,
+            )
             continue
         if d["acc"] < FLIP_THRESHOLD and sig not in current_dead:
             new_dead[sig] = f"{d['acc']:.1f}% (n={d['n']}) — {version} postmortem"
@@ -443,11 +466,35 @@ def compute_adjustments(
     new_short: dict[str, str] = {}
     new_long: dict[str, str] = {}
     for (sym, side), pnl in symbol_pnl.items():
-        if pnl < SUPPRESS_THRESHOLD:
-            if side == "short" and sym not in current_short:
-                new_short[sym] = f"{version}: {pnl:.2f} PnL → suppress shorts"
-            elif side == "long" and sym not in current_long:
-                new_long[sym] = f"{version}: {pnl:.2f} PnL → suppress longs"
+        if pnl >= SUPPRESS_THRESHOLD:
+            continue
+        # Multi-version evidence check
+        bad_versions = [
+            v for v, vpnl in all_version_pnls.items()
+            if vpnl.get((sym, side), 0) < SUPPRESS_THRESHOLD
+        ]
+        if len(bad_versions) < MIN_SUPPRESS_VERSIONS:
+            logger.info(
+                "GUARDRAIL skip suppress %s %s — only %d version(s) of evidence (need %d)",
+                sym, side, len(bad_versions), MIN_SUPPRESS_VERSIONS,
+            )
+            continue
+        if side == "short" and sym not in current_short:
+            projected = current_short | {sym}
+            if count_active_pairs(projected, current_long) >= MIN_ACTIVE_PAIRS:
+                new_short[sym] = (
+                    f"{version}+prior ({','.join(bad_versions)}): {pnl:.2f} PnL → suppress shorts"
+                )
+            else:
+                logger.info("GUARDRAIL skip %s short — would leave <3 active pairs", sym)
+        elif side == "long" and sym not in current_long:
+            projected = current_long | {sym}
+            if count_active_pairs(current_short, projected) >= MIN_ACTIVE_PAIRS:
+                new_long[sym] = (
+                    f"{version}+prior ({','.join(bad_versions)}): {pnl:.2f} PnL → suppress longs"
+                )
+            else:
+                logger.info("GUARDRAIL skip %s long — would leave <3 active pairs", sym)
 
     return new_dead, new_short, new_long
 
@@ -506,8 +553,23 @@ def run_loop(start_version: str, max_iterations: int) -> None:
             {r: f"{v['total_pnl']:.0f}" for r, v in regime.items()},
         )
 
+        # Collect multi-version symbol PnL for guardrail checks
+        # Look back at the last 3 completed versions (excluding current)
+        all_version_pnls: dict[str, dict[tuple[str, str], float]] = {}
+        m = re.match(r"v(\d+)", current)
+        if m:
+            cur_num = int(m.group(1))
+            for lookback in range(1, 4):
+                prev_v = f"v{cur_num - lookback}"
+                prev_pnl = parse_symbol_pnl(prev_v)
+                if prev_pnl:
+                    all_version_pnls[prev_v] = prev_pnl
+        all_version_pnls[current] = symbol_pnl
+
         # 4. Compute adjustments
-        new_dead, new_short, new_long = compute_adjustments(current, scorecard, symbol_pnl)
+        new_dead, new_short, new_long = compute_adjustments(
+            current, scorecard, symbol_pnl, all_version_pnls
+        )
 
         logger.info(
             "Adjustments → dead=%s short_supp=%s long_supp=%s",
@@ -521,13 +583,13 @@ def run_loop(start_version: str, max_iterations: int) -> None:
                 changed = True
                 logger.info("Patched DEAD_SIGNALS: %s", list(new_dead))
         if new_short:
-            if patch_suppressed("_SHORT_SUPPRESSED", new_short):
+            if patch_suppressed("_short_suppressed", new_short):
                 changed = True
-                logger.info("Patched _SHORT_SUPPRESSED: %s", list(new_short))
+                logger.info("Patched _short_suppressed: %s", list(new_short))
         if new_long:
-            if patch_suppressed("_LONG_SUPPRESSED", new_long):
+            if patch_suppressed("_long_suppressed", new_long):
                 changed = True
-                logger.info("Patched _LONG_SUPPRESSED: %s", list(new_long))
+                logger.info("Patched _long_suppressed: %s", list(new_long))
 
         # 6. Syntax check
         if not syntax_check():
@@ -593,4 +655,4 @@ if __name__ == "__main__":
     parser.add_argument("--max-versions", type=int, default=10, help="Max iterations (default: 10)")
     args = parser.parse_args()
 
-    run_loop(start_version=args.start, max_versions=args.max_versions)
+    run_loop(start_version=args.start, max_iterations=args.max_versions)

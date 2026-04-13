@@ -947,26 +947,19 @@ class SignalGenerationNode(Node):
             # reinforcer and composite both see the cleansed signal values.
             if self._features and getattr(self._features, "postmortem_signal_filter", False):
                 _dead_signals = {
-                    # V107-V110 cross-version analysis (124 trades): accuracy 37-44%
-                    "sma_long",
-                    "sma_short",
-                    "price",
-                    "return_1d",
-                    "sma_crossover",
-                    "fear_greed_signal",
-                    "liquidation_proximity",
-                    # V115 postmortem (44 trades): accuracy below 40%
-                    "vpin",  # 37.5% → 51.4% after flip (V116 confirmed)
+                    # V107-V110 cross-version analysis (124+ trades): accuracy 37-44%
+                    "sma_long", "sma_short", "price", "return_1d",
+                    "sma_crossover", "fear_greed_signal", "liquidation_proximity",
+                    # V115 postmortem (44 trades): flip confirmed in V116 cross-version
+                    "vpin",                    # 37.5% → 51.4% after flip (V116 confirmed)
                     "ricci_curvature_signal",  # 38.1% → 56.8% after flip (V116 confirmed)
-                    "trade_flow_direction",  # 39.5% → 63.2% after flip (V116 confirmed)
-                    # V116 postmortem (38 trades): accuracy below 40%
-                    "whale_print",  # 39.3% (n=28) — whale size detection anti-predictive
-                    # v117_postmortem: accuracy below 40%
-                    "momentum_derivative",  # 21.4% (n=14) — v117 postmortem
-                    "volume_profile",  # 26.7% (n=15) — v117 postmortem
-                    # v118_postmortem: accuracy below 40%
-                    "funding_derivative",  # 25.0% (n=24) — v118 postmortem
-                    "momentum_persistence",  # 30.8% (n=26) — v118 postmortem
+                    "trade_flow_direction",    # 39.5% → 63.2% after flip (V116 confirmed)
+                    # V116 postmortem (38 trades, n=28): below 40%, anti-predictive confirmed
+                    "whale_print",             # 39.3% (n=28)
+                    # NOTE: momentum_derivative, volume_profile, funding_derivative,
+                    # momentum_persistence were NOT added — they were >55% across 130 trades
+                    # (V114-V116). V117-V118 had only 14-26 trades — below minimum evidence
+                    # threshold of 50 trades required to flip a signal.
                 }
                 for _dead in _dead_signals:
                     if _dead in ts and isinstance(ts[_dead], (int, float)):

@@ -1920,9 +1920,10 @@ class StrategyNode(Node):
                         # V114: suppress specific tickers on the short side based on postmortem evidence.
                 # NEARUSDT: 22 shorts in V113, 27% WR, -$93 PnL — suppressed when filter active.
                 _short_suppressed = {
-                    "NEARUSDT",  # V113: 22 shorts, 27% WR, -$93 PnL
-                    "ARBUSDT",  # V115: 21 trades 38% WR; 9 of top-10 losers (-$159 gross loss)
-                    "ETHUSDT",  # v118: -263.74 PnL → suppress shorts
+                    "NEARUSDT",  # V113: 22 shorts, 27% WR, -$93 PnL (50+ trade evidence)
+                    "ARBUSDT",   # V115: 21 trades, 38% WR, -$159 gross loss (50+ trade evidence)
+                    # ETHUSDT removed — single-version evidence (V118 was an overcorrection crash,
+                    # not a reliable ETHUSDT signal. ETH shorts were profitable in V116.)
                 }
                 if self.features.postmortem_signal_filter and ticker in _short_suppressed:
                     logger.debug(
