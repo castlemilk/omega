@@ -138,6 +138,13 @@ try:
 except ImportError:
     _HAS_ADAPTIVE_COMBINER = False
 
+try:
+    from omega.nodes.victoria.signals.whale_flow import WhaleFlowSignals as _WhaleFlowSignals
+
+    _HAS_WHALE_FLOW = True
+except ImportError:
+    _HAS_WHALE_FLOW = False
+
 
 def _safe_mean(values: list[float | None], n: int) -> float | None:
     clean = [v for v in values[-n:] if v is not None]
@@ -373,6 +380,17 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._adaptive_combiner = _AdaptiveCombiner()
                 logger.info("AdaptiveCombiner initialized")
+
+        # V115 whale_flow: DefiLlama bridge + stablecoin + OKX OI signals
+        self._whale_flow: Any = None
+        if (
+            _HAS_WHALE_FLOW
+            and self._features
+            and getattr(self._features, "whale_flow", False)
+        ):
+            with contextlib.suppress(Exception):
+                self._whale_flow = _WhaleFlowSignals()
+                logger.info("WhaleFlowSignals initialized")
 
         # V106 trade_reinforcement: EMA-based per-signal weight adjustments
         self._reinforcer: Any = None
@@ -844,6 +862,41 @@ class SignalGenerationNode(Node):
                             ts[_ms_key] = _ms_val
                 except Exception as _ms_exc:
                     logger.debug("ws_microstructure %s: %s", ticker, _ms_exc)
+
+            # V115 Phase 1: whale_prints — sub-second informed-flow WS signals
+            if self._ws_feeds is not None and self._features and getattr(
+                self._features, "whale_prints", False
+            ):
+                try:
+                    _wp = self._ws_feeds.get_whale_signals(ticker)
+                    for _wp_key, _wp_val in _wp.items():
+                        if _wp_val != 0.0:
+                            ts[_wp_key] = _wp_val
+                except Exception as _wp_exc:
+                    logger.debug("whale_prints %s: %s", ticker, _wp_exc)
+
+            # V115 Phase 2: whale_flow — DefiLlama + OKX smart-money signals
+            if self._whale_flow is not None:
+                try:
+                    _wf = self._whale_flow.compute_all(ticker)
+                    for _wf_key, _wf_val in _wf.items():
+                        if _wf_val != 0.0:
+                            ts[_wf_key] = _wf_val
+                except Exception as _wf_exc:
+                    logger.debug("whale_flow %s: %s", ticker, _wf_exc)
+
+            # V115 Phase 2: funding_velocity — derivative of funding rate over 3 readings
+            if (
+                self._funding_signal is not None
+                and self._features
+                and getattr(self._features, "funding_velocity", False)
+            ):
+                try:
+                    _fv = self._funding_signal.compute_velocity(ticker)
+                    if _fv != 0.0:
+                        ts["funding_rate_velocity"] = _fv
+                except Exception as _fv_exc:
+                    logger.debug("funding_velocity %s: %s", ticker, _fv_exc)
 
             # V103: temporal_memory — inject 8 temporal features from signal history
             if self._signal_memory is not None:

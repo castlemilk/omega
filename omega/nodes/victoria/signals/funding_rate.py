@@ -44,6 +44,8 @@ class FundingRateSignal:
         self._window = window
         # Rolling buffer of funding rates per symbol (for z-score history)
         self._history: dict[str, deque] = {}
+        # Last 3 raw rates per symbol (for velocity / derivative)
+        self._velocity_history: dict[str, deque] = {}
         # Last raw rate per symbol (for inspection)
         self._last_rates: dict[str, float] = {}
         # Lazy-loaded cache
@@ -68,8 +70,11 @@ class FundingRateSignal:
 
         if symbol not in self._history:
             self._history[symbol] = deque(maxlen=self._window)
+        if symbol not in self._velocity_history:
+            self._velocity_history[symbol] = deque(maxlen=3)
 
         self._history[symbol].append(rate)
+        self._velocity_history[symbol].append(rate)
         self._last_rates[symbol] = rate
 
         return self._zscore_signal(symbol)
@@ -127,6 +132,29 @@ class FundingRateSignal:
         # Negate: positive funding rate → negative signal (bearish/dump risk)
         # Divide by 2 to map ±2σ → ±1
         signal = max(-1.0, min(1.0, -zscore / 2.0))
+        return signal
+
+    def compute_velocity(self, symbol: str) -> float:
+        """
+        Rate of change of funding rate over the last 3 readings.
+
+        Positive velocity → funding is rising (longs paying more → overbought warning
+        getting worse → bearish).  Normalised to [-1, +1].
+
+        Returns 0.0 if fewer than 2 readings are available.
+        """
+        hist = list(self._velocity_history.get(symbol, []))
+        if len(hist) < 2:
+            return 0.0
+
+        # Average per-step delta over available readings
+        deltas = [hist[i] - hist[i - 1] for i in range(1, len(hist))]
+        avg_delta = sum(deltas) / len(deltas)
+
+        # Scale: typical daily funding rate is ~0.01% (0.0001).
+        # A change of 0.0002 per reading (2x normal) → ±1 signal.
+        # Negate: rising funding → more bearish (negative signal)
+        signal = max(-1.0, min(1.0, -avg_delta / 0.0002))
         return signal
 
     def get_last_rates(self) -> dict[str, float]:

@@ -164,6 +164,30 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # Phase 1 expansion (V115) — sub-second informed-flow vectors
+    # ------------------------------------------------------------------
+    whale_prints: bool = False
+    """V115 Phase 1: inject 3 whale/informed-flow signals from WS tick data.
+    whale_print: net buy/sell pressure from trades > 2σ above rolling mean size.
+    book_depth_velocity: rate-of-change of bid vs ask depth at top-10 levels.
+    vpin: volume-synchronised probability of informed trading (50-trade buckets).
+    Requires ws_microstructure=True (shares the same WSFeedManager instance).
+    """
+
+    whale_flow: bool = False
+    """V115 Phase 2: inject 3 whale smart-money signals from DefiLlama + OKX.
+    exchange_net_flow: bridge inflow/outflow via DefiLlama (15-min cache).
+    stablecoin_velocity: rate of change of total stablecoin supply (15-min cache).
+    oi_rate_of_change: OKX perpetual swap OI derivative (no API key required).
+    """
+
+    funding_velocity: bool = False
+    """V115 Phase 2: inject funding_rate_velocity — derivative of funding rate
+    over last 3 readings.  Rising funding = worsening overleverage risk (bearish).
+    Computed by FundingRateSignal.compute_velocity() on each cycle.
+    """
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 
@@ -324,4 +348,19 @@ _PRESETS["v112_evidence_based"] = VictoriaFeatures(
     trade_reinforcement=True,
     activation_tracing=True,
     postmortem_signal_filter=True,
+)
+
+_PRESETS["v115_full_vectors"] = VictoriaFeatures(
+    # V114 foundation
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
+    # Phase 1: sub-second informed-flow vectors
+    whale_prints=True,
+    # Phase 2: whale smart-money + funding velocity
+    whale_flow=True,
+    funding_velocity=True,
 )
