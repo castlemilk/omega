@@ -891,6 +891,18 @@ class SignalGenerationNode(Node):
             # at trade close time (called from orchestrator_v2).
             # Weight adjustments are applied BEFORE composite so the IC/ML combiner sees them.
             # _reinf_weights injected into ts so strategy.py + activation tracer can read them.
+                        # V112: postmortem_signal_filter — zero out signals proven consistently wrong
+            # across 124+ trades in V107-V110. Zeroing happens before snapshot so the
+            # reinforcer and composite both see the cleansed signal values.
+            if self._features and getattr(self._features, "postmortem_signal_filter", False):
+                _DEAD_SIGNALS = {
+                    "sma_long", "sma_short", "price", "return_1d",
+                    "sma_crossover", "fear_greed_signal", "liquidation_proximity",
+                }
+                for _dead in _DEAD_SIGNALS:
+                    if _dead in ts:
+                        ts[_dead] = 0.0
+
             if self._reinforcer is not None:
                 self._reinforcer.snapshot(ticker, ts)
                 _reinf_adjs = self._reinforcer.get_weight_adjustments()

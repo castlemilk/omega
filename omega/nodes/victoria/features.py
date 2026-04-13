@@ -152,6 +152,17 @@ class VictoriaFeatures:
     (v107_traced preset).
     """
 
+    postmortem_signal_filter: bool = False
+    """V112: zero out signals proven consistently wrong across 5+ training runs.
+    Based on cross-version analysis of 124+ closed trades (V107-V110):
+    DEAD_SIGNALS zeroed: sma_long, sma_short, price, return_1d (accuracy 37-44%,
+    n=120+), sma_crossover (46.8% marginal), fear_greed_signal (44.4% marginal),
+    liquidation_proximity (26.5%, n=34).
+    These signals hurt composite quality despite having directional values.
+    Evidence basis: scripts/cross_version_analysis.py output.
+    (v112_evidence_based preset)
+    """
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
@@ -304,4 +315,13 @@ _PRESETS["v107_traced"] = VictoriaFeatures(
     temporal_memory=True,
     trade_reinforcement=True,
     activation_tracing=True,
+)
+
+_PRESETS["v112_evidence_based"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
 )
