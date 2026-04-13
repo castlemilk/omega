@@ -961,6 +961,9 @@ class SignalGenerationNode(Node):
                     # v117_postmortem: accuracy below 40%
                     "momentum_derivative",  # 21.4% (n=14) — v117 postmortem
                     "volume_profile",  # 26.7% (n=15) — v117 postmortem
+                    # v118_postmortem: accuracy below 40%
+                    "funding_derivative",  # 25.0% (n=24) — v118 postmortem
+                    "momentum_persistence",  # 30.8% (n=26) — v118 postmortem
                 }
                 for _dead in _DEAD_SIGNALS:
                     if _dead in ts and isinstance(ts[_dead], (int, float)):

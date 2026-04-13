@@ -1920,6 +1920,7 @@ class StrategyNode(Node):
                 _SHORT_SUPPRESSED = {
                     "NEARUSDT",   # V113: 22 shorts, 27% WR, -$93 PnL
                     "ARBUSDT",    # V115: 21 trades 38% WR; 9 of top-10 losers (-$159 gross loss)
+                    "ETHUSDT",  # v118: -263.74 PnL → suppress shorts
                 }
                 if self.features.postmortem_signal_filter and ticker in _SHORT_SUPPRESSED:
                     logger.debug("postmortem_signal_filter: suppressing %s short (evidence-based)", ticker)
