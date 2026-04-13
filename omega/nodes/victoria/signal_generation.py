@@ -949,12 +949,17 @@ class SignalGenerationNode(Node):
             # reinforcer and composite both see the cleansed signal values.
             if self._features and getattr(self._features, "postmortem_signal_filter", False):
                 _DEAD_SIGNALS = {
+                    # V107-V110 cross-version analysis (124 trades): accuracy 37-44%
                     "sma_long", "sma_short", "price", "return_1d",
                     "sma_crossover", "fear_greed_signal", "liquidation_proximity",
+                    # V115 postmortem (44 trades): accuracy below 40%
+                    "vpin",                  # 37.5% — informed trading proxy was anti-predictive
+                    "ricci_curvature_signal", # 38.1% — price-only Ricci not reliable at this TF
+                    "trade_flow_direction",   # 39.5% — net aggressor volume contradicting entries
                 }
                 for _dead in _DEAD_SIGNALS:
                     if _dead in ts and isinstance(ts[_dead], (int, float)):
-                        ts[_dead] = -float(ts[_dead])  # flip: 37% accurate → 63% accurate
+                        ts[_dead] = -float(ts[_dead])  # flip: anti-predictive → predictive
 
             if self._reinforcer is not None:
                 self._reinforcer.snapshot(ticker, ts)

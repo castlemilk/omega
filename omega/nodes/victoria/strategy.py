@@ -1909,7 +1909,10 @@ class StrategyNode(Node):
                         self._tracer.record_entry(ticker, _at)
                                 # V114: suppress specific tickers on the short side based on postmortem evidence.
                 # NEARUSDT: 22 shorts in V113, 27% WR, -$93 PnL — suppressed when filter active.
-                _SHORT_SUPPRESSED = {"NEARUSDT"}
+                _SHORT_SUPPRESSED = {
+                    "NEARUSDT",   # V113: 22 shorts, 27% WR, -$93 PnL
+                    "ARBUSDT",    # V115: 21 trades 38% WR; 9 of top-10 losers (-$159 gross loss)
+                }
                 if self.features.postmortem_signal_filter and ticker in _SHORT_SUPPRESSED:
                     logger.debug("postmortem_signal_filter: suppressing %s short (evidence-based)", ticker)
                     continue
