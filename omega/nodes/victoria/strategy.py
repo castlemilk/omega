@@ -1924,6 +1924,7 @@ class StrategyNode(Node):
                     "ARBUSDT",   # V115: 21 trades, 38% WR, -$159 gross loss (50+ trade evidence)
                     # ETHUSDT removed — single-version evidence (V118 was an overcorrection crash,
                     # not a reliable ETHUSDT signal. ETH shorts were profitable in V116.)
+                    "ETHUSDT",  # v120+prior (v118,v120): -212.30 PnL → suppress shorts
                 }
                 if self.features.postmortem_signal_filter and ticker in _short_suppressed:
                     logger.debug(
