@@ -62,6 +62,11 @@ _TICK_MOMENTUM_WINDOW = 50  # last N ticks for momentum
 _TRADE_FLOW_WINDOW_SEC = 60.0  # seconds for trade flow / volume profile
 _SPREAD_HISTORY = 100  # ticks to keep for spread z-score
 _VOL_PROFILE_WINDOWS = 10  # number of 60-s windows for avg volume
+# Phase 1 expansion
+_TRADE_SIZE_HISTORY = 200   # rolling window for whale-print mean/std
+_WHALE_SIGMA = 2.0          # trades > mean + N*sigma are whale prints
+_VPIN_BUCKET_SIZE = 50      # trades per VPIN bucket
+_VPIN_HISTORY = 20          # completed buckets to keep for rolling VPIN
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +145,18 @@ class _SymbolState:
     # Rolling spread history for z-score
     spread_history: deque[float] = field(default_factory=lambda: deque(maxlen=_SPREAD_HISTORY))
     spread_lock: threading.Lock = field(default_factory=threading.Lock)
+    # Whale print: rolling trade size history for mean/std computation
+    trade_sizes: deque = field(default_factory=lambda: deque(maxlen=_TRADE_SIZE_HISTORY))
+    # Book depth velocity: previous bid/ask totals (top-10) for delta computation
+    prev_bid_depth: float = 0.0
+    prev_ask_depth: float = 0.0
+    depth_lock: threading.Lock = field(default_factory=threading.Lock)
+    # VPIN: bucket accumulation + rolling completed-bucket scores
+    vpin_buy_vol: float = 0.0
+    vpin_sell_vol: float = 0.0
+    vpin_trade_count: int = 0
+    vpin_scores: deque = field(default_factory=lambda: deque(maxlen=_VPIN_HISTORY))
+    vpin_lock: threading.Lock = field(default_factory=threading.Lock)
     # Has received at least one trade
     has_data: bool = False
 
@@ -157,6 +174,12 @@ _ZERO_SIGNALS: dict[str, float] = {
     "liquidation_proximity": 0.0,
 }
 
+_ZERO_WHALE_SIGNALS: dict[str, float] = {
+    "whale_print": 0.0,
+    "book_depth_velocity": 0.0,
+    "vpin": 0.0,
+}
+
 
 class _NoOpWSFeedManager:
     """Returned when ``websockets`` is not importable."""
@@ -172,6 +195,9 @@ class _NoOpWSFeedManager:
 
     def get_microstructure(self, symbol: str) -> dict[str, float]:
         return dict(_ZERO_SIGNALS)
+
+    def get_whale_signals(self, symbol: str) -> dict[str, float]:
+        return dict(_ZERO_WHALE_SIGNALS)
 
 
 # ---------------------------------------------------------------------------
@@ -266,6 +292,32 @@ class WSFeedManager:
             "volume_profile": vp,
             "tick_momentum": tm,
             "liquidation_proximity": lp,
+        }
+
+    def get_whale_signals(self, symbol: str) -> dict[str, float]:
+        """
+        Return the 3 Phase-1 whale/informed-flow signals for *symbol*.
+
+        whale_print:         [-1, +1] — net buy/sell pressure from large trades (>2σ)
+        book_depth_velocity: [-1, +1] — rate of change of bid vs ask depth (top-10)
+        vpin:                [ 0, +1] — volume-sync'd probability of informed trading
+        """
+        sym = symbol.upper()
+        state = self._state.get(sym)
+        if state is None or not state.has_data:
+            return dict(_ZERO_WHALE_SIGNALS)
+
+        ticks = state.ticks.snapshot()
+        bids, asks = state.book.snapshot()
+
+        wp = self._whale_print(ticks, state)
+        bdv = self._book_depth_velocity(bids, asks, state)
+        vpin = self._vpin(state)
+
+        return {
+            "whale_print": wp,
+            "book_depth_velocity": bdv,
+            "vpin": vpin,
         }
 
     # ------------------------------------------------------------------
@@ -414,6 +466,91 @@ class WSFeedManager:
         combined = abs(obi) + abs(tfd)
         return max(0.0, min(1.0, combined - 1.0))
 
+    @staticmethod
+    def _whale_print(ticks: list[Tick], state: _SymbolState) -> float:
+        """
+        Net directional pressure from whale-sized trades in the last 60 seconds.
+
+        A "whale print" is a single trade whose size exceeds mean + 2σ of the
+        rolling 200-trade size history.  Returns:
+          (whale_buys - whale_sells) / (whale_buys + whale_sells)  → [-1, +1]
+        Positive = whales net buying; Negative = whales net selling.
+        Returns 0.0 if no whale trades or insufficient size history.
+        """
+        sizes = list(state.trade_sizes)
+        if len(sizes) < 10:
+            return 0.0
+
+        mean = sum(sizes) / len(sizes)
+        variance = sum((s - mean) ** 2 for s in sizes) / max(1, len(sizes) - 1)
+        std = variance ** 0.5
+        if std == 0.0:
+            return 0.0
+
+        threshold = mean + _WHALE_SIGMA * std
+        cutoff = time.time() - _TRADE_FLOW_WINDOW_SEC
+        recent = [t for t in ticks if t.ts >= cutoff]
+
+        whale_buys = sum(t.size for t in recent if t.side == "buy" and t.size >= threshold)
+        whale_sells = sum(t.size for t in recent if t.side == "sell" and t.size >= threshold)
+        total = whale_buys + whale_sells
+        if total == 0.0:
+            return 0.0
+        return max(-1.0, min(1.0, (whale_buys - whale_sells) / total))
+
+    @staticmethod
+    def _book_depth_velocity(
+        bids: list[BookLevel], asks: list[BookLevel], state: _SymbolState
+    ) -> float:
+        """
+        Rate of change of bid vs ask liquidity at the top-10 book levels.
+
+        Computes delta_bid_depth - delta_ask_depth since last call, normalised
+        by the current total book depth.  Positive = bids growing faster than
+        asks (buyers adding liquidity / sellers pulling out → bullish).
+        Returns 0.0 on first call (no previous snapshot).
+        """
+        if not bids or not asks:
+            return 0.0
+
+        cur_bid = sum(lvl.size for lvl in bids[:10])
+        cur_ask = sum(lvl.size for lvl in asks[:10])
+
+        with state.depth_lock:
+            prev_bid = state.prev_bid_depth
+            prev_ask = state.prev_ask_depth
+            state.prev_bid_depth = cur_bid
+            state.prev_ask_depth = cur_ask
+
+        if prev_bid == 0.0 and prev_ask == 0.0:
+            return 0.0  # first call — no delta yet
+
+        delta_bid = cur_bid - prev_bid
+        delta_ask = cur_ask - prev_ask
+        total = cur_bid + cur_ask
+        if total == 0.0:
+            return 0.0
+
+        raw = (delta_bid - delta_ask) / total
+        return max(-1.0, min(1.0, raw * 10.0))  # scale: typical delta is ~1-5% of depth
+
+    @staticmethod
+    def _vpin(state: _SymbolState) -> float:
+        """
+        Volume-synchronised Probability of Informed trading (simplified).
+
+        Uses 50-trade buckets accumulated in _process_agg_trade.  VPIN per
+        bucket = |buy_vol - sell_vol| / total_vol.  Returns the rolling mean
+        of the last _VPIN_HISTORY completed buckets, in [0, 1].
+        High VPIN → informed traders are active → expect directional move.
+        Returns 0.0 until at least one bucket is complete.
+        """
+        with state.vpin_lock:
+            scores = list(state.vpin_scores)
+        if not scores:
+            return 0.0
+        return sum(scores) / len(scores)
+
     # ------------------------------------------------------------------
     # Threading / asyncio internals
     # ------------------------------------------------------------------
@@ -498,7 +635,7 @@ class WSFeedManager:
 
     @staticmethod
     def _process_agg_trade(state: _SymbolState, data: dict[str, Any]) -> None:
-        """Push a new Tick onto the ring buffer and mark state as ready."""
+        """Push a new Tick onto the ring buffer and update VPIN/whale state."""
         try:
             price = float(data["p"])
             size = float(data["q"])
@@ -512,6 +649,26 @@ class WSFeedManager:
         tick = Tick(price=price, size=size, side=side, ts=ts)
         state.ticks.push(tick)
         state.has_data = True
+
+        # Track rolling trade size for whale detection
+        state.trade_sizes.append(size)
+
+        # Accumulate VPIN bucket
+        with state.vpin_lock:
+            if side == "buy":
+                state.vpin_buy_vol += size
+            else:
+                state.vpin_sell_vol += size
+            state.vpin_trade_count += 1
+            if state.vpin_trade_count >= _VPIN_BUCKET_SIZE:
+                total = state.vpin_buy_vol + state.vpin_sell_vol
+                if total > 0.0:
+                    score = abs(state.vpin_buy_vol - state.vpin_sell_vol) / total
+                    state.vpin_scores.append(score)
+                # Reset bucket
+                state.vpin_buy_vol = 0.0
+                state.vpin_sell_vol = 0.0
+                state.vpin_trade_count = 0
 
 
 # ---------------------------------------------------------------------------
