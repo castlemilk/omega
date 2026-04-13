@@ -1790,6 +1790,14 @@ class StrategyNode(Node):
                             conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
+                # V117: suppress specific tickers on the long side based on postmortem evidence.
+                # ADAUSDT: 8 of 10 worst losers in V116 were ADA longs (normal regime, -$105).
+                _LONG_SUPPRESSED = {
+                    "ADAUSDT",  # V116: 8/10 worst losers, 38.5% WR in normal regime, -$105
+                }
+                if self.features.postmortem_signal_filter and ticker in _LONG_SUPPRESSED:
+                    logger.debug("postmortem_signal_filter: suppressing %s long (evidence-based)", ticker)
+                    continue
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:

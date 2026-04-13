@@ -953,9 +953,11 @@ class SignalGenerationNode(Node):
                     "sma_long", "sma_short", "price", "return_1d",
                     "sma_crossover", "fear_greed_signal", "liquidation_proximity",
                     # V115 postmortem (44 trades): accuracy below 40%
-                    "vpin",                  # 37.5% — informed trading proxy was anti-predictive
-                    "ricci_curvature_signal", # 38.1% — price-only Ricci not reliable at this TF
-                    "trade_flow_direction",   # 39.5% — net aggressor volume contradicting entries
+                    "vpin",                  # 37.5% → 51.4% after flip (V116 confirmed)
+                    "ricci_curvature_signal", # 38.1% → 56.8% after flip (V116 confirmed)
+                    "trade_flow_direction",   # 39.5% → 63.2% after flip (V116 confirmed)
+                    # V116 postmortem (38 trades): accuracy below 40%
+                    "whale_print",            # 39.3% (n=28) — whale size detection anti-predictive
                 }
                 for _dead in _DEAD_SIGNALS:
                     if _dead in ts and isinstance(ts[_dead], (int, float)):
