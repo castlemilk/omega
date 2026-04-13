@@ -367,6 +367,13 @@ class VictoriaNode(Node):
                     with _cl.suppress(Exception):
                         self._strategy.init_tracer(_sig_tracer)
                         self._strategy._version = self._version
+                # V110: inject reinforcer into strategy for threshold reduction logic
+                _sig_reinf = getattr(self._signals, "_reinforcer", None)
+                if _sig_reinf is not None and getattr(self._strategy, "_reinforcer", None) is None:
+                    import contextlib as _cl
+
+                    with _cl.suppress(Exception):
+                        self._strategy.init_reinforcer(_sig_reinf)
             elif action in (
                 NodeAction.CONSTRUCT_PORTFOLIO.value,
                 NodeAction.STRATEGY.value,

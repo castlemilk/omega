@@ -495,6 +495,10 @@ class StrategyNode(Node):
         """Inject an ActivationTracer (from signal_generation.py via VictoriaNode)."""
         self._tracer = tracer
 
+    def init_reinforcer(self, reinforcer: Any) -> None:
+        """Inject a TradeReinforcer so _apply_regime_adaptive_thresholds can read n_trades."""
+        self._reinforcer = reinforcer
+
     def get_corr_matrix(self) -> dict:
         """Return the most recent signal correlation matrix (for Go API / dashboard)."""
         if self._corr_monitor is None:
@@ -1019,6 +1023,22 @@ class StrategyNode(Node):
                 if _new_short < _old_short:
                     self._short_conviction_threshold = _new_short
                     logger.info("crisis_short_bias: normal → short_thresh %.4f→0.05", _old_short)
+
+        # V110: reinforcement threshold reduction — when reinforcement has 50+ trades of
+        # history, lower both thresholds 20%. Reinforcement already filters bad signals via
+        # weight dampening, so a lower threshold doesn't increase risk — it restores trade
+        # volume that dampened signals inadvertently suppress.
+        if self.features.trade_reinforcement:
+            _reinf = getattr(self, "_reinforcer", None)
+            if _reinf is not None and getattr(_reinf, "_n_trades", 0) >= 50:
+                self._long_conviction_threshold *= 0.80
+                self._short_conviction_threshold *= 0.80
+                logger.debug(
+                    "Reinforcement threshold reduction (n=%d): long=%.3f short=%.3f",
+                    _reinf._n_trades,
+                    self._long_conviction_threshold,
+                    self._short_conviction_threshold,
+                )
 
     def _passes_conviction_filters(
         self, sig: dict, cycle: int, direction: str = "long"
