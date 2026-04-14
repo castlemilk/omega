@@ -418,3 +418,71 @@ _PRESETS["v128_exit_v1"] = VictoriaFeatures(
     mfe_retracement_cap=0.25,
     mae_stop_k=0.8,
 )
+
+# ---------------------------------------------------------------------------
+# V129 exit parameter grid — MFE-trail-only (hard stop removed)
+#
+# V128 post-mortem:
+#   - hard MAE stop (0.8×ATR) cut recovering positions → PnL regression
+#   - loss_capture=1.0 by definition when hard stop fires (pnl==mae at trigger)
+#   - win_capture improved to 0.60 — MFE trailing IS working
+#
+# Grid hypothesis: removing hard stop lets losers recover via time-exit,
+# lowering loss_capture. Tighter trail locks more winner gains.
+#
+# mae_stop_k=99.0 effectively disables the hard stop (fires only at 99×ATR).
+# ---------------------------------------------------------------------------
+
+# v129a: early trail activation (0.5×ATR), tight lock (lock 85% of peak)
+# Hypothesis: activates trail on smaller moves, cuts more winners early → higher win_capture
+_PRESETS["v129_trail_tight"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
+    whale_prints=True,
+    whale_flow=True,
+    funding_velocity=True,
+    disposition_exit_controller=True,
+    mfe_trail_k=0.5,          # activate at 0.5×ATR (earlier than V128's 1.0×)
+    mfe_retracement_cap=0.15,  # lock 85% of peak gain
+    mae_stop_k=99.0,           # hard stop disabled
+)
+
+# v129b: moderate trail (0.5×ATR), wider lock (lock 75% of peak) — control variant
+# Same activation as v129a but allows 25% retracement before firing
+_PRESETS["v129_trail_moderate"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
+    whale_prints=True,
+    whale_flow=True,
+    funding_velocity=True,
+    disposition_exit_controller=True,
+    mfe_trail_k=0.5,           # activate at 0.5×ATR
+    mfe_retracement_cap=0.25,  # lock 75% of peak (same as V128 cap, earlier activation)
+    mae_stop_k=99.0,           # hard stop disabled
+)
+
+# v129c: loose trail (1.5×ATR activation), tight lock (lock 85%) — let it breathe first
+# Hypothesis: wait for a larger move to confirm trend, then lock tightly
+_PRESETS["v129_trail_loose"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
+    whale_prints=True,
+    whale_flow=True,
+    funding_velocity=True,
+    disposition_exit_controller=True,
+    mfe_trail_k=1.5,           # activate at 1.5×ATR (later, bigger move required)
+    mfe_retracement_cap=0.15,  # tight lock once activated
+    mae_stop_k=99.0,           # hard stop disabled
+)

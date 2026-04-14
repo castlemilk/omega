@@ -38,11 +38,15 @@ BENCHMARKS_DIR = DATA_DIR / "benchmarks"
 
 # Maps version prefix → config label for grouping
 _CONFIG_LABELS = {
-    "bt_v93":  "v93_baseline",
-    "bt_v112": "v112_evidence_based",
-    "bt_v115": "v115_full_vectors",
-    "bt_v122": "v122_guardrail",
-    "bt_v127": "v127_live",
+    "bt_v93":   "v93_baseline",
+    "bt_v112":  "v112_evidence_based",
+    "bt_v115":  "v115_full_vectors",
+    "bt_v122":  "v122_guardrail",
+    "bt_v127":  "v127_live",
+    "bt_v128":  "v128_exit_v1",
+    "bt_v129t": "v129_trail_tight",
+    "bt_v129m": "v129_trail_moderate",
+    "bt_v129l": "v129_trail_loose",
 }
 
 _SNAPSHOT_LABELS = {
