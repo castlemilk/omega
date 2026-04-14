@@ -1790,11 +1790,11 @@ class StrategyNode(Node):
                             conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
-                # V117: suppress specific tickers on the long side based on postmortem evidence.
-                # ADAUSDT: 8 of 10 worst losers in V116 were ADA longs (normal regime, -$105).
-                _long_suppressed = {
-                    "ADAUSDT",  # V116: 8/10 worst losers, 38.5% WR in normal regime, -$105
-                }
+                # V122: removed ADAUSDT from long suppression — single-version evidence only
+                # (V116 had 8/10 worst losers as ADA longs, but ADAUSDT was the primary long
+                # candidate. Removing it left no long diversity → all-short death spiral
+                # in V117-V121). Policy: require ≥50 trades AND 2+ versions.
+                _long_suppressed: set[str] = set()
                 if self.features.postmortem_signal_filter and ticker in _long_suppressed:
                     logger.debug(
                         "postmortem_signal_filter: suppressing %s long (evidence-based)", ticker
@@ -1922,9 +1922,9 @@ class StrategyNode(Node):
                 _short_suppressed = {
                     "NEARUSDT",  # V113: 22 shorts, 27% WR, -$93 PnL (50+ trade evidence)
                     "ARBUSDT",   # V115: 21 trades, 38% WR, -$159 gross loss (50+ trade evidence)
-                    # ETHUSDT removed — single-version evidence (V118 was an overcorrection crash,
-                    # not a reliable ETHUSDT signal. ETH shorts were profitable in V116.)
-                    "ETHUSDT",  # v120+prior (v118,v120): -212.30 PnL → suppress shorts
+                    # V122: ETHUSDT removed — loop re-added despite 46aa5318 revert.
+                    # V118 was itself an overcorrection crash (not reliable ETH evidence).
+                    # ETH shorts were profitable in V116 (+PnL). Policy: ≥50 trades + 2 versions.
                 }
                 if self.features.postmortem_signal_filter and ticker in _short_suppressed:
                     logger.debug(

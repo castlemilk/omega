@@ -414,6 +414,138 @@ def log_iteration(
 
 
 # ---------------------------------------------------------------------------
+# Directional balance guardrail
+# ---------------------------------------------------------------------------
+
+#: Signals that are part of the V116-era evidence-based baseline (≥50 trades, 2+ versions).
+#: The loop must not revert these — only candidates added after V116 are eligible for revert.
+_BASELINE_DEAD_SIGNALS = frozenset({
+    "sma_long", "sma_short", "price", "return_1d",
+    "sma_crossover", "fear_greed_signal", "liquidation_proximity",
+    "vpin", "ricci_curvature_signal", "trade_flow_direction",
+})
+
+_BALANCE_ONESIDED_THRESHOLD = 0.80  # >80% one direction = imbalanced
+
+
+def get_trade_balance(version: str) -> tuple[int, int] | None:
+    """
+    Return (long_count, short_count) from the trades CSV for *version*.
+    Returns None if the file doesn't exist or has no trades.
+    """
+    trades_csv = ROOT / "data" / f"{version}_trades.csv"
+    if not trades_csv.exists():
+        return None
+    longs = 0
+    shorts = 0
+    try:
+        with open(trades_csv, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                side = row.get("side", "").lower()
+                if side == "long":
+                    longs += 1
+                elif side == "short":
+                    shorts += 1
+    except Exception:
+        return None
+    if longs + shorts == 0:
+        return None
+    return longs, shorts
+
+
+def check_balance_guardrail(current: str) -> str | None:
+    """
+    Check if the last 2 completed versions were >80% one-sided.
+
+    If so, find the most recently added entry in _dead_signals (beyond the
+    V116 baseline) or in _short/_long_suppressed, and return a revert message.
+
+    Returns:
+        A human-readable description of the revert taken, or None if balance is OK.
+    """
+    m = re.match(r"v(\d+)", current)
+    if not m:
+        return None
+    cur_num = int(m.group(1))
+
+    imbalanced_versions: list[tuple[str, int, int]] = []
+    for lookback in range(1, 3):  # check last 2 versions
+        v = f"v{cur_num - lookback}"
+        balance = get_trade_balance(v)
+        if balance is None:
+            continue
+        longs, shorts = balance
+        total = longs + shorts
+        if total < 10:
+            continue
+        short_pct = shorts / total
+        long_pct = longs / total
+        if short_pct > _BALANCE_ONESIDED_THRESHOLD or long_pct > _BALANCE_ONESIDED_THRESHOLD:
+            imbalanced_versions.append((v, longs, shorts))
+
+    if len(imbalanced_versions) < 2:
+        return None  # not both recent versions imbalanced
+
+    # Both recent versions were >80% one-sided → trigger guardrail.
+    # Find the most recently added non-baseline entry in _dead_signals.
+    src = SIGNAL_GEN.read_text()
+    dead_match = re.search(r"_dead_signals\s*=\s*\{([^}]+)\}", src, re.DOTALL | re.IGNORECASE)
+    candidate_signal: str | None = None
+    if dead_match:
+        block = dead_match.group(1)
+        # Extract quoted signal names in order (last one is most recently added)
+        names = re.findall(r'"([a-z_]+)"', block)
+        # Find the last non-baseline signal
+        for name in reversed(names):
+            if name not in _BASELINE_DEAD_SIGNALS:
+                candidate_signal = name
+                break
+
+    if candidate_signal:
+        # Remove this signal from _dead_signals
+        new_src = re.sub(
+            rf'\s*"{candidate_signal}",[^\n]*\n', "\n", src, flags=re.IGNORECASE
+        )
+        if new_src != src:
+            SIGNAL_GEN.write_text(new_src)
+            msg = (
+                f"BALANCE GUARDRAIL: reverted '{candidate_signal}' from _dead_signals. "
+                f"Reason: {', '.join(f'{v}={l}L/{s}S' for v,l,s in imbalanced_versions)}"
+            )
+            logger.warning(msg)
+            return msg
+
+    # No candidate in dead_signals — check for recently added suppressions beyond established ones
+    _BASELINE_SHORT = {"NEARUSDT", "ARBUSDT"}
+    strat_src = STRATEGY.read_text()
+    short_match = re.search(r"_short_suppressed\s*=\s*\{([^}]+)\}", strat_src, re.DOTALL)
+    if short_match:
+        block = short_match.group(1)
+        names = re.findall(r'"([A-Z]+)"', block)
+        for name in reversed(names):
+            if name not in _BASELINE_SHORT:
+                new_src = re.sub(
+                    rf'\s*"{name}",[^\n]*\n', "\n", strat_src, flags=re.IGNORECASE
+                )
+                if new_src != strat_src:
+                    STRATEGY.write_text(new_src)
+                    msg = (
+                        f"BALANCE GUARDRAIL: reverted '{name}' from _short_suppressed. "
+                        f"Reason: {', '.join(f'{v}={l}L/{s}S' for v,l,s in imbalanced_versions)}"
+                    )
+                    logger.warning(msg)
+                    return msg
+
+    versions_str = ", ".join(f"{v}={l}L/{s}S" for v, l, s in imbalanced_versions)
+    logger.warning(
+        "BALANCE GUARDRAIL triggered but found no revert candidate. "
+        "Blocking all new adjustments. Versions: %s", versions_str
+    )
+    return f"BALANCE GUARDRAIL: no revert candidate found, blocking new adjustments. ({versions_str})"
+
+
+# ---------------------------------------------------------------------------
 # Core decision logic
 # ---------------------------------------------------------------------------
 
@@ -576,6 +708,14 @@ def run_loop(start_version: str, max_iterations: int) -> None:
             list(new_dead), list(new_short), list(new_long),
         )
 
+        # 4b. Directional balance guardrail
+        # If the last 2 versions were >80% one-sided, revert the most recent
+        # non-baseline flip/suppression instead of applying new adjustments.
+        balance_revert = check_balance_guardrail(current)
+        if balance_revert:
+            logger.warning("Balance guardrail active — clearing new adjustments: %s", balance_revert)
+            new_dead, new_short, new_long = {}, {}, {}
+
         # 5. Patch files
         changed = False
         if new_dead:
@@ -599,7 +739,14 @@ def run_loop(start_version: str, max_iterations: int) -> None:
 
         # 7. Commit (even if no changes — records the iteration)
         next_version = version_increment(current)
-        if changed:
+        if balance_revert:
+            msg = (
+                f"fix(victoria): {next_version} balance guardrail revert from {current}\n\n"
+                f"{balance_revert}\n\n"
+                f"{current}: PnL={summary.get('pnl', 0):.2f} WR={summary.get('wr', 0):.1%} "
+                f"trades={summary.get('n_trades', 0)} PF={summary.get('pf', 0):.3f}"
+            )
+        elif changed:
             msg = (
                 f"feat(victoria): {next_version} evidence-based adjustments from {current} postmortem\n\n"
                 + (f"DEAD_SIGNALS added: {', '.join(new_dead)}\n" if new_dead else "")

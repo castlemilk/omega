@@ -954,8 +954,11 @@ class SignalGenerationNode(Node):
                     "vpin",                    # 37.5% → 51.4% after flip (V116 confirmed)
                     "ricci_curvature_signal",  # 38.1% → 56.8% after flip (V116 confirmed)
                     "trade_flow_direction",    # 39.5% → 63.2% after flip (V116 confirmed)
-                    # V116 postmortem (38 trades, n=28): below 40%, anti-predictive confirmed
-                    "whale_print",             # 39.3% (n=28)
+                    # NOTE: whale_print removed — V122 fix: was 61% positive-biased in V116
+                    # (n=28, below 50-trade policy). Negating it created systematic short push.
+                    # VPIN is bounded [0,1]: negated value is always in [-1,0] (permanently
+                    # bearish regardless of market). Keep vpin flipped — its raw value was
+                    # always negative (pos%=0%) so the flip just makes the sign consistent.
                     # NOTE: momentum_derivative, volume_profile, funding_derivative,
                     # momentum_persistence were NOT added — they were >55% across 130 trades
                     # (V114-V116). V117-V118 had only 14-26 trades — below minimum evidence
