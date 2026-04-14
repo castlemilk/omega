@@ -59,7 +59,7 @@ def _load_results(version: str) -> dict:
         return {}
 
 
-def compute_disposition(trades: list[dict]) -> dict:
+def compute_disposition(trades: list[dict]) -> dict:  # noqa: C901
     """
     Compute disposition metrics from closed trades.
 
@@ -123,11 +123,23 @@ def compute_disposition(trades: list[dict]) -> dict:
     avg_mae = sum(maes) / len(maes) if maes else None
     avg_mfe = sum(mfes) / len(mfes) if mfes else None
 
+    # Mean exit_score from V128+ trades CSV column (when available)
+    exit_scores = []
+    for t in trades:
+        es = t.get("exit_score")
+        if es is not None and es != "":
+            try:
+                exit_scores.append(float(es))
+            except (TypeError, ValueError):
+                pass
+    mean_exit_score = round(sum(exit_scores) / len(exit_scores), 4) if exit_scores else None
+
     return {
         "disposition_coefficient": round(disp_coef, 4) if disp_coef is not None else None,
         "hold_ratio": round(hold_ratio, 3) if hold_ratio is not None else None,
         "avg_mae": round(avg_mae, 4) if avg_mae is not None else None,
         "avg_mfe": round(avg_mfe, 4) if avg_mfe is not None else None,
+        "mean_exit_score": mean_exit_score,
         "_n_win_captures": len(win_captures),
         "_n_loss_captures": len(loss_captures),
     }
@@ -231,17 +243,31 @@ def evaluate_gates(metrics: dict) -> dict:
         bad = {k: v for k, v in metrics["regime_pnl"].items() if v < -100}
         failures.append(f"Regime catastrophe: {bad}")
 
-    # Disposition: hold_ratio > 0.7 (acceptable), disposition_coef > -0.2
+    # Disposition gate — tiered by data quality:
+    #   V128+ (has win/loss capture):  disposition_coefficient > 0.0  (target 0.3)
+    #   V93–V127 (hold-ratio proxy):   hold_ratio > 0.7
+    #   No data at all:                pass (can't evaluate)
     disp = metrics.get("disposition_coefficient")
     hold = metrics.get("hold_ratio")
-    disp_ok = (
-        (disp is not None and disp > -0.2)
-        or (hold is not None and hold > 0.7)
-        or (disp is None and hold is None)  # no data — pass
-    )
+    n_tel = metrics.get("_n_win_captures", 0) or 0
+    n_loss_tel = metrics.get("_n_loss_captures", 0) or 0
+    has_capture_data = (n_tel + n_loss_tel) > 0 and disp is not None
+
+    if has_capture_data:
+        # V128+: require positive disposition coefficient
+        disp_ok = disp > 0.0
+        if not disp_ok:
+            failures.append(
+                f"Disposition effect detected: coef={disp:.3f} (need >0.0, target >0.3)"
+            )
+    elif hold is not None:
+        # Pre-V128 proxy
+        disp_ok = hold > 0.7
+        if not disp_ok:
+            failures.append(f"Poor exit discipline (hold_ratio proxy): {hold:.2f} < 0.7")
+    else:
+        disp_ok = True  # no data — skip gate
     gates["disposition_acceptable"] = disp_ok
-    if not disp_ok:
-        failures.append(f"Poor exit discipline: disp_coef={disp}, hold_ratio={hold}")
 
     return {
         "passed": all(gates.values()),

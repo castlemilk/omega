@@ -1,0 +1,299 @@
+"""
+omega/nodes/victoria/exit_controller.py
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ATR-based tiered exit controller — fixes the structural disposition effect.
+
+The system-wide disposition coefficient was −0.44 to −0.62 across all backtest
+configs (Phase A, April 2026). This module replaces the fixed-percentage /
+time-based exit logic with ATR-anchored stops and trailing take-profits.
+
+Design
+------
+Two exit mechanisms, both ATR-denominated:
+
+  1. Hard MAE stop  — close immediately if running loss ≥ K_stop × ATR.
+     Prevents "hold-and-pray" losers that drag MAE well past MFE.
+
+  2. MFE trailing stop — once peak gain ≥ K_trail × ATR, lock 75% of that
+     peak by trailing at MFE × (1 − retracement_cap).  Fires when we give
+     back more than retracement_cap fraction of the best gain seen.
+
+Both coexist with the existing time-exit and stop-loss fallbacks in
+mark_to_market(); this module fires first when enabled.
+
+Exit telemetry (per-trade, appended to trades CSV):
+  win_capture   = pnl / mfe        (winners: fraction of peak captured)
+  loss_capture  = |pnl| / |mae|    (losers:  fraction of worst seen realised)
+  exit_score    = win_capture − loss_capture  (positive = good discipline)
+
+Feature flags (in VictoriaFeatures):
+  disposition_exit_controller  — master switch (bool)
+  mfe_trail_k                  — MFE trailing ATR multiplier (float, default 1.0)
+  mfe_retracement_cap          — fraction of MFE to give back before trailing (float, 0.25)
+  mae_stop_k                   — hard stop ATR multiplier (float, default 0.8)
+
+Usage (in PaperTradingEngine.mark_to_market):
+    from omega.nodes.victoria.exit_controller import ExitController, ExitConfig
+    ec = ExitController(ExitConfig(mfe_trail_k=1.0, mfe_retracement_cap=0.25, mae_stop_k=0.8))
+    close, reason = ec.should_close(pos, current_price, sym_market, size, unrealized)
+"""
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass, field
+from typing import Any
+
+
+# ---------------------------------------------------------------------------
+# Config
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ExitConfig:
+    """Runtime parameters for the exit controller."""
+
+    enabled: bool = True
+
+    # MFE trailing: activate once MFE >= mfe_trail_k * ATR ($ units)
+    mfe_trail_k: float = 1.0
+
+    # Retracement cap: fire trailing stop when we give back this fraction of MFE.
+    # 0.25 → lock 75% of peak gain.
+    mfe_retracement_cap: float = 0.25
+
+    # Hard stop: close if running loss >= mae_stop_k * ATR ($ units)
+    mae_stop_k: float = 0.8
+
+    # ATR lookback period (bars)
+    atr_period: int = 14
+
+
+# ---------------------------------------------------------------------------
+# ATR helper
+# ---------------------------------------------------------------------------
+
+def compute_atr(market_data: dict[str, Any], period: int = 14) -> float:
+    """
+    Compute Average True Range from OHLCV market data.
+
+    Returns ATR in the asset's price units (not dollars).
+    Returns 0.0 if insufficient data.
+    """
+    highs = market_data.get("high") or []
+    lows = market_data.get("low") or []
+    closes = market_data.get("close") or []
+
+    # Need at least 2 bars for true range
+    n_avail = min(len(highs), len(lows), len(closes))
+    if n_avail < 2:
+        return 0.0
+
+    n = min(n_avail, period + 1)
+    trs: list[float] = []
+    for i in range(max(n_avail - n, 0) + 1, n_avail):
+        h = float(highs[i])
+        l = float(lows[i])
+        prev_c = float(closes[i - 1])
+        tr = max(h - l, abs(h - prev_c), abs(l - prev_c))
+        trs.append(tr)
+
+    return sum(trs) / len(trs) if trs else 0.0
+
+
+# ---------------------------------------------------------------------------
+# ExitController
+# ---------------------------------------------------------------------------
+
+class ExitController:
+    """
+    ATR-anchored exit controller.
+
+    Designed as a stateless callable: all position state lives in the
+    ``pos`` dict from PaperTradingEngine; this class only evaluates conditions.
+    """
+
+    def __init__(self, config: ExitConfig | None = None) -> None:
+        self.config = config or ExitConfig()
+
+    def should_close(
+        self,
+        pos: dict[str, Any],
+        current_price: float,
+        sym_market: dict[str, Any],
+        size: float,
+        unrealized: float,
+    ) -> tuple[bool, str]:
+        """
+        Evaluate whether an open position should be closed.
+
+        Parameters
+        ----------
+        pos           : Position record from PaperTradingEngine._positions.
+        current_price : Current mark price for this symbol.
+        sym_market    : Full market-data dict for this symbol (needs high/low/close).
+        size          : Notional size of the position in USD.
+        unrealized    : Current unrealised PnL in USD.
+
+        Returns
+        -------
+        (should_close: bool, reason: str)
+        """
+        cfg = self.config
+        if not cfg.enabled:
+            return False, ""
+
+        atr_price = compute_atr(sym_market, cfg.atr_period)
+        if atr_price <= 0:
+            return False, ""
+
+        entry = float(pos.get("entry", current_price))
+        if entry <= 0:
+            return False, ""
+
+        # Convert ATR from price units → dollar units
+        quantity = size / entry
+        atr_dollars = atr_price * quantity
+        if atr_dollars <= 0:
+            return False, ""
+
+        mfe = float(pos.get("mfe", 0.0))  # most positive unrealised during lifetime
+
+        # ── 1. Hard MAE stop ────────────────────────────────────────────
+        stop_threshold = -(cfg.mae_stop_k * atr_dollars)
+        if unrealized <= stop_threshold:
+            return True, (
+                f"hard_stop_mae("
+                f"loss={unrealized:.2f},"
+                f"threshold={stop_threshold:.2f},"
+                f"k={cfg.mae_stop_k}x_atr)"
+            )
+
+        # ── 2. MFE trailing stop ────────────────────────────────────────
+        trail_activation = cfg.mfe_trail_k * atr_dollars
+        if mfe >= trail_activation:
+            trail_level = mfe * (1.0 - cfg.mfe_retracement_cap)
+            if unrealized < trail_level:
+                return True, (
+                    f"mfe_trail("
+                    f"mfe={mfe:.2f},"
+                    f"trail={trail_level:.2f},"
+                    f"unreal={unrealized:.2f},"
+                    f"cap={cfg.mfe_retracement_cap})"
+                )
+
+        return False, ""
+
+    # ------------------------------------------------------------------
+    # Exit telemetry
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def compute_exit_telemetry(
+        pnl: float,
+        mfe: float,
+        mae: float,
+    ) -> dict[str, float | None]:
+        """
+        Compute per-trade exit quality metrics.
+
+        win_capture   = pnl / mfe          (winners: 1.0 = captured 100% of peak)
+        loss_capture  = |pnl| / |mae|      (losers:  1.0 = closed at worst point)
+        exit_score    = win_capture − loss_capture
+
+        A positive exit_score means we let winners run further than losers —
+        the opposite of the disposition effect.
+        """
+        win_capture: float | None = None
+        loss_capture: float | None = None
+
+        if pnl > 0 and mfe > 0:
+            win_capture = round(pnl / mfe, 4)
+
+        if pnl < 0 and mae < 0:
+            loss_capture = round(abs(pnl) / abs(mae), 4)
+
+        if win_capture is not None and loss_capture is not None:
+            exit_score: float | None = round(win_capture - loss_capture, 4)
+        elif win_capture is not None:
+            exit_score = win_capture  # only winners so far
+        elif loss_capture is not None:
+            exit_score = -loss_capture  # only losers so far
+        else:
+            exit_score = None
+
+        return {
+            "win_capture": win_capture,
+            "loss_capture": loss_capture,
+            "exit_score": exit_score,
+        }
+
+
+# ---------------------------------------------------------------------------
+# Aggregate disposition coefficient
+# ---------------------------------------------------------------------------
+
+def aggregate_disposition(trades: list[dict[str, Any]]) -> dict[str, Any]:
+    """
+    Compute aggregate disposition coefficient from a list of closed trades.
+
+    Uses exit_score column if present (V128+), otherwise falls back to
+    win_capture/loss_capture computed from pnl/mfe/mae columns.
+
+    Returns dict with:
+        disposition_coefficient : median(win_capture) - median(loss_capture)
+        mean_exit_score         : mean(exit_score) across all trades with data
+        n_with_telemetry        : trades with exit_score available
+    """
+    win_caps: list[float] = []
+    loss_caps: list[float] = []
+    exit_scores: list[float] = []
+
+    for t in trades:
+        # Prefer pre-computed exit_score if present
+        es = t.get("exit_score")
+        if es is not None and es != "":
+            try:
+                exit_scores.append(float(es))
+            except (TypeError, ValueError):
+                pass
+
+        # Always compute win/loss capture from pnl/mfe/mae for percentile stats
+        pnl = float(t.get("pnl", 0) or 0)
+        mfe = float(t.get("mfe", 0) or 0)
+        mae = float(t.get("mae", 0) or 0)
+        tel = ExitController.compute_exit_telemetry(pnl, mfe, mae)
+        if tel["win_capture"] is not None:
+            win_caps.append(tel["win_capture"])
+        if tel["loss_capture"] is not None:
+            loss_caps.append(tel["loss_capture"])
+
+    def _median(vals: list[float]) -> float | None:
+        if not vals:
+            return None
+        s = sorted(vals)
+        n = len(s)
+        return (s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2)
+
+    med_win = _median(win_caps)
+    med_loss = _median(loss_caps)
+
+    if med_win is not None and med_loss is not None:
+        disp_coef: float | None = round(med_win - med_loss, 4)
+    elif med_win is not None:
+        disp_coef = round(med_win, 4)
+    elif med_loss is not None:
+        disp_coef = round(-med_loss, 4)
+    else:
+        disp_coef = None
+
+    mean_es: float | None = (
+        round(sum(exit_scores) / len(exit_scores), 4) if exit_scores else None
+    )
+
+    return {
+        "disposition_coefficient": disp_coef,
+        "mean_exit_score": mean_es,
+        "n_with_telemetry": len(exit_scores),
+        "_n_win_captures": len(win_caps),
+        "_n_loss_captures": len(loss_caps),
+    }

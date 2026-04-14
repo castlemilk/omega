@@ -164,6 +164,7 @@ def _init_trades_csv(path: Path) -> None:
             "entry_price", "exit_price", "pnl", "slippage",
             "hold_cycles", "conviction", "regime", "sit_out_reason",
             "mae", "mfe",  # Max Adverse / Favourable Excursion — for disposition metric
+            "win_capture", "loss_capture", "exit_score",  # V128 exit telemetry
         ])
 
 
@@ -577,11 +578,28 @@ def run(
     # strategy weight 0.25 (after fiedler) * $100k = $25k > 0.15 * $100k = $15k.
     # Remove paper-trading caps — the strategy's own fiedler/kelly/sit-out risk
     # controls are the quality gate; don't double-cap here.
+    # ── Exit controller (V128+): ATR-based disposition fix ─────────────────
+    _exit_ctrl = None
+    if _active_features.disposition_exit_controller:
+        from omega.nodes.victoria.exit_controller import ExitController, ExitConfig
+        _exit_cfg = ExitConfig(
+            enabled=True,
+            mfe_trail_k=float(_active_features.mfe_trail_k),
+            mfe_retracement_cap=float(_active_features.mfe_retracement_cap),
+            mae_stop_k=float(_active_features.mae_stop_k),
+        )
+        _exit_ctrl = ExitController(_exit_cfg)
+        log.info(
+            "ExitController: enabled (mfe_trail_k=%.2f, retracement_cap=%.2f, mae_stop_k=%.2f)",
+            _exit_cfg.mfe_trail_k, _exit_cfg.mfe_retracement_cap, _exit_cfg.mae_stop_k,
+        )
+
     engine = PaperTradingEngine(
         initial_capital=100_000.0,
         db_url=db_url or None,
         max_position_per_symbol=1.0,
         max_portfolio_exposure=1.0,
+        exit_controller=_exit_ctrl,
     )
     orch.set_paper_trading(engine)
 
@@ -724,6 +742,9 @@ def run(
                             sit_out_reason,
                             round(float(t.get("mae", 0.0)), 4),  # Max Adverse Excursion
                             round(float(t.get("mfe", 0.0)), 4),  # Max Favourable Excursion
+                            t.get("win_capture", ""),   # fraction of MFE captured (winners)
+                            t.get("loss_capture", ""),  # fraction of MAE realised (losers)
+                            t.get("exit_score", ""),    # win_capture - loss_capture
                         ])
                 last_closed_count = len(closed)
 

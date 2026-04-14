@@ -188,6 +188,40 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V128 exit discipline (disposition_coefficient fix)
+    # ------------------------------------------------------------------
+
+    disposition_exit_controller: bool = False
+    """V128+ exit discipline controller.
+
+    Replaces the fixed-percentage / time-based exit logic with ATR-anchored stops:
+      - Hard MAE stop: close immediately when running loss >= mae_stop_k * ATR.
+        Prevents "hold-and-pray" losers that drag MAE far past MFE.
+      - MFE trailing stop: once peak gain >= mfe_trail_k * ATR, trail at
+        MFE * (1 - mfe_retracement_cap) to lock 75% of peak (default).
+
+    Phase A (April 2026): disposition_coefficient was -0.44 to -0.62 across all
+    configs, confirming classic disposition effect. This controller targets > 0.0.
+
+    See: omega.nodes.victoria.exit_controller.ExitController
+    """
+
+    mfe_trail_k: float = 1.0
+    """ATR multiplier to activate MFE trailing stop (default 1.0 × ATR).
+    Only used when disposition_exit_controller=True.
+    """
+
+    mfe_retracement_cap: float = 0.25
+    """Fraction of MFE to give back before trailing fires (default 0.25 → lock 75%).
+    Only used when disposition_exit_controller=True.
+    """
+
+    mae_stop_k: float = 0.8
+    """ATR multiplier for hard MAE stop (default 0.8 × ATR).
+    Only used when disposition_exit_controller=True.
+    """
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 
@@ -227,8 +261,8 @@ class VictoriaFeatures:
     from_preset = preset
 
     def active_flags(self) -> list[str]:
-        """Return names of all True flags, sorted."""
-        return sorted(k for k, v in asdict(self).items() if v)
+        """Return names of all True boolean flags, sorted."""
+        return sorted(k for k, v in asdict(self).items() if isinstance(v, bool) and v)
 
     # Alias: enabled() → active_flags()
     def enabled(self) -> list[str]:
@@ -363,4 +397,24 @@ _PRESETS["v115_full_vectors"] = VictoriaFeatures(
     # Phase 2: whale smart-money + funding velocity
     whale_flow=True,
     funding_velocity=True,
+)
+
+# V128: v115_full_vectors + ATR-based exit controller (disposition fix)
+# Phase A target: disposition_coefficient > 0.0 (baseline was -0.44 to -0.62)
+_PRESETS["v128_exit_v1"] = VictoriaFeatures(
+    # V115 core (WS signals stripped in backtest mode automatically)
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
+    whale_prints=True,
+    whale_flow=True,
+    funding_velocity=True,
+    # V128 addition: ATR-based exit controller
+    disposition_exit_controller=True,
+    mfe_trail_k=1.0,
+    mfe_retracement_cap=0.25,
+    mae_stop_k=0.8,
 )
