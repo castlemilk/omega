@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "omega/benchmarks/scorecard",
+  "title": "Victoria Benchmark Scorecard",
+  "description": "Per-version, per-snapshot performance scorecard for Phase A evaluation. All versions must be run with --backtest-snapshot and --seed 42 to be comparable.",
+  "type": "object",
+  "required": ["version", "snapshot_id", "snapshot_path", "run_at", "seed", "features", "metrics", "gate_result"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Training version label (e.g. v128)",
+      "pattern": "^v[0-9]+"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "description": "Snapshot identifier (e.g. snap_20260414, snap_trending_2023q4)"
+    },
+    "snapshot_path": {
+      "type": "string",
+      "description": "Relative path to the frozen snapshot JSON file"
+    },
+    "run_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when this backtest was run"
+    },
+    "seed": {
+      "type": "integer",
+      "description": "RNG seed used (must be fixed for comparability)"
+    },
+    "features": {
+      "type": "string",
+      "description": "Feature flag preset or JSON string used for this run"
+    },
+    "n_cycles": {
+      "type": "integer",
+      "description": "Number of training cycles run"
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["pnl", "win_rate", "profit_factor", "n_trades", "long_pct", "short_pct", "max_drawdown"],
+      "properties": {
+        "pnl": {
+          "type": "number",
+          "description": "Total closed PnL in USD"
+        },
+        "win_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of winning closed trades"
+        },
+        "profit_factor": {
+          "type": "number",
+          "description": "Gross profit / gross loss (>1.0 = edge)"
+        },
+        "n_trades": {
+          "type": "integer",
+          "description": "Total closed trades"
+        },
+        "long_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of trades that are longs (healthy: 0.2-0.8)"
+        },
+        "short_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of trades that are shorts (healthy: 0.2-0.8)"
+        },
+        "max_drawdown": {
+          "type": "number",
+          "description": "Peak-to-trough equity drawdown in USD (negative)"
+        },
+        "sharpe": {
+          "type": ["number", "null"],
+          "description": "Annualised Sharpe ratio (null if insufficient data)"
+        },
+        "regime_pnl": {
+          "type": "object",
+          "description": "PnL breakdown by regime label",
+          "properties": {
+            "normal": {"type": "number"},
+            "crisis": {"type": "number"},
+            "high_vol": {"type": "number"}
+          }
+        },
+        "disposition_coefficient": {
+          "type": ["number", "null"],
+          "description": "median_win_capture - median_loss_capture. Null if MFE/MAE unavailable (pre-V128 runs use hold_ratio proxy instead)."
+        },
+        "hold_ratio": {
+          "type": ["number", "null"],
+          "description": "Backfill proxy for disposition: mean hold_cycles(winners) / mean hold_cycles(losers). >1 = good discipline."
+        },
+        "avg_mae": {
+          "type": ["number", "null"],
+          "description": "Average Max Adverse Excursion across closed trades"
+        },
+        "avg_mfe": {
+          "type": ["number", "null"],
+          "description": "Average Max Favourable Excursion across closed trades"
+        }
+      }
+    },
+    "gate_result": {
+      "type": "object",
+      "description": "Phase A gate pass/fail breakdown",
+      "required": ["passed", "gates"],
+      "properties": {
+        "passed": {
+          "type": "boolean",
+          "description": "True if ALL gates pass"
+        },
+        "gates": {
+          "type": "object",
+          "description": "Per-gate pass/fail",
+          "properties": {
+            "pnl_positive": {"type": "boolean"},
+            "profit_factor_above_1": {"type": "boolean"},
+            "n_trades_sufficient": {"type": "boolean"},
+            "long_short_balanced": {"type": "boolean"},
+            "no_regime_catastrophe": {"type": "boolean"},
+            "disposition_acceptable": {"type": "boolean"}
+          }
+        },
+        "failure_reasons": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Human-readable list of failed gate explanations"
+        }
+      }
+    },
+    "leaderboard_rank": {
+      "type": ["integer", "null"],
+      "description": "Aggregate rank across all snapshots (lower = better). Null until cross-snapshot ranking is computed."
+    }
+  }
+}

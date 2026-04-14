@@ -171,35 +171,107 @@ def fetch_macro() -> dict:
     return macro
 
 
-def build_snapshot(symbols: list[str], lookback: int) -> dict:
+def fetch_ohlcv_historical(symbols: list[str], start_date: str, end_date: str) -> dict:
+    """
+    Fetch historical OHLCV for a specific date range using ccxt (Binance public API).
+
+    Returns {symbol: {close: [...], open: [...], high: [...], low: [...], volume: [...],
+                       timestamps: [...], meta: {...}}}.
+    """
+    try:
+        import ccxt
+    except ImportError as exc:
+        raise RuntimeError("ccxt not installed. Run: pip install ccxt") from exc
+
+    from datetime import UTC
+    exchange = ccxt.binance({"enableRateLimit": True})
+    start_dt = datetime.fromisoformat(start_date).replace(tzinfo=timezone.utc)
+    end_dt = datetime.fromisoformat(end_date).replace(tzinfo=timezone.utc)
+    since_ms = int(start_dt.timestamp() * 1000)
+    days = (end_dt - start_dt).days + 5
+
+    result = {}
+    for sym in symbols:
+        # ccxt uses BTC/USDT not BTCUSDT
+        ccxt_sym = sym[:-4] + "/" + sym[-4:] if sym.endswith("USDT") else sym
+        logger.info("Fetching %s  %s → %s  (%d bars)…", ccxt_sym, start_date, end_date, days)
+        try:
+            raw = exchange.fetch_ohlcv(ccxt_sym, timeframe="1d", since=since_ms, limit=days)
+        except Exception as exc:
+            logger.warning("  %s: fetch failed: %s", sym, exc)
+            continue
+
+        closes, opens, highs, lows, volumes, timestamps = [], [], [], [], [], []
+        for row in raw:
+            bar_date = datetime.fromtimestamp(row[0] / 1000, tz=timezone.utc).date().isoformat()
+            if bar_date < start_date or bar_date > end_date:
+                continue
+            timestamps.append(int(row[0] // 1000))
+            opens.append(float(row[1]))
+            highs.append(float(row[2]))
+            lows.append(float(row[3]))
+            closes.append(float(row[4]))
+            volumes.append(float(row[5]))
+
+        if not closes:
+            logger.warning("  %s: no bars in range %s – %s", sym, start_date, end_date)
+            continue
+
+        result[sym] = {
+            "close": closes,
+            "open": opens,
+            "high": highs,
+            "low": lows,
+            "volume": volumes,
+            "timestamps": timestamps,
+            "meta": {"symbol": sym, "regularMarketPrice": closes[-1]},
+        }
+        logger.info("  %s: %d bars", sym, len(closes))
+
+    return result
+
+
+def build_snapshot(
+    symbols: list[str],
+    lookback: int = 90,
+    start_date: str | None = None,
+    end_date: str | None = None,
+    snapshot_id: str | None = None,
+) -> dict:
     now = datetime.now(timezone.utc)
     today = now.strftime("%Y-%m-%d")
 
-    logger.info("Building snapshot for %s…", today)
-    ohlcv = fetch_ohlcv(symbols, lookback)
+    if start_date and end_date:
+        logger.info("Building historical snapshot %s → %s…", start_date, end_date)
+        ohlcv = fetch_ohlcv_historical(symbols, start_date, end_date)
+        sid = snapshot_id or f"snap_{start_date.replace('-', '')}_{end_date.replace('-', '')}"
+        actual_start, actual_end = start_date, end_date
+    else:
+        logger.info("Building recent snapshot (last %d days)…", lookback)
+        ohlcv = fetch_ohlcv(symbols, lookback)
+        sid = snapshot_id or f"snap_{today.replace('-', '')}"
+        # Compute date range from timestamps
+        all_ts: list[int] = []
+        for d in ohlcv.values():
+            ts = d.get("timestamps", [])
+            if ts:
+                all_ts.extend(ts)
+        if all_ts:
+            actual_start = datetime.fromtimestamp(min(all_ts), tz=timezone.utc).strftime("%Y-%m-%d")
+            actual_end = datetime.fromtimestamp(max(all_ts), tz=timezone.utc).strftime("%Y-%m-%d")
+        else:
+            actual_end = today
+            actual_start = f"{now.year}-{now.month:02d}-{max(1, now.day - lookback):02d}"
 
     if not ohlcv:
         raise RuntimeError("No OHLCV data fetched — check exchange connectivity")
 
-    # Compute actual date range from timestamps where available
-    all_ts: list[int] = []
-    for d in ohlcv.values():
-        ts = d.get("timestamps", [])
-        if ts:
-            all_ts.extend(ts)
-    if all_ts:
-        start_dt = datetime.fromtimestamp(min(all_ts), tz=timezone.utc).strftime("%Y-%m-%d")
-        end_dt = datetime.fromtimestamp(max(all_ts), tz=timezone.utc).strftime("%Y-%m-%d")
-    else:
-        end_dt = today
-        start_dt = f"{now.year}-{now.month:02d}-{max(1, now.day - lookback):02d}"
-
     macro = fetch_macro()
 
     snap: dict = {
-        "_snapshot_id": f"snap_{today.replace('-', '')}",
+        "_snapshot_id": sid,
         "_created_at": int(time.time()),
-        "_date_range": [start_dt, end_dt],
+        "_date_range": [actual_start, actual_end],
         "_symbols": list(ohlcv.keys()),
         "_lookback": lookback,
         **ohlcv,
@@ -209,8 +281,7 @@ def build_snapshot(symbols: list[str], lookback: int) -> dict:
     series_lengths = {sym: len(ohlcv[sym]["close"]) for sym in ohlcv}
     logger.info(
         "Snapshot %s: %d symbols, %d–%d bars each",
-        snap["_snapshot_id"],
-        len(ohlcv),
+        sid, len(ohlcv),
         min(series_lengths.values()),
         max(series_lengths.values()),
     )
@@ -223,21 +294,36 @@ def main() -> None:
     )
     parser.add_argument(
         "--lookback", type=int, default=90,
-        help="Days of OHLCV history to fetch per symbol (default: 90)"
+        help="Days of OHLCV history to fetch (recent mode only, default: 90)"
+    )
+    parser.add_argument(
+        "--start-date", type=str, default=None, metavar="YYYY-MM-DD",
+        help="Historical window start date (enables historical mode, requires ccxt)"
+    )
+    parser.add_argument(
+        "--end-date", type=str, default=None, metavar="YYYY-MM-DD",
+        help="Historical window end date (requires --start-date)"
     )
     parser.add_argument(
         "--out", type=str, default=None,
-        help="Output path (default: data/snapshots/snap_YYYYMMDD.json)"
+        help="Output path (default: data/snapshots/snap_YYYYMMDD.json or derived from dates)"
+    )
+    parser.add_argument(
+        "--id", type=str, default=None, dest="snapshot_id",
+        help="Snapshot ID string (default: derived from dates)"
     )
     parser.add_argument(
         "--force", action="store_true",
-        help="Re-fetch even if today's snapshot already exists"
+        help="Re-fetch even if output file already exists"
     )
     parser.add_argument(
         "--symbols", type=str, default=None,
         help="Comma-separated symbol list (default: all 13 pairs)"
     )
     args = parser.parse_args()
+
+    if bool(args.start_date) != bool(args.end_date):
+        parser.error("--start-date and --end-date must be used together")
 
     _load_env()
 
@@ -247,28 +333,42 @@ def main() -> None:
         else ALL_SYMBOLS
     )
 
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    out_path = Path(args.out) if args.out else SNAPSHOT_DIR / f"snap_{today}.json"
+    # Determine output path
+    if args.out:
+        out_path = Path(args.out)
+    elif args.start_date and args.end_date:
+        sid = args.snapshot_id or f"snap_{args.start_date.replace('-','')}_{args.end_date.replace('-','')}"
+        out_path = SNAPSHOT_DIR / f"{sid}.json"
+    else:
+        today = datetime.now(timezone.utc).strftime("%Y%m%d")
+        out_path = SNAPSHOT_DIR / f"snap_{today}.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if out_path.exists() and not args.force:
         logger.info("Snapshot already exists: %s (use --force to overwrite)", out_path)
         snap = json.loads(out_path.read_text())
         logger.info(
-            "  id=%s  created=%s  symbols=%d",
+            "  id=%s  range=%s → %s  symbols=%d",
             snap.get("_snapshot_id"),
-            datetime.fromtimestamp(snap.get("_created_at", 0), tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            snap.get("_date_range", ["?", "?"])[0],
+            snap.get("_date_range", ["?", "?"])[-1],
             len(snap.get("_symbols", [])),
         )
         return
 
-    snap = build_snapshot(symbols, args.lookback)
+    snap = build_snapshot(
+        symbols,
+        lookback=args.lookback,
+        start_date=args.start_date,
+        end_date=args.end_date,
+        snapshot_id=args.snapshot_id,
+    )
 
     out_path.write_text(json.dumps(snap, default=str))
     size_kb = out_path.stat().st_size / 1024
     logger.info("Snapshot written → %s (%.1f KB)", out_path, size_kb)
     logger.info(
-        "Use with: python3 scripts/run_training.py --backtest-snapshot %s", out_path
+        "Use with: python3 scripts/run_training.py --backtest-snapshot %s --seed 42", out_path
     )
 
 

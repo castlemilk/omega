@@ -1922,10 +1922,10 @@ class StrategyNode(Node):
                 _short_suppressed = {
                     "NEARUSDT",  # V113: 22 shorts, 27% WR, -$93 PnL (50+ trade evidence)
                     "ARBUSDT",   # V115: 21 trades, 38% WR, -$159 gross loss (50+ trade evidence)
-                    # V122: ETHUSDT removed — loop re-added despite 46aa5318 revert.
-                    # V118 was itself an overcorrection crash (not reliable ETH evidence).
-                    # ETH shorts were profitable in V116 (+PnL). Policy: ≥50 trades + 2 versions.
-                    "ETHUSDT",  # v126+prior (v124,v126): -111.76 PnL → suppress shorts
+                    # V128: ETHUSDT removed (third time). Loop keeps re-adding it on single-run
+                    # evidence contaminated by V118 crash. Removing ETHUSDT short candidates
+                    # causes all-long bias (V127: 20L/0S). Policy: need ≥50 trades in 2+ clean
+                    # (non-crash) versions before suppression. Not met.
                 }
                 if self.features.postmortem_signal_filter and ticker in _short_suppressed:
                     logger.debug(

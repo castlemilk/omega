@@ -163,6 +163,7 @@ def _init_trades_csv(path: Path) -> None:
             "cycle", "timestamp", "symbol", "side", "size",
             "entry_price", "exit_price", "pnl", "slippage",
             "hold_cycles", "conviction", "regime", "sit_out_reason",
+            "mae", "mfe",  # Max Adverse / Favourable Excursion — for disposition metric
         ])
 
 
@@ -462,6 +463,7 @@ def run(
     meta_harness: bool = False,
     features: str | None = None,
     backtest_snapshot: str | None = None,
+    seed: int | None = None,
 ) -> dict:
     log = logging.getLogger(f"training.{version}")
 
@@ -475,6 +477,14 @@ def run(
 
     db_url = os.environ.get("DATABASE_URL", "")
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
+
+    # ── Deterministic seed (required for reproducible backtest comparisons) ──
+    if seed is not None:
+        import random as _random
+        import numpy as _np
+        _random.seed(seed)
+        _np.random.seed(seed)
+        log.info("RNG seed set to %d (deterministic mode)", seed)
 
     # ── Feature flags ─────────────────────────────────────────────────────
     from omega.nodes.victoria.features import VictoriaFeatures
@@ -712,6 +722,8 @@ def run(
                             t.get("conviction", ""),
                             regime,
                             sit_out_reason,
+                            round(float(t.get("mae", 0.0)), 4),  # Max Adverse Excursion
+                            round(float(t.get("mfe", 0.0)), 4),  # Max Favourable Excursion
                         ])
                 last_closed_count = len(closed)
 
@@ -1294,6 +1306,17 @@ if __name__ == "__main__":
             "Example: --backtest-snapshot data/snapshots/snap_20260414.json"
         ),
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        metavar="N",
+        help=(
+            "RNG seed for fully deterministic backtest runs. Seeds Python random, "
+            "numpy, and any sklearn components. Required for reproducible "
+            "version-to-version comparisons. Recommended: --seed 42"
+        ),
+    )
     args = parser.parse_args()
 
     version = _resolve_version(args.version)
@@ -1307,4 +1330,5 @@ if __name__ == "__main__":
         meta_harness=args.meta_harness,
         features=args.features,
         backtest_snapshot=args.backtest_snapshot,
+        seed=args.seed,
     )
