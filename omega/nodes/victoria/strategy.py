@@ -1925,6 +1925,7 @@ class StrategyNode(Node):
                     # V122: ETHUSDT removed — loop re-added despite 46aa5318 revert.
                     # V118 was itself an overcorrection crash (not reliable ETH evidence).
                     # ETH shorts were profitable in V116 (+PnL). Policy: ≥50 trades + 2 versions.
+                    "ETHUSDT",  # v126+prior (v124,v126): -111.76 PnL → suppress shorts
                 }
                 if self.features.postmortem_signal_filter and ticker in _short_suppressed:
                     logger.debug(
