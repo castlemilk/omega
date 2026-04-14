@@ -461,6 +461,7 @@ def run(
     log_interval: int = 5,
     meta_harness: bool = False,
     features: str | None = None,
+    backtest_snapshot: str | None = None,
 ) -> dict:
     log = logging.getLogger(f"training.{version}")
 
@@ -477,6 +478,22 @@ def run(
 
     # ── Feature flags ─────────────────────────────────────────────────────
     from omega.nodes.victoria.features import VictoriaFeatures
+    if backtest_snapshot:
+        # In backtest mode, WS-dependent features can't run — stub them out.
+        # The ReplayIngestionNode serves OHLCV; WS signals degrade to 0.0.
+        _WS_FLAGS = {"ws_microstructure", "whale_prints"}
+        _bt_features = features or ""
+        import json as _json
+        try:
+            _flag_dict = _json.loads(_bt_features) if _bt_features.startswith("{") else {}
+        except Exception:
+            _flag_dict = {}
+        if isinstance(_flag_dict, dict):
+            for _wf in _WS_FLAGS:
+                _flag_dict.pop(_wf, None)
+            if _flag_dict:
+                features = _json.dumps(_flag_dict)
+        log.info("BACKTEST MODE: WS signals disabled (%s)", ", ".join(sorted(_WS_FLAGS)))
     if features:
         os.environ["VICTORIA_FEATURES"] = features
     _active_features = VictoriaFeatures.from_env()
@@ -518,6 +535,16 @@ def run(
 
     victoria = VictoriaNode()
     victoria._version = version  # V107: propagates to tracer file path + orchestrator attribution log
+
+    # ── Backtest mode: inject ReplayIngestionNode ─────────────────────────
+    if backtest_snapshot:
+        from omega.nodes.victoria.providers.replay import ReplayIngestionNode, load_snapshot
+        _snap = load_snapshot(backtest_snapshot)
+        victoria._ingestion = ReplayIngestionNode(_snap, window=30)
+        log.info(
+            "BACKTEST MODE: ingestion replaced by ReplayIngestionNode (%s, %d steps)",
+            _snap.get("_snapshot_id"), victoria._ingestion._total_steps,
+        )
     # V86: raise Ring 1 block threshold from 1.0 → 2.0 for training.
     # V85 post-mortem: Ring 1 was blocking ALL trades in normal/recovery regime because
     # max_disagreement (1.0–1.5) exceeded learned_threshold (1.030). In post-crash recovery,
@@ -1255,6 +1282,18 @@ if __name__ == "__main__":
             '(e.g. \'{"ricci_sizing":true}\'). Default: v93_baseline (all OFF).'
         ),
     )
+    parser.add_argument(
+        "--backtest-snapshot",
+        type=str,
+        default=None,
+        metavar="PATH",
+        help=(
+            "Path to a frozen OHLCV snapshot (created by scripts/freeze_snapshot.py). "
+            "When set, replaces live DataIngestionNode with ReplayIngestionNode for "
+            "deterministic version-to-version comparison. WS signals degrade to 0.0. "
+            "Example: --backtest-snapshot data/snapshots/snap_20260414.json"
+        ),
+    )
     args = parser.parse_args()
 
     version = _resolve_version(args.version)
@@ -1267,4 +1306,5 @@ if __name__ == "__main__":
         log_interval=args.log_interval,
         meta_harness=args.meta_harness,
         features=args.features,
+        backtest_snapshot=args.backtest_snapshot,
     )
