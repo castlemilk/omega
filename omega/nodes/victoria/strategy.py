@@ -1863,6 +1863,14 @@ class StrategyNode(Node):
                             "Multi-cycle: %s short — no prior short confirmation, skipping", ticker
                         )
                         continue
+                # V130: block shorts in high_vol regime when flag enabled.
+                # Phase A V129 diagnosis: all high_vol losses were ETH shorts (-$3,476/snapshot).
+                # V93 already blocks longs in high_vol unconditionally (line ~1676).
+                # High_vol shorts work in prolonged bear (crisis) but lose in vol-spike recoveries
+                # where price bounces sharply against the position.
+                if self.features.high_vol_short_block and _is_high_vol:
+                    logger.debug("Suppressing %s short in high_vol regime (V130)", ticker)
+                    continue
                 # V73: suppress SOLUSDT shorts in normal regime — V72 normal SOLUSDT shorts
                 # showed mixed results and XRPUSDT blacklist reduces basket, so be selective.
                 # V79: removed SOL normal short suppression — V78 SOL short cycle 112
@@ -1921,7 +1929,7 @@ class StrategyNode(Node):
                 # NEARUSDT: 22 shorts in V113, 27% WR, -$93 PnL — suppressed when filter active.
                 _short_suppressed = {
                     "NEARUSDT",  # V113: 22 shorts, 27% WR, -$93 PnL (50+ trade evidence)
-                    "ARBUSDT",   # V115: 21 trades, 38% WR, -$159 gross loss (50+ trade evidence)
+                    "ARBUSDT",  # V115: 21 trades, 38% WR, -$159 gross loss (50+ trade evidence)
                     # V128: ETHUSDT removed (third time). Loop keeps re-adding it on single-run
                     # evidence contaminated by V118 crash. Removing ETHUSDT short candidates
                     # causes all-long bias (V127: 20L/0S). Policy: need ≥50 trades in 2+ clean

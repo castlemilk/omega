@@ -47,6 +47,7 @@ _CONFIG_LABELS = {
     "bt_v129t": "v129_trail_tight",
     "bt_v129m": "v129_trail_moderate",
     "bt_v129l": "v129_trail_loose",
+    "bt_v130":  "v130_high_vol_gate",
 }
 
 _SNAPSHOT_LABELS = {

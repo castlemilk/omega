@@ -222,6 +222,26 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V130 regime entry gates
+    # ------------------------------------------------------------------
+
+    high_vol_short_block: bool = False
+    """V130: hard-block new short entries when consolidated regime is 'high_vol'.
+
+    Phase A analysis (April 2026): all high_vol losses across V129 runs were ETH
+    shorts (6 trades, -$3,476 on recent / -$3,476 on trend snapshot). High_vol
+    shorts work in prolonged bear markets (crisis) but fail in vol-spike recoveries
+    where price bounces sharply against the short.
+
+    V93 already blocks longs in high_vol unconditionally. This flag adds the
+    symmetric block for shorts, eliminating the universal 'Regime catastrophe:
+    high_vol' failure in Phase A gate checks.
+
+    When to enable: pair with crisis_high_vol_long_block for full high_vol entry
+    blackout (v130_high_vol_gate preset).
+    """
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 
@@ -485,4 +505,30 @@ _PRESETS["v129_trail_loose"] = VictoriaFeatures(
     mfe_trail_k=1.5,           # activate at 1.5×ATR (later, bigger move required)
     mfe_retracement_cap=0.15,  # tight lock once activated
     mae_stop_k=99.0,           # hard stop disabled
+)
+
+# v130: high-vol entry gate — block all new entries (longs AND shorts) in high_vol regime.
+# Phase A V129 diagnosis: 100% of high_vol losses were ETH shorts (-$3,476 per snapshot).
+# V93 already blocks longs in high_vol; this preset adds crisis_high_vol_long_block (belt+
+# suspenders for crisis) and the new high_vol_short_block for shorts.
+# Base: v129_trail_moderate (best V129 aggregate PnL, $+1,332).
+# Expected: eliminates Regime catastrophe: high_vol gate failure; restores trend-snapshot PnL.
+_PRESETS["v130_high_vol_gate"] = VictoriaFeatures(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
+    whale_prints=True,
+    whale_flow=True,
+    funding_velocity=True,
+    # Exit discipline — carry forward best V129 params
+    disposition_exit_controller=True,
+    mfe_trail_k=0.5,
+    mfe_retracement_cap=0.25,
+    mae_stop_k=99.0,
+    # V130: block ALL entries in high_vol regime
+    crisis_high_vol_long_block=True,   # belt: block longs in crisis+high_vol (V101 flag)
+    high_vol_short_block=True,         # new: block shorts in high_vol (V130 flag)
 )
