@@ -37,16 +37,17 @@ Usage (in PaperTradingEngine.mark_to_market):
     ec = ExitController(ExitConfig(mfe_trail_k=1.0, mfe_retracement_cap=0.25, mae_stop_k=0.8))
     close, reason = ec.should_close(pos, current_price, sym_market, size, unrealized)
 """
+
 from __future__ import annotations
 
-import math
-from dataclasses import dataclass, field
+import contextlib
+from dataclasses import dataclass
 from typing import Any
-
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ExitConfig:
@@ -64,6 +65,14 @@ class ExitConfig:
     # Hard stop: close if running loss >= mae_stop_k * ATR ($ units)
     mae_stop_k: float = 0.8
 
+    # Early loss time-stop (V131): close losers that haven't recovered after N cycles.
+    # Fires when: age >= early_loss_cycles AND unrealized <= -(early_loss_k_atr * ATR).
+    # Goal: break the loss_capture=1.0 invariant by exiting underwater positions
+    # before they drift to their MAE point on the random time-exit.
+    early_loss_time_stop: bool = False
+    early_loss_cycles: int = 3      # minimum age before the stop can fire
+    early_loss_k_atr: float = 0.3   # loss threshold (fraction of ATR in $ terms)
+
     # ATR lookback period (bars)
     atr_period: int = 14
 
@@ -71,6 +80,7 @@ class ExitConfig:
 # ---------------------------------------------------------------------------
 # ATR helper
 # ---------------------------------------------------------------------------
+
 
 def compute_atr(market_data: dict[str, Any], period: int = 14) -> float:
     """
@@ -92,9 +102,9 @@ def compute_atr(market_data: dict[str, Any], period: int = 14) -> float:
     trs: list[float] = []
     for i in range(max(n_avail - n, 0) + 1, n_avail):
         h = float(highs[i])
-        l = float(lows[i])
+        lo = float(lows[i])
         prev_c = float(closes[i - 1])
-        tr = max(h - l, abs(h - prev_c), abs(l - prev_c))
+        tr = max(h - lo, abs(h - prev_c), abs(lo - prev_c))
         trs.append(tr)
 
     return sum(trs) / len(trs) if trs else 0.0
@@ -103,6 +113,7 @@ def compute_atr(market_data: dict[str, Any], period: int = 14) -> float:
 # ---------------------------------------------------------------------------
 # ExitController
 # ---------------------------------------------------------------------------
+
 
 class ExitController:
     """
@@ -122,6 +133,7 @@ class ExitController:
         sym_market: dict[str, Any],
         size: float,
         unrealized: float,
+        age: int = 0,
     ) -> tuple[bool, str]:
         """
         Evaluate whether an open position should be closed.
@@ -133,6 +145,7 @@ class ExitController:
         sym_market    : Full market-data dict for this symbol (needs high/low/close).
         size          : Notional size of the position in USD.
         unrealized    : Current unrealised PnL in USD.
+        age           : Cycles elapsed since position was opened (for time-stop).
 
         Returns
         -------
@@ -158,7 +171,22 @@ class ExitController:
 
         mfe = float(pos.get("mfe", 0.0))  # most positive unrealised during lifetime
 
-        # ── 1. Hard MAE stop ────────────────────────────────────────────
+        # ── 1. Early loss time-stop (V131) ──────────────────────────────
+        # Close losers that haven't recovered after N cycles. This fires BEFORE
+        # the hard MAE stop to ensure loss_capture < 1.0: the position exits
+        # while unrealized > mae (i.e., before it drifts to its absolute worst).
+        if cfg.early_loss_time_stop and age >= cfg.early_loss_cycles:
+            early_threshold = -(cfg.early_loss_k_atr * atr_dollars)
+            if unrealized <= early_threshold:
+                return True, (
+                    f"early_loss_time_stop("
+                    f"age={age},"
+                    f"loss={unrealized:.2f},"
+                    f"threshold={early_threshold:.2f},"
+                    f"k={cfg.early_loss_k_atr}x_atr)"
+                )
+
+        # ── 2. Hard MAE stop ────────────────────────────────────────────
         stop_threshold = -(cfg.mae_stop_k * atr_dollars)
         if unrealized <= stop_threshold:
             return True, (
@@ -168,7 +196,7 @@ class ExitController:
                 f"k={cfg.mae_stop_k}x_atr)"
             )
 
-        # ── 2. MFE trailing stop ────────────────────────────────────────
+        # ── 3. MFE trailing stop ────────────────────────────────────────
         trail_activation = cfg.mfe_trail_k * atr_dollars
         if mfe >= trail_activation:
             trail_level = mfe * (1.0 - cfg.mfe_retracement_cap)
@@ -232,6 +260,7 @@ class ExitController:
 # Aggregate disposition coefficient
 # ---------------------------------------------------------------------------
 
+
 def aggregate_disposition(trades: list[dict[str, Any]]) -> dict[str, Any]:
     """
     Compute aggregate disposition coefficient from a list of closed trades.
@@ -252,10 +281,8 @@ def aggregate_disposition(trades: list[dict[str, Any]]) -> dict[str, Any]:
         # Prefer pre-computed exit_score if present
         es = t.get("exit_score")
         if es is not None and es != "":
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 exit_scores.append(float(es))
-            except (TypeError, ValueError):
-                pass
 
         # Always compute win/loss capture from pnl/mfe/mae for percentile stats
         pnl = float(t.get("pnl", 0) or 0)
@@ -272,7 +299,7 @@ def aggregate_disposition(trades: list[dict[str, Any]]) -> dict[str, Any]:
             return None
         s = sorted(vals)
         n = len(s)
-        return (s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2)
+        return s[n // 2] if n % 2 else (s[n // 2 - 1] + s[n // 2]) / 2
 
     med_win = _median(win_caps)
     med_loss = _median(loss_caps)
@@ -286,9 +313,7 @@ def aggregate_disposition(trades: list[dict[str, Any]]) -> dict[str, Any]:
     else:
         disp_coef = None
 
-    mean_es: float | None = (
-        round(sum(exit_scores) / len(exit_scores), 4) if exit_scores else None
-    )
+    mean_es: float | None = round(sum(exit_scores) / len(exit_scores), 4) if exit_scores else None
 
     return {
         "disposition_coefficient": disp_coef,

@@ -34,7 +34,7 @@ import os
 import random
 import uuid
 from datetime import UTC, datetime
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from omega.nodes.victoria.exit_controller import ExitController
@@ -97,7 +97,7 @@ class PaperTradingEngine:
         db_url: str | None = None,
         max_portfolio_exposure: float = 0.80,
         max_position_per_symbol: float = 0.15,
-        exit_controller: "ExitController | None" = None,
+        exit_controller: ExitController | None = None,
     ) -> None:
         self.initial_capital = initial_capital
         self._db_url: str | None = db_url or os.environ.get("DATABASE_URL")
@@ -445,12 +445,15 @@ class PaperTradingEngine:
                     "mae": float(existing.get("mae", 0.0)),
                     "mfe": float(existing.get("mfe", 0.0)),
                 }
-                from omega.nodes.victoria.exit_controller import ExitController as _EC
-                close_trade.update(_EC.compute_exit_telemetry(
-                    realised,
-                    float(existing.get("mfe", 0.0)),
-                    float(existing.get("mae", 0.0)),
-                ))
+                from omega.nodes.victoria.exit_controller import ExitController as ExitCtl
+
+                close_trade.update(
+                    ExitCtl.compute_exit_telemetry(
+                        realised,
+                        float(existing.get("mfe", 0.0)),
+                        float(existing.get("mae", 0.0)),
+                    )
+                )
                 closed_from_flip.append(close_trade)
                 self._closed_trades.append(close_trade)
                 self._open_trades = [t for t in self._open_trades if t.get("sym") != symbol]
@@ -610,7 +613,7 @@ class PaperTradingEngine:
             # ── Exit controller (ATR-based, V128+) — checked first ──────
             if self._exit_controller is not None:
                 ec_close, ec_reason = self._exit_controller.should_close(
-                    pos, current_price, sym_market, size, unrealized
+                    pos, current_price, sym_market, size, unrealized, age=age
                 )
                 if ec_close:
                     should_close = True
@@ -657,8 +660,9 @@ class PaperTradingEngine:
                 "mfe": float(pos.get("mfe", 0.0)),
             }
             # ── Exit telemetry (V128+): win/loss capture + exit_score ───
-            from omega.nodes.victoria.exit_controller import ExitController as _EC
-            _tel = _EC.compute_exit_telemetry(
+            from omega.nodes.victoria.exit_controller import ExitController as ExitCtl
+
+            _tel = ExitCtl.compute_exit_telemetry(
                 unrealized,
                 float(pos.get("mfe", 0.0)),
                 float(pos.get("mae", 0.0)),

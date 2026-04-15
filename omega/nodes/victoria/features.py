@@ -222,6 +222,35 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V131 early loss time-stop
+    # ------------------------------------------------------------------
+
+    early_loss_time_stop: bool = False
+    """V131: close losers that haven't recovered after N cycles.
+
+    Fires when: age >= early_loss_cycles AND unrealized <= -(early_loss_k_atr × ATR).
+
+    Root cause this fixes: with random 3-7 cycle time-exits and disabled hard stop
+    (mae_stop_k=99.0), losing positions drift to their absolute worst point during
+    the hold window → loss_capture=1.000 universally → disposition_coefficient
+    permanently negative regardless of MFE trailing performance on winners.
+
+    The fix: exit underwater positions at cycle N if they've already lost K×ATR,
+    before they drift further. This gives loss_capture < 1.0 because pnl at exit
+    is worse than entry but better than the eventual MAE at the random exit.
+
+    See: omega.nodes.victoria.exit_controller.ExitController (early_loss_time_stop)
+    """
+
+    early_loss_cycles: int = 3
+    """Minimum age (cycles) before early_loss_time_stop can fire. Default 3."""
+
+    early_loss_k_atr: float = 0.3
+    """ATR multiplier for early loss threshold (default 0.3 × ATR in $ terms).
+    Lower values = tighter early exit; higher = give more room before cutting.
+    """
+
+    # ------------------------------------------------------------------
     # V130 regime entry gates
     # ------------------------------------------------------------------
 
@@ -531,4 +560,66 @@ _PRESETS["v130_high_vol_gate"] = VictoriaFeatures(
     # V130: block ALL entries in high_vol regime
     crisis_high_vol_long_block=True,   # belt: block longs in crisis+high_vol (V101 flag)
     high_vol_short_block=True,         # new: block shorts in high_vol (V130 flag)
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# V131: early loss time-stop — fix loss_capture=1.000 structural issue
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Problem diagnosed from V130 Phase A:
+#   avg_loss_capture = 1.000 universally. With mae_stop_k=99.0 (hard stop disabled)
+#   and random 3-7 cycle time-exits, losing positions drift to their MAE before the
+#   timer fires. disposition_coefficient = win_capture - 1.0 ≈ 0.5 - 1.0 = -0.5.
+#
+# Fix: exit underwater positions at cycle N if already down K×ATR, before the
+#   random timer fires at their worst point. loss_capture = |pnl_at_early_exit| /
+#   |mae| < 1.0 because the position exits BEFORE reaching its worst point.
+#
+# Base: V130 (best PnL so far, agg +$16,853 vs V112's +$5,084). Keep high_vol gates.
+# Drop crisis_high_vol_long_block (was regressing trend snapshot by -$4k vs V129m).
+#
+# Grid: 3 variants varying early_loss_cycles (N) and early_loss_k_atr (K).
+# All share: mfe_trail_k=0.5, mfe_retracement_cap=0.25, mae_stop_k=99.0.
+
+_V131_BASE = dict(
+    decision_embeddings=True,
+    ws_microstructure=True,
+    temporal_memory=True,
+    trade_reinforcement=True,
+    activation_tracing=True,
+    postmortem_signal_filter=True,
+    whale_prints=True,
+    whale_flow=True,
+    funding_velocity=True,
+    disposition_exit_controller=True,
+    mfe_trail_k=0.5,
+    mfe_retracement_cap=0.25,
+    mae_stop_k=99.0,
+    # Only high_vol_short_block — drop crisis_high_vol_long_block (hurt trend snapshot)
+    high_vol_short_block=True,
+    early_loss_time_stop=True,
+)
+
+# v131a: tight — exit after 2 cycles if down 0.3×ATR
+# Hypothesis: catch losers early before they drift further; risk = cutting recoveries
+_PRESETS["v131_early_N2K03"] = VictoriaFeatures(
+    **_V131_BASE,
+    early_loss_cycles=2,
+    early_loss_k_atr=0.3,
+)
+
+# v131b: moderate — exit after 3 cycles if down 0.3×ATR (baseline grid point)
+# Same K as v131a but 1 extra cycle of room to recover
+_PRESETS["v131_early_N3K03"] = VictoriaFeatures(
+    **_V131_BASE,
+    early_loss_cycles=3,
+    early_loss_k_atr=0.3,
+)
+
+# v131c: loose — exit after 3 cycles but only if down 0.5×ATR
+# Higher K = larger loss required before cutting; fewer triggers but deeper cuts
+_PRESETS["v131_early_N3K05"] = VictoriaFeatures(
+    **_V131_BASE,
+    early_loss_cycles=3,
+    early_loss_k_atr=0.5,
 )

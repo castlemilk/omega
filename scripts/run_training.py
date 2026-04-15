@@ -587,11 +587,16 @@ def run(
             mfe_trail_k=float(_active_features.mfe_trail_k),
             mfe_retracement_cap=float(_active_features.mfe_retracement_cap),
             mae_stop_k=float(_active_features.mae_stop_k),
+            early_loss_time_stop=bool(_active_features.early_loss_time_stop),
+            early_loss_cycles=int(_active_features.early_loss_cycles),
+            early_loss_k_atr=float(_active_features.early_loss_k_atr),
         )
         _exit_ctrl = ExitController(_exit_cfg)
         log.info(
-            "ExitController: enabled (mfe_trail_k=%.2f, retracement_cap=%.2f, mae_stop_k=%.2f)",
+            "ExitController: enabled (mfe_trail_k=%.2f, retracement_cap=%.2f, mae_stop_k=%.2f"
+            ", early_loss=%s N=%d K=%.2f)",
             _exit_cfg.mfe_trail_k, _exit_cfg.mfe_retracement_cap, _exit_cfg.mae_stop_k,
+            _exit_cfg.early_loss_time_stop, _exit_cfg.early_loss_cycles, _exit_cfg.early_loss_k_atr,
         )
 
     engine = PaperTradingEngine(
