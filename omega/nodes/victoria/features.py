@@ -318,6 +318,33 @@ class VictoriaFeatures:
     0.0 = require Fiedler above its rolling mean.
     """
 
+    # V133v2: exit-quality variant of Gate 2 (replaces disposition gate)
+    ffg_exit_quality_gate: bool = False
+    """V133v2: when True, Gate 2 uses clean_exit_ratio instead of disposition.
+    Avoids the self-referential lock: bad exits → gate blocks → no new trades → no fix.
+    """
+
+    ffg_exit_quality_min_clean: int = 20
+    """V133v2: Gate 2 cold-start threshold. Gate activates only after this many
+    clean (non-stop_loss) exits have been observed. Until then, Gate 2 passes.
+    """
+
+    ffg_exit_quality_ratio: float = 0.50
+    """V133v2: Gate 2 threshold. Require clean_exit_ratio > this value over the
+    last ffg_disposition_window trades.
+    """
+
+    # ------------------------------------------------------------------
+    # V135 ATR-based stop-loss flags
+    # ------------------------------------------------------------------
+
+    atr_stop_enabled: bool = False
+    """V135: when True, skip the legacy fixed -2% ROI stop-loss in paper_trading.py.
+    The ExitController's mae_stop_k ATR stop becomes the sole downside guard.
+    Allows loss_capture < 1.0: ATR stop fires at a dollar threshold independent
+    of the MAE tick, unlike the -2% stop which fires exactly at the first new-low.
+    """
+
     # ------------------------------------------------------------------
     # V130 regime entry gates
     # ------------------------------------------------------------------
@@ -853,3 +880,64 @@ _V134_BASE = {
     "ffg_disposition_min_trades": 100,   # disable Gate 2 in 150-cycle backtest
 }
 _PRESETS["v134_gate_calibrated"] = VictoriaFeatures(**_V134_BASE)
+
+# ---------------------------------------------------------------------------
+# V135: ATR-based stop-loss — structural disposition fix
+# ---------------------------------------------------------------------------
+# Replaces fixed -2% ROI stop with ExitController's ATR-based mae_stop.
+# The -2% stop fires at exactly the first new-low tick = MAE → loss_capture=1.0.
+# The ATR stop fires at a dollar threshold anchored to price volatility; if price
+# bounces before reaching ATR threshold, loss_capture < 1.0.
+#
+# Grid: V135a (K=1.0 tight), V135b (K=1.2 moderate), V135c (K=1.5 wide).
+# All three disable the legacy stop (atr_stop_enabled=True) and set the appropriate
+# mae_stop_k. Keeping all other V133a settings (sl_guard + AND-gate disabled for
+# clean isolation of the ATR stop effect).
+_V135_BASE = {
+    # Same signal stack as V133 base but without the AND-gate (isolate ATR stop)
+    "decision_embeddings": True, "ws_microstructure": True, "temporal_memory": True,
+    "trade_reinforcement": True, "postmortem_signal_filter": True,
+    "whale_prints": True, "whale_flow": True, "funding_velocity": True,
+    "activation_tracing": True, "decision_traces": True,
+    "disposition_exit_controller": True,
+    "mfe_trail_k": 1.0, "mfe_retracement_cap": 0.25,
+    "high_vol_short_block": True, "crisis_high_vol_long_block": False,
+    "early_loss_time_stop": True, "early_loss_cycles": 3, "early_loss_k_atr": 0.3,
+    "trailing_stop_min_age": 3,
+    "stop_loss_min_age": 0,      # age guard not needed — ATR stop replaces it
+    "four_factor_and_gate": False,  # isolate ATR stop effect
+    "atr_stop_enabled": True,    # V135: skip fixed -2% stop, use ATR stop only
+}
+_PRESETS["v135a_atr_k10"] = VictoriaFeatures(**{**_V135_BASE, "mae_stop_k": 1.0})
+_PRESETS["v135b_atr_k12"] = VictoriaFeatures(**{**_V135_BASE, "mae_stop_k": 1.2})
+_PRESETS["v135c_atr_k15"] = VictoriaFeatures(**{**_V135_BASE, "mae_stop_k": 1.5})
+
+# ---------------------------------------------------------------------------
+# V133v2: AND-gate with exit-quality Gate 2 (avoid self-referential lock)
+# ---------------------------------------------------------------------------
+# V133a's Gate 2 (disposition > 0) permanently blocks after 10 trades once
+# disposition goes negative. V133v2 replaces Gate 2 with a clean_exit_ratio
+# metric: once 20+ clean exits (non-stop_loss) have been seen, require that
+# >50% of recent exits are clean (not stopped out by fixed -2% stop_loss).
+# ATR stops count as clean exits (discipline, not drawdown).
+#
+# V133v2_a: AND-gate + new Gate 2. Still uses legacy -2% stop (stop_loss exits
+#            will count against clean_exit_ratio, so Gate 2 should still block
+#            partially — this tests whether Gate 2 fires less aggressively).
+# V133v2_b: AND-gate + new Gate 2 + ATR stop. ATR stops = clean exits, so
+#            clean_exit_ratio should stay high → Gate 2 rarely blocks.
+_V133V2_BASE = {
+    **_V133_BASE,
+    "four_factor_and_gate": True,
+    "ffg_exit_quality_gate": True,        # V133v2: new Gate 2
+    "ffg_exit_quality_min_clean": 20,     # cold-start until 20 clean exits
+    "ffg_exit_quality_ratio": 0.50,       # require >50% clean exits in window
+    "ffg_disposition_min_trades": 10,     # unused when exit_quality_gate=True
+}
+_PRESETS["v133v2_a"] = VictoriaFeatures(**_V133V2_BASE)
+_PRESETS["v133v2_b"] = VictoriaFeatures(**{
+    **_V133V2_BASE,
+    "atr_stop_enabled": True,  # ATR stops = clean exits → Gate 2 stays open
+    "mae_stop_k": 1.2,         # moderate ATR stop (same as V135b)
+    "stop_loss_min_age": 3,    # belt-and-suspenders age guard
+})

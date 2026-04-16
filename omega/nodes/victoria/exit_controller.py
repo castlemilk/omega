@@ -85,6 +85,14 @@ class ExitConfig:
     # (age >= early_loss_cycles) can act — the third unguarded loss_capture=1.0 path.
     stop_loss_min_age: int = 0
 
+    # V135: skip the legacy fixed-% stop-loss entirely.  When True, the -2% ROI
+    # stop in paper_trading.py is bypassed; the ExitController's mae_stop_k ATR
+    # stop becomes the sole downside guard (set mae_stop_k to desired ATR multiple).
+    # This allows loss_capture < 1.0 because the ATR stop fires at a threshold that
+    # is independent of the MAE tick — unlike the -2% stop which fires exactly at
+    # the first new-low, structurally guaranteeing loss_capture = 1.0.
+    skip_legacy_stop_loss: bool = False
+
     # ATR lookback period (bars)
     atr_period: int = 14
 

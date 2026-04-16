@@ -136,6 +136,12 @@ class FourFactorGate:
         self._max_positions: int = int(getattr(features, "ffg_max_positions", 5))
         self._orc_threshold: float = getattr(features, "ffg_orc_threshold", -0.3)
         self._fiedler_floor: float = getattr(features, "ffg_fiedler_floor", 0.0)
+        # V133v2: exit quality gate (replaces disposition gate)
+        # Uses clean_exit_ratio instead of win_capture - loss_capture to avoid
+        # the self-referential lock: "bad exits → gate blocks → no new trades → no fix"
+        self._use_exit_quality_gate: bool = bool(getattr(features, "ffg_exit_quality_gate", False))
+        self._exit_quality_min_clean: int = int(getattr(features, "ffg_exit_quality_min_clean", 20))
+        self._exit_quality_ratio: float = getattr(features, "ffg_exit_quality_ratio", 0.50)
 
     # ------------------------------------------------------------------
     # Static helpers
@@ -177,12 +183,24 @@ class FourFactorGate:
         self, ctx: GateContext
     ) -> tuple[bool, float | None]:
         """
-        Gate 2: disposition_gate.
+        Gate 2: exit quality gate (V133v2) or disposition gate (original).
 
-        Passes when rolling median(win_capture) - median(loss_capture) > 0.
-        Blocks new entries when exit discipline has collapsed.
-        Cold-start (< min_trades): passes by default.
+        V133v2 (ffg_exit_quality_gate=True):
+            Passes when clean_exit_ratio > ffg_exit_quality_ratio over the last
+            ffg_disposition_window trades, requiring at least ffg_exit_quality_min_clean
+            clean exits first (cold-start = pass).
+            "Clean exit" = any close_reason that does NOT start with "stop_loss(" —
+            i.e., ATR stops, MFE-trail, early_loss_time_stop, time_exit all qualify.
+            This avoids the self-referential trap: stop_loss exits don't degrade the
+            gate because they're excluded from the ratio denominator perspective.
+
+        Original (ffg_exit_quality_gate=False):
+            Passes when rolling median(win_capture) - median(loss_capture) > 0.
+            Blocks new entries when exit discipline has collapsed.
+            Cold-start (< min_trades): passes by default.
         """
+        if self._use_exit_quality_gate:
+            return self._gate2_exit_quality(ctx)
         from omega.nodes.victoria.exit_controller import aggregate_disposition  # local to avoid circular
 
         n = len(ctx.closed_trades)
@@ -195,6 +213,37 @@ class FourFactorGate:
         if disp is None:
             return True, None  # no telemetry (pre-V128 trades): pass
         return disp > 0.0, disp
+
+    def _gate2_exit_quality(
+        self, ctx: GateContext
+    ) -> tuple[bool, float | None]:
+        """
+        V133v2 exit-quality variant of Gate 2.
+
+        Passes when:
+          n_clean_closed < ffg_exit_quality_min_clean   (cold-start: pass)
+          OR
+          clean_ratio > ffg_exit_quality_ratio           (over last N trades)
+
+        clean_ratio = exits NOT via legacy stop_loss / all exits in window.
+        ATR stops, MFE-trail, early_loss_time_stop, time_exit = clean.
+        """
+        def _is_clean(t: dict[str, Any]) -> bool:
+            # "stop_loss(roi=...)" is the legacy fixed-pct exit. Everything else
+            # is discipline-driven and counts as a clean exit.
+            reason: str = t.get("close_reason", "") or ""
+            return not reason.startswith("stop_loss(")
+
+        all_trades = ctx.closed_trades
+        n_clean_total = sum(1 for t in all_trades if _is_clean(t))
+        if n_clean_total < self._exit_quality_min_clean:
+            return True, None  # cold-start: not enough disciplined exits yet
+
+        window = all_trades[-self._disposition_window:]
+        n_window = len(window)
+        n_clean_window = sum(1 for t in window if _is_clean(t))
+        ratio = n_clean_window / n_window if n_window > 0 else 0.0
+        return ratio > self._exit_quality_ratio, round(ratio, 4)
 
     def _gate3_capital_velocity(
         self, ctx: GateContext
@@ -259,7 +308,10 @@ class FourFactorGate:
                 f"cross_market_divergence(div={divergence:.3f}<{self._divergence_threshold})"
             )
         if not g2:
-            failing.append(f"disposition(coeff={disp:.3f}<=0)")
+            if self._use_exit_quality_gate:
+                failing.append(f"exit_quality(ratio={disp:.3f}<={self._exit_quality_ratio})" if disp is not None else "exit_quality(no_data)")
+            else:
+                failing.append(f"disposition(coeff={disp:.3f}<=0)")
         if not g3:
             orc_info = (
                 f"orc={ctx.orc_kappa:.3f}"

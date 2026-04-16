@@ -592,6 +592,8 @@ def run(
             early_loss_k_atr=float(_active_features.early_loss_k_atr),
             trailing_stop_min_age=int(_active_features.trailing_stop_min_age),
             stop_loss_min_age=int(_active_features.stop_loss_min_age),
+            # V135: skip legacy fixed-% stop when ATR stop is the guard
+            skip_legacy_stop_loss=bool(getattr(_active_features, "atr_stop_enabled", False)),
         )
         _exit_ctrl = ExitController(_exit_cfg)
         log.info(

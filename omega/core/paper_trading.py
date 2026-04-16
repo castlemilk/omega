@@ -631,12 +631,18 @@ class PaperTradingEngine:
                 if self._exit_controller is not None
                 else 0
             )
+            # V135: skip legacy -2% stop when ATR stop is the designated guard.
+            _skip_legacy_sl = (
+                self._exit_controller.config.skip_legacy_stop_loss
+                if self._exit_controller is not None
+                else False
+            )
             if not should_close:
                 if age >= _max_hold:
                     should_close = True
                     _exit_type = "loss_cut" if unrealized < 0 else "profit_run"
                     close_reason = f"time_exit(age={age},{_exit_type})"
-                elif age >= _min_stop_loss_age and roi < stop_loss_pct:
+                elif not _skip_legacy_sl and age >= _min_stop_loss_age and roi < stop_loss_pct:
                     # V133: stop_loss_min_age guard — suppress the -2% stop-loss
                     # until position age >= min_age.  Without this, stop_loss fires
                     # at age 1-2 exactly when roi first crosses -2% (= MAE tick),

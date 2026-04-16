@@ -60,6 +60,13 @@ _CONFIG_LABELS = {
     "bt_v133c":    "v133_gate_only",         # AND-gate only (no sl guard)
     # V134: AND-gate calibration — relax divergence threshold 0.05 → 0.03
     "bt_v134":     "v134_gate_calibrated",
+    # V135: ATR-based stop-loss grid (replaces fixed -2% stop)
+    "bt_v135a":    "v135_atr_k10",          # K=1.0 tight
+    "bt_v135b":    "v135_atr_k12",          # K=1.2 moderate
+    "bt_v135c":    "v135_atr_k15",          # K=1.5 wide
+    # V133v2: AND-gate with exit-quality Gate 2 (avoids self-referential lock)
+    "bt_v133v2a":  "v133v2_gate_quality",   # AND-gate + new Gate 2 only
+    "bt_v133v2b":  "v133v2_gate_atr",       # AND-gate + new Gate 2 + ATR stop
 }
 
 _SNAPSHOT_LABELS = {
