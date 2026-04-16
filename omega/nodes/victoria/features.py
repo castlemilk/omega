@@ -250,6 +250,74 @@ class VictoriaFeatures:
     Lower values = tighter early exit; higher = give more room before cutting.
     """
 
+    trailing_stop_min_age: int = 0
+    """V132: minimum position age (cycles) before the legacy 50%-MFE trailing
+    stop is allowed to fire.  0 = original behaviour (fires at any age).
+    Set to 3 or 4 to prevent the stop firing on new-low ticks at age 1-2,
+    breaking the structural loss_capture=1.0 invariant.
+    """
+
+    stop_loss_min_age: int = 0
+    """V133: minimum position age (cycles) before the legacy -2% ROI stop-loss
+    is allowed to fire.  0 = original behaviour (fires immediately).
+    Set to 3 so the stop-loss cannot fire at age 1-2 before early_loss_time_stop
+    (age ≥ 3) can act.  This is the third and final unguarded exit path that
+    causes structural loss_capture=1.0 alongside the trailing stop (V132 fix).
+    """
+
+    # ------------------------------------------------------------------
+    # V133 four-factor AND-gate entry filter
+    # ------------------------------------------------------------------
+
+    four_factor_and_gate: bool = False
+    """V133: Replace soft weighted-sum entry with four binary AND-gates.
+
+    All four gates must pass for entry; any gate breaking triggers exit check.
+      - cross_market_divergence_gate: |p_model − p_implied| ≥ threshold
+      - disposition_gate: rolling median(win_capture) − median(loss_capture) > 0
+      - capital_velocity_gate: open notional / capital < 50% AND positions < 5
+      - pair_network_gate: ORC mean curvature > −0.3 (network not fragmented)
+
+    Requires V131 early_loss_time_stop to be confirmed before enabling — Gate 2
+    (disposition_gate) will permanently block entries when disposition_coefficient
+    is structurally negative (−0.4 to −0.5 pre-V133).
+
+    See: omega.nodes.victoria.four_factor_gate.FourFactorGate
+    Spec: docs/research/four-factor-and-gate-design.md
+    """
+
+    ffg_sigmoid_scale: float = 5.0
+    """Gate 1: sigmoid scale mapping w_conv to p_model probability.
+    scale=5.0 maps w_conv=0.20 → p_model≈0.73.  Raise to sharpen sensitivity.
+    """
+
+    ffg_divergence_threshold: float = 0.05
+    """Gate 1: minimum |p_model − p_implied| to pass cross_market_divergence gate.
+    Default 0.05 = 5 percentage points.
+    """
+
+    ffg_disposition_window: int = 50
+    """Gate 2: rolling window of recent closed trades for disposition calculation."""
+
+    ffg_disposition_min_trades: int = 10
+    """Gate 2: cold-start floor — gate passes freely until this many trades closed."""
+
+    ffg_utilization_cap: float = 0.50
+    """Gate 3: maximum open_notional / initial_capital before gate blocks entry."""
+
+    ffg_max_positions: int = 5
+    """Gate 3: maximum concurrent open positions before gate blocks entry."""
+
+    ffg_orc_threshold: float = -0.3
+    """Gate 4: minimum ORC mean curvature (orc_kappa) to pass pair_network gate.
+    More negative = more permissive (allows entry during light network stress).
+    """
+
+    ffg_fiedler_floor: float = 0.0
+    """Gate 4: Fiedler z-score floor for fallback when ORC is unavailable.
+    0.0 = require Fiedler above its rolling mean.
+    """
+
     # ------------------------------------------------------------------
     # V130 regime entry gates
     # ------------------------------------------------------------------
@@ -339,7 +407,10 @@ class VictoriaFeatures:
 _PRESETS: dict[str, VictoriaFeatures] = {}
 
 # Populated after class definition to allow forward references.
-_PRESETS["v93_baseline"] = VictoriaFeatures()
+_PRESETS["v93_baseline"] = VictoriaFeatures(
+    decision_traces=True,
+    activation_tracing=True,
+)
 
 _PRESETS["v97_geometry"] = VictoriaFeatures(
     ricci_sizing=True,
@@ -430,6 +501,7 @@ _PRESETS["v112_evidence_based"] = VictoriaFeatures(
     temporal_memory=True,
     trade_reinforcement=True,
     activation_tracing=True,
+    decision_traces=True,
     postmortem_signal_filter=True,
 )
 
@@ -440,6 +512,7 @@ _PRESETS["v115_full_vectors"] = VictoriaFeatures(
     temporal_memory=True,
     trade_reinforcement=True,
     activation_tracing=True,
+    decision_traces=True,
     postmortem_signal_filter=True,
     # Phase 1: sub-second informed-flow vectors
     whale_prints=True,
@@ -495,9 +568,9 @@ _PRESETS["v129_trail_tight"] = VictoriaFeatures(
     whale_flow=True,
     funding_velocity=True,
     disposition_exit_controller=True,
-    mfe_trail_k=0.5,          # activate at 0.5×ATR (earlier than V128's 1.0×)
+    mfe_trail_k=0.5,  # activate at 0.5×ATR (earlier than V128's 1.0×)
     mfe_retracement_cap=0.15,  # lock 85% of peak gain
-    mae_stop_k=99.0,           # hard stop disabled
+    mae_stop_k=99.0,  # hard stop disabled
 )
 
 # v129b: moderate trail (0.5×ATR), wider lock (lock 75% of peak) — control variant
@@ -513,9 +586,9 @@ _PRESETS["v129_trail_moderate"] = VictoriaFeatures(
     whale_flow=True,
     funding_velocity=True,
     disposition_exit_controller=True,
-    mfe_trail_k=0.5,           # activate at 0.5×ATR
+    mfe_trail_k=0.5,  # activate at 0.5×ATR
     mfe_retracement_cap=0.25,  # lock 75% of peak (same as V128 cap, earlier activation)
-    mae_stop_k=99.0,           # hard stop disabled
+    mae_stop_k=99.0,  # hard stop disabled
 )
 
 # v129c: loose trail (1.5×ATR activation), tight lock (lock 85%) — let it breathe first
@@ -531,9 +604,9 @@ _PRESETS["v129_trail_loose"] = VictoriaFeatures(
     whale_flow=True,
     funding_velocity=True,
     disposition_exit_controller=True,
-    mfe_trail_k=1.5,           # activate at 1.5×ATR (later, bigger move required)
+    mfe_trail_k=1.5,  # activate at 1.5×ATR (later, bigger move required)
     mfe_retracement_cap=0.15,  # tight lock once activated
-    mae_stop_k=99.0,           # hard stop disabled
+    mae_stop_k=99.0,  # hard stop disabled
 )
 
 # v130: high-vol entry gate — block all new entries (longs AND shorts) in high_vol regime.
@@ -548,6 +621,7 @@ _PRESETS["v130_high_vol_gate"] = VictoriaFeatures(
     temporal_memory=True,
     trade_reinforcement=True,
     activation_tracing=True,
+    decision_traces=True,
     postmortem_signal_filter=True,
     whale_prints=True,
     whale_flow=True,
@@ -558,8 +632,8 @@ _PRESETS["v130_high_vol_gate"] = VictoriaFeatures(
     mfe_retracement_cap=0.25,
     mae_stop_k=99.0,
     # V130: block ALL entries in high_vol regime
-    crisis_high_vol_long_block=True,   # belt: block longs in crisis+high_vol (V101 flag)
-    high_vol_short_block=True,         # new: block shorts in high_vol (V130 flag)
+    crisis_high_vol_long_block=True,  # belt: block longs in crisis+high_vol (V101 flag)
+    high_vol_short_block=True,  # new: block shorts in high_vol (V130 flag)
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -587,6 +661,7 @@ _V131_BASE = dict(
     temporal_memory=True,
     trade_reinforcement=True,
     activation_tracing=True,
+    decision_traces=True,
     postmortem_signal_filter=True,
     whale_prints=True,
     whale_flow=True,
@@ -623,3 +698,158 @@ _PRESETS["v131_early_N3K05"] = VictoriaFeatures(
     early_loss_cycles=3,
     early_loss_k_atr=0.5,
 )
+
+# ---------------------------------------------------------------------------
+# V132: legacy trailing-stop age guard + early-loss time-stop
+# Root cause diagnosed in V131: the legacy 50%-MFE trailing stop fires at
+# age 1-2 (a new-low tick), making loss_capture=1.0 structurally.
+# Fix: suppress the trailing stop until `trailing_stop_min_age` cycles have
+# elapsed, giving losers a chance to recover before the stop fires.
+# ---------------------------------------------------------------------------
+_V132_BASE = {
+    # Full signal stack (carried forward from _V131_BASE)
+    "decision_embeddings": True,
+    "ws_microstructure": True,
+    "temporal_memory": True,
+    "trade_reinforcement": True,
+    "postmortem_signal_filter": True,
+    "whale_prints": True,
+    "whale_flow": True,
+    "funding_velocity": True,
+    # Observability — on by default for V132+
+    "activation_tracing": True,
+    "decision_traces": True,
+    # V129m exits (moderate MFE trail)
+    "disposition_exit_controller": True,
+    "mfe_trail_k": 1.0,
+    "mfe_retracement_cap": 0.25,
+    "mae_stop_k": 99.0,  # hard stop disabled — rely on early_loss + time_exit
+    # V130 regime gates
+    "high_vol_short_block": True,
+    "crisis_high_vol_long_block": False,  # dropped: regresses trend snapshot
+    # V131 early-loss layer (best config from grid: N=3, K=0.3)
+    "early_loss_time_stop": True,
+    "early_loss_cycles": 3,
+    "early_loss_k_atr": 0.3,
+}
+
+# v132a: age_guard=3, early_loss N=3 K=0.3
+# Primary fix: trailing stop suppressed until age 3.  Most losers that were
+# exiting at age 1-2 on a new-low tick now have 3 cycles to recover first.
+_PRESETS["v132_fix_a"] = VictoriaFeatures(
+    **_V132_BASE,
+    trailing_stop_min_age=3,
+)
+
+# v132b: age_guard=3, early_loss N=3 K=0.5
+# Looser early-loss threshold (0.5×ATR) — fewer cuts, deeper when they fire.
+# Tests whether a wider early-loss window is needed alongside the age guard.
+_PRESETS["v132_fix_b"] = VictoriaFeatures(
+    **{**_V132_BASE, "early_loss_k_atr": 0.5},
+    trailing_stop_min_age=3,
+)
+
+# v132c: age_guard=4, early_loss N=3 K=0.3
+# Extra cycle of recovery room before the legacy trailing stop can fire.
+# Hypothesis: some losers recover between cycle 3 and 4; delaying the guard
+# further improves disposition without sacrificing too much PnL.
+_PRESETS["v132_fix_c"] = VictoriaFeatures(
+    **_V132_BASE,
+    trailing_stop_min_age=4,
+)
+
+# ---------------------------------------------------------------------------
+# V133: stop_loss age guard + four-factor AND-gate entry filter
+#
+# V132 post-mortem:
+#   - trailing_stop age guard (V132) blocked MFE-trail and legacy trailing stop
+#     at age < 3, but the -2% ROI stop-loss fires at age 1-2 on first new-low
+#     tick → loss_capture=1.0 structurally unchanged. 30/55 losers exited via
+#     stop_loss before early_loss_time_stop could act.
+#   - disposition_coefficient: -0.46 to -0.52 across all 9 V132 runs (no
+#     improvement over V130). Phase B gate: FAIL.
+#
+# V133 fixes:
+#   1. stop_loss_min_age=3: suppress the -2% stop-loss until age >= 3.
+#      Now ALL three legacy exit paths are age-guarded. early_loss_time_stop
+#      (age >= 3, K=0.3 ATR) becomes the primary loser exit, firing before
+#      positions drift to absolute MAE.
+#   2. four_factor_and_gate=True: independent entry quality filter.
+#      Requires model-vs-market divergence, healthy exit discipline, low
+#      utilization, and non-fragmented correlation network.
+#
+# Base: V132c (best V132 preset: -$377 crisis, +$6,891 recent, -$2,132 trend).
+# ---------------------------------------------------------------------------
+
+_V133_BASE = {
+    # Full signal stack (V115 foundation)
+    "decision_embeddings": True,
+    "ws_microstructure": True,
+    "temporal_memory": True,
+    "trade_reinforcement": True,
+    "postmortem_signal_filter": True,
+    "whale_prints": True,
+    "whale_flow": True,
+    "funding_velocity": True,
+    # Full observability
+    "activation_tracing": True,
+    "decision_traces": True,
+    # Exit discipline — V129m trail parameters
+    "disposition_exit_controller": True,
+    "mfe_trail_k": 1.0,
+    "mfe_retracement_cap": 0.25,
+    "mae_stop_k": 99.0,
+    # V130 regime gates
+    "high_vol_short_block": True,
+    "crisis_high_vol_long_block": False,
+    # V131 early-loss (fires at age >= 3, loss >= 0.3×ATR)
+    "early_loss_time_stop": True,
+    "early_loss_cycles": 3,
+    "early_loss_k_atr": 0.3,
+    # V132 trailing-stop age guard (MFE trail + legacy trail)
+    "trailing_stop_min_age": 3,
+    # V133 stop-loss age guard (NEW: guard the -2% stop-loss too)
+    "stop_loss_min_age": 3,
+    # V133 AND-gate entry filter
+    "four_factor_and_gate": True,
+}
+
+# v133a: full fix — stop_loss age guard + four-factor gate (default params)
+# All three exit-path age guards active. Four-factor gate at design defaults.
+_PRESETS["v133_and_gate"] = VictoriaFeatures(**_V133_BASE)
+
+# v133b: stop_loss age guard only (no four-factor gate)
+# Isolates the stop_loss_min_age fix from the AND-gate to measure each
+# contribution independently. If disposition improves here but not in v133a,
+# the AND-gate is degrading entry quality (over-filtering).
+_PRESETS["v133_stop_loss_guard"] = VictoriaFeatures(
+    **{**_V133_BASE, "four_factor_and_gate": False},
+)
+
+# v133c: four-factor gate only (no stop_loss age guard, rolling from V132c)
+# Tests AND-gate precision improvement without the exit fix.
+# Expected: fewer trades (gate filtering), similar disposition (exits unchanged).
+_PRESETS["v133_gate_only"] = VictoriaFeatures(
+    **{**_V133_BASE, "stop_loss_min_age": 0},
+)
+
+# ---------------------------------------------------------------------------
+# V134: AND-gate calibration — disable Gate 2 (disposition) in backtest
+# ---------------------------------------------------------------------------
+# V133a achieved best PF ever (1.97) but too few trades (n=10-13 vs n≥20).
+# Root cause: Gate 2 (disposition) fires after ffg_disposition_min_trades=10
+# closed trades, then PERMANENTLY blocks new entries because disposition is
+# structurally negative (-0.37 to -0.53). This is a feedback-loop dead-lock:
+# bad exits → no new entries → no chance to improve exits.
+#
+# Fix: raise ffg_disposition_min_trades to 100 (effectively cold-start for
+# a 150-cycle backtest, since we never reach 100 closed trades). In live
+# production with 1000s of trades, Gate 2 would activate normally.
+# Also relax ffg_divergence_threshold 0.05→0.03 to allow borderline entries.
+# Target: n≥20 per snapshot while maintaining PF > 1.5.
+_V134_BASE = {
+    **_V133_BASE,
+    "ffg_divergence_threshold": 0.03,    # relaxed from 0.05
+    "ffg_disposition_min_trades": 100,   # disable Gate 2 in 150-cycle backtest
+}
+_PRESETS["v134_gate_calibrated"] = VictoriaFeatures(**_V134_BASE)

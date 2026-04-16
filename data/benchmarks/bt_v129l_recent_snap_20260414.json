@@ -1,0 +1,47 @@
+{
+  "version": "bt_v129l_recent",
+  "snapshot_id": "snap_20260414",
+  "snapshot_path": "",
+  "run_at": "2026-04-15T02:06:48.163219+00:00",
+  "seed": 42,
+  "features": "v129l_trail",
+  "n_cycles": 150,
+  "metrics": {
+    "pnl": 666.3,
+    "win_rate": 0.3171,
+    "profit_factor": 1.0718,
+    "n_trades": 41,
+    "long_pct": 0.6341,
+    "short_pct": 0.3659,
+    "max_drawdown": -3122.97,
+    "sharpe": 0.24,
+    "regime_pnl": {
+      "normal": 2731.41,
+      "crisis": 1411.01,
+      "high_vol": -3476.12
+    },
+    "disposition_coefficient": -0.3281,
+    "hold_ratio": 3.578,
+    "avg_mae": -111.6641,
+    "avg_mfe": 752.5618,
+    "mean_exit_score": -0.4667,
+    "_n_win_captures": 13,
+    "_n_loss_captures": 28
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": false,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "Regime catastrophe: {'high_vol': -3476.12}",
+      "Disposition effect detected: coef=-0.328 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}

@@ -621,18 +621,35 @@ class PaperTradingEngine:
 
             # ── Legacy time/pct exits (fallback when controller absent or
             #    position has not yet triggered ATR conditions) ──────────
+            _min_trail_age = (
+                self._exit_controller.config.trailing_stop_min_age
+                if self._exit_controller is not None
+                else 0
+            )
+            _min_stop_loss_age = (
+                self._exit_controller.config.stop_loss_min_age
+                if self._exit_controller is not None
+                else 0
+            )
             if not should_close:
                 if age >= _max_hold:
                     should_close = True
                     _exit_type = "loss_cut" if unrealized < 0 else "profit_run"
                     close_reason = f"time_exit(age={age},{_exit_type})"
-                elif roi < stop_loss_pct:
+                elif age >= _min_stop_loss_age and roi < stop_loss_pct:
+                    # V133: stop_loss_min_age guard — suppress the -2% stop-loss
+                    # until position age >= min_age.  Without this, stop_loss fires
+                    # at age 1-2 exactly when roi first crosses -2% (= MAE tick),
+                    # giving structural loss_capture=1.0 before early_loss_time_stop
+                    # (age >= 3) can act.  0 = original behaviour.
                     should_close = True
                     close_reason = f"stop_loss(roi={roi:.3f})"
-                elif mfe > size * 0.005 and unrealized < 0.5 * mfe:
+                elif age >= _min_trail_age and mfe > size * 0.005 and unrealized < 0.5 * mfe:
                     # Trailing stop: close if we give back more than 50% of peak MFE.
                     # Only fires when MFE is meaningful (>0.5% of position size) to
                     # avoid triggering on noise from tiny early gains.
+                    # V132: _min_trail_age guard prevents this firing at age 1-2
+                    # (new-low tick), which caused structural loss_capture=1.0.
                     should_close = True
                     close_reason = f"trailing_stop(mfe={mfe:.2f},unreal={unrealized:.2f})"
 

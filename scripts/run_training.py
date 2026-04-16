@@ -590,13 +590,16 @@ def run(
             early_loss_time_stop=bool(_active_features.early_loss_time_stop),
             early_loss_cycles=int(_active_features.early_loss_cycles),
             early_loss_k_atr=float(_active_features.early_loss_k_atr),
+            trailing_stop_min_age=int(_active_features.trailing_stop_min_age),
+            stop_loss_min_age=int(_active_features.stop_loss_min_age),
         )
         _exit_ctrl = ExitController(_exit_cfg)
         log.info(
             "ExitController: enabled (mfe_trail_k=%.2f, retracement_cap=%.2f, mae_stop_k=%.2f"
-            ", early_loss=%s N=%d K=%.2f)",
+            ", early_loss=%s N=%d K=%.2f, trail_min_age=%d, sl_min_age=%d)",
             _exit_cfg.mfe_trail_k, _exit_cfg.mfe_retracement_cap, _exit_cfg.mae_stop_k,
             _exit_cfg.early_loss_time_stop, _exit_cfg.early_loss_cycles, _exit_cfg.early_loss_k_atr,
+            _exit_cfg.trailing_stop_min_age, _exit_cfg.stop_loss_min_age,
         )
 
     engine = PaperTradingEngine(
@@ -607,6 +610,11 @@ def run(
         exit_controller=_exit_ctrl,
     )
     orch.set_paper_trading(engine)
+
+    # V133: inject engine reference into strategy for four-factor AND-gate
+    _strat = getattr(victoria, "_strategy", None)
+    if _strat is not None:
+        _strat._paper_engine = engine
 
     _init_trades_csv(trades_csv)
 

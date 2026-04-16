@@ -1,0 +1,47 @@
+{
+  "version": "v32",
+  "snapshot_id": "live",
+  "snapshot_path": "",
+  "run_at": "2026-04-14T10:44:16.644945+00:00",
+  "seed": 42,
+  "features": "",
+  "n_cycles": 200,
+  "metrics": {
+    "pnl": -61.27,
+    "win_rate": 0.2128,
+    "profit_factor": 0.7923,
+    "n_trades": 94,
+    "long_pct": 0.0,
+    "short_pct": 1.0,
+    "max_drawdown": -169.9,
+    "sharpe": -0.979,
+    "regime_pnl": {
+      "normal": -6.97,
+      "crisis": -99.66,
+      "high_vol": 45.35
+    },
+    "disposition_coefficient": null,
+    "hold_ratio": 0.982,
+    "avg_mae": null,
+    "avg_mfe": null,
+    "_n_win_captures": 0,
+    "_n_loss_captures": 0
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": false,
+      "profit_factor_above_1": false,
+      "n_trades_sufficient": true,
+      "long_short_balanced": false,
+      "no_regime_catastrophe": true,
+      "disposition_acceptable": true
+    },
+    "failure_reasons": [
+      "PnL negative: $-61.27",
+      "PF < 1: 0.792",
+      "L/S imbalance: 0% long"
+    ]
+  },
+  "leaderboard_rank": null
+}

@@ -1,0 +1,49 @@
+{
+  "version": "bt_v128_trend",
+  "snapshot_id": "snap_trending_2023q4",
+  "snapshot_path": "data/snapshots/snap_trending_2023q4.json",
+  "run_at": "2026-04-14T12:37:52.501112+00:00",
+  "seed": 42,
+  "features": "",
+  "n_cycles": 150,
+  "metrics": {
+    "pnl": -4925.86,
+    "win_rate": 0.3382,
+    "profit_factor": 0.7538,
+    "n_trades": 68,
+    "long_pct": 0.6324,
+    "short_pct": 0.3676,
+    "max_drawdown": -7580.71,
+    "sharpe": -1.146,
+    "regime_pnl": {
+      "normal": -166.73,
+      "crisis": -4308.03,
+      "high_vol": -451.11
+    },
+    "disposition_coefficient": -0.534,
+    "hold_ratio": 2.519,
+    "avg_mae": -102.3541,
+    "avg_mfe": 825.9866,
+    "mean_exit_score": -0.4999,
+    "_n_win_captures": 23,
+    "_n_loss_captures": 45
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": false,
+      "profit_factor_above_1": false,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": false,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "PnL negative: $-4925.86",
+      "PF < 1: 0.754",
+      "Regime catastrophe: {'normal': -166.73, 'crisis': -4308.03, 'high_vol': -451.11}",
+      "Disposition effect detected: coef=-0.534 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}

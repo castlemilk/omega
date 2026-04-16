@@ -51,6 +51,15 @@ _CONFIG_LABELS = {
     "bt_v131a":   "v131_early_N2K03",
     "bt_v131b":   "v131_early_N3K03",
     "bt_v131c":   "v131_early_N3K05",
+    "bt_v132a":    "v132_fix_a",
+    "bt_v132b":    "v132_fix_b",
+    "bt_v132c":    "v132_fix_c",
+    # V133: stop_loss age guard + four-factor AND-gate
+    "bt_v133a":    "v133_and_gate",          # full fix: sl_guard + AND-gate
+    "bt_v133b":    "v133_stop_loss_guard",   # stop_loss guard only (gate isolated)
+    "bt_v133c":    "v133_gate_only",         # AND-gate only (no sl guard)
+    # V134: AND-gate calibration — relax divergence threshold 0.05 → 0.03
+    "bt_v134":     "v134_gate_calibrated",
 }
 
 _SNAPSHOT_LABELS = {

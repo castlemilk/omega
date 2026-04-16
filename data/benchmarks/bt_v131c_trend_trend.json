@@ -1,0 +1,49 @@
+{
+  "version": "bt_v131c_trend",
+  "snapshot_id": "trend",
+  "snapshot_path": "",
+  "run_at": "2026-04-15T08:57:07.326237+00:00",
+  "seed": 42,
+  "features": "",
+  "n_cycles": 200,
+  "metrics": {
+    "pnl": -1951.64,
+    "win_rate": 0.403,
+    "profit_factor": 0.8934,
+    "n_trades": 67,
+    "long_pct": 0.6716,
+    "short_pct": 0.3284,
+    "max_drawdown": -6188.91,
+    "sharpe": -0.511,
+    "regime_pnl": {
+      "normal": 437.51,
+      "crisis": -2896.59,
+      "high_vol": 507.43
+    },
+    "disposition_coefficient": -0.4943,
+    "hold_ratio": 2.847,
+    "avg_mae": -130.5774,
+    "avg_mfe": 810.503,
+    "mean_exit_score": -0.3843,
+    "_n_win_captures": 27,
+    "_n_loss_captures": 40
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": false,
+      "profit_factor_above_1": false,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": false,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "PnL negative: $-1951.64",
+      "PF < 1: 0.893",
+      "Regime catastrophe: {'crisis': -2896.59}",
+      "Disposition effect detected: coef=-0.494 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}

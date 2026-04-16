@@ -1,0 +1,47 @@
+{
+  "version": "bt_v130_crisis",
+  "snapshot_id": "snap_crisis_2022h1",
+  "snapshot_path": "",
+  "run_at": "2026-04-15T05:26:03.639481+00:00",
+  "seed": 42,
+  "features": "v130_high_vol_gate",
+  "n_cycles": 150,
+  "metrics": {
+    "pnl": 8562.77,
+    "win_rate": 0.45,
+    "profit_factor": 1.659,
+    "n_trades": 40,
+    "long_pct": 0.6,
+    "short_pct": 0.4,
+    "max_drawdown": -5906.39,
+    "sharpe": 1.529,
+    "regime_pnl": {
+      "normal": 1228.13,
+      "crisis": 8913.6,
+      "high_vol": -1578.96
+    },
+    "disposition_coefficient": -0.3844,
+    "hold_ratio": 2.523,
+    "avg_mae": -190.7482,
+    "avg_mfe": 1354.7415,
+    "mean_exit_score": -0.2759,
+    "_n_win_captures": 18,
+    "_n_loss_captures": 21
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": false,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "Regime catastrophe: {'high_vol': -1578.96}",
+      "Disposition effect detected: coef=-0.384 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}

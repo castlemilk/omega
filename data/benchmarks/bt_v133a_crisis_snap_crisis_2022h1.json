@@ -1,0 +1,47 @@
+{
+  "version": "bt_v133a_crisis",
+  "snapshot_id": "snap_crisis_2022h1",
+  "snapshot_path": "",
+  "run_at": "2026-04-16T08:58:29.447252+00:00",
+  "seed": 42,
+  "features": "",
+  "n_cycles": 200,
+  "metrics": {
+    "pnl": 6334.94,
+    "win_rate": 0.5833,
+    "profit_factor": 2.4114,
+    "n_trades": 12,
+    "long_pct": 0.6667,
+    "short_pct": 0.3333,
+    "max_drawdown": -2214.84,
+    "sharpe": 1.536,
+    "regime_pnl": {
+      "normal": 3191.19,
+      "crisis": 3143.75,
+      "high_vol": 0.0
+    },
+    "disposition_coefficient": -0.3697,
+    "hold_ratio": 1.964,
+    "avg_mae": -232.6222,
+    "avg_mfe": 1714.8527,
+    "mean_exit_score": 0.0001,
+    "_n_win_captures": 7,
+    "_n_loss_captures": 5
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": false,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": true,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "Too few trades: 12 (need \u226520)",
+      "Disposition effect detected: coef=-0.370 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}

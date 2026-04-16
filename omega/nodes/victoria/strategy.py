@@ -412,6 +412,12 @@ class StrategyNode(Node):
 
         # --- Activation tracer (V107) — injected via init_tracer() ---
         self._tracer: Any = None
+
+        # --- V133: paper trading engine reference for four-factor AND-gate ---
+        # Set by run_training.py after the PaperTradingEngine is created so
+        # FourFactorGate.evaluate() can read closed_trades, positions, and
+        # initial_capital without polluting the signal/market_data dicts.
+        self._paper_engine: Any = None
         # Last bias-adjusted w_conv from _passes_conviction_filters — used by activation trace
         # so we record the exact conviction value that passed, not a fresh bias-free recompute.
         self._last_w_conv: float = 0.0
@@ -1587,6 +1593,20 @@ class StrategyNode(Node):
                 _hour_utc,
             )
 
+        # V133: four-factor AND-gate — instantiate once per portfolio construction.
+        # Requires model-vs-market divergence, disposition > 0, low utilisation,
+        # and non-fragmented correlation network. All four must pass for entry.
+        _ffg = None
+        _ffg_orc_kappa: float | None = None
+        _ffg_fiedler_z: float | None = None
+        if self.features.four_factor_and_gate:
+            from omega.nodes.victoria.four_factor_gate import FourFactorGate as _FFGClass
+
+            _ffg = _FFGClass(self.features)
+            _raw_orc = signals.get("_geometry_orc_kappa")
+            _ffg_orc_kappa = float(_raw_orc) if _raw_orc not in (None, 0.0) else None
+            _ffg_fiedler_z = float(_spectral_val.value) if _spectral_val else None
+
         # Screen tickers that have non-HOLD conviction above signal threshold
         # and apply the full conviction filter stack.
         long_candidates: dict[str, Any] = {}
@@ -1800,6 +1820,33 @@ class StrategyNode(Node):
                         "postmortem_signal_filter: suppressing %s long (evidence-based)", ticker
                     )
                     continue
+                # V133: four-factor AND-gate check (entry quality filter)
+                if _ffg is not None:
+                    from omega.nodes.victoria.four_factor_gate import GateContext as _GateCtx
+
+                    _ffg_ctx = _GateCtx(
+                        w_conv=float(sig.get("weighted_conviction") or self._last_w_conv),
+                        funding_rate=float(sig.get("funding_rate_signal", 0.0)),
+                        closed_trades=self._paper_engine.closed_trades if self._paper_engine else [],
+                        open_positions=self._paper_engine.positions if self._paper_engine else {},
+                        initial_capital=self._paper_engine.initial_capital if self._paper_engine else 100_000.0,
+                        orc_kappa=_ffg_orc_kappa,
+                        fiedler_zscore=_ffg_fiedler_z,
+                    )
+                    _ffg_result = _ffg.evaluate(_ffg_ctx)
+                    if not _ffg_result.all_pass:
+                        filtered_this_cycle += 1
+                        logger.info(
+                            "FFG blocked %s LONG: %s",
+                            ticker,
+                            "; ".join(_ffg_result.failing_gates),
+                        )
+                        self._last_ticker_decisions[ticker] = {
+                            "action": "SKIP_FFG",
+                            "direction": "long",
+                            "failing_gates": _ffg_result.failing_gates,
+                        }
+                        continue
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
@@ -1940,6 +1987,33 @@ class StrategyNode(Node):
                         "postmortem_signal_filter: suppressing %s short (evidence-based)", ticker
                     )
                     continue
+                # V133: four-factor AND-gate check (entry quality filter)
+                if _ffg is not None:
+                    from omega.nodes.victoria.four_factor_gate import GateContext as _GateCtx
+
+                    _ffg_ctx = _GateCtx(
+                        w_conv=float(sig.get("weighted_conviction") or self._last_w_conv),
+                        funding_rate=float(sig.get("funding_rate_signal", 0.0)),
+                        closed_trades=self._paper_engine.closed_trades if self._paper_engine else [],
+                        open_positions=self._paper_engine.positions if self._paper_engine else {},
+                        initial_capital=self._paper_engine.initial_capital if self._paper_engine else 100_000.0,
+                        orc_kappa=_ffg_orc_kappa,
+                        fiedler_zscore=_ffg_fiedler_z,
+                    )
+                    _ffg_result = _ffg.evaluate(_ffg_ctx)
+                    if not _ffg_result.all_pass:
+                        filtered_this_cycle += 1
+                        logger.info(
+                            "FFG blocked %s SHORT: %s",
+                            ticker,
+                            "; ".join(_ffg_result.failing_gates),
+                        )
+                        self._last_ticker_decisions[ticker] = {
+                            "action": "SKIP_FFG",
+                            "direction": "short",
+                            "failing_gates": _ffg_result.failing_gates,
+                        }
+                        continue
                 short_candidates[ticker] = sig
 
         if regime_blocked_longs or regime_blocked_shorts:

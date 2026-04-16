@@ -70,8 +70,20 @@ class ExitConfig:
     # Goal: break the loss_capture=1.0 invariant by exiting underwater positions
     # before they drift to their MAE point on the random time-exit.
     early_loss_time_stop: bool = False
-    early_loss_cycles: int = 3      # minimum age before the stop can fire
-    early_loss_k_atr: float = 0.3   # loss threshold (fraction of ATR in $ terms)
+    early_loss_cycles: int = 3  # minimum age before the stop can fire
+    early_loss_k_atr: float = 0.3  # loss threshold (fraction of ATR in $ terms)
+
+    # Legacy trailing-stop minimum age guard (V132): suppress the 50%-MFE
+    # trailing stop until a position has been open for at least this many cycles.
+    # 0 = disabled (original behaviour). 3 or 4 = gives losers time to recover
+    # before the stop fires at a new-low tick (loss_capture=1.0 structurally).
+    trailing_stop_min_age: int = 0
+
+    # Legacy stop-loss minimum age guard (V133): suppress the -2% ROI stop-loss
+    # until position age >= this value.  0 = original behaviour (fires immediately).
+    # Set to 3 so the stop-loss cannot fire at age 1-2 before early_loss_time_stop
+    # (age >= early_loss_cycles) can act — the third unguarded loss_capture=1.0 path.
+    stop_loss_min_age: int = 0
 
     # ATR lookback period (bars)
     atr_period: int = 14
@@ -197,17 +209,23 @@ class ExitController:
             )
 
         # ── 3. MFE trailing stop ────────────────────────────────────────
-        trail_activation = cfg.mfe_trail_k * atr_dollars
-        if mfe >= trail_activation:
-            trail_level = mfe * (1.0 - cfg.mfe_retracement_cap)
-            if unrealized < trail_level:
-                return True, (
-                    f"mfe_trail("
-                    f"mfe={mfe:.2f},"
-                    f"trail={trail_level:.2f},"
-                    f"unreal={unrealized:.2f},"
-                    f"cap={cfg.mfe_retracement_cap})"
-                )
+        # V132: respect trailing_stop_min_age — same guard as the legacy
+        # trailing stop in paper_trading.py.  Without this, the MFE trail
+        # fires at age 1-2 on whipsaw candles (price shoots up then crashes
+        # below entry in one cycle), causing structural loss_capture=1.0
+        # identical to the bug the age guard was meant to fix.
+        if age >= cfg.trailing_stop_min_age:
+            trail_activation = cfg.mfe_trail_k * atr_dollars
+            if mfe >= trail_activation:
+                trail_level = mfe * (1.0 - cfg.mfe_retracement_cap)
+                if unrealized < trail_level:
+                    return True, (
+                        f"mfe_trail("
+                        f"mfe={mfe:.2f},"
+                        f"trail={trail_level:.2f},"
+                        f"unreal={unrealized:.2f},"
+                        f"cap={cfg.mfe_retracement_cap})"
+                    )
 
         return False, ""
 
