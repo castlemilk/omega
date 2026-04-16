@@ -904,8 +904,8 @@ _PRESETS["v133_gate_only"] = VictoriaFeatures(
 # Target: n≥20 per snapshot while maintaining PF > 1.5.
 _V134_BASE = {
     **_V133_BASE,
-    "ffg_divergence_threshold": 0.03,    # relaxed from 0.05
-    "ffg_disposition_min_trades": 100,   # disable Gate 2 in 150-cycle backtest
+    "ffg_divergence_threshold": 0.03,  # relaxed from 0.05
+    "ffg_disposition_min_trades": 100,  # disable Gate 2 in 150-cycle backtest
 }
 _PRESETS["v134_gate_calibrated"] = VictoriaFeatures(**_V134_BASE)
 
@@ -923,18 +923,28 @@ _PRESETS["v134_gate_calibrated"] = VictoriaFeatures(**_V134_BASE)
 # clean isolation of the ATR stop effect).
 _V135_BASE = {
     # Same signal stack as V133 base but without the AND-gate (isolate ATR stop)
-    "decision_embeddings": True, "ws_microstructure": True, "temporal_memory": True,
-    "trade_reinforcement": True, "postmortem_signal_filter": True,
-    "whale_prints": True, "whale_flow": True, "funding_velocity": True,
-    "activation_tracing": True, "decision_traces": True,
+    "decision_embeddings": True,
+    "ws_microstructure": True,
+    "temporal_memory": True,
+    "trade_reinforcement": True,
+    "postmortem_signal_filter": True,
+    "whale_prints": True,
+    "whale_flow": True,
+    "funding_velocity": True,
+    "activation_tracing": True,
+    "decision_traces": True,
     "disposition_exit_controller": True,
-    "mfe_trail_k": 1.0, "mfe_retracement_cap": 0.25,
-    "high_vol_short_block": True, "crisis_high_vol_long_block": False,
-    "early_loss_time_stop": True, "early_loss_cycles": 3, "early_loss_k_atr": 0.3,
+    "mfe_trail_k": 1.0,
+    "mfe_retracement_cap": 0.25,
+    "high_vol_short_block": True,
+    "crisis_high_vol_long_block": False,
+    "early_loss_time_stop": True,
+    "early_loss_cycles": 3,
+    "early_loss_k_atr": 0.3,
     "trailing_stop_min_age": 3,
-    "stop_loss_min_age": 0,      # age guard not needed — ATR stop replaces it
+    "stop_loss_min_age": 0,  # age guard not needed — ATR stop replaces it
     "four_factor_and_gate": False,  # isolate ATR stop effect
-    "atr_stop_enabled": True,    # V135: skip fixed -2% stop, use ATR stop only
+    "atr_stop_enabled": True,  # V135: skip fixed -2% stop, use ATR stop only
 }
 _PRESETS["v135a_atr_k10"] = VictoriaFeatures(**{**_V135_BASE, "mae_stop_k": 1.0})
 _PRESETS["v135b_atr_k12"] = VictoriaFeatures(**{**_V135_BASE, "mae_stop_k": 1.2})
@@ -957,18 +967,20 @@ _PRESETS["v135c_atr_k15"] = VictoriaFeatures(**{**_V135_BASE, "mae_stop_k": 1.5}
 _V133V2_BASE = {
     **_V133_BASE,
     "four_factor_and_gate": True,
-    "ffg_exit_quality_gate": True,        # V133v2: new Gate 2
-    "ffg_exit_quality_min_clean": 20,     # cold-start until 20 clean exits
-    "ffg_exit_quality_ratio": 0.50,       # require >50% clean exits in window
-    "ffg_disposition_min_trades": 10,     # unused when exit_quality_gate=True
+    "ffg_exit_quality_gate": True,  # V133v2: new Gate 2
+    "ffg_exit_quality_min_clean": 20,  # cold-start until 20 clean exits
+    "ffg_exit_quality_ratio": 0.50,  # require >50% clean exits in window
+    "ffg_disposition_min_trades": 10,  # unused when exit_quality_gate=True
 }
 _PRESETS["v133v2_a"] = VictoriaFeatures(**_V133V2_BASE)
-_PRESETS["v133v2_b"] = VictoriaFeatures(**{
-    **_V133V2_BASE,
-    "atr_stop_enabled": True,  # ATR stops = clean exits → Gate 2 stays open
-    "mae_stop_k": 1.2,         # moderate ATR stop (same as V135b)
-    "stop_loss_min_age": 3,    # belt-and-suspenders age guard
-})
+_PRESETS["v133v2_b"] = VictoriaFeatures(
+    **{
+        **_V133V2_BASE,
+        "atr_stop_enabled": True,  # ATR stops = clean exits → Gate 2 stays open
+        "mae_stop_k": 1.2,  # moderate ATR stop (same as V135b)
+        "stop_loss_min_age": 3,  # belt-and-suspenders age guard
+    }
+)
 
 # ---------------------------------------------------------------------------
 # V136: crisis-regime entry bias fix
@@ -982,32 +994,45 @@ _PRESETS["v133v2_b"] = VictoriaFeatures(**{
 #   v136b: same but crisis_short_permissive × 0.4 (more aggressive short threshold)
 #   v136c: v136a + crisis_position_size_boost=1.5 (bigger shorts in crisis)
 _V136_BASE = {
-    "decision_embeddings": True, "ws_microstructure": True, "temporal_memory": True,
-    "trade_reinforcement": True, "postmortem_signal_filter": True,
-    "whale_prints": True, "whale_flow": True, "funding_velocity": True,
-    "activation_tracing": True, "decision_traces": True,
+    "decision_embeddings": True,
+    "ws_microstructure": True,
+    "temporal_memory": True,
+    "trade_reinforcement": True,
+    "postmortem_signal_filter": True,
+    "whale_prints": True,
+    "whale_flow": True,
+    "funding_velocity": True,
+    "activation_tracing": True,
+    "decision_traces": True,
     "disposition_exit_controller": True,
-    "mfe_trail_k": 1.0, "mfe_retracement_cap": 0.25,
-    "mae_stop_k": 1.2,           # V135b ATR stop
+    "mfe_trail_k": 1.0,
+    "mfe_retracement_cap": 0.25,
+    "mae_stop_k": 1.2,  # V135b ATR stop
     "high_vol_short_block": True,  # V130 high_vol gate (carry forward)
     "crisis_high_vol_long_block": False,  # covered by crisis_long_block below
-    "early_loss_time_stop": True, "early_loss_cycles": 3, "early_loss_k_atr": 0.3,
+    "early_loss_time_stop": True,
+    "early_loss_cycles": 3,
+    "early_loss_k_atr": 0.3,
     "trailing_stop_min_age": 3,
     "stop_loss_min_age": 0,
     "four_factor_and_gate": False,
-    "atr_stop_enabled": True,    # skip fixed -2% stop
+    "atr_stop_enabled": True,  # skip fixed -2% stop
     # V136 crisis bias
-    "crisis_long_block": True,             # hard block longs in crisis regime
-    "crisis_short_permissive": True,       # relax short threshold in crisis
-    "crisis_short_thresh_scale": 0.5,      # half threshold → twice as permissive
-    "crisis_position_size_boost": 1.25,    # 25% larger crisis shorts
+    "crisis_long_block": True,  # hard block longs in crisis regime
+    "crisis_short_permissive": True,  # relax short threshold in crisis
+    "crisis_short_thresh_scale": 0.5,  # half threshold → twice as permissive
+    "crisis_position_size_boost": 1.25,  # 25% larger crisis shorts
 }
 _PRESETS["v136a_crisis_bias"] = VictoriaFeatures(**_V136_BASE)
-_PRESETS["v136b_aggressive_short"] = VictoriaFeatures(**{
-    **_V136_BASE,
-    "crisis_short_thresh_scale": 0.4,  # more aggressive: 0.4× threshold
-})
-_PRESETS["v136c_size_boost"] = VictoriaFeatures(**{
-    **_V136_BASE,
-    "crisis_position_size_boost": 1.5,  # 50% larger crisis shorts
-})
+_PRESETS["v136b_aggressive_short"] = VictoriaFeatures(
+    **{
+        **_V136_BASE,
+        "crisis_short_thresh_scale": 0.4,  # more aggressive: 0.4× threshold
+    }
+)
+_PRESETS["v136c_size_boost"] = VictoriaFeatures(
+    **{
+        **_V136_BASE,
+        "crisis_position_size_boost": 1.5,  # 50% larger crisis shorts
+    }
+)

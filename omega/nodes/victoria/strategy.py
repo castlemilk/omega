@@ -1834,9 +1834,13 @@ class StrategyNode(Node):
                     _ffg_ctx = _GateCtx(
                         w_conv=float(sig.get("weighted_conviction") or self._last_w_conv),
                         funding_rate=float(sig.get("funding_rate_signal", 0.0)),
-                        closed_trades=self._paper_engine.closed_trades if self._paper_engine else [],
+                        closed_trades=self._paper_engine.closed_trades
+                        if self._paper_engine
+                        else [],
                         open_positions=self._paper_engine.positions if self._paper_engine else {},
-                        initial_capital=self._paper_engine.initial_capital if self._paper_engine else 100_000.0,
+                        initial_capital=self._paper_engine.initial_capital
+                        if self._paper_engine
+                        else 100_000.0,
                         orc_kappa=_ffg_orc_kappa,
                         fiedler_zscore=_ffg_fiedler_z,
                     )
@@ -1929,15 +1933,15 @@ class StrategyNode(Node):
                     getattr(self.features, "crisis_short_permissive", False)
                     and _regime_consolidated == "crisis"
                 ):
-                    _crisis_scale = float(
-                        getattr(self.features, "crisis_short_thresh_scale", 0.5)
-                    )
+                    _crisis_scale = float(getattr(self.features, "crisis_short_thresh_scale", 0.5))
                     _crisis_short_thresh = self._short_conviction_threshold * _crisis_scale
                     _raw_comp = abs(sig.get("composite", 0.0))
                     if _raw_comp < _crisis_short_thresh:
                         logger.debug(
                             "V136: %s short below scaled crisis threshold %.4f (scale=%.2f)",
-                            ticker, _crisis_short_thresh, _crisis_scale,
+                            ticker,
+                            _crisis_short_thresh,
+                            _crisis_scale,
                         )
                         continue
                 if self.features.high_vol_short_block and _is_high_vol:
@@ -2019,9 +2023,13 @@ class StrategyNode(Node):
                     _ffg_ctx = _GateCtx(
                         w_conv=float(sig.get("weighted_conviction") or self._last_w_conv),
                         funding_rate=float(sig.get("funding_rate_signal", 0.0)),
-                        closed_trades=self._paper_engine.closed_trades if self._paper_engine else [],
+                        closed_trades=self._paper_engine.closed_trades
+                        if self._paper_engine
+                        else [],
                         open_positions=self._paper_engine.positions if self._paper_engine else {},
-                        initial_capital=self._paper_engine.initial_capital if self._paper_engine else 100_000.0,
+                        initial_capital=self._paper_engine.initial_capital
+                        if self._paper_engine
+                        else 100_000.0,
                         orc_kappa=_ffg_orc_kappa,
                         fiedler_zscore=_ffg_fiedler_z,
                     )

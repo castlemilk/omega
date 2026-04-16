@@ -45,7 +45,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Context / Result types
 # ---------------------------------------------------------------------------
@@ -105,7 +104,9 @@ class GateResult:
         if self.all_pass:
             parts = [
                 f"cmd_div={self.divergence:.3f}",
-                f"disp={self.disposition_coefficient:.3f}" if self.disposition_coefficient is not None else "disp=cold",
+                f"disp={self.disposition_coefficient:.3f}"
+                if self.disposition_coefficient is not None
+                else "disp=cold",
                 f"util={self.utilization:.2f}",
                 f"orc={self.p_model:.3f}",
             ]
@@ -131,7 +132,9 @@ class FourFactorGate:
         self._sigmoid_scale: float = getattr(features, "ffg_sigmoid_scale", 5.0)
         self._divergence_threshold: float = getattr(features, "ffg_divergence_threshold", 0.05)
         self._disposition_window: int = int(getattr(features, "ffg_disposition_window", 50))
-        self._disposition_min_trades: int = int(getattr(features, "ffg_disposition_min_trades", 10))
+        self._disposition_min_trades: int = int(
+            getattr(features, "ffg_disposition_min_trades", 10)
+        )
         self._utilization_cap: float = getattr(features, "ffg_utilization_cap", 0.50)
         self._max_positions: int = int(getattr(features, "ffg_max_positions", 5))
         self._orc_threshold: float = getattr(features, "ffg_orc_threshold", -0.3)
@@ -140,7 +143,9 @@ class FourFactorGate:
         # Uses clean_exit_ratio instead of win_capture - loss_capture to avoid
         # the self-referential lock: "bad exits → gate blocks → no new trades → no fix"
         self._use_exit_quality_gate: bool = bool(getattr(features, "ffg_exit_quality_gate", False))
-        self._exit_quality_min_clean: int = int(getattr(features, "ffg_exit_quality_min_clean", 20))
+        self._exit_quality_min_clean: int = int(
+            getattr(features, "ffg_exit_quality_min_clean", 20)
+        )
         self._exit_quality_ratio: float = getattr(features, "ffg_exit_quality_ratio", 0.50)
 
     # ------------------------------------------------------------------
@@ -158,30 +163,26 @@ class FourFactorGate:
     # Individual gate evaluators
     # ------------------------------------------------------------------
 
-    def _gate1_cross_market(
-        self, ctx: GateContext
-    ) -> tuple[bool, float, float, float]:
+    def _gate1_cross_market(self, ctx: GateContext) -> tuple[bool, float, float, float]:
         """
         Gate 1: cross_market_divergence_gate.
 
         Passes when |p_model - p_implied| >= divergence_threshold.
         Prevents zero-edge trades where model and market already agree.
         """
-        FUNDING_CLIP = 0.001
+        funding_clip = 0.001
 
         p_model = self._sigmoid(ctx.w_conv * self._sigmoid_scale)
 
-        fr_clipped = max(-FUNDING_CLIP, min(FUNDING_CLIP, ctx.funding_rate))
+        fr_clipped = max(-funding_clip, min(funding_clip, ctx.funding_rate))
         # Linear map: fr=0 → 0.50, fr=+clip → 0.75, fr=−clip → 0.25
-        p_implied = 0.50 + (fr_clipped / FUNDING_CLIP) * 0.25
+        p_implied = 0.50 + (fr_clipped / funding_clip) * 0.25
 
         divergence = abs(p_model - p_implied)
         passes = divergence >= self._divergence_threshold
         return passes, p_model, p_implied, divergence
 
-    def _gate2_disposition(
-        self, ctx: GateContext
-    ) -> tuple[bool, float | None]:
+    def _gate2_disposition(self, ctx: GateContext) -> tuple[bool, float | None]:
         """
         Gate 2: exit quality gate (V133v2) or disposition gate (original).
 
@@ -201,22 +202,22 @@ class FourFactorGate:
         """
         if self._use_exit_quality_gate:
             return self._gate2_exit_quality(ctx)
-        from omega.nodes.victoria.exit_controller import aggregate_disposition  # local to avoid circular
+        from omega.nodes.victoria.exit_controller import (
+            aggregate_disposition,  # local to avoid circular
+        )
 
         n = len(ctx.closed_trades)
         if n < self._disposition_min_trades:
             return True, None  # cold-start: insufficient data
 
-        recent = ctx.closed_trades[-self._disposition_window:]
+        recent = ctx.closed_trades[-self._disposition_window :]
         stats = aggregate_disposition(recent)
         disp = stats.get("disposition_coefficient")
         if disp is None:
             return True, None  # no telemetry (pre-V128 trades): pass
         return disp > 0.0, disp
 
-    def _gate2_exit_quality(
-        self, ctx: GateContext
-    ) -> tuple[bool, float | None]:
+    def _gate2_exit_quality(self, ctx: GateContext) -> tuple[bool, float | None]:
         """
         V133v2 exit-quality variant of Gate 2.
 
@@ -228,6 +229,7 @@ class FourFactorGate:
         clean_ratio = exits NOT via legacy stop_loss / all exits in window.
         ATR stops, MFE-trail, early_loss_time_stop, time_exit = clean.
         """
+
         def _is_clean(t: dict[str, Any]) -> bool:
             # "stop_loss(roi=...)" is the legacy fixed-pct exit. Everything else
             # is discipline-driven and counts as a clean exit.
@@ -239,15 +241,13 @@ class FourFactorGate:
         if n_clean_total < self._exit_quality_min_clean:
             return True, None  # cold-start: not enough disciplined exits yet
 
-        window = all_trades[-self._disposition_window:]
+        window = all_trades[-self._disposition_window :]
         n_window = len(window)
         n_clean_window = sum(1 for t in window if _is_clean(t))
         ratio = n_clean_window / n_window if n_window > 0 else 0.0
         return ratio > self._exit_quality_ratio, round(ratio, 4)
 
-    def _gate3_capital_velocity(
-        self, ctx: GateContext
-    ) -> tuple[bool, float, int]:
+    def _gate3_capital_velocity(self, ctx: GateContext) -> tuple[bool, float, int]:
         """
         Gate 3: capital_velocity_gate.
 
@@ -256,9 +256,7 @@ class FourFactorGate:
         Prevents overleverage and concentration risk.
         """
         positions = {
-            sym: pos
-            for sym, pos in ctx.open_positions.items()
-            if abs(pos.get("size", 0.0)) > 1e-6
+            sym: pos for sym, pos in ctx.open_positions.items() if abs(pos.get("size", 0.0)) > 1e-6
         }
         open_notional = sum(abs(p.get("size", 0.0)) for p in positions.values())
         cap = ctx.initial_capital if ctx.initial_capital > 0 else 1.0
@@ -309,7 +307,11 @@ class FourFactorGate:
             )
         if not g2:
             if self._use_exit_quality_gate:
-                failing.append(f"exit_quality(ratio={disp:.3f}<={self._exit_quality_ratio})" if disp is not None else "exit_quality(no_data)")
+                failing.append(
+                    f"exit_quality(ratio={disp:.3f}<={self._exit_quality_ratio})"
+                    if disp is not None
+                    else "exit_quality(no_data)"
+                )
             else:
                 failing.append(f"disposition(coeff={disp:.3f}<=0)")
         if not g3:
@@ -350,9 +352,7 @@ class FourFactorGate:
             failing_gates=failing,
         )
 
-    def evaluate_exit(
-        self, ctx: GateContext, pos: dict[str, Any]  # noqa: ARG002
-    ) -> GateResult:
+    def evaluate_exit(self, ctx: GateContext, pos: dict[str, Any]) -> GateResult:
         """
         Evaluate gates for an open position — check if any gate has broken.
 
@@ -386,7 +386,7 @@ class FourFactorGate:
         return GateResult(
             all_pass=g1 and g3 and g4,
             cross_market_divergence=g1,
-            disposition=True,   # not evaluated on exit
+            disposition=True,  # not evaluated on exit
             capital_velocity=g3,
             pair_network=g4,
             p_model=p_model,
