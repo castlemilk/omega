@@ -349,6 +349,34 @@ class VictoriaFeatures:
     # V130 regime entry gates
     # ------------------------------------------------------------------
 
+    # ------------------------------------------------------------------
+    # V136 crisis-regime entry bias flags
+    # ------------------------------------------------------------------
+
+    crisis_long_block: bool = False
+    """V136: hard block on long entries when regime == crisis (not high_vol).
+    V135 diagnosis: 70-80% longs in crisis (H1-2022 bear) drives PF < 1.
+    Pairs with high_vol_short_block which covers the high_vol case.
+    """
+
+    crisis_short_permissive: bool = False
+    """V136: relax short conviction threshold in crisis regime.
+    When True, short threshold is scaled by crisis_short_thresh_scale before
+    applying the standard conviction filter, admitting more shorts in bear markets.
+    """
+
+    crisis_short_thresh_scale: float = 0.5
+    """V136: scale factor for short threshold in crisis (0 < x <= 1).
+    0.5 = halve the threshold (twice as permissive). 0.4 = very permissive.
+    Only applied when crisis_short_permissive=True and regime == crisis.
+    """
+
+    crisis_position_size_boost: float = 1.0
+    """V136: size multiplier for short positions in crisis regime.
+    Applied on top of other size factors when crisis_long_block=True.
+    1.0 = no boost. 1.25 = 25% larger. 1.5 = 50% larger shorts.
+    """
+
     high_vol_short_block: bool = False
     """V130: hard-block new short entries when consolidated regime is 'high_vol'.
 
@@ -940,4 +968,46 @@ _PRESETS["v133v2_b"] = VictoriaFeatures(**{
     "atr_stop_enabled": True,  # ATR stops = clean exits → Gate 2 stays open
     "mae_stop_k": 1.2,         # moderate ATR stop (same as V135b)
     "stop_loss_min_age": 3,    # belt-and-suspenders age guard
+})
+
+# ---------------------------------------------------------------------------
+# V136: crisis-regime entry bias fix
+# ---------------------------------------------------------------------------
+# Root finding from V135 Phase A: crisis snapshot bleeds $-5k to -7k because
+# the system enters 70-80% LONG in a 2022 bear market (H1-2022 was a sustained
+# crypto crash). No exit fix addresses this — the problem is entry-side.
+#
+# Grid based on V135b (K=1.2 ATR stop) + V130's high_vol_short_block:
+#   v136a: crisis_long_block + crisis_short_permissive(0.5) + ATR stop K=1.2
+#   v136b: same but crisis_short_permissive × 0.4 (more aggressive short threshold)
+#   v136c: v136a + crisis_position_size_boost=1.5 (bigger shorts in crisis)
+_V136_BASE = {
+    "decision_embeddings": True, "ws_microstructure": True, "temporal_memory": True,
+    "trade_reinforcement": True, "postmortem_signal_filter": True,
+    "whale_prints": True, "whale_flow": True, "funding_velocity": True,
+    "activation_tracing": True, "decision_traces": True,
+    "disposition_exit_controller": True,
+    "mfe_trail_k": 1.0, "mfe_retracement_cap": 0.25,
+    "mae_stop_k": 1.2,           # V135b ATR stop
+    "high_vol_short_block": True,  # V130 high_vol gate (carry forward)
+    "crisis_high_vol_long_block": False,  # covered by crisis_long_block below
+    "early_loss_time_stop": True, "early_loss_cycles": 3, "early_loss_k_atr": 0.3,
+    "trailing_stop_min_age": 3,
+    "stop_loss_min_age": 0,
+    "four_factor_and_gate": False,
+    "atr_stop_enabled": True,    # skip fixed -2% stop
+    # V136 crisis bias
+    "crisis_long_block": True,             # hard block longs in crisis regime
+    "crisis_short_permissive": True,       # relax short threshold in crisis
+    "crisis_short_thresh_scale": 0.5,      # half threshold → twice as permissive
+    "crisis_position_size_boost": 1.25,    # 25% larger crisis shorts
+}
+_PRESETS["v136a_crisis_bias"] = VictoriaFeatures(**_V136_BASE)
+_PRESETS["v136b_aggressive_short"] = VictoriaFeatures(**{
+    **_V136_BASE,
+    "crisis_short_thresh_scale": 0.4,  # more aggressive: 0.4× threshold
+})
+_PRESETS["v136c_size_boost"] = VictoriaFeatures(**{
+    **_V136_BASE,
+    "crisis_position_size_boost": 1.5,  # 50% larger crisis shorts
 })

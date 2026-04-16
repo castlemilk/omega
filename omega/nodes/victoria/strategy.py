@@ -1702,6 +1702,13 @@ class StrategyNode(Node):
                 # self._is_crisis can be False when _regime_consolidated=="crisis" and
                 # bear_prob is between 0 and 0.45 — causing longs to slip through.
                 # _regime_consolidated matches exactly what is recorded in trades.csv.
+                # V136: hard block on long entries in crisis regime (not high_vol).
+                # V135 diagnosis: 70-80% longs in crisis (H1-2022 bear market) drives PF<1.
+                # crisis_long_block targets crisis only; high_vol_short_block covers the
+                # high_vol case on the short side.
+                if self.features.crisis_long_block and _regime_consolidated == "crisis":
+                    logger.debug("V136: blocking %s long in crisis regime", ticker)
+                    continue
                 if self.features.crisis_high_vol_long_block and _regime_consolidated in (
                     "crisis",
                     "high_vol",
@@ -1915,6 +1922,24 @@ class StrategyNode(Node):
                 # V93 already blocks longs in high_vol unconditionally (line ~1676).
                 # High_vol shorts work in prolonged bear (crisis) but lose in vol-spike recoveries
                 # where price bounces sharply against the position.
+                # V136: lower short threshold in crisis to encourage directionally correct shorts.
+                # crisis_short_permissive_scale ∈ (0,1] multiplies the short conviction threshold.
+                # Default scale=1.0 (disabled). v136a uses 0.5, v136b uses 0.4.
+                if (
+                    getattr(self.features, "crisis_short_permissive", False)
+                    and _regime_consolidated == "crisis"
+                ):
+                    _crisis_scale = float(
+                        getattr(self.features, "crisis_short_thresh_scale", 0.5)
+                    )
+                    _crisis_short_thresh = self._short_conviction_threshold * _crisis_scale
+                    _raw_comp = abs(sig.get("composite", 0.0))
+                    if _raw_comp < _crisis_short_thresh:
+                        logger.debug(
+                            "V136: %s short below scaled crisis threshold %.4f (scale=%.2f)",
+                            ticker, _crisis_short_thresh, _crisis_scale,
+                        )
+                        continue
                 if self.features.high_vol_short_block and _is_high_vol:
                     logger.debug("Suppressing %s short in high_vol regime (V130)", ticker)
                     continue
@@ -2177,6 +2202,16 @@ class StrategyNode(Node):
         )
         _csb_short_mult = 1.3 if _csb_fear_regime else 1.0
         _csb_long_mult = 0.5 if _csb_fear_regime else 1.0
+        # V136: crisis_position_size_boost for shorts in crisis regime.
+        # Stacks additively with _csb_short_mult when crisis_short_bias is also on.
+        _v136_crisis_short_boost = (
+            float(getattr(self.features, "crisis_position_size_boost", 1.0))
+            if (
+                getattr(self.features, "crisis_long_block", False)
+                and _regime_consolidated == "crisis"
+            )
+            else 1.0
+        )
         for ticker, w in long_base.items():
             _w_conv = abs(self._compute_weighted_conviction(long_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
@@ -2225,6 +2260,7 @@ class StrategyNode(Node):
                     * conviction_size_multiplier(convictions[ticker])
                     * _conv_scale
                     * _csb_short_mult
+                    * _v136_crisis_short_boost
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
@@ -2233,6 +2269,7 @@ class StrategyNode(Node):
                     * conviction_size_multiplier(convictions[ticker])
                     * _conv_scale
                     * _csb_short_mult
+                    * _v136_crisis_short_boost
                 )
 
         # V102: crisis_short_bias size multipliers — scale shorts up (1.3x), longs down (0.5x)

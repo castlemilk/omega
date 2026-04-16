@@ -1,0 +1,46 @@
+{
+  "version": "bt_v136c_trend",
+  "snapshot_id": "snap_trending_2023q4",
+  "snapshot_path": "",
+  "run_at": "2026-04-16T11:54:37.018775+00:00",
+  "seed": 42,
+  "features": "",
+  "n_cycles": 200,
+  "metrics": {
+    "pnl": 7740.39,
+    "win_rate": 0.4595,
+    "profit_factor": 1.7894,
+    "n_trades": 37,
+    "long_pct": 0.4595,
+    "short_pct": 0.5405,
+    "max_drawdown": -3799.4,
+    "sharpe": 1.693,
+    "regime_pnl": {
+      "normal": 1105.57,
+      "crisis": 4843.38,
+      "high_vol": 1791.44
+    },
+    "disposition_coefficient": -0.4103,
+    "hold_ratio": 2.15,
+    "avg_mae": -243.416,
+    "avg_mfe": 1158.6187,
+    "mean_exit_score": -0.2639,
+    "_n_win_captures": 17,
+    "_n_loss_captures": 20
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": true,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "Disposition effect detected: coef=-0.410 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}

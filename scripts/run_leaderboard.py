@@ -67,6 +67,10 @@ _CONFIG_LABELS = {
     # V133v2: AND-gate with exit-quality Gate 2 (avoids self-referential lock)
     "bt_v133v2a":  "v133v2_gate_quality",   # AND-gate + new Gate 2 only
     "bt_v133v2b":  "v133v2_gate_atr",       # AND-gate + new Gate 2 + ATR stop
+    # V136: crisis-regime entry bias fix (hard long block + permissive shorts)
+    "bt_v136a":    "v136_crisis_bias",      # crisis_long_block + thresh×0.5 + ATR K=1.2
+    "bt_v136b":    "v136_aggressive_short", # crisis_long_block + thresh×0.4
+    "bt_v136c":    "v136_size_boost",       # v136a + 1.5× short size boost
 }
 
 _SNAPSHOT_LABELS = {
