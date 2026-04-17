@@ -1,0 +1,47 @@
+{
+  "version": "bt500_v136a_recent",
+  "snapshot_id": "recent",
+  "snapshot_path": "",
+  "run_at": "2026-04-17T02:57:37.997148+00:00",
+  "seed": 42,
+  "features": "",
+  "n_cycles": 200,
+  "metrics": {
+    "pnl": 41214.13,
+    "win_rate": 0.5205,
+    "profit_factor": 2.1802,
+    "n_trades": 146,
+    "long_pct": 0.589,
+    "short_pct": 0.411,
+    "max_drawdown": -2044.18,
+    "sharpe": 4.629,
+    "regime_pnl": {
+      "normal": 13238.88,
+      "crisis": 28257.86,
+      "high_vol": -282.62
+    },
+    "disposition_coefficient": -0.5222,
+    "hold_ratio": 1.806,
+    "avg_mae": -174.3302,
+    "avg_mfe": 1197.5941,
+    "mean_exit_score": -0.1976,
+    "_n_win_captures": 76,
+    "_n_loss_captures": 70
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": false,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "Regime catastrophe: {'high_vol': -282.62}",
+      "Disposition effect detected: coef=-0.522 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}

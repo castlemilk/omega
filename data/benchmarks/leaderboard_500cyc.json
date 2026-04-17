@@ -1,0 +1,115 @@
+[
+  {
+    "config": "v137a_500cyc",
+    "snapshots": {
+      "snap_crisis (bear, H1-2022)": {
+        "pnl": 1650.16,
+        "win_rate": 0.3839,
+        "profit_factor": 1.0297,
+        "n_trades": 112,
+        "long_pct": 0.625,
+        "sharpe": 0.151,
+        "hold_ratio": 1.468,
+        "disposition_coefficient": -0.5193,
+        "passed": false,
+        "failures": [
+          "Regime catastrophe: {'normal': -19518.46, 'high_vol': -2343.06}",
+          "Disposition effect detected: coef=-0.519 (need >0.0, target >0.3)"
+        ]
+      },
+      "snap_recent (mixed, 2026)": {
+        "pnl": 42601.43,
+        "win_rate": 0.5368,
+        "profit_factor": 2.2368,
+        "n_trades": 136,
+        "long_pct": 0.5809,
+        "sharpe": 4.723,
+        "hold_ratio": 1.788,
+        "disposition_coefficient": -0.5222,
+        "passed": false,
+        "failures": [
+          "Regime catastrophe: {'high_vol': -429.15}",
+          "Disposition effect detected: coef=-0.522 (need >0.0, target >0.3)"
+        ]
+      },
+      "snap_trending (bull, Q4-2023)": {
+        "pnl": 521.9,
+        "win_rate": 0.4031,
+        "profit_factor": 1.0119,
+        "n_trades": 129,
+        "long_pct": 0.5426,
+        "sharpe": 0.069,
+        "hold_ratio": 2.042,
+        "disposition_coefficient": -0.5564,
+        "passed": false,
+        "failures": [
+          "Regime catastrophe: {'normal': -5262.55}",
+          "Disposition effect detected: coef=-0.556 (need >0.0, target >0.3)"
+        ]
+      }
+    },
+    "n_snapshots": 3,
+    "agg_pnl": 44773.49,
+    "agg_pf": 1.4261,
+    "agg_sharpe": 1.648,
+    "all_passed": false,
+    "leaderboard_rank": 1
+  },
+  {
+    "config": "v136a_500cyc",
+    "snapshots": {
+      "snap_crisis (bear, H1-2022)": {
+        "pnl": -3184.61,
+        "win_rate": 0.3852,
+        "profit_factor": 0.9481,
+        "n_trades": 122,
+        "long_pct": 0.623,
+        "sharpe": -0.277,
+        "hold_ratio": 1.395,
+        "disposition_coefficient": -0.4674,
+        "passed": false,
+        "failures": [
+          "PnL negative: $-3184.61",
+          "PF < 1: 0.948",
+          "Regime catastrophe: {'normal': -23378.61, 'high_vol': -11956.44}",
+          "Disposition effect detected: coef=-0.467 (need >0.0, target >0.3)"
+        ]
+      },
+      "snap_recent (mixed, 2026)": {
+        "pnl": 41214.13,
+        "win_rate": 0.5205,
+        "profit_factor": 2.1802,
+        "n_trades": 146,
+        "long_pct": 0.589,
+        "sharpe": 4.629,
+        "hold_ratio": 1.806,
+        "disposition_coefficient": -0.5222,
+        "passed": false,
+        "failures": [
+          "Regime catastrophe: {'high_vol': -282.62}",
+          "Disposition effect detected: coef=-0.522 (need >0.0, target >0.3)"
+        ]
+      },
+      "snap_trending (bull, Q4-2023)": {
+        "pnl": 5896.46,
+        "win_rate": 0.3971,
+        "profit_factor": 1.1482,
+        "n_trades": 136,
+        "long_pct": 0.5441,
+        "sharpe": 0.804,
+        "hold_ratio": 2.041,
+        "disposition_coefficient": -0.5564,
+        "passed": false,
+        "failures": [
+          "Disposition effect detected: coef=-0.556 (need >0.0, target >0.3)"
+        ]
+      }
+    },
+    "n_snapshots": 3,
+    "agg_pnl": 43925.98,
+    "agg_pf": 1.4255,
+    "agg_sharpe": 1.719,
+    "all_passed": false,
+    "leaderboard_rank": 2
+  }
+]

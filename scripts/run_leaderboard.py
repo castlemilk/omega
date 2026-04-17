@@ -75,6 +75,9 @@ _CONFIG_LABELS = {
     "bt_v137a":    "v137_full_gate",        # V136a + all 4 AND-gate gates
     "bt_v137b":    "v137_no_gate1",         # V136a + AND-gate minus Gate 1 (divergence off)
     "bt_v137c":    "v137_no_gate4",         # V136a + AND-gate minus Gate 4 (pair network off)
+    # 500-cycle deep analysis (Track A)
+    "bt500_v136a": "v136a_500cyc",          # V136a baseline, 500 cycles
+    "bt500_v137a": "v137a_500cyc",          # V137a full AND-gate, 500 cycles
 }
 
 _SNAPSHOT_LABELS = {

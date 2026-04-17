@@ -1,0 +1,47 @@
+{
+  "version": "bt500_v137a_crisis",
+  "snapshot_id": "crisis",
+  "snapshot_path": "",
+  "run_at": "2026-04-17T02:57:38.034061+00:00",
+  "seed": 42,
+  "features": "",
+  "n_cycles": 200,
+  "metrics": {
+    "pnl": 1650.16,
+    "win_rate": 0.3839,
+    "profit_factor": 1.0297,
+    "n_trades": 112,
+    "long_pct": 0.625,
+    "short_pct": 0.375,
+    "max_drawdown": -14460.13,
+    "sharpe": 0.151,
+    "regime_pnl": {
+      "normal": -19518.46,
+      "crisis": 23511.68,
+      "high_vol": -2343.06
+    },
+    "disposition_coefficient": -0.5193,
+    "hold_ratio": 1.468,
+    "avg_mae": -349.0306,
+    "avg_mfe": 1292.7475,
+    "mean_exit_score": -0.366,
+    "_n_win_captures": 43,
+    "_n_loss_captures": 69
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": false,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "Regime catastrophe: {'normal': -19518.46, 'high_vol': -2343.06}",
+      "Disposition effect detected: coef=-0.519 (need >0.0, target >0.3)"
+    ]
+  },
+  "leaderboard_rank": null
+}
