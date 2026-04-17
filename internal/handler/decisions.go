@@ -55,7 +55,7 @@ func (h *DashboardHandler) handleDecisions(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{ //nolint:errcheck
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"decisions": rows,
 		"count":     len(rows),
 	})
@@ -93,7 +93,7 @@ func (h *DashboardHandler) handleDecision(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{ //nolint:errcheck
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"id":          snap.ID,
 		"cycle":       snap.Cycle,
 		"version":     snap.Version,

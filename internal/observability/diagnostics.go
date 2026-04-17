@@ -56,7 +56,7 @@ func collectRuntime() RuntimeDiagnostics {
 		StackInuseBytes:  ms.StackInuse,
 		TotalAllocBytes:  ms.TotalAlloc,
 		NumGC:            ms.NumGC,
-		LastGCPause:      time.Duration(ms.PauseNs[(ms.NumGC+255)%256]),
+		LastGCPause:      time.Duration(ms.PauseNs[(ms.NumGC+255)%256]), //nolint:gosec // runtime GC pause fits in int64
 		LastGCAt:         lastGCAt,
 		GCCPUFraction:    ms.GCCPUFraction,
 	}

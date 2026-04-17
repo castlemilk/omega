@@ -213,9 +213,10 @@ func (h *DashboardHandler) handleNodes(w http.ResponseWriter, r *http.Request) {
 			} else {
 				// Registry-only node (not yet in DB).
 				status := "idle"
-				if e.State == registry.NodeStateOffline {
+				switch e.State {
+				case registry.NodeStateOffline:
 					status = "error"
-				} else if e.State == registry.NodeStateHealthy {
+				case registry.NodeStateHealthy:
 					status = "active"
 				}
 				out = append(out, dashNode{
@@ -825,7 +826,7 @@ func (h *DashboardHandler) handleObsErrors(w http.ResponseWriter, r *http.Reques
 		 ORDER BY COUNT(*) DESC
 		 LIMIT 100`, since)
 
-	var out []obsError
+	out := make([]obsError, 0, 16)
 	if err == nil {
 		defer rows.Close() //nolint:errcheck
 		idx := 0

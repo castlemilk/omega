@@ -60,7 +60,7 @@ func runOvernight(cmd *cobra.Command, args []string) error {
 		_ = os.Remove(stopFile)
 	}
 
-	proc := exec.CommandContext(ctx, "python", pyArgs...)
+	proc := exec.CommandContext(ctx, "python", pyArgs...) //nolint:gosec // CLI-invoked training runner; pyArgs composed from flags
 	proc.Stdout = os.Stdout
 	proc.Stderr = os.Stderr
 

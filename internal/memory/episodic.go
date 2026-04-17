@@ -110,7 +110,7 @@ func (m *EpisodicMemory) Query(filter EpisodicFilter) ([]Episode, error) {
 		return nil, err
 	}
 
-	var out []Episode
+	out := make([]Episode, 0, len(all))
 	for _, ep := range all {
 		if filter.NodeID != "" && ep.NodeID != filter.NodeID {
 			continue

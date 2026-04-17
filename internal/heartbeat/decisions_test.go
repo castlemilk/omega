@@ -29,7 +29,7 @@ func TestDecisionStore_BoundedQueue(t *testing.T) {
 	for i := range decisionQueueSize + 20 {
 		s.RecordDecision(DecisionEntry{
 			NodeID:       "node-b",
-			Cycle:        int32(i + 1),
+			Cycle:        int32(i + 1), //nolint:gosec // bounded by decisionQueueSize+20
 			ReceivedAt:   time.Now(),
 			SnapshotJSON: `{}`,
 		})

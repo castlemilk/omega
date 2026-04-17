@@ -99,7 +99,7 @@ func (h *MemoryHandler) QueryEpisodes(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var results []*omegav1.ScoredEpisode
+	results := make([]*omegav1.ScoredEpisode, 0, len(episodes))
 	for _, ep := range episodes {
 		protoContent := make(map[string]string, len(ep.Content))
 		for k, v := range ep.Content {
@@ -212,7 +212,7 @@ func (h *MemoryHandler) QuerySemantic(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var concepts []*omegav1.MemoryConcept
+	concepts := make([]*omegav1.MemoryConcept, 0, len(memories))
 	for _, sm := range memories {
 		concepts = append(concepts, &omegav1.MemoryConcept{
 			ConceptId:     sm.MemoryID,

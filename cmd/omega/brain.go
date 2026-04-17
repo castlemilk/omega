@@ -370,7 +370,7 @@ func runBrainEval(cmd *cobra.Command, _ []string) error {
 		fmt.Println(strings.Repeat("=", 80))
 	}
 
-	var allResults []providerResult
+	allResults := make([]providerResult, 0, len(providers))
 
 	for _, prov := range providers {
 		if !brainEvalJSON {

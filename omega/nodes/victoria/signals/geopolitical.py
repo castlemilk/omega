@@ -16,13 +16,14 @@ Cache: data/cache/gdelt/{query_name}_{YYYYMMDD_HHmm}.json (15-min TTL live;
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import math
 import time
 import urllib.parse
 import urllib.request
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -93,6 +94,7 @@ def _cache_store(key: str, data: dict) -> None:
 # GDELT client
 # ---------------------------------------------------------------------------
 
+
 class GDELTClient:
     """Thin GDELT DOC 2.0 client with TTL cache."""
 
@@ -140,6 +142,7 @@ class GDELTClient:
 # Signal computation
 # ---------------------------------------------------------------------------
 
+
 class GeopoliticalSignal:
     """Computes 4 market-level geopolitical signals from GDELT DOC 2.0."""
 
@@ -164,7 +167,7 @@ class GeopoliticalSignal:
             sanctions_signal. All default to 0.0 on fetch failure.
         """
         if timestamp is None:
-            timestamp = datetime.now(timezone.utc)
+            timestamp = datetime.now(UTC)
 
         end_dt = timestamp
         start_24h = end_dt - timedelta(hours=24)
@@ -203,10 +206,8 @@ class GeopoliticalSignal:
         for art in a24:
             tone = art.get("tone") or art.get("avg_tone")
             if tone is not None:
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     tones.append(float(tone))
-                except (ValueError, TypeError):
-                    pass
         if not tones:
             return 0.0
         return max(-10.0, min(10.0, sum(tones) / len(tones)))
@@ -229,4 +230,3 @@ class GeopoliticalSignal:
             self._alpha_sanctions * raw + (1.0 - self._alpha_sanctions) * self._ema_sanctions
         )
         return self._ema_sanctions
-

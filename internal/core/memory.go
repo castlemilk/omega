@@ -519,7 +519,7 @@ func (k *MemoryKernel) Consolidate(ctx context.Context, namespace string) ([]str
 	if storeNS == "" {
 		storeNS = "global"
 	}
-	var concepts []string
+	concepts := make([]string, 0, len(signalOutcomes))
 
 	for key, o := range signalOutcomes {
 		if len(o.returns) < 3 {
@@ -577,7 +577,7 @@ func (k *MemoryKernel) Consolidate(ctx context.Context, namespace string) ([]str
 
 	// Top-appearing tickers
 	type kv struct{ k string; v int }
-	var sorted []kv
+	sorted := make([]kv, 0, len(tickerCount))
 	for k, v := range tickerCount {
 		sorted = append(sorted, kv{k, v})
 	}
@@ -728,7 +728,7 @@ func (k *MemoryKernel) Query(ctx context.Context, question string, limit int, na
 		return MemoryQueryResult{}, err
 	}
 
-	var snippets []EpisodeSnippet
+	snippets := make([]EpisodeSnippet, 0, len(eps))
 	for _, ep := range eps {
 		snippets = append(snippets, EpisodeSnippet{EventType: ep.EventType, Content: ep.Content, Importance: ep.Importance, Cycle: ep.Cycle})
 	}

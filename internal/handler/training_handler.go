@@ -479,8 +479,9 @@ func (h *TrainingHandler) handleJSONL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var rows []json.RawMessage
-	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
+	lines := bytes.Split(bytes.TrimSpace(data), []byte("\n"))
+	rows := make([]json.RawMessage, 0, len(lines))
+	for _, line := range lines {
 		if len(line) == 0 {
 			continue
 		}
@@ -488,9 +489,6 @@ func (h *TrainingHandler) handleJSONL(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		rows = append(rows, json.RawMessage(line))
-	}
-	if rows == nil {
-		rows = []json.RawMessage{}
 	}
 	writeJSON(w, rows)
 }
@@ -568,7 +566,7 @@ func (h *TrainingHandler) handleVersionStream(w http.ResponseWriter, r *http.Req
 						}
 					}
 				}
-				f.Close() //nolint:errcheck
+				_ = f.Close()
 			}
 
 			// Check if the training run has finished (results file present).
@@ -656,7 +654,7 @@ func (h *TrainingHandler) handleVersions(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	var versions []trainingVersionInfo
+	versions := make([]trainingVersionInfo, 0, len(entries))
 	for _, e := range entries {
 		name := e.Name()
 		if !strings.HasSuffix(name, "_results.json") {
@@ -783,8 +781,9 @@ func (h *TrainingHandler) handleTradeDetails(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var rows []json.RawMessage
-	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
+	lines := bytes.Split(bytes.TrimSpace(data), []byte("\n"))
+	rows := make([]json.RawMessage, 0, len(lines))
+	for _, line := range lines {
 		if len(line) == 0 {
 			continue
 		}
@@ -792,9 +791,6 @@ func (h *TrainingHandler) handleTradeDetails(w http.ResponseWriter, r *http.Requ
 			continue
 		}
 		rows = append(rows, json.RawMessage(line))
-	}
-	if rows == nil {
-		rows = []json.RawMessage{}
 	}
 	writeJSON(w, rows)
 }
@@ -840,8 +836,9 @@ func (h *TrainingHandler) handleDecisionTraces(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var rows []json.RawMessage
-	for _, line := range bytes.Split(bytes.TrimSpace(data), []byte("\n")) {
+	tLines := bytes.Split(bytes.TrimSpace(data), []byte("\n"))
+	rows := make([]json.RawMessage, 0, len(tLines))
+	for _, line := range tLines {
 		if len(line) == 0 || !json.Valid(line) {
 			continue
 		}

@@ -151,7 +151,7 @@ func (h *OrchestratorHandler) ListNodes(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoNodes []*omegav1.Node
+	protoNodes := make([]*omegav1.Node, 0, len(nodes))
 	for _, n := range nodes {
 		pn := dbNodeToProto(n)
 		h.attachCircuitBreaker(pn, n.NodeID)
@@ -203,7 +203,7 @@ func (h *OrchestratorHandler) ListNodeExecutions(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoExecs []*omegav1.ExecutionRecord
+	protoExecs := make([]*omegav1.ExecutionRecord, 0, len(execs))
 	for _, e := range execs {
 		protoExecs = append(protoExecs, dbExecToProto(e))
 	}
@@ -290,7 +290,7 @@ func (h *OrchestratorHandler) ListTraces(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoTraces []*omegav1.TraceSummary
+	protoTraces := make([]*omegav1.TraceSummary, 0, len(traces))
 	for _, t := range traces {
 		protoTraces = append(protoTraces, dbTraceSummaryToProto(t))
 	}
@@ -308,7 +308,7 @@ func (h *OrchestratorHandler) GetTrace(
 	if len(spans) == 0 {
 		return nil, connect.NewError(connect.CodeNotFound, fmt.Errorf("trace not found: %s", req.Msg.TraceId))
 	}
-	var protoSpans []*omegav1.Span
+	protoSpans := make([]*omegav1.Span, 0, len(spans))
 	for _, s := range spans {
 		protoSpans = append(protoSpans, dbSpanToProto(s))
 	}
@@ -388,7 +388,7 @@ func (h *OrchestratorHandler) GetMetricsHistory(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var histories []*omegav1.NodeLatencyHistory
+	histories := make([]*omegav1.NodeLatencyHistory, 0, len(nodes))
 	for _, n := range nodes {
 		if req.Msg.NodeId != "" && n.NodeID != req.Msg.NodeId {
 			continue
@@ -417,7 +417,7 @@ func (h *OrchestratorHandler) ListIssues(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoIssues []*omegav1.Issue
+	protoIssues := make([]*omegav1.Issue, 0, len(issues))
 	for _, i := range issues {
 		protoIssues = append(protoIssues, dbIssueToProto(i))
 	}
@@ -455,7 +455,7 @@ func (h *OrchestratorHandler) ListActivity(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoEntries []*omegav1.ActivityEntry
+	protoEntries := make([]*omegav1.ActivityEntry, 0, len(entries))
 	for _, e := range entries {
 		protoEntries = append(protoEntries, &omegav1.ActivityEntry{
 			LogId:      e.LogID,
@@ -568,7 +568,7 @@ func (h *OrchestratorHandler) GetConvergence(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoPoints []*omegav1.ConvergencePoint
+	protoPoints := make([]*omegav1.ConvergencePoint, 0, len(points))
 	for _, p := range points {
 		protoPoints = append(protoPoints, &omegav1.ConvergencePoint{
 			Cycle:      p.Cycle,
@@ -590,7 +590,7 @@ func (h *OrchestratorHandler) GetCosts(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoCosts []*omegav1.CostEntry
+	protoCosts := make([]*omegav1.CostEntry, 0, len(costs))
 	for _, c := range costs {
 		protoCosts = append(protoCosts, dbCostToProto(c))
 	}
@@ -1108,7 +1108,7 @@ func (h *OrchestratorHandler) GetBrainExecutionHistory(
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
-	var protoEntries []*omegav1.BrainExecutionEntry
+	protoEntries := make([]*omegav1.BrainExecutionEntry, 0, len(entries))
 	for _, e := range entries {
 		protoEntries = append(protoEntries, &omegav1.BrainExecutionEntry{
 			ExecId:           e.ExecID,

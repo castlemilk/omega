@@ -82,7 +82,7 @@ func runBacktest(cmd *cobra.Command, args []string) error {
 		end = t.Add(24 * time.Hour)
 	}
 
-	var filtered []*omegav1.ConvergencePoint
+	filtered := make([]*omegav1.ConvergencePoint, 0, len(points))
 	for _, p := range points {
 		if p.Timestamp == nil {
 			filtered = append(filtered, p)
@@ -104,7 +104,7 @@ func runBacktest(cmd *cobra.Command, args []string) error {
 	}
 
 	// Compute summary stats from convergence scores
-	var scores []float64
+	scores := make([]float64, 0, len(filtered))
 	var totalLatency float64
 	wins := 0
 	for _, p := range filtered {

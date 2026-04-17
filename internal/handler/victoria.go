@@ -34,7 +34,7 @@ func (h *VictoriaHandler) GetPortfolio(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var alloc []*omegav1.VictoriaAllocationSlice
+	alloc := make([]*omegav1.VictoriaAllocationSlice, 0, len(p.Allocation))
 	for _, a := range p.Allocation {
 		alloc = append(alloc, &omegav1.VictoriaAllocationSlice{
 			Name:  a.Name,
@@ -69,7 +69,7 @@ func (h *VictoriaHandler) GetPositions(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var protoPos []*omegav1.VictoriaPosition
+	protoPos := make([]*omegav1.VictoriaPosition, 0, len(positions))
 	for _, p := range positions {
 		protoPos = append(protoPos, &omegav1.VictoriaPosition{
 			Sym:      p.Sym,
@@ -128,7 +128,7 @@ func (h *VictoriaHandler) GetSignals(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var protoSigs []*omegav1.VictoriaSignal
+	protoSigs := make([]*omegav1.VictoriaSignal, 0, len(signals))
 	var totalConviction, totalWeight float64
 	for _, s := range signals {
 		protoSigs = append(protoSigs, &omegav1.VictoriaSignal{
@@ -183,7 +183,7 @@ func (h *VictoriaHandler) GetSignalHistory(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var protoPoints []*omegav1.VictoriaSignalICPoint
+	protoPoints := make([]*omegav1.VictoriaSignalICPoint, 0, len(points))
 	for _, p := range points {
 		protoPoints = append(protoPoints, &omegav1.VictoriaSignalICPoint{
 			T:  int32(p.T), //nolint:gosec
@@ -205,7 +205,7 @@ func (h *VictoriaHandler) GetTrades(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var protoTrades []*omegav1.VictoriaTrade
+	protoTrades := make([]*omegav1.VictoriaTrade, 0, len(trades))
 	for _, t := range trades {
 		protoTrades = append(protoTrades, &omegav1.VictoriaTrade{
 			Ts:         t.Ts,
@@ -268,7 +268,7 @@ func (h *VictoriaHandler) GetEquityCurve(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var protoPoints []*omegav1.VictoriaEquityPoint
+	protoPoints := make([]*omegav1.VictoriaEquityPoint, 0, len(points))
 	for _, p := range points {
 		protoPoints = append(protoPoints, &omegav1.VictoriaEquityPoint{
 			Date:  p.Date,
@@ -296,7 +296,7 @@ func (h *VictoriaHandler) GetRiskMetrics(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
-	var ablation []*omegav1.VictoriaAblationEntry
+	ablation := make([]*omegav1.VictoriaAblationEntry, 0, len(m.Ablation))
 	for _, a := range m.Ablation {
 		ablation = append(ablation, &omegav1.VictoriaAblationEntry{
 			Name:    a.Name,
@@ -305,7 +305,7 @@ func (h *VictoriaHandler) GetRiskMetrics(
 		})
 	}
 
-	var regimes []*omegav1.VictoriaRegime
+	regimes := make([]*omegav1.VictoriaRegime, 0, len(m.Regimes))
 	for _, r := range m.Regimes {
 		regimes = append(regimes, &omegav1.VictoriaRegime{
 			Name:   r.Name,
@@ -316,7 +316,7 @@ func (h *VictoriaHandler) GetRiskMetrics(
 		})
 	}
 
-	var crashes []*omegav1.VictoriaCrashScenario
+	crashes := make([]*omegav1.VictoriaCrashScenario, 0, len(m.Crashes))
 	for _, c := range m.Crashes {
 		sc := &omegav1.VictoriaCrashScenario{
 			Name:     c.Name,
@@ -333,7 +333,7 @@ func (h *VictoriaHandler) GetRiskMetrics(
 		crashes = append(crashes, sc)
 	}
 
-	var funding []*omegav1.VictoriaFundingPoint
+	funding := make([]*omegav1.VictoriaFundingPoint, 0, len(m.FundingData))
 	for _, f := range m.FundingData {
 		funding = append(funding, &omegav1.VictoriaFundingPoint{
 			T:       int32(f.T), //nolint:gosec
@@ -342,7 +342,7 @@ func (h *VictoriaHandler) GetRiskMetrics(
 		})
 	}
 
-	var adv []*omegav1.VictoriaAdvPoint
+	adv := make([]*omegav1.VictoriaAdvPoint, 0, len(m.AdvSeries))
 	for _, a := range m.AdvSeries {
 		adv = append(adv, &omegav1.VictoriaAdvPoint{
 			T:    int32(a.T), //nolint:gosec
@@ -351,7 +351,7 @@ func (h *VictoriaHandler) GetRiskMetrics(
 		})
 	}
 
-	var tpe []*omegav1.VictoriaTpePoint
+	tpe := make([]*omegav1.VictoriaTpePoint, 0, len(m.TpeSeries))
 	for _, t := range m.TpeSeries {
 		tpe = append(tpe, &omegav1.VictoriaTpePoint{
 			T:     int32(t.T), //nolint:gosec

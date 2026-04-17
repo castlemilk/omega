@@ -102,7 +102,7 @@ func (cc *ConstitutionalConstraints) Check(_ context.Context, metrics map[string
 	cc.mu.RLock()
 	defer cc.mu.RUnlock()
 
-	var violations []ConstraintViolation
+	violations := make([]ConstraintViolation, 0, len(cc.constraints))
 	for _, c := range cc.constraints {
 		value, ok := metrics[c.metricKey]
 		if !ok {
@@ -747,7 +747,7 @@ func (n *NashWelfareAggregator) OptimalWeights(outcomesHistory []map[string]floa
 	bestWelfare := -1.0
 	var bestWeights []float64
 	for trial := 0; trial < nTrials; trial++ {
-		candidate := randomSimplexPoint(uint64(trial*2654435761+1013904223), k)
+		candidate := randomSimplexPoint(uint64(trial*2654435761+1013904223), k) //nolint:gosec // deterministic seed, non-negative by construction
 		w := make(map[string]float64, k)
 		for i, obj := range n.objectives {
 			w[obj] = candidate[i]

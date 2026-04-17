@@ -114,7 +114,9 @@ def build_reasoning(
         parts.append("Drivers: " + ", ".join(sig_clauses))
 
     # 2. Composite + direction
-    direction_label = "LONG" if proposal == "LONG" else ("SHORT" if proposal == "SHORT" else "FLAT")
+    direction_label = (
+        "LONG" if proposal == "LONG" else ("SHORT" if proposal == "SHORT" else "FLAT")
+    )
     parts.append(f"{direction_label} composite={composite:+.4f}")
 
     # 3. Regime context

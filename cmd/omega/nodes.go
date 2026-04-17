@@ -215,11 +215,12 @@ func nodesCatalog(cmd *cobra.Command, args []string) error {
 
 	// Apply filters.
 	entries := registry.Catalog
-	if catalogFilterProject != "" {
+	switch {
+	case catalogFilterProject != "":
 		entries = registry.ByProject(catalogFilterProject)
-	} else if catalogFilterType != "" {
+	case catalogFilterType != "":
 		entries = registry.ByType(catalogFilterType)
-	} else if catalogFilterLevel >= 0 {
+	case catalogFilterLevel >= 0:
 		entries = registry.ByAutonomyLevel(catalogFilterLevel)
 	}
 

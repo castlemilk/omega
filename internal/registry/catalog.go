@@ -1168,8 +1168,8 @@ func FormatTable(filter string) string {
 
 	var sb strings.Builder
 	w := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tTYPE\tPROJECT\tL\tIC\tWEIGHT\tMEMORY\tBRAIN")
-	fmt.Fprintln(w, strings.Repeat("─", 90))
+	_, _ = fmt.Fprintln(w, "NAME\tTYPE\tPROJECT\tL\tIC\tWEIGHT\tMEMORY\tBRAIN")
+	_, _ = fmt.Fprintln(w, strings.Repeat("─", 90))
 	for _, e := range entries {
 		ic := "—"
 		if e.CurrentIC != nil {
@@ -1187,7 +1187,7 @@ func FormatTable(filter string) string {
 		if e.UsesBrain {
 			brain = "✓"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\tL%d\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\tL%d\t%s\t%s\t%s\t%s\n",
 			e.Name, e.NodeType, e.Project, e.AutonomyLevel, ic, wt, mem, brain)
 	}
 	_ = w.Flush()
@@ -1299,14 +1299,14 @@ func WriteFiles(root string) error {
 		return fmt.Errorf("catalog: marshal json: %w", err)
 	}
 	jsonPath := root + "/data/node_registry.json"
-	if err := os.WriteFile(jsonPath, jsonData, 0644); err != nil {
+	if err := os.WriteFile(jsonPath, jsonData, 0o600); err != nil {
 		return fmt.Errorf("catalog: write json: %w", err)
 	}
 
 	// Markdown
 	mdPath := root + "/docs/node_registry.md"
 	md := buildMarkdown()
-	if err := os.WriteFile(mdPath, []byte(md), 0644); err != nil {
+	if err := os.WriteFile(mdPath, []byte(md), 0o600); err != nil {
 		return fmt.Errorf("catalog: write markdown: %w", err)
 	}
 

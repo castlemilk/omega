@@ -93,7 +93,7 @@ func showSignalPerf(cmd *cobra.Command, args []string) error {
 
 // colorFloat formats a float with sign for display in a terminal-friendly way.
 func colorFloat(v float64, decimals int) string {
-	format := fmt.Sprintf("%+.%df", decimals)
+	format := fmt.Sprintf("%%+.%df", decimals)
 	return fmt.Sprintf(format, v)
 }
 

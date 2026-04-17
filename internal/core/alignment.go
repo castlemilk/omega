@@ -363,7 +363,7 @@ func (pe *ParetoEvaluator) NSGA2Sort(population []map[string]float64, objectives
 	}
 
 	// Collect sorted rank keys.
-	var rankKeys []int
+	rankKeys := make([]int, 0, len(rankGroups))
 	for r := range rankGroups {
 		rankKeys = append(rankKeys, r)
 	}
