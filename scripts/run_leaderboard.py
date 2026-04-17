@@ -82,6 +82,8 @@ _CONFIG_LABELS = {
     "bt_v138": "v138_full",                 # V138 full preset, 500 cycles
     # V138.1: warm-start bugs fixed (backtest-safe) — imd + reasoning only
     "bt_v138_1": "v138_1",                  # V138.1 fixed preset, 500 cycles
+    # V139: V138.1 + LLM analyst conviction modifier
+    "bt_v139": "v139_llm_analyst",          # V139 LLM analyst overlay, 500 cycles
 }
 
 _SNAPSHOT_LABELS = {

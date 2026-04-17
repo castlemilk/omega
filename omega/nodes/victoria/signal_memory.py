@@ -289,7 +289,9 @@ class SignalMemory:
         if manifold_regime == "trending":
             adjusted = ema
         elif manifold_regime == "mean_reversion":
-            adjusted = -abs(ema) if abs(ema) > 0.1 else ema
+            # Crisis/bear regimes map to mean_reversion — dampen momentum signal 0.5×
+            # rather than sign-flip to avoid injecting spurious directional noise.
+            adjusted = ema * 0.5
         else:  # transitional
             adjusted = ema * 0.5
         return max(-1.0, min(1.0, adjusted)), acceleration

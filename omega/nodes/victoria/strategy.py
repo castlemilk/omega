@@ -427,6 +427,18 @@ class StrategyNode(Node):
         # so we record the exact conviction value that passed, not a fresh bias-free recompute.
         self._last_w_conv: float = 0.0
 
+        # --- V139: LLM analyst conviction modifier ---
+        self._llm_analyst: Any = None
+        self._llm_modifier_cache: dict[str, tuple[float, str]] = {}  # ticker → (modifier, reasoning)
+        self._llm_call_count: int = 0
+        self._llm_veto_count: int = 0
+        if self.features.llm_analyst_enabled:
+            try:
+                from omega.nodes.victoria.signals.llm_analyst import LLMAnalystSignal
+                self._llm_analyst = LLMAnalystSignal()
+            except Exception as _e:
+                logger.warning("LLMAnalystSignal init failed: %s — LLM disabled", _e)
+
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
 
@@ -501,6 +513,8 @@ class StrategyNode(Node):
             logger.info("StrategyNode: trace writer initialised for %s → %s", version, output_dir)
         if self.features.anomaly_detector:
             self._anomaly_detector = AnomalyDetector(version=version)
+        if self._llm_analyst is not None:
+            self._llm_analyst.set_log_path(version)
 
     def init_tracer(self, tracer: Any) -> None:
         """Inject an ActivationTracer (from signal_generation.py via VictoriaNode)."""
@@ -553,6 +567,8 @@ class StrategyNode(Node):
                 "proposals_generated": float(self._proposals_generated),
                 "proposals_filtered": float(self._proposals_filtered),
                 "filter_rate": self._filter_rate(),
+                "llm_call_count": float(self._llm_call_count),
+                "llm_veto_count": float(self._llm_veto_count),
             },
             metadata={
                 "weighting": self._weighting,
@@ -1822,6 +1838,47 @@ class StrategyNode(Node):
                             conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
+                # V139: LLM analyst conviction modifier
+                if self._llm_analyst is not None:
+                    _n = self.features.llm_analyst_call_every_n
+                    if current_cycle % _n == 0 or ticker not in self._llm_modifier_cache:
+                        _closed = (
+                            self._paper_engine.closed_trades if self._paper_engine else []
+                        )
+                        _positions = (
+                            self._paper_engine.positions if self._paper_engine else {}
+                        )
+                        _llm_r = self._llm_analyst.compute(
+                            ticker=ticker,
+                            direction="long",
+                            regime=_regime_consolidated,
+                            composite=float(sig.get("composite", 0.0)),
+                            weighted_conviction=self._last_w_conv,
+                            signals={k: v for k, v in sig.items() if isinstance(v, (int, float))},
+                            bear_prob=float(signals.get("_regime_w_bear_prob", 0.0)),
+                            bull_prob=float(signals.get("_regime_w_bull_prob", 0.0)),
+                            last_trades=list(_closed)[-5:] if _closed else [],
+                            open_positions=_positions,
+                            cycle=current_cycle,
+                        )
+                        self._llm_modifier_cache[ticker] = (
+                            _llm_r.conviction_modifier, _llm_r.reasoning
+                        )
+                        self._llm_call_count += 1
+                    _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
+                    _effective_wconv = self._last_w_conv * _llm_mod
+                    if _effective_wconv < self._long_conviction_threshold:
+                        self._llm_veto_count += 1
+                        filtered_this_cycle += 1
+                        logger.debug(
+                            "LLM vetoed %s LONG: mod=%.2f eff_wconv=%.4f rsn=%s",
+                            ticker, _llm_mod, _effective_wconv, _llm_rsn,
+                        )
+                        continue
+                    sig = dict(sig)
+                    sig["_llm_modifier"] = _llm_mod
+                    sig["_llm_reasoning"] = _llm_rsn
+
                 # V122: removed ADAUSDT from long suppression — single-version evidence only
                 # (V116 had 8/10 worst losers as ADA longs, but ADAUSDT was the primary long
                 # candidate. Removing it left no long diversity → all-short death spiral
@@ -2006,7 +2063,48 @@ class StrategyNode(Node):
                             conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
-                        # V114: suppress specific tickers on the short side based on postmortem evidence.
+                # V139: LLM analyst conviction modifier
+                if self._llm_analyst is not None:
+                    _n = self.features.llm_analyst_call_every_n
+                    if current_cycle % _n == 0 or ticker not in self._llm_modifier_cache:
+                        _closed = (
+                            self._paper_engine.closed_trades if self._paper_engine else []
+                        )
+                        _positions = (
+                            self._paper_engine.positions if self._paper_engine else {}
+                        )
+                        _llm_r = self._llm_analyst.compute(
+                            ticker=ticker,
+                            direction="short",
+                            regime=_regime_consolidated,
+                            composite=float(sig.get("composite", 0.0)),
+                            weighted_conviction=self._last_w_conv,
+                            signals={k: v for k, v in sig.items() if isinstance(v, (int, float))},
+                            bear_prob=float(signals.get("_regime_w_bear_prob", 0.0)),
+                            bull_prob=float(signals.get("_regime_w_bull_prob", 0.0)),
+                            last_trades=list(_closed)[-5:] if _closed else [],
+                            open_positions=_positions,
+                            cycle=current_cycle,
+                        )
+                        self._llm_modifier_cache[ticker] = (
+                            _llm_r.conviction_modifier, _llm_r.reasoning
+                        )
+                        self._llm_call_count += 1
+                    _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
+                    _effective_wconv = self._last_w_conv * _llm_mod
+                    if _effective_wconv < self._short_conviction_threshold:
+                        self._llm_veto_count += 1
+                        filtered_this_cycle += 1
+                        logger.debug(
+                            "LLM vetoed %s SHORT: mod=%.2f eff_wconv=%.4f rsn=%s",
+                            ticker, _llm_mod, _effective_wconv, _llm_rsn,
+                        )
+                        continue
+                    sig = dict(sig)
+                    sig["_llm_modifier"] = _llm_mod
+                    sig["_llm_reasoning"] = _llm_rsn
+
+                # V114: suppress specific tickers on the short side based on postmortem evidence.
                 # NEARUSDT: 22 shorts in V113, 27% WR, -$93 PnL — suppressed when filter active.
                 _short_suppressed = {
                     "NEARUSDT",  # V113: 22 shorts, 27% WR, -$93 PnL (50+ trade evidence)

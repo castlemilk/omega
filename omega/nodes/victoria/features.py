@@ -1154,3 +1154,17 @@ _V1381_BASE = {
     "geopolitical_signals": False,      # live-only (no per-bar historical timestamps yet)
 }
 _PRESETS["v138_1"] = VictoriaFeatures(**_V1381_BASE)
+
+# ---------------------------------------------------------------------------
+# V139 — V138.1 base + LLM analyst conviction modifier
+# ---------------------------------------------------------------------------
+# LLM acts as senior analyst returning conviction_modifier ∈ [0.0, 1.5].
+# modifier < 0.5 → veto (entry skipped regardless of quant score).
+# momentum_derivative crisis dampening: mean_reversion → 0.5× (V138.1 fix also included).
+# Backtest: fully deterministic via SHA256-keyed file cache (data/cache/llm_analyst/).
+_V139_BASE = {
+    **_V1381_BASE,
+    "llm_analyst_enabled": True,
+    "llm_analyst_call_every_n": 10,
+}
+_PRESETS["v139_llm_analyst"] = VictoriaFeatures(**_V139_BASE)
