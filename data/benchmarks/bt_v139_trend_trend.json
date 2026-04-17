@@ -1,0 +1,37 @@
+{
+  "version": "bt_v139_trend",
+  "snapshot_id": "trend",
+  "snapshot_path": "data/snapshots/snap_trending_2023q4.json",
+  "run_at": "2026-04-17T11:58:34.132208+00:00",
+  "seed": 42,
+  "features": "v139_llm_analyst",
+  "n_cycles": 500,
+  "metrics": {
+    "pnl": 20406.49,
+    "win_rate": 0.52,
+    "profit_factor": 2.059,
+    "n_trades": 75,
+    "long_pct": 1.0,
+    "short_pct": 0.0,
+    "regime_pnl": {
+      "normal": 10468.87,
+      "crisis": 4545.67,
+      "high_vol": 5391.96
+    },
+    "sharpe": 2.152,
+    "disposition_coefficient": null
+  },
+  "gate_result": {
+    "passed": true,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": true,
+      "long_short_balanced": false,
+      "no_regime_catastrophe": true,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": []
+  },
+  "leaderboard_rank": null
+}

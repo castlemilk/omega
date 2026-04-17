@@ -1,0 +1,37 @@
+{
+  "version": "bt_v139_recent",
+  "snapshot_id": "recent",
+  "snapshot_path": "data/snapshots/snap_20260414.json",
+  "run_at": "2026-04-17T11:58:27.305841+00:00",
+  "seed": 42,
+  "features": "v139_llm_analyst",
+  "n_cycles": 500,
+  "metrics": {
+    "pnl": 40886.81,
+    "win_rate": 0.4878,
+    "profit_factor": 2.473,
+    "n_trades": 82,
+    "long_pct": 1.0,
+    "short_pct": 0.0,
+    "regime_pnl": {
+      "crisis": 31820.87,
+      "normal": 8186.34,
+      "high_vol": 879.6
+    },
+    "sharpe": 2.862,
+    "disposition_coefficient": null
+  },
+  "gate_result": {
+    "passed": true,
+    "gates": {
+      "pnl_positive": true,
+      "profit_factor_above_1": true,
+      "n_trades_sufficient": true,
+      "long_short_balanced": false,
+      "no_regime_catastrophe": true,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": []
+  },
+  "leaderboard_rank": null
+}
