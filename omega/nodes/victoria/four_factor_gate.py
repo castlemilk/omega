@@ -147,6 +147,9 @@ class FourFactorGate:
             getattr(features, "ffg_exit_quality_min_clean", 20)
         )
         self._exit_quality_ratio: float = getattr(features, "ffg_exit_quality_ratio", 0.50)
+        # V137: per-gate enable flags (bypass individual gates for ablation)
+        self._gate1_enabled: bool = bool(getattr(features, "ffg_gate1_enabled", True))
+        self._gate4_enabled: bool = bool(getattr(features, "ffg_gate4_enabled", True))
 
     # ------------------------------------------------------------------
     # Static helpers
@@ -294,11 +297,16 @@ class FourFactorGate:
         Evaluate all four gates for an entry decision.
 
         All four gates must pass; any failure blocks entry.
+        Gates 1 and 4 can be disabled via ffg_gate1_enabled / ffg_gate4_enabled
+        for ablation experiments (disabled gate always passes).
         """
-        g1, p_model, p_implied, divergence = self._gate1_cross_market(ctx)
+        if self._gate1_enabled:
+            g1, p_model, p_implied, divergence = self._gate1_cross_market(ctx)
+        else:
+            g1, p_model, p_implied, divergence = True, 0.5, 0.5, 0.0
         g2, disp = self._gate2_disposition(ctx)
         g3, utilization, n_pos = self._gate3_capital_velocity(ctx)
-        g4 = self._gate4_pair_network(ctx)
+        g4 = self._gate4_pair_network(ctx) if self._gate4_enabled else True
 
         failing: list[str] = []
         if not g1:
@@ -360,9 +368,12 @@ class FourFactorGate:
         Gate 2 (disposition) is entry-only — closing positions because
         recent exit discipline has been bad creates a feedback loop.
         """
-        g1, p_model, p_implied, divergence = self._gate1_cross_market(ctx)
+        if self._gate1_enabled:
+            g1, p_model, p_implied, divergence = self._gate1_cross_market(ctx)
+        else:
+            g1, p_model, p_implied, divergence = True, 0.5, 0.5, 0.0
         g3, utilization, n_pos = self._gate3_capital_velocity(ctx)
-        g4 = self._gate4_pair_network(ctx)
+        g4 = self._gate4_pair_network(ctx) if self._gate4_enabled else True
 
         failing: list[str] = []
         if not g1:

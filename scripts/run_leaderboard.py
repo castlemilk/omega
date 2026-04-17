@@ -71,6 +71,10 @@ _CONFIG_LABELS = {
     "bt_v136a":    "v136_crisis_bias",      # crisis_long_block + thresh×0.5 + ATR K=1.2
     "bt_v136b":    "v136_aggressive_short", # crisis_long_block + thresh×0.4
     "bt_v136c":    "v136_size_boost",       # v136a + 1.5× short size boost
+    # V137: V136a champion + reworked AND-gate (V133v2 exit-quality Gate 2)
+    "bt_v137a":    "v137_full_gate",        # V136a + all 4 AND-gate gates
+    "bt_v137b":    "v137_no_gate1",         # V136a + AND-gate minus Gate 1 (divergence off)
+    "bt_v137c":    "v137_no_gate4",         # V136a + AND-gate minus Gate 4 (pair network off)
 }
 
 _SNAPSHOT_LABELS = {

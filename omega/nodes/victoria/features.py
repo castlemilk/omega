@@ -334,6 +334,16 @@ class VictoriaFeatures:
     last ffg_disposition_window trades.
     """
 
+    ffg_gate1_enabled: bool = True
+    """V137: when False, Gate 1 (cross_market_divergence) is bypassed — always passes.
+    Used to isolate which gates provide lift without the divergence filter.
+    """
+
+    ffg_gate4_enabled: bool = True
+    """V137: when False, Gate 4 (pair_network / ORC / Fiedler) is bypassed — always passes.
+    Used to isolate whether ORC/Fiedler is still noisy and over-filtering entries.
+    """
+
     # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
     # ------------------------------------------------------------------
@@ -1035,4 +1045,33 @@ _PRESETS["v136c_size_boost"] = VictoriaFeatures(
         **_V136_BASE,
         "crisis_position_size_boost": 1.5,  # 50% larger crisis shorts
     }
+)
+
+# ---------------------------------------------------------------------------
+# V137 — V136a champion base + reworked AND-gate (V133v2 exit-quality Gate 2)
+# ---------------------------------------------------------------------------
+# Base: V136a (crisis_long_block + ATR K=1.2 + high_vol_short_block)
+# Layer: four_factor_and_gate with exit-quality Gate 2 (clean_exit_ratio > 0.5
+#        after 20 clean exits; cold-start passes). Gates 1 and 4 toggleable.
+#
+#   v137a: full AND-gate (all 4 gates active)
+#   v137b: AND-gate minus Gate 1 (divergence off — test if over-filtering)
+#   v137c: AND-gate minus Gate 4 (pair network off — ORC/Fiedler noise test)
+# ---------------------------------------------------------------------------
+_V137_BASE = {
+    **_V136_BASE,                          # crisis_long_block + ATR K=1.2 etc.
+    "four_factor_and_gate": True,
+    "ffg_exit_quality_gate": True,         # V133v2 exit-quality Gate 2
+    "ffg_exit_quality_min_clean": 20,      # cold-start until 20 clean exits
+    "ffg_exit_quality_ratio": 0.50,        # require >50% clean exits in window
+    "ffg_divergence_threshold": 0.05,      # Gate 1 threshold (default)
+    "ffg_gate1_enabled": True,
+    "ffg_gate4_enabled": True,
+}
+_PRESETS["v137a_full_gate"] = VictoriaFeatures(**_V137_BASE)
+_PRESETS["v137b_no_gate1"] = VictoriaFeatures(
+    **{**_V137_BASE, "ffg_gate1_enabled": False}   # divergence gate off
+)
+_PRESETS["v137c_no_gate4"] = VictoriaFeatures(
+    **{**_V137_BASE, "ffg_gate4_enabled": False}   # pair-network gate off
 )
