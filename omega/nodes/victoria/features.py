@@ -345,6 +345,37 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V138 signal improvement flags
+    # ------------------------------------------------------------------
+
+    improved_momentum_derivative: bool = False
+    """V138: EMA-smooth momentum_derivative (α=0.4, 5-period) + regime-conditional semantics
+    (trending=continuation, mean_reversion=overextension inversion, transitional=0.5×).
+    Also adds momentum_acceleration (second-order derivative) as a separate signal.
+    """
+
+    signal_memory_warm_start: bool = False
+    """V138: Pre-seed SignalMemory with first 20 replay cycles before trading starts.
+    Fixes cold-start NaN on conviction_trend, agreement_trend, regime_duration signals.
+    """
+
+    geometry_warm_start: bool = False
+    """V138: Pre-seed MarketManifold and ORC correlation matrices from 30 pre-bars
+    before the trading window. Makes Gate 4 (ORC/Fiedler) active from cycle 1 in backtest.
+    """
+
+    signal_reasoning: bool = False
+    """V138: Write natural-language reasoning to DecisionTrace.reasoning field.
+    Explains top 3 signal drivers, regime context, gate status, and threshold gap.
+    Rendered as tooltip in geometry dashboard.
+    """
+
+    geopolitical_signals: bool = False
+    """V138: GDELT DOC 2.0 geopolitical event signals (geo_event_intensity, geo_sentiment,
+    geo_regime_shift, sanctions_signal). 15-min TTL cache; backtest replay by date range.
+    """
+
+    # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
     # ------------------------------------------------------------------
 
@@ -1075,3 +1106,17 @@ _PRESETS["v137b_no_gate1"] = VictoriaFeatures(
 _PRESETS["v137c_no_gate4"] = VictoriaFeatures(
     **{**_V137_BASE, "ffg_gate4_enabled": False}   # pair-network gate off
 )
+
+# ---------------------------------------------------------------------------
+# V138 — V137a champion + signal improvements + geopolitical data
+# ---------------------------------------------------------------------------
+# Run ONLY after all flags are unit-tested and greenlit by user.
+_V138_BASE = {
+    **_V137_BASE,
+    "improved_momentum_derivative": True,
+    "signal_memory_warm_start": True,
+    "geometry_warm_start": True,
+    "signal_reasoning": True,
+    "geopolitical_signals": True,
+}
+_PRESETS["v138_full"] = VictoriaFeatures(**_V138_BASE)

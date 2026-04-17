@@ -64,11 +64,13 @@ def load_snapshot(path: str | Path) -> dict[str, Any]:
         raise FileNotFoundError(f"Backtest snapshot not found: {p}")
     data = json.loads(p.read_text())
     sid = data.get("_snapshot_id", str(p.stem))
-    logger.info("Loaded snapshot %s (%s → %s, %d symbols)",
-                sid,
-                data.get("_date_range", ["?", "?"])[0],
-                data.get("_date_range", ["?", "?"])[-1],
-                len(data.get("_symbols", [])))
+    logger.info(
+        "Loaded snapshot %s (%s → %s, %d symbols)",
+        sid,
+        data.get("_date_range", ["?", "?"])[0],
+        data.get("_date_range", ["?", "?"])[-1],
+        len(data.get("_symbols", [])),
+    )
     return data
 
 
@@ -99,15 +101,11 @@ class ReplayIngestionNode:
 
         # Identify data symbols (skip metadata keys)
         self._symbols = [
-            k for k in snapshot
-            if not k.startswith("_") and isinstance(snapshot[k], dict)
+            k for k in snapshot if not k.startswith("_") and isinstance(snapshot[k], dict)
         ]
 
         # Series length — use shortest series across symbols
-        self._series_len = min(
-            len(snapshot[sym].get("close", []))
-            for sym in self._symbols
-        )
+        self._series_len = min(len(snapshot[sym].get("close", [])) for sym in self._symbols)
         if self._series_len < window + 1:
             raise ValueError(
                 f"Snapshot {self._snapshot_id} has only {self._series_len} bars "
@@ -120,8 +118,11 @@ class ReplayIngestionNode:
 
         logger.info(
             "ReplayIngestionNode: snapshot=%s  symbols=%d  series=%d  window=%d  steps=%d",
-            self._snapshot_id, len(self._symbols), self._series_len,
-            window, self._total_steps,
+            self._snapshot_id,
+            len(self._symbols),
+            self._series_len,
+            window,
+            self._total_steps,
         )
 
     # ------------------------------------------------------------------
@@ -157,7 +158,9 @@ class ReplayIngestionNode:
         # Advance cursor, wrapping at series end
         self._cursor += 1
         if self._cursor > self._series_len:
-            logger.debug("ReplayIngestionNode: series end reached, wrapping cursor to %d", self._window)
+            logger.debug(
+                "ReplayIngestionNode: series end reached, wrapping cursor to %d", self._window
+            )
             self._cursor = self._window
 
         return NodeOutput(success=True, result=sliced)
@@ -176,3 +179,34 @@ class ReplayIngestionNode:
         if self._total_steps <= 0:
             return 1.0
         return (self._cursor - self._window) / self._total_steps
+
+    def get_pre_bars(self, n: int = 30) -> list[dict[str, Any]]:
+        """Return the last n bars before the trading window starts.
+
+        These bars exist in the snapshot before cursor position 0, giving geometry
+        objects (MarketManifold, OllivierRicciCurvature) enough history to produce
+        non-degenerate correlation matrices from cycle 1.
+
+        Returns:
+            List of n market_data dicts (same format as execute() output), ordered
+            oldest-first. Each dict maps ticker → OHLCV slice dict.
+        """
+        n = min(n, self._window)
+        pre_bars: list[dict[str, Any]] = []
+        for offset in range(n, 0, -1):
+            end = self._window - offset + 1
+            start = max(0, end - self._window)
+            sliced: dict[str, Any] = {}
+            for sym in self._symbols:
+                sym_data = self._snapshot[sym]
+                s: dict[str, Any] = {}
+                for key, val in sym_data.items():
+                    s[key] = val[start:end] if isinstance(val, list) else val
+                meta = dict(sym_data.get("meta", {"symbol": sym}))
+                closes = s.get("close", [])
+                if closes:
+                    meta["regularMarketPrice"] = closes[-1]
+                s["meta"] = meta
+                sliced[sym] = s
+            pre_bars.append(sliced)
+        return pre_bars

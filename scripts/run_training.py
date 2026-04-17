@@ -660,6 +660,30 @@ def run(
         log.debug("SignalDecayDetector unavailable (non-fatal): %s", _sd_exc)
         _decay_detector = None
 
+    # ── V138: warm-start hooks (run before trading loop) ─────────────────
+    _sig_node = getattr(victoria, "_signals", None)  # SignalGenerationNode
+    _replay_node = victoria._ingestion if backtest_snapshot else None
+
+    if _sig_node is not None and _replay_node is not None:
+        if getattr(_active_features, "signal_memory_warm_start", False):
+            try:
+                # Feed the first 20 bars through _compute_all_signals silently
+                # to pre-populate SignalMemory without advancing the replay cursor.
+                _warm_signal_dicts: list[dict] = []
+                for _pre_bar in _replay_node.get_pre_bars(20):
+                    _wsigs = _sig_node._compute_all_signals(_pre_bar)
+                    _warm_signal_dicts.append(_wsigs)
+                _sig_node.warm_start_signals(_warm_signal_dicts)
+            except Exception as _ws_exc:
+                log.warning("signal_memory_warm_start failed (non-fatal): %s", _ws_exc)
+
+        if getattr(_active_features, "geometry_warm_start", False):
+            try:
+                _pre_bars = _replay_node.get_pre_bars(30)
+                _sig_node.warm_start_geometry(_pre_bars)
+            except Exception as _wg_exc:
+                log.warning("geometry_warm_start failed (non-fatal): %s", _wg_exc)
+
     # ── Loop state ────────────────────────────────────────────────────────
     progress: list[dict] = []
     sit_out_counts: dict[str, int] = {

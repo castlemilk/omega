@@ -158,6 +158,11 @@ from omega.nodes.victoria.decision_trace import (
     TraceWriter,
     build_explanation,
 )
+try:
+    from omega.nodes.victoria.signal_reasoning import build_reasoning as _build_reasoning
+    _HAS_SIGNAL_REASONING = True
+except ImportError:
+    _HAS_SIGNAL_REASONING = False
 from omega.nodes.victoria.features import VictoriaFeatures
 from omega.nodes.victoria.signal_confluence import ConfluenceAnalyzer, ConfluenceResult
 from omega.nodes.victoria.signal_correlation import SignalCorrelationMonitor
@@ -2650,6 +2655,39 @@ class StrategyNode(Node):
                     explanation="",
                 )
                 trace.explanation = build_explanation(trace)
+                if (
+                    _HAS_SIGNAL_REASONING
+                    and getattr(self.features, "signal_reasoning", False)
+                ):
+                    _activations = [
+                        {
+                            "name": k,
+                            "raw_value": v,
+                            "weighted_value": v,
+                            "direction_alignment": (
+                                1 if (v > 0 and _td.proposal == "LONG")
+                                or (v < 0 and _td.proposal == "SHORT")
+                                else -1 if v != 0 else 0
+                            ),
+                        }
+                        for k, v in _signal_vals.items()
+                    ]
+                    trace.reasoning = _build_reasoning(
+                        ticker=_tr_ticker,
+                        proposal=_td.proposal,
+                        final_decision=_td.final_action,
+                        activations=_activations,
+                        composite=_td.demeaned_composite,
+                        regime=_regime_consolidated,
+                        bear_prob=_bear if _bear >= 0 else 0.0,
+                        bull_prob=_bull if _bull >= 0 else 0.0,
+                        thresh_scale=_thresh_scale,
+                        long_thresh=self._long_conviction_threshold,
+                        short_thresh=self._short_conviction_threshold,
+                        threshold_gap=abs(_w_conv) - _thresh,
+                        gate_result=None,
+                        blocking_filter=_td.filter_reason,
+                    )
                 _traces.append(trace)
             if _traces:
                 self._trace_writer.write_many(_traces)

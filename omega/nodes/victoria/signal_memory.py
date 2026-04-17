@@ -41,10 +41,13 @@ class SignalMemory:
         "vol_regime",  # string-valued; handled separately for regime_duration
     }
 
-    def __init__(self, lookback: int = 20) -> None:
+    def __init__(self, lookback: int = 20, improved_momentum_derivative: bool = False) -> None:
         self.lookback = lookback
+        self.improved_momentum_derivative = improved_momentum_derivative
         # ticker → signal_name → deque[float]  (maxlen=lookback)
         self.history: dict[str, dict[str, deque]] = {}
+        # ticker → signal_key → last EMA value (for improved_momentum_derivative)
+        self._ema_deriv: dict[str, dict[str, float]] = {}
         self._lock = threading.RLock()
 
     # ------------------------------------------------------------------
@@ -88,7 +91,7 @@ class SignalMemory:
                     ticker_hist[k] = deque(maxlen=self.lookback)
                 ticker_hist[k].append(float(v))
 
-    def get_temporal_features(self, ticker: str) -> dict[str, float]:
+    def get_temporal_features(self, ticker: str, manifold_regime: str = "transitional") -> dict[str, float]:
         """Compute temporal features from stored signal history for *ticker*.
 
         Requires at least 3 cycles of history for any feature to be computed.
@@ -123,7 +126,15 @@ class SignalMemory:
             features: dict[str, float] = {}
 
             # --- momentum (sma_crossover) ---
-            features["momentum_derivative"] = self._derivative("sma_crossover", ticker)
+            if self.improved_momentum_derivative:
+                raw_deriv = self._derivative("sma_crossover", ticker)
+                mom_deriv, mom_accel = self._ema_derivative(
+                    "sma_crossover", ticker, raw_deriv, manifold_regime
+                )
+                features["momentum_derivative"] = mom_deriv
+                features["momentum_acceleration"] = mom_accel
+            else:
+                features["momentum_derivative"] = self._derivative("sma_crossover", ticker)
             features["momentum_persistence"] = self._persistence("sma_crossover", ticker)
             features["momentum_crossover"] = self._crossover("sma_crossover", ticker)
 
@@ -253,3 +264,47 @@ class SignalMemory:
             else:
                 break
         return min(1.0, count / self.lookback)
+
+    def _ema_derivative(
+        self,
+        signal: str,
+        ticker: str,
+        raw_deriv: float,
+        manifold_regime: str,
+        alpha: float = 0.4,
+    ) -> tuple[float, float]:
+        """EMA-smoothed derivative with regime-conditional semantics.
+
+        Returns:
+            (adjusted_derivative, acceleration) both clamped to [-1, 1].
+        """
+        key = f"_ema_{signal}"
+        if ticker not in self._ema_deriv:
+            self._ema_deriv[ticker] = {}
+        prev_ema = self._ema_deriv[ticker].get(key, raw_deriv)
+        ema = alpha * raw_deriv + (1.0 - alpha) * prev_ema
+        acceleration = max(-1.0, min(1.0, ema - prev_ema))
+        self._ema_deriv[ticker][key] = ema
+
+        if manifold_regime == "trending":
+            adjusted = ema
+        elif manifold_regime == "mean_reversion":
+            adjusted = -abs(ema) if abs(ema) > 0.1 else ema
+        else:  # transitional
+            adjusted = ema * 0.5
+        return max(-1.0, min(1.0, adjusted)), acceleration
+
+    def warm_start(self, ticker_signals_list: list[dict[str, Any]]) -> None:
+        """Pre-seed signal history from replay cycles before trading begins.
+
+        Iterates over a list of per-cycle dicts mapping ticker → signal_dict,
+        calling update() for each without advancing the trading cursor.
+
+        Args:
+            ticker_signals_list: List of {ticker: {signal: value}} dicts,
+                one entry per warm-up cycle.
+        """
+        for cycle_signals in ticker_signals_list:
+            for ticker, signals in cycle_signals.items():
+                if isinstance(signals, dict):
+                    self.update(ticker, signals)

@@ -145,6 +145,13 @@ try:
 except ImportError:
     _HAS_WHALE_FLOW = False
 
+try:
+    from omega.nodes.victoria.signals.geopolitical import GeopoliticalSignal as _GeopoliticalSignal
+
+    _HAS_GEOPOLITICAL = True
+except ImportError:
+    _HAS_GEOPOLITICAL = False
+
 
 def _safe_mean(values: list[float | None], n: int) -> float | None:
     clean = [v for v in values[-n:] if v is not None]
@@ -367,8 +374,9 @@ class SignalGenerationNode(Node):
             and getattr(self._features, "temporal_memory", False)
         ):
             with contextlib.suppress(Exception):
-                self._signal_memory = _SignalMemory(lookback=20)
-                logger.info("SignalMemory initialized (lookback=20)")
+                _imd = bool(getattr(self._features, "improved_momentum_derivative", False))
+                self._signal_memory = _SignalMemory(lookback=20, improved_momentum_derivative=_imd)
+                logger.info("SignalMemory initialized (lookback=20, imd=%s)", _imd)
 
         # V103 adaptive_combiner: IC-weighted combiner with signal flipping
         self._adaptive_combiner: Any = None
@@ -387,6 +395,17 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._whale_flow = _WhaleFlowSignals()
                 logger.info("WhaleFlowSignals initialized")
+
+        # V138 geopolitical_signals: GDELT DOC 2.0 event signals
+        self._geo_signal: Any = None
+        if (
+            _HAS_GEOPOLITICAL
+            and self._features
+            and getattr(self._features, "geopolitical_signals", False)
+        ):
+            with contextlib.suppress(Exception):
+                self._geo_signal = _GeopoliticalSignal()
+                logger.info("GeopoliticalSignal initialized")
 
         # V106 trade_reinforcement: EMA-based per-signal weight adjustments
         self._reinforcer: Any = None
@@ -599,6 +618,50 @@ class SignalGenerationNode(Node):
         except Exception:
             pass
 
+    def warm_start_signals(self, pre_signal_dicts: list[dict[str, Any]]) -> None:
+        """Pre-seed SignalMemory with signal history before trading begins.
+
+        Called from run_training.py before the main loop when signal_memory_warm_start
+        feature flag is ON. Feeds silent replay cycles into the memory without recording
+        traces or advancing the trading cursor.
+
+        Args:
+            pre_signal_dicts: List of {ticker: {signal: value}} dicts, one per warm cycle.
+        """
+        if self._signal_memory is None:
+            return
+        try:
+            self._signal_memory.warm_start(pre_signal_dicts)
+            logger.info("SignalMemory warm-started with %d cycles", len(pre_signal_dicts))
+        except Exception as exc:
+            logger.warning("SignalMemory warm_start failed: %s", exc)
+
+    def warm_start_geometry(self, pre_bars: list[dict[str, Any]]) -> None:
+        """Pre-seed MarketManifold and OllivierRicciCurvature from snapshot pre-bars.
+
+        Called from run_training.py before the main loop when geometry_warm_start
+        feature flag is ON. Feeds the last 30 bars before the trading window into
+        geometry objects so their correlation matrices are non-degenerate from cycle 1.
+
+        Args:
+            pre_bars: List of market_data dicts (from ReplayIngestionNode.get_pre_bars()),
+                ordered oldest-first.
+        """
+        warmed = 0
+        for bar in pre_bars:
+            if self._market_manifold is not None:
+                try:
+                    self._market_manifold.update(bar)
+                    warmed += 1
+                except Exception as exc:
+                    logger.debug("geometry_warm_start manifold bar failed: %s", exc)
+            if self._orc is not None:
+                try:
+                    self._orc.update(bar)
+                except Exception as exc:
+                    logger.debug("geometry_warm_start orc bar failed: %s", exc)
+        logger.info("Geometry warm-started with %d bars", warmed)
+
     def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
 
@@ -641,6 +704,21 @@ class SignalGenerationNode(Node):
                 _spy_val = self._spy_signal.compute(market_data)
             except Exception as _exc:
                 logger.warning("SPYSignal compute error: %s", _exc)
+
+        # V138: geopolitical signals (market-level, applied to all tickers)
+        _geo_signals: dict[str, float] = {}
+        if self._geo_signal is not None:
+            try:
+                import datetime as _dt_mod
+                _is_hist = self._features is not None and getattr(
+                    self._features, "backtest_mode", False
+                )
+                _geo_signals = self._geo_signal.compute(
+                    timestamp=_dt_mod.datetime.now(_dt_mod.timezone.utc),
+                    is_historical=_is_hist,
+                )
+            except Exception as _geo_exc:
+                logger.debug("GeopoliticalSignal compute error: %s", _geo_exc)
 
         _ricci_val: float = 0.0
         _ricci_regime: str = "transitional"
@@ -828,6 +906,9 @@ class SignalGenerationNode(Node):
                 ts["yield_curve_signal"] = _yield_curve_val
             if _spy_val != 0.0:
                 ts["spy_signal"] = _spy_val
+            for _geo_k, _geo_v in _geo_signals.items():
+                if _geo_v != 0.0:
+                    ts[_geo_k] = _geo_v
             if _ricci_val != 0.0:
                 ts["ricci_curvature_signal"] = _ricci_val
             if _orc_val != 0.0:
@@ -900,7 +981,10 @@ class SignalGenerationNode(Node):
             if self._signal_memory is not None:
                 try:
                     self._signal_memory.update(ticker, ts)
-                    _temporal = self._signal_memory.get_temporal_features(ticker)
+                    _manifold_regime_for_mem = locals().get("_ricci_regime", "transitional")
+                    _temporal = self._signal_memory.get_temporal_features(
+                        ticker, manifold_regime=_manifold_regime_for_mem
+                    )
                     ts.update(_temporal)
                 except Exception as _tm_exc:
                     logger.debug("temporal_memory %s: %s", ticker, _tm_exc)
@@ -948,12 +1032,17 @@ class SignalGenerationNode(Node):
             if self._features and getattr(self._features, "postmortem_signal_filter", False):
                 _dead_signals = {
                     # V107-V110 cross-version analysis (124+ trades): accuracy 37-44%
-                    "sma_long", "sma_short", "price", "return_1d",
-                    "sma_crossover", "fear_greed_signal", "liquidation_proximity",
+                    "sma_long",
+                    "sma_short",
+                    "price",
+                    "return_1d",
+                    "sma_crossover",
+                    "fear_greed_signal",
+                    "liquidation_proximity",
                     # V115 postmortem (44 trades): flip confirmed in V116 cross-version
-                    "vpin",                    # 37.5% → 51.4% after flip (V116 confirmed)
+                    "vpin",  # 37.5% → 51.4% after flip (V116 confirmed)
                     "ricci_curvature_signal",  # 38.1% → 56.8% after flip (V116 confirmed)
-                    "trade_flow_direction",    # 39.5% → 63.2% after flip (V116 confirmed)
+                    "trade_flow_direction",  # 39.5% → 63.2% after flip (V116 confirmed)
                     # NOTE: whale_print removed — V122 fix: was 61% positive-biased in V116
                     # (n=28, below 50-trade policy). Negating it created systematic short push.
                     # VPIN is bounded [0,1]: negated value is always in [-1,0] (permanently

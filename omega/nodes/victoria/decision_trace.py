@@ -101,6 +101,10 @@ class DecisionTrace:
     explanation: str = ""
     """One-sentence summary of why this decision was made."""
 
+    reasoning: str = ""
+    """Structured multi-clause reasoning (signal drivers, regime, gate status, gap).
+    Populated when signal_reasoning feature flag is ON. Rendered as tooltip in dashboard."""
+
     def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         # Replace inf/nan with None for JSON safety
@@ -137,7 +141,7 @@ def build_explanation(trace: DecisionTrace) -> str:
         direction = "LONG" if trace.proposal == "LONG" else "SHORT"
         return (
             f"{trace.ticker}: {direction} — w_conv={trace.weighted_conviction:+.3f} "
-            f"(thresh={trace.long_thresh:.3f if direction == 'LONG' else trace.short_thresh:.3f}), "
+            f"(thresh={(trace.long_thresh if direction == 'LONG' else trace.short_thresh):.3f}), "
             f"regime={trace.regime}, ricci={trace.ricci_scalar:+.2f}, fiedler={trace.fiedler_raw:.2f}"
         )
 
