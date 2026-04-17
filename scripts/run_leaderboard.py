@@ -78,6 +78,10 @@ _CONFIG_LABELS = {
     # 500-cycle deep analysis (Track A)
     "bt500_v136a": "v136a_500cyc",          # V136a baseline, 500 cycles
     "bt500_v137a": "v137a_500cyc",          # V137a full AND-gate, 500 cycles
+    # V138: signal improvements + warm-starts + geopolitical (Phase A test)
+    "bt_v138": "v138_full",                 # V138 full preset, 500 cycles
+    # V138.1: warm-start bugs fixed (backtest-safe) — imd + reasoning only
+    "bt_v138_1": "v138_1",                  # V138.1 fixed preset, 500 cycles
 }
 
 _SNAPSHOT_LABELS = {
@@ -107,7 +111,7 @@ def infer_config_snapshot(version: str) -> tuple[str, str]:
     """Infer config label and snapshot label from version string like bt_v93_recent."""
     config = "unknown"
     snapshot = "unknown"
-    for prefix, label in _CONFIG_LABELS.items():
+    for prefix, label in sorted(_CONFIG_LABELS.items(), key=lambda kv: -len(kv[0])):
         if version.startswith(prefix):
             config = label
             suffix = version[len(prefix):].lstrip("_")

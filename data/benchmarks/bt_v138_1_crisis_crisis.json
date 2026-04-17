@@ -1,0 +1,41 @@
+{
+  "version": "bt_v138_1_crisis",
+  "snapshot_id": "crisis",
+  "snapshot_path": "data/snapshots/snap_crisis_2022h1.json",
+  "run_at": "2026-04-17T08:49:31.190173+00:00",
+  "seed": 42,
+  "features": "v138_1",
+  "n_cycles": 500,
+  "metrics": {
+    "pnl": -2219.48,
+    "win_rate": 0.3739,
+    "profit_factor": 0.961,
+    "n_trades": 115,
+    "long_pct": 0.6261,
+    "short_pct": 0.3739,
+    "regime_pnl": {
+      "crisis": 23957.96,
+      "normal": -21571.97,
+      "high_vol": -4605.47
+    },
+    "sharpe": -0.147,
+    "disposition_coefficient": null
+  },
+  "gate_result": {
+    "passed": false,
+    "gates": {
+      "pnl_positive": false,
+      "profit_factor_above_1": false,
+      "n_trades_sufficient": true,
+      "long_short_balanced": true,
+      "no_regime_catastrophe": false,
+      "disposition_acceptable": false
+    },
+    "failure_reasons": [
+      "PnL negative: -2219",
+      "PF=0.961 < 1.0",
+      "Regime catastrophe: {'normal': -21571.97}"
+    ]
+  },
+  "leaderboard_rank": null
+}

@@ -376,6 +376,23 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V139 LLM analyst flags
+    # ------------------------------------------------------------------
+
+    llm_analyst_enabled: bool = False
+    """V139: inject LLM conviction_modifier (0.0–1.5) that scales the IC-weighted
+    composite before threshold comparison. LLM acts as analyst, not decision-maker;
+    quant system retains full control. SHA256-keyed file cache for deterministic replay.
+    Requires ANTHROPIC_API_KEY env var; degrades gracefully to 1.0 on any error.
+    """
+
+    llm_analyst_call_every_n: int = 10
+    """V139: call LLM API every N cycles (per ticker). Between calls, last cached
+    modifier is reused. Lower = fresher analysis; higher = lower API cost.
+    Default 10 = ~once per 10 trading cycles per symbol.
+    """
+
+    # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
     # ------------------------------------------------------------------
 
@@ -1120,3 +1137,20 @@ _V138_BASE = {
     "geopolitical_signals": True,
 }
 _PRESETS["v138_full"] = VictoriaFeatures(**_V138_BASE)
+
+# ---------------------------------------------------------------------------
+# V138.1 — warm-start bugs fixed: disable in backtest (regime mismatch)
+# ---------------------------------------------------------------------------
+# signal_memory_warm_start and geometry_warm_start are now live-mode only.
+# In backtest, pre-bar seeding injects wrong-era regime bias (e.g. late-2021
+# bullish history at the start of a H1-2022 crisis replay).
+# improved_momentum_derivative + signal_reasoning remain enabled.
+_V1381_BASE = {
+    **_V137_BASE,
+    "improved_momentum_derivative": True,
+    "signal_memory_warm_start": False,  # disabled: backtest regime mismatch
+    "geometry_warm_start": False,       # disabled: backtest regime mismatch
+    "signal_reasoning": True,
+    "geopolitical_signals": False,      # live-only (no per-bar historical timestamps yet)
+}
+_PRESETS["v138_1"] = VictoriaFeatures(**_V1381_BASE)
