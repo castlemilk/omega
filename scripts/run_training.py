@@ -664,25 +664,29 @@ def run(
     _sig_node = getattr(victoria, "_signals", None)  # SignalGenerationNode
     _replay_node = victoria._ingestion if backtest_snapshot else None
 
-    if _sig_node is not None and _replay_node is not None:
-        if getattr(_active_features, "signal_memory_warm_start", False):
-            try:
-                # Feed the first 20 bars through _compute_all_signals silently
-                # to pre-populate SignalMemory without advancing the replay cursor.
-                _warm_signal_dicts: list[dict] = []
-                for _pre_bar in _replay_node.get_pre_bars(20):
-                    _wsigs = _sig_node._compute_all_signals(_pre_bar)
-                    _warm_signal_dicts.append(_wsigs)
-                _sig_node.warm_start_signals(_warm_signal_dicts)
-            except Exception as _ws_exc:
-                log.warning("signal_memory_warm_start failed (non-fatal): %s", _ws_exc)
+    if _sig_node is not None:
+        if _replay_node is not None:
+            # Backtest mode: disable signals that would inject current-day data into
+            # historical replays, causing regime contamination.
+            if getattr(_active_features, "geopolitical_signals", False):
+                try:
+                    _sig_node.disable_geo_in_backtest()
+                except Exception:
+                    pass
+            # signal_memory_warm_start and geometry_warm_start are disabled in backtest:
+            # pre-bars come from before the trading window (different regime) and contaminate
+            # conviction_trend / Ricci with wrong-era bias. Both features are live-mode only.
+            if getattr(_active_features, "signal_memory_warm_start", False):
+                log.info("signal_memory_warm_start skipped in backtest (regime mismatch risk)")
+            if getattr(_active_features, "geometry_warm_start", False):
+                log.info("geometry_warm_start skipped in backtest (regime mismatch risk)")
 
-        if getattr(_active_features, "geometry_warm_start", False):
-            try:
-                _pre_bars = _replay_node.get_pre_bars(30)
-                _sig_node.warm_start_geometry(_pre_bars)
-            except Exception as _wg_exc:
-                log.warning("geometry_warm_start failed (non-fatal): %s", _wg_exc)
+        else:
+            # Live mode: pre-seed from recent history — same regime, safe to warm-start.
+            if getattr(_active_features, "signal_memory_warm_start", False):
+                log.info("signal_memory_warm_start: live mode — warm-start on first cycle history")
+            if getattr(_active_features, "geometry_warm_start", False):
+                log.info("geometry_warm_start: live mode — warm-start on recent bars")
 
     # ── Loop state ────────────────────────────────────────────────────────
     progress: list[dict] = []
@@ -819,7 +823,7 @@ def run(
                         for _trade in new_closed:
                             _sym = _trade.get("sym", _trade.get("symbol", ""))
                             _td = _ticker_decs.get(_sym)
-                            if _td is not None:
+                            if _td is not None and hasattr(_td, "raw_composite"):
                                 _scf.write(json.dumps({
                                     "cycle": cycle_num,
                                     "ts": datetime.now(UTC).isoformat(),

@@ -158,8 +158,10 @@ from omega.nodes.victoria.decision_trace import (
     TraceWriter,
     build_explanation,
 )
+
 try:
     from omega.nodes.victoria.signal_reasoning import build_reasoning as _build_reasoning
+
     _HAS_SIGNAL_REASONING = True
 except ImportError:
     _HAS_SIGNAL_REASONING = False
@@ -429,13 +431,26 @@ class StrategyNode(Node):
 
         # --- V139: LLM analyst conviction modifier ---
         self._llm_analyst: Any = None
-        self._llm_modifier_cache: dict[str, tuple[float, str]] = {}  # ticker → (modifier, reasoning)
+        self._llm_modifier_cache: dict[
+            str, tuple[float, str]
+        ] = {}  # ticker → (modifier, reasoning)
         self._llm_call_count: int = 0
         self._llm_veto_count: int = 0
         if self.features.llm_analyst_enabled:
             try:
                 from omega.nodes.victoria.signals.llm_analyst import LLMAnalystSignal
-                self._llm_analyst = LLMAnalystSignal()
+
+                self._llm_analyst = LLMAnalystSignal(
+                    provider=getattr(self.features, "llm_analyst_provider", "claude"),
+                    model=getattr(self.features, "llm_analyst_model", "claude-haiku-4-5-20251001"),
+                    api_base=getattr(self.features, "llm_analyst_api_base", ""),
+                    api_key_env=getattr(self.features, "llm_analyst_api_key_env", ""),
+                )
+                logger.info(
+                    "LLMAnalystSignal: provider=%s model=%s",
+                    getattr(self.features, "llm_analyst_provider", "claude"),
+                    getattr(self.features, "llm_analyst_model", "?"),
+                )
             except Exception as _e:
                 logger.warning("LLMAnalystSignal init failed: %s — LLM disabled", _e)
 
@@ -1842,12 +1857,8 @@ class StrategyNode(Node):
                 if self._llm_analyst is not None:
                     _n = self.features.llm_analyst_call_every_n
                     if current_cycle % _n == 0 or ticker not in self._llm_modifier_cache:
-                        _closed = (
-                            self._paper_engine.closed_trades if self._paper_engine else []
-                        )
-                        _positions = (
-                            self._paper_engine.positions if self._paper_engine else {}
-                        )
+                        _closed = self._paper_engine.closed_trades if self._paper_engine else []
+                        _positions = self._paper_engine.positions if self._paper_engine else {}
                         _llm_r = self._llm_analyst.compute(
                             ticker=ticker,
                             direction="long",
@@ -1862,17 +1873,20 @@ class StrategyNode(Node):
                             cycle=current_cycle,
                         )
                         self._llm_modifier_cache[ticker] = (
-                            _llm_r.conviction_modifier, _llm_r.reasoning
+                            _llm_r.conviction_modifier,
+                            _llm_r.reasoning,
                         )
                         self._llm_call_count += 1
                     _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
-                    _effective_wconv = self._last_w_conv * _llm_mod
-                    if _effective_wconv < self._long_conviction_threshold:
+                    # Hard veto only on strongly negative LLM assessment (mod < 0.30).
+                    # 0.30-0.70 = cautious but passes; >1.0 = amplify.
+                    # Removed effective_wconv gate — it killed all near-threshold trades.
+                    if _llm_mod < 0.30:
                         self._llm_veto_count += 1
                         filtered_this_cycle += 1
                         logger.debug(
-                            "LLM vetoed %s LONG: mod=%.2f eff_wconv=%.4f rsn=%s",
-                            ticker, _llm_mod, _effective_wconv, _llm_rsn,
+                            "LLM vetoed %s LONG: mod=%.2f rsn=%s",
+                            ticker, _llm_mod, _llm_rsn,
                         )
                         continue
                     sig = dict(sig)
@@ -2067,12 +2081,8 @@ class StrategyNode(Node):
                 if self._llm_analyst is not None:
                     _n = self.features.llm_analyst_call_every_n
                     if current_cycle % _n == 0 or ticker not in self._llm_modifier_cache:
-                        _closed = (
-                            self._paper_engine.closed_trades if self._paper_engine else []
-                        )
-                        _positions = (
-                            self._paper_engine.positions if self._paper_engine else {}
-                        )
+                        _closed = self._paper_engine.closed_trades if self._paper_engine else []
+                        _positions = self._paper_engine.positions if self._paper_engine else {}
                         _llm_r = self._llm_analyst.compute(
                             ticker=ticker,
                             direction="short",
@@ -2087,17 +2097,20 @@ class StrategyNode(Node):
                             cycle=current_cycle,
                         )
                         self._llm_modifier_cache[ticker] = (
-                            _llm_r.conviction_modifier, _llm_r.reasoning
+                            _llm_r.conviction_modifier,
+                            _llm_r.reasoning,
                         )
                         self._llm_call_count += 1
                     _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
-                    _effective_wconv = self._last_w_conv * _llm_mod
-                    if _effective_wconv < self._short_conviction_threshold:
+                    # Hard veto only on strongly negative LLM assessment (mod < 0.30).
+                    if _llm_mod < 0.30:
                         self._llm_veto_count += 1
                         filtered_this_cycle += 1
                         logger.debug(
-                            "LLM vetoed %s SHORT: mod=%.2f eff_wconv=%.4f rsn=%s",
-                            ticker, _llm_mod, _effective_wconv, _llm_rsn,
+                            "LLM vetoed %s SHORT: mod=%.2f rsn=%s",
+                            ticker,
+                            _llm_mod,
+                            _llm_rsn,
                         )
                         continue
                     sig = dict(sig)
@@ -2753,19 +2766,19 @@ class StrategyNode(Node):
                     explanation="",
                 )
                 trace.explanation = build_explanation(trace)
-                if (
-                    _HAS_SIGNAL_REASONING
-                    and getattr(self.features, "signal_reasoning", False)
-                ):
+                if _HAS_SIGNAL_REASONING and getattr(self.features, "signal_reasoning", False):
                     _activations = [
                         {
                             "name": k,
                             "raw_value": v,
                             "weighted_value": v,
                             "direction_alignment": (
-                                1 if (v > 0 and _td.proposal == "LONG")
+                                1
+                                if (v > 0 and _td.proposal == "LONG")
                                 or (v < 0 and _td.proposal == "SHORT")
-                                else -1 if v != 0 else 0
+                                else -1
+                                if v != 0
+                                else 0
                             ),
                         }
                         for k, v in _signal_vals.items()
