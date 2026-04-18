@@ -903,13 +903,13 @@ def run(
                         "composite_method": _sym_sig.get("composite_method", "equal_weight"),
                         "basket_std": round(_basket_std, 6),
                         "basket_mean": round(_basket_mean, 6),
-                        "conviction": str(_td2.conviction) if _td2 else str(_trade.get("conviction", "")),
-                        "conviction_score": round(float(_td2.conviction_score), 6) if _td2 else None,
-                        "filters_applied": list(_td2.filters_applied) if _td2 else [],
+                        "conviction": str(_td2.conviction) if _td2 and hasattr(_td2, "conviction") else str(_trade.get("conviction", "")),
+                        "conviction_score": round(float(_td2.conviction_score), 6) if _td2 and hasattr(_td2, "conviction_score") else None,
+                        "filters_applied": list(_td2.filters_applied) if _td2 and hasattr(_td2, "filters_applied") else [],
                         "signal_traces": [
                             {"name": st.signal_name, "value": round(float(st.raw_value), 4), "weight": round(float(st.weight_applied), 4)}
                             for st in _td2.signal_traces
-                        ] if _td2 else [],
+                        ] if _td2 and hasattr(_td2, "signal_traces") else [],
                         "kelly_scale": round(_kelly_scale_cur, 4),
                         "fiedler_scale": round(getattr(strat, "_last_fiedler_scale", 1.0), 4) if strat else None,
                         "ml_weights": _ml_weights_snap,
