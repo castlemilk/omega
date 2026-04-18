@@ -95,6 +95,11 @@ _CONFIG_LABELS = {
     "bt_v140_glm":          "v140_glm",
     "bt_v140_minimax":      "v140_minimax",
     "bt_v140_claude_haiku": "v140_claude_haiku",
+    # V141: crisis alpha — all 6 forensics fixes
+    "bt_v141":              "v141_crisis_alpha",
+    "bt_v141_crisis":       "v141_crisis_alpha",
+    "bt_v141_no_llm":       "v141_crisis_no_llm",
+    "bt_v141_no_llm_crisis": "v141_crisis_no_llm",
 }
 
 _SNAPSHOT_LABELS = {

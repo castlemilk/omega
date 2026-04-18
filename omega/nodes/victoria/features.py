@@ -420,6 +420,79 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V141 crisis alpha fixes
+    # ------------------------------------------------------------------
+
+    regime_hysteresis_enabled: bool = False
+    """V141: require N consecutive non-crisis cycles before allowing crisis→normal transition.
+    Prevents Wasserstein false escapes where 1-2 "pause" candles reset the crisis label.
+    """
+
+    regime_hysteresis_cycles: int = 3
+    """V141: number of consecutive non-crisis cycles required before exiting crisis mode.
+    Only applied when regime_hysteresis_enabled=True.
+    """
+
+    bear_prob_long_block_threshold: float = 0.55
+    """V141: block long entries when bear_prob >= this threshold, regardless of regime label.
+    Default 0.55 preserves existing behavior. Set to 0.35 for V141 to catch bear-market longs
+    that slip through when the regime label temporarily reads "normal".
+    """
+
+    llm_crisis_mode_enabled: bool = False
+    """V141: asymmetric LLM veto thresholds when bear_prob > 0.30.
+    Long veto raised to llm_crisis_long_veto; short veto lowered to llm_crisis_short_veto.
+    Also increases call frequency to llm_crisis_call_every_n cycles.
+    """
+
+    llm_crisis_long_veto: float = 0.50
+    """V141: LLM veto threshold for LONG entries in crisis/bear regime (bear_prob > 0.30).
+    mod < this → veto. Default 0.50 (vs 0.30 in normal) — forensics showed 0.32-0.45 mods
+    for losing longs that should have been blocked.
+    """
+
+    llm_crisis_short_veto: float = 0.20
+    """V141: LLM veto threshold for SHORT entries in crisis/bear regime.
+    mod < this → veto. Default 0.20 (vs 0.30 in normal) — be more permissive with shorts
+    in crisis since they're the profit engine in bear markets.
+    """
+
+    llm_crisis_call_every_n: int = 5
+    """V141: LLM call frequency in crisis/bear regime (bear_prob > 0.30).
+    More frequent calls = fresher analysis during regime stress.
+    """
+
+    long_trail_multiplier: float = 1.0
+    """V141: scale factor for mfe_trail_k on LONG positions.
+    0.5 = trail activates at 0.5× ATR MFE (tighter — exits losing longs sooner).
+    1.0 = no change from base mfe_trail_k.
+    """
+
+    short_trail_multiplier: float = 1.0
+    """V141: scale factor for mfe_trail_k on SHORT positions.
+    1.5 = trail activates at 1.5× ATR MFE (wider — lets crisis shorts run further).
+    1.0 = no change from base mfe_trail_k.
+    """
+
+    zero_mfe_early_exit_cycles: int = 0
+    """V141: close positions with MFE=0 after this many cycles (disabled when 0).
+    Forensics: top 7 losers all had mfe=$0 after 3-4 cycles — position was wrong from tick 1.
+    Setting to 2 closes these immediately rather than holding to full ATR stop.
+    """
+
+    fear_greed_crisis_weight: float = 1.0
+    """V141: weight multiplier for fear_greed_signal in crisis/bear regime (bear_prob > 0.30).
+    1.0 = no change. 0.1 = dampen — forensics: fear_greed avg=+1.0 in H1-2022 (crisis-poison
+    bullish push). At 0.1×, its contribution to composite drops from ~1.0 to 0.1.
+    """
+
+    sma_crisis_weight: float = 1.0
+    """V141: weight multiplier for sma_crossover in crisis/bear regime (bear_prob > 0.30).
+    1.0 = no change. 0.2 = dampen — dead-cat bounces create false bullish crossovers.
+    At 0.2×, SMA crossover bullish push is mostly removed in structural downtrends.
+    """
+
+    # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
     # ------------------------------------------------------------------
 
@@ -1291,4 +1364,53 @@ _PRESETS["v140_claude_haiku"] = VictoriaFeatures(**{
     **_V140_BASE,
     "llm_analyst_provider": "cli",
     "llm_analyst_model": "claude-haiku-4-5-20251001",
+})
+
+# ---------------------------------------------------------------------------
+# V141 — Crisis alpha: all 6 forensics fixes applied on top of V139 base
+# ---------------------------------------------------------------------------
+# Root causes from crisis-forensics-v139.md:
+#   1. Regime mislabeling: 56 longs in "normal" during bear (-$21,905) → hysteresis
+#   2. Bear-prob direct gate: block longs when bear_prob > 0.35 regardless of label
+#   3. LLM veto too permissive for bear-market longs (0.30→0.50 in crisis mode)
+#   4. Crisis exit asymmetry: tighter long trail, wider short trail, zero-MFE exit
+#   5. fear_greed_signal crisis-poison: coded bullish in bear market → dampen 0.1×
+#   6. sma_crossover crisis-poison: dead-cat bounce signals → dampen 0.2×
+_V141_BASE = {
+    **_V1381_BASE,
+    # V139 LLM analyst (Haiku via CLI)
+    "llm_analyst_enabled": True,
+    "llm_analyst_call_every_n": 10,
+    "llm_analyst_provider": "cli",
+    "llm_analyst_model": "claude-haiku-4-5-20251001",
+    # Fix 1: regime hysteresis (3-cycle exit guard)
+    "regime_hysteresis_enabled": True,
+    "regime_hysteresis_cycles": 3,
+    # Fix 2: bear_prob direct long gate
+    "bear_prob_long_block_threshold": 0.35,
+    # Fix 3: LLM crisis mode (asymmetric veto thresholds)
+    "llm_crisis_mode_enabled": True,
+    "llm_crisis_long_veto": 0.50,
+    "llm_crisis_short_veto": 0.20,
+    "llm_crisis_call_every_n": 5,
+    # Fix 4: exit asymmetry (tight long trail, wide short trail)
+    "long_trail_multiplier": 0.5,   # trail activates at 0.5× ATR MFE for longs
+    "short_trail_multiplier": 1.5,  # trail activates at 1.5× ATR MFE for shorts
+    "zero_mfe_early_exit_cycles": 2,  # close zero-MFE positions after 2 cycles
+    # Fix 5 + 6: dampen crisis-poison signals
+    "fear_greed_crisis_weight": 0.1,
+    "sma_crisis_weight": 0.2,
+    # Carry forward V136a crisis flags
+    "crisis_long_block": True,
+    "crisis_short_permissive": True,
+    "crisis_short_thresh_scale": 0.5,
+    "crisis_position_size_boost": 1.25,
+}
+_PRESETS["v141_crisis_alpha"] = VictoriaFeatures(**_V141_BASE)
+
+# V141 ablation: no LLM (to isolate structural fixes from LLM contribution)
+_PRESETS["v141_crisis_no_llm"] = VictoriaFeatures(**{
+    **_V141_BASE,
+    "llm_analyst_enabled": False,
+    "llm_crisis_mode_enabled": False,
 })

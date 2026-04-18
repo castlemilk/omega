@@ -93,6 +93,17 @@ class ExitConfig:
     # the first new-low, structurally guaranteeing loss_capture = 1.0.
     skip_legacy_stop_loss: bool = False
 
+    # V141: side-specific trail multipliers (applied to mfe_trail_k per position side).
+    # long_trail_multiplier=0.5: trail activates at 0.5× ATR MFE (tighter, exits losing longs sooner).
+    # short_trail_multiplier=1.5: trail activates at 1.5× ATR MFE (wider, lets shorts run further).
+    long_trail_multiplier: float = 1.0
+    short_trail_multiplier: float = 1.0
+
+    # V141: close positions with zero MFE after N cycles (disabled when 0).
+    # Forensics: positions with mfe=0 after 2-4 cycles went immediately against entry.
+    # The fix is not entering them; but given we did, exit early rather than hold to full ATR stop.
+    zero_mfe_early_exit_cycles: int = 0
+
     # ATR lookback period (bars)
     atr_period: int = 14
 
@@ -190,6 +201,19 @@ class ExitController:
             return False, ""
 
         mfe = float(pos.get("mfe", 0.0))  # most positive unrealised during lifetime
+        position_side = str(pos.get("side", "")).lower()
+
+        # ── 0. Zero-MFE early exit (V141) ───────────────────────────────
+        # Close positions that never showed profit after N cycles. Forensics:
+        # all top losers had mfe=/bin/zsh after 2-4 cycles — wrong from the first tick.
+        if cfg.zero_mfe_early_exit_cycles > 0 and age >= cfg.zero_mfe_early_exit_cycles:
+            if mfe <= 0.0 and unrealized < 0.0:
+                return True, (
+                    f"zero_mfe_exit("
+                    f"age={age},"
+                    f"mfe={mfe:.2f},"
+                    f"unreal={unrealized:.2f})"
+                )
 
         # ── 1. Early loss time-stop (V131) ──────────────────────────────
         # Close losers that haven't recovered after N cycles. This fires BEFORE
@@ -222,8 +246,14 @@ class ExitController:
         # fires at age 1-2 on whipsaw candles (price shoots up then crashes
         # below entry in one cycle), causing structural loss_capture=1.0
         # identical to the bug the age guard was meant to fix.
+        # V141: side-specific trail multipliers — longs get tighter activation
+        # (0.5× ATR), shorts get wider activation (1.5× ATR) to let them run.
         if age >= cfg.trailing_stop_min_age:
-            trail_activation = cfg.mfe_trail_k * atr_dollars
+            if position_side == "short":
+                _trail_mult = cfg.short_trail_multiplier
+            else:
+                _trail_mult = cfg.long_trail_multiplier
+            trail_activation = cfg.mfe_trail_k * _trail_mult * atr_dollars
             if mfe >= trail_activation:
                 trail_level = mfe * (1.0 - cfg.mfe_retracement_cap)
                 if unrealized < trail_level:
@@ -232,6 +262,8 @@ class ExitController:
                         f"mfe={mfe:.2f},"
                         f"trail={trail_level:.2f},"
                         f"unreal={unrealized:.2f},"
+                        f"side={position_side},"
+                        f"trail_mult={_trail_mult},"
                         f"cap={cfg.mfe_retracement_cap})"
                     )
 

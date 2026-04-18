@@ -594,14 +594,21 @@ def run(
             stop_loss_min_age=int(_active_features.stop_loss_min_age),
             # V135: skip legacy fixed-% stop when ATR stop is the guard
             skip_legacy_stop_loss=bool(getattr(_active_features, "atr_stop_enabled", False)),
+            # V141: side-specific trail multipliers + zero_mfe early exit
+            long_trail_multiplier=float(getattr(_active_features, "long_trail_multiplier", 1.0)),
+            short_trail_multiplier=float(getattr(_active_features, "short_trail_multiplier", 1.0)),
+            zero_mfe_early_exit_cycles=int(getattr(_active_features, "zero_mfe_early_exit_cycles", 0)),
         )
         _exit_ctrl = ExitController(_exit_cfg)
         log.info(
             "ExitController: enabled (mfe_trail_k=%.2f, retracement_cap=%.2f, mae_stop_k=%.2f"
-            ", early_loss=%s N=%d K=%.2f, trail_min_age=%d, sl_min_age=%d)",
+            ", early_loss=%s N=%d K=%.2f, trail_min_age=%d, sl_min_age=%d"
+            ", long_trail_mult=%.2f, short_trail_mult=%.2f, zero_mfe_cycles=%d)",
             _exit_cfg.mfe_trail_k, _exit_cfg.mfe_retracement_cap, _exit_cfg.mae_stop_k,
             _exit_cfg.early_loss_time_stop, _exit_cfg.early_loss_cycles, _exit_cfg.early_loss_k_atr,
             _exit_cfg.trailing_stop_min_age, _exit_cfg.stop_loss_min_age,
+            _exit_cfg.long_trail_multiplier, _exit_cfg.short_trail_multiplier,
+            _exit_cfg.zero_mfe_early_exit_cycles,
         )
 
     engine = PaperTradingEngine(

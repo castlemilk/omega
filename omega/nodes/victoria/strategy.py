@@ -429,6 +429,10 @@ class StrategyNode(Node):
         # so we record the exact conviction value that passed, not a fresh bias-free recompute.
         self._last_w_conv: float = 0.0
 
+        # --- V141: regime hysteresis state ---
+        self._hysteresis_in_crisis: bool = False   # whether we are in hysteresis-locked crisis
+        self._hysteresis_normal_count: int = 0     # consecutive non-crisis cycles since last crisis
+
         # --- V139: LLM analyst conviction modifier ---
         self._llm_analyst: Any = None
         self._llm_modifier_cache: dict[
@@ -894,6 +898,27 @@ class StrategyNode(Node):
                 or (regime_hmm == "crisis" and bear_prob >= 0.45)
                 or (regime_label == "crisis" and bear_prob >= 0.45)
             )
+        # V141: regime hysteresis — prevent false exits from crisis mode.
+        # When regime flips from crisis to normal for 1-2 cycles (Wasserstein oscillation),
+        # require regime_hysteresis_cycles consecutive non-crisis readings before allowing transition.
+        if self.features.regime_hysteresis_enabled:
+            if is_crisis:
+                self._hysteresis_normal_count = 0
+                self._hysteresis_in_crisis = True
+            elif self._hysteresis_in_crisis:
+                self._hysteresis_normal_count += 1
+                if self._hysteresis_normal_count < self.features.regime_hysteresis_cycles:
+                    is_crisis = True  # hold in crisis until streak reaches threshold
+                    import logging as _log
+                    _log.getLogger("omega.victoria.strategy").info(
+                        "V141 hysteresis: crisis→normal suppressed (streak=%d < required=%d)",
+                        self._hysteresis_normal_count,
+                        self.features.regime_hysteresis_cycles,
+                    )
+                else:
+                    self._hysteresis_in_crisis = False
+                    self._hysteresis_normal_count = 0
+
         self._is_crisis = is_crisis
         self._is_high_vol_regime = regime_label == "high_vol"
         is_bull = (
@@ -1742,8 +1767,23 @@ class StrategyNode(Node):
                 # V135 diagnosis: 70-80% longs in crisis (H1-2022 bear market) drives PF<1.
                 # crisis_long_block targets crisis only; high_vol_short_block covers the
                 # high_vol case on the short side.
-                if self.features.crisis_long_block and _regime_consolidated == "crisis":
-                    logger.debug("V136: blocking %s long in crisis regime", ticker)
+                if self.features.crisis_long_block and (
+                    _regime_consolidated == "crisis" or self._is_crisis
+                ):
+                    logger.debug(
+                        "V136/V141: blocking %s long (label=%s, is_crisis=%s)",
+                        ticker, _regime_consolidated, self._is_crisis,
+                    )
+                    continue
+                # V141: bear_prob direct long gate — block longs when bear probability
+                # exceeds threshold regardless of regime label. Catches bear-market longs
+                # that slip through when the label temporarily reads "normal".
+                _bp_threshold = float(getattr(self.features, "bear_prob_long_block_threshold", 0.55))
+                if _regime_w_bear >= 0.0 and _regime_w_bear >= _bp_threshold:
+                    logger.debug(
+                        "V141: blocking %s long — bear_prob=%.2f >= threshold=%.2f",
+                        ticker, _regime_w_bear, _bp_threshold,
+                    )
                     continue
                 if self.features.crisis_high_vol_long_block and _regime_consolidated in (
                     "crisis",
@@ -1808,6 +1848,27 @@ class StrategyNode(Node):
                         _basket_mean,
                     )
                     continue
+                # V141: signal dampening in bear/crisis regime.
+                # fear_greed_signal avg=+1.0 in H1-2022 (bullish-coded extreme fear = buy-dip).
+                # sma_crossover avg=+0.018 (dead-cat bounce crossovers in bear market).
+                # Dampen both before composite recomputation to reduce their bullish push.
+                _is_bear_context = self._is_crisis or _regime_w_bear >= 0.30
+                _fg_crisis_w = float(getattr(self.features, "fear_greed_crisis_weight", 1.0))
+                _sma_crisis_w = float(getattr(self.features, "sma_crisis_weight", 1.0))
+                if _is_bear_context and (_fg_crisis_w != 1.0 or _sma_crisis_w != 1.0):
+                    sig = dict(sig)
+                    if _fg_crisis_w != 1.0 and "fear_greed_signal" in sig:
+                        sig["fear_greed_signal"] = float(sig["fear_greed_signal"]) * _fg_crisis_w
+                    if _sma_crisis_w != 1.0 and "sma_crossover" in sig:
+                        sig["sma_crossover"] = float(sig["sma_crossover"]) * _sma_crisis_w
+                    # Recompute composite as mean of all signal keys after dampening
+                    _all_sig_vals = [
+                        float(v) for k, v in sig.items()
+                        if (k.endswith("_signal") or k == "sma_crossover") and isinstance(v, (int, float))
+                    ]
+                    if _all_sig_vals:
+                        sig["composite"] = sum(_all_sig_vals) / len(_all_sig_vals)
+
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="long"
                 )
@@ -1855,10 +1916,19 @@ class StrategyNode(Node):
                         self._tracer.record_entry(ticker, _at)
                 # V139: LLM analyst conviction modifier
                 if self._llm_analyst is not None:
-                    _n = self.features.llm_analyst_call_every_n
+                    # V141: crisis mode — use faster call frequency and asymmetric veto thresholds
+                    _llm_crisis_mode = (
+                        getattr(self.features, "llm_crisis_mode_enabled", False)
+                        and _regime_w_bear >= 0.30
+                    )
+                    if _llm_crisis_mode:
+                        _n = int(getattr(self.features, "llm_crisis_call_every_n", 5))
+                    else:
+                        _n = self.features.llm_analyst_call_every_n
                     if current_cycle % _n == 0 or ticker not in self._llm_modifier_cache:
                         _closed = self._paper_engine.closed_trades if self._paper_engine else []
                         _positions = self._paper_engine.positions if self._paper_engine else {}
+                        _bear_prob_val = float(signals.get("_regime_w_bear_prob", 0.0))
                         _llm_r = self._llm_analyst.compute(
                             ticker=ticker,
                             direction="long",
@@ -1866,7 +1936,7 @@ class StrategyNode(Node):
                             composite=float(sig.get("composite", 0.0)),
                             weighted_conviction=self._last_w_conv,
                             signals={k: v for k, v in sig.items() if isinstance(v, (int, float))},
-                            bear_prob=float(signals.get("_regime_w_bear_prob", 0.0)),
+                            bear_prob=_bear_prob_val,
                             bull_prob=float(signals.get("_regime_w_bull_prob", 0.0)),
                             last_trades=list(_closed)[-5:] if _closed else [],
                             open_positions=_positions,
@@ -1878,15 +1948,18 @@ class StrategyNode(Node):
                         )
                         self._llm_call_count += 1
                     _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
-                    # Hard veto only on strongly negative LLM assessment (mod < 0.30).
-                    # 0.30-0.70 = cautious but passes; >1.0 = amplify.
-                    # Removed effective_wconv gate — it killed all near-threshold trades.
-                    if _llm_mod < 0.30:
+                    # V141 crisis mode: raise long veto threshold in bear regime.
+                    # Forensics: mods 0.32-0.45 for losing longs should have been vetoed.
+                    _long_veto_thresh = (
+                        float(getattr(self.features, "llm_crisis_long_veto", 0.50))
+                        if _llm_crisis_mode else 0.30
+                    )
+                    if _llm_mod < _long_veto_thresh:
                         self._llm_veto_count += 1
                         filtered_this_cycle += 1
                         logger.debug(
-                            "LLM vetoed %s LONG: mod=%.2f rsn=%s",
-                            ticker, _llm_mod, _llm_rsn,
+                            "LLM vetoed %s LONG: mod=%.2f < thresh=%.2f rsn=%s",
+                            ticker, _llm_mod, _long_veto_thresh, _llm_rsn,
                         )
                         continue
                     sig = dict(sig)
@@ -2077,9 +2150,16 @@ class StrategyNode(Node):
                             conviction_level=c.name,
                         )
                         self._tracer.record_entry(ticker, _at)
-                # V139: LLM analyst conviction modifier
+                # V139/V141: LLM analyst conviction modifier
                 if self._llm_analyst is not None:
-                    _n = self.features.llm_analyst_call_every_n
+                    _llm_crisis_mode_s = (
+                        getattr(self.features, "llm_crisis_mode_enabled", False)
+                        and _regime_w_bear >= 0.30
+                    )
+                    if _llm_crisis_mode_s:
+                        _n = int(getattr(self.features, "llm_crisis_call_every_n", 5))
+                    else:
+                        _n = self.features.llm_analyst_call_every_n
                     if current_cycle % _n == 0 or ticker not in self._llm_modifier_cache:
                         _closed = self._paper_engine.closed_trades if self._paper_engine else []
                         _positions = self._paper_engine.positions if self._paper_engine else {}
@@ -2102,15 +2182,17 @@ class StrategyNode(Node):
                         )
                         self._llm_call_count += 1
                     _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
-                    # Hard veto only on strongly negative LLM assessment (mod < 0.30).
-                    if _llm_mod < 0.30:
+                    # V141 crisis mode: more permissive short veto in bear regime.
+                    _short_veto_thresh = (
+                        float(getattr(self.features, "llm_crisis_short_veto", 0.20))
+                        if _llm_crisis_mode_s else 0.30
+                    )
+                    if _llm_mod < _short_veto_thresh:
                         self._llm_veto_count += 1
                         filtered_this_cycle += 1
                         logger.debug(
-                            "LLM vetoed %s SHORT: mod=%.2f rsn=%s",
-                            ticker,
-                            _llm_mod,
-                            _llm_rsn,
+                            "LLM vetoed %s SHORT: mod=%.2f < thresh=%.2f rsn=%s",
+                            ticker, _llm_mod, _short_veto_thresh, _llm_rsn,
                         )
                         continue
                     sig = dict(sig)
