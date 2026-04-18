@@ -383,13 +383,40 @@ class VictoriaFeatures:
     """V139: inject LLM conviction_modifier (0.0–1.5) that scales the IC-weighted
     composite before threshold comparison. LLM acts as analyst, not decision-maker;
     quant system retains full control. SHA256-keyed file cache for deterministic replay.
-    Requires ANTHROPIC_API_KEY env var; degrades gracefully to 1.0 on any error.
+    Degrades gracefully to modifier=1.0 on any error (missing key, timeout, parse fail).
     """
 
     llm_analyst_call_every_n: int = 10
-    """V139: call LLM API every N cycles (per ticker). Between calls, last cached
-    modifier is reused. Lower = fresher analysis; higher = lower API cost.
+    """V139: call LLM API every N cycles (per ticker). Cached modifier is reused between
+    calls. Lower = fresher analysis; higher = lower API cost.
     Default 10 = ~once per 10 trading cycles per symbol.
+    """
+
+    llm_analyst_provider: str = "claude"
+    """V139 pluggable provider. Options:
+      "claude"            — Anthropic API (ClaudeProvider)
+      "openai_compatible" — any OpenAI-format endpoint (Kimi, GLM, MiniMax, etc.)
+      "cli"               — wraps a local CLI tool (e.g. claude CLI)
+      "kimi" / "glm" / "minimax" / "groq" / "together"
+                          — shorthand aliases for known OpenAI-compatible APIs
+    """
+
+    llm_analyst_model: str = "claude-haiku-4-5-20251001"
+    """V139: model name within the chosen provider.
+    Claude shortcuts: "haiku", "sonnet", "opus" are resolved automatically.
+    For openai_compatible providers, pass the exact model name the API expects.
+    """
+
+    llm_analyst_api_base: str = ""
+    """V139: custom API base URL for openai_compatible providers (e.g. Kimi, GLM).
+    Leave empty when using named shorthand providers (kimi/glm/minimax) — base
+    is inferred automatically. Required only for custom/self-hosted endpoints.
+    """
+
+    llm_analyst_api_key_env: str = ""
+    """V139: env var name that holds the API key for the chosen provider.
+    Empty = use provider default (ANTHROPIC_API_KEY for claude, KIMI_API_KEY for kimi, etc.)
+    Override when the key is stored under a non-standard env var name.
     """
 
     # ------------------------------------------------------------------
@@ -1107,21 +1134,21 @@ _PRESETS["v136c_size_boost"] = VictoriaFeatures(
 #   v137c: AND-gate minus Gate 4 (pair network off — ORC/Fiedler noise test)
 # ---------------------------------------------------------------------------
 _V137_BASE = {
-    **_V136_BASE,                          # crisis_long_block + ATR K=1.2 etc.
+    **_V136_BASE,  # crisis_long_block + ATR K=1.2 etc.
     "four_factor_and_gate": True,
-    "ffg_exit_quality_gate": True,         # V133v2 exit-quality Gate 2
-    "ffg_exit_quality_min_clean": 20,      # cold-start until 20 clean exits
-    "ffg_exit_quality_ratio": 0.50,        # require >50% clean exits in window
-    "ffg_divergence_threshold": 0.05,      # Gate 1 threshold (default)
+    "ffg_exit_quality_gate": True,  # V133v2 exit-quality Gate 2
+    "ffg_exit_quality_min_clean": 20,  # cold-start until 20 clean exits
+    "ffg_exit_quality_ratio": 0.50,  # require >50% clean exits in window
+    "ffg_divergence_threshold": 0.05,  # Gate 1 threshold (default)
     "ffg_gate1_enabled": True,
     "ffg_gate4_enabled": True,
 }
 _PRESETS["v137a_full_gate"] = VictoriaFeatures(**_V137_BASE)
 _PRESETS["v137b_no_gate1"] = VictoriaFeatures(
-    **{**_V137_BASE, "ffg_gate1_enabled": False}   # divergence gate off
+    **{**_V137_BASE, "ffg_gate1_enabled": False}  # divergence gate off
 )
 _PRESETS["v137c_no_gate4"] = VictoriaFeatures(
-    **{**_V137_BASE, "ffg_gate4_enabled": False}   # pair-network gate off
+    **{**_V137_BASE, "ffg_gate4_enabled": False}  # pair-network gate off
 )
 
 # ---------------------------------------------------------------------------
@@ -1149,22 +1176,119 @@ _V1381_BASE = {
     **_V137_BASE,
     "improved_momentum_derivative": True,
     "signal_memory_warm_start": False,  # disabled: backtest regime mismatch
-    "geometry_warm_start": False,       # disabled: backtest regime mismatch
+    "geometry_warm_start": False,  # disabled: backtest regime mismatch
     "signal_reasoning": True,
-    "geopolitical_signals": False,      # live-only (no per-bar historical timestamps yet)
+    "geopolitical_signals": False,  # live-only (no per-bar historical timestamps yet)
 }
 _PRESETS["v138_1"] = VictoriaFeatures(**_V1381_BASE)
 
 # ---------------------------------------------------------------------------
-# V139 — V138.1 base + LLM analyst conviction modifier
+# V139 — V138.1 base + pluggable LLM analyst conviction modifier
 # ---------------------------------------------------------------------------
 # LLM acts as senior analyst returning conviction_modifier ∈ [0.0, 1.5].
 # modifier < 0.5 → veto (entry skipped regardless of quant score).
-# momentum_derivative crisis dampening: mean_reversion → 0.5× (V138.1 fix also included).
-# Backtest: fully deterministic via SHA256-keyed file cache (data/cache/llm_analyst/).
+# Backtest: fully deterministic via SHA256-keyed file cache per (provider, model, input).
+# Provider-agnostic: swap via llm_analyst_provider flag without code changes.
 _V139_BASE = {
     **_V1381_BASE,
     "llm_analyst_enabled": True,
     "llm_analyst_call_every_n": 10,
 }
-_PRESETS["v139_llm_analyst"] = VictoriaFeatures(**_V139_BASE)
+
+# Claude variants
+_PRESETS["v139_claude_haiku"] = VictoriaFeatures(
+    **{
+        **_V139_BASE,
+        "llm_analyst_provider": "claude",
+        "llm_analyst_model": "claude-haiku-4-5-20251001",
+    }
+)
+_PRESETS["v139_claude_sonnet"] = VictoriaFeatures(
+    **{
+        **_V139_BASE,
+        "llm_analyst_provider": "claude",
+        "llm_analyst_model": "claude-sonnet-4-6",
+    }
+)
+
+# Kimi v2 (Moonshot AI)
+_PRESETS["v139_kimi_v2"] = VictoriaFeatures(
+    **{
+        **_V139_BASE,
+        "llm_analyst_provider": "kimi",
+        "llm_analyst_model": "kimi-v2",
+        "llm_analyst_api_key_env": "KIMI_API_KEY",
+    }
+)
+
+# GLM 5.1 (Zhipu AI)
+_PRESETS["v139_glm"] = VictoriaFeatures(
+    **{
+        **_V139_BASE,
+        "llm_analyst_provider": "glm",
+        "llm_analyst_model": "glm-5.1",
+        "llm_analyst_api_key_env": "GLM_API_KEY",
+    }
+)
+
+# MiniMax 2.7
+_PRESETS["v139_minimax"] = VictoriaFeatures(
+    **{
+        **_V139_BASE,
+        "llm_analyst_provider": "minimax",
+        "llm_analyst_model": "minimax-text-01",
+        "llm_analyst_api_key_env": "MINIMAX_API_KEY",
+    }
+)
+
+# CLI fallback (uses claude CLI binary)
+_PRESETS["v139_cli"] = VictoriaFeatures(
+    **{
+        **_V139_BASE,
+        "llm_analyst_provider": "cli",
+        "llm_analyst_model": "claude-haiku-4-5-20251001",
+    }
+)
+
+# Default alias for Phase A — uses CLI provider (authenticated via Claude Desktop;
+# no ANTHROPIC_API_KEY env var needed in subprocess).
+_PRESETS["v139_llm_analyst"] = _PRESETS["v139_cli"]
+
+# ---------------------------------------------------------------------------
+# V140 — Multi-LLM A/B comparison (recent snapshot only, 500 cycles)
+# ---------------------------------------------------------------------------
+# Same V139_BASE config; only provider/model/api_base/api_key_env differ.
+# Endpoints verified: Kimi=moonshot.cn, GLM=bigmodel.cn, MiniMax=minimax.chat
+_V140_BASE = {
+    **_V1381_BASE,
+    "llm_analyst_enabled": True,
+    "llm_analyst_call_every_n": 10,
+}
+
+_PRESETS["v140_kimi"] = VictoriaFeatures(**{
+    **_V140_BASE,
+    "llm_analyst_provider": "kimi",
+    "llm_analyst_model": "kimi-k2",          # Kimi v2 model ID
+    "llm_analyst_api_key_env": "KIMI_API_KEY",
+})
+
+_PRESETS["v140_glm"] = VictoriaFeatures(**{
+    **_V140_BASE,
+    "llm_analyst_provider": "glm",
+    "llm_analyst_model": "glm-4-plus",        # GLM 5.1 uses glm-4-plus API name
+    "llm_analyst_api_key_env": "GLM_API_KEY",
+})
+
+_PRESETS["v140_minimax"] = VictoriaFeatures(**{
+    **_V140_BASE,
+    "llm_analyst_provider": "minimax",
+    "llm_analyst_model": "MiniMax-Text-01",   # MiniMax 2.7 API model name
+    "llm_analyst_api_key_env": "MINIMAX_API_KEY",
+})
+
+# Claude Haiku baseline for direct comparison (no CLI, uses API directly)
+_PRESETS["v140_claude_haiku"] = VictoriaFeatures(**{
+    **_V140_BASE,
+    "llm_analyst_provider": "cli",
+    "llm_analyst_model": "claude-haiku-4-5-20251001",
+})

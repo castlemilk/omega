@@ -82,8 +82,19 @@ _CONFIG_LABELS = {
     "bt_v138": "v138_full",                 # V138 full preset, 500 cycles
     # V138.1: warm-start bugs fixed (backtest-safe) — imd + reasoning only
     "bt_v138_1": "v138_1",                  # V138.1 fixed preset, 500 cycles
-    # V139: V138.1 + LLM analyst conviction modifier
-    "bt_v139": "v139_llm_analyst",          # V139 LLM analyst overlay, 500 cycles
+    # V139: V138.1 + pluggable LLM analyst conviction modifier
+    "bt_v139":        "v139_llm_analyst",          # default alias (Haiku)
+    "bt_v139_haiku":  "v139_claude_haiku",
+    "bt_v139_sonnet": "v139_claude_sonnet",
+    "bt_v139_kimi":   "v139_kimi_v2",
+    "bt_v139_glm":    "v139_glm",
+    "bt_v139_minimax":"v139_minimax",
+    "bt_v139_cli":    "v139_cli",
+    # V140: multi-LLM A/B comparison (recent snapshot only)
+    "bt_v140_kimi":         "v140_kimi",
+    "bt_v140_glm":          "v140_glm",
+    "bt_v140_minimax":      "v140_minimax",
+    "bt_v140_claude_haiku": "v140_claude_haiku",
 }
 
 _SNAPSHOT_LABELS = {
