@@ -512,8 +512,6 @@ class VictoriaFeatures:
     0.50 = only lock hysteresis in confirmed bear conditions.
     """
 
-
-
     # ------------------------------------------------------------------
     # V143 — Continuous confidence surfaces (Phase 1 of adaptive engine)
     # ------------------------------------------------------------------
@@ -1532,7 +1530,9 @@ _V142_BASE = {
     # Keep V141 exit asymmetry + signal dampening + LLM crisis mode
 }
 _PRESETS["v142"] = VictoriaFeatures(**_V142_BASE)
-_PRESETS["v142_no_llm"] = VictoriaFeatures(**{**_V142_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+_PRESETS["v142_no_llm"] = VictoriaFeatures(
+    **{**_V142_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False}
+)
 
 # ---------------------------------------------------------------------------
 # V143 — Continuous confidence surfaces (Phase 1: sigmoid entry model)
@@ -1556,6 +1556,7 @@ _PRESETS["v143"] = VictoriaFeatures(**_V143_BASE)
 for _center_10x in [30, 35, 40, 45, 50, 55, 60]:
     _center_val = _center_10x / 100.0
     from omega.nodes.victoria.confidence_surface import SurfaceConfig, SurfaceParams
+
     _sc = SurfaceConfig(bear_long=SurfaceParams(center=_center_val, temperature=0.10))
     _PRESETS[f"v143_center_{_center_10x}"] = VictoriaFeatures(
         **{**_V143_BASE, "surface_config": _sc}
@@ -1576,11 +1577,13 @@ _V144_BASE = {
     "meta_learning_enabled": True,
 }
 _PRESETS["v144"] = VictoriaFeatures(**_V144_BASE)
-_PRESETS["v144_no_llm"] = VictoriaFeatures(**{
-    **_V144_BASE,
-    "llm_analyst_enabled": False,
-    "llm_crisis_mode_enabled": False,
-})
+_PRESETS["v144_no_llm"] = VictoriaFeatures(
+    **{
+        **_V144_BASE,
+        "llm_analyst_enabled": False,
+        "llm_crisis_mode_enabled": False,
+    }
+)
 
 # ---------------------------------------------------------------------------
 # V145 — LLM Meta-Controller (Phase 3: LLM adjusts surface parameters)
@@ -1588,8 +1591,17 @@ _PRESETS["v144_no_llm"] = VictoriaFeatures(**{
 # Every 50 cycles, an LLM receives regime PF, signal IC drift, and surface
 # parameters, and suggests temperature / center adjustments. The suggestions
 # are blended at 30% weight with the meta-learner's config.
-_V145_BASE = {**_V144_BASE, "llm_meta_controller": True}
+_V145_BASE = {
+    **_V144_BASE,
+    "llm_meta_controller": True,
+    # Default to Kimi (openai-compatible) — available in .env without ANTHROPIC key
+    "llm_analyst_provider": "openai_compatible",
+    "llm_analyst_model": "moonshot-v1-8k",
+    "llm_analyst_api_base": "https://api.moonshot.cn/v1",
+    "llm_analyst_api_key_env": "KIMI_API_KEY",
+}
 _PRESETS["v145"] = VictoriaFeatures(**_V145_BASE)
+_PRESETS["v145_kimi"] = VictoriaFeatures(**_V145_BASE)
 
 # ---------------------------------------------------------------------------
 # V146 — Ensemble Voter (Phase 4: structured vote aggregation)

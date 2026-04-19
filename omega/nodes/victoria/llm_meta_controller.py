@@ -30,7 +30,6 @@ import json
 import logging
 import os
 import urllib.request
-from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -46,6 +45,20 @@ _CLAUDE_MODEL_ALIASES: dict[str, str] = {
     "sonnet": "claude-sonnet-4-6",
     "opus": "claude-opus-4-7",
 }
+
+# OpenAI-compatible provider configs (key env var → (base_url, default_model))
+_OPENAI_COMPAT_PROVIDERS: dict[str, tuple[str, str]] = {
+    "KIMI_API_KEY":    ("https://api.moonshot.cn/v1", "moonshot-v1-8k"),
+    "GLM_API_KEY":     ("https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
+    "MINIMAX_API_KEY": ("https://api.minimax.chat/v1", "MiniMax-Text-01"),
+}
+
+def _auto_provider() -> tuple[str, str, str] | None:
+    """Return (key_env, base_url, model) for first available openai-compat key."""
+    for env_var, (base_url, model) in _OPENAI_COMPAT_PROVIDERS.items():
+        if os.environ.get(env_var, ""):
+            return env_var, base_url, model
+    return None
 
 # ---------------------------------------------------------------------------
 # System prompt
@@ -191,6 +204,8 @@ class LLMMetaController:
         context: str,
         provider: str = "claude",
         model: str = "claude-haiku-4-5-20251001",
+        key_env: str | None = None,
+        base_url: str | None = None,
     ) -> dict[str, Any]:
         """
         Call the LLM with the context and return parsed adjustments dict.
@@ -201,7 +216,7 @@ class LLMMetaController:
         self.last_call_cycle = -1  # reset; set after successful return
 
         try:
-            result = self._call_provider(context, provider, model)
+            result = self._call_provider(context, provider, model, key_env=key_env, base_url=base_url)
             reasoning = result.get("reasoning", "")
             if reasoning:
                 logger.info("V145 llm_meta_ctrl reasoning: %s", reasoning[:200])
@@ -215,13 +230,71 @@ class LLMMetaController:
         context: str,
         provider: str,
         model: str,
+        key_env: str | None = None,
+        base_url: str | None = None,
     ) -> dict[str, Any]:
         """Internal: dispatch to the right provider and parse JSON response."""
         if provider == "claude" or provider == "cli":
             return self._call_claude(context, model)
-        # Extend here for openai_compatible, etc.
+        if provider == "openai_compatible":
+            return self._call_openai_compatible(context, model, key_env=key_env, base_url=base_url)
+        # Auto-detect: try openai-compat keys first, then claude
+        auto = _auto_provider()
+        if auto:
+            logger.info("V145 llm_meta_ctrl: auto-routing to %s", auto[0])
+            return self._call_openai_compatible(context, model, key_env=auto[0], base_url=auto[1])
         logger.warning("V145 llm_meta_ctrl: unknown provider %r, falling back to claude", provider)
         return self._call_claude(context, model)
+
+    def _call_openai_compatible(
+        self,
+        context: str,
+        model: str,
+        key_env: str | None = None,
+        base_url: str | None = None,
+    ) -> dict[str, Any]:
+        """Call any OpenAI-compatible API (Kimi, GLM, MiniMax) via urllib."""
+        # Resolve key: explicit env var > auto-detect first available
+        if key_env is None:
+            auto = _auto_provider()
+            if auto is None:
+                raise RuntimeError("No openai-compatible API key found in environment")
+            key_env, _auto_base, _auto_model = auto
+            if base_url is None:
+                base_url = _auto_base
+            # Only use auto model if caller didn't specify a real one
+            if not model or model == "claude-haiku-4-5-20251001":
+                model = _auto_model
+        api_key = os.environ.get(key_env, "")
+        if not api_key:
+            raise RuntimeError(f"{key_env} not set")
+        if base_url is None:
+            base_url = _OPENAI_COMPAT_PROVIDERS.get(key_env, ("", ""))[0]
+
+        url = base_url.rstrip("/") + "/chat/completions"
+        body = json.dumps({
+            "model": model,
+            "max_tokens": 512,
+            "messages": [
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": context},
+            ],
+        }).encode()
+
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            raw = json.loads(resp.read().decode())
+
+        text = raw["choices"][0]["message"]["content"]
+        return self._parse_response(text)
 
     def _call_claude(self, context: str, model: str) -> dict[str, Any]:
         """Call Anthropic Claude API via urllib (zero extra deps)."""
@@ -365,16 +438,16 @@ class LLMMetaController:
             if sp is None:
                 continue
 
-            ml_T = sp.temperature
+            ml_temp = sp.temperature
             ml_center = sp.center
 
             # Blend temperature
             if name in temp_adj:
-                llm_T = float(temp_adj[name])
-                blended_T = (1.0 - llm_weight) * ml_T + llm_weight * llm_T
-                blended_T = max(_T_MIN, min(_T_MAX, blended_T))
+                llm_temp = float(temp_adj[name])
+                blended_temp = (1.0 - llm_weight) * ml_temp + llm_weight * llm_temp
+                blended_temp = max(_T_MIN, min(_T_MAX, blended_temp))
             else:
-                blended_T = ml_T
+                blended_temp = ml_temp
 
             # Apply center delta
             if name in center_shifts:
@@ -383,7 +456,7 @@ class LLMMetaController:
             else:
                 blended_center = ml_center
 
-            new_params[name] = SurfaceParams(center=blended_center, temperature=blended_T)
+            new_params[name] = SurfaceParams(center=blended_center, temperature=blended_temp)
 
         # Rebuild SurfaceConfig preserving unchanged fields
         kwargs: dict[str, Any] = {}

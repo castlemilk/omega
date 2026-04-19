@@ -495,8 +495,11 @@ class StrategyNode(Node):
         if getattr(self.features, "meta_learning_enabled", False):
             try:
                 from omega.nodes.victoria.meta_learner import MetaLearner
+
                 self._meta_learner = MetaLearner()
-                logger.info("V144 meta_learner initialised (state: %s)", self._meta_learner.state_file)
+                logger.info(
+                    "V144 meta_learner initialised (state: %s)", self._meta_learner.state_file
+                )
             except Exception as _ml_exc:
                 logger.warning("V144 meta_learner init failed: %s", _ml_exc)
 
@@ -505,6 +508,7 @@ class StrategyNode(Node):
         if getattr(self.features, "llm_meta_controller", False):
             try:
                 from omega.nodes.victoria.llm_meta_controller import LLMMetaController
+
                 self._llm_meta_ctrl = LLMMetaController()
                 logger.info("V145 llm_meta_controller initialised")
             except Exception as _exc:
@@ -515,6 +519,7 @@ class StrategyNode(Node):
         if getattr(self.features, "ensemble_voting", False):
             try:
                 from omega.nodes.victoria.ensemble_voter import EnsembleVoter
+
                 self._ensemble_voter = EnsembleVoter()
                 logger.info("V146 ensemble_voter initialised")
             except Exception as _exc:
@@ -525,6 +530,7 @@ class StrategyNode(Node):
         if getattr(self.features, "bayesian_regime", False):
             try:
                 from omega.nodes.victoria.bayesian_regime import BayesianRegimeDetector
+
                 self._bayes_regime = BayesianRegimeDetector()
                 logger.info("V147 bayesian_regime_detector initialised")
             except Exception as _exc:
@@ -946,9 +952,7 @@ class StrategyNode(Node):
             # clearly elevated (> bear_prob_hysteresis_gate, default 0.50).
             # V141 fired on marginal readings (bear_prob ≈ 0.45) which locked the
             # trend snapshot into crisis mode during early Q4-2023 volatility.
-            _hysteresis_bp_gate = float(
-                getattr(self.features, "bear_prob_hysteresis_gate", 0.50)
-            )
+            _hysteresis_bp_gate = float(getattr(self.features, "bear_prob_hysteresis_gate", 0.50))
             if is_crisis and bear_prob > _hysteresis_bp_gate:
                 self._hysteresis_normal_count = 0
                 self._hysteresis_in_crisis = True
@@ -1514,28 +1518,37 @@ class StrategyNode(Node):
                 # V144: meta-learner supplies adapted T and μ for this cycle
                 _ml_cfg = self._meta_learner.get_surface_config()
                 from omega.nodes.victoria.confidence_surface import ConfidenceSurface
+
                 _confidence_surface = ConfidenceSurface(_ml_cfg)
                 # V145: LLM meta-controller blends with meta-learner every 50 cycles
-                if self._llm_meta_ctrl is not None:
-                    if self._llm_meta_ctrl.should_call(current_cycle):
-                        _ml_summary = self._meta_learner.summary()
-                        _ctx = self._llm_meta_ctrl.build_context(
-                            regime_pf=_ml_summary["regime_pf"],
-                            signal_ic=_ml_summary["signal_ic"],
-                            surface_summary=_ml_summary["surfaces"],
-                            recent_trades=[],
-                            macro_snapshot={},
-                        )
-                        _llm_result = self._llm_meta_ctrl.call(
-                            _ctx,
-                            provider=getattr(self.features, "llm_analyst_provider", "claude"),
-                            model=getattr(self.features, "llm_analyst_model", "claude-haiku-4-5-20251001"),
-                        )
-                        if _llm_result:
-                            _ml_cfg = self._llm_meta_ctrl.blend_with_meta_learner(_ml_cfg, _llm_result)
-                            _confidence_surface = ConfidenceSurface(_ml_cfg)
+                if self._llm_meta_ctrl is not None and self._llm_meta_ctrl.should_call(
+                    current_cycle
+                ):
+                    _ml_summary = self._meta_learner.summary()
+                    _ctx = self._llm_meta_ctrl.build_context(
+                        regime_pf=_ml_summary["regime_pf"],
+                        signal_ic=_ml_summary["signal_ic"],
+                        surface_summary=_ml_summary["surfaces"],
+                        recent_trades=[],
+                        macro_snapshot={},
+                    )
+                    _meta_provider = getattr(self.features, "llm_analyst_provider", "claude")
+                    _meta_model = getattr(self.features, "llm_analyst_model", "claude-haiku-4-5-20251001")
+                    _meta_key_env = getattr(self.features, "llm_analyst_api_key_env", None)
+                    _meta_base_url = getattr(self.features, "llm_analyst_api_base", None)
+                    _llm_result = self._llm_meta_ctrl.call(
+                        _ctx,
+                        provider=_meta_provider,
+                        model=_meta_model,
+                        key_env=_meta_key_env,
+                        base_url=_meta_base_url,
+                    )
+                    if _llm_result:
+                        _ml_cfg = self._llm_meta_ctrl.blend_with_meta_learner(_ml_cfg, _llm_result)
+                        _confidence_surface = ConfidenceSurface(_ml_cfg)
             else:
                 from omega.nodes.victoria.confidence_surface import get_surface as _get_surface
+
                 _confidence_surface = _get_surface(self.features)
 
         for ticker, sig in signals.items():
@@ -1606,14 +1619,21 @@ class StrategyNode(Node):
         _bayes_long_scale = 1.0
         _bayes_short_scale = 1.0
         if self._bayes_regime is not None:
-            _sig_vals = {k: float(v) for k, v in signals.items()
-                         if k in self._bayes_regime.signal_names and isinstance(v, (int, float))}
+            _sig_vals = {
+                k: float(v)
+                for k, v in signals.items()
+                if k in self._bayes_regime.signal_names and isinstance(v, (int, float))
+            }
             _posterior = self._bayes_regime.compute_posterior(_sig_vals)
             _bayes_long_scale = max(0.1, 1.0 + _posterior.long_affinity())
             _bayes_short_scale = max(0.1, 1.0 + _posterior.short_affinity())
-            logger.debug("V147 posterior: %s dominant=%s long=%.2f short=%.2f",
-                         {r: round(p, 3) for r, p in _posterior.probs.items()},
-                         _posterior.dominant[0], _bayes_long_scale, _bayes_short_scale)
+            logger.debug(
+                "V147 posterior: %s dominant=%s long=%.2f short=%.2f",
+                {r: round(p, 3) for r, p in _posterior.probs.items()},
+                _posterior.dominant[0],
+                _bayes_long_scale,
+                _bayes_short_scale,
+            )
 
         # --- Fiedler spectral position size modifier (computed early for all paths) ---
         # λ₂ of the signal correlation graph Laplacian — low = signals fragmenting.
@@ -1870,8 +1890,10 @@ class StrategyNode(Node):
                 # V135 diagnosis: 70-80% longs in crisis (H1-2022 bear market) drives PF<1.
                 # crisis_long_block targets crisis only; high_vol_short_block covers the
                 # high_vol case on the short side.
-                if not _use_surface and self.features.crisis_long_block and (
-                    _regime_consolidated == "crisis" or self._is_crisis
+                if (
+                    not _use_surface
+                    and self.features.crisis_long_block
+                    and (_regime_consolidated == "crisis" or self._is_crisis)
                 ):
                     logger.debug(
                         "V136/V141: blocking %s long (label=%s, is_crisis=%s)",
@@ -1898,7 +1920,11 @@ class StrategyNode(Node):
                 # V142: block all long entries in high_vol regime.
                 # Phase A: 0% WR in high_vol — superseded by surface (regime_base=0.15)
                 # when continuous_surfaces=True; kept as hard gate when False.
-                if not _use_surface and getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
+                if (
+                    not _use_surface
+                    and getattr(self.features, "high_vol_entry_block", False)
+                    and _is_high_vol
+                ):
                     logger.debug(
                         "V142: blocking %s long in high_vol regime (high_vol_entry_block)",
                         ticker,
@@ -2239,7 +2265,11 @@ class StrategyNode(Node):
                         )
                         continue
                 # V142: block all short entries in high_vol regime.
-                if not _use_surface and getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
+                if (
+                    not _use_surface
+                    and getattr(self.features, "high_vol_entry_block", False)
+                    and _is_high_vol
+                ):
                     logger.debug(
                         "V142: blocking %s short in high_vol regime (high_vol_entry_block)",
                         ticker,
