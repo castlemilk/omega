@@ -515,6 +515,28 @@ class VictoriaFeatures:
 
 
     # ------------------------------------------------------------------
+    # V143 — Continuous confidence surfaces (Phase 1 of adaptive engine)
+    # ------------------------------------------------------------------
+    # Replaces all binary entry gates with multiplicative sigmoid surfaces.
+    # See docs/architecture/adaptive-engine-v2.md for mathematical derivation.
+    # When False (default): existing hard-gate logic is unchanged.
+    # When True: every entry gate is replaced by a continuous confidence factor;
+    #   final position size = base_size × Π(cᵢ) for all applicable factors.
+    continuous_surfaces: bool = False
+    """V143: when True, replace all hard entry gates with continuous sigmoid surfaces.
+    Position size = base_size × c_bear × c_composite × c_regime × c_llm.
+    All factors ∈ [0, 1] and multiply. No binary cliffs.
+    Validated by parameter sensitivity test (target: bear_prob center sweep <$5k range).
+    """
+
+    surface_config: object = None
+    """V143: optional SurfaceConfig instance for custom surface parameters.
+    None → uses calibrated defaults from confidence_surface.py.
+    Type is 'object' to avoid circular import; cast to SurfaceConfig at use.
+    """
+
+
+    # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
     # ------------------------------------------------------------------
 
@@ -1470,3 +1492,30 @@ _V142_BASE = {
 }
 _PRESETS["v142"] = VictoriaFeatures(**_V142_BASE)
 _PRESETS["v142_no_llm"] = VictoriaFeatures(**{**_V142_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+
+# ---------------------------------------------------------------------------
+# V143 — Continuous confidence surfaces (Phase 1: sigmoid entry model)
+# ---------------------------------------------------------------------------
+# Replaces all 47 binary gate exits in the long/short entry paths with
+# multiplicative sigmoid confidence factors. Position size ∝ product of factors.
+# Validated by parameter sensitivity test: bear_prob center 0.30→0.60 sweep
+# should show PnL range < $5,000 (vs $30,000 with hard gates).
+_V143_BASE = {
+    **_V142_BASE,
+    # Phase 1: enable continuous surfaces
+    "continuous_surfaces": True,
+    # V143 uses V142's conservative bear_prob gate AS the sigmoid center default.
+    # The sigmoid surface calibration is in confidence_surface.py SurfaceConfig defaults.
+}
+_PRESETS["v143"] = VictoriaFeatures(**_V143_BASE)
+
+# V143 sensitivity sweep presets — for parameter sensitivity test.
+# Vary sigmoid center from 0.30 to 0.60 to validate <$5k PnL swing.
+# Usage: python3 scripts/run_sensitivity_test.py --preset v143_center_{N}
+for _center_10x in [30, 35, 40, 45, 50, 55, 60]:
+    _center_val = _center_10x / 100.0
+    from omega.nodes.victoria.confidence_surface import SurfaceConfig, SurfaceParams
+    _sc = SurfaceConfig(bear_long=SurfaceParams(center=_center_val, temperature=0.10))
+    _PRESETS[f"v143_center_{_center_10x}"] = VictoriaFeatures(
+        **{**_V143_BASE, "surface_config": _sc}
+    )

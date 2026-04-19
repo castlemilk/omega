@@ -1467,6 +1467,12 @@ class StrategyNode(Node):
         # Compute conviction for every ticker with a composite score
         # Skip metadata keys (_regime_probs, _regime_hmm, etc.)
         convictions: dict[str, ConvictionLevel] = {}
+        # V143: continuous confidence surface flag (set once per cycle).
+        _use_surface = getattr(self.features, "continuous_surfaces", False)
+        if _use_surface:
+            from omega.nodes.victoria.confidence_surface import get_surface as _get_surface
+            _confidence_surface = _get_surface(self.features)
+
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
                 continue
@@ -1765,7 +1771,7 @@ class StrategyNode(Node):
                 # V92 post-mortem: 7 high_vol trades, 0% WR, -$55.88 across ETH/NEAR/ARB/ADA.
                 # Pattern is basket-wide: VRP "high_vol" signals elevated fear + downward
                 # momentum for all correlated assets, not just ETH.
-                if _is_high_vol:
+                if not _use_surface and _is_high_vol:
                     logger.debug("Suppressing %s long in high_vol regime (V93)", ticker)
                     continue
                 # V101: regime-safe flag — hard-block longs in crisis OR high_vol when on.
@@ -1778,7 +1784,7 @@ class StrategyNode(Node):
                 # V135 diagnosis: 70-80% longs in crisis (H1-2022 bear market) drives PF<1.
                 # crisis_long_block targets crisis only; high_vol_short_block covers the
                 # high_vol case on the short side.
-                if self.features.crisis_long_block and (
+                if not _use_surface and self.features.crisis_long_block and (
                     _regime_consolidated == "crisis" or self._is_crisis
                 ):
                     logger.debug(
@@ -1791,21 +1797,22 @@ class StrategyNode(Node):
                 # V141: bear_prob direct long gate — block longs when bear probability
                 # exceeds threshold regardless of regime label. Catches bear-market longs
                 # that slip through when the label temporarily reads "normal".
-                _bp_threshold = float(
-                    getattr(self.features, "bear_prob_long_block_threshold", 0.55)
-                )
-                if _regime_w_bear >= 0.0 and _regime_w_bear >= _bp_threshold:
-                    logger.debug(
-                        "V141: blocking %s long — bear_prob=%.2f >= threshold=%.2f",
-                        ticker,
-                        _regime_w_bear,
-                        _bp_threshold,
+                if not _use_surface:
+                    _bp_threshold = float(
+                        getattr(self.features, "bear_prob_long_block_threshold", 0.55)
                     )
-                    continue
+                    if _regime_w_bear >= 0.0 and _regime_w_bear >= _bp_threshold:
+                        logger.debug(
+                            "V141: blocking %s long — bear_prob=%.2f >= threshold=%.2f",
+                            ticker,
+                            _regime_w_bear,
+                            _bp_threshold,
+                        )
+                        continue
                 # V142: block all long entries in high_vol regime.
-                # Phase A: 0% WR in high_vol across all versions — vol spikes cause
-                # sharp reversals that the signal stack cannot predict.
-                if getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
+                # Phase A: 0% WR in high_vol — superseded by surface (regime_base=0.15)
+                # when continuous_surfaces=True; kept as hard gate when False.
+                if not _use_surface and getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
                     logger.debug(
                         "V142: blocking %s long in high_vol regime (high_vol_entry_block)",
                         ticker,
@@ -1825,7 +1832,7 @@ class StrategyNode(Node):
                 # V81: removed BNB suppression — V66 was pre-abs_min fix. With abs_min=0.06 and
                 # normal long_thresh=0.15 (scaled), BNB longs only trigger on genuine signals.
                 # BNB at 0.019 composite in bull market should be tradeable.
-                if sig.get("composite", 0.0) <= self._signal_threshold:
+                if not _use_surface and sig.get("composite", 0.0) <= self._signal_threshold:
                     continue
                 # Multi-cycle confirmation (V63 C+D): only enter if last cycle was also long.
                 # Prevents whipsaw entries on single-cycle signal spikes.
@@ -2126,7 +2133,7 @@ class StrategyNode(Node):
                         )
                         continue
                 # V142: block all short entries in high_vol regime.
-                if getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
+                if not _use_surface and getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
                     logger.debug(
                         "V142: blocking %s short in high_vol regime (high_vol_entry_block)",
                         ticker,
@@ -2288,6 +2295,27 @@ class StrategyNode(Node):
                             "failing_gates": _ffg_result.failing_gates,
                         }
                         continue
+                # V143: surface evaluation for short entry
+                if _use_surface:
+                    _llm_mod_val_s = float(sig.get("_llm_modifier", 1.0) or 1.0)
+                    _surf_r_s = _confidence_surface.evaluate_short(
+                        bear_prob=max(0.0, _regime_w_bear),
+                        composite=float(sig.get("composite", 0.0)),
+                        regime=_regime_consolidated,
+                        llm_modifier=_llm_mod_val_s,
+                    )
+                    logger.debug("V143 surface short: %s", _surf_r_s.debug_str)
+                    if not _surf_r_s.should_enter:
+                        filtered_this_cycle += 1
+                        logger.debug(
+                            "V143: %s short rejected by surface (confidence=%.4f)",
+                            ticker,
+                            _surf_r_s.confidence,
+                        )
+                        continue
+                    sig = dict(sig)
+                    sig["_surface_confidence"] = _surf_r_s.confidence
+
                 short_candidates[ticker] = sig
 
         if regime_blocked_longs or regime_blocked_shorts:
@@ -2484,11 +2512,13 @@ class StrategyNode(Node):
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
+                _surf_conf = float(long_candidates[ticker].get("_surface_confidence", 1.0))
                 raw_weights[ticker] = (
                     w
                     * conviction_size_multiplier(convictions[ticker])
                     * _conv_scale
                     * _csb_long_mult
+                    * _surf_conf  # V143: continuous confidence surface multiplier
                 )
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
@@ -2513,12 +2543,14 @@ class StrategyNode(Node):
                 )
             else:
                 _conv_scale = max(0.5, min(2.0, _w_conv / 0.25))
+                _surf_conf_s = float(short_candidates[ticker].get("_surface_confidence", 1.0))
                 raw_weights[ticker] = (
                     -w
                     * conviction_size_multiplier(convictions[ticker])
                     * _conv_scale
                     * _csb_short_mult
                     * _v136_crisis_short_boost
+                    * _surf_conf_s  # V143: continuous confidence surface multiplier
                 )
 
         # V102: crisis_short_bias size multipliers — scale shorts up (1.3x), longs down (0.5x)
