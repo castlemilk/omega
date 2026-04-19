@@ -566,6 +566,18 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V147 Bayesian Regime Detector
+    # ------------------------------------------------------------------
+    bayesian_regime: bool = False
+    """V147: when True, replace hard bear_prob/bull_prob threshold trees with a
+    probabilistic posterior P(regime | signals, LLM) over four regimes:
+    {crisis, high_vol, normal, trending}.  Long/short sizing scales by
+    posterior long_affinity / short_affinity respectively.
+    State persisted to data/bayesian_regime_state.json across cycles.
+    Backward compatible: False → identical behaviour to V146.
+    """
+
+    # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
     # ------------------------------------------------------------------
 
@@ -1588,3 +1600,16 @@ _PRESETS["v145"] = VictoriaFeatures(**_V145_BASE)
 # Backward compatible with V144 confidence surfaces + meta-learner.
 _V146_BASE = {**_V144_BASE, "ensemble_voting": True}
 _PRESETS["v146"] = VictoriaFeatures(**_V146_BASE)
+
+# ---------------------------------------------------------------------------
+# V147 — Bayesian Regime Detector (Phase 5)
+# ---------------------------------------------------------------------------
+# Replaces hard bear_prob/bull_prob threshold trees with a probabilistic
+# posterior P(regime | signals, LLM) over four regimes: crisis, high_vol,
+# normal, trending.  Long/short sizing multipliers are derived from
+# posterior.long_affinity() and posterior.short_affinity() respectively.
+# Likelihood distributions are learned online via Welford updates each time
+# a trade closes with a known regime label.
+# State: data/bayesian_regime_state.json (persisted across cycles).
+_V147_BASE = {**_V146_BASE, "bayesian_regime": True}
+_PRESETS["v147"] = VictoriaFeatures(**_V147_BASE)

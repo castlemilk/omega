@@ -520,6 +520,16 @@ class StrategyNode(Node):
             except Exception as _exc:
                 logger.warning("V146 ensemble_voter init failed: %s", _exc)
 
+        # --- V147: Bayesian Regime Detector ---
+        self._bayes_regime: Any = None
+        if getattr(self.features, "bayesian_regime", False):
+            try:
+                from omega.nodes.victoria.bayesian_regime import BayesianRegimeDetector
+                self._bayes_regime = BayesianRegimeDetector()
+                logger.info("V147 bayesian_regime_detector initialised")
+            except Exception as _exc:
+                logger.warning("V147 bayesian_regime_detector init failed: %s", _exc)
+
     # ------------------------------------------------------------------ Kelly sizing
 
     def _kelly_fraction(self) -> float:
@@ -1592,6 +1602,19 @@ class StrategyNode(Node):
         if self._is_crisis:
             _block_longs = True
 
+        # V147: compute Bayesian posterior and use affinity for sizing
+        _bayes_long_scale = 1.0
+        _bayes_short_scale = 1.0
+        if self._bayes_regime is not None:
+            _sig_vals = {k: float(v) for k, v in signals.items()
+                         if k in self._bayes_regime.signal_names and isinstance(v, (int, float))}
+            _posterior = self._bayes_regime.compute_posterior(_sig_vals)
+            _bayes_long_scale = max(0.1, 1.0 + _posterior.long_affinity())
+            _bayes_short_scale = max(0.1, 1.0 + _posterior.short_affinity())
+            logger.debug("V147 posterior: %s dominant=%s long=%.2f short=%.2f",
+                         {r: round(p, 3) for r, p in _posterior.probs.items()},
+                         _posterior.dominant[0], _bayes_long_scale, _bayes_short_scale)
+
         # --- Fiedler spectral position size modifier (computed early for all paths) ---
         # λ₂ of the signal correlation graph Laplacian — low = signals fragmenting.
         _sv = self._build_spectral_vector(signals)
@@ -2634,6 +2657,12 @@ class StrategyNode(Node):
                 _csb_n_shorts,
                 _csb_n_longs,
             )
+
+        # V147: Bayesian affinity scaling (multiplies after all other sizing, before Kelly)
+        if self._bayes_regime is not None:
+            for _ticker in list(raw_weights.keys()):
+                _w = raw_weights[_ticker]
+                raw_weights[_ticker] = _w * (_bayes_long_scale if _w > 0 else _bayes_short_scale)
 
         # Kelly scaling: adjust all weights by half-Kelly fraction
         _kelly_scale = self._kelly_fraction()
