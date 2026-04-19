@@ -492,6 +492,28 @@ class VictoriaFeatures:
     At 0.2×, SMA crossover bullish push is mostly removed in structural downtrends.
     """
 
+    # V142: block ALL entries (both long and short) in high_vol regime.
+    # Phase A data: 0% WR across all versions in high_vol (8 trades, -$5,311 V141; 6 trades, -$6,296 V139).
+    # High_vol entries are structurally losers: vol spikes mean price bounces sharply against positions.
+    high_vol_entry_block: bool = False
+    """V142: when True, block both long and short entries in high_vol regime.
+    Phase A diagnosis: 0% win-rate in high_vol across V137a/V139/V141 — regime cannot be traded profitably
+    with current signal stack. Cleanest fix is to sit out entirely.
+    """
+
+    # V142: gate regime hysteresis activation to confirmed bear contexts.
+    # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
+    # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
+    # With this gate, hysteresis only locks in when bear_prob > bear_prob_hysteresis_gate
+    # at the time of crisis onset — preventing trend-snapshot lock-in.
+    bear_prob_hysteresis_gate: float = 0.50
+    """V142: minimum bear_prob required to engage regime hysteresis lock.
+    When bear_prob < this at crisis onset, hysteresis does not engage.
+    0.50 = only lock hysteresis in confirmed bear conditions.
+    """
+
+
+
     # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
     # ------------------------------------------------------------------
@@ -1338,33 +1360,41 @@ _V140_BASE = {
     "llm_analyst_call_every_n": 10,
 }
 
-_PRESETS["v140_kimi"] = VictoriaFeatures(**{
-    **_V140_BASE,
-    "llm_analyst_provider": "kimi",
-    "llm_analyst_model": "kimi-k2",          # Kimi v2 model ID
-    "llm_analyst_api_key_env": "KIMI_API_KEY",
-})
+_PRESETS["v140_kimi"] = VictoriaFeatures(
+    **{
+        **_V140_BASE,
+        "llm_analyst_provider": "kimi",
+        "llm_analyst_model": "kimi-k2",  # Kimi v2 model ID
+        "llm_analyst_api_key_env": "KIMI_API_KEY",
+    }
+)
 
-_PRESETS["v140_glm"] = VictoriaFeatures(**{
-    **_V140_BASE,
-    "llm_analyst_provider": "glm",
-    "llm_analyst_model": "glm-4-plus",        # GLM 5.1 uses glm-4-plus API name
-    "llm_analyst_api_key_env": "GLM_API_KEY",
-})
+_PRESETS["v140_glm"] = VictoriaFeatures(
+    **{
+        **_V140_BASE,
+        "llm_analyst_provider": "glm",
+        "llm_analyst_model": "glm-4-plus",  # GLM 5.1 uses glm-4-plus API name
+        "llm_analyst_api_key_env": "GLM_API_KEY",
+    }
+)
 
-_PRESETS["v140_minimax"] = VictoriaFeatures(**{
-    **_V140_BASE,
-    "llm_analyst_provider": "minimax",
-    "llm_analyst_model": "MiniMax-Text-01",   # MiniMax 2.7 API model name
-    "llm_analyst_api_key_env": "MINIMAX_API_KEY",
-})
+_PRESETS["v140_minimax"] = VictoriaFeatures(
+    **{
+        **_V140_BASE,
+        "llm_analyst_provider": "minimax",
+        "llm_analyst_model": "MiniMax-Text-01",  # MiniMax 2.7 API model name
+        "llm_analyst_api_key_env": "MINIMAX_API_KEY",
+    }
+)
 
 # Claude Haiku baseline for direct comparison (no CLI, uses API directly)
-_PRESETS["v140_claude_haiku"] = VictoriaFeatures(**{
-    **_V140_BASE,
-    "llm_analyst_provider": "cli",
-    "llm_analyst_model": "claude-haiku-4-5-20251001",
-})
+_PRESETS["v140_claude_haiku"] = VictoriaFeatures(
+    **{
+        **_V140_BASE,
+        "llm_analyst_provider": "cli",
+        "llm_analyst_model": "claude-haiku-4-5-20251001",
+    }
+)
 
 # ---------------------------------------------------------------------------
 # V141 — Crisis alpha: all 6 forensics fixes applied on top of V139 base
@@ -1394,7 +1424,7 @@ _V141_BASE = {
     "llm_crisis_short_veto": 0.20,
     "llm_crisis_call_every_n": 5,
     # Fix 4: exit asymmetry (tight long trail, wide short trail)
-    "long_trail_multiplier": 0.5,   # trail activates at 0.5× ATR MFE for longs
+    "long_trail_multiplier": 0.5,  # trail activates at 0.5× ATR MFE for longs
     "short_trail_multiplier": 1.5,  # trail activates at 1.5× ATR MFE for shorts
     "zero_mfe_early_exit_cycles": 2,  # close zero-MFE positions after 2 cycles
     # Fix 5 + 6: dampen crisis-poison signals
@@ -1409,8 +1439,34 @@ _V141_BASE = {
 _PRESETS["v141_crisis_alpha"] = VictoriaFeatures(**_V141_BASE)
 
 # V141 ablation: no LLM (to isolate structural fixes from LLM contribution)
-_PRESETS["v141_crisis_no_llm"] = VictoriaFeatures(**{
+_PRESETS["v141_crisis_no_llm"] = VictoriaFeatures(
+    **{
+        **_V141_BASE,
+        "llm_analyst_enabled": False,
+        "llm_crisis_mode_enabled": False,
+    }
+)
+
+# ---------------------------------------------------------------------------
+# V142 — Quick fix: tighten bear_prob gate, gated hysteresis, high_vol block
+# ---------------------------------------------------------------------------
+# V141 post-mortem: bear_prob_long_block=0.35 fired in trend/recent snapshots
+# (Q4-2023 volatile early period; mixed-2026 regime swings), blocking profitable
+# longs and regressing trend by $30k, recent by $21k. Three targeted fixes:
+#   1. Revert bear_prob_long_block_threshold to 0.55 (conservative default)
+#   2. Gate regime hysteresis to only engage when bear_prob > 0.50 at onset
+#   3. Block all entries in high_vol regime (0% WR, structural loser across all versions)
+#   4. Keep LLM crisis mode (proved +$3,161 delta vs no-LLM in V141)
+_V142_BASE = {
     **_V141_BASE,
-    "llm_analyst_enabled": False,
-    "llm_crisis_mode_enabled": False,
-})
+    # Fix 1: conservative bear_prob gate (revert from 0.35)
+    "bear_prob_long_block_threshold": 0.55,
+    # Fix 2: hysteresis gate (only lock in confirmed bear, bear_prob > 0.50)
+    "regime_hysteresis_enabled": True,
+    "bear_prob_hysteresis_gate": 0.50,
+    # Fix 3: block all high_vol entries (0% WR across all versions)
+    "high_vol_entry_block": True,
+    # Keep V141 exit asymmetry + signal dampening + LLM crisis mode
+}
+_PRESETS["v142"] = VictoriaFeatures(**_V142_BASE)
+_PRESETS["v142_no_llm"] = VictoriaFeatures(**{**_V142_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})

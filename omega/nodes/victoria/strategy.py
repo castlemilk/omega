@@ -430,8 +430,8 @@ class StrategyNode(Node):
         self._last_w_conv: float = 0.0
 
         # --- V141: regime hysteresis state ---
-        self._hysteresis_in_crisis: bool = False   # whether we are in hysteresis-locked crisis
-        self._hysteresis_normal_count: int = 0     # consecutive non-crisis cycles since last crisis
+        self._hysteresis_in_crisis: bool = False  # whether we are in hysteresis-locked crisis
+        self._hysteresis_normal_count: int = 0  # consecutive non-crisis cycles since last crisis
 
         # --- V139: LLM analyst conviction modifier ---
         self._llm_analyst: Any = None
@@ -902,22 +902,33 @@ class StrategyNode(Node):
         # When regime flips from crisis to normal for 1-2 cycles (Wasserstein oscillation),
         # require regime_hysteresis_cycles consecutive non-crisis readings before allowing transition.
         if self.features.regime_hysteresis_enabled:
-            if is_crisis:
+            # V142: gate hysteresis engagement — only lock in crisis when bear_prob is
+            # clearly elevated (> bear_prob_hysteresis_gate, default 0.50).
+            # V141 fired on marginal readings (bear_prob ≈ 0.45) which locked the
+            # trend snapshot into crisis mode during early Q4-2023 volatility.
+            _hysteresis_bp_gate = float(
+                getattr(self.features, "bear_prob_hysteresis_gate", 0.50)
+            )
+            if is_crisis and bear_prob > _hysteresis_bp_gate:
                 self._hysteresis_normal_count = 0
                 self._hysteresis_in_crisis = True
             elif self._hysteresis_in_crisis:
-                self._hysteresis_normal_count += 1
-                if self._hysteresis_normal_count < self.features.regime_hysteresis_cycles:
-                    is_crisis = True  # hold in crisis until streak reaches threshold
-                    import logging as _log
-                    _log.getLogger("omega.victoria.strategy").info(
-                        "V141 hysteresis: crisis→normal suppressed (streak=%d < required=%d)",
-                        self._hysteresis_normal_count,
-                        self.features.regime_hysteresis_cycles,
-                    )
-                else:
-                    self._hysteresis_in_crisis = False
+                if is_crisis:
+                    # still in crisis — reset normal counter, keep lock
                     self._hysteresis_normal_count = 0
+                else:
+                    self._hysteresis_normal_count += 1
+                    if self._hysteresis_normal_count < self.features.regime_hysteresis_cycles:
+                        is_crisis = True  # hold in crisis until streak reaches threshold
+                        logger.info(
+                            "V142 hysteresis: crisis→normal suppressed (streak=%d < required=%d, bear_prob=%.2f)",
+                            self._hysteresis_normal_count,
+                            self.features.regime_hysteresis_cycles,
+                            bear_prob,
+                        )
+                    else:
+                        self._hysteresis_in_crisis = False
+                        self._hysteresis_normal_count = 0
 
         self._is_crisis = is_crisis
         self._is_high_vol_regime = regime_label == "high_vol"
@@ -1772,17 +1783,32 @@ class StrategyNode(Node):
                 ):
                     logger.debug(
                         "V136/V141: blocking %s long (label=%s, is_crisis=%s)",
-                        ticker, _regime_consolidated, self._is_crisis,
+                        ticker,
+                        _regime_consolidated,
+                        self._is_crisis,
                     )
                     continue
                 # V141: bear_prob direct long gate — block longs when bear probability
                 # exceeds threshold regardless of regime label. Catches bear-market longs
                 # that slip through when the label temporarily reads "normal".
-                _bp_threshold = float(getattr(self.features, "bear_prob_long_block_threshold", 0.55))
+                _bp_threshold = float(
+                    getattr(self.features, "bear_prob_long_block_threshold", 0.55)
+                )
                 if _regime_w_bear >= 0.0 and _regime_w_bear >= _bp_threshold:
                     logger.debug(
                         "V141: blocking %s long — bear_prob=%.2f >= threshold=%.2f",
-                        ticker, _regime_w_bear, _bp_threshold,
+                        ticker,
+                        _regime_w_bear,
+                        _bp_threshold,
+                    )
+                    continue
+                # V142: block all long entries in high_vol regime.
+                # Phase A: 0% WR in high_vol across all versions — vol spikes cause
+                # sharp reversals that the signal stack cannot predict.
+                if getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
+                    logger.debug(
+                        "V142: blocking %s long in high_vol regime (high_vol_entry_block)",
+                        ticker,
                     )
                     continue
                 if self.features.crisis_high_vol_long_block and _regime_consolidated in (
@@ -1863,8 +1889,10 @@ class StrategyNode(Node):
                         sig["sma_crossover"] = float(sig["sma_crossover"]) * _sma_crisis_w
                     # Recompute composite as mean of all signal keys after dampening
                     _all_sig_vals = [
-                        float(v) for k, v in sig.items()
-                        if (k.endswith("_signal") or k == "sma_crossover") and isinstance(v, (int, float))
+                        float(v)
+                        for k, v in sig.items()
+                        if (k.endswith("_signal") or k == "sma_crossover")
+                        and isinstance(v, (int, float))
                     ]
                     if _all_sig_vals:
                         sig["composite"] = sum(_all_sig_vals) / len(_all_sig_vals)
@@ -1952,14 +1980,18 @@ class StrategyNode(Node):
                     # Forensics: mods 0.32-0.45 for losing longs should have been vetoed.
                     _long_veto_thresh = (
                         float(getattr(self.features, "llm_crisis_long_veto", 0.50))
-                        if _llm_crisis_mode else 0.30
+                        if _llm_crisis_mode
+                        else 0.30
                     )
                     if _llm_mod < _long_veto_thresh:
                         self._llm_veto_count += 1
                         filtered_this_cycle += 1
                         logger.debug(
                             "LLM vetoed %s LONG: mod=%.2f < thresh=%.2f rsn=%s",
-                            ticker, _llm_mod, _long_veto_thresh, _llm_rsn,
+                            ticker,
+                            _llm_mod,
+                            _long_veto_thresh,
+                            _llm_rsn,
                         )
                         continue
                     sig = dict(sig)
@@ -2093,6 +2125,13 @@ class StrategyNode(Node):
                             _crisis_scale,
                         )
                         continue
+                # V142: block all short entries in high_vol regime.
+                if getattr(self.features, "high_vol_entry_block", False) and _is_high_vol:
+                    logger.debug(
+                        "V142: blocking %s short in high_vol regime (high_vol_entry_block)",
+                        ticker,
+                    )
+                    continue
                 if self.features.high_vol_short_block and _is_high_vol:
                     logger.debug("Suppressing %s short in high_vol regime (V130)", ticker)
                     continue
@@ -2185,14 +2224,18 @@ class StrategyNode(Node):
                     # V141 crisis mode: more permissive short veto in bear regime.
                     _short_veto_thresh = (
                         float(getattr(self.features, "llm_crisis_short_veto", 0.20))
-                        if _llm_crisis_mode_s else 0.30
+                        if _llm_crisis_mode_s
+                        else 0.30
                     )
                     if _llm_mod < _short_veto_thresh:
                         self._llm_veto_count += 1
                         filtered_this_cycle += 1
                         logger.debug(
                             "LLM vetoed %s SHORT: mod=%.2f < thresh=%.2f rsn=%s",
-                            ticker, _llm_mod, _short_veto_thresh, _llm_rsn,
+                            ticker,
+                            _llm_mod,
+                            _short_veto_thresh,
+                            _llm_rsn,
                         )
                         continue
                     sig = dict(sig)
