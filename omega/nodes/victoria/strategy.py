@@ -500,6 +500,26 @@ class StrategyNode(Node):
             except Exception as _ml_exc:
                 logger.warning("V144 meta_learner init failed: %s", _ml_exc)
 
+        # --- V145: LLM Meta-Controller ---
+        self._llm_meta_ctrl: Any = None
+        if getattr(self.features, "llm_meta_controller", False):
+            try:
+                from omega.nodes.victoria.llm_meta_controller import LLMMetaController
+                self._llm_meta_ctrl = LLMMetaController()
+                logger.info("V145 llm_meta_controller initialised")
+            except Exception as _exc:
+                logger.warning("V145 llm_meta_controller init failed: %s", _exc)
+
+        # --- V146: Ensemble Voter ---
+        self._ensemble_voter: Any = None
+        if getattr(self.features, "ensemble_voting", False):
+            try:
+                from omega.nodes.victoria.ensemble_voter import EnsembleVoter
+                self._ensemble_voter = EnsembleVoter()
+                logger.info("V146 ensemble_voter initialised")
+            except Exception as _exc:
+                logger.warning("V146 ensemble_voter init failed: %s", _exc)
+
     # ------------------------------------------------------------------ Kelly sizing
 
     def _kelly_fraction(self) -> float:
@@ -1485,6 +1505,25 @@ class StrategyNode(Node):
                 _ml_cfg = self._meta_learner.get_surface_config()
                 from omega.nodes.victoria.confidence_surface import ConfidenceSurface
                 _confidence_surface = ConfidenceSurface(_ml_cfg)
+                # V145: LLM meta-controller blends with meta-learner every 50 cycles
+                if self._llm_meta_ctrl is not None:
+                    if self._llm_meta_ctrl.should_call(current_cycle):
+                        _ml_summary = self._meta_learner.summary()
+                        _ctx = self._llm_meta_ctrl.build_context(
+                            regime_pf=_ml_summary["regime_pf"],
+                            signal_ic=_ml_summary["signal_ic"],
+                            surface_summary=_ml_summary["surfaces"],
+                            recent_trades=[],
+                            macro_snapshot={},
+                        )
+                        _llm_result = self._llm_meta_ctrl.call(
+                            _ctx,
+                            provider=getattr(self.features, "llm_analyst_provider", "claude"),
+                            model=getattr(self.features, "llm_analyst_model", "claude-haiku-4-5-20251001"),
+                        )
+                        if _llm_result:
+                            _ml_cfg = self._llm_meta_ctrl.blend_with_meta_learner(_ml_cfg, _llm_result)
+                            _confidence_surface = ConfidenceSurface(_ml_cfg)
             else:
                 from omega.nodes.victoria.confidence_surface import get_surface as _get_surface
                 _confidence_surface = _get_surface(self.features)
@@ -1492,6 +1531,14 @@ class StrategyNode(Node):
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
                 continue
+            # V146: ensemble voter replaces weighted-sum composite when enabled
+            if self._ensemble_voter is not None:
+                _ens = self._ensemble_voter.from_signal_dict(sig)
+                composite = _ens.composite  # ±conviction replaces weighted sum
+                sig = dict(sig)
+                sig["composite"] = composite
+                sig["_ensemble_conviction"] = _ens.conviction
+                sig["_ensemble_agreement"] = _ens.agreement_ratio
             composite = sig.get("composite")
             if composite is not None:
                 convictions[ticker] = score_to_conviction(float(composite) * _cs_norm)

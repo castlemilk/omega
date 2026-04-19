@@ -545,6 +545,16 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V145: LLM Meta-Controller (Phase 3)
+    # ------------------------------------------------------------------
+    llm_meta_controller: bool = False
+    """V145: when True, LLMMetaController calls an LLM every 50 cycles to
+    suggest surface parameter adjustments (temperature and center deltas).
+    Blended with meta-learner config at 30% LLM weight. Zero overhead when False.
+    Requires meta_learning_enabled=True and continuous_surfaces=True.
+    """
+
+    # ------------------------------------------------------------------
     # V146 Ensemble Voter
     # ------------------------------------------------------------------
     ensemble_voting: bool = False
@@ -1559,3 +1569,22 @@ _PRESETS["v144_no_llm"] = VictoriaFeatures(**{
     "llm_analyst_enabled": False,
     "llm_crisis_mode_enabled": False,
 })
+
+# ---------------------------------------------------------------------------
+# V145 — LLM Meta-Controller (Phase 3: LLM adjusts surface parameters)
+# ---------------------------------------------------------------------------
+# Every 50 cycles, an LLM receives regime PF, signal IC drift, and surface
+# parameters, and suggests temperature / center adjustments. The suggestions
+# are blended at 30% weight with the meta-learner's config.
+_V145_BASE = {**_V144_BASE, "llm_meta_controller": True}
+_PRESETS["v145"] = VictoriaFeatures(**_V145_BASE)
+
+# ---------------------------------------------------------------------------
+# V146 — Ensemble Voter (Phase 4: structured vote aggregation)
+# ---------------------------------------------------------------------------
+# Replaces the scalar weighted-sum composite (Σ signal × weight) with a
+# majority-vote aggregation that preserves uncertainty information:
+#   conviction = agreement_ratio × max_confidence_of_majority
+# Backward compatible with V144 confidence surfaces + meta-learner.
+_V146_BASE = {**_V144_BASE, "ensemble_voting": True}
+_PRESETS["v146"] = VictoriaFeatures(**_V146_BASE)
