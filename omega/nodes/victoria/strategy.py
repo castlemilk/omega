@@ -2132,6 +2132,26 @@ class StrategyNode(Node):
                             "failing_gates": _ffg_result.failing_gates,
                         }
                         continue
+                # V143: surface evaluation for long entry
+                if _use_surface:
+                    _llm_mod_val_l = float(sig.get("_llm_modifier", 1.0) or 1.0)
+                    _surf_r_l = _confidence_surface.evaluate_long(
+                        bear_prob=max(0.0, _regime_w_bear),
+                        composite=float(sig.get("composite", 0.0)),
+                        regime=_regime_consolidated,
+                        llm_modifier=_llm_mod_val_l,
+                    )
+                    logger.debug("V143 surface long: %s", _surf_r_l.debug_str)
+                    if not _surf_r_l.should_enter:
+                        filtered_this_cycle += 1
+                        logger.debug(
+                            "V143: %s long rejected by surface (confidence=%.4f)",
+                            ticker,
+                            _surf_r_l.confidence,
+                        )
+                        continue
+                    sig = dict(sig)
+                    sig["_surface_confidence"] = _surf_r_l.confidence
                 long_candidates[ticker] = sig
             elif c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
