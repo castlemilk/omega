@@ -535,6 +535,25 @@ class VictoriaFeatures:
     Type is 'object' to avoid circular import; cast to SurfaceConfig at use.
     """
 
+    # ------------------------------------------------------------------
+    # V144: Meta-Learning Layer (Phase 2)
+    # ------------------------------------------------------------------
+    meta_learning_enabled: bool = False
+    """V144: when True, MetaLearner tracks rolling PF per regime and adjusts
+    surface T and μ each cycle. State persisted to data/meta_learner_state.json.
+    Requires continuous_surfaces=True.
+    """
+
+    # ------------------------------------------------------------------
+    # V146 Ensemble Voter
+    # ------------------------------------------------------------------
+    ensemble_voting: bool = False
+    """V146: when True, replace the scalar weighted-sum composite with structured
+    vote aggregation (EnsembleVoter).  Each signal casts a directional vote;
+    conviction = agreement_ratio × max_confidence_of_majority.  The resulting
+    composite is ±conviction, preserving sign convention for downstream filters.
+    Backward compatible: False → identical behaviour to V144.
+    """
 
     # ------------------------------------------------------------------
     # V135 ATR-based stop-loss flags
@@ -1519,3 +1538,24 @@ for _center_10x in [30, 35, 40, 45, 50, 55, 60]:
     _PRESETS[f"v143_center_{_center_10x}"] = VictoriaFeatures(
         **{**_V143_BASE, "surface_config": _sc}
     )
+
+# ---------------------------------------------------------------------------
+# V144 — Meta-Learning Layer (Phase 2: adaptive surface T and μ)
+# ---------------------------------------------------------------------------
+# Adds rolling 20-trade PF tracking per regime. Adjusts surface temperatures
+# and centers automatically without LLM calls.
+# Learning rules:
+#   PF > 1.5 → T -= 0.01  (sharpen: well-calibrated)
+#   PF < 0.8 → T += 0.02  (soften: miscalibrated)
+#   T ∈ [0.05, 0.30]; μ EMA toward mean entry_value of winners
+# State persisted to data/meta_learner_state.json across cycles.
+_V144_BASE = {
+    **_V143_BASE,
+    "meta_learning_enabled": True,
+}
+_PRESETS["v144"] = VictoriaFeatures(**_V144_BASE)
+_PRESETS["v144_no_llm"] = VictoriaFeatures(**{
+    **_V144_BASE,
+    "llm_analyst_enabled": False,
+    "llm_crisis_mode_enabled": False,
+})

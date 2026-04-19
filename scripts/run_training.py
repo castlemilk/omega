@@ -798,6 +798,30 @@ def run(
                         ])
                 last_closed_count = len(closed)
 
+                # ── V144: meta-learner trade callback ─────────────────
+                if strat is not None:
+                    _ml = getattr(strat, "_meta_learner", None)
+                    if _ml is not None:
+                        for _t in new_closed:
+                            _ml.record_trade(
+                                pnl=float(_t.get("pnl", 0.0)),
+                                side=_t.get("side", "long"),
+                                regime=regime,
+                                entry_confidence=float(_t.get("conviction") or 0.5)
+                                    if isinstance(_t.get("conviction"), float) else 0.5,
+                                entry_value=float(
+                                    getattr(strat, "_last_signals", {}).get(
+                                        "_regime_w_bear_prob",
+                                        getattr(strat, "_last_signals", {}).get(
+                                            "_regime_w_bear", 0.3
+                                        )
+                                    )
+                                ) if regime in ("crisis", "high_vol")
+                                else abs(float(_t.get("conviction") or 0.0)),
+                            )
+                        if cycle_num % 50 == 0:
+                            _ml.save_state()
+
             # ── Signal metrics ────────────────────────────────────────────
             last_signals: dict = {}
             try:

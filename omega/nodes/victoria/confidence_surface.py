@@ -183,7 +183,7 @@ class SurfaceConfig:
     # c_bear_long(bp) = σ(-(bp - center) / T)
     # At bp=0.40: c=0.50. At bp=0.20: c=0.88. At bp=0.60: c=0.12.
     bear_long: SurfaceParams = field(
-        default_factory=lambda: SurfaceParams(center=0.40, temperature=0.12)
+        default_factory=lambda: SurfaceParams(center=0.35, temperature=0.12)
     )
 
     # ── Bear probability surface (for short entries) ──
@@ -201,8 +201,9 @@ class SurfaceConfig:
     )
 
     # ── Composite conviction surface (short entries) ──
-    # comp is negative for shorts; we evaluate on abs(comp).
-    # c_composite_short(comp) = σ((-comp - center) / T)
+    # Victoria composite is the long-side basket signal (usually positive).
+    # We use abs(comp) as signal strength; direction is captured by bear_prob + regime.
+    # c_composite_short(comp) = σ((|comp| - center) / T)
     composite_short: SurfaceParams = field(
         default_factory=lambda: SurfaceParams(center=0.05, temperature=0.03)
     )
@@ -212,9 +213,13 @@ class SurfaceConfig:
 
     # ── Minimum confidence to enter a position ──
     # Below this, the position is skipped (the effective "block").
-    # At $50k base size, confidence=0.01 → $500 position = below min notional.
-    # Set to 0.01 to allow very small entries in genuinely uncertain regimes.
-    min_confidence: float = 0.01
+    # 0.20 is chosen so that regime base weights act as implicit hard gates:
+    #   high_vol_long=0.15 → max confidence=0.15 → always blocked (natural high_vol gate)
+    #   crisis_long=0.30 → only top crisis longs (low bear_prob + strong composite) enter
+    #   normal/bull longs typically reach 0.25–0.60 → enter
+    # This preserves the parameter-sensitivity smoothness of the sigmoid while
+    # maintaining regime-level filtering equivalent to the old hard gates.
+    min_confidence: float = 0.20
 
     # ── Temperature bounds for meta-learner ──
     # The meta-learner adjusts temperatures within these bounds.
@@ -378,10 +383,14 @@ class ConfidenceSurface:
             cfg.bear_short.temperature,
         )
 
-        # Factor 2: composite conviction (shorts want strongly NEGATIVE composite)
+        # Factor 2: composite conviction (use signal magnitude, not direction)
+        # Victoria's composite is the LONG-side basket signal (usually positive even when
+        # shorting individual assets). Using abs() treats it as signal strength:
+        # high |composite| = strong signal (bullish OR bearish) = higher short confidence.
+        # Direction is already encoded in bear_prob + regime_weight.
         comp_clamped = max(-1.0, min(1.0, composite))
         c_composite = _increasing(
-            -comp_clamped,  # negate: high confidence when composite is strongly negative
+            abs(comp_clamped),
             cfg.composite_short.center,
             cfg.composite_short.temperature,
         )

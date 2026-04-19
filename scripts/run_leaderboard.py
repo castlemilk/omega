@@ -105,6 +105,31 @@ _CONFIG_LABELS = {
     "bt_v141_crisis":       "v141_crisis_alpha",
     "bt_v141_no_llm":       "v141_crisis_no_llm",
     "bt_v141_no_llm_crisis": "v141_crisis_no_llm",
+    # V143: continuous confidence surfaces (Phase 1)
+    "bt_v143":              "v143_surfaces",
+    "bt_v143_crisis":       "v143_surfaces",
+    "bt_v143_trend":        "v143_surfaces",
+    "bt_v143_recent":       "v143_surfaces",
+    # V144: meta-learning layer (Phase 2)
+    "bt_v144":              "v144_meta_learner",
+    "bt_v144_crisis":       "v144_meta_learner",
+    "bt_v144_trend":        "v144_meta_learner",
+    "bt_v144_recent":       "v144_meta_learner",
+    # V145: LLM meta-controller (Phase 3)
+    "bt_v145":              "v145_llm_meta",
+    "bt_v145_crisis":       "v145_llm_meta",
+    "bt_v145_trend":        "v145_llm_meta",
+    "bt_v145_recent":       "v145_llm_meta",
+    # V146: ensemble voting (Phase 4)
+    "bt_v146":              "v146_ensemble",
+    "bt_v146_crisis":       "v146_ensemble",
+    "bt_v146_trend":        "v146_ensemble",
+    "bt_v146_recent":       "v146_ensemble",
+    # V147: Bayesian regime detection (Phase 5)
+    "bt_v147":              "v147_bayesian",
+    "bt_v147_crisis":       "v147_bayesian",
+    "bt_v147_trend":        "v147_bayesian",
+    "bt_v147_recent":       "v147_bayesian",
 }
 
 _SNAPSHOT_LABELS = {

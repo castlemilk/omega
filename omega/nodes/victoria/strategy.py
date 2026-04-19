@@ -490,6 +490,16 @@ class StrategyNode(Node):
         self._trade_history: deque = deque(maxlen=50)
         self._kelly_min_trades: int = 10  # minimum trades before using Kelly
 
+        # --- V144: Meta-Learning Layer ---
+        self._meta_learner: Any = None
+        if getattr(self.features, "meta_learning_enabled", False):
+            try:
+                from omega.nodes.victoria.meta_learner import MetaLearner
+                self._meta_learner = MetaLearner()
+                logger.info("V144 meta_learner initialised (state: %s)", self._meta_learner.state_file)
+            except Exception as _ml_exc:
+                logger.warning("V144 meta_learner init failed: %s", _ml_exc)
+
     # ------------------------------------------------------------------ Kelly sizing
 
     def _kelly_fraction(self) -> float:
@@ -1470,8 +1480,14 @@ class StrategyNode(Node):
         # V143: continuous confidence surface flag (set once per cycle).
         _use_surface = getattr(self.features, "continuous_surfaces", False)
         if _use_surface:
-            from omega.nodes.victoria.confidence_surface import get_surface as _get_surface
-            _confidence_surface = _get_surface(self.features)
+            if self._meta_learner is not None:
+                # V144: meta-learner supplies adapted T and μ for this cycle
+                _ml_cfg = self._meta_learner.get_surface_config()
+                from omega.nodes.victoria.confidence_surface import ConfidenceSurface
+                _confidence_surface = ConfidenceSurface(_ml_cfg)
+            else:
+                from omega.nodes.victoria.confidence_surface import get_surface as _get_surface
+                _confidence_surface = _get_surface(self.features)
 
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
