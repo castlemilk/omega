@@ -542,6 +542,20 @@ class VictoriaFeatures:
     Requires continuous_surfaces=True.
     """
 
+    meta_learner_exit_only: bool = False
+    """V148: when True with meta_learning_enabled, meta-learner adjusts exit
+    trail tightness only (not entry surfaces). Derived from bear_long T:
+    low T (high PF) → tighter trail; high T (uncertain) → looser trail.
+    Allows V139 entry volume while still benefiting from adaptive exits.
+    """
+
+    continuous_sizing: bool = False
+    """V148: when True, position size is scaled by regime directional confidence.
+    size_long *= sigmoid(bull_prob); size_short *= sigmoid(bear_prob).
+    Distinct from continuous_surfaces (which gates entry); this never blocks a trade,
+    only modulates its size. Preserves V139 trade volume.
+    """
+
     # ------------------------------------------------------------------
     # V145: LLM Meta-Controller (Phase 3)
     # ------------------------------------------------------------------
@@ -1626,3 +1640,36 @@ _PRESETS["v146"] = VictoriaFeatures(**_V146_BASE)
 # State: data/bayesian_regime_state.json (persisted across cycles).
 _V147_BASE = {**_V146_BASE, "bayesian_regime": True}
 _PRESETS["v147"] = VictoriaFeatures(**_V147_BASE)
+
+# ---------------------------------------------------------------------------
+# V148 — Best-of-phases: V139 volume × V141 crisis × V144 adaptive exits ×
+#         V143 continuous sizing.
+# ---------------------------------------------------------------------------
+# Design principle: V139 proved volume matters more than per-trade perfection.
+# V148 preserves V139's 100+ trades/snapshot by using hard conviction gates for
+# entry (not continuous surfaces) while adding two non-volume-killing upgrades:
+#   1. meta_learner_exit_only: meta-learner tunes trailing stop tightness based
+#      on rolling PF — high PF → tighten trail, low PF → loosen. Zero effect on
+#      entry gating.
+#   2. continuous_sizing: position size ∝ sigmoid(bull_prob) for longs,
+#      sigmoid(bear_prob) for shorts. Trades always execute; only size varies.
+# LLM: MiniMax (Anthropic-compat) via hermes auth.json — trade-level analyst.
+_V148_BASE = {
+    **_V142_BASE,
+    # V144 meta-learner — exit tuning only (not entry gating)
+    "meta_learning_enabled": True,
+    "meta_learner_exit_only": True,
+    # V143 continuous regime-confidence sizing (not entry gating)
+    "continuous_sizing": True,
+    # LLM analyst: MiniMax via hermes (confirmed working, 60s timeout)
+    "llm_analyst_provider": "openai_compatible",
+    "llm_analyst_model": "claude-3-5-haiku-20241022",
+    "llm_analyst_api_base": "https://api.minimax.io/anthropic",
+    "llm_analyst_api_key_env": "MINIMAX_API_KEY",
+    "llm_analyst_call_every_n": 10,
+    "llm_crisis_mode_enabled": True,
+}
+_PRESETS["v148"] = VictoriaFeatures(**_V148_BASE)
+_PRESETS["v148_no_llm"] = VictoriaFeatures(
+    **{**_V148_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False}
+)

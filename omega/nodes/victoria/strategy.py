@@ -1513,6 +1513,34 @@ class StrategyNode(Node):
         convictions: dict[str, ConvictionLevel] = {}
         # V143: continuous confidence surface flag (set once per cycle).
         _use_surface = getattr(self.features, "continuous_surfaces", False)
+
+        # V148: meta_learner_exit_only — meta-learner tunes exit trail tightness,
+        # not entry surfaces. Maps bear_long T → trail multiplier per cycle.
+        # Low T (model converged, high PF) → tighter trail (lock profits).
+        # High T (uncertain, low PF) → looser trail (avoid premature stops).
+        _meta_exit_only = getattr(self.features, "meta_learner_exit_only", False)
+        if _meta_exit_only and self._meta_learner is not None:
+            _ml_cfg_exit = self._meta_learner.get_surface_config()
+            _bear_T_exit = _ml_cfg_exit.bear_long.temperature
+            # T ∈ [0.05, 0.30] → mult ∈ [1.40, 0.80]
+            _ml_trail_mult = max(0.7, min(1.5, 1.4 - (_bear_T_exit - 0.05) * 2.4))
+            _paper_ec = (
+                getattr(self._paper_engine, "_exit_controller", None)
+                if self._paper_engine is not None
+                else None
+            )
+            if _paper_ec is not None:
+                _base_long_m = float(getattr(self.features, "long_trail_multiplier", 1.0))
+                _base_short_m = float(getattr(self.features, "short_trail_multiplier", 1.0))
+                _paper_ec.config.long_trail_multiplier = _base_long_m * _ml_trail_mult
+                _paper_ec.config.short_trail_multiplier = _base_short_m * _ml_trail_mult
+                logger.debug(
+                    "V148 meta_exit: bear_T=%.3f trail_mult=%.3f (long=%.3f short=%.3f)",
+                    _bear_T_exit, _ml_trail_mult,
+                    _paper_ec.config.long_trail_multiplier,
+                    _paper_ec.config.short_trail_multiplier,
+                )
+
         if _use_surface:
             if self._meta_learner is not None:
                 # V144: meta-learner supplies adapted T and μ for this cycle
@@ -2608,6 +2636,21 @@ class StrategyNode(Node):
         # a level.  This continuous factor rewards genuinely high-conviction signals.
         raw_weights: dict[str, float] = {}
         _wconv_scores: dict[str, float] = {}  # w_conv per ticker for paper_trading sizing
+
+        # V148: continuous_sizing — scale by regime directional confidence (never blocks entry)
+        _use_cont_sizing = getattr(self.features, "continuous_sizing", False)
+        _cont_size_long_mult = 1.0
+        _cont_size_short_mult = 1.0
+        if _use_cont_sizing and _use_continuous_regime:
+            # bull_prob ∈ [0,1] → long size ∈ [0.5, 1.5]; bear_prob → short size
+            _cont_size_long_mult = max(0.5, min(1.5, 0.5 + _regime_w_bull * 2.0))
+            _cont_size_short_mult = max(0.5, min(1.5, 0.5 + _regime_w_bear * 2.0))
+            logger.debug(
+                "V148 cont_sizing: bull=%.2f long_mult=%.2f bear=%.2f short_mult=%.2f",
+                _regime_w_bull, _cont_size_long_mult,
+                _regime_w_bear, _cont_size_short_mult,
+            )
+
         # V102: crisis_short_bias per-direction size multipliers (applied before kelly).
         _csb_fear_regime = self.features.crisis_short_bias and _regime_consolidated in (
             "crisis",
@@ -2655,6 +2698,7 @@ class StrategyNode(Node):
                     * _conv_scale
                     * _csb_long_mult
                     * _surf_conf  # V143: continuous confidence surface multiplier
+                    * _cont_size_long_mult  # V148: regime-confidence continuous sizing
                 )
         for ticker, w in short_base.items():
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
@@ -2687,6 +2731,7 @@ class StrategyNode(Node):
                     * _csb_short_mult
                     * _v136_crisis_short_boost
                     * _surf_conf_s  # V143: continuous confidence surface multiplier
+                    * _cont_size_short_mult  # V148: regime-confidence continuous sizing
                 )
 
         # V102: crisis_short_bias size multipliers — scale shorts up (1.3x), longs down (0.5x)
