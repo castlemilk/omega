@@ -375,7 +375,7 @@ class LLMMetaController:
                 return raw["choices"][0]["message"]["content"]
 
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=60) as resp:
             raw = json.loads(resp.read().decode())
 
         text = _extract(raw)
