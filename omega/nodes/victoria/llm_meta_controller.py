@@ -54,27 +54,77 @@ _OPENAI_COMPAT_PROVIDERS: dict[str, tuple[str, str]] = {
 }
 
 def _auto_provider() -> tuple[str, str, str] | None:
-    """Return (key_env, base_url, model) for first available openai-compat key."""
+    """Return (key_env, base_url, model) for first available openai-compat key.
+
+    Load order: env var → .env (already loaded by run_training) → hermes auth.json.
+    """
     for env_var, (base_url, model) in _OPENAI_COMPAT_PROVIDERS.items():
         if os.environ.get(env_var, ""):
             return env_var, base_url, model
+    # Hermes fallback: prefer zai (last_status=ok), then minimax, then others
+    for pool_key in ("zai", "minimax", "alibaba", "kimi-coding"):
+        result = _hermes_key(pool_key)
+        if result:
+            _, model = _HERMES_PROVIDER_MAP.get(pool_key, ("", "", "glm-4.5"))[1:]
+            env_label = _HERMES_PROVIDER_MAP.get(pool_key, ("UNKNOWN",))[0]
+            return env_label, result[1], model
     return None
+# ---------------------------------------------------------------------------
+# Hermes auth.json fallback key loader
+# ---------------------------------------------------------------------------
+
+_HERMES_PATH = "~/.hermes/auth.json"
+
+# Maps credential_pool key → (label_used_as_env_name, correct_base_url, model)
+_HERMES_PROVIDER_MAP: dict[str, tuple[str, str, str]] = {
+    "zai":      ("GLM_API_KEY",      "https://api.z.ai/api/coding/paas/v4", "glm-4.5"),
+    "minimax":  ("MINIMAX_API_KEY",  "https://api.minimax.io/anthropic",    "claude-3-5-haiku-20241022"),
+    "alibaba":  ("DASHSCOPE_API_KEY","https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
+    "kimi-coding": ("KIMI_API_KEY",  "https://api.moonshot.ai/v1",          "moonshot-v1-8k"),
+}
+
+# MiniMax uses Anthropic protocol (x-api-key header), not Bearer
+_ANTHROPIC_COMPAT_POOLS = {"minimax"}
+
+
+def _load_hermes_auth() -> dict:
+    """Load ~/.hermes/auth.json, return {} on failure."""
+    import os
+    try:
+        p = os.path.expanduser(_HERMES_PATH)
+        with open(p) as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _hermes_key(pool_key: str) -> tuple[str, str] | None:
+    """Return (access_token, base_url) from hermes for pool_key, skipping exhausted."""
+    auth = _load_hermes_auth()
+    entries = auth.get("credential_pool", {}).get(pool_key, [])
+    for e in entries:
+        if e.get("last_status") == "exhausted":
+            continue
+        token = e.get("access_token", "")
+        base_url = e.get("base_url", "")
+        if token and base_url:
+            return token, base_url
+    return None
+
+
 
 # ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT = """\
-You are a quant meta-controller. Given the system state, suggest surface parameter adjustments.
-Return ONLY a JSON object with these optional keys:
-{
-  "temperature_adjustments": {"bear_long": 0.15, "composite_long": 0.06},
-  "center_shifts": {"bear_long": -0.02},
-  "signal_family_emphasis": {"microstructure": 1.3, "macro": 0.7},
-  "reasoning": "brief explanation under 100 words"
-}
-All values must be floats. temperature_adjustments override current T. center_shifts are DELTAS added to current center.\
-"""
+_SYSTEM_PROMPT = (
+    "You are a quant meta-controller. Respond with ONLY a JSON object — "
+    "no markdown, no explanation, no preamble. Start your response with { and end with }. "
+    'Optional keys: {"temperature_adjustments": {"bear_long": 0.15}, '
+    '"center_shifts": {"bear_long": -0.02}, '
+    '"signal_family_emphasis": {"momentum": 1.2}, "reasoning": "under 50 words"} '
+    "temperature_adjustments override current T (float). center_shifts are deltas (float)."
+)
 
 # ---------------------------------------------------------------------------
 # Surface parameter bounds
@@ -265,35 +315,70 @@ class LLMMetaController:
             # Only use auto model if caller didn't specify a real one
             if not model or model == "claude-haiku-4-5-20251001":
                 model = _auto_model
-        api_key = os.environ.get(key_env, "")
+        # Resolve API key: hermes FIRST (authoritative for openai-compat providers),
+        # then env var fallback.
+        _label_to_pool = {v[0]: k for k, v in _HERMES_PROVIDER_MAP.items()}
+        hermes_pool_key: str | None = _label_to_pool.get(key_env or "")
+        api_key = ""
+        if hermes_pool_key:
+            result = _hermes_key(hermes_pool_key)
+            if result:
+                api_key, base_url = result[0], result[1]
         if not api_key:
-            raise RuntimeError(f"{key_env} not set")
+            api_key = os.environ.get(key_env, "") if key_env else ""
+        if not api_key:
+            raise RuntimeError(f"No API key found for {key_env} (hermes or env)")
         if base_url is None:
-            base_url = _OPENAI_COMPAT_PROVIDERS.get(key_env, ("", ""))[0]
+            base_url = _OPENAI_COMPAT_PROVIDERS.get(key_env or "", ("", ""))[0]
 
-        url = base_url.rstrip("/") + "/chat/completions"
-        body = json.dumps({
-            "model": model,
-            "max_tokens": 512,
-            "messages": [
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": context},
-            ],
-        }).encode()
+        # MiniMax uses Anthropic protocol; others use OpenAI Bearer
+        is_anthropic_compat = hermes_pool_key in _ANTHROPIC_COMPAT_POOLS
+        base_url = base_url.rstrip("/")
 
-        req = urllib.request.Request(
-            url,
-            data=body,
-            headers={
+        if is_anthropic_compat:
+            url = base_url + "/v1/messages"
+            body = json.dumps({
+                "model": model,
+                "max_tokens": 2048,
+                "system": _SYSTEM_PROMPT,
+                "messages": [{"role": "user", "content": context}],
+            }).encode()
+            headers = {
+                "Content-Type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            }
+            def _extract(raw):
+                # Skip thinking blocks; fall back to thinking text if no text block
+                thinking_text = ""
+                for block in raw.get("content", []):
+                    if block.get("type") == "text":
+                        return block["text"]
+                    if block.get("type") == "thinking":
+                        thinking_text = block.get("thinking", "")
+                return thinking_text or raw["content"][0].get("text", "")
+        else:
+            url = base_url + "/chat/completions"
+            body = json.dumps({
+                "model": model,
+                "max_tokens": 512,
+                "messages": [
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": context},
+                ],
+            }).encode()
+            headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {api_key}",
-            },
-            method="POST",
-        )
+            }
+            def _extract(raw):
+                return raw["choices"][0]["message"]["content"]
+
+        req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=20) as resp:
             raw = json.loads(resp.read().decode())
 
-        text = raw["choices"][0]["message"]["content"]
+        text = _extract(raw)
         return self._parse_response(text)
 
     def _call_claude(self, context: str, model: str) -> dict[str, Any]:

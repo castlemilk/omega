@@ -1594,14 +1594,15 @@ _PRESETS["v144_no_llm"] = VictoriaFeatures(
 _V145_BASE = {
     **_V144_BASE,
     "llm_meta_controller": True,
-    # Default to Kimi (openai-compatible) — available in .env without ANTHROPIC key
+    # MiniMax (Anthropic-compat) via hermes auth.json — confirmed working 2026-04-19
     "llm_analyst_provider": "openai_compatible",
-    "llm_analyst_model": "moonshot-v1-8k",
-    "llm_analyst_api_base": "https://api.moonshot.cn/v1",
-    "llm_analyst_api_key_env": "KIMI_API_KEY",
+    "llm_analyst_model": "claude-3-5-haiku-20241022",
+    "llm_analyst_api_base": "https://api.minimax.io/anthropic",
+    "llm_analyst_api_key_env": "MINIMAX_API_KEY",
 }
 _PRESETS["v145"] = VictoriaFeatures(**_V145_BASE)
-_PRESETS["v145_kimi"] = VictoriaFeatures(**_V145_BASE)
+_PRESETS["v145_minimax"] = VictoriaFeatures(**_V145_BASE)
+_PRESETS["v145_zai"] = VictoriaFeatures(**_V145_BASE)  # legacy alias
 
 # ---------------------------------------------------------------------------
 # V146 — Ensemble Voter (Phase 4: structured vote aggregation)
