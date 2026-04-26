@@ -620,6 +620,11 @@ class VictoriaFeatures:
     conditional_high_vol_block: bool = False
     high_vol_block_bear_threshold: float = 0.40
 
+    # V165: soft-block via size reduction. When conditional_high_vol_block lets
+    # an entry through (bear_prob below threshold), apply this multiplier to size.
+    # 1.0 = no size change; 0.5 = half size in non-bearish high_vol; 0.0 = block.
+    high_vol_size_mult: float = 1.0
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".

@@ -3210,6 +3210,18 @@ class StrategyNode(Node):
                 _orc_regime,
             )
 
+        # V165: high_vol size reduction. When the entry survived the high_vol gate
+        # (block off, or conditional gate's bear_prob check passed), de-risk by
+        # multiplying weights. This converts the binary block into a graded
+        # response — half-size in benign vol, full block (size_mult=0) in crisis.
+        _hv_size_mult = float(getattr(self.features, "high_vol_size_mult", 1.0))
+        if _hv_size_mult < 1.0 and _is_high_vol and weights:
+            weights = {t: w * _hv_size_mult for t, w in weights.items()}
+            logger.info(
+                "V165 high_vol size mult=%.2f (regime=high_vol)",
+                _hv_size_mult,
+            )
+
         # ── Portfolio risk manager (layers 1-5) ─────────────────────────────
         # Build price_histories for vol-scaling from market_data
         _price_histories: dict[str, list[float]] = {}
