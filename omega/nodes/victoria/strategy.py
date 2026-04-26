@@ -284,6 +284,104 @@ def conviction_size_multiplier(conviction: ConvictionLevel) -> float:
     return _CONVICTION_SIZE[conviction]
 
 
+# ---------------------------------------------------------------------------
+# V157: regime-aware signal weighting
+# ---------------------------------------------------------------------------
+# Per-mode weight multipliers applied to individual signals before composite
+# recomputation. Applied in _construct_portfolio after strategy_selector fires.
+#
+# TREND: upweight trend-following signals, downweight mean-reversion.
+# CRISIS: upweight mean-reversion / defensive, downweight trend-following.
+# DEFAULT: identity (1.0) — no change.
+# ---------------------------------------------------------------------------
+_REGIME_SIGNAL_WEIGHTS: dict[str, dict[str, float]] = {
+    "TREND": {
+        # trend-following signals → boost
+        "breakout_signal": 1.5,
+        "breakout_position": 1.5,
+        "adx_signal": 1.5,
+        "timeframe_signal": 1.5,
+        "zscore_signal": 1.2,       # momentum z-score
+        "macd_crossover": 1.2,
+        # mean-reversion / defensive → suppress
+        "ollivier_ricci_signal": 0.5,
+        "sma_crossover": 0.3,
+        "bb_signal": 0.3,
+        "rsi_signal": 0.5,
+        "ricci_curvature_signal": 0.5,
+    },
+    "CRISIS": {
+        # V161: revert to V158 dampening (not V159 amplification).
+        # V159 tried 1.5× on breakout/ADX/MTF to exploit SHORT alpha in crashes, but
+        # in price-recovery sub-periods (e.g. Feb-March 2022 bounce) breakout_signal=+1
+        # (prices making new highs) × 1.5× drove aggressive short composites → big losses.
+        # V158's conservative 0.3× approach: damp ALL trend-following signals in CRISIS,
+        # rely on mean-reversion (bb/rsi/ORC) for alpha.  Fewer trades → V153-like behavior.
+        "breakout_signal": 0.3,
+        "breakout_position": 0.3,
+        "adx_signal": 0.5,
+        "timeframe_signal": 0.3,
+        "zscore_signal": 0.5,
+        "macd_crossover": 0.5,
+        "ollivier_ricci_signal": 1.2,
+        "bb_signal": 1.5,
+        "rsi_signal": 1.5,
+        "ricci_curvature_signal": 1.2,
+        "sma_crossover": 1.0,
+    },
+    "DEFAULT": {},
+}
+
+
+def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
+    """Apply regime-appropriate weight multipliers to per-ticker signal dicts.
+
+    Mutates ``signals`` in-place: scales individual signal values and recomputes
+    the ``composite`` key as an equal-weight mean of surviving directional signals.
+
+    Parameters
+    ----------
+    signals:
+        Top-level signals dict as returned by SignalGenerationNode (keys = tickers).
+    mode_str:
+        Current StrategyMode value string: "TREND", "CRISIS", or "DEFAULT".
+    """
+    weights = _REGIME_SIGNAL_WEIGHTS.get(mode_str, {})
+    if not weights:
+        return  # DEFAULT: nothing to do
+
+    import logging as _logging
+    _wlog = _logging.getLogger("omega.victoria.strategy")
+
+    for ticker, ts in signals.items():
+        if not isinstance(ts, dict):
+            continue
+
+        modified = False
+        for sig_key, multiplier in weights.items():
+            if sig_key in ts and isinstance(ts[sig_key], (int, float)):
+                ts[sig_key] = float(ts[sig_key]) * multiplier
+                modified = True
+
+        if not modified:
+            continue
+
+        # Recompute composite as equal-weight mean of directional signals
+        directional_vals = [
+            float(v)
+            for k, v in ts.items()
+            if (k.endswith("_signal") or k == "sma_crossover")
+            and isinstance(v, (int, float))
+        ]
+        if directional_vals:
+            ts["composite"] = sum(directional_vals) / len(directional_vals)
+            ts["composite_method"] = f"regime_{mode_str.lower()}_weighted"
+            _wlog.debug(
+                "V157 regime weights [%s] applied to %s: composite=%.4f  n=%d",
+                mode_str, ticker, ts["composite"], len(directional_vals),
+            )
+
+
 class StrategyNode(Node):
     """
     Constructs portfolios and backtests strategies from trading signals.
@@ -450,6 +548,10 @@ class StrategyNode(Node):
                     api_base=getattr(self.features, "llm_analyst_api_base", ""),
                     api_key_env=getattr(self.features, "llm_analyst_api_key_env", ""),
                 )
+                # V153: wire trend-mode flag so LLM gets bull-market preamble
+                self._llm_analyst.trend_mode_enabled = bool(
+                    getattr(self.features, "llm_trend_mode_enabled", False)
+                )
                 logger.info(
                     "LLMAnalystSignal: provider=%s model=%s",
                     getattr(self.features, "llm_analyst_provider", "claude"),
@@ -535,6 +637,37 @@ class StrategyNode(Node):
                 logger.info("V147 bayesian_regime_detector initialised")
             except Exception as _exc:
                 logger.warning("V147 bayesian_regime_detector init failed: %s", _exc)
+
+        # --- V156: Strategy Selector ---
+        self._strategy_selector: Any = None
+        if getattr(self.features, "strategy_selector_enabled", False):
+            try:
+                from omega.nodes.victoria.strategy_selector import StrategySelector
+
+                self._strategy_selector = StrategySelector(self.features)
+                logger.info("V156 strategy_selector initialised")
+            except Exception as _exc:
+                logger.warning("V156 strategy_selector init failed: %s", _exc)
+
+        # --- V162: Resilience state (vol_shock / drawdown / correlation / adaptive) ---
+        self._resilience: Any = None
+        _resilience_enabled = any(
+            getattr(self.features, flag, False)
+            for flag in (
+                "vol_shock_detector_enabled",
+                "drawdown_circuit_breaker_enabled",
+                "correlation_breakdown_protection",
+                "adaptive_position_sizing",
+            )
+        )
+        if _resilience_enabled:
+            try:
+                from omega.nodes.victoria.resilience import ResilienceState
+
+                self._resilience = ResilienceState(self.features)
+                logger.info("V162 resilience_state initialised")
+            except Exception as _exc:
+                logger.warning("V162 resilience init failed: %s", _exc)
 
     # ------------------------------------------------------------------ Kelly sizing
 
@@ -974,6 +1107,26 @@ class StrategyNode(Node):
                         self._hysteresis_in_crisis = False
                         self._hysteresis_normal_count = 0
 
+        # V155: Wasserstein bull_prob auxiliary — suppress crisis mislabeling in bull markets.
+        # Forensics (v152): 30% of trending-snapshot cycles falsely labeled crisis because
+        # bear_prob oscillated high during Q4-2023 uptrend. When bull_prob clearly confirms
+        # a bull regime, override the crisis label rather than letting the system go bearish.
+        if (
+            getattr(self.features, "wasserstein_bull_prob_auxiliary", False)
+            and bull_prob >= 0.0  # only when Wasserstein probs are available
+            and bull_prob >= float(
+                getattr(self.features, "wasserstein_bull_prob_anticrisis_threshold", 0.60)
+            )
+        ):
+            if is_crisis:
+                logger.debug(
+                    "V155 bull_prob aux: crisis suppressed (bull=%.2f >= %.2f, bear=%.2f)",
+                    bull_prob,
+                    float(getattr(self.features, "wasserstein_bull_prob_anticrisis_threshold", 0.60)),
+                    bear_prob,
+                )
+            is_crisis = False
+
         self._is_crisis = is_crisis
         self._is_high_vol_regime = regime_label == "high_vol"
         is_bull = (
@@ -1394,6 +1547,61 @@ class StrategyNode(Node):
         current_cycle = self._execution_count
         self._last_ticker_decisions = {}  # reset each cycle
         self._last_confluence = {}  # reset confluence cache each cycle
+
+        # V156: apply regime-adaptive strategy mode overrides before threshold computation.
+        if self._strategy_selector is not None:
+            _sel_mode = self._strategy_selector.update(signals, self.features)
+            logger.debug("V156 strategy_selector mode=%s", _sel_mode.value)
+
+            # V157: regime-aware signal weighting — apply per-mode multipliers to
+            # individual signals then recompute composite for each ticker.
+            # Runs only when both the selector AND the feature flag are active.
+            if getattr(self.features, "regime_signal_weighting", False):
+                _apply_regime_signal_weights(signals, _sel_mode.value)
+
+        # V162: refresh resilience state from current equity + signals.
+        # Drives vol_shock hysteresis, drawdown halt/emergency-close, correlation
+        # breakdown cap, and adaptive sizing confidence.  Safe no-op when disabled.
+        if self._resilience is not None and self._paper_engine is not None:
+            try:
+                _eq = float(self._paper_engine.initial_capital)
+                _eq += float(getattr(self._paper_engine, "realised_pnl", 0.0) or 0.0)
+                # unrealised PnL — sum of open positions at current prices
+                for _pos in getattr(self._paper_engine, "positions", {}).values():
+                    try:
+                        _entry = float(getattr(_pos, "entry_price", 0.0) or 0.0)
+                        _sz = float(getattr(_pos, "size", 0.0) or 0.0)
+                        _sym = getattr(_pos, "symbol", "") or ""
+                        _last = 0.0
+                        _md = market_data.get(_sym, {}) if isinstance(market_data, dict) else {}
+                        if isinstance(_md, dict):
+                            _px = _md.get("close") or _md.get("adjclose") or []
+                            if _px:
+                                _last = float(_px[-1])
+                        if _last > 0 and _entry > 0 and _sz != 0:
+                            _side = 1.0 if str(getattr(_pos, "side", "long")).lower() == "long" else -1.0
+                            _eq += (_last - _entry) * _sz * _side
+                    except Exception:
+                        pass
+                self._resilience.update(
+                    signals,
+                    equity=_eq,
+                    positions=getattr(self._paper_engine, "positions", {}),
+                )
+                if self._resilience.emergency_close():
+                    logger.error("V162 emergency close triggered — flattening all positions")
+                    try:
+                        for _sym in list(getattr(self._paper_engine, "positions", {}).keys()):
+                            _close_fn = getattr(self._paper_engine, "close_position", None)
+                            if callable(_close_fn):
+                                _md = market_data.get(_sym, {}) if isinstance(market_data, dict) else {}
+                                _px = (_md.get("close") or _md.get("adjclose") or [])
+                                if _px:
+                                    _close_fn(_sym, float(_px[-1]), reason="drawdown_emergency")
+                    except Exception as _ec_exc:
+                        logger.warning("V162 emergency close error: %s", _ec_exc)
+            except Exception as _r_exc:
+                logger.debug("V162 resilience update error: %s", _r_exc)
 
         # Set per-direction conviction thresholds based on current regime.
         # CRISIS/BEAR → shorts get lower bar (0.05), longs get higher bar (0.20).
@@ -1945,19 +2153,23 @@ class StrategyNode(Node):
                             _bp_threshold,
                         )
                         continue
-                # V142: block all long entries in high_vol regime.
-                # Phase A: 0% WR in high_vol — superseded by surface (regime_base=0.15)
-                # when continuous_surfaces=True; kept as hard gate when False.
+                # V142/V164: block long entries in high_vol regime.
+                # V164 conditional gate: when conditional_high_vol_block=True, only
+                # block if bear_prob also exceeds high_vol_block_bear_threshold —
+                # preserves crisis protection while allowing benign-vol trading.
                 if (
                     not _use_surface
                     and getattr(self.features, "high_vol_entry_block", False)
                     and _is_high_vol
                 ):
-                    logger.debug(
-                        "V142: blocking %s long in high_vol regime (high_vol_entry_block)",
-                        ticker,
-                    )
-                    continue
+                    _conditional = getattr(self.features, "conditional_high_vol_block", False)
+                    _hv_bear_thresh = float(getattr(self.features, "high_vol_block_bear_threshold", 0.40))
+                    if not _conditional or (_conditional and _regime_w_bear >= _hv_bear_thresh):
+                        logger.debug(
+                            "V142/V164: blocking %s long in high_vol regime (cond=%s bear=%.2f thr=%.2f)",
+                            ticker, _conditional, _regime_w_bear, _hv_bear_thresh,
+                        )
+                        continue
                 if self.features.crisis_high_vol_long_block and _regime_consolidated in (
                     "crisis",
                     "high_vol",
@@ -2044,6 +2256,36 @@ class StrategyNode(Node):
                     if _all_sig_vals:
                         sig["composite"] = sum(_all_sig_vals) / len(_all_sig_vals)
 
+                # V153: trend signal dampening — suppress contrarian signals in bull market.
+                # Forensics: mean_reversion fights uptrends the same way fear_greed fights
+                # downtrends. Dampen it when bull_prob confirms we're in a trending regime.
+                _bull_prob_val = float(signals.get("_regime_w_bull_prob", 0.0))
+                _trend_bp_thresh = float(
+                    getattr(self.features, "trend_dampening_bull_prob_threshold", 0.65)
+                )
+                _is_trend_context = (
+                    _regime_consolidated in ("trending", "normal")
+                    and _bull_prob_val > _trend_bp_thresh
+                )
+                if (
+                    _is_trend_context
+                    and getattr(self.features, "trend_signal_dampening", False)
+                ):
+                    _mr_w = float(getattr(self.features, "trend_mean_reversion_weight", 0.2))
+                    if _mr_w != 1.0:
+                        sig = dict(sig)
+                        for _mr_key in ("mean_reversion", "mean_reversion_signal"):
+                            if _mr_key in sig:
+                                sig[_mr_key] = float(sig[_mr_key]) * _mr_w
+                        _all_sig_vals_t = [
+                            float(v)
+                            for k, v in sig.items()
+                            if (k.endswith("_signal") or k == "sma_crossover" or k == "mean_reversion")
+                            and isinstance(v, (int, float))
+                        ]
+                        if _all_sig_vals_t:
+                            sig["composite"] = sum(_all_sig_vals_t) / len(_all_sig_vals_t)
+
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="long"
                 )
@@ -2051,6 +2293,21 @@ class StrategyNode(Node):
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (long): %s", ticker, reason)
                     continue
+                # V155: asymmetric risk gate — veto longs where bear regime clearly dominates.
+                # Veto when bear_prob > bull_prob × threshold: regime is structurally against
+                # the direction. threshold=1.5 means bear must be 50% stronger than bull to block.
+                # This preserves normal-regime longs while blocking regime-misaligned entries.
+                if getattr(self.features, "asymmetric_risk_gate", False):
+                    _ar_bull = max(float(signals.get("_regime_w_bull_prob", 0.5)), 0.01)
+                    _ar_bear = float(signals.get("_regime_w_bear_prob", 0.5))
+                    _ar_thresh = float(getattr(self.features, "asymmetric_risk_threshold", 1.5))
+                    if _ar_bear > _ar_bull * _ar_thresh:
+                        filtered_this_cycle += 1
+                        logger.debug(
+                            "AsymmRisk vetoed %s LONG: bear=%.2f > bull=%.2f × %.1f (regime mismatch)",
+                            ticker, _ar_bear, _ar_bull, _ar_thresh,
+                        )
+                        continue
                 if self.features.signal_confluence and self._confluence is not None:
                     _cf = self._confluence.analyze(sig, ticker=ticker, direction="long")
                     self._last_confluence[ticker] = _cf
@@ -2123,6 +2380,27 @@ class StrategyNode(Node):
                         )
                         self._llm_call_count += 1
                     _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
+                    # V153: dynamic per-regime modifier floor (overrides V151 flat floor).
+                    # V151 flat floor: trend/normal/high_vol all get the same floor, but
+                    # high_vol needs more LLM influence (uncertain) and trending needs less
+                    # (don't let LLM fight the trend). Dynamic floors fix the asymmetry.
+                    if getattr(self.features, "dynamic_modifier_floor", False):
+                        _dyn_floor_map = {
+                            "crisis": float(getattr(self.features, "dyn_floor_crisis", 0.0)),
+                            "normal": float(getattr(self.features, "dyn_floor_normal", 0.80)),
+                            "high_vol": float(getattr(self.features, "dyn_floor_high_vol", 0.70)),
+                            "trending": float(getattr(self.features, "dyn_floor_trending", 0.90)),
+                            "default": float(getattr(self.features, "dyn_floor_normal", 0.80)),
+                        }
+                        _dyn_floor = _dyn_floor_map.get(_regime_consolidated, _dyn_floor_map["default"])
+                        if _dyn_floor > 0.0:
+                            _llm_mod = max(_llm_mod, _dyn_floor)
+                    else:
+                        # V151: floor gates on regime label — crisis = full veto mode,
+                        # all other labels apply the modifier floor.
+                        _llm_nc_floor = float(getattr(self.features, "llm_non_crisis_modifier_floor", 1.0))
+                        if _regime_consolidated != "crisis" and _llm_nc_floor < 1.0:
+                            _llm_mod = max(_llm_mod, _llm_nc_floor)
                     # V141 crisis mode: raise long veto threshold in bear regime.
                     # Forensics: mods 0.32-0.45 for losing longs should have been vetoed.
                     _long_veto_thresh = (
@@ -2292,17 +2570,20 @@ class StrategyNode(Node):
                             _crisis_scale,
                         )
                         continue
-                # V142: block all short entries in high_vol regime.
+                # V142/V164: block short entries in high_vol regime (conditional gate).
                 if (
                     not _use_surface
                     and getattr(self.features, "high_vol_entry_block", False)
                     and _is_high_vol
                 ):
-                    logger.debug(
-                        "V142: blocking %s short in high_vol regime (high_vol_entry_block)",
-                        ticker,
-                    )
-                    continue
+                    _conditional = getattr(self.features, "conditional_high_vol_block", False)
+                    _hv_bear_thresh = float(getattr(self.features, "high_vol_block_bear_threshold", 0.40))
+                    if not _conditional or (_conditional and _regime_w_bear >= _hv_bear_thresh):
+                        logger.debug(
+                            "V142/V164: blocking %s short in high_vol regime (cond=%s bear=%.2f thr=%.2f)",
+                            ticker, _conditional, _regime_w_bear, _hv_bear_thresh,
+                        )
+                        continue
                 if self.features.high_vol_short_block and _is_high_vol:
                     logger.debug("Suppressing %s short in high_vol regime (V130)", ticker)
                     continue
@@ -2322,6 +2603,18 @@ class StrategyNode(Node):
                     filtered_this_cycle += 1
                     logger.debug("Filtered %s (short): %s", ticker, reason)
                     continue
+                # V155: asymmetric risk gate — veto shorts where bull regime clearly dominates.
+                if getattr(self.features, "asymmetric_risk_gate", False):
+                    _ar_bull = float(signals.get("_regime_w_bull_prob", 0.5))
+                    _ar_bear = max(float(signals.get("_regime_w_bear_prob", 0.5)), 0.01)
+                    _ar_thresh = float(getattr(self.features, "asymmetric_risk_threshold", 1.5))
+                    if _ar_bull > _ar_bear * _ar_thresh:
+                        filtered_this_cycle += 1
+                        logger.debug(
+                            "AsymmRisk vetoed %s SHORT: bull=%.2f > bear=%.2f × %.1f (regime mismatch)",
+                            ticker, _ar_bull, _ar_bear, _ar_thresh,
+                        )
+                        continue
                 if self.features.signal_confluence and self._confluence is not None:
                     _cf = self._confluence.analyze(sig, ticker=ticker, direction="short")
                     self._last_confluence[ticker] = _cf
@@ -2392,6 +2685,23 @@ class StrategyNode(Node):
                         )
                         self._llm_call_count += 1
                     _llm_mod, _llm_rsn = self._llm_modifier_cache.get(ticker, (1.0, ""))
+                    # V153: dynamic per-regime modifier floor (short path — mirrors long path)
+                    if getattr(self.features, "dynamic_modifier_floor", False):
+                        _dyn_floor_map_s = {
+                            "crisis": float(getattr(self.features, "dyn_floor_crisis", 0.0)),
+                            "normal": float(getattr(self.features, "dyn_floor_normal", 0.80)),
+                            "high_vol": float(getattr(self.features, "dyn_floor_high_vol", 0.70)),
+                            "trending": float(getattr(self.features, "dyn_floor_trending", 0.90)),
+                            "default": float(getattr(self.features, "dyn_floor_normal", 0.80)),
+                        }
+                        _dyn_floor_s = _dyn_floor_map_s.get(_regime_consolidated, _dyn_floor_map_s["default"])
+                        if _dyn_floor_s > 0.0:
+                            _llm_mod = max(_llm_mod, _dyn_floor_s)
+                    else:
+                        # V151: floor gates on regime label (same as long path above)
+                        _llm_nc_floor_s = float(getattr(self.features, "llm_non_crisis_modifier_floor", 1.0))
+                        if _regime_consolidated != "crisis" and _llm_nc_floor_s < 1.0:
+                            _llm_mod = max(_llm_mod, _llm_nc_floor_s)
                     # V141 crisis mode: more permissive short veto in bear regime.
                     _short_veto_thresh = (
                         float(getattr(self.features, "llm_crisis_short_veto", 0.20))
@@ -2650,6 +2960,36 @@ class StrategyNode(Node):
                 _regime_w_bull, _cont_size_long_mult,
                 _regime_w_bear, _cont_size_short_mult,
             )
+
+        # V162: resilience size multiplier (vol_shock × regime_conf × drawdown taper)
+        # Additionally: block all new entries when drawdown halt active.
+        _resil_mult = 1.0
+        _resil_block_entries = False
+        _resil_max_positions: int | None = None
+        if self._resilience is not None:
+            try:
+                _resil_mult = float(self._resilience.size_multiplier())
+                _resil_block_entries = not bool(self._resilience.entry_allowed())
+                _resil_max_positions = self._resilience.max_positions()
+            except Exception as _resil_exc:
+                logger.debug("V162 resilience query error: %s", _resil_exc)
+        if _resil_block_entries:
+            logger.warning("V162 drawdown halt active — blocking new entries this cycle")
+            long_base = {}
+            short_base = {}
+        _cont_size_long_mult *= _resil_mult
+        _cont_size_short_mult *= _resil_mult
+        # Apply max_positions cap from correlation breakdown: keep only the top-N by conviction
+        if _resil_max_positions is not None and _resil_max_positions >= 0:
+            _all_cands: list[tuple[str, float, str]] = []
+            for _t, _s in long_candidates.items():
+                _all_cands.append((_t, abs(self._compute_weighted_conviction(_s)), "long"))
+            for _t, _s in short_candidates.items():
+                _all_cands.append((_t, abs(self._compute_weighted_conviction(_s)), "short"))
+            _all_cands.sort(key=lambda x: -x[1])
+            _keep = set(t for t, _, _ in _all_cands[:_resil_max_positions])
+            long_base = {t: v for t, v in long_base.items() if t in _keep}
+            short_base = {t: v for t, v in short_base.items() if t in _keep}
 
         # V102: crisis_short_bias per-direction size multipliers (applied before kelly).
         _csb_fear_regime = self.features.crisis_short_bias and _regime_consolidated in (

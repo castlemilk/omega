@@ -116,8 +116,11 @@ def _find_baseline_version(current: str) -> str | None:
 # Logging setup
 # ---------------------------------------------------------------------------
 
+_METRICS_DIR = os.environ.get("OMEGA_METRICS_DIR", "/tmp")
+
+
 def _setup_logging(version: str) -> logging.Logger:
-    log_file = f"/tmp/{version}_training.log"
+    log_file = f"{_METRICS_DIR}/{version}_training.log"
     logging.basicConfig(
         level=logging.WARNING,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -469,12 +472,12 @@ def run(
     log = logging.getLogger(f"training.{version}")
 
     # ── File paths ────────────────────────────────────────────────────────
-    metrics_jsonl = Path(f"/tmp/{version}_metrics.jsonl")
+    metrics_jsonl = Path(f"{_METRICS_DIR}/{version}_metrics.jsonl")
     trades_csv = DATA_DIR / f"{version}_trades.csv"
     progress_file = DATA_DIR / f"{version}_progress.json"
     results_file = DATA_DIR / f"{version}_results.json"
     signal_contribs_jsonl = DATA_DIR / f"{version}_signal_contribs.jsonl"
-    trade_details_jsonl = Path(f"/tmp/{version}_trade_details.jsonl")
+    trade_details_jsonl = Path(f"{_METRICS_DIR}/{version}_trade_details.jsonl")
 
     db_url = os.environ.get("DATABASE_URL", "")
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
@@ -514,7 +517,7 @@ def run(
     log.info("CoinGecko key  : %s", cg_key[:12] + "..." if cg_key else "MISSING")
     log.info("Database URL   : %s", db_url[:40] + "..." if db_url else "NOT SET — SQLite fallback")
     log.info("Metrics JSONL  : %s", metrics_jsonl)
-    log.info("Log file       : /tmp/%s_training.log", version)
+    log.info("Log file       : %s/%s_training.log", _METRICS_DIR, version)
     _active_flags = _active_features.active_flags()
     if _active_flags:
         log.info("Features ON    : %s", ", ".join(_active_flags))
@@ -648,7 +651,7 @@ def run(
 
     # ── Decision snapshot writer ──────────────────────────────────────────
     from omega.core.decision_snapshot import DecisionSnapshot, DecisionWriter
-    decision_writer = DecisionWriter(version=version, db_url=db_url or None)
+    decision_writer = DecisionWriter(version=version, db_url=db_url or None, output_dir=_METRICS_DIR)
     log.info("Decision snapshots → %s (+ Postgres if configured)", decision_writer.path)
 
     # ── Heartbeat client ──────────────────────────────────────────────────
@@ -1018,6 +1021,20 @@ def run(
                      and v.get("dxy_signal") is not None),
                     None,
                 ),
+                # V152: Wasserstein regime distance signals
+                "w2_crisis": last_signals.get("_w2_crisis"),
+                "w2_normal": last_signals.get("_w2_normal"),
+                "w2_trend": last_signals.get("_w2_trend"),
+                "w2_closest_regime": last_signals.get("_w2_closest_regime"),
+                # V152: TDA crash-prediction signals
+                "tda_fragmentation": last_signals.get("_tda_fragmentation"),
+                "tda_regime": last_signals.get("_tda_regime"),
+                "tda_betti0": last_signals.get("_tda_betti0"),
+                "tda_betti1": last_signals.get("_tda_betti1"),
+                "tda_pers_entropy": last_signals.get("_tda_pers_entropy"),
+                # V153: regime transition signal
+                "regime_transition": last_signals.get("_regime_transition"),
+                "regime_transition_from": last_signals.get("_regime_transition_from"),
             }
             metrics_fh.write(json.dumps(metric_row) + "\n")
             metrics_fh.flush()

@@ -462,6 +462,116 @@ class VictoriaFeatures:
     More frequent calls = fresher analysis during regime stress.
     """
 
+    llm_regime_gate_threshold: float = 0.40
+    """V150: bear_prob threshold below which the non-crisis modifier floor applies.
+    When bear_prob <= this value the LLM can advise but cannot veto or heavily dampen.
+    Default 0.40 = non-crisis markets; 0.0 disables the gate entirely.
+    """
+
+    llm_non_crisis_modifier_floor: float = 1.0
+    """V150: minimum LLM modifier when bear_prob <= llm_regime_gate_threshold.
+    1.0 = off (no floor); 0.70 = LLM can dampen at most 30% but cannot veto in
+    non-crisis conditions. Prevents over-vetoing in bull/normal market regimes.
+    """
+
+    # ── V152: RMT denoising ───────────────────────────────────────────────────
+
+    rmt_denoise_enabled: bool = False
+    """V152: attach RMTDenoiser for correlation-based position limits.
+    Denoises the asset correlation matrix using Marchenko-Pastur to remove noise
+    eigenvalues before computing position-level correlation risk.
+    """
+
+    rmt_n_obs: int = 252
+    """V152: observation window for RMT denoiser (trading days). 252 = 1 year."""
+
+    rmt_alpha: float = 0.0
+    """V152: blend factor for RMT denoiser (0.0 = pure denoised, 1.0 = empirical)."""
+
+    # ── V152: Wasserstein regime distance ─────────────────────────────────────
+
+    wasserstein_regime_enabled: bool = False
+    """V152: enable Wasserstein W₂ regime distance signal.
+    Replaces bear_prob-based regime classification with geometry-aware W₁ distance
+    to crisis/normal/trending return archetypes. Feeds into regime_w_bear as a
+    continuous crash-proximity score.
+    """
+
+    wasserstein_window: int = 60
+    """V152: rolling return window for Wasserstein distance computation."""
+
+    # ── V152: TDA crash prediction ────────────────────────────────────────────
+
+    tda_signal_enabled: bool = False
+    """V152: enable TDA (persistent homology) crash-prediction signal.
+    Computes Betti numbers and persistence entropy on delay-embedded returns.
+    β₁ loops + low persistence entropy = pre-crash topology.
+    """
+
+    tda_window: int = 60
+    """V152: rolling return window for TDA embedding."""
+
+    # ── V153: Trend-aware improvements ───────────────────────────────────────
+
+    llm_trend_mode_enabled: bool = False
+    """V153: inject trend-mode preamble into LLM system prompt when bull_prob > 0.55.
+    Counterpart to llm_crisis_mode_enabled. In a confirmed uptrend the LLM is instructed:
+    "Market is in a confirmed uptrend. Long entries are primary. Short entries require
+    exceptional conviction." Prevents the LLM from dampening good long entries with
+    crisis-trained bearish bias during bull markets.
+    """
+
+    trend_signal_dampening: bool = False
+    """V153: dampen contrarian/mean-reversion signals in trending/bull regimes.
+    Mirror of fear_greed_crisis_weight/sma_crisis_weight but for trend direction:
+    mean_reversion and other bearish signals that fight the trend are scaled down
+    when bull_prob > 0.55, reducing their drag on composite during uptrends.
+    trend_mean_reversion_weight controls the scale factor (default 0.2).
+    """
+
+    trend_mean_reversion_weight: float = 0.2
+    """V153: weight multiplier for mean_reversion in trending/bull regime (bull_prob > 0.55).
+    0.2 = dampen to 20% — removes most contrarian push in strong uptrends.
+    Only applied when trend_signal_dampening=True.
+    """
+
+    dynamic_modifier_floor: bool = False
+    """V153: replace single llm_non_crisis_modifier_floor with per-regime floors.
+    Floor map:
+      crisis   → dyn_floor_crisis   (default 0.0 — full LLM veto authority)
+      normal   → dyn_floor_normal   (default 0.80)
+      high_vol → dyn_floor_high_vol (default 0.70 — more LLM influence)
+      trending → dyn_floor_trending (default 0.90 — don't fight the trend)
+    When True, overrides llm_non_crisis_modifier_floor entirely.
+    """
+
+    dyn_floor_crisis: float = 0.0
+    """V155: configurable LLM modifier floor in crisis regime. 0.0 = full veto authority."""
+
+    dyn_floor_normal: float = 0.80
+    """V155: configurable LLM modifier floor in normal regime."""
+
+    dyn_floor_high_vol: float = 0.70
+    """V155: configurable LLM modifier floor in high_vol regime."""
+
+    dyn_floor_trending: float = 0.90
+    """V155: configurable LLM modifier floor in trending regime."""
+
+    trend_dampening_bull_prob_threshold: float = 0.65
+    """V155: bull_prob threshold above which trend_signal_dampening activates. Default 0.65."""
+
+    regime_transition_signal: bool = False
+    """V153: emit a regime_transition signal when the consolidated regime label changes.
+    Value encodes direction and magnitude of the transition:
+      normal → trending: +0.8  (confirmed bull breakout — strong long)
+      crisis → normal:   +0.3  (recovery — moderate long)
+      normal → crisis:   -0.8  (regime breakdown — strong short/exit)
+      trending → crisis: -0.9  (trend collapse — strongest bearish signal)
+      etc.
+    Stored as signals["_regime_transition"]; transitions are the highest-alpha
+    moments in the cycle where the market hasn't yet priced the new regime.
+    """
+
     long_trail_multiplier: float = 1.0
     """V141: scale factor for mfe_trail_k on LONG positions.
     0.5 = trail activates at 0.5× ATR MFE (tighter — exits losing longs sooner).
@@ -500,6 +610,15 @@ class VictoriaFeatures:
     Phase A diagnosis: 0% win-rate in high_vol across V137a/V139/V141 — regime cannot be traded profitably
     with current signal stack. Cleanest fix is to sit out entirely.
     """
+
+    # V164: softer high_vol gate. The unconditional V142 block costs ~$1.6k of
+    # alpha per recent-snapshot window because it sits out high_vol periods that
+    # are NOT crisis-precursors. When conditional_high_vol_block=True, the high_vol
+    # block fires only when bear_prob also exceeds high_vol_block_bear_threshold,
+    # preserving crisis protection (high_vol+high bear_prob = pre-crash) while
+    # allowing trading in benign vol spikes (high_vol+low bear_prob = bull volatility).
+    conditional_high_vol_block: bool = False
+    high_vol_block_bear_threshold: float = 0.40
 
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
@@ -646,6 +765,174 @@ class VictoriaFeatures:
 
     When to enable: pair with crisis_high_vol_long_block for full high_vol entry
     blackout (v130_high_vol_gate preset).
+    """
+
+    # ------------------------------------------------------------------
+    # V155 — Wasserstein bull_prob auxiliary + asymmetric risk gate
+    # ------------------------------------------------------------------
+
+    wasserstein_bull_prob_auxiliary: bool = False
+    """V155: suppress crisis mislabeling when bull_prob clearly indicates a bull market.
+    Forensics (v152): 30% of trending-snapshot cycles labeled 'crisis' by bear_prob
+    oscillation in Q4-2023 bull market. When bull_prob >= threshold, crisis label
+    is suppressed regardless of bear_prob, preventing bearish bias in clear uptrends.
+    """
+
+    wasserstein_bull_prob_anticrisis_threshold: float = 0.60
+    """V155: minimum bull_prob to suppress crisis label when wasserstein_bull_prob_auxiliary=True.
+    0.60 = only override crisis when Wasserstein is clearly bullish (not marginal).
+    """
+
+    asymmetric_risk_gate: bool = False
+    """V155: veto trades where the opposing regime probability dominates the aligned one.
+    For longs: veto if bear_prob > bull_prob × asymmetric_risk_threshold.
+    For shorts: veto if bull_prob > bear_prob × asymmetric_risk_threshold.
+    threshold=1.5 means the opposing regime must be 50% stronger to block entry.
+    Preserves trades in balanced regimes; vetoes entries directly against a dominant regime.
+    Does NOT block normal-market longs (bear_prob ≈ bull_prob passes at threshold=1.5).
+    """
+
+    asymmetric_risk_threshold: float = 1.5
+    """V155: regime dominance ratio to trigger asymmetric_risk_gate veto. Default 1.5×.
+    1.5 = opposing prob must be 50% stronger than aligned prob to veto (e.g., bear=0.60, bull=0.40).
+    """
+
+    # ------------------------------------------------------------------
+    # V156 — Regime-adaptive strategy selector
+    # ------------------------------------------------------------------
+
+    strategy_selector_enabled: bool = False
+    """V156: enable per-cycle regime-adaptive strategy mode switching.
+    Detects sustained bull/crisis regimes and applies mode-specific feature overrides:
+      TREND mode  — disables crisis protections that fight bull markets
+      CRISIS mode — activates full crisis alpha stack
+      DEFAULT mode — base config unchanged
+    Transitions are hysteresis-gated to prevent oscillation.
+    See omega/nodes/victoria/strategy_selector.py for full mode definitions.
+    """
+
+    strategy_selector_trend_window: int = 10
+    """V156: consecutive cycles with bull_prob above threshold required to enter TREND mode."""
+
+    strategy_selector_crisis_window: int = 5
+    """V156: consecutive cycles with bear_prob above threshold required to enter CRISIS mode."""
+
+    strategy_selector_trend_bull_threshold: float = 0.60
+    """V156: bull_prob level required (sustained for trend_window cycles) to trigger TREND mode."""
+
+    strategy_selector_crisis_bear_threshold: float = 0.55
+    """V156: bear_prob level required (sustained for crisis_window cycles) to trigger CRISIS mode."""
+
+    strategy_selector_trend_exit_window: int = 5
+    """V156: consecutive cycles below trend_bull_threshold required to exit TREND mode."""
+
+    strategy_selector_crisis_exit_window: int = 5
+    """V156: consecutive cycles below crisis_bear_threshold required to exit CRISIS mode."""
+
+    strategy_selector_trend_crisis_veto: bool = False
+    """V160: When True, TREND mode entry is vetoed if any cycle in the last
+    strategy_selector_trend_window cycles had a crisis/high_vol/bear regime label.
+    Prevents TREND mode from firing during 2022-style pre-crash rising markets where
+    regime labels oscillate between 'normal' and 'crisis'/'high_vol'.
+    Has no effect on Q4-2023-style sustained bull markets (all-normal labels).
+    """
+
+    # ------------------------------------------------------------------
+    # V162 — Resilience features (volatility shock, drawdown breaker,
+    # correlation breakdown, adaptive sizing, mode-transition blend).
+    # See omega/nodes/victoria/resilience.py + signals/vol_shock.py.
+    # ------------------------------------------------------------------
+
+    vol_shock_detector_enabled: bool = False
+    """V162: Emit vol_shock_max_z / vol_shock_flag / vol_shock_worst_ticker.
+    When active (z >= vol_shock_z_threshold): halve sizes, tighten stops 50%,
+    raise LLM cadence to every 3 cycles. Hysteresis: release after 5 cycles
+    of z < 2.0 (handled inside resilience.ResilienceState)."""
+
+    vol_shock_z_threshold: float = 3.0
+    """V162: z-score (current realized vol vs 30-cycle rolling baseline) that
+    arms the shock latch. Baseline std must have >=3 samples — else no-op."""
+
+    drawdown_circuit_breaker_enabled: bool = False
+    """V162: Track real-time running peak of (realised + unrealised) PnL.
+    Halt new entries when drawdown >= max_drawdown_pct; emergency-close every
+    open position when drawdown >= 2× max_drawdown_pct. Halt releases when
+    drawdown recovers below 0.5× max_drawdown_pct (hysteresis)."""
+
+    max_drawdown_pct: float = 5.0
+    """V162: percent drawdown (peak → current equity) that triggers the halt.
+    Emergency close at 2× this value. 5.0 = halt at 5% DD, emergency at 10%."""
+
+    correlation_breakdown_protection: bool = False
+    """V162: When ORC κ < orc_breakdown_threshold OR Fiedler z <
+    fiedler_breakdown_threshold, cap concurrent positions to 2 and tighten
+    stops by 30% (multiplier 0.7). Indicates the cross-asset graph has
+    decoupled — our basket diversification assumption is broken."""
+
+    orc_breakdown_threshold: float = -0.5
+    """V162: ORC κ (Ollivier-Ricci curvature) below this = graph breakdown."""
+
+    fiedler_breakdown_threshold: float = 0.0
+    """V162: Fiedler z-score below this = algebraic connectivity collapse."""
+
+    mode_transition_blend: bool = False
+    """V162: Blend strategy_selector override values over blend_cycles when
+    switching modes, instead of snapping on a single cycle. Numeric fields
+    interpolate linearly; boolean fields flip at the midpoint ⌈N/2⌉."""
+
+    blend_cycles: int = 5
+    """V162: number of cycles over which to ramp overrides on mode transition."""
+
+    adaptive_position_sizing: bool = False
+    """V162: Scale base position size by regime_confidence × (1 − dd/max_dd).
+    regime_confidence = |bull_prob − bear_prob|, floored at 0.2. Composes
+    multiplicatively with vol_shock size reduction."""
+
+    # ------------------------------------------------------------------
+    # V157 — Trend-following signals
+    # ------------------------------------------------------------------
+
+    breakout_signal_enabled: bool = False
+    """V157: Donchian channel breakout detection signal.
+    Computes breakout_position (continuous channel position) and breakout_signal
+    (±1 directional flag on N-period high/low break).
+    """
+
+    breakout_window: int = 20
+    """V157: Donchian channel lookback period (number of candles). Default 20."""
+
+    trend_strength_signal_enabled: bool = False
+    """V157: ADX-based trend strength signal.
+    adx_signal: directional, 0 when ranging (ADX < adx_min), ±1 in strong trends.
+    Suppresses trend-following signals in ranging markets.
+    """
+
+    trend_strength_period: int = 14
+    """V157: ADX smoothing period (Wilder). Default 14."""
+
+    trend_strength_adx_min: float = 20.0
+    """V157: ADX threshold below which trend direction signals are suppressed."""
+
+    multi_timeframe_alignment: bool = False
+    """V157: Higher-timeframe momentum alignment signal.
+    Computes momentum on short (4-cycle) and long (24-cycle) windows.
+    timeframe_signal: +1 when both timeframes agree, 0 when they conflict.
+    mtf_size_multiplier: 1.0 aligned, 0.5 conflicting (reduces counter-trend trades).
+    """
+
+    mtf_short_window: int = 4
+    """V157: Short-term momentum window (cycles). Default 4 ≈ 16h on 4h data."""
+
+    mtf_long_window: int = 24
+    """V157: Long-term momentum window (cycles). Default 24 ≈ 4 days on 4h data."""
+
+    regime_signal_weighting: bool = False
+    """V157: Regime-adaptive signal weights applied in strategy_selector modes.
+    TREND mode: upweights breakout (1.5×), trend_strength (1.5×), momentum (1.2×).
+               Downweights mean-reversion signals: ORC (0.5×), SMA (0.3×), BB (0.3×).
+    CRISIS mode: upweights mean-reversion (1.5×), ORC (1.2×).
+                Downweights momentum (0.5×), breakout (0.3×).
+    DEFAULT: equal weights (1.0×).
     """
 
     # ------------------------------------------------------------------
@@ -1673,3 +1960,415 @@ _PRESETS["v148"] = VictoriaFeatures(**_V148_BASE)
 _PRESETS["v148_no_llm"] = VictoriaFeatures(
     **{**_V148_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False}
 )
+
+# ---------------------------------------------------------------------------
+# V149 — V148 with LLM integration fixed (OpenAICompatibleProvider Anthropic-compat)
+# ---------------------------------------------------------------------------
+# Root cause: V148's OpenAICompatibleProvider sent Bearer+/chat/completions to
+# api.minimax.io/anthropic, which requires x-api-key+/v1/messages (Anthropic format).
+# Provider is now fixed — V149 config is identical to V148 but LLM actually fires.
+#
+# Ablation: v149_no_hysteresis tests whether regime_hysteresis_enabled causes the
+# observed -$10k trend-snapshot regression (by locking the crisis label into
+# Q4-2023/early-2026 volatile periods where brief volatility triggers crisis briefly).
+_V149_BASE = {
+    **_V148_BASE,
+    # LLM config is unchanged from V148 — provider fix is in llm_analyst.py
+}
+_PRESETS["v149"] = VictoriaFeatures(**_V149_BASE)
+
+# Kimi-CLI variant (kimi-cli binary, no API key needed)
+_PRESETS["v149_kimi"] = VictoriaFeatures(
+    **{
+        **_V149_BASE,
+        "llm_analyst_provider": "kimi_cli",
+        "llm_analyst_model": "kimi-latest",
+        "llm_analyst_api_base": "",
+        "llm_analyst_api_key_env": "",
+    }
+)
+
+# Ablation: disable regime hysteresis to check if it causes trend regression
+_PRESETS["v149_no_hysteresis"] = VictoriaFeatures(
+    **{**_V149_BASE, "regime_hysteresis_enabled": False}
+)
+
+# No-LLM baseline for isolating LLM contribution
+_PRESETS["v149_no_llm"] = VictoriaFeatures(
+    **{**_V149_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False}
+)
+
+# ---------------------------------------------------------------------------
+# V150 — Regime-gated LLM: non-crisis modifier floor
+# ---------------------------------------------------------------------------
+# V149 post-mortem: LLM helped crisis (-$875 best ever) but hurt recent/trend
+# via over-vetoing (46% veto rate, avg_mod=0.527 in normal conditions).
+# Fix: when bear_prob <= 0.40 (non-crisis), clamp modifier floor to 0.70 so
+# the LLM can advise but cannot veto or cut size by more than 30%.
+# Crisis behavior (bear_prob > 0.40) is unchanged from V149.
+_V150_BASE = {
+    **_V149_BASE,
+    "llm_regime_gate_threshold": 0.40,
+    "llm_non_crisis_modifier_floor": 0.70,
+}
+_PRESETS["v150"] = VictoriaFeatures(**_V150_BASE)
+
+# Kimi HTTP variant (if key is valid)
+_PRESETS["v150_kimi"] = VictoriaFeatures(
+    **{
+        **_V150_BASE,
+        "llm_analyst_provider": "kimi",
+        "llm_analyst_model": "moonshot-v1-8k",
+        "llm_analyst_api_base": "",
+        "llm_analyst_api_key_env": "KIMI_API_KEY",
+    }
+)
+
+# No-LLM baseline for isolating V150 structural changes
+_PRESETS["v150_no_llm"] = VictoriaFeatures(
+    **{**_V150_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False}
+)
+
+# ---------------------------------------------------------------------------
+# V151 — Regime-label-gated LLM floor (fix V150 crisis regression)
+# ---------------------------------------------------------------------------
+# V150 post-mortem: bear_prob gate (≤0.40) fired during crisis bear_prob dips,
+# applying the floor mid-crisis and allowing trades that should be vetoed.
+# Fix: gate the floor on regime label == "crisis" instead of bear_prob.
+# When label is crisis, full veto mode regardless of momentary bear_prob.
+# When label is normal/high_vol/trending, floor applies.
+#
+# Grid: 3 floor values to find recent/crisis Pareto optimum.
+#   v151a: floor=0.70 — same as V150 but crisis-gated correctly
+#   v151b: floor=0.80 — more permissive, LLM can dampen ≤20%
+#   v151c: floor=0.90 — near pass-through, LLM advisory only in non-crisis
+_V151_BASE = {
+    **_V149_BASE,
+    # llm_regime_gate_threshold no longer used (V151 uses label gate in strategy.py)
+}
+_PRESETS["v151a"] = VictoriaFeatures(**{**_V151_BASE, "llm_non_crisis_modifier_floor": 0.70})
+_PRESETS["v151b"] = VictoriaFeatures(**{**_V151_BASE, "llm_non_crisis_modifier_floor": 0.80})
+_PRESETS["v151c"] = VictoriaFeatures(**{**_V151_BASE, "llm_non_crisis_modifier_floor": 0.90})
+
+# V152: best V151 preset (v151c, floor=0.90) + all 3 research signals enabled.
+# - rmt_denoise: already always-on via set_rmt_denoiser() wire; flag kept for clarity
+# - wasserstein_regime_enabled: W₁ distances to crisis/normal/trending archetypes
+# - tda_signal_enabled: persistent homology crash-prediction on BTC returns
+_V152_BASE = {
+    **_V151_BASE,
+    "llm_non_crisis_modifier_floor": 0.90,  # best V151 floor
+    "wasserstein_regime_enabled": True,
+    "wasserstein_window": 60,
+    "tda_signal_enabled": True,
+    "tda_window": 60,
+}
+_PRESETS["v152"] = VictoriaFeatures(**_V152_BASE)
+_PRESETS["v152_no_llm"] = VictoriaFeatures(**{**_V152_BASE, "llm_analyst_enabled": False})
+_PRESETS["v152_wasserstein_only"] = VictoriaFeatures(**{
+    **_V151_BASE,
+    "llm_non_crisis_modifier_floor": 0.90,
+    "wasserstein_regime_enabled": True,
+    "wasserstein_window": 60,
+    "tda_signal_enabled": False,
+})
+_PRESETS["v152_tda_only"] = VictoriaFeatures(**{
+    **_V151_BASE,
+    "llm_non_crisis_modifier_floor": 0.90,
+    "wasserstein_regime_enabled": False,
+    "tda_signal_enabled": True,
+    "tda_window": 60,
+})
+
+# V153: V152 + 4 trend-aware improvements.
+# Forensics (docs/research/trend-forensics-v152.md) identified regime mislabeling
+# (30% crisis cycles in a bull market) and LLM bearish bias as root causes of
+# trend-snapshot regression vs V139. V153 directly addresses both.
+_V153_BASE = {
+    **_V152_BASE,
+    "llm_trend_mode_enabled": True,       # LLM trend-mode preamble in bull market
+    "trend_signal_dampening": True,        # dampen mean_reversion in uptrends
+    "dynamic_modifier_floor": True,        # per-regime floors: trending=0.90, high_vol=0.70
+    "regime_transition_signal": True,      # high-alpha transition detection signal
+}
+_PRESETS["v153"] = VictoriaFeatures(**_V153_BASE)
+_PRESETS["v153_no_llm"] = VictoriaFeatures(**{**_V153_BASE, "llm_analyst_enabled": False})
+_PRESETS["v153_trend_only"] = VictoriaFeatures(**{
+    **_V152_BASE,
+    "llm_trend_mode_enabled": True,
+    "trend_signal_dampening": True,
+    "dynamic_modifier_floor": True,
+    "regime_transition_signal": False,     # isolate: trend fixes without transition signal
+})
+_PRESETS["v153_transition_only"] = VictoriaFeatures(**{
+    **_V152_BASE,
+    "regime_transition_signal": True,      # isolate: just the transition signal
+})
+
+# V154: v153_trend_only + crisis floor 0.50 (was 0.0) + bull_prob threshold 0.65 (was 0.55)
+_V154_BASE = {
+    **_V152_BASE,
+    "llm_trend_mode_enabled": True,
+    "trend_signal_dampening": True,
+    "dynamic_modifier_floor": True,
+    "regime_transition_signal": False,
+}
+_PRESETS["v154"] = VictoriaFeatures(**_V154_BASE)
+
+# V155: grid-search-tuned floor params + Wasserstein bull_prob auxiliary.
+#
+# Grid search (200 cycles, recent snapshot, 27 combos) winner:
+#   dyn_floor_crisis=0.25, dyn_floor_normal=0.70, trend_dampening_bp_thresh=0.65
+#   PnL $+10,427 | PF 1.64 | WR 41.3% | 63 trades — sole Pareto-dominant config.
+#
+# asymmetric_risk_gate disabled after Phase A showed it degrades trend snapshot
+# (-$8k vs V153to -$868). Wasserstein bull_prob auxiliary also disabled — it can't
+# override mislabeled crisis cycles where bull_prob is already suppressed by the
+# Wasserstein distribution shift. Both will be revisited in V156 with a deeper fix.
+_V155_BASE = {
+    **_V152_BASE,
+    "llm_trend_mode_enabled": True,
+    "trend_signal_dampening": True,
+    "dynamic_modifier_floor": True,
+    "regime_transition_signal": False,
+    # Floors reverted to V153to defaults after Phase A showed grid-winner params
+    # (cf=0.25, nc=0.70) overfit recent-only and hurt crisis (-$2.9k) + trend (-$4.3k).
+    # Grid search confirmed td_thresh=0.65 is already optimal (was the default).
+    # V156 will run a multi-snapshot grid search to find truly generalizable floors.
+    "dyn_floor_crisis": 0.0,                     # reverted: LLM full veto in crisis
+    "dyn_floor_normal": 0.80,                    # reverted: original V153to value
+    "dyn_floor_high_vol": 0.70,                  # unchanged
+    "dyn_floor_trending": 0.90,                  # unchanged
+    "trend_dampening_bull_prob_threshold": 0.65,  # grid-confirmed (was already default)
+}
+_PRESETS["v155"] = VictoriaFeatures(**_V155_BASE)
+# v155_wass: with Wasserstein auxiliary — for future ablation testing
+_PRESETS["v155_wass"] = VictoriaFeatures(**{
+    **_V155_BASE,
+    "wasserstein_bull_prob_auxiliary": True,
+    "wasserstein_bull_prob_anticrisis_threshold": 0.60,
+})
+# v155_asymm: with asymmetric gate — for future ablation testing
+_PRESETS["v155_asymm"] = VictoriaFeatures(**{
+    **_V155_BASE,
+    "asymmetric_risk_gate": True,
+    "asymmetric_risk_threshold": 1.5,
+})
+
+# ---------------------------------------------------------------------------
+# V156 — Regime-adaptive strategy selector
+# ---------------------------------------------------------------------------
+# The manifold analysis proved a single config can't win across all regimes.
+# V156 adds a per-cycle mode switcher: TREND (removes crisis blocks in bull
+# markets) / CRISIS (full crisis alpha) / DEFAULT (base config unchanged).
+# Base: V155 with strategy_selector enabled.
+_V156_BASE = {
+    **_V155_BASE,
+    "strategy_selector_enabled": True,
+    "strategy_selector_trend_window": 10,       # 10 bull cycles to enter TREND
+    "strategy_selector_crisis_window": 5,       # 5 bear cycles to enter CRISIS
+    "strategy_selector_trend_bull_threshold": 0.60,
+    "strategy_selector_crisis_bear_threshold": 0.55,
+    "strategy_selector_trend_exit_window": 5,
+    "strategy_selector_crisis_exit_window": 5,
+}
+_PRESETS["v156"] = VictoriaFeatures(**_V156_BASE)
+_PRESETS["v156_no_llm"] = VictoriaFeatures(**{**_V156_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+
+# ---------------------------------------------------------------------------
+# V157 — Trend-following signals + regime-adaptive signal weighting
+# ---------------------------------------------------------------------------
+# Adds three price-only trend signals (breakout detection, ADX trend strength,
+# multi-timeframe momentum alignment) and regime-aware weight scaling.
+#
+# Best auto-improve params: dyn_floor_crisis=0.0, trend_dampening_bull=0.574,
+#                           dyn_floor_normal=0.80 (from 2-snapshot GP search).
+# ---------------------------------------------------------------------------
+_V157_BASE = {
+    **_V156_BASE,
+    # Tune best auto-improve params from 2-snapshot GP search
+    "dyn_floor_crisis": 0.0,
+    "trend_dampening_bull_prob_threshold": 0.574,
+    "dyn_floor_normal": 0.80,
+    # V157 trend signals
+    "breakout_signal_enabled": True,
+    "breakout_window": 20,
+    "trend_strength_signal_enabled": True,
+    "trend_strength_period": 14,
+    "trend_strength_adx_min": 20.0,
+    "multi_timeframe_alignment": True,
+    "mtf_short_window": 4,
+    "mtf_long_window": 24,
+    # Regime-aware signal weighting
+    "regime_signal_weighting": True,
+}
+_PRESETS["v157"] = VictoriaFeatures(**_V157_BASE)
+_PRESETS["v157_no_llm"] = VictoriaFeatures(**{**_V157_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+
+# V157 ablation: selector fix + regime weighting only (no new signals).
+# Isolates contribution of reweighting vs the new signal content.
+_V157_NO_TREND_SIGNALS_BASE = {
+    **_V156_BASE,
+    "dyn_floor_crisis": 0.0,
+    "trend_dampening_bull_prob_threshold": 0.574,
+    "dyn_floor_normal": 0.80,
+    "regime_signal_weighting": True,
+    # All trend signals OFF
+    "breakout_signal_enabled": False,
+    "trend_strength_signal_enabled": False,
+    "multi_timeframe_alignment": False,
+}
+_PRESETS["v157_no_trend_signals"] = VictoriaFeatures(**_V157_NO_TREND_SIGNALS_BASE)
+_PRESETS["v157_no_trend_signals_no_llm"] = VictoriaFeatures(**{
+    **_V157_NO_TREND_SIGNALS_BASE,
+    "llm_analyst_enabled": False,
+    "llm_crisis_mode_enabled": False,
+})
+
+# ---------------------------------------------------------------------------
+# V158 — Breakout-aware regime detection
+# ---------------------------------------------------------------------------
+# Fixes the V157 selector bug: "normal" regime is now only mapped to
+# bull_prob=0.65 when basket_breakout > 0.10 AND basket_mtf > 0.
+# This prevents TREND mode from firing in the 2022 crisis snapshot's
+# "normal" pre-crash period, while still triggering on genuine bull markets
+# (Q4-2023) where prices ARE making new Donchian highs.
+# ---------------------------------------------------------------------------
+_V158_BASE = {
+    **_V157_BASE,
+    # trend_window stays at 10 (needs 10 × confirmed normal-with-breakout cycles)
+    # crisis_window stays at 5 (fast reaction to bear/crisis labels)
+    # All V157 signals kept — they're what makes _basket_breakout available
+}
+_PRESETS["v158"] = VictoriaFeatures(**_V158_BASE)
+_PRESETS["v158_no_llm"] = VictoriaFeatures(**{**_V158_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+
+# ---------------------------------------------------------------------------
+# V159 — Faster crisis detection + breakout-amplified SHORT signals in crisis
+# ---------------------------------------------------------------------------
+# Root cause of V158 crisis failure (from progress analysis):
+#   1. TREND mode fires in Jan-Feb 2022 (basket_breakout > 0.10 during brief rally)
+#   2. When crash hits (~cycle 125), the crisis_window=5 delay costs ~$42k in losses
+#   3. After entering CRISIS mode (~cycle 250), breakout signals are suppressed
+#      to 0.3× — cutting off the strongest SHORT alpha (breakdown signals)
+#
+# Fixes:
+#   1. trend_window: 10 → 15 (harder to enter TREND: need 15 consecutive breakout
+#      cycles = 60h = 2.5 days, less likely during 2022 short bounces)
+#   2. crisis_window: 5 → 3 (faster CRISIS entry: only 3 cycles needed = 12h)
+#   3. CRISIS breakout weights: 0.3 → 1.5 (breakdown signals = SHORT alpha)
+#      (strategy.py _REGIME_SIGNAL_WEIGHTS["CRISIS"]["breakout_signal"] = 1.5)
+# ---------------------------------------------------------------------------
+_V159_BASE = {
+    **_V158_BASE,
+    "strategy_selector_trend_window": 15,       # harder to enter TREND
+    "strategy_selector_crisis_window": 3,       # faster crisis entry (was 5)
+    "strategy_selector_trend_exit_window": 5,   # unchanged
+    "strategy_selector_crisis_exit_window": 3,  # faster crisis exit too (was 5)
+}
+_PRESETS["v159"] = VictoriaFeatures(**_V159_BASE)
+_PRESETS["v159_no_llm"] = VictoriaFeatures(**{**_V159_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+
+# ---------------------------------------------------------------------------
+# V160 — Crisis-label contamination window veto on TREND entry
+# ---------------------------------------------------------------------------
+# Root cause of ALL V157/V158/V159 crisis failures (confirmed from trade logs):
+#   - 2022 crisis snapshot oscillates between "normal" and "crisis"/"high_vol" labels
+#     while prices are still rising in Jan-Feb 2022 (pre-crash bull continuation)
+#   - V158/V159's basket_breakout > 0.10 condition fires in BOTH Q4-2023 (genuine bull)
+#     and Jan-Feb 2022 (pre-crash rising) → can't disambiguate with price action alone
+#   - V159 attempted faster crisis_window=3 + upweighted shorts, but:
+#     shorts entered in CRISIS mode lose when prices rise (cycle 153 crash: -$31k in 5c)
+#     shorts entered in DEFAULT mode with breakdown signals also lose in rising market
+#
+# Key differentiator: Q4-2023 vs Jan-Feb 2022:
+#   - Q4-2023 (genuine trend): regime labels are SUSTAINED "normal" (no crisis/high_vol
+#     labels mixed in over the trend_window period)
+#   - 2022 pre-crash: regime labels OSCILLATE between "normal" and "crisis"/"high_vol"
+#     even during the rising phase — the regime model detects underlying fragility
+#
+# Fix: track a crisis-label contamination window (deque of size trend_window).
+#      If ANY cycle in the last trend_window cycles had a crisis/high_vol/bear label,
+#      cap bull_prob below trend_bull_threshold → TREND mode cannot fire.
+#      After the contamination window clears (trend_window consecutive clean cycles),
+#      TREND mode can fire normally if breakout/MTF confirm it.
+# ---------------------------------------------------------------------------
+_V160_BASE = {
+    **_V158_BASE,                                     # same signals as V158
+    "strategy_selector_trend_window": 10,             # back to V158 (was 15 in V159)
+    "strategy_selector_crisis_window": 5,             # back to V158 (was 3 in V159)
+    "strategy_selector_trend_exit_window": 5,
+    "strategy_selector_crisis_exit_window": 5,
+    "strategy_selector_trend_crisis_veto": True,      # V160: the key new flag
+}
+_PRESETS["v160"] = VictoriaFeatures(**_V160_BASE)
+_PRESETS["v160_no_llm"] = VictoriaFeatures(**{**_V160_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+
+# ---------------------------------------------------------------------------
+# V161 — Dual-duty crisis veto: CRISIS overrides applied in DEFAULT mode
+#         when crisis labels contaminate the window
+# ---------------------------------------------------------------------------
+# V160 failure analysis (from cycle 170 crisis: -$35k):
+#   - Crisis-label veto DID prevent TREND mode (0 StrategySelector transitions) ✓
+#   - But DEFAULT mode was still taking longs during the 2022 crash
+#   - Root cause: V160 base config has crisis_long_block=False (default)
+#     AND the selector's crisis_window=5 counter kept resetting because
+#     "normal" labels interrupted the streak → CRISIS mode never armed
+#
+# V161 change (in strategy_selector.py _apply_overrides only):
+#   - When in DEFAULT mode AND crisis_contaminated=True → apply _CRISIS_OVERRIDES
+#     (same protections as full CRISIS mode: crisis_long_block, high_vol_entry_block, etc.)
+#   - This makes the contamination window dual-purpose:
+#     1. Veto TREND mode (prevents longs in pre-crash rising markets)
+#     2. Apply CRISIS protections (prevents longs after crash begins)
+#   - Net effect in crisis snapshot: always in CRISIS-protected mode
+#     (V153-like conservative behaviour → small positive PnL expected)
+#   - Net effect in trend snapshot: brief CRISIS override during occasional
+#     volatility spikes (acceptable cost), TREND mode fires in clean stretches
+# ---------------------------------------------------------------------------
+_V161_BASE = _V160_BASE  # same flags; the change is in strategy_selector.py
+_PRESETS["v161"] = VictoriaFeatures(**_V161_BASE)
+_PRESETS["v161_no_llm"] = VictoriaFeatures(**{**_V161_BASE, "llm_analyst_enabled": False, "llm_crisis_mode_enabled": False})
+
+# V161_LIVE: production config — v161_no_llm base + 5-param optimal from 2026-04-24
+# 5-param auto_improve run 2 (iter 8), composite backtest +$41,850 all-positive:
+#   recent=+$4,319 (103t, pf 1.13), crisis=+$2,606 (32t, pf 1.23), trend=+$34,925 (100t, pf 2.65)
+# Note: LLM analyst stays OFF — matches the backtest config exactly. Tracing flags
+#   (decision_traces, activation_tracing, signal_reasoning) are inherited True from
+#   v161_no_llm. Enabling llm_analyst for live would diverge from backtest premise.
+_V161_LIVE = {
+    **_V161_BASE,
+    "llm_analyst_enabled": False,
+    "llm_crisis_mode_enabled": False,
+    # 5-param optimal (auto_improve_5param_run2.jsonl iter 8)
+    "trend_dampening_bull_prob_threshold": 0.6305,
+    "crisis_short_thresh_scale": 0.701,
+    "strategy_selector_trend_bull_threshold": 0.7265,
+    "strategy_selector_crisis_bear_threshold": 0.6093,
+    "bear_prob_long_block_threshold": 0.4188,
+}
+_PRESETS["v161_live"] = VictoriaFeatures(**_V161_LIVE)
+
+# V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
+# Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
+# 5% drawdown, emergency-closes at 10%, caps positions to 2 during correlation
+# breakdown, blends mode transitions over 5 cycles, scales size by regime confidence.
+_V162_BASE = {
+    **_V161_LIVE,
+    # vol_shock
+    "vol_shock_detector_enabled": True,
+    "vol_shock_z_threshold": 3.0,
+    # drawdown
+    "drawdown_circuit_breaker_enabled": True,
+    "max_drawdown_pct": 5.0,
+    # correlation breakdown
+    "correlation_breakdown_protection": True,
+    "orc_breakdown_threshold": -0.5,
+    "fiedler_breakdown_threshold": 0.0,
+    # mode transition blend
+    "mode_transition_blend": True,
+    "blend_cycles": 5,
+    # adaptive sizing
+    "adaptive_position_sizing": True,
+}
+_PRESETS["v162"] = VictoriaFeatures(**_V162_BASE)
+_PRESETS["v162_resilient"] = VictoriaFeatures(**_V162_BASE)
