@@ -12,8 +12,11 @@ import json, os, statistics, sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-METRICS = Path("/tmp/v163_live_metrics.jsonl")
-OUT = Path("data/v163_live_monitor.jsonl")
+_VERSION = os.environ.get("V_LIVE_VERSION", "v163_live")
+_METRICS_DIR = os.environ.get("OMEGA_METRICS_DIR", "/tmp")
+METRICS = Path(f"{_METRICS_DIR}/{_VERSION}_metrics.jsonl")
+OUT = Path(f"data/{_VERSION}_monitor.jsonl")
+_TRADES_CSV = Path(f"data/{_VERSION}_trades.csv")
 
 
 def _stdev(xs):
@@ -49,9 +52,19 @@ def main() -> int:
     first_ts = rows[0].get("timestamp") or rows[0].get("ts")
     last_ts = rows[-1].get("timestamp") or rows[-1].get("ts")
 
-    closed_pnl = rows[-1].get("closed_pnl") or rows[-1].get("realized_pnl") or 0.0
-    closed_trades = rows[-1].get("closed_trades") or rows[-1].get("n_closed") or 0
-    win_rate = rows[-1].get("win_rate") or 0.0
+    closed_trades = int(rows[-1].get("total_closed") or 0)
+    # PnL not in metrics — read from trades CSV if present
+    closed_pnl = 0.0
+    win_rate = 0.0
+    trades_csv = _TRADES_CSV
+    if trades_csv.exists():
+        import csv
+        with open(trades_csv) as f:
+            reader = csv.DictReader(f)
+            pnls = [float(r.get("pnl") or 0) for r in reader]
+        if pnls:
+            closed_pnl = sum(pnls)
+            win_rate = sum(1 for p in pnls if p > 0) / len(pnls)
 
     regimes: dict[str, int] = {}
     for r in rows:
@@ -70,12 +83,12 @@ def main() -> int:
         "regimes": regimes,
         "regime_transitions": regime_transitions,
         "signal_stdev": {
-            "w2_trend": round(_stdev([r.get("_w2_trend") for r in rows]), 6),
-            "w2_crisis": round(_stdev([r.get("_w2_crisis") for r in rows]), 6),
-            "w2_normal": round(_stdev([r.get("_w2_normal") for r in rows]), 6),
-            "tda_betti0": round(_stdev([r.get("_tda_betti0") for r in rows]), 6),
-            "tda_fragmentation": round(_stdev([r.get("_tda_fragmentation") for r in rows]), 6),
-            "tda_pers_entropy": round(_stdev([r.get("_tda_pers_entropy") for r in rows]), 6),
+            "w2_trend": round(_stdev([r.get("w2_trend") for r in rows]), 6),
+            "w2_crisis": round(_stdev([r.get("w2_crisis") for r in rows]), 6),
+            "w2_normal": round(_stdev([r.get("w2_normal") for r in rows]), 6),
+            "tda_betti0": round(_stdev([r.get("tda_betti0") for r in rows]), 6),
+            "tda_fragmentation": round(_stdev([r.get("tda_fragmentation") for r in rows]), 6),
+            "tda_pers_entropy": round(_stdev([r.get("tda_pers_entropy") for r in rows]), 6),
         },
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
