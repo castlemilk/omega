@@ -122,6 +122,37 @@ live-specific bug.
 
 V165 Phase A target: confirm composite ≥ V161's +$41,850 with crisis ≥ +$2,000.
 
+### V165 Phase A result — FAILED
+
+| Snap | V161 baseline | V165 (cond gate 0.30 + size_mult 0.5) | Δ |
+|---|---|---|---|
+| recent | +$4,319 | **+$2,259** | **−$2,060** |
+| crisis | +$2,606 | **−$28,655** | **−$31,261** |
+| trend  | +$34,925 | +$27,346 | −$7,579 |
+| **composite** | **+$41,850** | **+$950** | **−$40,900 (−98%)** |
+
+Worse than both V163bt (no block: +$10,357) and V164bt (cond block 0.40:
++$11,333). V165 is the worst variant tested.
+
+**Why crisis breaks at any conditional threshold:** the crisis snapshot
+contains cycles labeled `high_vol` (not `crisis`) where the Bayesian regime
+detector hasn't yet caught up to the crash, so `bear_prob` is still low.
+These are *exactly* the cycles V142's hard block was designed to catch. Any
+gate that depends on `bear_prob >= threshold` lets them through, and they
+lose at full or half size.
+
+**Conclusion: the V142 hard `high_vol_entry_block` is unconditionally
+correct.** Removing or weakening it costs $30-40k composite PnL. The $1.6k
+recent-snapshot alpha gained by softening the block is dominated by the
+crisis-snapshot loss by an order of magnitude.
+
+**Recommendation:** keep `high_vol_entry_block=True` permanently. Do NOT
+ship `conditional_high_vol_block` or `high_vol_size_mult` — leave them as
+dead-code feature flags or remove them in a future cleanup commit. Future
+work to capture the recent-snapshot high_vol alpha should focus on signal
+recalibration (the conviction filter doesn't separate winners from losers
+in live, lesson #1) rather than gate softening.
+
 ## Process changes already shipped
 
 - **TDA/W2 buffer bug** — `update_returns` extends → replaces (commit `a2998e8`).
