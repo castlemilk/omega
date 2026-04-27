@@ -1008,15 +1008,20 @@ class SignalGenerationNode(Node):
                     pass
 
             # Cross-asset market-level signals (pre-computed above, applied to every ticker)
-            if _fear_greed_val != 0.0:
+            # V166: gated by *_in_composite feature flags. Values are still surfaced
+            # at signals["_xxx_val"] for metrics; the flags control whether they
+            # enter the per-ticker composite. Defaults match v161_live behaviour
+            # (fear_greed only) even when FRED_API_KEY/yfinance are now present.
+            _f = self._features
+            if _fear_greed_val != 0.0 and getattr(_f, "fear_greed_in_composite", True):
                 ts["fear_greed_signal"] = _fear_greed_val
-            if _dxy_val != 0.0:
+            if _dxy_val != 0.0 and getattr(_f, "dxy_signal_in_composite", False):
                 ts["dxy_signal"] = _dxy_val
-            if _vix_val != 0.0:
+            if _vix_val != 0.0 and getattr(_f, "vix_signal_in_composite", False):
                 ts["vix_signal"] = _vix_val
-            if _yield_curve_val != 0.0:
+            if _yield_curve_val != 0.0 and getattr(_f, "yield_curve_in_composite", False):
                 ts["yield_curve_signal"] = _yield_curve_val
-            if _spy_val != 0.0:
+            if _spy_val != 0.0 and getattr(_f, "spy_signal_in_composite", False):
                 ts["spy_signal"] = _spy_val
             for _geo_k, _geo_v in _geo_signals.items():
                 if _geo_v != 0.0:

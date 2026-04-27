@@ -635,6 +635,19 @@ class VictoriaFeatures:
     live_signal_normalization: bool = False
     live_signal_norm_window: int = 50
 
+    # V166: macro signal contribution gates. These signals' raw values are
+    # computed and surfaced in metrics regardless (for observability), but
+    # they only enter the per-ticker composite when their flag is True.
+    # Defaults: False — preserves v161_live composite behaviour even when
+    # FRED_API_KEY/yfinance are now available. Phase A showed enabling
+    # vix/spy/dxy at weight=1.0 with the empty IC table costs $30-50k of
+    # composite PnL because they dilute the basket and add bias.
+    vix_signal_in_composite: bool = False
+    spy_signal_in_composite: bool = False
+    dxy_signal_in_composite: bool = False
+    fear_greed_in_composite: bool = True
+    yield_curve_in_composite: bool = False
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
