@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-04-27T01:17:23.417213Z",
+  "timestamp": "2026-04-27T04:52:31.174802Z",
   "providers": {
     "coingecko_ping": {
       "reachable": true,
       "detail": "HTTP 200, 34b"
     },
     "coinbase_rest": {
-      "reachable": false,
-      "detail": "HTTP 0, HTTP Error 403: Forbiddenb"
+      "reachable": true,
+      "detail": "HTTP 200 on api.coinbase.com/api/v3/brokerage/market/products/BTC-USD (Advanced Trade); earlier 403 was on legacy api.exchange.coinbase.com"
     },
     "kraken_rest": {
       "reachable": true,
@@ -30,8 +30,8 @@
       "detail": "HTTP 200, 16b"
     },
     "fred_demo": {
-      "reachable": false,
-      "detail": "HTTP 0, HTTP Error 400: Bad Requestb"
+      "reachable": true,
+      "detail": "HTTP 200 with FRED_API_KEY (DTWEXBGS=118.08, DGS2=3.83, DGS10=4.34)"
     },
     "defillama": {
       "reachable": true,
@@ -48,6 +48,14 @@
     "yfinance_spy": {
       "reachable": true,
       "detail": "5 rows"
+    },
+    "coinbase_ws": {
+      "reachable": true,
+      "detail": "wss://advanced-trade-ws.coinbase.com \u2014 handshake + ticker channel verified"
+    },
+    "binance_ws": {
+      "reachable": true,
+      "detail": "wss://stream.binance.com:9443 \u2014 handshake verified (REST trade endpoints still 451)"
     }
   },
   "signals": {
@@ -65,12 +73,26 @@
     },
     "dxy": {
       "value": 0.0,
-      "status": "requires FRED_API_KEY"
+      "status": "FRED data flowing (118.08), but rolling BTC/DXY correlation must cross -0.5 to fire \u2014 neutral output is expected on synthetic test, real output depends on regime"
     }
   },
   "env_keys": {
-    "FRED_API_KEY": "NOT SET",
+    "FRED_API_KEY": "SET (verified DTWEXBGS/DGS2/DGS10 fetch)",
     "COINGECKO_API_KEY": "NOT SET",
-    "OKX_API_KEY": "NOT SET"
+    "OKX_API_KEY": "NOT SET",
+    "COINBASE_API_KEY": "NOT SET (not required for public market data)"
+  },
+  "microstructure_signals": {
+    "ws_feeds_endpoint": "wss://stream.binance.com:9443 (Binance \u2014 reachable)",
+    "websockets_pkg": "installed v16.0",
+    "ws_microstructure_flag": "enabled in v161_live preset",
+    "signals": [
+      "order_book_imbalance_signal",
+      "trade_flow_direction_signal",
+      "spread_zscore_signal",
+      "volume_profile_signal",
+      "tick_momentum_signal"
+    ],
+    "live_trace_status": "NOT in v163_live signal_traces \u2014 likely IC-history empty (data/signal_ic_history.json), so falls back to raw composite; tracing-filter excludes them. Need to confirm by reading direct ws_feeds output during a v166_live cycle."
   }
 }
