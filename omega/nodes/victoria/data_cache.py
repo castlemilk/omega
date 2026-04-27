@@ -289,8 +289,11 @@ class MacroDataCache:
     # ── Funding rate ───────────────────────────────────────────────────────────
 
     def _refresh_funding(self, symbol: str) -> None:
-        """Fetch funding rate from OKX → Coinbase INTX → CoinGecko and upsert."""
-        rate = _fetch_okx_funding(symbol)
+        """Fetch funding rate from Binance → OKX → Coinbase INTX → CoinGecko."""
+        # V166: Binance fapi works from US; OKX 403's. Try Binance first.
+        rate = _fetch_binance_funding(symbol)
+        if rate is None:
+            rate = _fetch_okx_funding(symbol)
         if rate is None:
             rate = _fetch_coinbase_intx_funding(symbol)
         if rate is None:
@@ -382,6 +385,51 @@ def _fetch_fred_observations(
 
 
 # ── OKX funding fetch helper ───────────────────────────────────────────────────
+
+
+# V166: Binance funding fallback. Binance fapi.binance.com/fapi/v1/premiumIndex
+# is reachable from US (geo-block applies to spot trading endpoints, not public
+# market data on the futures REST subdomain). OKX returns 403 from US, so this
+# is now the primary source in practice.
+_BINANCE_FAPI_URL = "https://fapi.binance.com/fapi/v1/premiumIndex"
+_BINANCE_FAPI_MAP = {
+    "BTCUSDT": "BTCUSDT",
+    "ETHUSDT": "ETHUSDT",
+    "SOLUSDT": "SOLUSDT",
+    "BNBUSDT": "BNBUSDT",
+    "XRPUSDT": "XRPUSDT",
+    "ADAUSDT": "ADAUSDT",
+    "ARBUSDT": "ARBUSDT",
+    "AVAXUSDT": "AVAXUSDT",
+    "DOGEUSDT": "DOGEUSDT",
+    "MATICUSDT": "MATICUSDT",
+    "NEARUSDT": "NEARUSDT",
+    "LINKUSDT": "LINKUSDT",
+    "DOTUSDT": "DOTUSDT",
+    "ATOMUSDT": "ATOMUSDT",
+}
+
+
+def _fetch_binance_funding(symbol: str) -> float | None:
+    """Fetch lastFundingRate from Binance fapi premiumIndex."""
+    sym = _BINANCE_FAPI_MAP.get(symbol)
+    if not sym:
+        return None
+    try:
+        url = _BINANCE_FAPI_URL + "?" + urllib.parse.urlencode({"symbol": sym})
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "omega-victoria/1.0", "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=8.0) as resp:
+            data = json.loads(resp.read().decode())
+        rate = data.get("lastFundingRate")
+        if rate is None:
+            return None
+        return float(rate)
+    except Exception as exc:
+        logger.debug("_fetch_binance_funding: failed for %s: %s", symbol, exc)
+        return None
 
 
 def _fetch_okx_funding(symbol: str) -> float | None:

@@ -126,16 +126,24 @@ class GDELTClient:
             f"&format=json"
         )
         url = _GDELT_BASE + params
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "omega-victoria/1.0"})
-            with urllib.request.urlopen(req, timeout=8) as resp:
-                raw = json.loads(resp.read().decode())
-            articles = raw.get("articles", []) or []
-            _cache_store(key, {"articles": articles})
-            return articles
-        except Exception as exc:
-            logger.debug("GDELT query %r failed: %s", query_name, exc)
-            return []
+        # V166: GDELT TLS handshakes intermittently time out at 8s; retry with
+        # backoff at longer timeout. Empty result still cached so we don't
+        # hammer the API on persistent failures.
+        last_exc: Exception | None = None
+        for _attempt, _to in enumerate((20, 30), start=1):
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "omega-victoria/1.0"})
+                with urllib.request.urlopen(req, timeout=_to) as resp:
+                    raw = json.loads(resp.read().decode())
+                articles = raw.get("articles", []) or []
+                _cache_store(key, {"articles": articles})
+                return articles
+            except Exception as exc:
+                last_exc = exc
+                logger.debug("GDELT query %r attempt %d (timeout=%ds) failed: %s",
+                             query_name, _attempt, _to, exc)
+        logger.warning("GDELT query %r failed after retries: %s", query_name, last_exc)
+        return []
 
 
 # ---------------------------------------------------------------------------
