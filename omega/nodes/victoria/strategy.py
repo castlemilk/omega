@@ -431,6 +431,10 @@ class StrategyNode(Node):
         self._short_conviction_threshold: float = 0.10
         # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
         self._signal_ics: dict[str, float] = {}
+        # V166: rolling per-signal history for live normalization (z-score). Keyed
+        # by signal name (not per-ticker — pooling across tickers gives more samples
+        # for the same signal's intrinsic distribution).
+        self._signal_history: dict[str, list[float]] = {}
         # Tracking counters
         self._proposals_generated: int = 0  # tickers that passed basic conviction screen
         self._proposals_filtered: int = 0  # tickers blocked by conviction filters
@@ -1003,6 +1007,12 @@ class StrategyNode(Node):
 
         weighted_sum = 0.0
         total_ic = 0.0
+        # V166: live signal normalization. When enabled, z-score each signal
+        # value against its rolling history before weighting. Compensates for
+        # tighter live signal distributions vs backtest (the calibration mismatch
+        # that makes the conviction filter too restrictive in live).
+        _norm_enabled = bool(getattr(self.features, "live_signal_normalization", False))
+        _norm_window = int(getattr(self.features, "live_signal_norm_window", 50))
         for k, v in signals_dict.items():
             if not (k.endswith("_signal") or k == "sma_crossover"):
                 continue
@@ -1015,6 +1025,18 @@ class StrategyNode(Node):
                 continue
             if math.isnan(fv) or math.isinf(fv):
                 continue
+            if _norm_enabled:
+                hist = self._signal_history.setdefault(k, [])
+                hist.append(fv)
+                if len(hist) > _norm_window:
+                    del hist[0]
+                if len(hist) >= 5:
+                    _mean = sum(hist) / len(hist)
+                    _var = sum((x - _mean) ** 2 for x in hist) / len(hist)
+                    _std = math.sqrt(_var) if _var > 0 else 1.0
+                    fv = (fv - _mean) / _std if _std > 1e-9 else fv
+                    # Clamp z-score to [-3, +3] to avoid blowups from outliers
+                    fv = max(-3.0, min(3.0, fv))
             weighted_sum += fv * ic
             total_ic += ic
 

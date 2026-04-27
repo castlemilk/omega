@@ -1008,14 +1008,15 @@ def run(
                 "regime_consolidated": str(last_signals.get("_regime", "")),
                 "stale_symbols": ["ALL"] if sit_out_reason == "stale_data" else [],
                 "active_filters": _get_active_filters(sit_out_reason, proposals_gen, proposals_filt),
-                "fear_greed_signal": next(
+                # V166: prefer top-level macros (set by signal_generation), fall back to per-ticker
+                "fear_greed_signal": last_signals.get("_fear_greed_val") if last_signals.get("_fear_greed_val") is not None else next(
                     (v.get("fear_greed_signal") for k, v in last_signals.items()
                      if isinstance(v, dict) and not k.startswith("_") and not k.startswith("adv_")
                      and v.get("fear_greed_signal") is not None),
                     None,
                 ),
-                "funding_rate_btc": (last_signals.get("BTCUSDT") or {}).get("funding_rate_signal"),
-                "dxy_signal": next(
+                "funding_rate_btc": last_signals.get("_funding_rate_btc") if last_signals.get("_funding_rate_btc") is not None else (last_signals.get("BTCUSDT") or {}).get("funding_rate_signal"),
+                "dxy_signal": last_signals.get("_dxy_val") if last_signals.get("_dxy_val") is not None else next(
                     (v.get("dxy_signal") for k, v in last_signals.items()
                      if isinstance(v, dict) and not k.startswith("_") and not k.startswith("adv_")
                      and v.get("dxy_signal") is not None),

@@ -91,6 +91,22 @@ try:
 except ImportError:
     _HAS_ORC = False
 
+try:
+    from omega.nodes.victoria.signals.wasserstein_regime import (
+        WassersteinRegimeSignal as _WassersteinRegimeSignal,
+    )
+
+    _HAS_WASSERSTEIN_REGIME = True
+except ImportError:
+    _HAS_WASSERSTEIN_REGIME = False
+
+try:
+    from omega.nodes.victoria.signals.tda_signal import TDASignal as _TDASignal
+
+    _HAS_TDA_SIGNAL = True
+except ImportError:
+    _HAS_TDA_SIGNAL = False
+
 logger = logging.getLogger("omega.nodes.victoria.signal_generation")
 
 # V103: optional new-architecture modules — import lazily to preserve V93 baseline
@@ -151,6 +167,24 @@ try:
     _HAS_GEOPOLITICAL = True
 except ImportError:
     _HAS_GEOPOLITICAL = False
+
+# V157: trend-following signals (price-only, no external deps — always importable)
+try:
+    from omega.nodes.victoria.signals import breakout as _breakout_mod
+    from omega.nodes.victoria.signals import trend_strength as _trend_strength_mod
+    from omega.nodes.victoria.signals import multi_timeframe as _mtf_mod
+
+    _HAS_TREND_SIGNALS = True
+except ImportError:
+    _HAS_TREND_SIGNALS = False
+
+# V162: volatility shock detector (price-only, no external deps).
+try:
+    from omega.nodes.victoria.signals import vol_shock as _vol_shock_mod
+
+    _HAS_VOL_SHOCK = True
+except ImportError:
+    _HAS_VOL_SHOCK = False
 
 
 def _safe_mean(values: list[float | None], n: int) -> float | None:
@@ -406,6 +440,33 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._geo_signal = _GeopoliticalSignal()
                 logger.info("GeopoliticalSignal initialized")
+
+        # V152 wasserstein_regime: W₁ distance to return distribution archetypes
+        self._wasserstein_regime_sig: Any = None
+        if (
+            _HAS_WASSERSTEIN_REGIME
+            and self._features
+            and getattr(self._features, "wasserstein_regime_enabled", False)
+        ):
+            with contextlib.suppress(Exception):
+                _w_win = int(getattr(self._features, "wasserstein_window", 60))
+                self._wasserstein_regime_sig = _WassersteinRegimeSignal(window=_w_win, min_obs=20)
+                logger.info("WassersteinRegimeSignal initialized (window=%d)", _w_win)
+
+        # V152 tda_signal: persistent homology crash-prediction signal
+        self._tda_signal_inst: Any = None
+        if (
+            _HAS_TDA_SIGNAL
+            and self._features
+            and getattr(self._features, "tda_signal_enabled", False)
+        ):
+            with contextlib.suppress(Exception):
+                _tda_win = int(getattr(self._features, "tda_window", 60))
+                self._tda_signal_inst = _TDASignal(window=_tda_win, min_obs=30)
+                logger.info("TDASignal initialized (window=%d)", _tda_win)
+
+        # V153 regime_transition_signal: tracks prev regime to detect label changes
+        self._prev_regime_for_transition: str | None = None
 
         # V106 trade_reinforcement: EMA-based per-signal weight adjustments
         self._reinforcer: Any = None
@@ -691,6 +752,13 @@ class SignalGenerationNode(Node):
             except Exception as _exc:
                 logger.warning("VIXSignal compute error: %s", _exc)
 
+        # V166: surface macro values at top-level so the per-cycle metrics
+        # writer can read them without depending on whether they made it into
+        # any per-ticker dict (the prior `if val != 0.0` gate dropped them).
+        signals["_fear_greed_val"] = float(_fear_greed_val)
+        signals["_dxy_val"] = float(_dxy_val)
+        signals["_vix_val"] = float(_vix_val)
+
         _yield_curve_val: float = 0.0
         if self._yield_curve_signal is not None:
             try:
@@ -886,12 +954,56 @@ class SignalGenerationNode(Node):
                     # bearish, in an up-SMA market, low vol became doubly bullish).
                     ts["volume_signal"] = max(-1.0, min(1.0, -vol_z / 2.0))
 
+            # V157: breakout detection — Donchian channel breakout signal
+            if (
+                _HAS_TREND_SIGNALS
+                and self._features
+                and getattr(self._features, "breakout_signal_enabled", False)
+            ):
+                try:
+                    _bk_window = int(getattr(self._features, "breakout_window", 20))
+                    _bk = _breakout_mod.compute(prices, window=_bk_window)
+                    ts.update(_bk)
+                except Exception as _bk_exc:
+                    logger.debug("breakout %s: %s", ticker, _bk_exc)
+
+            # V157: trend strength — ADX-based trend confirmation
+            if (
+                _HAS_TREND_SIGNALS
+                and self._features
+                and getattr(self._features, "trend_strength_signal_enabled", False)
+            ):
+                try:
+                    _adx_period = int(getattr(self._features, "trend_strength_period", 14))
+                    _adx_min = float(getattr(self._features, "trend_strength_adx_min", 20.0))
+                    _adx = _trend_strength_mod.compute(prices, period=_adx_period, adx_min=_adx_min)
+                    ts.update(_adx)
+                except Exception as _adx_exc:
+                    logger.debug("trend_strength %s: %s", ticker, _adx_exc)
+
+            # V157: multi-timeframe alignment — short/long momentum agreement
+            if (
+                _HAS_TREND_SIGNALS
+                and self._features
+                and getattr(self._features, "multi_timeframe_alignment", False)
+            ):
+                try:
+                    _mtf_short = int(getattr(self._features, "mtf_short_window", 4))
+                    _mtf_long = int(getattr(self._features, "mtf_long_window", 24))
+                    _mtf = _mtf_mod.compute(prices, short_window=_mtf_short, long_window=_mtf_long)
+                    ts.update(_mtf)
+                except Exception as _mtf_exc:
+                    logger.debug("multi_timeframe %s: %s", ticker, _mtf_exc)
+
             # Funding rate signal
             if self._funding_signal is not None:
                 try:
                     fr_signal = self._funding_signal.compute(ticker)
                     if fr_signal != 0.0:
                         ts["funding_rate_signal"] = fr_signal
+                    # V166: surface BTC funding at top level for metrics observability
+                    if ticker == "BTCUSDT":
+                        signals["_funding_rate_btc"] = float(fr_signal)
                 except Exception:
                     pass
 
@@ -1175,6 +1287,144 @@ class SignalGenerationNode(Node):
                 min(_vals),
                 max(_vals),
             )
+
+        # V152: Wasserstein regime distance — W₁ to return distribution archetypes
+        # Uses BTC log-returns as market-level input; outputs _w2_crisis/_w2_normal/_w2_trend.
+        if self._wasserstein_regime_sig is not None:
+            try:
+                _btc_data = market_data.get("BTCUSDT") or {}
+                _btc_prices = self._clean_prices(
+                    _btc_data.get("adjclose") or _btc_data.get("close", [])
+                )
+                if len(_btc_prices) >= 10:
+                    import math as _m
+                    _btc_rets = [
+                        _m.log(_btc_prices[i] / _btc_prices[i - 1])
+                        for i in range(1, len(_btc_prices))
+                        if _btc_prices[i - 1] > 0 and _btc_prices[i] > 0
+                    ]
+                    self._wasserstein_regime_sig.update_returns(_btc_rets)
+                    _w_sv = self._wasserstein_regime_sig.compute()
+                    signals["_w2_crisis"] = _w_sv.raw.get("w2_crisis", 0.0)
+                    signals["_w2_normal"] = _w_sv.raw.get("w2_normal", 0.0)
+                    signals["_w2_trend"] = _w_sv.raw.get("w2_trend", 0.0)
+                    signals["_w2_closest_regime"] = _w_sv.regime_tag
+                    logger.debug(
+                        "wasserstein_regime: closest=%s w2_crisis=%.5f w2_normal=%.5f w2_trend=%.5f",
+                        _w_sv.regime_tag,
+                        _w_sv.raw.get("w2_crisis", 0.0),
+                        _w_sv.raw.get("w2_normal", 0.0),
+                        _w_sv.raw.get("w2_trend", 0.0),
+                    )
+            except Exception as _w2_exc:
+                logger.debug("WassersteinRegimeSignal compute error: %s", _w2_exc)
+
+        # V152: TDA crash-prediction signal — persistent homology on BTC returns.
+        # Outputs _tda_fragmentation (< 0 = crash precursor topology).
+        if self._tda_signal_inst is not None:
+            try:
+                _btc_data = market_data.get("BTCUSDT") or {}
+                _btc_prices = self._clean_prices(
+                    _btc_data.get("adjclose") or _btc_data.get("close", [])
+                )
+                if len(_btc_prices) >= 10:
+                    import math as _m2
+                    _btc_rets = [
+                        _m2.log(_btc_prices[i] / _btc_prices[i - 1])
+                        for i in range(1, len(_btc_prices))
+                        if _btc_prices[i - 1] > 0 and _btc_prices[i] > 0
+                    ]
+                    self._tda_signal_inst.update_returns(_btc_rets)
+                    _tda_sv = self._tda_signal_inst.compute()
+                    signals["_tda_fragmentation"] = _tda_sv.value
+                    signals["_tda_regime"] = _tda_sv.regime_tag
+                    signals["_tda_betti0"] = _tda_sv.raw.get("betti0", 0)
+                    signals["_tda_betti1"] = _tda_sv.raw.get("betti1", 0)
+                    signals["_tda_pers_entropy"] = _tda_sv.raw.get("persistence_entropy", 0.0)
+                    logger.debug(
+                        "tda_signal: regime=%s value=%.3f β0=%d β1=%d pers_entropy=%.4f",
+                        _tda_sv.regime_tag,
+                        _tda_sv.value,
+                        _tda_sv.raw.get("betti0", 0),
+                        _tda_sv.raw.get("betti1", 0),
+                        _tda_sv.raw.get("persistence_entropy", 0.0),
+                    )
+            except Exception as _tda_exc:
+                logger.debug("TDASignal compute error: %s", _tda_exc)
+
+        # V153: Regime transition signal — high-alpha moments when the regime label changes.
+        # Transitions are where the market hasn't yet priced the new regime; the signal
+        # value encodes direction and magnitude of the regime shift.
+        if self._features and getattr(self._features, "regime_transition_signal", False):
+            _curr_regime = str(signals.get("_regime", "default"))
+            _prev = self._prev_regime_for_transition
+            _transition_value = 0.0
+            if _prev is not None and _prev != _curr_regime:
+                _transition_map = {
+                    ("normal", "trending"):  0.8,   # confirmed bull breakout — strong long
+                    ("default", "trending"): 0.6,
+                    ("high_vol", "trending"): 0.5,
+                    ("high_vol", "normal"):   0.4,   # vol compression → recovery
+                    ("crisis", "normal"):     0.3,   # recovery — moderate long
+                    ("crisis", "high_vol"):   0.1,
+                    ("trending", "normal"):  -0.2,   # trend fade — mild bearish
+                    ("normal", "high_vol"):  -0.5,   # vol spike — risk-off
+                    ("normal", "crisis"):    -0.8,   # regime breakdown — strong short/exit
+                    ("trending", "high_vol"): -0.6,  # trend disruption
+                    ("trending", "crisis"):  -0.9,   # trend collapse — strongest bearish
+                    ("high_vol", "crisis"):  -0.7,   # vol spike into bear
+                }
+                _transition_value = _transition_map.get((_prev, _curr_regime), 0.0)
+                if _transition_value != 0.0:
+                    logger.info(
+                        "Regime transition %s→%s value=%.1f",
+                        _prev, _curr_regime, _transition_value,
+                    )
+            self._prev_regime_for_transition = _curr_regime
+            signals["_regime_transition"] = _transition_value
+            signals["_regime_transition_from"] = _prev or ""
+
+        # V158: basket-level breakout summary — mean breakout_signal across all
+        # tickers. Injected as _basket_breakout so strategy_selector can use
+        # actual price momentum (not just regime labels) for TREND mode detection.
+        _bk_vals = [
+            float(ts.get("breakout_signal", 0.0))
+            for ts in signals.values()
+            if isinstance(ts, dict) and "breakout_signal" in ts
+        ]
+        if _bk_vals:
+            signals["_basket_breakout"] = round(sum(_bk_vals) / len(_bk_vals), 4)
+
+        # V158: basket-level MTF alignment — fraction of tickers with aligned timeframes.
+        _mtf_aligns = [
+            float(ts.get("timeframe_alignment", 0.0))
+            for ts in signals.values()
+            if isinstance(ts, dict) and "timeframe_alignment" in ts
+        ]
+        if _mtf_aligns:
+            signals["_basket_mtf_alignment"] = round(sum(_mtf_aligns) / len(_mtf_aligns), 4)
+
+        # V162: basket-level volatility shock detector.  Stateless; hysteresis and
+        # size/stop adjustments live in ResilienceState.  Keys injected:
+        #   vol_shock_max_z, vol_shock_ratio, vol_shock_flag, vol_shock_worst_ticker
+        if (
+            _HAS_VOL_SHOCK
+            and self._features
+            and getattr(self._features, "vol_shock_detector_enabled", False)
+        ):
+            try:
+                _prices_by_ticker: dict[str, list[float]] = {}
+                for _tkr, _data in market_data.items():
+                    if not isinstance(_data, dict):
+                        continue
+                    _p = self._clean_prices(_data.get("adjclose") or _data.get("close", []))
+                    if _p:
+                        _prices_by_ticker[_tkr] = _p
+                _vs_z = float(getattr(self._features, "vol_shock_z_threshold", 3.0))
+                _vs = _vol_shock_mod.compute(_prices_by_ticker, shock_z=_vs_z)
+                signals.update(_vs)
+            except Exception as _vs_exc:
+                logger.debug("vol_shock basket: %s", _vs_exc)
 
         return signals
 

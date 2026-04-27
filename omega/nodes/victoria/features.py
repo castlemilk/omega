@@ -625,6 +625,16 @@ class VictoriaFeatures:
     # 1.0 = no size change; 0.5 = half size in non-bearish high_vol; 0.0 = block.
     high_vol_size_mult: float = 1.0
 
+    # V166: live signal normalization. When enabled, per-signal values are
+    # z-scored against a rolling buffer (window = `live_signal_norm_window`)
+    # before being weighted into the composite. This compensates for live signal
+    # distributions being tighter than backtest distributions — without
+    # normalization, the conviction filter (calibrated on backtest) is too
+    # restrictive in live and marginal trades cluster near the threshold.
+    # Default OFF (no behavior change in backtest).
+    live_signal_normalization: bool = False
+    live_signal_norm_window: int = 50
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
