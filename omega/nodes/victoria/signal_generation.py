@@ -1057,6 +1057,33 @@ class SignalGenerationNode(Node):
                 except Exception as _ms_exc:
                     logger.debug("ws_microstructure %s: %s", ticker, _ms_exc)
 
+            # V166: cross-exchange divergence — Binance WS price vs REST close.
+            # Compute always when feeds available so the value can be surfaced
+            # for metrics; only inject into composite when the flag is on.
+            if self._ws_feeds is not None and getattr(
+                self._features, "cross_exchange_divergence_enabled", False
+            ):
+                try:
+                    from omega.nodes.victoria.signals.cross_exchange_divergence import (
+                        compute_divergence,
+                    )
+                    _ws_p = self._ws_feeds.get_latest_price(ticker)
+                    _rest_p = None
+                    _prices = data.get("close") or data.get("adjclose")
+                    if isinstance(_prices, list) and _prices:
+                        try:
+                            _rest_p = float(_prices[-1])
+                        except (TypeError, ValueError):
+                            _rest_p = None
+                    _thr = float(getattr(self._features, "cross_exchange_divergence_threshold_pct", 0.001))
+                    _ced = compute_divergence(_ws_p, _rest_p, _thr)
+                    if _ced != 0.0 and getattr(self._features, "cross_exchange_divergence_in_composite", False):
+                        ts["cross_exchange_divergence_signal"] = _ced
+                    # Always surface for observability
+                    ts["_cross_exchange_divergence"] = _ced
+                except Exception as _ced_exc:
+                    logger.debug("cross_exchange_divergence %s: %s", ticker, _ced_exc)
+
             # V115 Phase 1: whale_prints — sub-second informed-flow WS signals
             if (
                 self._ws_feeds is not None

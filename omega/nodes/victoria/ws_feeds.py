@@ -196,6 +196,9 @@ class _NoOpWSFeedManager:
     def get_microstructure(self, symbol: str) -> dict[str, float]:
         return dict(_ZERO_SIGNALS)
 
+    def get_latest_price(self, symbol: str) -> float | None:
+        return None
+
     def get_whale_signals(self, symbol: str) -> dict[str, float]:
         return dict(_ZERO_WHALE_SIGNALS)
 
@@ -293,6 +296,21 @@ class WSFeedManager:
             "tick_momentum": tm,
             "liquidation_proximity": lp,
         }
+
+    def get_latest_price(self, symbol: str) -> float | None:
+        """V166: latest WS tick price for cross-exchange divergence signal.
+
+        Returns the most recent aggTrade price from Binance WS, or None if no
+        data has arrived for the symbol.
+        """
+        sym = symbol.upper()
+        state = self._state.get(sym)
+        if state is None or not state.has_data:
+            return None
+        ticks = state.ticks.snapshot()
+        if not ticks:
+            return None
+        return float(ticks[-1].price)
 
     def get_whale_signals(self, symbol: str) -> dict[str, float]:
         """

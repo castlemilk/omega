@@ -621,6 +621,8 @@ def run(
         max_portfolio_exposure=1.0,
         exit_controller=_exit_ctrl,
     )
+    # V166: wire VictoriaFeatures into engine so Kelly sizing can read flags
+    engine._features = _active_features
     orch.set_paper_trading(engine)
 
     # V133: inject engine reference into strategy for four-factor AND-gate

@@ -118,6 +118,42 @@ class PaperTradingEngine:
 
         self._realised_pnl: float = 0.0
 
+        # V166: VictoriaFeatures (optional) — Kelly sizing reads `kelly_sizing`,
+        # `kelly_min_trades`, `kelly_fraction_cap`, `kelly_safety_factor` here.
+        # Set externally via paper_trading_engine._features = features.
+        self._features: Any = None
+
+    def _kelly_fraction(self) -> float | None:
+        """V166: empirical Kelly fraction from closed trades.
+
+        Returns None if insufficient trade history (< kelly_min_trades closed)
+        or if no losers (avg_loss=0 makes Kelly undefined). Otherwise returns
+        f* × kelly_safety_factor, clipped to [0, kelly_fraction_cap].
+        """
+        feats = self._features
+        min_n = int(getattr(feats, "kelly_min_trades", 20)) if feats else 20
+        cap = float(getattr(feats, "kelly_fraction_cap", 1.0)) if feats else 1.0
+        safety = float(getattr(feats, "kelly_safety_factor", 0.5)) if feats else 0.5
+
+        trades = self._closed_trades
+        if len(trades) < min_n:
+            return None
+        pnls = [float(t.get("pnl", 0.0)) for t in trades]
+        wins = [p for p in pnls if p > 0]
+        losses = [p for p in pnls if p < 0]
+        if not wins or not losses:
+            return None
+        p = len(wins) / len(pnls)
+        avg_win = sum(wins) / len(wins)
+        avg_loss = abs(sum(losses) / len(losses))
+        if avg_loss <= 0:
+            return None
+        b = avg_win / avg_loss
+        q = 1.0 - p
+        f_star = (p * b - q) / b
+        f = max(0.0, f_star * safety)
+        return min(cap, f)
+
         # Conviction filter counter: how many low-conviction trades were skipped
         self.conviction_skipped: int = 0
 
@@ -391,6 +427,22 @@ class PaperTradingEngine:
             _conviction = float(proposal.get("conviction", 0.30))
             _conv_size_scale = min(_conviction / 0.30, 1.0)
             size = raw_size_fraction * _conv_size_scale * self.initial_capital
+
+            # V166: Kelly Criterion sizing. f* = (p × b - q) / b, where
+            #   p = empirical win rate (from closed trades),
+            #   b = avg_win / |avg_loss|,
+            #   q = 1 - p.
+            # Half-Kelly (× kelly_safety_factor) mitigates parameter uncertainty.
+            # Falls back to base sizing when fewer than kelly_min_trades closed.
+            _features = getattr(self, "_features", None)
+            if _features and getattr(_features, "kelly_sizing", False):
+                _kelly_mult = self._kelly_fraction()
+                if _kelly_mult is not None:
+                    size = size * _kelly_mult
+                    logger.debug(
+                        "Kelly sizing %s: kelly_mult=%.3f → size=%.2f",
+                        symbol, _kelly_mult, size,
+                    )
 
             # Portfolio risk checks: total exposure cap + per-symbol cap
             allowed, cap_reason = self._check_portfolio_limits(symbol, size)

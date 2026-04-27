@@ -648,6 +648,24 @@ class VictoriaFeatures:
     fear_greed_in_composite: bool = True
     yield_curve_in_composite: bool = False
 
+    # V166: cross-exchange divergence (Polymarket-style latency arb).
+    # Compares Binance WS real-time tick price vs CoinGecko REST close.
+    # Gap >0 → WS leading up → bullish bias. Default OFF — needs IC calibration
+    # before joining composite. Threshold in fraction (0.001 = 10 bps).
+    cross_exchange_divergence_enabled: bool = False
+    cross_exchange_divergence_threshold_pct: float = 0.001
+    cross_exchange_divergence_in_composite: bool = False
+
+    # V166: Kelly Criterion position sizing. When enabled, base size scaled by
+    # f* = (p × b - q) / b where p = empirical win rate, b = avg_win/|avg_loss|,
+    # q = 1 - p. Half-Kelly (×0.5) is applied to mitigate parameter uncertainty.
+    # Floor at 0 (no negative-Kelly entries) and cap at 1.0× base. Falls back
+    # to base sizing when fewer than `kelly_min_trades` historical trades exist.
+    kelly_sizing: bool = False
+    kelly_min_trades: int = 20
+    kelly_fraction_cap: float = 1.0
+    kelly_safety_factor: float = 0.5  # half-Kelly
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
