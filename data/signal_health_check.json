@@ -1,0 +1,76 @@
+{
+  "timestamp": "2026-04-27T01:17:23.417213Z",
+  "providers": {
+    "coingecko_ping": {
+      "reachable": true,
+      "detail": "HTTP 200, 34b"
+    },
+    "coinbase_rest": {
+      "reachable": false,
+      "detail": "HTTP 0, HTTP Error 403: Forbiddenb"
+    },
+    "kraken_rest": {
+      "reachable": true,
+      "detail": "HTTP 200, 306b"
+    },
+    "binance_rest": {
+      "reachable": true,
+      "detail": "HTTP 200, 2b"
+    },
+    "okx_funding": {
+      "reachable": false,
+      "detail": "HTTP 0, HTTP Error 403: Forbiddenb"
+    },
+    "alternative_me_fng": {
+      "reachable": true,
+      "detail": "HTTP 200, 211b"
+    },
+    "cryptocompare": {
+      "reachable": true,
+      "detail": "HTTP 200, 16b"
+    },
+    "fred_demo": {
+      "reachable": false,
+      "detail": "HTTP 0, HTTP Error 400: Bad Requestb"
+    },
+    "defillama": {
+      "reachable": true,
+      "detail": "HTTP 200, 7786816b"
+    },
+    "gdelt": {
+      "reachable": false,
+      "detail": "HTTP 0, <urlopen error _ssl.c:1063: The handshake operation timed out>b"
+    },
+    "yfinance_vix": {
+      "reachable": true,
+      "detail": "5 rows"
+    },
+    "yfinance_spy": {
+      "reachable": true,
+      "detail": "5 rows"
+    }
+  },
+  "signals": {
+    "fear_greed": {
+      "value": -1.0,
+      "status": "OK"
+    },
+    "vix": {
+      "value": -0.1,
+      "status": "OK"
+    },
+    "funding_btc": {
+      "value": -3.72882183565e-05,
+      "status": "OK (raw rate, z-score needs history)"
+    },
+    "dxy": {
+      "value": 0.0,
+      "status": "requires FRED_API_KEY"
+    }
+  },
+  "env_keys": {
+    "FRED_API_KEY": "NOT SET",
+    "COINGECKO_API_KEY": "NOT SET",
+    "OKX_API_KEY": "NOT SET"
+  }
+}
