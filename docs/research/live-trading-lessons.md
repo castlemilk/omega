@@ -161,6 +161,52 @@ in live, lesson #1) rather than gate softening.
 - **Auto_improve PARAM_BOUNDS expanded 5→7** (commit `7eef278`) — note
   V163's 7-param run did not improve over the 3-param +$41,850 best.
 
+## V166 — macro metrics fix + normalization (failed)
+
+**Diagnosis:** the "4 dead macro signals" were partly a misdiagnosis.
+- `fear_greed_signal` and `funding_rate_signal` were **ALIVE** in trade traces
+  (verified in `data/v163_live_signal_contribs.jsonl`: fear_greed values
+  ~0.95, funding values ±0.5–1.1). They were silent in metrics_jsonl due
+  to a plumbing bug — `last_signals` is `{ticker: composite_float}` but the
+  metrics writer treated it as `{ticker: subdict}` and silently got None
+  via `next()` default.
+- `dxy_signal` is genuinely dead (FRED 400 on DGS2/DGS10/DTWEXBGS — needs
+  `FRED_API_KEY`).
+- `vix_signal` is dead (`yfinance` not installed).
+- `vol_rank` is intentionally not in metrics (`run_training.py:997` —
+  internal sit_out gate, not a signal).
+
+**Fix shipped:** signal_generation surfaces macros at top-level keys
+(`_fear_greed_val`, `_dxy_val`, `_vix_val`, `_funding_rate_btc`); metrics
+writer prefers those. No strategy behavior change from this fix.
+
+**Normalization attempt failed.** V166 Phase A with
+`live_signal_normalization=True` (z-score over 50-cycle rolling buffer,
+clamp ±3):
+
+| Snap | V161 | V166 z-norm | Δ |
+|---|---|---|---|
+| recent | +$4,319 (103t) | +$3,978 (23t, WR 61%) | −$341 |
+| crisis | +$2,606 (32t) | **−$14,118** (28t, PF 0.25) | **−$16,724** |
+| trend | +$34,925 (100t) | +$7,813 (39t) | −$27,112 |
+| composite | +$41,850 | **−$2,327** | **−$44,177** |
+
+The conviction threshold (0.10) is calibrated for **raw-signal** units, not
+z-score units. After z-scoring, signals have unit variance — the same 0.10
+threshold becomes much more permissive on the average signal but selects
+different *types* of trades. Trade count drops 75%+ and crisis goes
+catastrophic (more long entries during the 2022 crash because the z-score
+amplifies bullish signals relative to the contracted bearish ones).
+
+**Lesson:** signal normalization can't be flipped on as a standalone fix.
+Any future normalization needs **joint recalibration** of the conviction
+threshold and the regime-adaptive scalers (`_thresh_scale = basket_std /
+0.20`). That's a multi-parameter optimization problem, not a feature flag.
+
+**Decision:** ship V166 to live with `live_signal_normalization=False` —
+keeps only the metrics observability fix (zero behavior change), gives us
+live macro-signal visibility for future calibration work.
+
 ## Open questions for next live run
 
 1. Does `v164_live` (24 cycles, current run) show the same single-burst
