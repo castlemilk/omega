@@ -666,6 +666,12 @@ class VictoriaFeatures:
     kelly_fraction_cap: float = 1.0
     kelly_safety_factor: float = 0.5  # half-Kelly
 
+    # V168: global conviction-threshold multiplier. The regime-adaptive long/short
+    # thresholds (0.05–0.20 depending on regime) are calibrated for 1h bars.
+    # At 15-min cadence, signals are noisier and crossings are rarer; multiplying
+    # all thresholds by <1.0 lets more candidates through. Default 1.0 = no change.
+    conviction_threshold_mult: float = 1.0
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".

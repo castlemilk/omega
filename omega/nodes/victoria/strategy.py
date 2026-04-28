@@ -1269,6 +1269,20 @@ class StrategyNode(Node):
                 regime_hmm,
             )
 
+        # V168: global conviction-threshold multiplier for short-cadence runs.
+        # Default 1.0 = no change; set to 0.5 in v168_15min_micro to allow more
+        # candidates through at 15-min cadence where signals are noisier.
+        _ct_mult = float(getattr(self.features, "conviction_threshold_mult", 1.0))
+        if _ct_mult != 1.0:
+            self._long_conviction_threshold *= _ct_mult
+            self._short_conviction_threshold *= _ct_mult
+            logger.debug(
+                "V168 conviction_threshold_mult=%.2f → long=%.4f short=%.4f",
+                _ct_mult,
+                self._long_conviction_threshold,
+                self._short_conviction_threshold,
+            )
+
         # V95: Geodesic crash proximity gate — when the market manifold is closer to
         # the crash reference state than the rally state, raise long_thresh proportionally.
         # Geodesic distance is computed in signal_generation.py (MarketManifold) and
