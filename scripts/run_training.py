@@ -630,6 +630,31 @@ def run(
     if _strat is not None:
         _strat._paper_engine = engine
 
+    # V169: load calibrated signal ICs from data/signal_ic_history.json so the
+    # IC-weighted composite path replaces the empty-IC fallback. Without this
+    # call, _compute_weighted_conviction returns the raw composite (uniform 1.0
+    # weights) regardless of file presence — root cause of V165/V166/V168_micro
+    # regressions. Flat {name: ic} dict; strategy filters positive ICs only.
+    if _strat is not None:
+        _ic_path = ROOT / "data" / "signal_ic_history.json"
+        if _ic_path.exists():
+            try:
+                _ic_doc = json.loads(_ic_path.read_text())
+                _ics_flat: dict[str, float] = {}
+                for _name, _rec in (_ic_doc.get("signals") or {}).items():
+                    _ic = _rec.get("ic")
+                    if isinstance(_ic, (int, float)):
+                        _ics_flat[_name] = float(_ic)
+                if _ics_flat:
+                    _strat.update_signal_ics(_ics_flat)
+                    _pos = sum(1 for v in _ics_flat.values() if v > 0)
+                    log.info(
+                        "V169 ICs loaded: %d signals (%d positive, %d zero/negative dropped)",
+                        len(_ics_flat), _pos, len(_ics_flat) - _pos,
+                    )
+            except Exception as _ic_exc:
+                log.warning("V169 IC load failed: %s", _ic_exc)
+
     _init_trades_csv(trades_csv)
 
     # ── Watchdog + circuit breaker ────────────────────────────────────────
