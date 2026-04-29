@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-27T04:52:31.174802Z",
+  "timestamp": "2026-04-29T01:23:36.285297+00:00",
   "providers": {
     "coingecko_ping": {
       "reachable": true,
@@ -56,6 +56,14 @@
     "binance_ws": {
       "reachable": true,
       "detail": "wss://stream.binance.com:9443 \u2014 handshake verified (REST trade endpoints still 451)"
+    },
+    "deepseek_chat": {
+      "reachable": true,
+      "detail": "POST api.deepseek.com/v1/chat/completions OK; deepseek-chat (V3) ~0.7s simple, ~1.5s analyst prompt"
+    },
+    "deepseek_reasoner": {
+      "reachable": true,
+      "detail": "POST same endpoint, model=deepseek-reasoner (R1 with chain-of-thought); ~0.8s simple"
     }
   },
   "signals": {
@@ -80,7 +88,8 @@
     "FRED_API_KEY": "SET (verified DTWEXBGS/DGS2/DGS10 fetch)",
     "COINGECKO_API_KEY": "NOT SET",
     "OKX_API_KEY": "NOT SET",
-    "COINBASE_API_KEY": "NOT SET (not required for public market data)"
+    "COINBASE_API_KEY": "NOT SET (not required for public market data)",
+    "DEEPSEEK_API_KEY": "SET (verified end-to-end via OpenAICompatibleProvider.analyze)"
   },
   "microstructure_signals": {
     "ws_feeds_endpoint": "wss://stream.binance.com:9443 (Binance \u2014 reachable)",
@@ -94,5 +103,13 @@
       "tick_momentum_signal"
     ],
     "live_trace_status": "NOT in v163_live signal_traces \u2014 likely IC-history empty (data/signal_ic_history.json), so falls back to raw composite; tracing-filter excludes them. Need to confirm by reading direct ws_feeds output during a v166_live cycle."
+  },
+  "llm_providers": {
+    "deepseek": {
+      "preset_chat": "v169_deepseek_chat",
+      "preset_reasoner": "v169_deepseek_r1",
+      "api_base": "https://api.deepseek.com/v1",
+      "note": "response parser had 1 minor JSON malformation (stray quote) on a real analyst prompt; reasoning was sound. Existing parser robustness should handle it."
+    }
   }
 }

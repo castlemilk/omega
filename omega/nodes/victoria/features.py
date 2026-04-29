@@ -2400,6 +2400,26 @@ _V161_LIVE = {
 }
 _PRESETS["v161_live"] = VictoriaFeatures(**_V161_LIVE)
 
+# V169 DeepSeek presets — same v161_live policy, LLM analyst pointed at DeepSeek.
+# Requires DEEPSEEK_API_KEY in env (.env or shell). Two variants:
+#   v169_deepseek_chat: DeepSeek-V3 (deepseek-chat) — fast, cheap, OpenAI-compatible
+#   v169_deepseek_r1:   DeepSeek-R1 (deepseek-reasoner) — chain-of-thought, slower
+_V169_DEEPSEEK_CHAT = {
+    **_V161_LIVE,
+    "llm_analyst_enabled": True,
+    "llm_analyst_provider": "deepseek",
+    "llm_analyst_model": "deepseek-chat",
+    "llm_analyst_api_base": "https://api.deepseek.com/v1",
+    "llm_analyst_api_key_env": "DEEPSEEK_API_KEY",
+}
+_PRESETS["v169_deepseek_chat"] = VictoriaFeatures(**_V169_DEEPSEEK_CHAT)
+
+_V169_DEEPSEEK_R1 = {
+    **_V169_DEEPSEEK_CHAT,
+    "llm_analyst_model": "deepseek-reasoner",
+}
+_PRESETS["v169_deepseek_r1"] = VictoriaFeatures(**_V169_DEEPSEEK_R1)
+
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
 # 5% drawdown, emergency-closes at 10%, caps positions to 2 during correlation

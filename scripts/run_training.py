@@ -630,12 +630,12 @@ def run(
     if _strat is not None:
         _strat._paper_engine = engine
 
-    # V169: load calibrated signal ICs from data/signal_ic_history.json so the
-    # IC-weighted composite path replaces the empty-IC fallback. Without this
-    # call, _compute_weighted_conviction returns the raw composite (uniform 1.0
-    # weights) regardless of file presence — root cause of V165/V166/V168_micro
-    # regressions. Flat {name: ic} dict; strategy filters positive ICs only.
-    if _strat is not None:
+    # V169: load calibrated signal ICs from data/signal_ic_history.json. DISABLED
+    # by default — V169 and V169b Phase A both regressed catastrophically (-$50k
+    # composite). The pooled-regime ICs aren't directly transferable; per-regime
+    # ICs would help but the strategy doesn't read them. Set OMEGA_LOAD_ICS=1 to
+    # opt in for further experiments.
+    if _strat is not None and os.environ.get("OMEGA_LOAD_ICS") == "1":
         _ic_path = ROOT / "data" / "signal_ic_history.json"
         if _ic_path.exists():
             try:

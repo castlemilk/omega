@@ -209,7 +209,7 @@ class ClaudeProvider(LLMProvider):
     """Anthropic Claude provider (urllib, same pattern as brain.py)."""
 
     def __init__(self, api_key_env: str = "ANTHROPIC_API_KEY", timeout: int = 10) -> None:
-        self._api_key = os.environ.get(api_key_env) or ""
+        self._api_key = (os.environ.get(api_key_env) or "").strip()
         self._timeout = timeout
 
     def analyze(self, prompt: str, model: str) -> tuple[dict, int, int]:
@@ -251,8 +251,23 @@ class OpenAICompatibleProvider(LLMProvider):
     """Provider for any OpenAI-format /v1/chat/completions endpoint.
 
     Works with: Kimi (api.moonshot.cn/v1), GLM (open.bigmodel.cn/api/paas/v4),
-    MiniMax (api.minimax.chat/v1), and any other OpenAI-compatible API.
+    MiniMax (api.minimax.chat/v1 or api.minimax.io/anthropic), and others.
+
+    Anthropic-compat mode: when api_base contains '/anthropic', uses x-api-key
+    header + /v1/messages endpoint (MiniMax's Anthropic proxy).
     """
+
+    _ANTHROPIC_SYSTEM = (
+        "You are a senior quantitative crypto trading analyst embedded in an automated trading system. "
+        "Your role is to review trade proposals and return a structured JSON assessment. "
+        "Every response MUST be a valid JSON object and nothing else — no preamble, no markdown, no explanation. "
+        "JSON schema: "
+        "{\"conviction_modifier\": <float 0.0-1.5>, "
+        "\"reasoning\": <string max 80 chars>, "
+        "\"confidence\": <float 0.0-1.0>, "
+        "\"regime_override\": <string or null>}. "
+        "conviction_modifier semantics: <0.5 veto, 0.5-1.0 cautious, 1.0 neutral, >1.0 amplify."
+    )
 
     def __init__(
         self,
@@ -261,13 +276,30 @@ class OpenAICompatibleProvider(LLMProvider):
         timeout: int = 15,
     ) -> None:
         self._api_base = api_base.rstrip("/")
-        self._api_key = os.environ.get(api_key_env) or ""
+        self._api_key = (os.environ.get(api_key_env) or "").strip()
         self._timeout = timeout
-        self._endpoint = f"{self._api_base}/chat/completions"
+
+        # Anthropic-compat mode: /anthropic proxy uses x-api-key + /v1/messages
+        # Extended-thinking models can be slow (4-10s), so use 60s timeout.
+        self._anthropic_compat = "/anthropic" in self._api_base
+        if self._anthropic_compat:
+            self._endpoint = f"{self._api_base}/v1/messages"
+            self._timeout = max(timeout, 60)
+        elif "chatcompletion" in self._api_base or self._api_base.endswith("/chat/completions"):
+            # Full endpoint path already provided (e.g. MiniMax chatcompletion_v2)
+            self._endpoint = self._api_base
+        else:
+            self._endpoint = f"{self._api_base}/chat/completions"
 
     def analyze(self, prompt: str, model: str) -> tuple[dict, int, int]:
         if not self._api_key:
             raise RuntimeError(f"API key env var empty (api_base={self._api_base})")
+
+        if self._anthropic_compat:
+            return self._call_anthropic_compat(prompt, model)
+        return self._call_openai(prompt, model)
+
+    def _call_openai(self, prompt: str, model: str) -> tuple[dict, int, int]:
         body = json.dumps(
             {
                 "model": model,
@@ -287,10 +319,64 @@ class OpenAICompatibleProvider(LLMProvider):
         )
         with urllib.request.urlopen(req, timeout=self._timeout) as resp:
             raw = json.loads(resp.read().decode())
-        text = raw["choices"][0]["message"]["content"]
+        choices = raw.get("choices")
+        if not choices:
+            # Some providers (MiniMax chatcompletion_v2) embed errors in base_resp
+            base = raw.get("base_resp", {})
+            raise RuntimeError(
+                f"No choices in response (status={base.get('status_code')}: "
+                f"{base.get('status_msg', 'unknown')})"
+            )
+        text = choices[0]["message"]["content"]
         usage = raw.get("usage", {})
         t_in = usage.get("prompt_tokens", 0)
         t_out = usage.get("completion_tokens", 0)
+        return normalize_response(text, "openai_compatible"), t_in, t_out
+
+    def _call_anthropic_compat(self, prompt: str, model: str) -> tuple[dict, int, int]:
+        """MiniMax Anthropic proxy: x-api-key header, /v1/messages endpoint."""
+        # Strip schema hints from user prompt — they're now in system prompt.
+        # Avoid triggering refusal filters on the "Return ONLY JSON" instruction.
+        clean_prompt = prompt
+        schema_hint_start = "Return ONLY a JSON object with:"
+        if schema_hint_start in clean_prompt:
+            clean_prompt = clean_prompt[: clean_prompt.index(schema_hint_start)].rstrip()
+        # Extended thinking models consume many tokens before output;
+        # use 1024 to leave room for the JSON response after thinking.
+        body = json.dumps(
+            {
+                "model": model,
+                "max_tokens": 1024,
+                "system": self._ANTHROPIC_SYSTEM,
+                "messages": [{"role": "user", "content": clean_prompt}],
+            }
+        ).encode()
+        req = urllib.request.Request(
+            self._endpoint,
+            data=body,
+            headers={
+                "Content-Type": "application/json",
+                "x-api-key": self._api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+            raw = json.loads(resp.read().decode())
+        # Extract text: skip thinking blocks, fall back to first block
+        text = ""
+        for block in raw.get("content", []):
+            if block.get("type") == "text":
+                text = block["text"]
+                break
+        if not text:
+            blocks = raw.get("content", [])
+            text = blocks[0].get("text", blocks[0].get("thinking", "")) if blocks else ""
+        if not text:
+            raise RuntimeError(f"No text in Anthropic-compat response: {raw!r}")
+        usage = raw.get("usage", {})
+        t_in = usage.get("input_tokens", 0)
+        t_out = usage.get("output_tokens", 0)
         return normalize_response(text, "openai_compatible"), t_in, t_out
 
 
@@ -347,9 +433,13 @@ PROVIDERS: dict[str, type[LLMProvider]] = {
 KNOWN_BASES: dict[str, str] = {
     "kimi": "https://api.moonshot.cn/v1",
     "glm": "https://open.bigmodel.cn/api/paas/v4",
-    "minimax": "https://api.minimax.chat/v1",
+    # Full endpoint path — chatcompletion_v2 is MiniMax's OpenAI-compat chat endpoint
+    "minimax": "https://api.minimax.chat/v1/text/chatcompletion_v2",
     "together": "https://api.together.xyz/v1",
     "groq": "https://api.groq.com/openai/v1",
+    # V169: DeepSeek (OpenAI-compatible). Use "deepseek" with model
+    # "deepseek-chat" for V3, or "deepseek-reasoner" for R1 (chain-of-thought).
+    "deepseek": "https://api.deepseek.com/v1",
 }
 
 # Known API key env var names per provider shorthand
@@ -360,6 +450,7 @@ KNOWN_API_KEY_ENVS: dict[str, str] = {
     "minimax": "MINIMAX_API_KEY",
     "together": "TOGETHER_API_KEY",
     "groq": "GROQ_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
 }
 
 
@@ -374,6 +465,13 @@ def build_provider(
     Handles shorthand names like "kimi" or "glm" that map to
     OpenAICompatibleProvider with known api_base values.
     """
+    # kimi_cli: wrap kimi-cli binary (same pattern as Claude CLI)
+    if provider == "kimi_cli":
+        return CLIProvider(
+            cli_template=["kimi-cli", "--quiet", "--prompt", "{prompt}"],
+            timeout=90,
+        )
+
     # Shorthand → OpenAI-compatible
     if provider in KNOWN_BASES:
         resolved_base = api_base or KNOWN_BASES[provider]
@@ -441,6 +539,9 @@ class LLMAnalystSignal:
                 "LLMProvider build failed (%s): %s — will degrade to 1.0", provider, exc
             )
             self._provider = None
+
+        # V153: trend-mode preamble injection (set externally from strategy.py)
+        self.trend_mode_enabled: bool = False
 
     def set_log_path(self, version: str) -> None:
         """Set per-version JSONL log path. Call from strategy.py after version is known."""
@@ -629,8 +730,23 @@ class LLMAnalystSignal:
         positions_str = (
             f"\nOpen: {payload['open_positions']['long']}L / {payload['open_positions']['short']}S"
         )
+        # V153: trend-mode preamble — injected when bull_prob confirms uptrend.
+        # Counteracts the LLM's crisis-trained bearish bias in bull markets.
+        trend_ctx = ""
+        if (
+            self.trend_mode_enabled
+            and payload.get("bull_prob", 0.0) > 0.55
+            and payload.get("regime", "") in ("trending", "normal")
+        ):
+            trend_ctx = (
+                "MARKET CONTEXT: Confirmed uptrend (bull_prob={:.2f}). "
+                "Long entries are primary — bias toward confirmation. "
+                "Short entries require exceptional cross-signal conviction.\n\n"
+            ).format(payload["bull_prob"])
+
         return (
             f"You are a senior crypto quant analyst.\n\n"
+            f"{trend_ctx}"
             f"Ticker: {payload['ticker']}  Proposal: {payload['direction'].upper()}\n"
             f"Regime: {payload['regime']}  "
             f"bear_prob={payload['bear_prob']:.2f}  bull_prob={payload['bull_prob']:.2f}\n"

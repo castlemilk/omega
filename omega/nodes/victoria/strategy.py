@@ -892,12 +892,19 @@ class StrategyNode(Node):
         }
 
     def update_signal_ics(self, ics: dict[str, float]) -> None:
-        """Load per-signal IC values from signal_audit output for weighted conviction."""
-        self._signal_ics = {k: v for k, v in ics.items() if v > 0}
+        """Load per-signal IC values for weighted conviction.
+
+        V169b: keep negative ICs — `_compute_weighted_conviction` uses `fv * ic`
+        which correctly inverts anti-predictive signals; the prior `if v > 0`
+        filter dropped them entirely, throwing away their information value.
+        Only drop zero/near-zero ICs (no information).
+        """
+        self._signal_ics = {k: v for k, v in ics.items() if abs(v) >= 1e-4}
+        n_pos = sum(1 for v in self._signal_ics.values() if v > 0)
+        n_neg = sum(1 for v in self._signal_ics.values() if v < 0)
         logger.info(
-            "StrategyNode: loaded ICs for %d signals (killed %d negative-IC)",
-            len(self._signal_ics),
-            sum(1 for v in ics.values() if v <= 0),
+            "StrategyNode: loaded ICs for %d signals (%d positive, %d anti-predictive flipped)",
+            len(self._signal_ics), n_pos, n_neg,
         )
 
     def set_rmt_denoiser(self, denoiser: Any) -> None:
@@ -1017,8 +1024,11 @@ class StrategyNode(Node):
             if not (k.endswith("_signal") or k == "sma_crossover"):
                 continue
             ic = self._signal_ics.get(k, 0.0)
-            if ic <= 0:
-                continue  # skip killed / negative-IC signals
+            # V169b: keep anti-predictive signals (negative IC) — `fv * ic` already
+            # inverts their sign so they contribute correctly. Only drop zero-IC
+            # (signal we have no info about) or below a noise floor.
+            if abs(ic) < 1e-4:
+                continue
             try:
                 fv = float(v)
             except (TypeError, ValueError):
@@ -1038,7 +1048,7 @@ class StrategyNode(Node):
                     # Clamp z-score to [-3, +3] to avoid blowups from outliers
                     fv = max(-3.0, min(3.0, fv))
             weighted_sum += fv * ic
-            total_ic += ic
+            total_ic += abs(ic)  # V169b: normalize by |IC| so negatives don't shrink the divisor
 
         if total_ic == 0.0:
             return float(signals_dict.get("composite", 0.0))
