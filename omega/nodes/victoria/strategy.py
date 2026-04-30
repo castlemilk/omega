@@ -431,6 +431,10 @@ class StrategyNode(Node):
         self._short_conviction_threshold: float = 0.10
         # Per-signal IC values loaded from signal_audit.py; empty = fall back to raw composite
         self._signal_ics: dict[str, float] = {}
+        # V170: per-regime IC table — {signal_name: {regime: ic}}.
+        # Looked up first when per_regime_ic_weighting=True; falls back to pooled
+        # _signal_ics when missing.
+        self._regime_ics: dict[str, dict[str, float]] = {}
         # V166: rolling per-signal history for live normalization (z-score). Keyed
         # by signal name (not per-ticker — pooling across tickers gives more samples
         # for the same signal's intrinsic distribution).
@@ -892,19 +896,27 @@ class StrategyNode(Node):
         }
 
     def update_signal_ics(self, ics: dict[str, float]) -> None:
-        """Load per-signal IC values for weighted conviction.
-
-        V169b: keep negative ICs — `_compute_weighted_conviction` uses `fv * ic`
-        which correctly inverts anti-predictive signals; the prior `if v > 0`
-        filter dropped them entirely, throwing away their information value.
-        Only drop zero/near-zero ICs (no information).
-        """
+        """Load pooled per-signal IC values."""
         self._signal_ics = {k: v for k, v in ics.items() if abs(v) >= 1e-4}
         n_pos = sum(1 for v in self._signal_ics.values() if v > 0)
         n_neg = sum(1 for v in self._signal_ics.values() if v < 0)
         logger.info(
             "StrategyNode: loaded ICs for %d signals (%d positive, %d anti-predictive flipped)",
             len(self._signal_ics), n_pos, n_neg,
+        )
+
+    def update_regime_ics(self, regime_ics: dict[str, dict[str, float]]) -> None:
+        """V170: load per-regime IC table.
+
+        Schema: {signal_name: {regime_label: ic_float}}.
+        Used by _compute_weighted_conviction when per_regime_ic_weighting=True.
+        """
+        self._regime_ics = regime_ics
+        n_signals = len(regime_ics)
+        n_regimes = sum(len(v) for v in regime_ics.values())
+        logger.info(
+            "StrategyNode: loaded per-regime ICs (%d signals × ~%d regimes = %d entries)",
+            n_signals, max(1, n_regimes // max(1, n_signals)), n_regimes,
         )
 
     def set_rmt_denoiser(self, denoiser: Any) -> None:
@@ -1020,10 +1032,19 @@ class StrategyNode(Node):
         # that makes the conviction filter too restrictive in live).
         _norm_enabled = bool(getattr(self.features, "live_signal_normalization", False))
         _norm_window = int(getattr(self.features, "live_signal_norm_window", 50))
+        # V170: per-regime IC weighting — look up regime-specific IC when
+        # per_regime_ic_weighting is on. Falls back to pooled IC when the signal
+        # has no entry for the current regime (or the regime label is unknown).
+        _per_regime = bool(getattr(self.features, "per_regime_ic_weighting", False))
+        _regime_label = str(signals_dict.get("_regime", "")) or "unknown"
         for k, v in signals_dict.items():
             if not (k.endswith("_signal") or k == "sma_crossover"):
                 continue
             ic = self._signal_ics.get(k, 0.0)
+            if _per_regime and self._regime_ics:
+                _r_ic = self._regime_ics.get(k, {}).get(_regime_label)
+                if _r_ic is not None:
+                    ic = float(_r_ic)
             # V169b: keep anti-predictive signals (negative IC) — `fv * ic` already
             # inverts their sign so they contribute correctly. Only drop zero-IC
             # (signal we have no info about) or below a noise floor.

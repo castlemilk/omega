@@ -652,6 +652,24 @@ def run(
                         "V169 ICs loaded: %d signals (%d positive, %d zero/negative dropped)",
                         len(_ics_flat), _pos, len(_ics_flat) - _pos,
                     )
+                # V170: also load per-regime IC table for per_regime_ic_weighting
+                _regime_ics: dict[str, dict[str, float]] = {}
+                for _name, _rec in (_ic_doc.get("signals") or {}).items():
+                    _rgi = _rec.get("regime_ic") or {}
+                    _per: dict[str, float] = {}
+                    for _r, _entry in _rgi.items():
+                        _ric = _entry.get("ic") if isinstance(_entry, dict) else None
+                        if isinstance(_ric, (int, float)):
+                            _per[_r] = float(_ric)
+                    if _per:
+                        _regime_ics[_name] = _per
+                if _regime_ics and hasattr(_strat, "update_regime_ics"):
+                    _strat.update_regime_ics(_regime_ics)
+                    log.info(
+                        "V170 regime ICs loaded: %d signals across %d regime buckets",
+                        len(_regime_ics),
+                        sum(len(v) for v in _regime_ics.values()),
+                    )
             except Exception as _ic_exc:
                 log.warning("V169 IC load failed: %s", _ic_exc)
 

@@ -672,6 +672,13 @@ class VictoriaFeatures:
     # all thresholds by <1.0 lets more candidates through. Default 1.0 = no change.
     conviction_threshold_mult: float = 1.0
 
+    # V170: per-regime IC weighting. When enabled and the loaded IC history
+    # includes regime_ic per signal, the IC-weighted composite uses the IC for
+    # the CURRENT regime label rather than the pooled IC. Pooled-IC weighting
+    # (V169) failed because signals like sma_short have +0.235 IC in crisis but
+    # -0.084 in normal — pooling cancelled the alpha. Per-regime preserves it.
+    per_regime_ic_weighting: bool = False
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
