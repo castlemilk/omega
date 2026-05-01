@@ -1135,6 +1135,16 @@ class SignalGenerationNode(Node):
 
             # IC-weighted composite — falls back to equal-weight when IC data is sparse.
             # V103: adaptive_combiner replaces _ic_weighted_composite when ON.
+            # V172_pruned: drop named signals entirely from the per-ticker
+            # signal dict before composite computation. Calibrated ICs say
+            # sma_crossover is a -0.27 anti-predictor on 11k pairs; pruning is
+            # simpler and more robust than weight-flipping (which keeps
+            # regressing across V165-V172 attempts).
+            _excluded_in_basket = set(getattr(self._features, "excluded_signals", None) or [])
+            for _ek in list(_excluded_in_basket):
+                if _ek in ts:
+                    del ts[_ek]
+
             # Uses per-signal Information Coefficient from SignalDecayDetector to
             # up-weight historically predictive signals and exclude anti-predictive ones.
             directional = [

@@ -1037,8 +1037,12 @@ class StrategyNode(Node):
         # has no entry for the current regime (or the regime label is unknown).
         _per_regime = bool(getattr(self.features, "per_regime_ic_weighting", False))
         _regime_label = str(signals_dict.get("_regime", "")) or "unknown"
+        # V172_pruned: drop excluded signals entirely (anti-predictive ones).
+        _excluded = set(getattr(self.features, "excluded_signals", None) or [])
         for k, v in signals_dict.items():
             if not (k.endswith("_signal") or k == "sma_crossover"):
+                continue
+            if k in _excluded:
                 continue
             ic = self._signal_ics.get(k, 0.0)
             if _per_regime and self._regime_ics:

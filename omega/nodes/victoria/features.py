@@ -30,7 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 logger = logging.getLogger("omega.victoria.features")
 
@@ -678,6 +678,12 @@ class VictoriaFeatures:
     # (V169) failed because signals like sma_short have +0.235 IC in crisis but
     # -0.084 in normal — pooling cancelled the alpha. Per-regime preserves it.
     per_regime_ic_weighting: bool = False
+
+    # V172_pruned: drop named signals from the composite computation entirely.
+    # Calibrated ICs say sma_crossover is anti-predictive (-0.273 pooled, -0.645
+    # in crisis) on 11,674 pairs. Rather than weight-flipping (which has
+    # repeatedly regressed), just remove the contribution.
+    excluded_signals: list[str] = field(default_factory=list)
 
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
