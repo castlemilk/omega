@@ -86,11 +86,15 @@ SNAPSHOT_ALIASES: dict[str, str] = {
     "recent": str(DATA_DIR / "snapshots" / "snap_20260414.json"),
     "crisis": str(DATA_DIR / "snapshots" / "snap_crisis_2022h1.json"),
     "trend": str(DATA_DIR / "snapshots" / "snap_trending_2023q4.json"),
+    # V172: fresh 15-min snapshots from Binance fapi (capture_15min_snapshot.py)
+    "fresh_live": str(DATA_DIR / "snapshots" / "snap_15min_live.json"),
+    "fresh_30d": str(DATA_DIR / "snapshots" / "snap_15min_recent_30d.json"),
+    "fresh_60d": str(DATA_DIR / "snapshots" / "snap_15min_recent_60d.json"),
 }
 
 # Safety thresholds
 HALT_PNL_FLOOR = -30_000.0
-HALT_MIN_TRADES = 20
+HALT_MIN_TRADES = 12  # was 20; crisis snapshot routinely yields 18-22 trades, halting search prematurely
 HALT_CONSECUTIVE_REGRESSIONS = 3
 
 # Decision thresholds
