@@ -157,6 +157,19 @@ the wrong direction. **Defer until the LLM modifier is empirically positive.**
 - Item 5 (sub-strategy ensemble). Requires a real refactor and more design.
 - Item 6 (LLM debate). Premature; LLM modifier isn't even net-positive yet.
 
+## Update — V172 results (2026-05-01 evening)
+
+**Both variants regressed.** V172 Ridge composite −$15,394 vs V161 +$41,850
+(−$57k). V172_pruned (just `del ts["sma_crossover"]`) composite −$24,249
+(−$66k). The *pruning* result is more informative than the Ridge result —
+it proves that even dropping a clearly-anti-predictive signal regresses, so
+the IC of an isolated signal isn't a reliable guide to its system-level
+contribution. sma_crossover (IC −0.273) is load-bearing in the integrated
+strategy despite negative correlation with PnL in isolation.
+
+This empirically validates the closing hypothesis below. **Closing the IC
+research line for good.** Pivoting to items 1, 3, 5 from the action list.
+
 ## Closing the IC research line (if V172 fails)
 
 After V165, V166, V168_micro, V169, V169b, V170, V171, V172 — if V172 also

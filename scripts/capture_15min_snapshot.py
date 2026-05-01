@@ -9,6 +9,7 @@ Usage: python3 scripts/capture_15min_snapshot.py
 from __future__ import annotations
 
 import json
+import os
 import sys
 import time
 import urllib.parse
@@ -17,6 +18,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 OUT = Path("data/snapshots/snap_15min_live.json")
+# Optional override via env vars for capturing different windows.
+OUT = Path(os.environ.get("OMEGA_SNAPSHOT_OUT", str(OUT)))
+_OFFSET_DAYS = int(os.environ.get("OMEGA_SNAPSHOT_OFFSET_DAYS", "0"))
 SYMBOLS = [
     "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
     "ADAUSDT", "DOTUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT",
@@ -28,10 +32,11 @@ LIMIT = 672  # 7 days × 96 bars/day = 672
 _BINANCE_KLINES = "https://fapi.binance.com/fapi/v1/klines"
 
 
-def _fetch_klines(symbol: str, interval: str, limit: int) -> list[list]:
-    url = _BINANCE_KLINES + "?" + urllib.parse.urlencode({
-        "symbol": symbol, "interval": interval, "limit": limit,
-    })
+def _fetch_klines(symbol: str, interval: str, limit: int, end_ms: int | None = None) -> list[list]:
+    params = {"symbol": symbol, "interval": interval, "limit": limit}
+    if end_ms is not None:
+        params["endTime"] = end_ms
+    url = _BINANCE_KLINES + "?" + urllib.parse.urlencode(params)
     req = urllib.request.Request(url, headers={"User-Agent": "omega/1.0"})
     with urllib.request.urlopen(req, timeout=15) as r:
         return json.loads(r.read())
@@ -48,9 +53,12 @@ def main() -> int:
     }
     first_ts = None
     last_ts = None
+    end_ms = None
+    if _OFFSET_DAYS > 0:
+        end_ms = int((time.time() - _OFFSET_DAYS * 86400) * 1000)
     for sym in SYMBOLS:
         try:
-            bars = _fetch_klines(sym, INTERVAL, LIMIT)
+            bars = _fetch_klines(sym, INTERVAL, LIMIT, end_ms=end_ms)
         except Exception as exc:
             print(f"  {sym}: FAILED — {exc}", file=sys.stderr)
             continue
