@@ -426,6 +426,19 @@ class PaperTradingEngine:
             # conviction=0.15 → 50% of base size; conviction>=0.30 → full size.
             _conviction = float(proposal.get("conviction", 0.30))
             _conv_size_scale = min(_conviction / 0.30, 1.0)
+            # V174 #6 conviction_pyramid: replace linear ramp with discrete
+            # tranches so marginal entries are materially smaller.
+            _features = getattr(self, "_features", None)
+            if _features and getattr(_features, "conviction_pyramid", False):
+                _c = abs(_conviction)
+                if _c < 0.30:
+                    _conv_size_scale = 0.25
+                elif _c < 0.50:
+                    _conv_size_scale = 0.50
+                elif _c < 0.70:
+                    _conv_size_scale = 0.75
+                else:
+                    _conv_size_scale = 1.0
             size = raw_size_fraction * _conv_size_scale * self.initial_capital
 
             # V166: Kelly Criterion sizing. f* = (p × b - q) / b, where

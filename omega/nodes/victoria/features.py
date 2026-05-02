@@ -715,6 +715,13 @@ class VictoriaFeatures:
     adversarial_check: bool = False
     adaptive_decay_window: int = 20
 
+    # V174 #6 conviction pyramid: tier the entry size by conviction tranche.
+    # < 0.30 → 0.25x (starter), 0.30-0.50 → 0.50x, 0.50-0.70 → 0.75x, >= 0.70 → 1.0x.
+    # Existing _conv_size_scale (paper_trading.py:428) is a linear ramp; pyramid
+    # makes low-conviction entries materially smaller so marginal trades that
+    # turn out wrong cost less.
+    conviction_pyramid: bool = False
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
