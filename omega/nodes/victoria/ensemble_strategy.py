@@ -145,9 +145,24 @@ def macro_signals(signals: dict[str, Any], regime: str) -> tuple[float, float, S
     return round(regime_confidence, 4), round(bias, 4), vote
 
 
-def aggregate(votes: list[SubVote], macro_confidence: float) -> EnsembleDecision:
-    """Combine sub-votes into a final decision and size multiplier."""
-    actives = [v for v in votes if v.direction != "abstain"]
+def aggregate(
+    votes: list[SubVote],
+    macro_confidence: float,
+    sub_weights: dict[str, float] | None = None,
+) -> EnsembleDecision:
+    """Combine sub-votes into a final decision and size multiplier.
+
+    V174 sub_weights: optional {sub_name: weight in [0,1]}. Multiplied into
+    each vote's conviction. When a sub-strategy has been performing poorly
+    recently (recent_hit_rate < 0.5), `adaptive_ensemble_decay` lowers its
+    weight, fading its influence on the ensemble decision.
+    """
+    sub_weights = sub_weights or {}
+
+    def _eff(v: SubVote) -> float:
+        return v.conviction * sub_weights.get(v.name, 1.0)
+
+    actives = [v for v in votes if v.direction != "abstain" and _eff(v) > 0.05]
     if not actives:
         return EnsembleDecision("abstain", 0.0, votes, macro_confidence, 0.0)
     longs = [v for v in actives if v.direction == "long"]
@@ -172,10 +187,10 @@ def aggregate(votes: list[SubVote], macro_confidence: float) -> EnsembleDecision
     elif n_agree == 2 and n_abstain == 0:
         size_mult = 0.50
     else:
-        size_mult = 0.0  # fall through; shouldn't happen given checks above
+        size_mult = 0.0
 
-    # Apply min-conviction across agreeing votes and macro regime confidence
-    min_conv = min(v.conviction for v in agreeing) if agreeing else 0.0
+    # Apply min-effective-conviction across agreeing votes and macro regime confidence
+    min_conv = min(_eff(v) for v in agreeing) if agreeing else 0.0
     size_mult = size_mult * max(0.1, min_conv) * max(0.5, macro_confidence)
     size_mult = max(0.0, min(1.0, size_mult))
 
@@ -194,21 +209,56 @@ def aggregate(votes: list[SubVote], macro_confidence: float) -> EnsembleDecision
     )
 
 
-def decide(signals: dict[str, Any], regime: str) -> EnsembleDecision:
+def decide(
+    signals: dict[str, Any],
+    regime: str,
+    sub_weights: dict[str, float] | None = None,
+    adversarial_check: bool = False,
+) -> EnsembleDecision:
     """Main entry: compute all sub-votes and aggregate.
 
-    `signals` is the per-ticker `ts` dict from signal_generation; `regime` is
-    one of {normal, crisis, high_vol, trending, unknown}.
+    `sub_weights` (V174 #1): per-sub-strategy multiplier reflecting recent
+    hit rate. {momentum: 0.8, mean_reversion: 1.0, macro: 0.5} dampens
+    sub-strategies that have recently underperformed.
+
+    `adversarial_check` (V174 #4): when True, also computes the decision
+    with all signal values negated. If the negated decision is also
+    high-conviction in the OPPOSITE direction, it confirms the call. If it
+    matches our direction or the gap is small, the underlying signals are
+    ambiguous → SIT OUT.
     """
     mom = momentum_vote(signals)
     mr = mean_reversion_vote(signals, regime)
-    macro_conf, macro_bias, macro = macro_signals(signals, regime)
-    decision = aggregate([mom, mr, macro], macro_conf)
-    logger.debug(
-        "ensemble: regime=%s mom=%s mr=%s macro=%s(bias=%.2f conf=%.2f) → %s size×%.2f",
-        regime, mom, mr, macro, macro_bias, macro_conf,
-        decision.direction, decision.size_mult,
-    )
+    macro_conf, _macro_bias, macro = macro_signals(signals, regime)
+    decision = aggregate([mom, mr, macro], macro_conf, sub_weights)
+    if not adversarial_check or decision.direction == "abstain":
+        return decision
+
+    # V174 #4: re-evaluate with negated signal values
+    neg_signals = {
+        k: (-v if isinstance(v, (int, float)) and not k.startswith("_regime") else v)
+        for k, v in signals.items()
+    }
+    neg_mom = momentum_vote(neg_signals)
+    neg_mr = mean_reversion_vote(neg_signals, regime)
+    _neg_conf, _neg_bias, neg_macro = macro_signals(neg_signals, regime)
+    neg_decision = aggregate([neg_mom, neg_mr, neg_macro], _neg_conf, sub_weights)
+
+    if neg_decision.direction == decision.direction:
+        # Same direction even with negated inputs → ambiguous, sit out
+        logger.debug("adversarial: SAME-direction conflict → sit out (orig=%s neg=%s)",
+                     decision.direction, neg_decision.direction)
+        return EnsembleDecision("abstain", 0.0, decision.sub_votes,
+                                decision.macro_regime_confidence, decision.macro_bias)
+
+    if neg_decision.direction != "abstain":
+        # Opposite-direction high-conviction → CONFIRMED. Boost size 1.2x (cap 1.0).
+        boosted = min(1.0, decision.size_mult * 1.2)
+        return EnsembleDecision(decision.direction, round(boosted, 4),
+                                decision.sub_votes,
+                                decision.macro_regime_confidence,
+                                decision.macro_bias)
+    # Negated → abstain → standard, keep decision unchanged
     return decision
 
 

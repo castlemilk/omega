@@ -704,6 +704,17 @@ class VictoriaFeatures:
     coinglass_signal_enabled: bool = False
     coinmetrics_signal_enabled: bool = False
 
+    # V174 ensemble feedback mechanisms (feedback-mechanisms.md):
+    # adaptive_ensemble_decay: track per-sub-strategy recent WR (last 20 trades)
+    #     and fade votes from underperforming sub-strategies. Keeps the ensemble
+    #     self-correcting through regime shifts.
+    # adversarial_check: re-run decide() with all signal values negated. If the
+    #     negated decision is also high-conviction in the same direction →
+    #     ambiguous, sit out. If opposite-and-strong → confirmation, boost size.
+    adaptive_ensemble_decay: bool = False
+    adversarial_check: bool = False
+    adaptive_decay_window: int = 20
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".

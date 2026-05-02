@@ -1023,12 +1023,28 @@ class StrategyNode(Node):
         """
         # V173: ensemble strategy — replace single weighted composite with
         # majority-vote across momentum / mean-reversion / macro sub-strategies.
-        # Returns signed conviction = direction_sign × size_mult; SIT_OUT → 0.0.
+        # V174: optional adaptive decay (recent-WR fade) + adversarial check.
         if getattr(self.features, "ensemble_strategy", False):
             try:
                 from omega.nodes.victoria.ensemble_strategy import decide
                 _regime = str(signals_dict.get("_regime", "normal"))
-                _d = decide(signals_dict, _regime)
+                # V174 adaptive decay: dampen all sub-strategies by recent overall WR.
+                # (Per-sub WR tracking would need a schema change; this approximates.)
+                _sub_weights: dict[str, float] | None = None
+                if getattr(self.features, "adaptive_ensemble_decay", False):
+                    _eng = getattr(self, "_paper_engine", None)
+                    _window = int(getattr(self.features, "adaptive_decay_window", 20))
+                    if _eng is not None:
+                        _trades = getattr(_eng, "_closed_trades", [])
+                        _recent = _trades[-_window:] if _trades else []
+                        if len(_recent) >= 5:
+                            _wins = sum(1 for t in _recent if float(t.get("pnl", 0) or 0) > 0)
+                            _wr = _wins / len(_recent)
+                            # Map: WR 0.0 → weight 0.0; WR 0.5 → 1.0; WR 1.0 → 1.0.
+                            _w = max(0.0, min(1.0, _wr / 0.5))
+                            _sub_weights = {"momentum": _w, "mean_reversion": _w, "macro": _w}
+                _adv = bool(getattr(self.features, "adversarial_check", False))
+                _d = decide(signals_dict, _regime, sub_weights=_sub_weights, adversarial_check=_adv)
                 if _d.direction == "long":
                     return float(_d.size_mult)
                 if _d.direction == "short":
