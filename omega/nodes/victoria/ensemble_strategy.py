@@ -187,6 +187,10 @@ def aggregate(
     elif n_agree == 2 and n_abstain == 0:
         size_mult = 0.50
     else:
+        # V174c attempt: lone-vote (1-active+2-abstain) at 0.4x size REGRESSED
+        # by $1,129 composite — the fix made the ensemble behave like the
+        # baseline composite, losing the restrictive-consensus alpha that gives
+        # V173 its edge. Reverted: keep sit-out for sub-quorum cases.
         size_mult = 0.0
 
     # Apply min-effective-conviction across agreeing votes and macro regime confidence
