@@ -1021,6 +1021,22 @@ class StrategyNode(Node):
         If no ICs have been loaded, falls back to the raw composite score so
         the filter still runs with equal weighting.
         """
+        # V173: ensemble strategy — replace single weighted composite with
+        # majority-vote across momentum / mean-reversion / macro sub-strategies.
+        # Returns signed conviction = direction_sign × size_mult; SIT_OUT → 0.0.
+        if getattr(self.features, "ensemble_strategy", False):
+            try:
+                from omega.nodes.victoria.ensemble_strategy import decide
+                _regime = str(signals_dict.get("_regime", "normal"))
+                _d = decide(signals_dict, _regime)
+                if _d.direction == "long":
+                    return float(_d.size_mult)
+                if _d.direction == "short":
+                    return -float(_d.size_mult)
+                return 0.0
+            except Exception as _ens_exc:
+                logger.debug("ensemble_strategy fallback: %s", _ens_exc)
+                # fall through to existing logic on error
         if not self._signal_ics:
             return float(signals_dict.get("composite", 0.0))
 

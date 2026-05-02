@@ -954,6 +954,27 @@ class SignalGenerationNode(Node):
                     # bearish, in an up-SMA market, low vol became doubly bullish).
                     ts["volume_signal"] = max(-1.0, min(1.0, -vol_z / 2.0))
 
+            # V173: VWAP deviation signal (price vs volume-weighted avg).
+            if getattr(self._features, "vwap_signal_enabled", False):
+                try:
+                    from omega.nodes.victoria.signals.vwap_deviation import compute_vwap_deviation
+                    _vols = self._clean_prices(data.get("volume", []))
+                    _vwap_v = compute_vwap_deviation(prices, _vols, window=60)
+                    if _vwap_v != 0.0:
+                        ts["vwap_signal"] = _vwap_v
+                except Exception as _vwap_exc:
+                    logger.debug("vwap_signal %s: %s", ticker, _vwap_exc)
+
+            # V173: RSI divergence signal (price/RSI divergence as reversal indicator).
+            if getattr(self._features, "rsi_divergence_enabled", False):
+                try:
+                    from omega.nodes.victoria.signals.rsi_divergence import compute_divergence
+                    _rsi_div = compute_divergence(prices, lookback=20, period=14)
+                    if _rsi_div != 0.0:
+                        ts["rsi_divergence_signal"] = _rsi_div
+                except Exception as _rd_exc:
+                    logger.debug("rsi_divergence %s: %s", ticker, _rd_exc)
+
             # V157: breakout detection — Donchian channel breakout signal
             if (
                 _HAS_TREND_SIGNALS

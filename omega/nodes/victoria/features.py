@@ -685,6 +685,18 @@ class VictoriaFeatures:
     # repeatedly regressed), just remove the contribution.
     excluded_signals: list[str] = field(default_factory=list)
 
+    # V173: ensemble strategy — three independent sub-strategies vote
+    # (momentum / mean-reversion / macro). When True, the per-ticker conviction
+    # is replaced by the ensemble decision (direction × size_mult). See
+    # omega/nodes/victoria/ensemble_strategy.py for the architecture.
+    ensemble_strategy: bool = False
+
+    # V173: VWAP-deviation signal (price vs volume-weighted average price).
+    vwap_signal_enabled: bool = False
+
+    # V173: RSI-divergence signal (price/RSI divergence as reversal indicator).
+    rsi_divergence_enabled: bool = False
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
