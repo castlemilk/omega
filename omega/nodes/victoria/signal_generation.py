@@ -759,6 +759,51 @@ class SignalGenerationNode(Node):
         signals["_dxy_val"] = float(_dxy_val)
         signals["_vix_val"] = float(_vix_val)
 
+        # V173 market-level signals: mempool, google_trends, coinglass, coinmetrics.
+        # All gated by per-source feature flags. Lazy-import per call to avoid
+        # importing heavy deps when disabled.
+        _f = self._features
+        if getattr(_f, "mempool_signal_enabled", False):
+            try:
+                from omega.nodes.victoria.signals.mempool import MempoolSignal
+                if not hasattr(self, "_mempool_inst"):
+                    self._mempool_inst = MempoolSignal()
+                _mp = self._mempool_inst.compute()
+                for _k, _v in _mp.items():
+                    signals[f"_{_k}"] = float(_v)
+            except Exception as _mp_exc:
+                logger.debug("mempool signal: %s", _mp_exc)
+        if getattr(_f, "google_trends_signal_enabled", False):
+            try:
+                from omega.nodes.victoria.signals.google_trends import GoogleTrendsSignal
+                if not hasattr(self, "_gtrends_inst"):
+                    self._gtrends_inst = GoogleTrendsSignal()
+                _gt = self._gtrends_inst.compute()
+                for _k, _v in _gt.items():
+                    signals[f"_{_k}"] = float(_v)
+            except Exception as _gt_exc:
+                logger.debug("google_trends signal: %s", _gt_exc)
+        if getattr(_f, "coinglass_signal_enabled", False):
+            try:
+                from omega.nodes.victoria.signals.coinglass import CoinglassSignal
+                if not hasattr(self, "_cg_inst"):
+                    self._cg_inst = CoinglassSignal()
+                _cg = self._cg_inst.compute()
+                for _k, _v in _cg.items():
+                    signals[f"_{_k}"] = float(_v)
+            except Exception as _cg_exc:
+                logger.debug("coinglass signal: %s", _cg_exc)
+        if getattr(_f, "coinmetrics_signal_enabled", False):
+            try:
+                from omega.nodes.victoria.signals.coinmetrics import CoinMetricsSignal
+                if not hasattr(self, "_cm_inst"):
+                    self._cm_inst = CoinMetricsSignal()
+                _cm = self._cm_inst.compute()
+                for _k, _v in _cm.items():
+                    signals[f"_{_k}"] = float(_v)
+            except Exception as _cm_exc:
+                logger.debug("coinmetrics signal: %s", _cm_exc)
+
         _yield_curve_val: float = 0.0
         if self._yield_curve_signal is not None:
             try:

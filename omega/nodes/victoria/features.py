@@ -697,6 +697,13 @@ class VictoriaFeatures:
     # V173: RSI-divergence signal (price/RSI divergence as reversal indicator).
     rsi_divergence_enabled: bool = False
 
+    # V173 free signal sources (mempool + google_trends work no-key;
+    # coinglass/coinmetrics need API keys — modules return zeros without them).
+    mempool_signal_enabled: bool = False
+    google_trends_signal_enabled: bool = False
+    coinglass_signal_enabled: bool = False
+    coinmetrics_signal_enabled: bool = False
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
