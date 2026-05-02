@@ -107,8 +107,12 @@ def mean_reversion_vote(signals: dict[str, Any], regime: str) -> SubVote:
         return SubVote("abstain", 0.0, "mean_reversion")
     breakout = _safe_float(signals, "breakout_signal", 0.0)
     orc = _safe_float(signals, "ollivier_ricci_signal", 0.0)
-    # Fade strong breakouts confirmed by negative ORC (overextension).
-    if abs(breakout) < 0.3 or abs(orc) < 0.05:
+    # V175: loosened thresholds for calm-market live conditions. Backtest
+    # snapshots had violent price action that easily satisfied |breakout|>0.3
+    # AND |orc|>0.05, but live markets rarely cross both at once. Use OR with
+    # lower bars so mean_reversion votes more often (rather than abstaining
+    # and leaving momentum as the lone vote → ensemble sit-out).
+    if abs(breakout) < 0.10 and abs(orc) < 0.02:
         return SubVote("abstain", 0.0, "mean_reversion")
     # ORC sign should oppose breakout for a fade signal.
     if breakout > 0 and orc < 0:
@@ -137,7 +141,9 @@ def macro_signals(signals: dict[str, Any], regime: str) -> tuple[float, float, S
     same_sign = sum(1 for c in components if c * bias > 0.05)
     regime_confidence = same_sign / max(1, len(components))
 
-    if abs(bias) < 0.1:
+    # V175: loosened bias floor 0.10 → 0.05. macro vote now fires more often
+    # in low-vol live conditions where fear_greed and funding stay near zero.
+    if abs(bias) < 0.05:
         vote = SubVote("abstain", 0.0, "macro")
     else:
         direction: Vote = "long" if bias > 0 else "short"
