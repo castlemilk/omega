@@ -722,6 +722,26 @@ class VictoriaFeatures:
     # turn out wrong cost less.
     conviction_pyramid: bool = False
 
+    # V178 regime-selective sizing. v168 forensics across 97 trades showed
+    # high_vol is +$699/64% WR (best regime) while normal is -$658/22% WR
+    # (loss source). DeepSeek R1 independently arrived at the same conclusion
+    # ("avoid normal regime entirely"). Strategy: dampen normal entries
+    # (multiply by normal_regime_size_mult), boost high_vol entries
+    # (multiply by high_vol_size_boost). Crisis protection unchanged.
+    normal_regime_dampen: bool = False
+    normal_regime_size_mult: float = 0.3
+    high_vol_size_boost: float = 1.5
+
+    # V178 R1 exit improvements. From DeepSeek R1 trade analysis:
+    #   "Winners hold 4-10 bars; losers are 2-bar holds with MAE=PnL, MFE=0".
+    # mfe_trailing_retracement: lock gains when current PnL drops to this
+    #   fraction of peak MFE (0.70 = exit on 30% MFE retrace).
+    # zero_mfe_fast_exit_bars: if MFE stays 0 (no favorable move) past this
+    #   many bars, exit at half loss cap. Existing zero_mfe_early_exit_cycles
+    #   already does this at 2 bars; this lets R1's recommendation of 1 bar.
+    mfe_trailing_retracement: float = 0.0  # 0 = disabled, 0.70 = R1 recommendation
+    zero_mfe_fast_exit_bars: int = 0  # 0 = use existing; 1 = R1 recommendation
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
@@ -2469,6 +2489,33 @@ _V169_DEEPSEEK_R1 = {
     "llm_analyst_model": "deepseek-reasoner",
 }
 _PRESETS["v169_deepseek_r1"] = VictoriaFeatures(**_V169_DEEPSEEK_R1)
+
+# V178 = ensemble + regime-selective + R1 meta + R1 exit improvements.
+# Per v168 forensics (97 trades) and DeepSeek R1 analysis:
+#   - normal regime: 64 trades, -$658, 22% WR (LOSS SOURCE) → dampen to 30% size
+#   - high_vol regime: 11 trades, +$699, 64% WR (BEST) → boost to 150% size
+#   - crisis: keep current protection
+#   - 2-bar losers with MFE=0 → exit at 1 bar (R1 #2)
+#   - winners: lock at 70% of peak MFE (R1 #1: mfe_retracement_cap 0.25 → 0.30)
+# Removes high_vol_entry_block (was based on 2022 data, current high_vol is alpha).
+_V178_R1 = {
+    **_V161_LIVE,
+    "ensemble_strategy": True,
+    "vix_signal_in_composite": True,
+    "high_vol_entry_block": False,
+    "high_vol_short_block": False,
+    "normal_regime_dampen": True,
+    "normal_regime_size_mult": 0.3,
+    "high_vol_size_boost": 1.5,
+    "mfe_retracement_cap": 0.30,
+    "zero_mfe_early_exit_cycles": 1,
+    "llm_analyst_enabled": False,  # disabled in backtest; enable for live
+    "llm_analyst_provider": "openai_compatible",
+    "llm_analyst_model": "deepseek-chat",
+    "llm_analyst_api_base": "https://api.deepseek.com/v1",
+    "llm_analyst_api_key_env": "DEEPSEEK_API_KEY",
+}
+_PRESETS["v178_r1"] = VictoriaFeatures(**_V178_R1)
 
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at

@@ -440,6 +440,19 @@ class PaperTradingEngine:
                 else:
                     _conv_size_scale = 1.0
             size = raw_size_fraction * _conv_size_scale * self.initial_capital
+            # V178: regime-selective sizing. proposal carries the regime label;
+            # dampen normal entries (loss source), boost high_vol entries (best regime).
+            if _features and getattr(_features, "normal_regime_dampen", False):
+                _rf = proposal.get("regime_filter") or {}
+                _proposal_regime = str(
+                    _rf.get("regime") or proposal.get("regime", "")
+                ).lower()
+                if _proposal_regime == "normal":
+                    _norm_mult = float(getattr(_features, "normal_regime_size_mult", 0.3))
+                    size *= _norm_mult
+                elif _proposal_regime == "high_vol":
+                    _hv_mult = float(getattr(_features, "high_vol_size_boost", 1.5))
+                    size *= _hv_mult
 
             # V166: Kelly Criterion sizing. f* = (p × b - q) / b, where
             #   p = empirical win rate (from closed trades),
