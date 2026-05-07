@@ -132,9 +132,17 @@ def macro_signals(signals: dict[str, Any], regime: str) -> tuple[float, float, S
     fg = _safe_float(signals, "fear_greed_signal", 0.0)        # [-1, +1] contrarian
     funding = _safe_float(signals, "funding_rate_signal", 0.0) # [-1, +1] z-score, sign-flipped
     vix = _safe_float(signals, "vix_signal", 0.0)              # higher = bearish
-    # Composite bias: fear_greed and funding both contrarian.
-    bias = (fg + funding - 0.5 * vix) / 2.5  # rough scale into [-1, +1]
+    # V178: free-source macro additions (also surfaced as top-level signals_dict
+    # keys when their feature flags are on).
+    fomo = _safe_float(signals, "_retail_fomo_signal", 0.0)    # +1 = euphoria → contrarian short already
+    fee_urgency = _safe_float(signals, "_mempool_fee_urgency", 0.0)  # high = network stress
+    # Composite bias: fear_greed + funding contrarian; fomo also contrarian
+    # (already negated upstream); fee_urgency dampens magnitude slightly when stressed.
+    bias = (fg + funding - 0.5 * vix + fomo) / 3.0  # rough scale into [-1, +1]
     bias = max(-1.0, min(1.0, bias))
+    # Network stress reduces conviction (slight risk-off bias on bias magnitude).
+    if abs(fee_urgency) > 0.5:
+        bias *= 0.7
 
     # Regime confidence: high when signals agree on direction; low when split.
     components = [fg, funding, -vix]  # -vix because high vix = bearish

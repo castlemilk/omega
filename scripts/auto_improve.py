@@ -90,6 +90,7 @@ SNAPSHOT_ALIASES: dict[str, str] = {
     "fresh_live": str(DATA_DIR / "snapshots" / "snap_15min_live.json"),
     "fresh_30d": str(DATA_DIR / "snapshots" / "snap_15min_recent_30d.json"),
     "fresh_60d": str(DATA_DIR / "snapshots" / "snap_15min_recent_60d.json"),
+    "fresh_0508": str(DATA_DIR / "snapshots" / "snap_15min_fresh_0508.json"),
 }
 
 # Safety thresholds
