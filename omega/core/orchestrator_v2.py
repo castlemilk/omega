@@ -1228,6 +1228,10 @@ class OmegaOrchestrator:
                     node_proposals: list[dict] = []
                     for item in raw_list:
                         if isinstance(item, dict) and "weights" in item and item["weights"]:
+                            # V179: thread regime_consolidated onto each per-symbol
+                            # proposal so paper_trading regime-selective sizing fires.
+                            _regime_c = item.get("regime_consolidated", "")
+                            _conv_scores = item.get("conviction_scores", {})
                             for sym, w in item["weights"].items():
                                 node_proposals.append(
                                     {
@@ -1235,6 +1239,8 @@ class OmegaOrchestrator:
                                         "weight": float(w),
                                         "node_id": state.node_id,
                                         "autonomy_level": autonomy_level.value,
+                                        "regime": _regime_c,
+                                        "conviction": _conv_scores.get(sym, 0.30),
                                     }
                                 )
                         elif isinstance(item, dict):
