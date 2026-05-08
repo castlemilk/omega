@@ -245,6 +245,8 @@ def run_backtest(
         result = strat_out.result
         weights: dict[str, float] = result.get("weights", {})
         conviction_scores: dict[str, float] = result.get("conviction_scores", {})
+        # V179: surface consolidated regime onto each proposal for regime-selective sizing
+        _regime_consolidated = result.get("regime_consolidated", "")
 
         # Build proposals and execute
         proposals = [
@@ -252,6 +254,7 @@ def run_backtest(
                 "symbol": sym,
                 "weight": float(w),
                 "conviction": conviction_scores.get(sym, 0.30),
+                "regime": _regime_consolidated,
             }
             for sym, w in weights.items()
         ]

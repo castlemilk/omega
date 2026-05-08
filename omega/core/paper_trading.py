@@ -443,10 +443,9 @@ class PaperTradingEngine:
             # V178: regime-selective sizing. proposal carries the regime label;
             # dampen normal entries (loss source), boost high_vol entries (best regime).
             if _features and getattr(_features, "normal_regime_dampen", False):
-                _rf = proposal.get("regime_filter") or {}
-                _proposal_regime = str(
-                    _rf.get("regime") or proposal.get("regime", "")
-                ).lower()
+                # V179: read consolidated regime from proposal (orchestrator
+                # now surfaces regime_consolidated as proposal['regime']).
+                _proposal_regime = str(proposal.get("regime", "")).lower()
                 if _proposal_regime == "normal":
                     _norm_mult = float(getattr(_features, "normal_regime_size_mult", 0.3))
                     size *= _norm_mult

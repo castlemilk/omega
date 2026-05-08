@@ -3629,6 +3629,10 @@ class StrategyNode(Node):
             "regime_blocked_longs": regime_blocked_longs,
             "regime_blocked_shorts": regime_blocked_shorts,
             "regime_filter": {"regime": _regime_hmm, "confidence": _regime_confidence},
+            # V179: expose consolidated regime label (normal/crisis/high_vol/trending)
+            # so paper_trading can apply regime-selective sizing. _regime_hmm is
+            # only bull/bear/sideways and won't match those keys.
+            "regime_consolidated": _regime_consolidated,
             "filter_stats": {
                 "generated": self._proposals_generated,
                 "filtered": self._proposals_filtered,

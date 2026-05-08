@@ -537,12 +537,16 @@ class OmegaOrchestrator:
                                             proposals.append(item)
                                 elif isinstance(raw_result, dict) and "weights" in raw_result:
                                     _conv_scores = raw_result.get("conviction_scores", {})
+                                    # V179: surface consolidated regime so paper_trading
+                                    # regime-selective sizing actually fires.
+                                    _regime_consolidated = raw_result.get("regime_consolidated", "")
                                     for sym, w in raw_result["weights"].items():
                                         proposals.append(
                                             {
                                                 "symbol": sym,
                                                 "weight": float(w),
                                                 "conviction": _conv_scores.get(sym, 0.30),
+                                                "regime": _regime_consolidated,
                                             }
                                         )
                                 elif isinstance(raw_result, dict):
