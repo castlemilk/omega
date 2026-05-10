@@ -742,6 +742,17 @@ class VictoriaFeatures:
     mfe_trailing_retracement: float = 0.0  # 0 = disabled, 0.70 = R1 recommendation
     zero_mfe_fast_exit_bars: int = 0  # 0 = use existing; 1 = R1 recommendation
 
+    # V180 short-side filter. v177 forensics: 9 of 11 shorts were ADAUSDT,
+    # 4 in normal regime (all losers, -$432 combined). Option C: block ensemble
+    # short proposals when regime is normal. Crisis/high_vol shorts unaffected.
+    ensemble_block_normal_shorts: bool = False
+
+    # V180 long-side threshold override. The composite check in strategy.py uses
+    # the regime-adaptive long threshold (default 0.10 in normal). Lowering this
+    # lets more longs through when ensemble has 2-of-3 consensus producing
+    # ±0.07-0.09 magnitude (currently rejected). 0.0 = use regime-adaptive.
+    ensemble_long_threshold_override: float = 0.0
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".

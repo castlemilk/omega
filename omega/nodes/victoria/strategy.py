@@ -1045,6 +1045,11 @@ class StrategyNode(Node):
                             _sub_weights = {"momentum": _w, "mean_reversion": _w, "macro": _w}
                 _adv = bool(getattr(self.features, "adversarial_check", False))
                 _d = decide(signals_dict, _regime, sub_weights=_sub_weights, adversarial_check=_adv)
+                # V180 short filter: block ensemble shorts when regime is normal
+                # (v177 forensics — 4 of 4 normal-regime shorts lost, total -$432).
+                if _d.direction == "short" and getattr(self.features, "ensemble_block_normal_shorts", False):
+                    if _regime.lower() == "normal":
+                        return 0.0
                 if _d.direction == "long":
                     return float(_d.size_mult)
                 if _d.direction == "short":
@@ -1336,6 +1341,12 @@ class StrategyNode(Node):
                 regime_hmm,
             )
 
+        # V180: long-side threshold override. When >0, replace the
+        # regime-adaptive long threshold with this value so v176/v177-style
+        # 2-of-3 ensemble longs (composite ~0.07-0.09) can fire in normal regime.
+        _long_override = float(getattr(self.features, "ensemble_long_threshold_override", 0.0))
+        if _long_override > 0:
+            self._long_conviction_threshold = _long_override
         # V168: global conviction-threshold multiplier for short-cadence runs.
         # Default 1.0 = no change; set to 0.5 in v168_15min_micro to allow more
         # candidates through at 15-min cadence where signals are noisier.
