@@ -753,6 +753,11 @@ class VictoriaFeatures:
     # ±0.07-0.09 magnitude (currently rejected). 0.0 = use regime-adaptive.
     ensemble_long_threshold_override: float = 0.0
 
+    # V181 short-side conviction multiplier. Scales raw_size_fraction for shorts
+    # by this value before the min-position-fraction floor check. 0.67 = needs
+    # ~50% more raw conviction to clear the floor (asymmetric bar). 1.0 = no change.
+    ensemble_short_conviction_mult: float = 1.0
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".

@@ -422,13 +422,41 @@ class PaperTradingEngine:
                 continue
 
             new_side = "long" if weight > 0 else "short"
+            # V181: short-side filtering at proposal level. _compute_weighted_conviction
+            # blocks were ineffective because 9 call sites strip the conviction sign with
+            # abs(); side decisions happen elsewhere. This is the right interception point —
+            # we have explicit `new_side` AND `proposal['regime']` (V179 wiring).
+            _features = getattr(self, "_features", None)
+            if _features and new_side == "short":
+                _proposal_regime = str(proposal.get("regime", "")).lower()
+                if (
+                    getattr(_features, "ensemble_block_normal_shorts", False)
+                    and _proposal_regime == "normal"
+                ):
+                    logger.debug(
+                        "V181 block: SHORT %s in normal regime (ensemble_block_normal_shorts)",
+                        symbol,
+                    )
+                    continue
+                # V181 conviction asymmetry: shorts must clear a higher bar.
+                # mult = 0.67 means short conviction multiplied by 0.67, i.e. needs 50% more
+                # raw conviction to cross the same _MIN_POSITION_FRACTION_EFFECTIVE floor.
+                _short_mult = float(getattr(_features, "ensemble_short_conviction_mult", 1.0))
+                if _short_mult < 1.0:
+                    raw_size_fraction = raw_size_fraction * _short_mult
+                    if raw_size_fraction < _MIN_POSITION_FRACTION_EFFECTIVE:
+                        logger.debug(
+                            "V181 short-conviction-mult %.2f drops %s below floor; skip",
+                            _short_mult, symbol,
+                        )
+                        continue
+
             # Conviction-proportional sizing: scale down low-conviction trades.
             # conviction=0.15 → 50% of base size; conviction>=0.30 → full size.
             _conviction = float(proposal.get("conviction", 0.30))
             _conv_size_scale = min(_conviction / 0.30, 1.0)
             # V174 #6 conviction_pyramid: replace linear ramp with discrete
             # tranches so marginal entries are materially smaller.
-            _features = getattr(self, "_features", None)
             if _features and getattr(_features, "conviction_pyramid", False):
                 _c = abs(_conviction)
                 if _c < 0.30:
