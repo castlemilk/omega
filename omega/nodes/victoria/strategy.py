@@ -1045,6 +1045,36 @@ class StrategyNode(Node):
                             _sub_weights = {"momentum": _w, "mean_reversion": _w, "macro": _w}
                 _adv = bool(getattr(self.features, "adversarial_check", False))
                 _d = decide(signals_dict, _regime, sub_weights=_sub_weights, adversarial_check=_adv)
+
+                # V186 LLM tie-breaker: when the three sub-strategies disagree
+                # (decide returns abstain with at least one active vote), call
+                # an LLM to arbitrate. Only fires when feature flag is on.
+                if (
+                    _d.direction == "abstain"
+                    and getattr(self.features, "llm_tiebreaker", False)
+                    and any(v.direction != "abstain" for v in _d.sub_votes)
+                ):
+                    try:
+                        from omega.nodes.victoria.llm_arbitration import tiebreaker_decision
+                        _eng = getattr(self, "_paper_engine", None)
+                        _recent = getattr(_eng, "_closed_trades", []) if _eng else []
+                        _tb = tiebreaker_decision(
+                            signals_dict, _d.sub_votes, _regime, _recent,
+                            model=getattr(self.features, "llm_arbitration_model", "deepseek-chat"),
+                        )
+                        if _tb["direction"] in ("long", "short") and _tb["conviction"] >= 0.5:
+                            # Take the LLM's call at 50% size (conservative
+                            # because it's an arbitrated decision, not consensus).
+                            _tb_size = 0.5 * _tb["conviction"]
+                            logger.info(
+                                "V186 llm_tiebreaker: %s conv=%.2f → size=%.3f (%s)",
+                                _tb["direction"], _tb["conviction"], _tb_size,
+                                _tb.get("reasoning", "")[:60],
+                            )
+                            return _tb_size if _tb["direction"] == "long" else -_tb_size
+                    except Exception as _tb_exc:
+                        logger.debug("llm_tiebreaker error: %s", _tb_exc)
+
                 # V180 short filter: block ensemble shorts when regime is normal
                 # (v177 forensics — 4 of 4 normal-regime shorts lost, total -$432).
                 if _d.direction == "short" and getattr(self.features, "ensemble_block_normal_shorts", False):
@@ -1068,6 +1098,34 @@ class StrategyNode(Node):
                 _kl_mult = float(getattr(self.features, "kyles_lambda_conviction_multiplier", 0.0))
                 if _kl_mult > 0.0 and float(signals_dict.get("kyles_lambda_spike", 0.0)) >= 1.0:
                     _final_size = min(1.0, _final_size * _kl_mult)
+                # V186 LLM risk-scaling: on high-conviction trades only, ask an
+                # LLM to scale 0.5x / 1.0x / 1.5x using recent loser MAE pattern.
+                if (
+                    getattr(self.features, "llm_risk_scaling", False)
+                    and abs(_final_size) >= 0.5
+                ):
+                    try:
+                        from omega.nodes.victoria.llm_arbitration import risk_scaling_decision
+                        _eng = getattr(self, "_paper_engine", None)
+                        _recent = getattr(_eng, "_closed_trades", []) if _eng else []
+                        # ticker symbol isn't on this stack frame; use the
+                        # signals_dict's most-non-zero hint, or fall back to ?.
+                        _sym = str(signals_dict.get("_ticker", "")) or "?"
+                        _rs = risk_scaling_decision(
+                            _sym, _d.direction, abs(_final_size),
+                            signals_dict, _recent,
+                            model=getattr(self.features, "llm_arbitration_model", "deepseek-chat"),
+                        )
+                        _scale = float(_rs.get("scale", 1.0))
+                        if _scale != 1.0:
+                            _final_size = max(-1.0, min(1.0, _final_size * _scale))
+                            logger.info(
+                                "V186 llm_risk_scaling %s: %.2fx → size=%.3f (%s)",
+                                _sym, _scale, _final_size,
+                                _rs.get("reasoning", "")[:60],
+                            )
+                    except Exception as _rs_exc:
+                        logger.debug("llm_risk_scaling error: %s", _rs_exc)
                 if _d.direction == "long":
                     return _final_size
                 if _d.direction == "short":

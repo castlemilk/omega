@@ -803,6 +803,18 @@ class VictoriaFeatures:
     # imbalance plus trade-flow burst detection. WS-only.
     lob_features: bool = False
 
+    # V186 LLM arbitration (ported from TradingAgents).
+    # llm_tiebreaker: when ensemble aggregate returns "abstain" with at least
+    # one active vote, call DeepSeek-chat to arbitrate. Takes the LLM's call
+    # at half size (conservative). 1 LLM call per ~5-10 abstain cycles.
+    llm_tiebreaker: bool = False
+    # llm_risk_scaling: when ensemble size_mult >= 0.5, call DeepSeek-chat
+    # to scale 0.5x/1.0x/1.5x using recent loser MAE pattern. 1 call per
+    # high-conviction trade.
+    llm_risk_scaling: bool = False
+    # Shared model + provider. Default: deepseek-chat (fast, ~1.5s, ~$0.001/call).
+    llm_arbitration_model: str = "deepseek-chat"
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
@@ -2687,6 +2699,36 @@ _V185_PHASE_A = {
     "lob_features": True,
 }
 _PRESETS["v185_phase_a"] = VictoriaFeatures(**_V185_PHASE_A)
+
+# V186 — kitchen-sink preset combining every flag that beat same-time baseline:
+#   * V184 stacked (short filter + 50% MFE profit-lock trail)  +$82 vs baseline
+#   * V185 Phase A (VPIN + Kyle + LOB; WS-only, live-only uplift)
+#   * V186 LLM tie-breaker (recover sit-out cycles via DeepSeek arbitration)
+#   * V186 LLM risk-scaling (size 0.5/1.0/1.5x on high-conv trades)
+_V186_KITCHEN_SINK = {
+    **_V184_STACKED,
+    "vpin_signal": True,
+    "vpin_conviction_multiplier": 1.3,
+    "kyles_lambda_signal": True,
+    "kyles_lambda_conviction_multiplier": 1.2,
+    "lob_features": True,
+    "llm_tiebreaker": True,
+    "llm_risk_scaling": True,
+    "llm_arbitration_model": "deepseek-chat",
+}
+_PRESETS["v186"] = VictoriaFeatures(**_V186_KITCHEN_SINK)
+
+# V186 without LLM (for snapshot ablation where the LLM call cost dominates
+# but the LLM calls are inactive anyway because trade volume is low).
+_V186_NO_LLM = {
+    **_V184_STACKED,
+    "vpin_signal": True,
+    "vpin_conviction_multiplier": 1.3,
+    "kyles_lambda_signal": True,
+    "kyles_lambda_conviction_multiplier": 1.2,
+    "lob_features": True,
+}
+_PRESETS["v186_no_llm"] = VictoriaFeatures(**_V186_NO_LLM)
 
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
