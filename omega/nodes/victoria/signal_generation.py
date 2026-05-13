@@ -168,6 +168,24 @@ try:
 except ImportError:
     _HAS_GEOPOLITICAL = False
 
+try:
+    from omega.nodes.victoria.signals.vpin import VPINSignal as _VPINSignal
+    _HAS_VPIN = True
+except ImportError:
+    _HAS_VPIN = False
+
+try:
+    from omega.nodes.victoria.signals.kyles_lambda import KylesLambdaSignal as _KylesLambdaSignal
+    _HAS_KYLES_LAMBDA = True
+except ImportError:
+    _HAS_KYLES_LAMBDA = False
+
+try:
+    from omega.nodes.victoria.signals.lob_features import LOBFeaturesSignal as _LOBFeaturesSignal
+    _HAS_LOB_FEATURES = True
+except ImportError:
+    _HAS_LOB_FEATURES = False
+
 # V157: trend-following signals (price-only, no external deps — always importable)
 try:
     from omega.nodes.victoria.signals import breakout as _breakout_mod
@@ -429,6 +447,27 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._whale_flow = _WhaleFlowSignals()
                 logger.info("WhaleFlowSignals initialized")
+
+        # V185 VPIN wrapper: z-score + spike features over raw VPIN.
+        self._vpin_signal: Any = None
+        if _HAS_VPIN and self._features and getattr(self._features, "vpin_signal", False):
+            with contextlib.suppress(Exception):
+                self._vpin_signal = _VPINSignal()
+                logger.info("VPINSignal initialized")
+
+        # V185 Kyle's lambda: market-impact-based informed-trader detector.
+        self._kyles_lambda: Any = None
+        if _HAS_KYLES_LAMBDA and self._features and getattr(self._features, "kyles_lambda_signal", False):
+            with contextlib.suppress(Exception):
+                self._kyles_lambda = _KylesLambdaSignal(ws_feeds=self._ws_feeds)
+                logger.info("KylesLambdaSignal initialized")
+
+        # V185 LOB features: multi-level OFI, arrival rate z, adverse selection.
+        self._lob_features: Any = None
+        if _HAS_LOB_FEATURES and self._features and getattr(self._features, "lob_features", False):
+            with contextlib.suppress(Exception):
+                self._lob_features = _LOBFeaturesSignal(ws_feeds=self._ws_feeds)
+                logger.info("LOBFeaturesSignal initialized")
 
         # V138 geopolitical_signals: GDELT DOC 2.0 event signals
         self._geo_signal: Any = None
@@ -1122,6 +1161,44 @@ class SignalGenerationNode(Node):
                             ts[_ms_key] = _ms_val
                 except Exception as _ms_exc:
                     logger.debug("ws_microstructure %s: %s", ticker, _ms_exc)
+
+            # V185 VPIN signal: enrich raw vpin with zscore + spike features.
+            # Uses breakout_signal as the directional hint so a spike inherits
+            # the direction the trend-following sub-strategies already see.
+            if self._vpin_signal is not None:
+                _raw_vpin = float(ts.get("vpin", 0.0))
+                if _raw_vpin > 0.0:
+                    try:
+                        _vpin_feats = self._vpin_signal.compute(
+                            symbol=ticker,
+                            vpin_value=_raw_vpin,
+                            directional_hint=float(ts.get("breakout_signal", 0.0)),
+                        )
+                        for _k, _v in _vpin_feats.items():
+                            if _v != 0.0:
+                                ts[_k] = _v
+                    except Exception as _vpin_exc:
+                        logger.debug("vpin_signal %s: %s", ticker, _vpin_exc)
+
+            # V185 Kyle's Lambda: market-impact slope of price on signed flow.
+            if self._kyles_lambda is not None:
+                try:
+                    _kl = self._kyles_lambda.compute(ticker)
+                    for _k, _v in _kl.items():
+                        if _v != 0.0:
+                            ts[_k] = _v
+                except Exception as _kl_exc:
+                    logger.debug("kyles_lambda %s: %s", ticker, _kl_exc)
+
+            # V185 LOB features: multi-level OFI, arrival-rate z, adverse selection.
+            if self._lob_features is not None:
+                try:
+                    _lf = self._lob_features.compute(ticker)
+                    for _k, _v in _lf.items():
+                        if _v != 0.0:
+                            ts[_k] = _v
+                except Exception as _lf_exc:
+                    logger.debug("lob_features %s: %s", ticker, _lf_exc)
 
             # V166: cross-exchange divergence — Binance WS price vs REST close.
             # Compute always when feeds available so the value can be surfaced

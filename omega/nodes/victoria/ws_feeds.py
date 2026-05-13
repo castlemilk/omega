@@ -65,8 +65,31 @@ _VOL_PROFILE_WINDOWS = 10  # number of 60-s windows for avg volume
 # Phase 1 expansion
 _TRADE_SIZE_HISTORY = 200  # rolling window for whale-print mean/std
 _WHALE_SIGMA = 2.0  # trades > mean + N*sigma are whale prints
-_VPIN_BUCKET_SIZE = 50  # trades per VPIN bucket
+_VPIN_BUCKET_SIZE = 50  # legacy: trades per VPIN bucket (used if volume mode is off)
 _VPIN_HISTORY = 20  # completed buckets to keep for rolling VPIN
+
+# V185: volume-bucketed VPIN per Easley/López de Prado. Each bucket fills
+# until cumulative volume crosses this threshold (in base-currency units —
+# units are the same as `q` from Binance aggTrade). Defaults sized so a
+# bucket fills every ~30-90s on BTCUSDT under typical conditions. When the
+# manager is configured with vpin_volume_bucketing=True, the legacy
+# trade-count bucketing is replaced.
+_VPIN_VOLUME_BUCKETS: dict[str, float] = {
+    "BTCUSDT": 1.0,
+    "ETHUSDT": 10.0,
+    "SOLUSDT": 100.0,
+    "BNBUSDT": 10.0,
+    "XRPUSDT": 5000.0,
+    "ADAUSDT": 5000.0,
+    "DOTUSDT": 500.0,
+    "AVAXUSDT": 250.0,
+    "LINKUSDT": 250.0,
+    "MATICUSDT": 5000.0,
+    "NEARUSDT": 2500.0,
+    "SUIUSDT": 5000.0,
+    "ARBUSDT": 5000.0,
+}
+_VPIN_VOLUME_DEFAULT = 100.0  # fallback for symbols not in the table above
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +163,7 @@ class OrderBook:
 
 @dataclass
 class _SymbolState:
+    symbol: str = ""  # V185: symbol-keyed VPIN volume bucket threshold lookup
     ticks: RingBuffer = field(default_factory=RingBuffer)
     book: OrderBook = field(default_factory=OrderBook)
     # Rolling spread history for z-score
@@ -202,6 +226,12 @@ class _NoOpWSFeedManager:
     def get_whale_signals(self, symbol: str) -> dict[str, float]:
         return dict(_ZERO_WHALE_SIGNALS)
 
+    def get_ticks(self, symbol: str) -> list[Tick]:
+        return []
+
+    def get_book(self, symbol: str) -> tuple[list[BookLevel], list[BookLevel]]:
+        return ([], [])
+
 
 # ---------------------------------------------------------------------------
 # Main feed manager
@@ -220,7 +250,7 @@ class WSFeedManager:
 
     def __init__(self, symbols: list[str]) -> None:
         self._symbols = [s.upper() for s in symbols]
-        self._state: dict[str, _SymbolState] = {s: _SymbolState() for s in self._symbols}
+        self._state: dict[str, _SymbolState] = {s: _SymbolState(symbol=s) for s in self._symbols}
         self._thread: threading.Thread | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._stop_event = threading.Event()
@@ -311,6 +341,29 @@ class WSFeedManager:
         if not ticks:
             return None
         return float(ticks[-1].price)
+
+    def get_ticks(self, symbol: str) -> list[Tick]:
+        """V185: read-only snapshot of the recent trade tape for `symbol`.
+
+        Consumed by Kyle's Lambda and LOB-features signals. Returns an empty
+        list when no data has arrived yet.
+        """
+        sym = symbol.upper()
+        state = self._state.get(sym)
+        if state is None or not state.has_data:
+            return []
+        return state.ticks.snapshot()
+
+    def get_book(self, symbol: str) -> tuple[list[BookLevel], list[BookLevel]]:
+        """V185: read-only snapshot of the L2 order book for `symbol`.
+
+        Returns (bids, asks). Empty tuple of lists when no data is available.
+        """
+        sym = symbol.upper()
+        state = self._state.get(sym)
+        if state is None or not state.has_data:
+            return ([], [])
+        return state.book.snapshot()
 
     def get_whale_signals(self, symbol: str) -> dict[str, float]:
         """
@@ -671,19 +724,29 @@ class WSFeedManager:
         # Track rolling trade size for whale detection
         state.trade_sizes.append(size)
 
-        # Accumulate VPIN bucket
+        # Accumulate VPIN bucket. V185: bucket by cumulative volume (canonical
+        # Easley/López de Prado VPIN) rather than fixed trade count. Each
+        # bucket closes when total volume (buy_vol + sell_vol) crosses the
+        # symbol-specific threshold from _VPIN_VOLUME_BUCKETS. The legacy
+        # trade-count bucket is kept as a fallback when the volume threshold
+        # is non-positive.
         with state.vpin_lock:
             if side == "buy":
                 state.vpin_buy_vol += size
             else:
                 state.vpin_sell_vol += size
             state.vpin_trade_count += 1
-            if state.vpin_trade_count >= _VPIN_BUCKET_SIZE:
-                total = state.vpin_buy_vol + state.vpin_sell_vol
-                if total > 0.0:
-                    score = abs(state.vpin_buy_vol - state.vpin_sell_vol) / total
+            total_vol = state.vpin_buy_vol + state.vpin_sell_vol
+            sym_key = getattr(state, "symbol", "") or ""
+            vol_threshold = _VPIN_VOLUME_BUCKETS.get(sym_key, _VPIN_VOLUME_DEFAULT)
+            bucket_full = (
+                (vol_threshold > 0.0 and total_vol >= vol_threshold)
+                or (vol_threshold <= 0.0 and state.vpin_trade_count >= _VPIN_BUCKET_SIZE)
+            )
+            if bucket_full:
+                if total_vol > 0.0:
+                    score = abs(state.vpin_buy_vol - state.vpin_sell_vol) / total_vol
                     state.vpin_scores.append(score)
-                # Reset bucket
                 state.vpin_buy_vol = 0.0
                 state.vpin_sell_vol = 0.0
                 state.vpin_trade_count = 0

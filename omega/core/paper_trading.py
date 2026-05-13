@@ -451,6 +451,23 @@ class PaperTradingEngine:
                         )
                         continue
 
+            # V182 conviction-inversion gate. v177 live forensics: high-conv (>=0.25)
+            # trades had 19% WR / -$359 PnL vs low-conv (<0.15) 52% WR / +$1305 PnL.
+            # Bi-modal distribution: zero mid-bucket trades. Note that the CSV's
+            # `conviction` column is abs(weight) (set at trade-record-write time, see
+            # lines 562/799/1105 below) — NOT proposal["conviction"]. So the gate
+            # operates on raw_size_fraction (= |weight| before sign-restoration).
+            if _features:
+                _max_conv = float(getattr(_features, "ensemble_max_conviction", 0.0))
+                if _max_conv > 0.0:
+                    _abs_weight = abs(raw_size_fraction)
+                    if _abs_weight >= _max_conv:
+                        logger.debug(
+                            "V182 max-conv veto: %s %s |weight|=%.3f >= %.3f",
+                            new_side, symbol, _abs_weight, _max_conv,
+                        )
+                        continue
+
             # Conviction-proportional sizing: scale down low-conviction trades.
             # conviction=0.15 → 50% of base size; conviction>=0.30 → full size.
             _conviction = float(proposal.get("conviction", 0.30))

@@ -1050,10 +1050,28 @@ class StrategyNode(Node):
                 if _d.direction == "short" and getattr(self.features, "ensemble_block_normal_shorts", False):
                     if _regime.lower() == "normal":
                         return 0.0
+                # V183 normal-regime conviction cap. Extended v177 forensics: 3-of-3
+                # ensemble agreement in normal regime loses 14-of-15 (-$892); same
+                # bucket in crisis/high_vol wins (+$922). Block when size_mult crosses
+                # the cap AND regime is normal — both longs and shorts.
+                _norm_cap = float(getattr(self.features, "ensemble_block_normal_high_conv", 0.0))
+                if _norm_cap > 0.0 and _regime.lower() == "normal":
+                    if abs(_d.size_mult) >= _norm_cap:
+                        return 0.0
+                # V185 VPIN conviction multiplier: amplify size on informed-flow spikes.
+                # signals_dict["vpin_spike"] == 1.0 when current VPIN z-score >= 2.
+                _vpin_mult = float(getattr(self.features, "vpin_conviction_multiplier", 0.0))
+                _final_size = float(_d.size_mult)
+                if _vpin_mult > 0.0 and float(signals_dict.get("vpin_spike", 0.0)) >= 1.0:
+                    _final_size = min(1.0, _final_size * _vpin_mult)
+                # V185 Kyle's Lambda multiplier: amplify size on adverse-selection spike.
+                _kl_mult = float(getattr(self.features, "kyles_lambda_conviction_multiplier", 0.0))
+                if _kl_mult > 0.0 and float(signals_dict.get("kyles_lambda_spike", 0.0)) >= 1.0:
+                    _final_size = min(1.0, _final_size * _kl_mult)
                 if _d.direction == "long":
-                    return float(_d.size_mult)
+                    return _final_size
                 if _d.direction == "short":
-                    return -float(_d.size_mult)
+                    return -_final_size
                 return 0.0
             except Exception as _ens_exc:
                 logger.debug("ensemble_strategy fallback: %s", _ens_exc)

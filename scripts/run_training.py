@@ -601,6 +601,8 @@ def run(
             long_trail_multiplier=float(getattr(_active_features, "long_trail_multiplier", 1.0)),
             short_trail_multiplier=float(getattr(_active_features, "short_trail_multiplier", 1.0)),
             zero_mfe_early_exit_cycles=int(getattr(_active_features, "zero_mfe_early_exit_cycles", 0)),
+            # V184: soft profit-lock that activates as soon as MFE > 0.
+            mfe_trailing_retracement=float(getattr(_active_features, "mfe_trailing_retracement", 0.0)),
         )
         _exit_ctrl = ExitController(_exit_cfg)
         log.info(

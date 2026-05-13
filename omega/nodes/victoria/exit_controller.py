@@ -104,6 +104,15 @@ class ExitConfig:
     # The fix is not entering them; but given we did, exit early rather than hold to full ATR stop.
     zero_mfe_early_exit_cycles: int = 0
 
+    # V184 soft profit-lock. Independent of mfe_trail_k/mfe_retracement_cap, this
+    # is a "any-positive-MFE" trail intended to catch the V177 forensic pattern:
+    # 40% of losers (19/47) touched positive MFE before reversing. The existing
+    # MFE trail requires MFE >= mfe_trail_k × ATR before activating, which most
+    # of those losers never crossed. When > 0, this trail activates as soon as
+    # MFE > 0 and exits when unrealized < mfe * mfe_trailing_retracement.
+    # 0.0 = disabled. 0.50 = lock 50% of MFE (tight). 0.70 = lock 70%.
+    mfe_trailing_retracement: float = 0.0
+
     # ATR lookback period (bars)
     atr_period: int = 14
 
@@ -265,6 +274,20 @@ class ExitController:
                         f"side={position_side},"
                         f"trail_mult={_trail_mult},"
                         f"cap={cfg.mfe_retracement_cap})"
+                    )
+
+            # V184 soft profit-lock: trail activates as soon as MFE > 0, no ATR
+            # threshold required. Catches the V177 pattern where losers touched
+            # positive MFE but reversed before the hard trail's K×ATR activation.
+            if cfg.mfe_trailing_retracement > 0.0 and mfe > 0.0:
+                soft_trail_level = mfe * cfg.mfe_trailing_retracement
+                if unrealized < soft_trail_level:
+                    return True, (
+                        f"mfe_soft_trail("
+                        f"mfe={mfe:.2f},"
+                        f"lock={soft_trail_level:.2f},"
+                        f"unreal={unrealized:.2f},"
+                        f"retain={cfg.mfe_trailing_retracement})"
                     )
 
         return False, ""

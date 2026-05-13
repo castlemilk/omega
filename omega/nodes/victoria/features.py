@@ -758,6 +758,51 @@ class VictoriaFeatures:
     # ~50% more raw conviction to clear the floor (asymmetric bar). 1.0 = no change.
     ensemble_short_conviction_mult: float = 1.0
 
+    # V182 conviction-inversion gate. v177 forensics + R1 meta-analysis found that
+    # high-conviction trades (raw weighted conviction >= 0.25) had 19% WR / -$359 PnL,
+    # while low-conviction trades (<0.15) had 52% WR / +$1305 PnL. Bi-modal: zero
+    # trades in the mid-bucket. Hypothesis: "high conviction" trades are precisely
+    # the marginal trades that just barely clear the regime-adaptive threshold —
+    # momentum-trap entries. 0.0 = disabled, 0.25 = R1 recommendation (veto trades
+    # with |raw_size_fraction| >= 0.25 at proposal-construction time).
+    ensemble_max_conviction: float = 0.0
+
+    # V183 normal-regime conviction cap. Extended v177 forensics (67 trades) revealed
+    # the conviction inversion is regime-localized: high-conv (size_mult>=0.25) trades
+    # in NORMAL regime lost -$892 across 15 trades (7% WR). Same bucket in crisis/high_vol
+    # made +$922 (10t / 40% WR). The ensemble's "all-3-agree" trades are contrarian
+    # signals in normal regime (mean_rev firing same-direction as momentum at exhaustion
+    # points), confirmation signals in crisis/high_vol (mean_rev abstains by design).
+    # When > 0, blocks ensemble trades where regime==normal AND |size_mult| >= this cap.
+    # 0.0 = disabled, 0.25 = block all 3-of-3 normal-regime trades.
+    ensemble_block_normal_high_conv: float = 0.0
+
+    # V185 VPIN signal: order-flow imbalance from volume-bucket trade tagging.
+    # When enabled, signal_generation wraps the raw ws_feeds VPIN value with
+    # rolling z-score + spike (z>=2) features and injects them per-ticker.
+    # The ensemble can then use vpin_spike as a conviction multiplier on the
+    # decided direction (high VPIN = informed flow, magnitude not direction).
+    # Requires ws_microstructure=True. Inactive in backtest snapshots (replay
+    # paths don't reproduce WS trade tape).
+    vpin_signal: bool = False
+    # When > 0 AND ensemble_strategy is on AND a VPIN spike fires for the
+    # symbol on the same cycle, multiply ensemble size_mult by this factor
+    # (capped at 1.0). 0.0 disables the multiplier even if vpin_signal is on.
+    vpin_conviction_multiplier: float = 0.0
+
+    # V185 Kyle's Lambda signal: market-impact slope of price on signed flow.
+    # High λ z-score = market makers pricing in adverse selection = informed
+    # flow active. Used as a confirmation signal alongside VPIN. WS-only.
+    kyles_lambda_signal: bool = False
+    # If > 0 AND lambda spike fires on the same cycle, multiplies ensemble
+    # size_mult by this factor (capped at 1.0). Compounds with VPIN multiplier.
+    kyles_lambda_conviction_multiplier: float = 0.0
+
+    # V185 LOB features: multi_level_imbalance, trade_arrival_rate_z,
+    # adverse_selection. Provides depth-weighted alternatives to top-of-book
+    # imbalance plus trade-flow burst detection. WS-only.
+    lob_features: bool = False
+
     # V142: gate regime hysteresis activation to confirmed bear contexts.
     # V141 hysteresis fired even on marginal crisis readings (bear_prob ≈ 0.45) which
     # bled into Q4-2023 / trend snapshots where brief volatility briefly triggers "crisis".
@@ -2532,6 +2577,116 @@ _V178_R1 = {
     "llm_analyst_api_key_env": "DEEPSEEK_API_KEY",
 }
 _PRESETS["v178_r1"] = VictoriaFeatures(**_V178_R1)
+
+# V176 = V161_LIVE + ensemble_strategy + vix_signal_in_composite.
+# This is the base used by the v177_ensemble_extended live run.
+_V176_ENSEMBLE = {
+    **_V161_LIVE,
+    "ensemble_strategy": True,
+    "vix_signal_in_composite": True,
+}
+_PRESETS["v176_ensemble"] = VictoriaFeatures(**_V176_ENSEMBLE)
+
+# V181 = V176 + short-side proposal-level filter (block normal-regime shorts +
+# 33% conviction haircut on remaining shorts). On fresh_0508 200-cycle ablation:
+#   baseline: -$18 / 29t  →  v181_both: +$18 / 24t  (pf 1.22)
+_V181_SHORT_FILTER = {
+    **_V176_ENSEMBLE,
+    "ensemble_block_normal_shorts": True,
+    "ensemble_short_conviction_mult": 0.67,
+}
+_PRESETS["v181_short_filter"] = VictoriaFeatures(**_V181_SHORT_FILTER)
+
+# V182 = V176 + conviction-inversion cap. R1 meta-analysis of v177 37 live trades
+# found bi-modal distribution: low-conv (<0.15) +$1305/52% WR, high-conv (>=0.25)
+# -$359/19% WR, zero mid-bucket trades. Veto trades with |conviction| >= 0.25.
+_V182_MAX_CONV = {
+    **_V176_ENSEMBLE,
+    "ensemble_max_conviction": 0.25,
+}
+_PRESETS["v182_max_conv"] = VictoriaFeatures(**_V182_MAX_CONV)
+
+# V182 + V181 stacked: short filter AND conviction cap. The two finds are
+# complementary: V181 blocks structural short-side bleed, V182 blocks marginal
+# (high-conviction-but-actually-momentum-trap) entries on either side.
+_V182_STACKED = {
+    **_V181_SHORT_FILTER,
+    "ensemble_max_conviction": 0.25,
+}
+_PRESETS["v182_stacked"] = VictoriaFeatures(**_V182_STACKED)
+
+# V183 = V176 + normal-regime high-conviction block. Extended v177 forensics on
+# 67 trades: 3-of-3 ensemble agreement in normal regime loses 14-of-15 (-$892);
+# same bucket in crisis/high_vol wins (+$922). The inversion is regime-local,
+# not conviction-pure. Block ensemble trades where regime==normal AND
+# size_mult >= 0.25 (all-3-agree threshold). Crisis/high_vol untouched.
+_V183_NORMAL_CAP = {
+    **_V176_ENSEMBLE,
+    "ensemble_block_normal_high_conv": 0.25,
+}
+_PRESETS["v183_normal_cap"] = VictoriaFeatures(**_V183_NORMAL_CAP)
+
+# V183 + V181 stacked: normal-regime high-conv block + short filter. Treats two
+# distinct leaks in v177 simultaneously.
+_V183_STACKED = {
+    **_V181_SHORT_FILTER,
+    "ensemble_block_normal_high_conv": 0.25,
+}
+_PRESETS["v183_stacked"] = VictoriaFeatures(**_V183_STACKED)
+
+# V184 = V176 + soft profit-lock trail. Extended v177 forensics: 19 of 47 losers
+# (40%) touched positive MFE before reversing. Existing MFE trail activates only
+# at K×ATR (most of those touches were below). V184 adds a second trail that
+# fires as soon as MFE > 0, locking `mfe_trailing_retracement` fraction of peak.
+# Variants for ablation:
+_V184_LOCK50 = {  # lock 50% of MFE (give back 50% — moderate)
+    **_V176_ENSEMBLE,
+    "mfe_trailing_retracement": 0.50,
+}
+_PRESETS["v184_lock50"] = VictoriaFeatures(**_V184_LOCK50)
+
+_V184_LOCK70 = {  # lock 70% of MFE (R1's earlier recommendation — tight)
+    **_V176_ENSEMBLE,
+    "mfe_trailing_retracement": 0.70,
+}
+_PRESETS["v184_lock70"] = VictoriaFeatures(**_V184_LOCK70)
+
+_V184_STACKED = {  # V181 short filter + V184 lock50
+    **_V181_SHORT_FILTER,
+    "mfe_trailing_retracement": 0.50,
+}
+_PRESETS["v184_stacked"] = VictoriaFeatures(**_V184_STACKED)
+
+# V185 = V184 lock50 + VPIN signal (z-score wrapper + 1.3x conviction multiplier
+# on detected spikes). VPIN is informed-flow detection from existing WS trade
+# tape — no new data source required. Cannot be ablated on snapshot (replay
+# paths don't reproduce WS); validate live only. Requires ws_microstructure=True.
+_V185_VPIN = {
+    **_V184_LOCK50,
+    "vpin_signal": True,
+    "vpin_conviction_multiplier": 1.3,
+}
+_PRESETS["v185_vpin"] = VictoriaFeatures(**_V185_VPIN)
+
+_V185_STACKED = {  # V181 short filter + V184 lock50 + VPIN
+    **_V184_STACKED,
+    "vpin_signal": True,
+    "vpin_conviction_multiplier": 1.3,
+}
+_PRESETS["v185_stacked"] = VictoriaFeatures(**_V185_STACKED)
+
+# V185 Phase A — V176 ensemble + VPIN (vol-bucketed) + Kyle's Lambda + LOB
+# features. All three new signals are WS-derived so the snapshot run is
+# effectively V176 baseline; the value of this preset is the LIVE A/B.
+_V185_PHASE_A = {
+    **_V176_ENSEMBLE,
+    "vpin_signal": True,
+    "vpin_conviction_multiplier": 1.3,
+    "kyles_lambda_signal": True,
+    "kyles_lambda_conviction_multiplier": 1.2,
+    "lob_features": True,
+}
+_PRESETS["v185_phase_a"] = VictoriaFeatures(**_V185_PHASE_A)
 
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
