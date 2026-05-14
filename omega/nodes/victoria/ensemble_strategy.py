@@ -149,6 +149,22 @@ def macro_signals(signals: dict[str, Any], regime: str) -> tuple[float, float, S
     same_sign = sum(1 for c in components if c * bias > 0.05)
     regime_confidence = same_sign / max(1, len(components))
 
+    # V187 dynamic-graph adjustment. High `graph_clustering` = the basket is
+    # moving as a pack = systemic risk on = dampen macro confidence. Low BTC
+    # `graph_centrality` = market decoupled from BTC = momentum thesis weaker.
+    # Both effects pull regime_confidence DOWN; we don't boost it from graph
+    # data because clustering high enough to be informative is usually a
+    # contrarian or risk-off signal, not a confirmation.
+    _graph_clustering = _safe_float(signals, "graph_clustering", 0.0)
+    if _graph_clustering > 0.7:
+        regime_confidence *= 0.7  # pack movement → cut macro confidence
+    _btc_centrality = _safe_float(signals, "graph_centrality_btc", 0.0)
+    # When BTC centrality is very high (>0.8) the entire basket follows BTC —
+    # macro is informative. When very low (<0.2) the basket has decoupled —
+    # macro bias is less reliable.
+    if 0.0 < _btc_centrality < 0.2:
+        regime_confidence *= 0.8
+
     # V175: loosened bias floor 0.10 → 0.05. macro vote now fires more often
     # in low-vol live conditions where fear_greed and funding stay near zero.
     if abs(bias) < 0.05:

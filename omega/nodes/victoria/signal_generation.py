@@ -186,6 +186,12 @@ try:
 except ImportError:
     _HAS_LOB_FEATURES = False
 
+try:
+    from omega.nodes.victoria.signals.dynamic_graph import DynamicGraphSignal as _DynamicGraphSignal
+    _HAS_DYNAMIC_GRAPH = True
+except ImportError:
+    _HAS_DYNAMIC_GRAPH = False
+
 # V157: trend-following signals (price-only, no external deps — always importable)
 try:
     from omega.nodes.victoria.signals import breakout as _breakout_mod
@@ -468,6 +474,13 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._lob_features = _LOBFeaturesSignal(ws_feeds=self._ws_feeds)
                 logger.info("LOBFeaturesSignal initialized")
+
+        # V187 dynamic correlation graph: EMGNN-lite, works in backtest + live.
+        self._dynamic_graph: Any = None
+        if _HAS_DYNAMIC_GRAPH and self._features and getattr(self._features, "dynamic_graph_signal", False):
+            with contextlib.suppress(Exception):
+                self._dynamic_graph = _DynamicGraphSignal()
+                logger.info("DynamicGraphSignal initialized")
 
         # V138 geopolitical_signals: GDELT DOC 2.0 event signals
         self._geo_signal: Any = None
@@ -954,6 +967,25 @@ class SignalGenerationNode(Node):
                 signals["_geometry_orc_kappa"] = round(float(_orc_state_ref.mean_curvature), 4)
                 signals["_geometry_orc_regime"] = _orc_state_ref.regime
 
+        # V187 dynamic graph: push latest close per symbol then compute graph
+        # features once for the whole basket. The same dict is then injected
+        # into each ticker's signals_dict inside the loop below.
+        _dg_features: dict[str, float] = {}
+        if self._dynamic_graph is not None:
+            try:
+                for _dg_ticker, _dg_data in market_data.items():
+                    if not _dg_data or not isinstance(_dg_data, dict):
+                        continue
+                    _dg_closes = _dg_data.get("adjclose") or _dg_data.get("close") or []
+                    if _dg_closes:
+                        try:
+                            self._dynamic_graph.push_close(_dg_ticker, float(_dg_closes[-1]))
+                        except (TypeError, ValueError, IndexError):
+                            continue
+                _dg_features = self._dynamic_graph.compute() or {}
+            except Exception as _dg_exc:
+                logger.debug("dynamic_graph compute error: %s", _dg_exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -1199,6 +1231,11 @@ class SignalGenerationNode(Node):
                             ts[_k] = _v
                 except Exception as _lf_exc:
                     logger.debug("lob_features %s: %s", ticker, _lf_exc)
+
+            # V187 dynamic graph features: same dict on every ticker (basket-level).
+            for _dg_k, _dg_v in _dg_features.items():
+                if _dg_v != 0.0:
+                    ts[_dg_k] = _dg_v
 
             # V166: cross-exchange divergence — Binance WS price vs REST close.
             # Compute always when feeds available so the value can be surfaced

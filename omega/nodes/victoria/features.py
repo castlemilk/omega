@@ -803,6 +803,12 @@ class VictoriaFeatures:
     # imbalance plus trade-flow burst detection. WS-only.
     lob_features: bool = False
 
+    # V187 dynamic correlation graph (EMGNN-lite). Builds a rolling-window
+    # cross-asset correlation graph each cycle, exposes BTC degree centrality,
+    # clustering coefficient, edge density + their z-scores. Works in both
+    # live and backtest (price-only signal, no WS dependency).
+    dynamic_graph_signal: bool = False
+
     # V186 LLM arbitration (ported from TradingAgents).
     # llm_tiebreaker: when ensemble aggregate returns "abstain" with at least
     # one active vote, call DeepSeek-chat to arbitrate. Takes the LLM's call
@@ -2729,6 +2735,22 @@ _V186_NO_LLM = {
     "lob_features": True,
 }
 _PRESETS["v186_no_llm"] = VictoriaFeatures(**_V186_NO_LLM)
+
+# V187 — V186 (no LLM) + dynamic graph signal. Graph features work in
+# backtest unlike VPIN/Kyle/LOB, so the snapshot ablation actually measures
+# the graph signal's contribution.
+_V187_GRAPH = {
+    **_V186_NO_LLM,
+    "dynamic_graph_signal": True,
+}
+_PRESETS["v187_graph"] = VictoriaFeatures(**_V187_GRAPH)
+
+# V187 with LLM = full kitchen sink including graph + LLM arbitration.
+_V187_FULL = {
+    **_V186_KITCHEN_SINK,
+    "dynamic_graph_signal": True,
+}
+_PRESETS["v187_full"] = VictoriaFeatures(**_V187_FULL)
 
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
