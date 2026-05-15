@@ -2752,6 +2752,32 @@ _V187_FULL = {
 }
 _PRESETS["v187_full"] = VictoriaFeatures(**_V187_FULL)
 
+# V187 ensemble — minimal evolution of V176: ensemble + dynamic graph signal
+# + profit-lock trail at 50%. No short filter, no VPIN/Kyle/LOB (those are
+# WS-only and already live-tested in v185_vpin/v186_live). This is the
+# 7-day live test of the dynamic graph signal's contribution.
+_V187_ENSEMBLE = {
+    **_V176_ENSEMBLE,
+    "dynamic_graph_signal": True,
+    "mfe_trailing_retracement": 0.50,
+}
+_PRESETS["v187_ensemble"] = VictoriaFeatures(**_V187_ENSEMBLE)
+
+# V188 pyramid — V187 ensemble + conviction_pyramid (discrete sizing tranches).
+# Existing pyramid flag (paper_trading.py:477-486) maps:
+#   conv < 0.30 → 25% size
+#   0.30 <= conv < 0.50 → 50% size
+#   0.50 <= conv < 0.70 → 75% size
+#   conv >= 0.70 → 100% size
+# Each tranche is protected by the 50% MFE soft profit-lock trail.
+# Not true pyramiding (no position-add on rising conviction), but a first
+# step toward right-sizing marginal entries.
+_V188_PYRAMID = {
+    **_V187_ENSEMBLE,
+    "conviction_pyramid": True,
+}
+_PRESETS["v188_pyramid"] = VictoriaFeatures(**_V188_PYRAMID)
+
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
 # 5% drawdown, emergency-closes at 10%, caps positions to 2 during correlation
