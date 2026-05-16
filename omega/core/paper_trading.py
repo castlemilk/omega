@@ -422,11 +422,34 @@ class PaperTradingEngine:
                 continue
 
             new_side = "long" if weight > 0 else "short"
+            # V189 symbol blacklist: aggregated forensics across 2805 trades shows
+            # specific symbols (ETHUSDT, ADAUSDT) systematically lose. When a
+            # symbol is in features.symbol_blacklist, skip new proposals for it.
+            _features = getattr(self, "_features", None)
+            if _features:
+                _blacklist = tuple(getattr(_features, "symbol_blacklist", ()) or ())
+                if _blacklist and symbol in _blacklist:
+                    logger.debug("V189 blacklist: skip %s", symbol)
+                    continue
+                # V189 hour-of-day dampener: scale size on toxic hours.
+                _damp_hours = tuple(getattr(_features, "damp_hours_utc", ()) or ())
+                if _damp_hours:
+                    try:
+                        from datetime import datetime, timezone
+                        _now_hour = datetime.now(timezone.utc).hour
+                        if _now_hour in _damp_hours:
+                            _damp_mult = float(getattr(_features, "damp_hours_multiplier", 0.3))
+                            raw_size_fraction = raw_size_fraction * _damp_mult
+                            if raw_size_fraction < _MIN_POSITION_FRACTION_EFFECTIVE:
+                                logger.debug("V189 damp_hours drops %s below floor", symbol)
+                                continue
+                    except Exception:
+                        pass
+
             # V181: short-side filtering at proposal level. _compute_weighted_conviction
             # blocks were ineffective because 9 call sites strip the conviction sign with
             # abs(); side decisions happen elsewhere. This is the right interception point —
             # we have explicit `new_side` AND `proposal['regime']` (V179 wiring).
-            _features = getattr(self, "_features", None)
             if _features and new_side == "short":
                 _proposal_regime = str(proposal.get("regime", "")).lower()
                 if (

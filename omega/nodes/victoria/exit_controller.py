@@ -113,6 +113,13 @@ class ExitConfig:
     # 0.0 = disabled. 0.50 = lock 50% of MFE (tight). 0.70 = lock 70%.
     mfe_trailing_retracement: float = 0.0
 
+    # V189 minimum hold cycles. Gap analysis on 2805 aggregated trades shows
+    # 1-2 cycle exits had 3% WR and -$167/trade (-$170K aggregated). When set,
+    # the ExitController will NOT close positions younger than this except via
+    # hard stops (early_loss_time_stop, mae_stop_k, skip_legacy_stop_loss). The
+    # soft trails and zero_mfe_early_exit are suppressed below this age.
+    min_hold_cycles: int = 0
+
     # ATR lookback period (bars)
     atr_period: int = 14
 
@@ -212,10 +219,20 @@ class ExitController:
         mfe = float(pos.get("mfe", 0.0))  # most positive unrealised during lifetime
         position_side = str(pos.get("side", "")).lower()
 
+        # V189 minimum hold cycles. Gap analysis on 2805 aggregated trades:
+        # 1-2 cycle exits had 3% WR and -$167/trade. Suppress soft exits below
+        # this age. Hard MAE stops still fire — only the soft trails are gated.
+        _min_hold = int(getattr(cfg, "min_hold_cycles", 0) or 0)
+        _below_min_hold = _min_hold > 0 and age < _min_hold
+
         # ── 0. Zero-MFE early exit (V141) ───────────────────────────────
         # Close positions that never showed profit after N cycles. Forensics:
         # all top losers had mfe=/bin/zsh after 2-4 cycles — wrong from the first tick.
-        if cfg.zero_mfe_early_exit_cycles > 0 and age >= cfg.zero_mfe_early_exit_cycles:
+        if (
+            cfg.zero_mfe_early_exit_cycles > 0
+            and age >= cfg.zero_mfe_early_exit_cycles
+            and not _below_min_hold
+        ):
             if mfe <= 0.0 and unrealized < 0.0:
                 return True, (
                     f"zero_mfe_exit("
@@ -257,7 +274,7 @@ class ExitController:
         # identical to the bug the age guard was meant to fix.
         # V141: side-specific trail multipliers — longs get tighter activation
         # (0.5× ATR), shorts get wider activation (1.5× ATR) to let them run.
-        if age >= cfg.trailing_stop_min_age:
+        if age >= cfg.trailing_stop_min_age and not _below_min_hold:
             if position_side == "short":
                 _trail_mult = cfg.short_trail_multiplier
             else:

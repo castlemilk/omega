@@ -603,6 +603,8 @@ def run(
             zero_mfe_early_exit_cycles=int(getattr(_active_features, "zero_mfe_early_exit_cycles", 0)),
             # V184: soft profit-lock that activates as soon as MFE > 0.
             mfe_trailing_retracement=float(getattr(_active_features, "mfe_trailing_retracement", 0.0)),
+            # V189: minimum hold cycles before soft exits fire (hard stops unaffected).
+            min_hold_cycles=int(getattr(_active_features, "min_hold_cycles", 0)),
         )
         _exit_ctrl = ExitController(_exit_cfg)
         log.info(

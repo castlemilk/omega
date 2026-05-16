@@ -809,6 +809,25 @@ class VictoriaFeatures:
     # live and backtest (price-only signal, no WS dependency).
     dynamic_graph_signal: bool = False
 
+    # V189 symbol blacklist. Gap analysis on 2805 aggregated trades showed
+    # ETHUSDT (-$56K, PF 0.63) and ADAUSDT (-$41K, PF 0.73) are systematically
+    # losing while NEARUSDT (+$33K, PF 1.85) and ARBUSDT (+$7K, PF 1.52) win.
+    # When a symbol is in this list, paper_trading blocks new proposals for it.
+    symbol_blacklist: tuple = ()
+
+    # V189 minimum hold time (cycles). Gap analysis: 1-2 cycle exits had 3% WR
+    # and -$167/trade (-$170K aggregated); 6-10 cycle holds had 83% WR and
+    # +$175/trade. Premature exits are catastrophic. The exit controller is
+    # blocked from closing positions before this age except for hard stops.
+    min_hold_cycles: int = 0
+
+    # V189 hour-of-day dampener. Aggregated trades show two toxic hours UTC:
+    # 04:00 (-$21K across 198 trades) and 13:00 (-$38K across 525 trades).
+    # When current cycle hour is in this set, scale new-trade size by the
+    # multiplier. Defaults: empty set (disabled).
+    damp_hours_utc: tuple = ()
+    damp_hours_multiplier: float = 0.3
+
     # V186 LLM arbitration (ported from TradingAgents).
     # llm_tiebreaker: when ensemble aggregate returns "abstain" with at least
     # one active vote, call DeepSeek-chat to arbitrate. Takes the LLM's call
@@ -2777,6 +2796,29 @@ _V188_PYRAMID = {
     "conviction_pyramid": True,
 }
 _PRESETS["v188_pyramid"] = VictoriaFeatures(**_V188_PYRAMID)
+
+# V189 — gap-analysis-informed preset. Built from forensics on 2805 aggregated
+# v17x/v18x trades (docs/research/live-gap-analysis.md). Three targeted fixes:
+#   * symbol_blacklist = ETHUSDT + ADAUSDT (combined -$97K, PF 0.63/0.73)
+#   * min_hold_cycles = 5 (suppress soft exits below age 5; 1-2 cyc had 3% WR)
+#   * damp_hours_utc = {4, 13} at 0.3x (worst hours: 04:00 -$21K, 13:00 -$38K)
+# Carries V184 stacked (short filter + 50% MFE trail) as the proven base.
+_V189_GAP_FIX = {
+    **_V184_STACKED,
+    "symbol_blacklist": ("ETHUSDT", "ADAUSDT"),
+    "min_hold_cycles": 5,
+    "damp_hours_utc": (4, 13),
+    "damp_hours_multiplier": 0.3,
+}
+_PRESETS["v189_gap_fix"] = VictoriaFeatures(**_V189_GAP_FIX)
+
+# V189 minimal — only the highest-confidence single fix (symbol blacklist).
+# Isolates the symbol contribution from min-hold/damp-hours effects.
+_V189_BLACKLIST_ONLY = {
+    **_V184_STACKED,
+    "symbol_blacklist": ("ETHUSDT", "ADAUSDT"),
+}
+_PRESETS["v189_blacklist_only"] = VictoriaFeatures(**_V189_BLACKLIST_ONLY)
 
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
