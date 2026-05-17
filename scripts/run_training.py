@@ -161,6 +161,19 @@ def _total_pnl(trades: list[dict]) -> float:
 
 
 def _init_trades_csv(path: Path) -> None:
+    # Health-monitor-aware: if the file already has rows, leave them intact and
+    # append further trades. This preserves cumulative trade history across
+    # health-monitor relaunches (the original "w" mode truncated history every
+    # time the training process died and was relaunched, costing real data).
+    existing_rows = 0
+    if path.exists():
+        try:
+            with open(path, newline="") as f:
+                existing_rows = sum(1 for _ in f)
+        except OSError:
+            existing_rows = 0
+    if existing_rows >= 1:
+        return  # header + data already present; subsequent writes append (line 828)
     with open(path, "w", newline="") as f:
         csv.writer(f).writerow([
             "cycle", "timestamp", "symbol", "side", "size",

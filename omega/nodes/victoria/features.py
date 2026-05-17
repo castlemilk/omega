@@ -2820,6 +2820,29 @@ _V189_BLACKLIST_ONLY = {
 }
 _PRESETS["v189_blacklist_only"] = VictoriaFeatures(**_V189_BLACKLIST_ONLY)
 
+# V189b — V189 gap-fix + VPIN/Kyle that proved +$330/PF 6.26 in v185_vpin.
+_V189B_GAP_VPIN = {
+    **_V189_GAP_FIX,
+    "vpin_signal": True,
+    "vpin_conviction_multiplier": 1.3,
+    "kyles_lambda_signal": True,
+    "kyles_lambda_conviction_multiplier": 1.2,
+}
+_PRESETS["v189b_gap_vpin"] = VictoriaFeatures(**_V189B_GAP_VPIN)
+
+# V190 — "best of everything proven" stack. NO LLM (v186 LLM didn't differentiate).
+#   V176 ensemble base
+#   V181 short filter      (gap analysis confirmed shorts PF 0.44 at scale)
+#   V184 50% MFE trail     (only profitable trail variant)
+#   V185 VPIN + Kyle       (live-proved +$330 / PF 6.26 in v185_vpin)
+#   V187 dynamic graph     (price-only; works in backtest+live; no regression)
+#   V189 gap fixes         (ETH/ADA blacklist + min_hold=5 + damp_hours{4,13})
+_V190_PROVEN_STACK = {
+    **_V189B_GAP_VPIN,
+    "dynamic_graph_signal": True,
+}
+_PRESETS["v190_proven_stack"] = VictoriaFeatures(**_V190_PROVEN_STACK)
+
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
 # 5% drawdown, emergency-closes at 10%, caps positions to 2 during correlation
