@@ -809,6 +809,17 @@ class VictoriaFeatures:
     # live and backtest (price-only signal, no WS dependency).
     dynamic_graph_signal: bool = False
 
+    # V191 range-trading sub-strategy. When enabled, the ensemble adds a
+    # FOURTH vote that ONLY fires in flat/low-vol regimes (range_bound==1.0
+    # AND tda_fragmentation>0.9). Direction is fade-based off Bollinger bands;
+    # conviction comes from mean-reversion-score magnitude. Range trades are
+    # sized at 25-50% of normal because they're inherently lower conviction.
+    range_trading_enabled: bool = False
+    # V191 funding-rate carry. Binary direction signal derived from
+    # funding_rate_signal z-score. Used by range_vote when other inputs are
+    # ambiguous (e.g. price mid-range but funding extreme).
+    funding_carry_signal: bool = False
+
     # V189 symbol blacklist. Gap analysis on 2805 aggregated trades showed
     # ETHUSDT (-$56K, PF 0.63) and ADAUSDT (-$41K, PF 0.73) are systematically
     # losing while NEARUSDT (+$33K, PF 1.85) and ARBUSDT (+$7K, PF 1.52) win.
@@ -2842,6 +2853,17 @@ _V190_PROVEN_STACK = {
     "dynamic_graph_signal": True,
 }
 _PRESETS["v190_proven_stack"] = VictoriaFeatures(**_V190_PROVEN_STACK)
+
+# V191 — V190 proven stack + range-trading sub-strategy + funding-carry signal.
+# Designed to fire in the ~60-70% of market time that's flat/low-vol where the
+# three core sub-strategies all abstain. Range trades are size-capped at 25-50%
+# of normal because they're inherently lower conviction.
+_V191_RANGE_STACK = {
+    **_V190_PROVEN_STACK,
+    "range_trading_enabled": True,
+    "funding_carry_signal": True,
+}
+_PRESETS["v191_range_stack"] = VictoriaFeatures(**_V191_RANGE_STACK)
 
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at

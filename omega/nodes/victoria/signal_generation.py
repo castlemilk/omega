@@ -192,6 +192,18 @@ try:
 except ImportError:
     _HAS_DYNAMIC_GRAPH = False
 
+try:
+    from omega.nodes.victoria.signals.range_trading import RangeTradingSignal as _RangeTradingSignal
+    _HAS_RANGE_TRADING = True
+except ImportError:
+    _HAS_RANGE_TRADING = False
+
+try:
+    from omega.nodes.victoria.signals.funding_carry import FundingCarrySignal as _FundingCarrySignal
+    _HAS_FUNDING_CARRY = True
+except ImportError:
+    _HAS_FUNDING_CARRY = False
+
 # V157: trend-following signals (price-only, no external deps — always importable)
 try:
     from omega.nodes.victoria.signals import breakout as _breakout_mod
@@ -481,6 +493,18 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._dynamic_graph = _DynamicGraphSignal()
                 logger.info("DynamicGraphSignal initialized")
+
+        # V191 range-trading + funding-carry signals — fire in flat/low-vol.
+        self._range_trading: Any = None
+        if _HAS_RANGE_TRADING and self._features and getattr(self._features, "range_trading_enabled", False):
+            with contextlib.suppress(Exception):
+                self._range_trading = _RangeTradingSignal()
+                logger.info("RangeTradingSignal initialized")
+        self._funding_carry: Any = None
+        if _HAS_FUNDING_CARRY and self._features and getattr(self._features, "funding_carry_signal", False):
+            with contextlib.suppress(Exception):
+                self._funding_carry = _FundingCarrySignal()
+                logger.info("FundingCarrySignal initialized")
 
         # V138 geopolitical_signals: GDELT DOC 2.0 event signals
         self._geo_signal: Any = None
@@ -1236,6 +1260,36 @@ class SignalGenerationNode(Node):
             for _dg_k, _dg_v in _dg_features.items():
                 if _dg_v != 0.0:
                     ts[_dg_k] = _dg_v
+
+            # V191 range-trading: feed OHLC bars and emit per-ticker features.
+            if self._range_trading is not None:
+                try:
+                    _highs = data.get("high") or []
+                    _lows = data.get("low") or []
+                    _closes_ohlc = data.get("close") or data.get("adjclose") or []
+                    if _highs and _lows and _closes_ohlc:
+                        self._range_trading.push_bar(
+                            ticker,
+                            float(_highs[-1]),
+                            float(_lows[-1]),
+                            float(_closes_ohlc[-1]),
+                        )
+                    _rt = self._range_trading.compute(ticker)
+                    for _k, _v in _rt.items():
+                        if _v != 0.0 or _k == "bb_position":
+                            ts[_k] = _v
+                except Exception as _rt_exc:
+                    logger.debug("range_trading %s: %s", ticker, _rt_exc)
+
+            # V191 funding carry: depends on existing funding_rate_signal value.
+            if self._funding_carry is not None:
+                try:
+                    _fc = self._funding_carry.compute(ts)
+                    for _k, _v in _fc.items():
+                        if _v != 0.0:
+                            ts[_k] = _v
+                except Exception as _fc_exc:
+                    logger.debug("funding_carry %s: %s", ticker, _fc_exc)
 
             # V166: cross-exchange divergence — Binance WS price vs REST close.
             # Compute always when feeds available so the value can be surfaced

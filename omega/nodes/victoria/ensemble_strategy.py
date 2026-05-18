@@ -206,16 +206,27 @@ def aggregate(
     else:
         return EnsembleDecision("abstain", 0.0, votes, macro_confidence, 0.0)
 
-    # Size mult: depends on agreement structure
+    # Size mult: depends on agreement structure. V191 adds a 4th vote (range);
+    # the table below handles both 3-vote and 4-vote inputs.
     n_total = len(votes)
     n_agree = len(agreeing)
     n_abstain = sum(1 for v in votes if v.direction == "abstain")
+    has_range = any(v.name == "range" for v in agreeing)
+
     if n_agree == n_total:
         size_mult = 1.0
-    elif n_agree == 2 and n_abstain == 1:
-        size_mult = 0.75
-    elif n_agree == 2 and n_abstain == 0:
+    elif n_agree >= 3 and n_abstain == n_total - n_agree:
+        size_mult = 0.85  # 3-of-4 with abstains
+    elif n_agree == 2 and n_abstain == n_total - 2:
+        # 2-of-3 with abstain OR 2-of-4 with two abstains
+        size_mult = 0.75 if not has_range else 0.50
+    elif n_agree == 2 and n_abstain == n_total - 2 - 1:
+        # 2 agree + 1 disagree (3-vote) or 2 agree + 1 disagree + 1 abstain (4-vote)
         size_mult = 0.50
+    elif n_agree == 1 and has_range and n_abstain >= n_total - 2:
+        # V191: range-only vote (solo or with one other voter) — small size
+        # because range trades are inherently lower conviction.
+        size_mult = 0.25
     else:
         # V174c attempt: lone-vote (1-active+2-abstain) at 0.4x size REGRESSED
         # by $1,129 composite — the fix made the ensemble behave like the
@@ -264,7 +275,21 @@ def decide(
     mom = momentum_vote(signals)
     mr = mean_reversion_vote(signals, regime)
     macro_conf, _macro_bias, macro = macro_signals(signals, regime)
-    decision = aggregate([mom, mr, macro], macro_conf, sub_weights)
+
+    # V191: optional 4th sub-strategy — range trading. Fires only when
+    # `range_bound` and `tda_fragmentation > 0.9` are true in signals_dict.
+    # When disabled (signal_generation not pushing range features), it just
+    # abstains and aggregate sees 3 votes as before.
+    votes_list = [mom, mr, macro]
+    try:
+        from omega.nodes.victoria.signals.range_trading import range_vote
+        rv = range_vote(signals)
+        if rv.direction != "abstain":
+            votes_list.append(rv)
+    except Exception:
+        pass
+
+    decision = aggregate(votes_list, macro_conf, sub_weights)
     if not adversarial_check or decision.direction == "abstain":
         return decision
 
