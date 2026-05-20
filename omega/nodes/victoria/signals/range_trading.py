@@ -43,7 +43,7 @@ _BB_PERIOD: Final[int] = 20
 _BB_SIGMA: Final[float] = 2.0
 _ATR_PERIOD: Final[int] = 14
 _ATR_HISTORY: Final[int] = 100
-_ATR_LOW_VOL_RATIO: Final[float] = 0.7
+_ATR_LOW_VOL_RATIO: Final[float] = 1.0  # V191b: loosened 0.7→1.0 — current ATR below median = range
 _RSI_PERIOD: Final[int] = 14
 
 
@@ -209,10 +209,19 @@ def range_vote(signals: dict[str, Any]) -> SubVote:
         except (TypeError, ValueError):
             return d
 
+    # V191c: funding-carry override fires INDEPENDENTLY of range_bound.
+    # Extreme funding (|z| >= 1.0) is itself enough signal — represents
+    # crowded positioning and pays carry. Doesn't require BB extremes or
+    # ATR contraction.
+    carry = _f("funding_carry_signal", 0.0)
+    if abs(carry) >= 1.0:
+        direction: Vote = "short" if carry > 0 else "long"
+        return SubVote(direction, 0.6, "range")
+
     if _f("range_bound") < 1.0:
         return SubVote("abstain", 0.0, "range")
-    if _f("tda_fragmentation") <= 0.9:
-        return SubVote("abstain", 0.0, "range")
+    # V191b: TDA check removed. ATR-based range_bound already excludes vol
+    # spikes; the TDA gate was redundant and blocking valid range setups.
 
     bb_pos = _f("bb_position", 0.5)
     mr_score = _f("mean_reversion_score", 0.0)

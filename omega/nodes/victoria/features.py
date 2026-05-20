@@ -820,6 +820,13 @@ class VictoriaFeatures:
     # ambiguous (e.g. price mid-range but funding extreme).
     funding_carry_signal: bool = False
 
+    # V191b flat-market conviction floor. When > 0 AND range_bound==1.0 in
+    # the per-ticker signals dict, the conviction filter floor is replaced
+    # by this lower value. 0.05 lets composites of 0.05-0.10 through in
+    # confirmed range-bound conditions where the absolute composite is
+    # naturally compressed. 0.0 = disabled (use normal floor).
+    flat_market_conviction_threshold: float = 0.0
+
     # V189 symbol blacklist. Gap analysis on 2805 aggregated trades showed
     # ETHUSDT (-$56K, PF 0.63) and ADAUSDT (-$41K, PF 0.73) are systematically
     # losing while NEARUSDT (+$33K, PF 1.85) and ARBUSDT (+$7K, PF 1.52) win.
@@ -2864,6 +2871,28 @@ _V191_RANGE_STACK = {
     "funding_carry_signal": True,
 }
 _PRESETS["v191_range_stack"] = VictoriaFeatures(**_V191_RANGE_STACK)
+
+# V191b — same as V191 but with the flat-market conviction floor at 0.05.
+# Loosens the conviction filter when TDA reports "smooth" + basket vol at
+# floor, so small-composite range trades can fire instead of being rejected.
+_V191B_RANGE_STACK = {
+    **_V191_RANGE_STACK,
+    "flat_market_conviction_threshold": 0.05,
+}
+_PRESETS["v191b_range_stack"] = VictoriaFeatures(**_V191B_RANGE_STACK)
+
+# V191c — V191b + funding-carry override (fires independently of range_bound).
+# Same flags as V191b; the signal-side change is in range_trading.py:range_vote.
+_PRESETS["v191c_range_stack"] = VictoriaFeatures(**_V191B_RANGE_STACK)
+
+# V192 aggressive — loose conviction threshold (0.03 floor) regardless of regime.
+# Tests whether marginal trades (composite 0.03-0.05) carry positive expected
+# value or are noise. If garbage, abandon and keep the 0.10/0.05 gates.
+_V192_AGGRESSIVE = {
+    **_V191B_RANGE_STACK,
+    "flat_market_conviction_threshold": 0.03,
+}
+_PRESETS["v192_aggressive"] = VictoriaFeatures(**_V192_AGGRESSIVE)
 
 # V162: resilience-hardened preset — v161_live base + 5 resilience features enabled.
 # Trades composite PnL for stability: halves sizes on vol shocks, halts entries at
