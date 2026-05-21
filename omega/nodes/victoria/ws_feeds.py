@@ -28,7 +28,9 @@ Usage::
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+import os
 import statistics
 import threading
 import time
@@ -274,6 +276,17 @@ class WSFeedManager:
             daemon=True,
         )
         self._thread.start()
+        # V193: optional Coinbase Advanced Trade WS — public market_trades
+        # channel for a second aggressor-tagged trade tape. Merges into the
+        # existing _SymbolState ticks + VPIN buckets via _process_agg_trade.
+        # Disabled when COINBASE_WS_DISABLED=1.
+        if not os.environ.get("COINBASE_WS_DISABLED"):
+            self._coinbase_thread = threading.Thread(
+                target=self._coinbase_thread_main,
+                name="ws-feed-coinbase",
+                daemon=True,
+            )
+            self._coinbase_thread.start()
         self._started = True
         logger.debug("ws_feeds: background thread started for %s", self._symbols)
 
@@ -636,6 +649,97 @@ class WSFeedManager:
             logger.debug("ws_feeds: event loop exited with exception", exc_info=True)
         finally:
             loop.close()
+
+    # ------------------------------------------------------------------
+    # V193: Coinbase Advanced Trade WS — public market_trades channel
+    # ------------------------------------------------------------------
+
+    def _coinbase_thread_main(self) -> None:
+        """Background thread that connects to Coinbase WS and feeds the
+        existing per-symbol VPIN/whale/tick state from the second exchange."""
+        if not _WEBSOCKETS_AVAILABLE:
+            return
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(self._coinbase_async_main())
+        except Exception:
+            logger.debug("ws_feeds.coinbase: event loop exited", exc_info=True)
+        finally:
+            loop.close()
+
+    async def _coinbase_async_main(self) -> None:
+        """Reconnect loop for Coinbase WS."""
+        import websockets  # local import — keeps optional dep optional
+        # Map BTCUSDT → BTC-USD etc.
+        cb_products: list[str] = []
+        for sym in self._symbols:
+            if sym.endswith("USDT"):
+                cb_products.append(sym[:-4] + "-USD")
+            elif sym.endswith("USD") and "-" not in sym:
+                cb_products.append(sym[:-3] + "-USD")
+        if not cb_products:
+            return
+        url = "wss://advanced-trade-ws.coinbase.com"
+        while not self._stop_event.is_set():
+            try:
+                async with websockets.connect(url, ping_interval=20, ping_timeout=20) as ws:
+                    sub_msg = json.dumps(
+                        {"type": "subscribe", "product_ids": cb_products, "channel": "market_trades"}
+                    )
+                    await ws.send(sub_msg)
+                    logger.info("ws_feeds.coinbase: subscribed to %s", cb_products)
+                    async for raw in ws:
+                        if self._stop_event.is_set():
+                            return
+                        try:
+                            msg = json.loads(raw)
+                        except Exception:
+                            continue
+                        if msg.get("channel") != "market_trades":
+                            continue
+                        for ev in msg.get("events", []):
+                            for trade in ev.get("trades", []):
+                                self._process_coinbase_trade(trade)
+            except Exception as exc:
+                logger.debug(
+                    "ws_feeds.coinbase: connection error (%s), reconnecting in %ss",
+                    exc, _RECONNECT_DELAY,
+                )
+                await asyncio.sleep(_RECONNECT_DELAY)
+
+    def _process_coinbase_trade(self, trade: dict[str, Any]) -> None:
+        """Push a Coinbase trade into the matching _SymbolState as if it were a
+        Binance aggTrade. Coinbase 'side' is the AGGRESSOR side ('BUY'/'SELL'),
+        same semantic as our internal Tick.side."""
+        try:
+            product = str(trade.get("product_id", ""))
+            if not product.endswith("-USD"):
+                return
+            sym_key = product[:-4] + "USDT"  # BTC-USD → BTCUSDT
+            state = self._state.get(sym_key)
+            if state is None:
+                return
+            price = float(trade["price"])
+            size = float(trade["size"])
+            side = "buy" if str(trade.get("side", "")).upper() == "BUY" else "sell"
+            # Coinbase 'time' is ISO 8601; convert to epoch seconds
+            ts_iso = str(trade.get("time", ""))
+            try:
+                from datetime import datetime, timezone
+                ts = datetime.fromisoformat(ts_iso.replace("Z", "+00:00")).timestamp()
+            except Exception:
+                ts = time.time()
+            # Reuse Binance aggTrade processing path — synthesize a dict that
+            # _process_agg_trade can parse: keys p, q, m, T (ms).
+            fake = {
+                "p": price,
+                "q": size,
+                "m": (side == "sell"),  # buyer maker → seller aggressor
+                "T": ts * 1000.0,
+            }
+            self._process_agg_trade(state, fake)
+        except Exception as exc:
+            logger.debug("ws_feeds.coinbase: bad trade msg (%s): %r", exc, trade)
 
     async def _async_main(self) -> None:
         """Reconnect loop — re-connects on any error or clean close."""
