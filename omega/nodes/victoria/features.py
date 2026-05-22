@@ -2915,6 +2915,34 @@ _V194_DIAGNOSTIC = {
 }
 _PRESETS["v194_diagnostic"] = VictoriaFeatures(**_V194_DIAGNOSTIC)
 
+# V195 stripped — back to V176 ensemble base, MINIMAL gates. Hypothesis:
+# the cumulative V18x-V19x gate accretion (FFG, crisis_long_block,
+# high_vol_entry_block, regime_hysteresis) is what blocks all trades in
+# current market conditions, not the conviction filter. v176 ensemble
+# produced +$592 / +$1,174 in earlier live runs with similar markets.
+_V195_STRIPPED = {
+    **_V176_ENSEMBLE,
+    # Disable gates that have been blocking trades
+    "four_factor_and_gate": False,
+    "crisis_long_block": False,
+    "high_vol_entry_block": False,
+    "high_vol_short_block": False,
+    "regime_hysteresis_enabled": False,
+    "ensemble_block_normal_shorts": False,
+    "llm_analyst_enabled": False,
+    "llm_crisis_mode_enabled": False,
+    # Keep the proven additions
+    "mfe_trailing_retracement": 0.50,
+    "vpin_signal": True,
+    "vpin_conviction_multiplier": 1.3,
+    "kyles_lambda_signal": True,
+    "kyles_lambda_conviction_multiplier": 1.2,
+    "lob_features": True,
+    "activation_tracing": True,
+    "decision_traces": True,
+}
+_PRESETS["v195_stripped"] = VictoriaFeatures(**_V195_STRIPPED)
+
 # V192 aggressive — loose conviction threshold (0.03 floor) regardless of regime.
 # Tests whether marginal trades (composite 0.03-0.05) carry positive expected
 # value or are noise. If garbage, abandon and keep the 0.10/0.05 gates.
