@@ -809,6 +809,14 @@ class VictoriaFeatures:
     # live and backtest (price-only signal, no WS dependency).
     dynamic_graph_signal: bool = False
 
+    # V194 spectral crash-duration detector. Computes the top two eigenvalues
+    # of the cross-asset return-correlation matrix per cycle. Wide spectral
+    # gap (λ1 - λ2) = market moving as a single block = crash signature.
+    # Tracks `crash_duration` (consecutive cycles z >= 2) so the ensemble
+    # can size down or widen stops during sustained crashes. Works in both
+    # live and backtest (price-only).
+    spectral_crash_signal: bool = False
+
     # V191 range-trading sub-strategy. When enabled, the ensemble adds a
     # FOURTH vote that ONLY fires in flat/low-vol regimes (range_bound==1.0
     # AND tda_fragmentation>0.9). Direction is fade-based off Bollinger bands;
@@ -2884,6 +2892,16 @@ _PRESETS["v191b_range_stack"] = VictoriaFeatures(**_V191B_RANGE_STACK)
 # V191c — V191b + funding-carry override (fires independently of range_bound).
 # Same flags as V191b; the signal-side change is in range_trading.py:range_vote.
 _PRESETS["v191c_range_stack"] = VictoriaFeatures(**_V191B_RANGE_STACK)
+
+# V194 — V190 proven stack + spectral crash detector. Adds defensive
+# spectral_gap / crash_duration features. The V18x graph + V194 spectral
+# together cover both market COHESION (centrality, clustering) and
+# CRASH-COHESION (gap z-score) for full graph-based market structure view.
+_V194_DEFENSIVE = {
+    **_V190_PROVEN_STACK,
+    "spectral_crash_signal": True,
+}
+_PRESETS["v194_defensive"] = VictoriaFeatures(**_V194_DEFENSIVE)
 
 # V192 aggressive — loose conviction threshold (0.03 floor) regardless of regime.
 # Tests whether marginal trades (composite 0.03-0.05) carry positive expected

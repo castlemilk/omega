@@ -193,6 +193,12 @@ except ImportError:
     _HAS_DYNAMIC_GRAPH = False
 
 try:
+    from omega.nodes.victoria.signals.spectral_crash import SpectralCrashSignal as _SpectralCrashSignal
+    _HAS_SPECTRAL_CRASH = True
+except ImportError:
+    _HAS_SPECTRAL_CRASH = False
+
+try:
     from omega.nodes.victoria.signals.range_trading import RangeTradingSignal as _RangeTradingSignal
     _HAS_RANGE_TRADING = True
 except ImportError:
@@ -493,6 +499,14 @@ class SignalGenerationNode(Node):
             with contextlib.suppress(Exception):
                 self._dynamic_graph = _DynamicGraphSignal()
                 logger.info("DynamicGraphSignal initialized")
+
+        # V194 spectral crash-duration detector: eigenvalue-based market
+        # cohesion. Defensive signal — sizes DOWN as crash_duration grows.
+        self._spectral_crash: Any = None
+        if _HAS_SPECTRAL_CRASH and self._features and getattr(self._features, "spectral_crash_signal", False):
+            with contextlib.suppress(Exception):
+                self._spectral_crash = _SpectralCrashSignal()
+                logger.info("SpectralCrashSignal initialized")
 
         # V191 range-trading + funding-carry signals — fire in flat/low-vol.
         self._range_trading: Any = None
@@ -1010,6 +1024,23 @@ class SignalGenerationNode(Node):
             except Exception as _dg_exc:
                 logger.debug("dynamic_graph compute error: %s", _dg_exc)
 
+        # V194 spectral crash: same pattern — push closes then compute once.
+        _sc_features: dict[str, float] = {}
+        if self._spectral_crash is not None:
+            try:
+                for _sc_ticker, _sc_data in market_data.items():
+                    if not _sc_data or not isinstance(_sc_data, dict):
+                        continue
+                    _sc_closes = _sc_data.get("adjclose") or _sc_data.get("close") or []
+                    if _sc_closes:
+                        try:
+                            self._spectral_crash.push_close(_sc_ticker, float(_sc_closes[-1]))
+                        except (TypeError, ValueError, IndexError):
+                            continue
+                _sc_features = self._spectral_crash.compute() or {}
+            except Exception as _sc_exc:
+                logger.debug("spectral_crash compute error: %s", _sc_exc)
+
         for ticker, data in market_data.items():
             if not data or not isinstance(data, dict):
                 continue
@@ -1260,6 +1291,11 @@ class SignalGenerationNode(Node):
             for _dg_k, _dg_v in _dg_features.items():
                 if _dg_v != 0.0:
                     ts[_dg_k] = _dg_v
+
+            # V194 spectral crash: same basket-level injection.
+            for _sc_k, _sc_v in _sc_features.items():
+                if _sc_v != 0.0:
+                    ts[_sc_k] = _sc_v
 
             # V191 range-trading: feed OHLC bars and emit per-ticker features.
             if self._range_trading is not None:
