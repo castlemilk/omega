@@ -2943,6 +2943,18 @@ _V195_STRIPPED = {
 }
 _PRESETS["v195_stripped"] = VictoriaFeatures(**_V195_STRIPPED)
 
+# V195b — v195_stripped + ALSO disable strategy_selector which silently
+# overrides the disabled gates when it enters CRISIS mode (per
+# strategy_selector.py _CRISIS_OVERRIDES). The selector re-enables
+# crisis_long_block, high_vol_entry_block, regime_hysteresis_enabled
+# whenever the basket is labeled crisis — defeating the v195 stripping.
+_V195B_STRIPPED = {
+    **_V195_STRIPPED,
+    "strategy_selector_enabled": False,
+    "strategy_selector_trend_crisis_veto": False,
+}
+_PRESETS["v195b_stripped"] = VictoriaFeatures(**_V195B_STRIPPED)
+
 # V192 aggressive — loose conviction threshold (0.03 floor) regardless of regime.
 # Tests whether marginal trades (composite 0.03-0.05) carry positive expected
 # value or are noise. If garbage, abandon and keep the 0.10/0.05 gates.
