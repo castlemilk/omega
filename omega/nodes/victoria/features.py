@@ -2903,6 +2903,18 @@ _V194_DEFENSIVE = {
 }
 _PRESETS["v194_defensive"] = VictoriaFeatures(**_V194_DEFENSIVE)
 
+# V194 diagnostic — pure composite path (NO ensemble), conviction threshold
+# at 0.02 floor. Will produce trades by design. Output tells us whether the
+# system's marginal trades have positive EV or are noise. Used as a probe
+# only; not intended for production deployment without further validation.
+_V194_DIAGNOSTIC = {
+    **_V161_LIVE,
+    "ensemble_strategy": False,
+    "conviction_threshold_mult": 0.20,
+    "flat_market_conviction_threshold": 0.02,
+}
+_PRESETS["v194_diagnostic"] = VictoriaFeatures(**_V194_DIAGNOSTIC)
+
 # V192 aggressive — loose conviction threshold (0.03 floor) regardless of regime.
 # Tests whether marginal trades (composite 0.03-0.05) carry positive expected
 # value or are noise. If garbage, abandon and keep the 0.10/0.05 gates.
