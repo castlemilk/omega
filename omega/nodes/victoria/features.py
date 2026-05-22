@@ -817,6 +817,14 @@ class VictoriaFeatures:
     # live and backtest (price-only).
     spectral_crash_signal: bool = False
 
+    # V196 preset-override safety. When True, strategy_selector observes its
+    # mode (TREND / CRISIS / DEFAULT) and logs what it WOULD override, but
+    # does NOT mutate the features dataclass. Use this with a stripped-gate
+    # preset to keep the selector's diagnostics without losing the strip.
+    # Recommended whenever you've explicitly disabled crisis_long_block,
+    # high_vol_entry_block, regime_hysteresis_enabled, etc.
+    preset_override_mode: bool = False
+
     # V191 range-trading sub-strategy. When enabled, the ensemble adds a
     # FOURTH vote that ONLY fires in flat/low-vol regimes (range_bound==1.0
     # AND tda_fragmentation>0.9). Direction is fade-based off Bollinger bands;
