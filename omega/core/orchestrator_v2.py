@@ -1210,6 +1210,35 @@ class OmegaOrchestrator:
 
             # Check autonomy: PICO mode = deterministic strategy only
             autonomy_level = self._autonomy.get_level(state.node_id)
+
+            # V197 pipeline tracer: assert the signal_data → strategy handoff
+            # is well-shaped. The historical zero-trade bug masked exactly
+            # this boundary; logging it makes the failure observable.
+            try:
+                from omega.core.pipeline_tracer import get_tracer
+                _tracer = get_tracer()
+                _flat = signal_data
+                # When signal_data is keyed by node_id with per-ticker dicts
+                # underneath, flatten one level for the shape check.
+                if (
+                    signal_data
+                    and all(isinstance(v, dict) for v in signal_data.values())
+                    and not any("composite" in v for v in signal_data.values() if isinstance(v, dict))
+                    and len(signal_data) <= 5  # likely 1-2 nodes, not 13+ tickers
+                ):
+                    _flat = {}
+                    for _nid, _v in signal_data.items():
+                        if isinstance(_v, dict):
+                            for _k, _vv in _v.items():
+                                _flat[_k] = _vv
+                _tracer.trace_handoff(
+                    "orchestrator", state.name,
+                    _flat if _flat is not signal_data else signal_data,
+                    min_keys=1,
+                )
+            except Exception:
+                pass
+
             inp = NodeInput(
                 action=NodeAction.CONSTRUCT_PORTFOLIO.value,
                 parameters={
