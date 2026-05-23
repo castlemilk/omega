@@ -1765,6 +1765,32 @@ class StrategyNode(Node):
           - Time filter: no new positions within 2 cycles of last trade
         """
         current_cycle = self._execution_count
+
+        # V197 signal-routing assertion — surface upstream wiring failures
+        # immediately rather than waiting hours for the zero-streak warning.
+        # Counts per-ticker dicts with a "composite" key. If zero, the upstream
+        # signal pipeline is delivering wrong-shape data to strategy and no
+        # trade can possibly fire.
+        _ticker_composites = {
+            k: v.get("composite") for k, v in signals.items()
+            if isinstance(v, dict) and "composite" in v and not k.startswith("_") and not k.startswith("adv_")
+        }
+        if not _ticker_composites:
+            _sample_keys = list(signals.keys())[:10]
+            _sample_value_types = {k: type(signals[k]).__name__ for k in _sample_keys}
+            logger.error(
+                "SIGNAL_ROUTING_BROKEN cycle=%d — zero per-ticker composites in input. "
+                "signals has %d top-level keys: %s; value types: %s. "
+                "Strategy cannot trade with this shape. Check orchestrator._step_strategy.",
+                current_cycle, len(signals), _sample_keys, _sample_value_types,
+            )
+            # Touch sentinel file the health monitor can check.
+            try:
+                from pathlib import Path
+                Path("data/SIGNAL_ROUTING_BROKEN").touch()
+            except Exception:
+                pass
+
         self._last_ticker_decisions = {}  # reset each cycle
         self._last_confluence = {}  # reset confluence cache each cycle
 
