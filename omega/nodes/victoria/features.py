@@ -825,6 +825,14 @@ class VictoriaFeatures:
     # high_vol_entry_block, regime_hysteresis_enabled, etc.
     preset_override_mode: bool = False
 
+    # V196b strong-signal bypass. When enabled, a ticker whose raw composite
+    # signal magnitude exceeds `strong_signal_threshold` skips the ensemble
+    # vote entirely and trades at the raw composite. Safety valve for the
+    # case where the ensemble's 3-vote consensus blocks an obvious individual
+    # trade (e.g. NEAR moving 18% while basket average is flat).
+    strong_signal_bypass: bool = False
+    strong_signal_threshold: float = 0.15
+
     # V191 range-trading sub-strategy. When enabled, the ensemble adds a
     # FOURTH vote that ONLY fires in flat/low-vol regimes (range_bound==1.0
     # AND tda_fragmentation>0.9). Direction is fade-based off Bollinger bands;
@@ -2962,6 +2970,17 @@ _V195B_STRIPPED = {
     "strategy_selector_trend_crisis_veto": False,
 }
 _PRESETS["v195b_stripped"] = VictoriaFeatures(**_V195B_STRIPPED)
+
+# V196 — v195b stripped + strong_signal_bypass. When per-ticker composite
+# magnitude exceeds 0.15 (significant individual signal), skip ensemble vote
+# and trade directly. Catches the case where one symbol has a clear move but
+# basket average / ensemble consensus is flat.
+_V196_BYPASS = {
+    **_V195B_STRIPPED,
+    "strong_signal_bypass": True,
+    "strong_signal_threshold": 0.15,
+}
+_PRESETS["v196_bypass"] = VictoriaFeatures(**_V196_BYPASS)
 
 # V192 aggressive — loose conviction threshold (0.03 floor) regardless of regime.
 # Tests whether marginal trades (composite 0.03-0.05) carry positive expected

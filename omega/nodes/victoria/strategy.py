@@ -1021,6 +1021,20 @@ class StrategyNode(Node):
         If no ICs have been loaded, falls back to the raw composite score so
         the filter still runs with equal weighting.
         """
+        # V196b strong-signal bypass. Per-ticker raw composite that exceeds
+        # `strong_signal_threshold` skips the ensemble vote and trades directly.
+        # Safety valve when ensemble consensus would block an obvious individual
+        # trade (e.g. one symbol moving 5-20% while basket averages flat).
+        if getattr(self.features, "strong_signal_bypass", False):
+            _raw_comp = float(signals_dict.get("composite", 0.0))
+            _strong_thr = float(getattr(self.features, "strong_signal_threshold", 0.15))
+            if abs(_raw_comp) >= _strong_thr:
+                logger.info(
+                    "V196b strong_signal_bypass: composite=%.3f >= %.3f, skipping ensemble",
+                    _raw_comp, _strong_thr,
+                )
+                return _raw_comp
+
         # V173: ensemble strategy — replace single weighted composite with
         # majority-vote across momentum / mean-reversion / macro sub-strategies.
         # V174: optional adaptive decay (recent-WR fade) + adversarial check.
@@ -1436,6 +1450,22 @@ class StrategyNode(Node):
                 self._long_conviction_threshold,
                 self._short_conviction_threshold,
             )
+
+        # V191b flat-market conviction floor. When set + ATR signals say the
+        # whole basket is range-bound (TDA "smooth" + ATR contraction), cap
+        # both long+short thresholds at this lower value to let small-composite
+        # range trades through.
+        _flat_thresh = float(getattr(self.features, "flat_market_conviction_threshold", 0.0))
+        if _flat_thresh > 0.0:
+            _tda_reg = str(signals.get("_tda_regime", "") or signals.get("tda_regime", "")).lower()
+            _basket_std_val = float(signals.get("_basket_std", 0.20) or 0.20)
+            if _tda_reg == "smooth" and _basket_std_val <= 0.21:
+                self._long_conviction_threshold = min(self._long_conviction_threshold, _flat_thresh)
+                self._short_conviction_threshold = min(self._short_conviction_threshold, _flat_thresh)
+                logger.debug(
+                    "V191b flat-market floor → long=%.4f short=%.4f",
+                    self._long_conviction_threshold, self._short_conviction_threshold,
+                )
 
         # V95: Geodesic crash proximity gate — when the market manifold is closer to
         # the crash reference state than the rally state, raise long_thresh proportionally.
