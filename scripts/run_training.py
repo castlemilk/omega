@@ -773,12 +773,49 @@ def run(
     # Pre-loop diagnostic (cycle 0 — before any trades)
     print_training_diagnostics(victoria, strat, 0, engine)
 
+    # V198 PipelineTracer: startup smoke test. Run ONE cycle and assert
+    # signals reach strategy. Fails loud at startup rather than weeks later.
+    try:
+        from omega.core.pipeline_tracer import get_tracer
+        _smoke_violations_before = get_tracer().violation_count
+        _smoke_result = orch.run_one_cycle()
+        _smoke_violations_after = get_tracer().violation_count
+        if _smoke_violations_after > _smoke_violations_before:
+            log.error(
+                "STARTUP_SMOKE_TEST_FAILED: %d new pipeline violations on first cycle. "
+                "Check data/PIPELINE_VIOLATION for details.",
+                _smoke_violations_after - _smoke_violations_before,
+            )
+        else:
+            log.info(
+                "STARTUP_SMOKE_TEST_OK: cycle 1 ran without pipeline violations "
+                "(tracer handoffs=%d)", get_tracer().handoff_count,
+            )
+    except Exception as _smoke_exc:
+        log.warning("startup smoke test bypass: %s", _smoke_exc)
+
     try:
         for i in range(n_cycles):
             cycle_num = i + 1
             cycle_start = time.perf_counter()
-            result = orch.run_one_cycle()
+            # Smoke test consumed cycle 1; skip the orch call here on i==0
+            # but still emit metrics for cycle 1.
+            if i == 0:
+                result = _smoke_result if "_smoke_result" in locals() else orch.run_one_cycle()
+            else:
+                result = orch.run_one_cycle()
             cycle_elapsed = time.perf_counter() - cycle_start
+
+            # V198 PipelineTracer: per-cycle health snapshot to
+            # data/pipeline_health.jsonl. One-line JSON, cheap.
+            try:
+                get_tracer().snapshot(cycle_num, {
+                    "trades_closed": engine.closed_trade_count if hasattr(engine, "closed_trade_count") else 0,
+                    "open_positions": len(getattr(engine, "_positions", {})),
+                    "elapsed_s": round(cycle_elapsed, 3),
+                })
+            except Exception:
+                pass
 
             if result.improvement_proposed:
                 improve_calls += 1

@@ -195,6 +195,8 @@ class VictoriaNode(Node):
 
         # RMT denoiser — standalone signal + foundation for geometric methods
         self._rmt_denoiser = RMTDenoiser(window=100)
+        # V152: wire denoised signal-correlation matrix into strategy position limits
+        self._strategy.set_rmt_denoiser(self._rmt_denoiser)
 
         # Spectral graph theory stress indicator (geometric method #4)
         self._spectral_graph = SpectralGraphSignal(window=30)
@@ -493,6 +495,32 @@ class VictoriaNode(Node):
 
             elapsed = (time.perf_counter() - t0) * 1000
             self._total_latency_ms += elapsed
+
+            # V198 PipelineTracer: signal_generation output assertion. Fires
+            # only on COMPUTE_SIGNALS so we don't spam other action types.
+            if action == NodeAction.COMPUTE_SIGNALS.value and isinstance(result, dict):
+                try:
+                    from omega.core.pipeline_tracer import get_tracer
+                    _tracer = get_tracer()
+                    _per_ticker_count = sum(
+                        1 for k, v in result.items()
+                        if isinstance(v, dict) and "composite" in v
+                        and not k.startswith("_") and not k.startswith("adv_")
+                    )
+                    _tracer.trace_handoff(
+                        "signal_generation", "orchestrator",
+                        {"keys": len(result), "per_ticker_with_composite": _per_ticker_count},
+                        non_zero_keys=("per_ticker_with_composite",),
+                    )
+                    # Track liveness of the headline signals
+                    for _sig_name in ("fear_greed_signal", "funding_rate_signal", "vix_signal"):
+                        if _sig_name in result and isinstance(result[_sig_name], dict):
+                            _tracer.watch_signal(
+                                _sig_name,
+                                float(result[_sig_name].get("value", 0.0)),
+                            )
+                except Exception:
+                    pass
 
             # Promote debate consensus metrics so Go can observe them via Prometheus.
             extra_metrics: dict[str, float] = {}
@@ -988,6 +1016,13 @@ class VictoriaNode(Node):
             else:
                 signals["basic_signals"]["value"] = 0.0
                 signals["basic_signals"]["confidence"] = 0.0
+
+            # Promote global underscore keys (e.g. _w2_crisis, _tda_fragmentation)
+            # from basic_signals to the top-level signals dict so run_training.py
+            # and strategy can access them via last_signals.get("_w2_crisis").
+            for _gk, _gv in list(signals["basic_signals"].items()):
+                if _gk.startswith("_"):
+                    signals[_gk] = _gv
 
         # Advanced signals are only computed outside PICO mode
         # (they may use more complex / probabilistic computations)
@@ -2103,6 +2138,17 @@ class VictoriaNode(Node):
         ):
             if acc.get(name) is not None:
                 signals[name] = acc[name]
+
+        # Promote global underscore keys from basic_signals to top-level signals.
+        # signal_generation._compute_all_signals() returns global keys (e.g. _w2_crisis,
+        # _tda_fragmentation) alongside per-ticker dicts. In the DAG path these land in
+        # acc["basic_signals"] but must surface at signals["_w2_crisis"] for run_training
+        # and strategy to find them via last_signals.get("_w2_crisis").
+        _basic_raw = acc.get("basic_signals")
+        if isinstance(_basic_raw, dict):
+            for _gk, _gv in _basic_raw.items():
+                if _gk.startswith("_") and _gk not in signals:
+                    signals[_gk] = _gv
 
         # Map market_data_signal → market_data key (matches SIGNAL_NAMES)
         if "market_data_signal" in signals:
