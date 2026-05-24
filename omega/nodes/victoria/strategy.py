@@ -1766,6 +1766,16 @@ class StrategyNode(Node):
         """
         current_cycle = self._execution_count
 
+        # V198 PipelineTracer: strategy-side handoff assertion.
+        try:
+            from omega.core.pipeline_tracer import get_tracer
+            get_tracer().trace_handoff(
+                "orchestrator", "strategy._construct_portfolio",
+                signals, min_keys=1,
+            )
+        except Exception:
+            pass
+
         # V197 signal-routing assertion — surface upstream wiring failures
         # immediately rather than waiting hours for the zero-streak warning.
         # Counts per-ticker dicts with a "composite" key. If zero, the upstream

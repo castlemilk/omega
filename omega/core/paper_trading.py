@@ -363,6 +363,18 @@ class PaperTradingEngine:
         executed: list[dict[str, Any]] = []
         ts_now = datetime.now(UTC)
 
+        # V198 PipelineTracer: strategy→paper_trading proposal handoff.
+        # Logs proposal count so we can see if strategy ever emits anything.
+        try:
+            from omega.core.pipeline_tracer import get_tracer
+            get_tracer().trace_handoff(
+                "strategy", "paper_trading.execute_proposals",
+                {"proposal_count": len(proposals)},
+                required_keys=("proposal_count",),
+            )
+        except Exception:
+            pass
+
         # Mark-to-market: close stale/stopped positions before processing new proposals
         self.mark_to_market(market_data, current_cycle, cycle_id=cycle_id)
 
