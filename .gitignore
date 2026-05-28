@@ -10,3 +10,15 @@ build/
 .env
 .venv
 venv/
+
+# Build artifacts
+omega-api
+.gocache/
+.gomod/
+
+# OS / editor noise
+.DS_Store
+data/.fuse_hidden*
+
+# Local analysis reports
+code-quality-report-*.md
