@@ -560,7 +560,7 @@ func (h *TrainingHandler) handleVersionStream(w http.ResponseWriter, r *http.Req
 								if !json.Valid(line) {
 									continue
 								}
-								fmt.Fprintf(w, "data: %s\n\n", line) //nolint:errcheck
+								fmt.Fprintf(w, "data: %s\n\n", line) //nolint:errcheck,gosec // SSE plain-text stream, not HTML; line validated as JSON above
 							}
 							flusher.Flush()
 						}
@@ -570,7 +570,7 @@ func (h *TrainingHandler) handleVersionStream(w http.ResponseWriter, r *http.Req
 			}
 
 			// Check if the training run has finished (results file present).
-			if _, err := os.Stat(resultsPath); err == nil {
+			if _, err := os.Stat(resultsPath); err == nil { //nolint:gosec // G304/G703: resultsPath derived from validated version string
 				complete, _ := json.Marshal(map[string]string{
 					"version": version,
 					"message": "training complete",

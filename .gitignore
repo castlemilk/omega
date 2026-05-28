@@ -12,7 +12,7 @@ build/
 venv/
 
 # Build artifacts
-omega-api
+/omega-api
 .gocache/
 .gomod/
 

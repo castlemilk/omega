@@ -144,7 +144,7 @@ var Catalog = []CatalogEntry{
 		Changelog: []string{"V1.0: initial"},
 	},
 
-	{
+	{ //nolint:gosec // G101: APIKeyName field stores env-var NAME, not a credential value
 		Name: "SentimentSignal", ModulePath: "omega.nodes.victoria.signals_advanced",
 		NodeType: "signal", Project: "victoria",
 		Description:   "Aggregates the Fear & Greed Index (alternative.me) and CryptoPanic bullish/bearish vote ratio into a composite sentiment score.",
@@ -274,7 +274,7 @@ var Catalog = []CatalogEntry{
 		Changelog: []string{"V1.0: initial"},
 	},
 
-	{
+	{ //nolint:gosec // G101: APIKeyName field stores env-var NAME, not a credential value
 		Name: "MacroSignal", ModulePath: "omega.nodes.victoria.macro_signals",
 		NodeType: "signal", Project: "victoria",
 		Description:   "Ingests US macro data from FRED: M2 money supply growth, federal funds rate, real 10Y yield, 2s10s yield curve, DXY, and Fed net liquidity (assets minus RRP minus TGA).",
@@ -342,7 +342,7 @@ var Catalog = []CatalogEntry{
 		Changelog: []string{"V1.0: initial"},
 	},
 
-	{
+	{ //nolint:gosec // G101: APIKeyName field stores env-var NAME, not a credential value
 		Name: "LiquidationSignal", ModulePath: "omega.nodes.victoria.liquidation_signals",
 		NodeType: "signal", Project: "victoria",
 		Description:   "Fetches Coinglass and Bybit liquidation data to compute cascade risk scores — proximity to large liquidation clusters predicts volatility spikes.",
@@ -362,7 +362,7 @@ var Catalog = []CatalogEntry{
 		Changelog: []string{"V1.0: Coinglass only", "V1.1: Bybit levels + historical window"},
 	},
 
-	{
+	{ //nolint:gosec // G101: APIKeyName field stores env-var NAME, not a credential value
 		Name: "LiquidationCascadeSignal", ModulePath: "omega.nodes.victoria.liquidation_cascade",
 		NodeType: "signal", Project: "victoria",
 		Description:   "Models the amplification factor of liquidation cascades using historical price-liquidation co-movements. Outputs a cascade amplification score and estimated cascade radius.",
@@ -402,7 +402,7 @@ var Catalog = []CatalogEntry{
 		Changelog: []string{"V1.0: initial"},
 	},
 
-	{
+	{ //nolint:gosec // G101: APIKeyName field stores env-var NAME, not a credential value
 		Name: "NewsSignal", ModulePath: "omega.nodes.victoria.news_signals",
 		NodeType: "signal", Project: "victoria",
 		Description:   "Aggregates CryptoPanic API headlines and RSS feeds, applies VADER sentiment NLP, and learns per-source reliability weights from outcome feedback.",
@@ -426,7 +426,7 @@ var Catalog = []CatalogEntry{
 		Changelog: []string{"V1.0: VADER on all sources equally", "V1.1: per-source reliability weights learned from feedback"},
 	},
 
-	{
+	{ //nolint:gosec // G101: APIKeyName field stores env-var NAME, not a credential value
 		Name: "TwitterSignal", ModulePath: "omega.nodes.victoria.twitter_signals",
 		NodeType: "signal", Project: "victoria",
 		Description:   "Reads CryptoCompare social stats API for tweet volume, Reddit activity, and social dominance scores for BTC/ETH/SOL.",

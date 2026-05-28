@@ -85,10 +85,11 @@ func (hm *HandlerMetrics) MetricsInterceptor() connect.UnaryInterceptorFunc {
 			method := shortMethod(procedure)
 			service := shortService(procedure)
 
-			baseAttrs := []attribute.KeyValue{
+			baseAttrs := make([]attribute.KeyValue, 0, 3)
+			baseAttrs = append(baseAttrs,
 				telemetry.AttrRPCMethod.String(method),
 				telemetry.AttrRPCService.String(service),
-			}
+			)
 
 			// Start span
 			ctx, span := hm.tracer.Start(ctx, telemetry.SpanRPCHandler,

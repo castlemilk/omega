@@ -173,7 +173,7 @@ func main() {
 		// Register bridge as a platform health checker (DEGRADED, not UNHEALTHY, when unreachable).
 		bridgeAddr := addr
 		composite.Register(observability.NewHealthCheckerFunc("bridge", func(hctx context.Context) observability.HealthStatus {
-			req, err := http.NewRequestWithContext(hctx, http.MethodGet, bridgeAddr+"/health", nil)
+			req, err := http.NewRequestWithContext(hctx, http.MethodGet, bridgeAddr+"/health", nil) //nolint:gosec // bridgeAddr is operator-configured OMEGA_PYTHON_PIPELINE_ADDR, not user input
 			if err != nil {
 				return observability.HealthStatus{State: observability.HealthStateDegraded, Details: map[string]any{"error": err.Error()}}
 			}
@@ -396,7 +396,7 @@ func main() {
 		addr = ":" + p
 	}
 	log.Printf("Omega API listening on %s", addr) //nolint:gosec
-	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics (OTel endpoint=%q)", telCfg.OtlpEndpoint)
+	log.Printf("Observability: /healthz /readyz /metrics /debug/diagnostics (OTel endpoint=%q)", telCfg.OtlpEndpoint) //nolint:gosec // OtlpEndpoint is operator-provided config, not user input
 
 	srv := &http.Server{ //nolint:gosec
 		Addr:              addr,

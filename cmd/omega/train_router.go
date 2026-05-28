@@ -13,6 +13,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// trainRouterCmd trains the AttentionRouter. Help text includes a dev-only default
+// Postgres URL with placeholder credentials; suppressing G101 (false positive).
+//
+//nolint:gosec // G101: placeholder credentials in help-text default URL
 var trainRouterCmd = &cobra.Command{
 	Use:   "train-router",
 	Short: "Train the AttentionRouter from coordination outcome history",

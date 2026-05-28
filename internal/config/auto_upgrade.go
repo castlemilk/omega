@@ -82,7 +82,7 @@ func (u *AutoUpgrader) Backup(path string) error {
 		filepath.Dir(path),
 		filepath.Base(path)+".bak."+ts,
 	)
-	if err := os.WriteFile(backupPath, raw, 0o600); err != nil {
+	if err := os.WriteFile(backupPath, raw, 0o600); err != nil { //nolint:gosec // G304/G703: backupPath derived from operator-provided config path
 		return fmt.Errorf("config: write backup %q: %w", backupPath, err)
 	}
 	return nil

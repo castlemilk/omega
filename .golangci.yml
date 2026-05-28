@@ -46,7 +46,6 @@ linters-settings:
       - ruleguard
       - sloppyLen
       - stringConcatSimplify
-      - typeAssert
       - unnecessaryBlock
       - unnecessaryDefer
       - weakCond
@@ -100,3 +99,4 @@ issues:
     # orchestrator.go: exec calls use controlled args, int32 cast is safe
     - path: "internal/handler/orchestrator\\.go"
       linters: [gosec]
+

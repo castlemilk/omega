@@ -320,7 +320,7 @@ func TestSSEHandler_multipleClients(t *testing.T) {
 		srw := newStreamResponseWriter()
 		writers[i] = srw
 		req := httptest.NewRequest(http.MethodGet, "/events", nil)
-		ctx, c := context.WithCancel(req.Context())
+		ctx, c := context.WithCancel(req.Context()) //nolint:gosec // cancel stored in cancels[] and invoked at line ~345
 		cancels[i] = c
 		req = req.WithContext(ctx)
 		go h.ServeHTTP(srw, req)

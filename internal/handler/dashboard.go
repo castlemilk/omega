@@ -518,8 +518,9 @@ func (h *DashboardHandler) handleObsServices(w http.ResponseWriter, r *http.Requ
 	defer cancel()
 	report := h.composite.Check(ctx)
 
-	services := []obsService{
-		{
+	services := make([]obsService, 0, 4)
+	services = append(services,
+		obsService{
 			Name:          "Go API",
 			Status:        "healthy",
 			LastHeartbeat: now,
@@ -528,7 +529,7 @@ func (h *DashboardHandler) handleObsServices(w http.ResponseWriter, r *http.Requ
 			P95LatencyMS:  45,
 			UptimeSeconds: uptime,
 		},
-		{
+		obsService{
 			Name:          "Frontend",
 			Status:        "healthy",
 			LastHeartbeat: now,
@@ -537,7 +538,7 @@ func (h *DashboardHandler) handleObsServices(w http.ResponseWriter, r *http.Requ
 			P95LatencyMS:  8,
 			UptimeSeconds: uptime,
 		},
-	}
+	)
 
 	// Derive database and python bridge status from composite health
 	dbStatus := "healthy"
