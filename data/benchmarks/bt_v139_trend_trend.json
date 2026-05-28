@@ -2,36 +2,45 @@
   "version": "bt_v139_trend",
   "snapshot_id": "trend",
   "snapshot_path": "data/snapshots/snap_trending_2023q4.json",
-  "run_at": "2026-04-17T11:58:34.132208+00:00",
+  "run_at": "2026-04-18T06:43:59.556081+00:00",
   "seed": 42,
   "features": "v139_llm_analyst",
   "n_cycles": 500,
   "metrics": {
-    "pnl": 20406.49,
-    "win_rate": 0.52,
-    "profit_factor": 2.059,
-    "n_trades": 75,
-    "long_pct": 1.0,
-    "short_pct": 0.0,
+    "pnl": 14162.85,
+    "win_rate": 0.4569,
+    "profit_factor": 1.404,
+    "n_trades": 116,
+    "long_pct": 0.5517,
+    "short_pct": 0.4483,
+    "max_drawdown": -5987.26,
+    "sharpe": 1.889,
     "regime_pnl": {
-      "normal": 10468.87,
-      "crisis": 4545.67,
-      "high_vol": 5391.96
+      "normal": 363.66,
+      "crisis": 8412.59,
+      "high_vol": 5386.61
     },
-    "sharpe": 2.152,
-    "disposition_coefficient": null
+    "disposition_coefficient": -0.5456,
+    "hold_ratio": 2.026,
+    "avg_mae": -245.2576,
+    "avg_mfe": 1196.1017,
+    "mean_exit_score": -0.2393,
+    "_n_win_captures": 53,
+    "_n_loss_captures": 63
   },
   "gate_result": {
-    "passed": true,
+    "passed": false,
     "gates": {
       "pnl_positive": true,
       "profit_factor_above_1": true,
       "n_trades_sufficient": true,
-      "long_short_balanced": false,
+      "long_short_balanced": true,
       "no_regime_catastrophe": true,
       "disposition_acceptable": false
     },
-    "failure_reasons": []
+    "failure_reasons": [
+      "Disposition effect detected: coef=-0.546 (need >0.0, target >0.3)"
+    ]
   },
   "leaderboard_rank": null
 }

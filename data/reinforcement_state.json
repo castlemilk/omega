@@ -1,13 +1,12 @@
 {
-  "updated_at": "2026-04-13T22:47:56.186234+00:00",
-  "n_trades": 445,
+  "updated_at": "2026-04-20T11:56:34.604108+00:00",
+  "n_trades": 2956,
   "scores": {
-    "sma_crossover": 0.0,
-    "fear_greed_signal": 0.0,
-    "momentum_derivative": -0.2,
-    "conviction_trend": 0.2,
-    "agreement_trend": 0.2,
-    "funding_rate_signal": 0.1
-  },
-  "_note": "Reset V120: capped extreme scores, zeroed dead-signal EMAs after V118 crash"
+    "sma_crossover": -0.303368,
+    "fear_greed_signal": -0.302973,
+    "momentum_derivative": 0.146468,
+    "conviction_trend": 0.244756,
+    "agreement_trend": 0.244756,
+    "funding_rate_signal": -0.138007
+  }
 }
