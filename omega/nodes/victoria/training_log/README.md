@@ -19,12 +19,14 @@ dirs, memory files, and chat history.
 
 | Gate    | Best version          | PnL        | Trades | WR    | PF   | Notes                                                  |
 |---------|-----------------------|-----------:|-------:|------:|-----:|--------------------------------------------------------|
-| recent  | V176 (`fresh_live`)   | **+$1,189**| 31     | 38.7% | 3.22 | V175 loosened ensemble + vix_signal in composite       |
-| trend   | V172 (`pruned`)       | **+$18,437**| 64    | 43.8% | 2.07 | Ridge calibrator + signal pruning                      |
+| recent  | **V199** (carry sub)  | **+$2,478**| 67     | 34.3% | 1.13 | Carry-only sub-strategy + carry in per-ticker ensemble |
+| trend   | V172 (`pruned`)       | **+$18,437**| 64    | 43.8% | 2.07 | Ridge calibrator + signal pruning (V199 regressed here)|
 | crisis  | *no positive run*     | best −$35K | —      | —     | —    | Whole stack is trend-biased; crisis remains unsolved   |
 
 Regime parity is the #1 open problem: trend & recent positive, crisis
-consistently negative across V170s–V190s.
+consistently negative across V170s–V190s. V199 broke the recent
+high-water but regressed on trend — V200 owns the trend-regime
+suppressor that should recover both.
 
 ## Phase index
 
@@ -37,7 +39,7 @@ consistently negative across V170s–V190s.
 | [V189.md](V189.md) | Gate stacking diminishing returns | Symbol blacklist + min hold + damp hours. V184 60d barely positive PF 1.04. |
 | [V191.md](V191.md) | Range/carry attempt            | Range sub-strategy + funding-carry signal — carry gated behind range_bound=1.0 (rarely fires). |
 | [V197.md](V197.md) | Observability reset            | PipelineTracer wired at all 6 boundaries; strategy_selector silent-override bug caught & fixed. |
-| [V199.md](V199.md) | **NEXT — carry-only sub-strategy** | Build funding/basis carry that fires when momentum/mean-rev/macro abstain.  |
+| [V199.md](V199.md) | Carry-only sub-strategy        | New recent high-water (+$2,478, 67 trades). Trend regressed — fix in V200.    |
 
 ## The loop
 
