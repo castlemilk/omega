@@ -1592,13 +1592,31 @@ class StrategyNode(Node):
         _carry_conf = float(_carry_meta.get("confidence", 0.0) or 0.0)
         _carry_regime = str(_carry_meta.get("regime_tag", "") or "")
 
+        # V200: trend-regime suppressor — when HMM is confident bull/bear, skip
+        # injecting funding_carry_signal into the per-ticker ensemble so it
+        # doesn't dilute the trend-stack edge (V199 trend regression).  The
+        # carry-only sub-strategy fallback below is unaffected — it still fires
+        # when the main stack abstains entirely.
+        _carry_hmm = str(signals.get("_regime_hmm", signals.get("_regime", ""))).lower()
+        _carry_probs = signals.get("_regime_probs", [])
+        _carry_hmm_conf = 0.0
+        if _carry_probs and len(_carry_probs) >= 3:
+            if _carry_hmm == "bull":
+                _carry_hmm_conf = float(_carry_probs[0])
+            elif _carry_hmm == "bear":
+                _carry_hmm_conf = float(_carry_probs[1])
+        _carry_trend_suppressed = (
+            _carry_hmm in ("bull", "bear") and _carry_hmm_conf > 0.5
+        )
+
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
                 continue
             # V199: inject the funding-carry signal into the per-ticker sig so
             # the ensemble voter includes it.  Confidence-weighted: use the raw
             # value when |annualized| > 10% APY (carry_regime != "carry_neutral").
-            if _carry_value != 0.0:
+            # V200: suppress the per-ticker injection in confirmed bull/bear.
+            if _carry_value != 0.0 and not _carry_trend_suppressed:
                 sig = dict(sig)
                 sig["funding_carry_signal"] = _carry_value
             # V146: ensemble voter replaces weighted-sum composite when enabled
