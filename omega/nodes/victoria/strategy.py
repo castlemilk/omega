@@ -1521,9 +1521,9 @@ class StrategyNode(Node):
         _meta_exit_only = getattr(self.features, "meta_learner_exit_only", False)
         if _meta_exit_only and self._meta_learner is not None:
             _ml_cfg_exit = self._meta_learner.get_surface_config()
-            _bear_T_exit = _ml_cfg_exit.bear_long.temperature
+            _bear_t_exit = _ml_cfg_exit.bear_long.temperature
             # T ∈ [0.05, 0.30] → mult ∈ [1.40, 0.80]
-            _ml_trail_mult = max(0.7, min(1.5, 1.4 - (_bear_T_exit - 0.05) * 2.4))
+            _ml_trail_mult = max(0.7, min(1.5, 1.4 - (_bear_t_exit - 0.05) * 2.4))
             _paper_ec = (
                 getattr(self._paper_engine, "_exit_controller", None)
                 if self._paper_engine is not None
@@ -1536,7 +1536,8 @@ class StrategyNode(Node):
                 _paper_ec.config.short_trail_multiplier = _base_short_m * _ml_trail_mult
                 logger.debug(
                     "V148 meta_exit: bear_T=%.3f trail_mult=%.3f (long=%.3f short=%.3f)",
-                    _bear_T_exit, _ml_trail_mult,
+                    _bear_t_exit,
+                    _ml_trail_mult,
                     _paper_ec.config.long_trail_multiplier,
                     _paper_ec.config.short_trail_multiplier,
                 )
@@ -1561,7 +1562,9 @@ class StrategyNode(Node):
                         macro_snapshot={},
                     )
                     _meta_provider = getattr(self.features, "llm_analyst_provider", "claude")
-                    _meta_model = getattr(self.features, "llm_analyst_model", "claude-haiku-4-5-20251001")
+                    _meta_model = getattr(
+                        self.features, "llm_analyst_model", "claude-haiku-4-5-20251001"
+                    )
                     _meta_key_env = getattr(self.features, "llm_analyst_api_key_env", None)
                     _meta_base_url = getattr(self.features, "llm_analyst_api_base", None)
                     _llm_result = self._llm_meta_ctrl.call(
@@ -2647,8 +2650,10 @@ class StrategyNode(Node):
             _cont_size_short_mult = max(0.5, min(1.5, 0.5 + _regime_w_bear * 2.0))
             logger.debug(
                 "V148 cont_sizing: bull=%.2f long_mult=%.2f bear=%.2f short_mult=%.2f",
-                _regime_w_bull, _cont_size_long_mult,
-                _regime_w_bear, _cont_size_short_mult,
+                _regime_w_bull,
+                _cont_size_long_mult,
+                _regime_w_bear,
+                _cont_size_short_mult,
             )
 
         # V102: crisis_short_bias per-direction size multipliers (applied before kelly).

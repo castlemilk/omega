@@ -48,10 +48,11 @@ _CLAUDE_MODEL_ALIASES: dict[str, str] = {
 
 # OpenAI-compatible provider configs (key env var → (base_url, default_model))
 _OPENAI_COMPAT_PROVIDERS: dict[str, tuple[str, str]] = {
-    "KIMI_API_KEY":    ("https://api.moonshot.cn/v1", "moonshot-v1-8k"),
-    "GLM_API_KEY":     ("https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
+    "KIMI_API_KEY": ("https://api.moonshot.cn/v1", "moonshot-v1-8k"),
+    "GLM_API_KEY": ("https://open.bigmodel.cn/api/paas/v4", "glm-4-flash"),
     "MINIMAX_API_KEY": ("https://api.minimax.chat/v1", "MiniMax-Text-01"),
 }
+
 
 def _auto_provider() -> tuple[str, str, str] | None:
     """Return (key_env, base_url, model) for first available openai-compat key.
@@ -69,6 +70,8 @@ def _auto_provider() -> tuple[str, str, str] | None:
             env_label = _HERMES_PROVIDER_MAP.get(pool_key, ("UNKNOWN",))[0]
             return env_label, result[1], model
     return None
+
+
 # ---------------------------------------------------------------------------
 # Hermes auth.json fallback key loader
 # ---------------------------------------------------------------------------
@@ -77,10 +80,18 @@ _HERMES_PATH = "~/.hermes/auth.json"
 
 # Maps credential_pool key → (label_used_as_env_name, correct_base_url, model)
 _HERMES_PROVIDER_MAP: dict[str, tuple[str, str, str]] = {
-    "zai":      ("GLM_API_KEY",      "https://api.z.ai/api/coding/paas/v4", "glm-4.5"),
-    "minimax":  ("MINIMAX_API_KEY",  "https://api.minimax.io/anthropic",    "claude-3-5-haiku-20241022"),
-    "alibaba":  ("DASHSCOPE_API_KEY","https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "qwen-plus"),
-    "kimi-coding": ("KIMI_API_KEY",  "https://api.moonshot.ai/v1",          "moonshot-v1-8k"),
+    "zai": ("GLM_API_KEY", "https://api.z.ai/api/coding/paas/v4", "glm-4.5"),
+    "minimax": (
+        "MINIMAX_API_KEY",
+        "https://api.minimax.io/anthropic",
+        "claude-3-5-haiku-20241022",
+    ),
+    "alibaba": (
+        "DASHSCOPE_API_KEY",
+        "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+        "qwen-plus",
+    ),
+    "kimi-coding": ("KIMI_API_KEY", "https://api.moonshot.ai/v1", "moonshot-v1-8k"),
 }
 
 # MiniMax uses Anthropic protocol (x-api-key header), not Bearer
@@ -90,6 +101,7 @@ _ANTHROPIC_COMPAT_POOLS = {"minimax"}
 def _load_hermes_auth() -> dict:
     """Load ~/.hermes/auth.json, return {} on failure."""
     import os
+
     try:
         p = os.path.expanduser(_HERMES_PATH)
         with open(p) as f:
@@ -110,7 +122,6 @@ def _hermes_key(pool_key: str) -> tuple[str, str] | None:
         if token and base_url:
             return token, base_url
     return None
-
 
 
 # ---------------------------------------------------------------------------
@@ -266,7 +277,9 @@ class LLMMetaController:
         self.last_call_cycle = -1  # reset; set after successful return
 
         try:
-            result = self._call_provider(context, provider, model, key_env=key_env, base_url=base_url)
+            result = self._call_provider(
+                context, provider, model, key_env=key_env, base_url=base_url
+            )
             reasoning = result.get("reasoning", "")
             if reasoning:
                 logger.info("V145 llm_meta_ctrl reasoning: %s", reasoning[:200])
@@ -337,17 +350,20 @@ class LLMMetaController:
 
         if is_anthropic_compat:
             url = base_url + "/v1/messages"
-            body = json.dumps({
-                "model": model,
-                "max_tokens": 2048,
-                "system": _SYSTEM_PROMPT,
-                "messages": [{"role": "user", "content": context}],
-            }).encode()
+            body = json.dumps(
+                {
+                    "model": model,
+                    "max_tokens": 2048,
+                    "system": _SYSTEM_PROMPT,
+                    "messages": [{"role": "user", "content": context}],
+                }
+            ).encode()
             headers = {
                 "Content-Type": "application/json",
                 "x-api-key": api_key,
                 "anthropic-version": "2023-06-01",
             }
+
             def _extract(raw):
                 # Skip thinking blocks; fall back to thinking text if no text block
                 thinking_text = ""
@@ -359,18 +375,21 @@ class LLMMetaController:
                 return thinking_text or raw["content"][0].get("text", "")
         else:
             url = base_url + "/chat/completions"
-            body = json.dumps({
-                "model": model,
-                "max_tokens": 512,
-                "messages": [
-                    {"role": "system", "content": _SYSTEM_PROMPT},
-                    {"role": "user", "content": context},
-                ],
-            }).encode()
+            body = json.dumps(
+                {
+                    "model": model,
+                    "max_tokens": 512,
+                    "messages": [
+                        {"role": "system", "content": _SYSTEM_PROMPT},
+                        {"role": "user", "content": context},
+                    ],
+                }
+            ).encode()
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {api_key}",
             }
+
             def _extract(raw):
                 return raw["choices"][0]["message"]["content"]
 

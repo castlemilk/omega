@@ -348,13 +348,14 @@ class StrategyFileSystem:
         path = self._iter_dir(iteration_id) / "strategy_snapshot.json"
         if not path.exists():
             return {}
-        return json.loads(path.read_text())
+        data: dict[str, Any] = json.loads(path.read_text())
+        return data
 
     def next_iteration_id(self) -> int:
         """Return the next available iteration ID (1-based)."""
         if not self._index:
             return 1
-        return max(e["iteration_id"] for e in self._index) + 1
+        return int(max(e["iteration_id"] for e in self._index)) + 1
 
 
 # ---------------------------------------------------------------------------

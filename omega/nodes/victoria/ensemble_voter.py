@@ -14,6 +14,7 @@ Usage
     result = voter.from_signal_dict(sig)
     # result.composite replaces the old weighted-sum composite
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -32,14 +33,14 @@ class Vote:
 class EnsembleResult:
     """Result of ensemble vote aggregation."""
 
-    direction: str          # "long", "short", or "abstain"
-    conviction: float       # agreement_ratio × max_confidence_of_majority ∈ [0, 1]
+    direction: str  # "long", "short", or "abstain"
+    conviction: float  # agreement_ratio × max_confidence_of_majority ∈ [0, 1]
     agreement_ratio: float  # majority_count / total_non_abstaining ∈ [0, 1]
     n_votes: int
     n_abstain: int
     long_votes: int
     short_votes: int
-    composite: float        # backward-compat: +conviction for long, -conviction for short, 0 for abstain
+    composite: float  # backward-compat: +conviction for long, -conviction for short, 0 for abstain
     vote_breakdown: list[dict] = field(default_factory=list)
 
 
@@ -53,9 +54,7 @@ class EnsembleVoter:
     # Core methods
     # ------------------------------------------------------------------
 
-    def signal_to_vote(
-        self, signal_name: str, value: float, max_expected: float = 1.0
-    ) -> Vote:
+    def signal_to_vote(self, signal_name: str, value: float, max_expected: float = 1.0) -> Vote:
         """Convert a raw signal value to a Vote.
 
         Parameters
@@ -159,9 +158,7 @@ class EnsembleVoter:
             ``"_signal"`` plus ``"sma_crossover"`` are used automatically.
         """
         if signal_keys is None:
-            signal_keys = [
-                k for k in sig if k.endswith("_signal") or k == "sma_crossover"
-            ]
+            signal_keys = [k for k in sig if k.endswith("_signal") or k == "sma_crossover"]
 
         votes: list[Vote] = []
         for key in signal_keys:

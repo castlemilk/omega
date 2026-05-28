@@ -398,6 +398,11 @@ class SignalGenerationNode(Node):
 
         # V138 geopolitical_signals: GDELT DOC 2.0 event signals
         self._geo_signal: Any = None
+        # _geo_backtest_ts: when set (by set_geo_backtest_ts()), use historical GDELT replay.
+        # _geo_backtest_disabled: True in backtest mode until a replay timestamp is provided,
+        #   preventing current-day geopolitics from contaminating historical snapshots.
+        self._geo_backtest_ts: Any | None = None
+        self._geo_backtest_disabled: bool = False
         if (
             _HAS_GEOPOLITICAL
             and self._features
@@ -618,6 +623,16 @@ class SignalGenerationNode(Node):
         except Exception:
             pass
 
+    def disable_geo_in_backtest(self) -> None:
+        """Disable geopolitical signals for backtest runs without a known replay timestamp.
+
+        Called from run_training.py when backtest_snapshot is set but no per-bar
+        timestamp can be injected. Prevents contamination of historical replays with
+        current-day GDELT data.
+        """
+        self._geo_backtest_disabled = True
+        logger.info("GeopoliticalSignal disabled for backtest (no replay timestamp configured)")
+
     def warm_start_signals(self, pre_signal_dicts: list[dict[str, Any]]) -> None:
         """Pre-seed SignalMemory with signal history before trading begins.
 
@@ -706,15 +721,18 @@ class SignalGenerationNode(Node):
                 logger.warning("SPYSignal compute error: %s", _exc)
 
         # V138: geopolitical signals (market-level, applied to all tickers)
+        # In backtest mode (_geo_backtest_ts is not None), use the snapshot's replay
+        # timestamp; when no timestamp is configured for backtest, skip to avoid
+        # contaminating historical replay with current-day geopolitics.
         _geo_signals: dict[str, float] = {}
-        if self._geo_signal is not None:
+        if self._geo_signal is not None and not self._geo_backtest_disabled:
             try:
                 import datetime as _dt_mod
-                _is_hist = self._features is not None and getattr(
-                    self._features, "backtest_mode", False
-                )
+
+                _geo_ts = self._geo_backtest_ts or _dt_mod.datetime.now(_dt_mod.UTC)
+                _is_hist = self._geo_backtest_ts is not None
                 _geo_signals = self._geo_signal.compute(
-                    timestamp=_dt_mod.datetime.now(_dt_mod.timezone.utc),
+                    timestamp=_geo_ts,
                     is_historical=_is_hist,
                 )
             except Exception as _geo_exc:

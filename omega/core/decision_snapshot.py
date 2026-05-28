@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -315,7 +316,7 @@ class DecisionReader:
                     logger.warning("DecisionReader: line %d parse error: %s", lineno, exc)
         return snapshots
 
-    def iter_snapshots(self):
+    def iter_snapshots(self) -> Iterator[DecisionSnapshot]:
         """Generator — yields one DecisionSnapshot at a time (memory-efficient)."""
         if not self._path.exists():
             return

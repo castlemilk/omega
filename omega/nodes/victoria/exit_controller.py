@@ -206,14 +206,13 @@ class ExitController:
         # ── 0. Zero-MFE early exit (V141) ───────────────────────────────
         # Close positions that never showed profit after N cycles. Forensics:
         # all top losers had mfe=/bin/zsh after 2-4 cycles — wrong from the first tick.
-        if cfg.zero_mfe_early_exit_cycles > 0 and age >= cfg.zero_mfe_early_exit_cycles:
-            if mfe <= 0.0 and unrealized < 0.0:
-                return True, (
-                    f"zero_mfe_exit("
-                    f"age={age},"
-                    f"mfe={mfe:.2f},"
-                    f"unreal={unrealized:.2f})"
-                )
+        if (
+            cfg.zero_mfe_early_exit_cycles > 0
+            and age >= cfg.zero_mfe_early_exit_cycles
+            and mfe <= 0.0
+            and unrealized < 0.0
+        ):
+            return True, (f"zero_mfe_exit(age={age},mfe={mfe:.2f},unreal={unrealized:.2f})")
 
         # ── 1. Early loss time-stop (V131) ──────────────────────────────
         # Close losers that haven't recovered after N cycles. This fires BEFORE

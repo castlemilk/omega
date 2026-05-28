@@ -16,14 +16,14 @@ Learning rules (adaptive-engine-v2.md §3):
 State is persisted to data/meta_learner_state.json across cycles and runs,
 matching the pattern of reinforcement_state.json.
 """
+
 from __future__ import annotations
 
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -33,25 +33,30 @@ ROLLING_WINDOW = 20  # trades per regime buffer
 
 T_MIN: float = 0.05
 T_MAX: float = 0.30
-T_SHARPEN: float = 0.01   # delta when PF > PF_HIGH
-T_SOFTEN: float = 0.02    # delta when PF < PF_LOW
+T_SHARPEN: float = 0.01  # delta when PF > PF_HIGH
+T_SOFTEN: float = 0.02  # delta when PF < PF_LOW
 PF_HIGH: float = 1.5
 PF_LOW: float = 0.8
 CENTER_ALPHA: float = 0.05  # EMA weight for center adjustment toward winners
 
 SIGNAL_FAMILIES = [
-    "momentum", "mean_reversion", "microstructure", "macro", "sentiment", "geometry"
+    "momentum",
+    "mean_reversion",
+    "microstructure",
+    "macro",
+    "sentiment",
+    "geometry",
 ]
 
 # Maps (regime, side) → which surface dimension to adjust
 _REGIME_SIDE_SURFACE = {
-    ("crisis",   "long"):  "bear_long",
-    ("crisis",   "short"): "bear_short",
-    ("high_vol", "long"):  "bear_long",
+    ("crisis", "long"): "bear_long",
+    ("crisis", "short"): "bear_short",
+    ("high_vol", "long"): "bear_long",
     ("high_vol", "short"): "bear_short",
-    ("normal",   "long"):  "composite_long",
-    ("normal",   "short"): "composite_short",
-    ("trending", "long"):  "composite_long",
+    ("normal", "long"): "composite_long",
+    ("normal", "short"): "composite_short",
+    ("trending", "long"): "composite_long",
     ("trending", "short"): "composite_short",
 }
 
@@ -59,6 +64,7 @@ _REGIME_SIDE_SURFACE = {
 # ---------------------------------------------------------------------------
 # Internal data structures
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class _TradeEntry:
@@ -71,19 +77,22 @@ class _TradeEntry:
 @dataclass
 class _RegimeBuffer:
     """Rolling window of at most ROLLING_WINDOW trades for one regime."""
-    trades: List[dict] = field(default_factory=list)
+
+    trades: list[dict] = field(default_factory=list)
 
     def push(self, entry: _TradeEntry) -> None:
-        self.trades.append({
-            "pnl": entry.pnl,
-            "side": entry.side,
-            "entry_confidence": entry.entry_confidence,
-            "entry_value": entry.entry_value,
-        })
+        self.trades.append(
+            {
+                "pnl": entry.pnl,
+                "side": entry.side,
+                "entry_confidence": entry.entry_confidence,
+                "entry_value": entry.entry_value,
+            }
+        )
         if len(self.trades) > ROLLING_WINDOW:
             self.trades.pop(0)
 
-    def profit_factor(self) -> Optional[float]:
+    def profit_factor(self) -> float | None:
         """Return rolling PF, or None if fewer than 5 trades."""
         if len(self.trades) < 5:
             return None
@@ -93,7 +102,7 @@ class _RegimeBuffer:
             return 9.99 if wins else None
         return sum(wins) / sum(losses) if wins else 0.0
 
-    def mean_entry_value_winners(self) -> Optional[float]:
+    def mean_entry_value_winners(self) -> float | None:
         winners = [t["entry_value"] for t in self.trades if t["pnl"] > 0]
         return sum(winners) / len(winners) if winners else None
 
@@ -101,7 +110,7 @@ class _RegimeBuffer:
         return {"trades": self.trades, "pf": self.profit_factor()}
 
     @classmethod
-    def from_dict(cls, d: dict) -> "_RegimeBuffer":
+    def from_dict(cls, d: dict) -> _RegimeBuffer:
         buf = cls()
         buf.trades = d.get("trades", [])
         # trim to window in case saved state had a different window size
@@ -112,6 +121,7 @@ class _RegimeBuffer:
 @dataclass
 class _SurfaceState:
     """Learned T and center for one confidence surface dimension."""
+
     center: float
     temperature: float
     initial_center: float
@@ -128,7 +138,7 @@ class _SurfaceState:
         }
 
     @classmethod
-    def from_dict(cls, d: dict, defaults: "_SurfaceState") -> "_SurfaceState":
+    def from_dict(cls, d: dict, defaults: _SurfaceState) -> _SurfaceState:
         return cls(
             center=d.get("center", defaults.center),
             temperature=d.get("temperature", defaults.temperature),
@@ -141,6 +151,7 @@ class _SurfaceState:
 # ---------------------------------------------------------------------------
 # MetaLearner
 # ---------------------------------------------------------------------------
+
 
 class MetaLearner:
     """
@@ -171,24 +182,24 @@ class MetaLearner:
 
     def __init__(self, state_file: Path = _DEFAULT_STATE_FILE) -> None:
         self.state_file = Path(state_file)
-        self._regime_buffers: Dict[str, _RegimeBuffer] = {
-            "crisis":   _RegimeBuffer(),
+        self._regime_buffers: dict[str, _RegimeBuffer] = {
+            "crisis": _RegimeBuffer(),
             "high_vol": _RegimeBuffer(),
-            "normal":   _RegimeBuffer(),
+            "normal": _RegimeBuffer(),
             "trending": _RegimeBuffer(),
         }
-        self._signal_ic: Dict[str, float] = {f: 0.0 for f in SIGNAL_FAMILIES}
-        self._surfaces: Dict[str, _SurfaceState] = self._default_surfaces()
+        self._signal_ic: dict[str, float] = {f: 0.0 for f in SIGNAL_FAMILIES}
+        self._surfaces: dict[str, _SurfaceState] = self._default_surfaces()
         self._load_state()
 
     # ── Defaults ──────────────────────────────────────────────────────────
 
-    def _default_surfaces(self) -> Dict[str, _SurfaceState]:
+    def _default_surfaces(self) -> dict[str, _SurfaceState]:
         # Mirror SurfaceConfig defaults from confidence_surface.py
         return {
-            "bear_long":       _SurfaceState(0.35, 0.12, 0.35, 0.12),
-            "bear_short":      _SurfaceState(0.35, 0.12, 0.35, 0.12),
-            "composite_long":  _SurfaceState(0.08, 0.04, 0.08, 0.04),
+            "bear_long": _SurfaceState(0.35, 0.12, 0.35, 0.12),
+            "bear_short": _SurfaceState(0.35, 0.12, 0.35, 0.12),
+            "composite_long": _SurfaceState(0.08, 0.04, 0.08, 0.04),
             "composite_short": _SurfaceState(0.05, 0.03, 0.05, 0.03),
         }
 
@@ -215,7 +226,7 @@ class MetaLearner:
     def save_state(self) -> None:
         payload = {
             "version": 2,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(UTC).isoformat(),
             "surfaces": {name: s.to_dict() for name, s in self._surfaces.items()},
             "regime_buffers": {r: b.to_dict() for r, b in self._regime_buffers.items()},
             "signal_ic": {f: round(ic, 6) for f, ic in self._signal_ic.items()},
@@ -235,7 +246,7 @@ class MetaLearner:
         regime: str,
         entry_confidence: float = 0.5,
         entry_value: float = 0.0,
-        signal_contribs: Optional[Dict[str, float]] = None,
+        signal_contribs: dict[str, float] | None = None,
     ) -> None:
         """
         Record a closed trade and apply the learning rule.
@@ -279,29 +290,34 @@ class MetaLearner:
         surf = self._surfaces[surface_key]
 
         # Temperature adjustment
-        old_T = surf.temperature
+        old_temp = surf.temperature
         if pf > PF_HIGH:
             surf.temperature = max(T_MIN, surf.temperature - T_SHARPEN)
         elif pf < PF_LOW:
             surf.temperature = min(T_MAX, surf.temperature + T_SOFTEN)
 
-        if surf.temperature != old_T:
+        if surf.temperature != old_temp:
             surf.n_adjustments += 1
             logger.debug(
                 "meta_learner [%s]: T %.4f→%.4f  (regime=%s side=%s PF=%.2f n=%d)",
-                surface_key, old_T, surf.temperature, regime, side, pf, surf.n_adjustments,
+                surface_key,
+                old_temp,
+                surf.temperature,
+                regime,
+                side,
+                pf,
+                surf.n_adjustments,
             )
 
         # Center adjustment: EMA toward mean entry_value of winners
         win_val = buf.mean_entry_value_winners()
         if win_val is not None and 0.0 < abs(win_val) < 1.0:
-            old_center = surf.center
             surf.center = (1.0 - CENTER_ALPHA) * surf.center + CENTER_ALPHA * win_val
             surf.center = max(0.01, min(0.95, surf.center))
 
     # ── Signal IC ─────────────────────────────────────────────────────────
 
-    def _update_signal_ic(self, contribs: Dict[str, float], was_win: bool) -> None:
+    def _update_signal_ic(self, contribs: dict[str, float], was_win: bool) -> None:
         outcome = 1.0 if was_win else -1.0
         for family, weight in contribs.items():
             if family not in self._signal_ic:
@@ -319,8 +335,10 @@ class MetaLearner:
         Lazy import to avoid circular dependency at module load time.
         """
         from omega.nodes.victoria.confidence_surface import (
-            ConfidenceSurface, SurfaceConfig, SurfaceParams,
+            SurfaceConfig,
+            SurfaceParams,
         )
+
         defaults = SurfaceConfig()
         return SurfaceConfig(
             bear_long=SurfaceParams(
@@ -343,18 +361,15 @@ class MetaLearner:
             min_confidence=defaults.min_confidence,
         )
 
-    def get_signal_family_emphasis(self) -> Dict[str, float]:
+    def get_signal_family_emphasis(self) -> dict[str, float]:
         """
         Return per-family multipliers for signal weighting.
         High IC → emphasis > 1.0; low/negative IC → < 1.0.
         Range: [0.5, 1.5].
         """
-        return {
-            family: max(0.5, min(1.5, 1.0 + ic))
-            for family, ic in self._signal_ic.items()
-        }
+        return {family: max(0.5, min(1.5, 1.0 + ic)) for family, ic in self._signal_ic.items()}
 
-    def summary(self) -> Dict:
+    def summary(self) -> dict:
         return {
             "surfaces": {
                 name: {
@@ -374,9 +389,9 @@ class MetaLearner:
     def reset(self) -> None:
         """Reset all learned parameters to defaults (useful for testing)."""
         self._regime_buffers = {
-            "crisis":   _RegimeBuffer(),
+            "crisis": _RegimeBuffer(),
             "high_vol": _RegimeBuffer(),
-            "normal":   _RegimeBuffer(),
+            "normal": _RegimeBuffer(),
             "trending": _RegimeBuffer(),
         }
         self._signal_ic = {f: 0.0 for f in SIGNAL_FAMILIES}

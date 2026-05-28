@@ -60,7 +60,6 @@ import math
 from dataclasses import dataclass, field
 from typing import Literal
 
-
 # ---------------------------------------------------------------------------
 # Primitives
 # ---------------------------------------------------------------------------
@@ -107,9 +106,7 @@ class SurfaceParams:
 
     def __post_init__(self) -> None:
         if self.temperature <= 0:
-            raise ValueError(
-                f"SurfaceParams.temperature must be > 0, got {self.temperature}"
-            )
+            raise ValueError(f"SurfaceParams.temperature must be > 0, got {self.temperature}")
 
 
 @dataclass
@@ -452,11 +449,9 @@ class ConfidenceSurface:
         """
         results: dict[float, float] = {}
         original_center = (
-            self.config.bear_long.center
-            if direction == "long"
-            else self.config.bear_short.center
+            self.config.bear_long.center if direction == "long" else self.config.bear_short.center
         )
-        original_T = (
+        original_temperature = (
             self.config.bear_long.temperature
             if direction == "long"
             else self.config.bear_short.temperature
@@ -494,10 +489,10 @@ class ConfidenceSurface:
         # Restore original parameters
         if direction == "long":
             self.config.bear_long.center = original_center
-            self.config.bear_long.temperature = original_T
+            self.config.bear_long.temperature = original_temperature
         else:
             self.config.bear_short.center = original_center
-            self.config.bear_short.temperature = original_T
+            self.config.bear_short.temperature = original_temperature
 
         return results
 
@@ -567,7 +562,7 @@ def calibrate_from_trades(
         bp_vals = [float(t["bear_prob"]) for t in boundary]
         mean_bp = sum(bp_vals) / len(bp_vals)
         variance = sum((v - mean_bp) ** 2 for v in bp_vals) / len(bp_vals)
-        std_bp = variance ** 0.5
+        std_bp = variance**0.5
         temperature = max(0.05, min(0.25, std_bp * 1.5))
     else:
         temperature = 0.12  # default
@@ -611,9 +606,7 @@ def run_sensitivity_test(
     except FileNotFoundError:
         return {"error": f"CSV not found: {csv_path}"}
 
-    side_trades = [
-        t for t in trades if str(t.get("side", "")).lower() == direction
-    ]
+    side_trades = [t for t in trades if str(t.get("side", "")).lower() == direction]
     if not side_trades:
         return {"error": f"No {direction} trades in {csv_path}"}
 
@@ -621,9 +614,9 @@ def run_sensitivity_test(
 
     # Sigmoid sensitivity per temperature
     pnl_by_temp: dict[float, dict[float, float]] = {}
-    for T in temperatures:
-        grid = surface.sensitivity_grid(side_trades, centers, direction, temperature=T)
-        pnl_by_temp[T] = grid
+    for temp in temperatures:
+        grid = surface.sensitivity_grid(side_trades, centers, direction, temperature=temp)
+        pnl_by_temp[temp] = grid
 
     # Hard-gate comparison: simulate binary gate at each center
     hard_gate_pnl: dict[float, float] = {}
@@ -644,10 +637,7 @@ def run_sensitivity_test(
 
     # Sensitivity ranges
     hard_range = max(hard_gate_pnl.values()) - min(hard_gate_pnl.values())
-    sigmoid_ranges = {
-        T: max(g.values()) - min(g.values())
-        for T, g in pnl_by_temp.items()
-    }
+    sigmoid_ranges = {T: max(g.values()) - min(g.values()) for T, g in pnl_by_temp.items()}
     best_sigmoid_range = min(sigmoid_ranges.values())
 
     return {

@@ -147,7 +147,7 @@ class PaperTradingEngine:
 
     def _total_open_notional(self) -> float:
         """Sum of all open position notional values."""
-        return sum(pos.get("size", 0.0) for pos in self._positions.values())
+        return float(sum(pos.get("size", 0.0) for pos in self._positions.values()))
 
     def _check_portfolio_limits(self, symbol: str, notional: float) -> tuple[bool, str]:
         """

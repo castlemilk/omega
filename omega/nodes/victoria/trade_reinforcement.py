@@ -79,9 +79,9 @@ logger = logging.getLogger("omega.victoria.trade_reinforcement")
 
 _DEFAULT_PATH = "data/reinforcement_state.json"
 _EMA_ALPHA = 0.03  # Reduced from 0.1 — slower convergence prevents single bad runs
-                   # from swinging weights wildly. At alpha=0.1, one -$263 run
-                   # (V118) overwrote months of signal calibration. At 0.03,
-                   # a new run has ~3% influence vs ~10%.
+# from swinging weights wildly. At alpha=0.1, one -$263 run
+# (V118) overwrote months of signal calibration. At 0.03,
+# a new run has ~3% influence vs ~10%.
 _MIN_TRADES = 5  # trades before adjustments activate
 _MULT_SCALE = 0.5  # score * scale → offset from 1.0
 _MULT_FLOOR = 0.2

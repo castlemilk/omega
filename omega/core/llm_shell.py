@@ -191,7 +191,8 @@ def invoke_json(
                 break
 
     try:
-        return json.loads(text)
+        parsed: dict | None = json.loads(text)
+        return parsed
     except Exception:
         logger.debug("llm_shell.invoke_json: could not parse JSON from: %s", text[:200])
         return None

@@ -105,11 +105,16 @@ _CONFIG_LABELS = {
     "bt_v141_crisis":       "v141_crisis_alpha",
     "bt_v141_no_llm":       "v141_crisis_no_llm",
     "bt_v141_no_llm_crisis": "v141_crisis_no_llm",
-    # V143: continuous confidence surfaces (Phase 1)
-    "bt_v143":              "v143_surfaces",
-    "bt_v143_crisis":       "v143_surfaces",
-    "bt_v143_trend":        "v143_surfaces",
-    "bt_v143_recent":       "v143_surfaces",
+    # V143: continuous confidence surfaces (Phase 1) — v3 had long-gate bug
+    "bt_v143":              "v143_surfaces_buggy",
+    "bt_v143_crisis":       "v143_surfaces_buggy",
+    "bt_v143_trend":        "v143_surfaces_buggy",
+    "bt_v143_recent":       "v143_surfaces_buggy",
+    # V143v2: Phase 1 with long surface gate fixed
+    "bt_v143v2":            "v143_surfaces",
+    "bt_v143v2_crisis":     "v143_surfaces",
+    "bt_v143v2_trend":      "v143_surfaces",
+    "bt_v143v2_recent":     "v143_surfaces",
     # V144: meta-learning layer (Phase 2)
     "bt_v144":              "v144_meta_learner",
     "bt_v144_crisis":       "v144_meta_learner",

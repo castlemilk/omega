@@ -91,7 +91,9 @@ class SignalMemory:
                     ticker_hist[k] = deque(maxlen=self.lookback)
                 ticker_hist[k].append(float(v))
 
-    def get_temporal_features(self, ticker: str, manifold_regime: str = "transitional") -> dict[str, float]:
+    def get_temporal_features(
+        self, ticker: str, manifold_regime: str = "transitional"
+    ) -> dict[str, float]:
         """Compute temporal features from stored signal history for *ticker*.
 
         Requires at least 3 cycles of history for any feature to be computed.
@@ -289,9 +291,10 @@ class SignalMemory:
         if manifold_regime == "trending":
             adjusted = ema
         elif manifold_regime == "mean_reversion":
-            # Crisis/bear regimes map to mean_reversion — dampen momentum signal 0.5×
-            # rather than sign-flip to avoid injecting spurious directional noise.
-            adjusted = ema * 0.5
+            # Crisis/bear regimes: invert direction (counter-trend) then halve magnitude.
+            # Sign-flip provides short-direction bias in downtrends (V139 belt-and-suspenders).
+            raw_flipped = -abs(ema) if abs(ema) > 0.1 else ema
+            adjusted = raw_flipped * 0.5
         else:  # transitional
             adjusted = ema * 0.5
         return max(-1.0, min(1.0, adjusted)), acceleration

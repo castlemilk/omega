@@ -4,6 +4,7 @@ Phase 5 (V147): Bayesian Regime Detector.
 Replaces hard bear_prob/bull_prob threshold trees with a probabilistic
 posterior P(regime | signals, LLM) over four regimes.
 """
+
 from __future__ import annotations
 
 import json
@@ -11,7 +12,7 @@ import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import ClassVar
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ REGIMES = ["crisis", "high_vol", "normal", "trending"]
 class RegimePrior:
     """P(R | LLM_assessment) — uniform by default."""
 
-    probs: Dict[str, float] = field(
+    probs: dict[str, float] = field(
         default_factory=lambda: {
             "crisis": 0.25,
             "high_vol": 0.25,
@@ -69,38 +70,37 @@ class RegimeLikelihood:
     Uses online Welford algorithm for running mean and variance.
     """
 
-    def __init__(self, signal_names: List[str]):
+    def __init__(self, signal_names: list[str]):
         self.signal_names = signal_names
         # Per-regime, per-signal running stats: {regime: {signal: [n, mean, M2]}}
-        self._stats: Dict[str, Dict[str, List[float]]] = {
-            regime: {sig: [0.0, 0.0, 0.0] for sig in signal_names}
-            for regime in REGIMES
+        self._stats: dict[str, dict[str, list[float]]] = {
+            regime: {sig: [0.0, 0.0, 0.0] for sig in signal_names} for regime in REGIMES
         }
 
-    def update(self, regime: str, signal_values: Dict[str, float]) -> None:
+    def update(self, regime: str, signal_values: dict[str, float]) -> None:
         """Welford online update for regime signal statistics."""
         if regime not in self._stats:
             return
         for sig_name, value in signal_values.items():
             if sig_name not in self._stats[regime]:
                 continue
-            n, mean, M2 = self._stats[regime][sig_name]
+            n, mean, m2 = self._stats[regime][sig_name]
             n += 1
             delta = value - mean
             mean += delta / n
             delta2 = value - mean
-            M2 += delta * delta2
-            self._stats[regime][sig_name] = [n, mean, M2]
+            m2 += delta * delta2
+            self._stats[regime][sig_name] = [n, mean, m2]
 
     def get_distribution(self, regime: str, signal: str) -> SignalDistribution:
         stats = self._stats.get(regime, {}).get(signal, [0.0, 0.0, 0.0])
-        n, mean, M2 = stats
+        n, mean, m2 = stats
         if n < 3:
             return SignalDistribution(mu=0.0, sigma=0.3)  # uninformative prior
-        sigma = math.sqrt(M2 / (n - 1)) if n > 1 else 0.3
+        sigma = math.sqrt(m2 / (n - 1)) if n > 1 else 0.3
         return SignalDistribution(mu=mean, sigma=max(sigma, 0.01))
 
-    def log_likelihood(self, regime: str, signal_values: Dict[str, float]) -> float:
+    def log_likelihood(self, regime: str, signal_values: dict[str, float]) -> float:
         """Compute Σ log P(signal_i | regime) across all signals."""
         total = 0.0
         for sig_name, value in signal_values.items():
@@ -112,7 +112,7 @@ class RegimeLikelihood:
         return self._stats
 
     @classmethod
-    def from_dict(cls, d: dict, signal_names: List[str]) -> "RegimeLikelihood":
+    def from_dict(cls, d: dict, signal_names: list[str]) -> RegimeLikelihood:
         obj = cls(signal_names)
         for regime, sigs in d.items():
             if regime in obj._stats:
@@ -126,7 +126,7 @@ class RegimeLikelihood:
 class RegimePosterior:
     """P(R | signals, LLM) ∝ P(signals | R) × P(R | LLM)"""
 
-    probs: Dict[str, float]
+    probs: dict[str, float]
 
     @property
     def crisis(self) -> float:
@@ -145,7 +145,7 @@ class RegimePosterior:
         return self.probs.get("trending", 0.25)
 
     @property
-    def dominant(self) -> Tuple[str, float]:
+    def dominant(self) -> tuple[str, float]:
         """Return (regime_name, probability) of most likely regime."""
         best = max(self.probs, key=self.probs.get)  # type: ignore[arg-type]
         return best, self.probs[best]
@@ -188,7 +188,7 @@ class BayesianRegimeDetector:
         detector.save_state()
     """
 
-    _DEFAULT_SIGNAL_NAMES = [
+    _DEFAULT_SIGNAL_NAMES: ClassVar[list[str]] = [
         "momentum_signal",
         "rsi_signal",
         "macd_signal",
@@ -201,7 +201,7 @@ class BayesianRegimeDetector:
 
     def __init__(
         self,
-        signal_names: Optional[List[str]] = None,
+        signal_names: list[str] | None = None,
         state_file: Path = Path("data/bayesian_regime_state.json"),
     ):
         self.signal_names = signal_names or self._DEFAULT_SIGNAL_NAMES
@@ -213,8 +213,8 @@ class BayesianRegimeDetector:
 
     def compute_posterior(
         self,
-        signal_values: Dict[str, float],
-        prior: Optional[RegimePrior] = None,
+        signal_values: dict[str, float],
+        prior: RegimePrior | None = None,
     ) -> RegimePosterior:
         """
         Compute P(regime | signals) using Bayes' rule.
@@ -229,7 +229,7 @@ class BayesianRegimeDetector:
         # Filter to known signals
         known_signals = {k: v for k, v in signal_values.items() if k in self.signal_names}
 
-        log_posteriors: Dict[str, float] = {}
+        log_posteriors: dict[str, float] = {}
         for regime in REGIMES:
             log_p_prior = math.log(max(_prior.probs.get(regime, 0.25), 1e-10))
             log_p_signals = self._likelihood.log_likelihood(regime, known_signals)
@@ -243,7 +243,7 @@ class BayesianRegimeDetector:
 
         return RegimePosterior(probs=probs)
 
-    def update_likelihood(self, regime: str, signal_values: Dict[str, float]) -> None:
+    def update_likelihood(self, regime: str, signal_values: dict[str, float]) -> None:
         """Online update of signal distributions for a regime."""
         self._likelihood.update(regime, signal_values)
         self._n_updates += 1
