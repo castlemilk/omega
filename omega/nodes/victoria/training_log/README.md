@@ -20,13 +20,15 @@ dirs, memory files, and chat history.
 | Gate    | Best version          | PnL        | Trades | WR    | PF   | Notes                                                  |
 |---------|-----------------------|-----------:|-------:|------:|-----:|--------------------------------------------------------|
 | recent  | **V199** (carry sub)  | **+$2,478**| 67     | 34.3% | 1.13 | Carry-only sub-strategy + carry in per-ticker ensemble |
-| trend   | V172 (`pruned`)       | **+$18,437**| 64    | 43.8% | 2.07 | Ridge calibrator + signal pruning (V199 regressed here)|
+| trend   | V172 (`pruned`)       | **+$18,437**| 64    | 43.8% | 2.07 | Ridge calibrator + signal pruning (V199/V200 regressed)|
 | crisis  | *no positive run*     | best −$35K | —      | —     | —    | Whole stack is trend-biased; crisis remains unsolved   |
 
 Regime parity is the #1 open problem: trend & recent positive, crisis
 consistently negative across V170s–V190s. V199 broke the recent
-high-water but regressed on trend — V200 owns the trend-regime
-suppressor that should recover both.
+high-water but regressed on trend; V200's trend-regime suppressor
+didn't fire on the trend snapshot (HMM never hits bull/bear with
+conf>0.5 there) — V201 owns the diagnostic trace to find out where
+the trend regression actually comes from.
 
 ## Phase index
 
@@ -40,6 +42,7 @@ suppressor that should recover both.
 | [V191.md](V191.md) | Range/carry attempt            | Range sub-strategy + funding-carry signal — carry gated behind range_bound=1.0 (rarely fires). |
 | [V197.md](V197.md) | Observability reset            | PipelineTracer wired at all 6 boundaries; strategy_selector silent-override bug caught & fixed. |
 | [V199.md](V199.md) | Carry-only sub-strategy        | New recent high-water (+$2,478, 67 trades). Trend regressed — fix in V200.    |
+| [V200.md](V200.md) | Trend-regime carry suppressor  | Refuted: suppressor never fired on trend snapshot (trades identical to V199); recent regressed (+$427). V201 = tracer-driven diagnosis. |
 
 ## The loop
 
