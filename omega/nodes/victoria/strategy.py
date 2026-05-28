@@ -1582,9 +1582,25 @@ class StrategyNode(Node):
 
                 _confidence_surface = _get_surface(self.features)
 
+        # V199: extract the top-level funding-carry signal once per cycle so it
+        # can participate in the per-ticker ensemble vote.  Previously the carry
+        # signal lived at signals["carry"] as a meta-key — the ensemble voter
+        # only picks up `*_signal` keys inside the per-ticker sig dict, so carry
+        # never reached the composite (silent-override pattern, see V191/V197).
+        _carry_meta = signals.get("carry") if isinstance(signals.get("carry"), dict) else {}
+        _carry_value = float(_carry_meta.get("value", 0.0) or 0.0)
+        _carry_conf = float(_carry_meta.get("confidence", 0.0) or 0.0)
+        _carry_regime = str(_carry_meta.get("regime_tag", "") or "")
+
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
                 continue
+            # V199: inject the funding-carry signal into the per-ticker sig so
+            # the ensemble voter includes it.  Confidence-weighted: use the raw
+            # value when |annualized| > 10% APY (carry_regime != "carry_neutral").
+            if _carry_value != 0.0:
+                sig = dict(sig)
+                sig["funding_carry_signal"] = _carry_value
             # V146: ensemble voter replaces weighted-sum composite when enabled
             if self._ensemble_voter is not None:
                 _ens = self._ensemble_voter.from_signal_dict(sig)
@@ -2498,6 +2514,44 @@ class StrategyNode(Node):
         self._proposals_filtered += (
             filtered_this_cycle + regime_blocked_longs + regime_blocked_shorts
         )
+
+        # V199: carry-only sub-strategy fallback.
+        # When the main stack abstains entirely (no long or short candidates) but
+        # the funding-carry signal has strong confidence (|annualized| ≥ 20% APY,
+        # i.e. regime_tag ∈ {"crowded_long", "crowded_short"}), construct a small
+        # BTCUSDT trade in the carry direction.  Sized at 15% of normal to reflect
+        # lower per-trade edge offset by higher fire frequency in flat regimes.
+        # Suppressed in confirmed crisis (existing crisis logic owns directional bias).
+        _carry_strong = (
+            _carry_value != 0.0
+            and _carry_conf >= 0.5
+            and _carry_regime in ("crowded_long", "crowded_short")
+        )
+        if (
+            _carry_strong
+            and not long_candidates
+            and not short_candidates
+            and not self._is_crisis
+        ):
+            _carry_ticker = "BTCUSDT"
+            _carry_sig_src = signals.get(_carry_ticker)
+            if isinstance(_carry_sig_src, dict):
+                _carry_sub_sig = dict(_carry_sig_src)
+                _carry_sub_sig["composite"] = _carry_value
+                _carry_sub_sig["funding_carry_signal"] = _carry_value
+                _carry_sub_sig["_carry_sub_strategy"] = True
+                _carry_sub_sig["_carry_size_scale"] = 0.15
+                if _carry_value > 0:
+                    long_candidates[_carry_ticker] = _carry_sub_sig
+                else:
+                    short_candidates[_carry_ticker] = _carry_sub_sig
+                logger.info(
+                    "V199 carry_sub_strategy fired: %s carry=%.3f conf=%.2f regime=%s",
+                    "long" if _carry_value > 0 else "short",
+                    _carry_value,
+                    _carry_conf,
+                    _carry_regime,
+                )
 
         # No candidates: either all filtered by conviction or no conviction signals at all.
         # Do NOT fall back to weak signals — the filter's purpose is to reduce trade count.
