@@ -49,7 +49,13 @@ def compute_sharpe(
     variance = sum((x - mean_ex) ** 2 for x in excess) / (n - 1)
     std = math.sqrt(variance)
 
-    if std == 0.0:
+    # Constant returns have zero variance in exact arithmetic, but
+    # floating-point summation can leave a negligible residual (~1e-18),
+    # so an exact `std == 0.0` check misses it and produces an
+    # astronomically large, meaningless ratio. Treat std that is
+    # negligible relative to the return scale as zero.
+    scale = max((abs(x) for x in excess), default=0.0)
+    if std == 0.0 or std <= 1e-12 * scale:
         return 0.0
 
     return mean_ex / std * math.sqrt(periods_per_year)
