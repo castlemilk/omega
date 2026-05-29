@@ -1129,7 +1129,10 @@ class StrategyNode(Node):
             if self._is_crisis or self._is_high_vol_regime:
                 _old_short = self._short_conviction_threshold
                 _old_long = self._long_conviction_threshold
-                self._short_conviction_threshold = _old_short * 0.60
+                # V201: removed short_thresh *= 0.6 discount — empirical evidence
+                # (V200 trade CSV) shows 36 crisis shorts avg MAE -$920, net -$16,703.
+                # The discount let loose shorts through, then snapback rallies squeezed
+                # them. Long-side 1.5× block kept (it works).
                 self._long_conviction_threshold = min(_old_long * 1.50, 0.99)
                 logger.info(
                     "crisis_short_bias: %s → short_thresh %.4f→%.4f, long_thresh %.4f→%.4f",
@@ -1473,7 +1476,8 @@ class StrategyNode(Node):
             if _regime_consolidated in ("crisis", "high_vol"):
                 _pre_short = self._short_conviction_threshold
                 _pre_long = self._long_conviction_threshold
-                self._short_conviction_threshold *= 0.6
+                # V201: removed second *= 0.6 short discount (was stacking with the
+                # block above, effective cut 64%). See V201.md for trade-CSV evidence.
                 self._long_conviction_threshold *= 1.5
                 logger.info(
                     "crisis_short_bias: fear regime %s — short_thresh %.4f→%.4f "
@@ -1605,9 +1609,7 @@ class StrategyNode(Node):
                 _carry_hmm_conf = float(_carry_probs[0])
             elif _carry_hmm == "bear":
                 _carry_hmm_conf = float(_carry_probs[1])
-        _carry_trend_suppressed = (
-            _carry_hmm in ("bull", "bear") and _carry_hmm_conf > 0.5
-        )
+        _carry_trend_suppressed = _carry_hmm in ("bull", "bear") and _carry_hmm_conf > 0.5
 
         for ticker, sig in signals.items():
             if ticker.startswith("_") or not isinstance(sig, dict):
@@ -2545,12 +2547,7 @@ class StrategyNode(Node):
             and _carry_conf >= 0.5
             and _carry_regime in ("crowded_long", "crowded_short")
         )
-        if (
-            _carry_strong
-            and not long_candidates
-            and not short_candidates
-            and not self._is_crisis
-        ):
+        if _carry_strong and not long_candidates and not short_candidates and not self._is_crisis:
             _carry_ticker = "BTCUSDT"
             _carry_sig_src = signals.get(_carry_ticker)
             if isinstance(_carry_sig_src, dict):
