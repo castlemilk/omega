@@ -2808,24 +2808,11 @@ class StrategyNode(Node):
                     * _cont_size_short_mult  # V148: regime-confidence continuous sizing
                 )
 
-        # V102: crisis_short_bias size multipliers — scale shorts up (1.3x), longs down (0.5x)
-        # in crisis/high_vol to tilt allocation toward the favored direction.
-        # Applied before Kelly so the Kelly fraction operates on the already-skewed weights.
-        if self.features.crisis_short_bias and (self._is_crisis or _is_high_vol):
-            _csb_n_shorts = sum(1 for w in raw_weights.values() if w < 0)
-            _csb_n_longs = sum(1 for w in raw_weights.values() if w > 0)
-            for _ticker in list(raw_weights.keys()):
-                _w = raw_weights[_ticker]
-                if _w < 0:
-                    raw_weights[_ticker] = _w * 1.3
-                elif _w > 0:
-                    raw_weights[_ticker] = _w * 0.5
-            logger.info(
-                "crisis_short_bias size: %s — %d shorts *1.3, %d longs *0.5",
-                "crisis" if self._is_crisis else "high_vol",
-                _csb_n_shorts,
-                _csb_n_longs,
-            )
+        # V202: crisis_short_bias size amplifier (×1.3 shorts / ×0.5 longs)
+        # removed. V201 isolated sizing as the crisis P&L driver after
+        # the threshold-discount removal failed to move crisis (−$18,996
+        # vs −$19,410 parent). Snapback rallies on crisis snaps squeeze
+        # oversized loose shorts; let Kelly cap risk instead.
 
         # V147: Bayesian affinity scaling (multiplies after all other sizing, before Kelly)
         if self._bayes_regime is not None:
@@ -2839,16 +2826,14 @@ class StrategyNode(Node):
         # shorts (AVAX/LINK) losing -$40+ when the bypass fires on marginal signals.
         # Crisis markets have high mean-reversion risk; smaller positions limit damage
         # while still participating in genuine directional moves.
-        if self._is_crisis and not self.features.crisis_short_bias:
+        # V202: crisis half-Kelly safety net always applied in crisis,
+        # regardless of crisis_short_bias. The V102 logic that skipped it
+        # when CSB was on relied on the per-direction sizing (now removed)
+        # as the substitute risk cap; without the amplifier the skip was
+        # leaving crisis cycles unsized-down.
+        if self._is_crisis:
             _kelly_scale *= 0.5
             logger.info("Crisis half-Kelly: scale * 0.5 = %.3f", _kelly_scale)
-        elif self._is_crisis and self.features.crisis_short_bias:
-            logger.info(
-                "Crisis half-Kelly skipped: crisis_short_bias uses per-direction "
-                "sizing (short×%.1f long×%.1f)",
-                _csb_short_mult,
-                _csb_long_mult,
-            )
         self._last_kelly_scale: float = _kelly_scale  # expose for observability
         if _kelly_scale != 1.0:
             raw_weights = {t: w * _kelly_scale for t, w in raw_weights.items()}
