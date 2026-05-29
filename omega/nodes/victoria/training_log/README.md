@@ -25,13 +25,15 @@ dirs, memory files, and chat history.
 
 Regime parity is the #1 open problem: trend & recent positive, crisis
 consistently negative across V170s–V200s. V201 diagnosed the V172
-trend regression as the `crisis_short_bias` threshold discount (not
-carry, as V199/V200 had assumed); removing the discount recovers
-~60% of the V172→V199 PnL gap on trend, but regresses recent (the
-discount was helping recent's NEAR shorts) and leaves crisis
-essentially unchanged — locating the crisis damage in sizing, not
-selection. V202 pulls the size amplifier and restores the crisis
-half-Kelly safety net.
+trend regression as the `crisis_short_bias` threshold discount;
+removing it recovered ~60% of the V172→V199 trend gap. V202 then
+tested the sizing-is-the-lever theory (remove size amp + restore
+crisis half-Kelly) and **refuted it**: crisis flat (−$19,003 vs
+−$18,996), trend regressed (+$8,830 vs +$12,996) because the
+half-Kelly skip was load-bearing for trend's crisis-labeled cycles.
+Crisis is structurally **exit-side** — same trade count, same loss
+magnitude across two opposite sizing regimes. V203 = revert the
+half-Kelly restoration + crisis trail tightener.
 
 ## Phase index
 
@@ -47,6 +49,7 @@ half-Kelly safety net.
 | [V199.md](V199.md) | Carry-only sub-strategy        | New recent high-water (+$2,478, 67 trades). Trend regressed — fix in V200.    |
 | [V200.md](V200.md) | Trend-regime carry suppressor  | Refuted: suppressor never fired on trend snapshot (trades identical to V199); recent regressed (+$427). V201 = tracer-driven diagnosis. |
 | [V201.md](V201.md) | Remove crisis_short_bias threshold discount | Mixed: trend +$12,996 (confirmed — discount, not carry, drove V172 regression); recent +$223 (discount was helping recent); crisis −$18,996 (binding constraint is sizing, not selection). V202 = remove size amplifier + restore crisis half-Kelly. |
+| [V202.md](V202.md) | Remove crisis size amp + restore half-Kelly | **Refuted.** Crisis unchanged (−$19,003 vs −$18,996); trend regressed (+$8,830 vs +$12,996) — half-Kelly skip was load-bearing for trend's crisis-labeled cycles. Crisis is structurally exit-side, not sizing. V203 = revert half-Kelly + crisis trail tightener. |
 
 ## The loop
 
