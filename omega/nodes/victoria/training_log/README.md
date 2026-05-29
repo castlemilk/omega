@@ -15,20 +15,23 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-05-28)
+## High-water marks (as of 2026-05-29)
 
 | Gate    | Best version          | PnL        | Trades | WR    | PF   | Notes                                                  |
 |---------|-----------------------|-----------:|-------:|------:|-----:|--------------------------------------------------------|
 | recent  | **V199** (carry sub)  | **+$2,478**| 67     | 34.3% | 1.13 | Carry-only sub-strategy + carry in per-ticker ensemble |
-| trend   | V172 (`pruned`)       | **+$18,437**| 64    | 43.8% | 2.07 | Ridge calibrator + signal pruning (V199/V200 regressed)|
+| trend   | V172 (`pruned`)       | **+$18,437**| 64    | 43.8% | 2.07 | Ridge calibrator + signal pruning (V201 +$12,996 closes 60% of the gap) |
 | crisis  | *no positive run*     | best −$35K | —      | —     | —    | Whole stack is trend-biased; crisis remains unsolved   |
 
 Regime parity is the #1 open problem: trend & recent positive, crisis
-consistently negative across V170s–V190s. V199 broke the recent
-high-water but regressed on trend; V200's trend-regime suppressor
-didn't fire on the trend snapshot (HMM never hits bull/bear with
-conf>0.5 there) — V201 owns the diagnostic trace to find out where
-the trend regression actually comes from.
+consistently negative across V170s–V200s. V201 diagnosed the V172
+trend regression as the `crisis_short_bias` threshold discount (not
+carry, as V199/V200 had assumed); removing the discount recovers
+~60% of the V172→V199 PnL gap on trend, but regresses recent (the
+discount was helping recent's NEAR shorts) and leaves crisis
+essentially unchanged — locating the crisis damage in sizing, not
+selection. V202 pulls the size amplifier and restores the crisis
+half-Kelly safety net.
 
 ## Phase index
 
@@ -43,6 +46,7 @@ the trend regression actually comes from.
 | [V197.md](V197.md) | Observability reset            | PipelineTracer wired at all 6 boundaries; strategy_selector silent-override bug caught & fixed. |
 | [V199.md](V199.md) | Carry-only sub-strategy        | New recent high-water (+$2,478, 67 trades). Trend regressed — fix in V200.    |
 | [V200.md](V200.md) | Trend-regime carry suppressor  | Refuted: suppressor never fired on trend snapshot (trades identical to V199); recent regressed (+$427). V201 = tracer-driven diagnosis. |
+| [V201.md](V201.md) | Remove crisis_short_bias threshold discount | Mixed: trend +$12,996 (confirmed — discount, not carry, drove V172 regression); recent +$223 (discount was helping recent); crisis −$18,996 (binding constraint is sizing, not selection). V202 = remove size amplifier + restore crisis half-Kelly. |
 
 ## The loop
 
