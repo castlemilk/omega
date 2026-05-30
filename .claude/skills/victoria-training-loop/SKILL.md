@@ -31,6 +31,11 @@ the loop.
    brief for the new version. Also read `README.md` for the current
    high-water table — you need it to know what "improved" means.
 
+   **Then check the reflection trigger (see "Mandatory reflection"
+   below).** If any trigger fires, the next deliverable is
+   `REFLECTION_V###.md`, NOT a new version. Reflection blocks
+   pre-registration until it's committed.
+
 2. **Propose the next version's hypothesis.** State it out loud to
    the user *before* writing code:
    - What version number? (parent + 1, or `Va` / `Vb` sibling if
@@ -99,6 +104,85 @@ the loop.
   independently of the narrative. The code can be cherry-picked
   without dragging the log entry; the log can be edited later
   without rewriting code history.
+
+## Mandatory reflection (added after V202)
+
+Before pre-registering a new version, check **all four** triggers.
+If **any** fire, the next deliverable is a reflection document
+(`training_log/REFLECTION_V###.md`), **not** a new V###.md.
+Reflection is committed before any new pre-registration.
+
+### Triggers
+
+1. **Stagnation:** 3 consecutive versions have failed to break
+   *any* gate's high-water (recent / trend / crisis).
+2. **Eval-noise flag:** a pre-registered no-op change (or a change
+   pre-registered as "will not affect gate X") moves gate X by
+   > $500. The eval has hidden state coupling and the current
+   single-seed deltas are no longer trustworthy.
+3. **Subsystem patching loop:** the failing gate (typically crisis)
+   has been static for K ≥ 3 versions AND the last K-1 hypotheses
+   all target the same subsystem (e.g. all touch `crisis_short_bias`
+   parameters; all touch carry injection; all touch the same
+   threshold stack). Same trade count + same WR + same loss across
+   versions is the diagnostic — selection/sizing isn't moving the
+   gate.
+4. **Drifted high-water:** the current best on any gate is from a
+   version > 5 versions ago and we still haven't matched it.
+
+### What the reflection step must do
+
+The document answers all five and commits the answer:
+
+1. **Eval stability.** Either (a) re-run the current best version
+   on its gate with `--seed 42` and compare vs the recorded number,
+   or (b) provide direct evidence from existing trade CSVs (align
+   trades across versions by `(cycle, symbol, side)`, count rows
+   with PnL drift on no-op gates). Establish a noise floor in
+   dollars.
+2. **Variance estimate.** Commission multi-seed runs of the
+   current best on its gate (seeds {1, 2, 3, 42} minimum). Cost is
+   ~2 hours per gate; queue as background. Until σ is known,
+   **any future gate delta < 2σ is "in noise" and does NOT count
+   as a high-water break.** Document the threshold in the
+   reflection.
+3. **Subsystem audit.** List the last K hypotheses and which
+   subsystem each touched. If they're all the same subsystem and
+   the gate hasn't moved, name the entire subsystem as the
+   suspected dead end and propose work outside it.
+4. **Revert-and-branch option.** State the structural delta
+   between the current code and the version that holds the gate's
+   high-water. Decide whether reverting to that baseline and
+   branching from there is cheaper than continuing the parameter
+   walk.
+5. **Untouched dimensions.** Explicitly enumerate signal classes,
+   regimes, sizing approaches, exit strategies, snapshot diversity,
+   and meta-evaluation approaches that have NOT been tried in the
+   last 10+ versions. The next version's hypothesis should come
+   from this list, not from the last entry's "next steps."
+
+### Output
+
+- Write `training_log/REFLECTION_V###.md` where `###` is the
+  most-recent version. Structure as in `REFLECTION_V202.md`.
+- Commit: `docs(training): reflection after V### — <one-line
+  conclusion>`.
+- The next pre-registered version's hypothesis must cite the
+  reflection's "untouched dimensions" or its revert-and-branch
+  recommendation. If you find yourself pre-registering another
+  iteration on the same subsystem the reflection flagged as dead,
+  STOP — re-read the reflection.
+
+### Why this exists
+
+The V199–V202 arc tuned `crisis_short_bias` for three consecutive
+versions while the gate moved less than the eval's own noise floor.
+The trade CSVs revealed 60–70% per-trade PnL drift across changes
+pre-registered as no-ops on those gates — the eval has hidden RNG
+coupling we weren't measuring, and we were reading $100–$500
+deltas as signal. The fix is to force a noise-floor measurement
+and a subsystem audit at the moment the trajectory shape says
+"you're stuck," not after another three wasted versions.
 
 ## Common traps (learned from V148→V198+)
 
