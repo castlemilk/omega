@@ -15,13 +15,13 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-05-31, post-V204 revert)
+## High-water marks (as of 2026-06-01, post-V205)
 
-| Gate    | Best version                | PnL (seeded) | Trades | WR         | PF        | Notes                                                  |
-|---------|-----------------------------|-------------:|-------:|-----------:|----------:|--------------------------------------------------------|
-| recent  | ~~V199~~ **DEMOTED**        | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4). V204 V172-pinned reads −$4,472 — also within 2σ noise. Recent has no surviving high-water; new claims must clear V199×recent mean +$93 by ≥ 2σ = $5,094 (i.e. > +$5,187). |
-| trend   | **V204 (V172 strategy.py)** | **+$22,105** | **77** | **40.26%** | **2.30**  | V204 seed=42 on `snap_trending_2023q4`, strategy.py reverted to commit `daa8304`. Replaces V172 logged +$18,437 (unseeded-protocol artefact) and V201 seeded +$11,550. 2σ floor for future trend claims: > +$22,107. |
-| crisis  | V202-era (V199–V202 code)   | **−$19,042** | 63     | 33.33%     | —         | V203 σ≈$0.5; V202-era code holds best (least-negative). V204 V172 revert is *worse* on crisis at −$22,809 (−3,800σ) — the V173–V202 series delivered a real $3,767 crisis improvement that V204 surrenders. **V205+ salvage objective: re-introduce this crisis gain without losing the V204 trend ceiling.** No positive crisis run on record. |
+| Gate    | Best version                          | PnL (seeded) | Trades | WR         | PF        | Notes                                                  |
+|---------|---------------------------------------|-------------:|-------:|-----------:|----------:|--------------------------------------------------------|
+| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4). V204 V172-pinned reads −$4,472; V205 reads −$2,184 — both within 2σ noise. Recent has no surviving high-water; new claims must clear V199×recent mean +$93 by ≥ 2σ = $5,094 (i.e. > +$5,187). |
+| trend   | **V204 (V172 strategy.py)**           | **+$22,105** | **77** | **40.26%** | **2.30**  | V204 seed=42 on `snap_trending_2023q4`, strategy.py reverted to commit `daa8304`. V205 (V157 CRISIS strip) collapsed trend to +$6,231 — V204 ceiling preserved. 2σ floor for future trend claims: > +$22,107. |
+| crisis  | **V205 (V157 CRISIS weights stripped)** | **−$8,533** | **38** | **39.47%** | **0.50** | V205 seed=42 on `snap_crisis_2022h1`, strategy.py = V204 baseline minus `_REGIME_SIGNAL_WEIGHTS["CRISIS"]` body. Replaces V202-era −$19,042 by +$10,509 (10,509σ above V203 crisis noise floor — first crisis movement that clears noise). Crisis still negative but **first improvement on record that clears the noise floor**. Cost: V205 trend regressed −$15,874 vs V204; the V157 CRISIS strip is too coarse a lever for a stacked solution. **V206+ objective: find a less-coarse lever that recovers crisis without giving back trend.** 2σ ceiling for future crisis claims: > −$8,532 (less-negative). |
 
 ### V203 variance baseline (2σ noise floors for future claims)
 
@@ -66,6 +66,8 @@ half-Kelly restoration + crisis trail tightener.
 | [V202.md](V202.md) | Remove crisis size amp + restore half-Kelly | **Refuted.** Crisis unchanged (−$19,003 vs −$18,996); trend regressed (+$8,830 vs +$12,996) — half-Kelly skip was load-bearing for trend's crisis-labeled cycles. Crisis is structurally exit-side, not sizing. V203 = revert half-Kelly + crisis trail tightener. |
 | [REFLECTION_V202.md](REFLECTION_V202.md) | Mandatory reflection (4 triggers fired) | Identified 60–70% per-trade PnL drift on no-op changes; commissioned V203 variance batch. Process change: 2σ noise floor required for high-water claims. |
 | [V203.md](V203.md) | Variance re-baseline (no code change) | **σ_recent=$2,547, σ_crisis≈$0, σ_trend≈$1.** V199 recent high-water REFUTED (Δ=−$2,239 vs logged +$2,478 at seed=42, +0.94σ from $0). Recent high-water DEMOTED. V204 = Route C (revert strategy.py to V172). |
+| [V204.md](V204.md) | Route C — revert strategy.py to V172 baseline | **Trend high-water broken** (+$22,105, seed=42). Crisis regressed −$3,767 to −$22,809; recent within noise. Decomposition pivot: 1e743de strategy.py portion is cosmetic — the V173–V202 worktree deletions are what produced the crisis improvement. V205 = strip one architectural component (V157 CRISIS weights). |
+| [V205.md](V205.md) | Strip V157 CRISIS regime weights | **Crisis high-water broken** (−$8,533, +$14,277 vs V204; first crisis movement clearing V203 noise floor). Trend collapsed −$15,874 to +$6,231 — V157 CRISIS damping was load-bearing on trend snapshot's crisis sub-periods. Lever too coarse for stacked solution. V206 = revert V205 + try V170 per-regime IC weighting in isolation. |
 
 ## The loop
 
