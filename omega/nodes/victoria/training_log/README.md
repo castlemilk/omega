@@ -15,13 +15,27 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-05-29)
+## High-water marks (as of 2026-05-30, post-V203 variance audit)
 
-| Gate    | Best version          | PnL        | Trades | WR    | PF   | Notes                                                  |
-|---------|-----------------------|-----------:|-------:|------:|-----:|--------------------------------------------------------|
-| recent  | **V199** (carry sub)  | **+$2,478**| 67     | 34.3% | 1.13 | Carry-only sub-strategy + carry in per-ticker ensemble |
-| trend   | V172 (`pruned`)       | **+$18,437**| 64    | 43.8% | 2.07 | Ridge calibrator + signal pruning (V201 +$12,996 closes 60% of the gap) |
-| crisis  | *no positive run*     | best −$35K | —      | —     | —    | Whole stack is trend-biased; crisis remains unsolved   |
+| Gate    | Best version          | PnL (logged) | Trades | WR    | PF   | Notes                                                  |
+|---------|-----------------------|-------------:|-------:|------:|-----:|--------------------------------------------------------|
+| recent  | ~~V199~~ **DEMOTED**  | ~~+$2,478~~  | 67     | 34.3% | 1.13 | V203 σ=$2,547 (n=4). Logged +$2,478 sits +0.94σ from $0 — within noise. New claims must clear V199×recent mean +$93 by ≥ 2σ = $5,094 (i.e. > +$5,187). |
+| trend   | V172 (`pruned`)       | **+$18,437** | 64     | 43.8% | 2.07 | Standing pending V204 seeded rerun. V203 measured V201 on trend at +$11,550 (σ=$1) — $1,446 below logged V201; same seeded-vs-unseeded artefact may apply to V172. |
+| crisis  | *no positive run*     | best −$35K   | —      | —     | —    | V203 σ≈$0 — crisis is fully deterministic across seeds, confirming exit-side / abstention / direction problem, not selection or sizing. |
+
+### V203 variance baseline (2σ noise floors for future claims)
+
+| Gate    | Cell measured                    | Mean PnL  | σ      | 2σ threshold |
+|---------|----------------------------------|----------:|-------:|-------------:|
+| recent  | V199 code × snap_20260414        | +$93      | $2,547 | **$5,094**   |
+| crisis  | V199 code × snap_crisis_2022h1   | −$19,042  | $0.5   | **$1**       |
+| trend   | V201 code × snap_trending_2023q4 | +$11,550  | $1     | **$2**       |
+
+Process change: every V###.md must compare new gate deltas against
+these 2σ thresholds before claiming a high-water break. Single-seed
+deltas below threshold are reported as "in noise" and do NOT update
+this table. See `V203.md` for the full methodology and
+`REFLECTION_V202.md` for the trigger that commissioned it.
 
 Regime parity is the #1 open problem: trend & recent positive, crisis
 consistently negative across V170s–V200s. V201 diagnosed the V172
@@ -50,6 +64,8 @@ half-Kelly restoration + crisis trail tightener.
 | [V200.md](V200.md) | Trend-regime carry suppressor  | Refuted: suppressor never fired on trend snapshot (trades identical to V199); recent regressed (+$427). V201 = tracer-driven diagnosis. |
 | [V201.md](V201.md) | Remove crisis_short_bias threshold discount | Mixed: trend +$12,996 (confirmed — discount, not carry, drove V172 regression); recent +$223 (discount was helping recent); crisis −$18,996 (binding constraint is sizing, not selection). V202 = remove size amplifier + restore crisis half-Kelly. |
 | [V202.md](V202.md) | Remove crisis size amp + restore half-Kelly | **Refuted.** Crisis unchanged (−$19,003 vs −$18,996); trend regressed (+$8,830 vs +$12,996) — half-Kelly skip was load-bearing for trend's crisis-labeled cycles. Crisis is structurally exit-side, not sizing. V203 = revert half-Kelly + crisis trail tightener. |
+| [REFLECTION_V202.md](REFLECTION_V202.md) | Mandatory reflection (4 triggers fired) | Identified 60–70% per-trade PnL drift on no-op changes; commissioned V203 variance batch. Process change: 2σ noise floor required for high-water claims. |
+| [V203.md](V203.md) | Variance re-baseline (no code change) | **σ_recent=$2,547, σ_crisis≈$0, σ_trend≈$1.** V199 recent high-water REFUTED (Δ=−$2,239 vs logged +$2,478 at seed=42, +0.94σ from $0). Recent high-water DEMOTED. V204 = Route C (revert strategy.py to V172). |
 
 ## The loop
 
