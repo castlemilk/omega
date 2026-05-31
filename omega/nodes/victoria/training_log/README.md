@@ -15,13 +15,13 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-05-30, post-V203 variance audit)
+## High-water marks (as of 2026-05-31, post-V204 revert)
 
-| Gate    | Best version          | PnL (logged) | Trades | WR    | PF   | Notes                                                  |
-|---------|-----------------------|-------------:|-------:|------:|-----:|--------------------------------------------------------|
-| recent  | ~~V199~~ **DEMOTED**  | ~~+$2,478~~  | 67     | 34.3% | 1.13 | V203 σ=$2,547 (n=4). Logged +$2,478 sits +0.94σ from $0 — within noise. New claims must clear V199×recent mean +$93 by ≥ 2σ = $5,094 (i.e. > +$5,187). |
-| trend   | V172 (`pruned`)       | **+$18,437** | 64     | 43.8% | 2.07 | Standing pending V204 seeded rerun. V203 measured V201 on trend at +$11,550 (σ=$1) — $1,446 below logged V201; same seeded-vs-unseeded artefact may apply to V172. |
-| crisis  | *no positive run*     | best −$35K   | —      | —     | —    | V203 σ≈$0 — crisis is fully deterministic across seeds, confirming exit-side / abstention / direction problem, not selection or sizing. |
+| Gate    | Best version                | PnL (seeded) | Trades | WR         | PF        | Notes                                                  |
+|---------|-----------------------------|-------------:|-------:|-----------:|----------:|--------------------------------------------------------|
+| recent  | ~~V199~~ **DEMOTED**        | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4). V204 V172-pinned reads −$4,472 — also within 2σ noise. Recent has no surviving high-water; new claims must clear V199×recent mean +$93 by ≥ 2σ = $5,094 (i.e. > +$5,187). |
+| trend   | **V204 (V172 strategy.py)** | **+$22,105** | **77** | **40.26%** | **2.30**  | V204 seed=42 on `snap_trending_2023q4`, strategy.py reverted to commit `daa8304`. Replaces V172 logged +$18,437 (unseeded-protocol artefact) and V201 seeded +$11,550. 2σ floor for future trend claims: > +$22,107. |
+| crisis  | V202-era (V199–V202 code)   | **−$19,042** | 63     | 33.33%     | —         | V203 σ≈$0.5; V202-era code holds best (least-negative). V204 V172 revert is *worse* on crisis at −$22,809 (−3,800σ) — the V173–V202 series delivered a real $3,767 crisis improvement that V204 surrenders. **V205+ salvage objective: re-introduce this crisis gain without losing the V204 trend ceiling.** No positive crisis run on record. |
 
 ### V203 variance baseline (2σ noise floors for future claims)
 
