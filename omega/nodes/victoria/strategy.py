@@ -301,7 +301,7 @@ _REGIME_SIGNAL_WEIGHTS: dict[str, dict[str, float]] = {
         "breakout_position": 1.5,
         "adx_signal": 1.5,
         "timeframe_signal": 1.5,
-        "zscore_signal": 1.2,       # momentum z-score
+        "zscore_signal": 1.2,  # momentum z-score
         "macd_crossover": 1.2,
         # mean-reversion / defensive → suppress
         "ollivier_ricci_signal": 0.5,
@@ -351,6 +351,7 @@ def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
         return  # DEFAULT: nothing to do
 
     import logging as _logging
+
     _wlog = _logging.getLogger("omega.victoria.strategy")
 
     for ticker, ts in signals.items():
@@ -370,15 +371,17 @@ def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
         directional_vals = [
             float(v)
             for k, v in ts.items()
-            if (k.endswith("_signal") or k == "sma_crossover")
-            and isinstance(v, (int, float))
+            if (k.endswith("_signal") or k == "sma_crossover") and isinstance(v, (int, float))
         ]
         if directional_vals:
             ts["composite"] = sum(directional_vals) / len(directional_vals)
             ts["composite_method"] = f"regime_{mode_str.lower()}_weighted"
             _wlog.debug(
                 "V157 regime weights [%s] applied to %s: composite=%.4f  n=%d",
-                mode_str, ticker, ts["composite"], len(directional_vals),
+                mode_str,
+                ticker,
+                ts["composite"],
+                len(directional_vals),
             )
 
 
@@ -902,7 +905,9 @@ class StrategyNode(Node):
         n_neg = sum(1 for v in self._signal_ics.values() if v < 0)
         logger.info(
             "StrategyNode: loaded ICs for %d signals (%d positive, %d anti-predictive flipped)",
-            len(self._signal_ics), n_pos, n_neg,
+            len(self._signal_ics),
+            n_pos,
+            n_neg,
         )
 
     def update_regime_ics(self, regime_ics: dict[str, dict[str, float]]) -> None:
@@ -916,7 +921,9 @@ class StrategyNode(Node):
         n_regimes = sum(len(v) for v in regime_ics.values())
         logger.info(
             "StrategyNode: loaded per-regime ICs (%d signals × ~%d regimes = %d entries)",
-            n_signals, max(1, n_regimes // max(1, n_signals)), n_regimes,
+            n_signals,
+            max(1, n_regimes // max(1, n_signals)),
+            n_regimes,
         )
 
     def set_rmt_denoiser(self, denoiser: Any) -> None:
@@ -1171,15 +1178,16 @@ class StrategyNode(Node):
         if (
             getattr(self.features, "wasserstein_bull_prob_auxiliary", False)
             and bull_prob >= 0.0  # only when Wasserstein probs are available
-            and bull_prob >= float(
-                getattr(self.features, "wasserstein_bull_prob_anticrisis_threshold", 0.60)
-            )
+            and bull_prob
+            >= float(getattr(self.features, "wasserstein_bull_prob_anticrisis_threshold", 0.60))
         ):
             if is_crisis:
                 logger.debug(
                     "V155 bull_prob aux: crisis suppressed (bull=%.2f >= %.2f, bear=%.2f)",
                     bull_prob,
-                    float(getattr(self.features, "wasserstein_bull_prob_anticrisis_threshold", 0.60)),
+                    float(
+                        getattr(self.features, "wasserstein_bull_prob_anticrisis_threshold", 0.60)
+                    ),
                     bear_prob,
                 )
             is_crisis = False
@@ -1650,7 +1658,11 @@ class StrategyNode(Node):
                             if _px:
                                 _last = float(_px[-1])
                         if _last > 0 and _entry > 0 and _sz != 0:
-                            _side = 1.0 if str(getattr(_pos, "side", "long")).lower() == "long" else -1.0
+                            _side = (
+                                1.0
+                                if str(getattr(_pos, "side", "long")).lower() == "long"
+                                else -1.0
+                            )
                             _eq += (_last - _entry) * _sz * _side
                     except Exception:
                         pass
@@ -1665,8 +1677,12 @@ class StrategyNode(Node):
                         for _sym in list(getattr(self._paper_engine, "positions", {}).keys()):
                             _close_fn = getattr(self._paper_engine, "close_position", None)
                             if callable(_close_fn):
-                                _md = market_data.get(_sym, {}) if isinstance(market_data, dict) else {}
-                                _px = (_md.get("close") or _md.get("adjclose") or [])
+                                _md = (
+                                    market_data.get(_sym, {})
+                                    if isinstance(market_data, dict)
+                                    else {}
+                                )
+                                _px = _md.get("close") or _md.get("adjclose") or []
                                 if _px:
                                     _close_fn(_sym, float(_px[-1]), reason="drawdown_emergency")
                     except Exception as _ec_exc:
@@ -1800,9 +1816,9 @@ class StrategyNode(Node):
         _meta_exit_only = getattr(self.features, "meta_learner_exit_only", False)
         if _meta_exit_only and self._meta_learner is not None:
             _ml_cfg_exit = self._meta_learner.get_surface_config()
-            _bear_T_exit = _ml_cfg_exit.bear_long.temperature
+            _bear_temp_exit = _ml_cfg_exit.bear_long.temperature
             # T ∈ [0.05, 0.30] → mult ∈ [1.40, 0.80]
-            _ml_trail_mult = max(0.7, min(1.5, 1.4 - (_bear_T_exit - 0.05) * 2.4))
+            _ml_trail_mult = max(0.7, min(1.5, 1.4 - (_bear_temp_exit - 0.05) * 2.4))
             _paper_ec = (
                 getattr(self._paper_engine, "_exit_controller", None)
                 if self._paper_engine is not None
@@ -1815,7 +1831,8 @@ class StrategyNode(Node):
                 _paper_ec.config.short_trail_multiplier = _base_short_m * _ml_trail_mult
                 logger.debug(
                     "V148 meta_exit: bear_T=%.3f trail_mult=%.3f (long=%.3f short=%.3f)",
-                    _bear_T_exit, _ml_trail_mult,
+                    _bear_temp_exit,
+                    _ml_trail_mult,
                     _paper_ec.config.long_trail_multiplier,
                     _paper_ec.config.short_trail_multiplier,
                 )
@@ -1840,7 +1857,9 @@ class StrategyNode(Node):
                         macro_snapshot={},
                     )
                     _meta_provider = getattr(self.features, "llm_analyst_provider", "claude")
-                    _meta_model = getattr(self.features, "llm_analyst_model", "claude-haiku-4-5-20251001")
+                    _meta_model = getattr(
+                        self.features, "llm_analyst_model", "claude-haiku-4-5-20251001"
+                    )
                     _meta_key_env = getattr(self.features, "llm_analyst_api_key_env", None)
                     _meta_base_url = getattr(self.features, "llm_analyst_api_base", None)
                     _llm_result = self._llm_meta_ctrl.call(
@@ -2234,11 +2253,16 @@ class StrategyNode(Node):
                     and _is_high_vol
                 ):
                     _conditional = getattr(self.features, "conditional_high_vol_block", False)
-                    _hv_bear_thresh = float(getattr(self.features, "high_vol_block_bear_threshold", 0.40))
+                    _hv_bear_thresh = float(
+                        getattr(self.features, "high_vol_block_bear_threshold", 0.40)
+                    )
                     if not _conditional or (_conditional and _regime_w_bear >= _hv_bear_thresh):
                         logger.debug(
                             "V142/V164: blocking %s long in high_vol regime (cond=%s bear=%.2f thr=%.2f)",
-                            ticker, _conditional, _regime_w_bear, _hv_bear_thresh,
+                            ticker,
+                            _conditional,
+                            _regime_w_bear,
+                            _hv_bear_thresh,
                         )
                         continue
                 if self.features.crisis_high_vol_long_block and _regime_consolidated in (
@@ -2338,10 +2362,7 @@ class StrategyNode(Node):
                     _regime_consolidated in ("trending", "normal")
                     and _bull_prob_val > _trend_bp_thresh
                 )
-                if (
-                    _is_trend_context
-                    and getattr(self.features, "trend_signal_dampening", False)
-                ):
+                if _is_trend_context and getattr(self.features, "trend_signal_dampening", False):
                     _mr_w = float(getattr(self.features, "trend_mean_reversion_weight", 0.2))
                     if _mr_w != 1.0:
                         sig = dict(sig)
@@ -2351,7 +2372,11 @@ class StrategyNode(Node):
                         _all_sig_vals_t = [
                             float(v)
                             for k, v in sig.items()
-                            if (k.endswith("_signal") or k == "sma_crossover" or k == "mean_reversion")
+                            if (
+                                k.endswith("_signal")
+                                or k == "sma_crossover"
+                                or k == "mean_reversion"
+                            )
                             and isinstance(v, (int, float))
                         ]
                         if _all_sig_vals_t:
@@ -2376,7 +2401,10 @@ class StrategyNode(Node):
                         filtered_this_cycle += 1
                         logger.debug(
                             "AsymmRisk vetoed %s LONG: bear=%.2f > bull=%.2f × %.1f (regime mismatch)",
-                            ticker, _ar_bear, _ar_bull, _ar_thresh,
+                            ticker,
+                            _ar_bear,
+                            _ar_bull,
+                            _ar_thresh,
                         )
                         continue
                 if self.features.signal_confluence and self._confluence is not None:
@@ -2463,13 +2491,17 @@ class StrategyNode(Node):
                             "trending": float(getattr(self.features, "dyn_floor_trending", 0.90)),
                             "default": float(getattr(self.features, "dyn_floor_normal", 0.80)),
                         }
-                        _dyn_floor = _dyn_floor_map.get(_regime_consolidated, _dyn_floor_map["default"])
+                        _dyn_floor = _dyn_floor_map.get(
+                            _regime_consolidated, _dyn_floor_map["default"]
+                        )
                         if _dyn_floor > 0.0:
                             _llm_mod = max(_llm_mod, _dyn_floor)
                     else:
                         # V151: floor gates on regime label — crisis = full veto mode,
                         # all other labels apply the modifier floor.
-                        _llm_nc_floor = float(getattr(self.features, "llm_non_crisis_modifier_floor", 1.0))
+                        _llm_nc_floor = float(
+                            getattr(self.features, "llm_non_crisis_modifier_floor", 1.0)
+                        )
                         if _regime_consolidated != "crisis" and _llm_nc_floor < 1.0:
                             _llm_mod = max(_llm_mod, _llm_nc_floor)
                     # V141 crisis mode: raise long veto threshold in bear regime.
@@ -2648,11 +2680,16 @@ class StrategyNode(Node):
                     and _is_high_vol
                 ):
                     _conditional = getattr(self.features, "conditional_high_vol_block", False)
-                    _hv_bear_thresh = float(getattr(self.features, "high_vol_block_bear_threshold", 0.40))
+                    _hv_bear_thresh = float(
+                        getattr(self.features, "high_vol_block_bear_threshold", 0.40)
+                    )
                     if not _conditional or (_conditional and _regime_w_bear >= _hv_bear_thresh):
                         logger.debug(
                             "V142/V164: blocking %s short in high_vol regime (cond=%s bear=%.2f thr=%.2f)",
-                            ticker, _conditional, _regime_w_bear, _hv_bear_thresh,
+                            ticker,
+                            _conditional,
+                            _regime_w_bear,
+                            _hv_bear_thresh,
                         )
                         continue
                 if self.features.high_vol_short_block and _is_high_vol:
@@ -2683,7 +2720,10 @@ class StrategyNode(Node):
                         filtered_this_cycle += 1
                         logger.debug(
                             "AsymmRisk vetoed %s SHORT: bull=%.2f > bear=%.2f × %.1f (regime mismatch)",
-                            ticker, _ar_bull, _ar_bear, _ar_thresh,
+                            ticker,
+                            _ar_bull,
+                            _ar_bear,
+                            _ar_thresh,
                         )
                         continue
                 if self.features.signal_confluence and self._confluence is not None:
@@ -2765,12 +2805,16 @@ class StrategyNode(Node):
                             "trending": float(getattr(self.features, "dyn_floor_trending", 0.90)),
                             "default": float(getattr(self.features, "dyn_floor_normal", 0.80)),
                         }
-                        _dyn_floor_s = _dyn_floor_map_s.get(_regime_consolidated, _dyn_floor_map_s["default"])
+                        _dyn_floor_s = _dyn_floor_map_s.get(
+                            _regime_consolidated, _dyn_floor_map_s["default"]
+                        )
                         if _dyn_floor_s > 0.0:
                             _llm_mod = max(_llm_mod, _dyn_floor_s)
                     else:
                         # V151: floor gates on regime label (same as long path above)
-                        _llm_nc_floor_s = float(getattr(self.features, "llm_non_crisis_modifier_floor", 1.0))
+                        _llm_nc_floor_s = float(
+                            getattr(self.features, "llm_non_crisis_modifier_floor", 1.0)
+                        )
                         if _regime_consolidated != "crisis" and _llm_nc_floor_s < 1.0:
                             _llm_mod = max(_llm_mod, _llm_nc_floor_s)
                     # V141 crisis mode: more permissive short veto in bear regime.
@@ -3028,8 +3072,10 @@ class StrategyNode(Node):
             _cont_size_short_mult = max(0.5, min(1.5, 0.5 + _regime_w_bear * 2.0))
             logger.debug(
                 "V148 cont_sizing: bull=%.2f long_mult=%.2f bear=%.2f short_mult=%.2f",
-                _regime_w_bull, _cont_size_long_mult,
-                _regime_w_bear, _cont_size_short_mult,
+                _regime_w_bull,
+                _cont_size_long_mult,
+                _regime_w_bear,
+                _cont_size_short_mult,
             )
 
         # V162: resilience size multiplier (vol_shock × regime_conf × drawdown taper)
