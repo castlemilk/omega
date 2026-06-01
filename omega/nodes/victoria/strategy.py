@@ -310,11 +310,25 @@ _REGIME_SIGNAL_WEIGHTS: dict[str, dict[str, float]] = {
         "rsi_signal": 0.5,
         "ricci_curvature_signal": 0.5,
     },
-    # V205: CRISIS regime weights disabled. V158/V161 damping of trend-following
-    # signals was structurally wrong for sustained crashes like snap_crisis_2022h1
-    # — damping breakout/ADX/MTF prevents the strategy from shorting into the
-    # breakdown that those signals correctly identify. Empty dict = identity weights.
-    "CRISIS": {},
+    "CRISIS": {
+        # V161: revert to V158 dampening (not V159 amplification).
+        # V159 tried 1.5× on breakout/ADX/MTF to exploit SHORT alpha in crashes, but
+        # in price-recovery sub-periods (e.g. Feb-March 2022 bounce) breakout_signal=+1
+        # (prices making new highs) × 1.5× drove aggressive short composites → big losses.
+        # V158's conservative 0.3× approach: damp ALL trend-following signals in CRISIS,
+        # rely on mean-reversion (bb/rsi/ORC) for alpha.  Fewer trades → V153-like behavior.
+        "breakout_signal": 0.3,
+        "breakout_position": 0.3,
+        "adx_signal": 0.5,
+        "timeframe_signal": 0.3,
+        "zscore_signal": 0.5,
+        "macd_crossover": 0.5,
+        "ollivier_ricci_signal": 1.2,
+        "bb_signal": 1.5,
+        "rsi_signal": 1.5,
+        "ricci_curvature_signal": 1.2,
+        "sma_crossover": 1.0,
+    },
     "DEFAULT": {},
 }
 
