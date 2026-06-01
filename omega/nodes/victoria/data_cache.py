@@ -188,6 +188,10 @@ class MacroDataCache:
 
     def _is_macro_stale(self, series_id: str) -> bool:
         """True if no cache entry or newest fetched_at is older than _MACRO_STALE_HOURS."""
+        # V207a: when OMEGA_FROZEN_CACHE=1, treat all cached rows as fresh
+        # — never trigger a live FRED fetch. Read-only mode for backtests.
+        if os.environ.get("OMEGA_FROZEN_CACHE") == "1":
+            return False
         row = self._conn.execute(
             "SELECT MAX(fetched_at) FROM macro_cache WHERE series_id = ?",
             (series_id,),
@@ -206,6 +210,12 @@ class MacroDataCache:
 
     def _is_funding_stale(self, symbol: str) -> bool:
         """True if no cache entry or fetched_at is older than _FUNDING_STALE_HOURS."""
+        # V207a: when OMEGA_FROZEN_CACHE=1, treat the cache as authoritative.
+        # If a row exists return False; if missing return False too so the
+        # caller gets None from _read_funding rather than triggering a live
+        # OKX/Coinbase/CoinGecko fetch that would mutate funding_rate_cache.
+        if os.environ.get("OMEGA_FROZEN_CACHE") == "1":
+            return False
         row = self._conn.execute(
             "SELECT fetched_at FROM funding_rate_cache WHERE symbol = ?",
             (symbol,),

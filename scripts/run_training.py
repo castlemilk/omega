@@ -26,13 +26,24 @@ Default version is auto-incremented from data/training_version.txt (or "v1").
 """
 from __future__ import annotations
 
+import os
+import sys
+
+# V207a: pin PYTHONHASHSEED before any further import. CPython chooses
+# the string-hash seed at process start from this env var; if unset,
+# it is randomized per-process, which permutes set/dict iteration
+# order and produces ~1e-4 FP drift in composite scoring (V206b
+# located this as one of the two noise channels). If we did not
+# inherit the desired value, re-exec ourselves with it pinned.
+if os.environ.get("PYTHONHASHSEED") != "42":
+    os.environ["PYTHONHASHSEED"] = "42"
+    os.execvpe(sys.executable, [sys.executable] + sys.argv, os.environ)
+
 import argparse
 import csv
 import json
 import logging
 import math
-import os
-import sys
 import time
 from datetime import datetime, timezone
 UTC = timezone.utc
@@ -532,7 +543,10 @@ def run(
     try:
         from omega.nodes.victoria.data_cache import MacroDataCache
         _macro_cache = MacroDataCache()
-        _macro_cache.warm_up()
+        if os.environ.get("OMEGA_FROZEN_CACHE") == "1":
+            log.info("V207a: OMEGA_FROZEN_CACHE=1 — skipping macro warm_up (no live FRED/funding fetches)")
+        else:
+            _macro_cache.warm_up()
     except Exception as _cache_exc:
         log.warning("Macro cache warm-up failed (non-fatal): %s", _cache_exc)
 
@@ -1412,7 +1426,23 @@ if __name__ == "__main__":
             "version-to-version comparisons. Recommended: --seed 42"
         ),
     )
+    parser.add_argument(
+        "--frozen-cache",
+        action="store_true",
+        default=False,
+        help=(
+            "V207a: freeze data/macro_cache.db reads. Suppresses MacroDataCache "
+            "warm_up() and disables _refresh_macro/_refresh_funding live fetches; "
+            "callers read whatever rows already exist in the cache (or get None). "
+            "Auto-enabled when --backtest-snapshot is set. Sets env var "
+            "OMEGA_FROZEN_CACHE=1 so data_cache.py respects the freeze."
+        ),
+    )
     args = parser.parse_args()
+    if args.backtest_snapshot and not args.frozen_cache:
+        args.frozen_cache = True
+    if args.frozen_cache:
+        os.environ["OMEGA_FROZEN_CACHE"] = "1"
 
     version = _resolve_version(args.version)
     _setup_logging(version)
