@@ -15,13 +15,13 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-06-01, post-V205)
+## High-water marks (as of 2026-06-01, post-V206b)
 
 | Gate    | Best version                          | PnL (seeded) | Trades | WR         | PF        | Notes                                                  |
 |---------|---------------------------------------|-------------:|-------:|-----------:|----------:|--------------------------------------------------------|
-| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4). V204 V172-pinned reads −$4,472; V205 reads −$2,184 — both within 2σ noise. Recent has no surviving high-water; new claims must clear V199×recent mean +$93 by ≥ 2σ = $5,094 (i.e. > +$5,187). |
-| trend   | **V204 (V172 strategy.py)**           | **+$22,105** | **77** | **40.26%** | **2.30**  | V204 seed=42 on `snap_trending_2023q4`, strategy.py reverted to commit `daa8304`. V205 (V157 CRISIS strip) collapsed trend to +$6,231 — V204 ceiling preserved. 2σ floor for future trend claims: > +$22,107. |
-| crisis  | **V205 (V157 CRISIS weights stripped)** | **−$8,533** | **38** | **39.47%** | **0.50** | V205 seed=42 on `snap_crisis_2022h1`, strategy.py = V204 baseline minus `_REGIME_SIGNAL_WEIGHTS["CRISIS"]` body. Replaces V202-era −$19,042 by +$10,509 (10,509σ above V203 crisis noise floor — first crisis movement that clears noise). Crisis still negative but **first improvement on record that clears the noise floor**. Cost: V205 trend regressed −$15,874 vs V204; the V157 CRISIS strip is too coarse a lever for a stacked solution. **V206+ objective: find a less-coarse lever that recovers crisis without giving back trend.** 2σ ceiling for future crisis claims: > −$8,532 (less-negative). |
+| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4). V204 V172-pinned reads −$4,472; V205 reads −$2,184; V206b reads −$2,894 — all within 2σ. No surviving recent high-water. |
+| trend   | ~~V204~~ **RESCINDED (V206b)**        | ~~+$22,105~~ | 77     | 40.26%     | 2.30      | V206b on V204-byte-identical strategy.py read +$13,993 (within-pair σ < $1, cross-day Δ = $8,112). The V204 reading is not reproducible day-over-day. **No surviving trend high-water until V207a fences the leak.** See V206b.md for the audit. |
+| crisis  | ~~V205~~ **RESCINDED (V206b)**        | ~~−$8,533~~  | 38     | 39.47%     | 0.50      | V206b crisis within-pair noise on a literal no-op is $1,978 (r1=−$22,959 / r2=−$24,937). V205's claimed +$14,277 swing vs V204 is inside the noise envelope. **Working crisis ceiling: −$22,809 (V204), σ ≈ $1,978.** Any further crisis claim must clear that floor on a PYTHONHASHSEED-pinned + funding-rate-fenced run. See V206b.md. |
 
 ### V203 variance baseline (2σ noise floors for future claims)
 
