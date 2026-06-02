@@ -2983,16 +2983,14 @@ class StrategyNode(Node):
             long_candidates = dict(
                 sorted(
                     long_candidates.items(),
-                    key=lambda kv: abs(kv[1].get("composite", 0.0)),
-                    reverse=True,
+                    key=lambda kv: (-abs(kv[1].get("composite", 0.0)), kv[0]),
                 )[:_max_per_side]
             )
         if len(short_candidates) > _max_per_side:
             short_candidates = dict(
                 sorted(
                     short_candidates.items(),
-                    key=lambda kv: abs(kv[1].get("composite", 0.0)),
-                    reverse=True,
+                    key=lambda kv: (-abs(kv[1].get("composite", 0.0)), kv[0]),
                 )[:_max_per_side]
             )
 
@@ -3011,23 +3009,23 @@ class StrategyNode(Node):
             if long_candidates:
                 raw_l = {
                     ticker: max(0.001, sig.get("composite", 0.001))
-                    for ticker, sig in long_candidates.items()
+                    for ticker, sig in sorted(long_candidates.items(), key=lambda kv: kv[0])
                 }
                 total_l = sum(raw_l.values())
                 long_base = {ticker: v / total_l for ticker, v in raw_l.items()}
             if short_candidates:
                 raw_s = {
                     ticker: max(0.001, abs(sig.get("composite", 0.001)))
-                    for ticker, sig in short_candidates.items()
+                    for ticker, sig in sorted(short_candidates.items(), key=lambda kv: kv[0])
                 }
                 total_s = sum(raw_s.values())
                 short_base = {ticker: v / total_s for ticker, v in raw_s.items()}
 
         elif self._weighting == "risk_parity":
-            for _ticker, _sig in {**long_candidates, **short_candidates}.items():
+            for _ticker, _sig in sorted({**long_candidates, **short_candidates}.items(), key=lambda kv: kv[0]):
                 pass  # vols computed per-pool below
             vols_l: dict[str, float] = {}
-            for ticker, _sig in long_candidates.items():
+            for ticker, _sig in sorted(long_candidates.items(), key=lambda kv: kv[0]):
                 data = market_data.get(ticker)
                 if data:
                     prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
@@ -3041,7 +3039,7 @@ class StrategyNode(Node):
                 long_base = {ticker: v / total_l for ticker, v in inv_vol_l.items()}
 
             vols_s: dict[str, float] = {}
-            for ticker, _sig in short_candidates.items():
+            for ticker, _sig in sorted(short_candidates.items(), key=lambda kv: kv[0]):
                 data = market_data.get(ticker)
                 if data:
                     prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
@@ -3099,11 +3097,11 @@ class StrategyNode(Node):
         # Apply max_positions cap from correlation breakdown: keep only the top-N by conviction
         if _resil_max_positions is not None and _resil_max_positions >= 0:
             _all_cands: list[tuple[str, float, str]] = []
-            for _t, _s in long_candidates.items():
+            for _t, _s in sorted(long_candidates.items(), key=lambda kv: kv[0]):
                 _all_cands.append((_t, abs(self._compute_weighted_conviction(_s)), "long"))
-            for _t, _s in short_candidates.items():
+            for _t, _s in sorted(short_candidates.items(), key=lambda kv: kv[0]):
                 _all_cands.append((_t, abs(self._compute_weighted_conviction(_s)), "short"))
-            _all_cands.sort(key=lambda x: -x[1])
+            _all_cands.sort(key=lambda x: (-x[1], x[0]))
             _keep = set(t for t, _, _ in _all_cands[:_resil_max_positions])
             long_base = {t: v for t, v in long_base.items() if t in _keep}
             short_base = {t: v for t, v in short_base.items() if t in _keep}
@@ -3125,7 +3123,7 @@ class StrategyNode(Node):
             )
             else 1.0
         )
-        for ticker, w in long_base.items():
+        for ticker, w in sorted(long_base.items(), key=lambda kv: kv[0]):
             _w_conv = abs(self._compute_weighted_conviction(long_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
             if self.features.signal_confluence:
@@ -3157,7 +3155,7 @@ class StrategyNode(Node):
                     * _surf_conf  # V143: continuous confidence surface multiplier
                     * _cont_size_long_mult  # V148: regime-confidence continuous sizing
                 )
-        for ticker, w in short_base.items():
+        for ticker, w in sorted(short_base.items(), key=lambda kv: kv[0]):
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
             if self.features.signal_confluence:
