@@ -15,19 +15,22 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-06-02, post-V208)
+## High-water marks (as of 2026-06-02, post-V209)
 
-Noise-floor status: **recent gate now < $1** (V208a within-pair PnL
-spread $0.06 with identical trade count after canonical-sort fix in
-`_construct_portfolio`). Trend/crisis noise floors at the same fix
-to be re-measured in V209 (full 3-gate × 2-pair audit).
+Noise-floor status (V209 3-gate × 2-pair audit at V208a HEAD):
+**crisis < $100** ($56 within-pair PnL spread, identical trade count
+— 35× improvement over V206b's $1,978 crisis floor). Recent and trend
+still drift > $100 ($2,773 and $1,500 spreads, trade Δ=3 each) —
+V208a's $0.06 recent floor did NOT reproduce in V209. Second
+gate-specific channel still alive. V210 = mandatory reflection
+(eval-noise trigger fired).
 
 
 | Gate    | Best version                          | PnL (seeded) | Trades | WR         | PF        | Notes                                                  |
 |---------|---------------------------------------|-------------:|-------:|-----------:|----------:|--------------------------------------------------------|
-| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4). V204 V172-pinned reads −$4,472; V205 reads −$2,184; V206b reads −$2,894 — all within 2σ. No surviving recent high-water. |
-| trend   | ~~V204~~ **RESCINDED (V206b)**        | ~~+$22,105~~ | 77     | 40.26%     | 2.30      | V206b on V204-byte-identical strategy.py read +$13,993 (within-pair σ < $1, cross-day Δ = $8,112). The V204 reading is not reproducible day-over-day. **No surviving trend high-water until V207a fences the leak.** See V206b.md for the audit. |
-| crisis  | ~~V205~~ **RESCINDED (V206b)**        | ~~−$8,533~~  | 38     | 39.47%     | 0.50      | V206b crisis within-pair noise on a literal no-op is $1,978 (r1=−$22,959 / r2=−$24,937). V205's claimed +$14,277 swing vs V204 is inside the noise envelope. **Working crisis ceiling: −$22,809 (V204), σ ≈ $1,978.** Any further crisis claim must clear that floor on a PYTHONHASHSEED-pinned + funding-rate-fenced run. See V206b.md. |
+| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4); V209 within-pair σ $2,773 at fenced+sorted HEAD. No surviving recent high-water. |
+| trend   | ~~V204~~ **RESCINDED (V206b)**        | ~~+$22,105~~ | 77     | 40.26%     | 2.30      | V209 trend r1/r2 read +$14,929 / +$16,429 (within-pair σ $1,500). V204 +$22,105 lies $5,676–$7,176 above V209 but inside cross-day envelope — not discriminable until V211+ closes the second channel. No surviving trend high-water. |
+| crisis  | **V209 (working ceiling)**            | **−$17,763** |     65 |    32.31%  |     0.614 | V209 crisis r1/r2 = −$17,791 / −$17,735, within-pair σ ≈ $28 (n=1 pair). +$5,046 better than V206b's −$22,809 ceiling — clears 2σ comfortably, signal not noise. **New working crisis ceiling: −$17,763 ± $28 on seed=42 + PYTHONHASHSEED=42 + frozen funding cache + V208a canonical sort.** See V209.md for the audit. |
 
 ### V203 variance baseline (2σ noise floors for future claims)
 
@@ -78,6 +81,7 @@ half-Kelly restoration + crisis trail tightener.
 | [V207a.md](V207a.md) | PYTHONHASHSEED=42 + frozen funding cache | Crisis spread 17× reduction ($1,978→$113). Recent+trend got **worse** ($3,257 / $14,047) — third channel unmasked. V207b = localize it. |
 | [V207b.md](V207b.md) | Static cycle-1 bisect | Localized to `strategy.py:_construct_portfolio` sizing chain (lines 3143-3192). Most-likely root: `_compute_weighted_conviction` rolling z-score over shared-pool `_signal_history`. V208 = falsifier-branch test. |
 | [V208.md](V208.md) | **Kill third channel via canonical sort** | **Recent spread $3,257 → $0.06 (54,000×).** Sub-experiment A (canonical sort across `_construct_portfolio` items()) passed first try with identical trade count. V209 = redo full 3-gate × 2-pair audit at new noise floor. |
+| [V209.md](V209.md) | **Full 3-gate × 2-pair audit at V208a HEAD** | **Partial pass.** Crisis $56 spread (Δ=0) — new working ceiling −$17,763 ± $28 (+$5,046 vs V206b). Recent $2,773 / trend $1,500 spreads, trade Δ=3 each — V208a's $0.06 recent floor did NOT reproduce. Cycle-1 composite drift unchanged on recent. Second gate-specific channel alive. **V210 = mandatory reflection** (eval-noise trigger fired). |
 
 ## The loop
 
