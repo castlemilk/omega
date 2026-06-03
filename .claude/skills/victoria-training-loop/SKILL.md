@@ -204,6 +204,71 @@ and a subsystem audit at the moment the trajectory shape says
 - **Sequential ablations are contaminated by state drift**
   (commit `e4ab82d`). If you need a clean A/B, snapshot state first.
 
+## Keep the workspace clean
+
+**One-line rule: never leave the repo dirty between iterations.**
+
+Wedged sessions (timed-out python runs, killed git operations,
+interrupted commits) accumulate stale `.git/*.lock` files and
+uncommitted `training_log/V*.md` work that blocks the next
+iteration. This section is mandatory.
+
+### Before pre-registration (step 3)
+
+1. `git status` must be clean OR you explicitly enumerate untracked
+   files in the response. Stale `data/v*_*` artifacts are expected;
+   untracked `.md` files in `training_log/` are NOT — see recovery
+   rule below.
+2. Check `.git/index.lock`, `.git/HEAD.lock`, `.git/objects/maintenance.lock`,
+   `.git/refs/heads/*.lock`. If any exist AND mtime > 60s old AND
+   no live `git` process holds them (`ps -ef | grep '[g]it '`),
+   delete them: `rm -f .git/index.lock .git/HEAD.lock .git/objects/maintenance.lock`.
+3. Confirm `git status` returns promptly (< 5s). If not, escalate
+   — don't try invasive surgery on `.git/`.
+
+### During a gate run (step 5)
+
+When launching `scripts/run_training.py` in background, capture the
+PID immediately and persist it:
+
+```bash
+python3 scripts/run_training.py --version v### ... &
+echo $! >> data/v###_pids.txt
+```
+
+At task end, verify those PIDs are gone:
+
+```bash
+for pid in $(cat data/v###_pids.txt 2>/dev/null); do
+    kill -0 $pid 2>/dev/null && echo "STILL ALIVE: $pid" && kill $pid
+done
+```
+
+A wedged python process holding open file descriptors is the most
+common cause of the next session's lock issues.
+
+### Recovery: first action when entering a possibly-wedged repo
+
+Before doing anything else, run:
+
+```bash
+git status --short | grep -E "training_log/(V|REFLECTION_V)[0-9]+.*\.md"
+```
+
+If this returns any uncommitted `training_log/V###.md` or
+`REFLECTION_V###.md` files (modified OR untracked), they are
+autosaves from a wedged prior session. Commit them FIRST, with an
+`(autosaved from wedged session)` suffix in the commit message,
+before pre-registering the new version. Example:
+
+```
+docs(training): V210 results (autosaved from wedged session)
+```
+
+Then proceed with the normal loop. **Never start V###+1 work on
+top of an uncommitted V### that you didn't write yourself in this
+session.**
+
 ## File layout
 
 ```
