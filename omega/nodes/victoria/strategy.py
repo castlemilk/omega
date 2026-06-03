@@ -1720,7 +1720,7 @@ class StrategyNode(Node):
         # composites (ETHUSDT, DOTUSDT, etc.) should anchor the basket std.
         _composites_for_std = [
             float(sig["composite"])
-            for t, sig in signals.items()
+            for t, sig in sorted(signals.items(), key=lambda kv: kv[0])
             if not t.startswith("_")
             and not t.startswith("adv_")
             and isinstance(sig, dict)
@@ -2129,7 +2129,7 @@ class StrategyNode(Node):
         # Use per-ticker composites (excluding metadata and synthetics).
         _basket_composites = [
             float(sig["composite"])
-            for t, sig in signals.items()
+            for t, sig in sorted(signals.items(), key=lambda kv: kv[0])
             if not t.startswith("_")
             and not t.startswith("adv_")
             and isinstance(sig, dict)
