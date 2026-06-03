@@ -15,22 +15,23 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-06-02, post-V209)
+## High-water marks (as of 2026-06-03, post-V210)
 
-Noise-floor status (V209 3-gate × 2-pair audit at V208a HEAD):
-**crisis < $100** ($56 within-pair PnL spread, identical trade count
-— 35× improvement over V206b's $1,978 crisis floor). Recent and trend
-still drift > $100 ($2,773 and $1,500 spreads, trade Δ=3 each) —
-V208a's $0.06 recent floor did NOT reproduce in V209. Second
-gate-specific channel still alive. V210 = mandatory reflection
-(eval-noise trigger fired).
+Noise-floor status (V209 3-gate × 2-pair audit at V208a HEAD,
+V210 cycle-1 bisect on the same artifacts): **crisis fence confirmed
+locked at −$17,763 ± $28** (working ceiling, 35× improvement over
+V206b's $1,978 crisis floor). Recent and trend noise-floor
+**unresolved**, V210/V211 in progress: V210 localized the residual
+channel to `signals.items()` unsorted aggregation at `strategy.py:1722`
+(basket_std) and `:2130` (basket_mean). V211 = canonical-sort fix on
+those two call-sites with pre-registered ≥2-pair audit acceptance.
 
 
 | Gate    | Best version                          | PnL (seeded) | Trades | WR         | PF        | Notes                                                  |
 |---------|---------------------------------------|-------------:|-------:|-----------:|----------:|--------------------------------------------------------|
-| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4); V209 within-pair σ $2,773 at fenced+sorted HEAD. No surviving recent high-water. |
-| trend   | ~~V204~~ **RESCINDED (V206b)**        | ~~+$22,105~~ | 77     | 40.26%     | 2.30      | V209 trend r1/r2 read +$14,929 / +$16,429 (within-pair σ $1,500). V204 +$22,105 lies $5,676–$7,176 above V209 but inside cross-day envelope — not discriminable until V211+ closes the second channel. No surviving trend high-water. |
-| crisis  | **V209 (working ceiling)**            | **−$17,763** |     65 |    32.31%  |     0.614 | V209 crisis r1/r2 = −$17,791 / −$17,735, within-pair σ ≈ $28 (n=1 pair). +$5,046 better than V206b's −$22,809 ceiling — clears 2σ comfortably, signal not noise. **New working crisis ceiling: −$17,763 ± $28 on seed=42 + PYTHONHASHSEED=42 + frozen funding cache + V208a canonical sort.** See V209.md for the audit. |
+| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4); V209 within-pair σ ≥$1,386 at fenced+sorted HEAD. Noise-floor **unresolved** (V210/V211). No surviving recent high-water. |
+| trend   | ~~V204~~ **RESCINDED (V206b)**        | ~~+$22,105~~ | 77     | 40.26%     | 2.30      | V209 trend r1/r2 read +$14,929 / +$16,429 (within-pair σ ≥$750). Noise-floor **unresolved** (V210/V211). V204 +$22,105 unreproducible at HEAD; inside V172-era trend noise envelope per V206b's ≥$14,000 V172 spread. No surviving trend high-water. |
+| crisis  | **V209 (locked working ceiling)**     | **−$17,763** |     65 |    32.31%  |     0.614 | V209 crisis r1/r2 = −$17,791 / −$17,735, within-pair σ ≈ $28 (n=1 pair). +$5,046 better than V206b's −$22,809 ceiling — clears 2σ by >100×, signal not noise. V210 confirmed crisis selection-stable (65/65 trade match across r1/r2) — robustness from regime-architecture (strong-directional short-bias), not from the fences. **Locked crisis ceiling: −$17,763 ± $28 on seed=42 + PYTHONHASHSEED=42 + frozen funding cache + V208a canonical sort.** See V209.md + REFLECTION_V209.md + V210.md. |
 
 ### V203 variance baseline (2σ noise floors for future claims)
 
@@ -82,6 +83,8 @@ half-Kelly restoration + crisis trail tightener.
 | [V207b.md](V207b.md) | Static cycle-1 bisect | Localized to `strategy.py:_construct_portfolio` sizing chain (lines 3143-3192). Most-likely root: `_compute_weighted_conviction` rolling z-score over shared-pool `_signal_history`. V208 = falsifier-branch test. |
 | [V208.md](V208.md) | **Kill third channel via canonical sort** | **Recent spread $3,257 → $0.06 (54,000×).** Sub-experiment A (canonical sort across `_construct_portfolio` items()) passed first try with identical trade count. V209 = redo full 3-gate × 2-pair audit at new noise floor. |
 | [V209.md](V209.md) | **Full 3-gate × 2-pair audit at V208a HEAD** | **Partial pass.** Crisis $56 spread (Δ=0) — new working ceiling −$17,763 ± $28 (+$5,046 vs V206b). Recent $2,773 / trend $1,500 spreads, trade Δ=3 each — V208a's $0.06 recent floor did NOT reproduce. Cycle-1 composite drift unchanged on recent. Second gate-specific channel alive. **V210 = mandatory reflection** (eval-noise trigger fired). |
+| [REFLECTION_V209.md](REFLECTION_V209.md) | Mandatory reflection (trigger #2) | V208a $0.06 was a one-pair fluke; n=1 spreads do not establish σ. Noise-floor claim rule: ≥2-pair audit OR structural argument. Crisis fence is real (selection-stable from regime architecture, not from the determinism fixes). Operating thresholds until V211: σ_recent≥$1,386, σ_trend≥$750, σ_crisis≈$28. |
+| [V210.md](V210.md) | Cycle-1 bisect on V209 artifacts | **Localized third channel** to `signals.items()` unsorted at `strategy.py:1722` (basket_std) and `:2130` (basket_mean). Crisis 65/65 trade match (selection-stable); recent first bifurcates cycle 184; trend first bifurcates cycle 38. Sub-signal values identical at every common trade event — sub-signal layer is clean. V211 = canonical-sort fix on the two unsorted aggregations, pre-registered ≥2-pair audit acceptance. |
 
 ## The loop
 
