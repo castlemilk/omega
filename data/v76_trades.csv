@@ -1,0 +1,3 @@
+cycle,timestamp,symbol,side,size,entry_price,exit_price,pnl,slippage,hold_cycles,conviction,regime,sit_out_reason
+27,2026-04-08T08:46:23.991605+00:00,BNBUSDT,long,25000.0,611.76,612.18,17.1636,0.0,10,0.25,normal,normal
+35,2026-04-08T08:48:35.326619+00:00,ETHUSDT,long,25000.0,2253.48,2255.18,18.8597,0.0,10,0.25,normal,normal

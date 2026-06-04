@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.72, "reasoning": "Order book signals (depth +1.0, imbalance +0.86) suggest accumulation; momentum dying (-0.95) supports reversal.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.73, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

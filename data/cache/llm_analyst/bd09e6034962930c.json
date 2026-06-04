@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.72, "reasoning": "7/8 agree short; -0.34 is moderate, fear_greed +0.92 is caution flag", "regime_override": null, "signal_adjustments": {}, "confidence": 0.68, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

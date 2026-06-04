@@ -3022,7 +3022,9 @@ class StrategyNode(Node):
                 short_base = {ticker: v / total_s for ticker, v in raw_s.items()}
 
         elif self._weighting == "risk_parity":
-            for _ticker, _sig in sorted({**long_candidates, **short_candidates}.items(), key=lambda kv: kv[0]):
+            for _ticker, _sig in sorted(
+                {**long_candidates, **short_candidates}.items(), key=lambda kv: kv[0]
+            ):
                 pass  # vols computed per-pool below
             vols_l: dict[str, float] = {}
             for ticker, _sig in sorted(long_candidates.items(), key=lambda kv: kv[0]):

@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.2, "reasoning": "All signals negative; long trades lost; short won\u2014veto long in crisis regime.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.95, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

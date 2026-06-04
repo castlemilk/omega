@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.38, "reasoning": "Strong technicals (-0.63) BUT spread_zscore +1.22 & fear_greed +1.09 signal reversal risk", "regime_override": null, "signal_adjustments": {}, "confidence": 0.46, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

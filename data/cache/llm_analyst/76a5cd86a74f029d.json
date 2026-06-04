@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.25, "reasoning": "5 consecutive losing longs + technical collapse (SMA/price/momentum -6 to -9) outweigh weak composite.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.68, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

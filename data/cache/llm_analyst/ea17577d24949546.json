@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.25, "reasoning": "Composite negative vs SHORT, signal parity, shorts losing", "regime_override": "normal", "signal_adjustments": {}, "confidence": 0.75, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

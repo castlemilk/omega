@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.35, "reasoning": "Fear spike unsupported by structure; weak composite & recent loss", "regime_override": null, "signal_adjustments": {}, "confidence": 0.72, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

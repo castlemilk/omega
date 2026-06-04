@@ -1,0 +1,37 @@
+{
+  "version": "v127",
+  "total_pnl": -42.8828,
+  "trade_count": 20,
+  "components": {
+    "alpha": -42.8828,
+    "beta": -10.5,
+    "timing": -32.3828,
+    "selection": -0.0,
+    "residual": 42.8828
+  },
+  "per_symbol": {
+    "ADAUSDT": {
+      "pnl": -42.8828,
+      "selection": -0.0,
+      "trades": 20
+    }
+  },
+  "per_regime": {
+    "normal": {
+      "pnl": 49.2552,
+      "alpha": 49.2552,
+      "trades": 7
+    },
+    "high_vol": {
+      "pnl": 0.0,
+      "alpha": 0.0,
+      "trades": 1
+    },
+    "crisis": {
+      "pnl": -92.138,
+      "alpha": -92.138,
+      "trades": 12
+    }
+  },
+  "generated_at": "2026-04-14T10:10:04.936597+00:00"
+}

@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.15, "reasoning": "Composite -0.11, 7/8 signals bearish, 5 losing longs; veto", "regime_override": null, "signal_adjustments": {}, "confidence": 0.88, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

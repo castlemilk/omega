@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.3, "reasoning": "MAs bearish, VPIN negative, recent 5 long losses despite signal", "regime_override": null, "signal_adjustments": {}, "confidence": 0.7, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

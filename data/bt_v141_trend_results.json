@@ -1,0 +1,49 @@
+{
+  "version": "bt_v141_trend",
+  "run": {
+    "date": "2026-04-18T12:07:22.027747+00:00",
+    "cycles": 500,
+    "sleep_seconds": 0.0,
+    "elapsed_s": 2861.6,
+    "avg_cycle_s": 5.723,
+    "cg_key_used": true,
+    "db_url_used": true
+  },
+  "preflight": {
+    "ok": true,
+    "warnings": []
+  },
+  "intelligence": {
+    "improve_calls": 1,
+    "semantic_patterns_db": 30,
+    "semantic_patterns_node": 4
+  },
+  "observability": {
+    "metrics_jsonl": "/tmp/bt_v141_trend_metrics.jsonl",
+    "total_zero_trade_cycles": 391,
+    "max_zero_streak": 1,
+    "ring1_pass_rate_final": 1.0,
+    "conviction_filter_rate": 0.49546012589311667,
+    "circuit_breaker_trips": 0,
+    "final_vol_low_threshold": 0.0
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 0,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 500
+  },
+  "trades": {
+    "total_closed": 120,
+    "long_trades": 55,
+    "short_trades": 65,
+    "open_positions": 1,
+    "win_rate": 0.3833,
+    "total_pnl_usd": -15750.56,
+    "realised_pnl_engine": -15750.56,
+    "gross_profit": 40663.16,
+    "gross_loss": 56413.71,
+    "profit_factor": 0.721
+  }
+}

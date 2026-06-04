@@ -1,0 +1,4 @@
+{"cycle": 6, "ticker": "ARBUSDT", "pnl": -26.20940455883767, "side": "long", "sma_crossover": -37.129353869449474, "fear_greed_signal": 10.919949310611807}
+{"cycle": 9, "ticker": "NEARUSDT", "pnl": -8.742151664929304, "side": "long", "momentum_derivative": 0.02284364139000393, "sma_crossover": -13.569581595597622, "fear_greed_signal": 4.804586289278315}
+{"cycle": 10, "ticker": "ARBUSDT", "pnl": -23.01041082599569, "side": "long", "sma_crossover": -32.59752369886325, "fear_greed_signal": 9.587112872867554}
+{"cycle": 6, "ticker": "ETHUSDT", "pnl": -3.178899374210642, "side": "long", "momentum_derivative": -0.005749081471262273, "sma_crossover": 5.2767610789012425, "funding_rate_signal": -5.272175782657185, "fear_greed_signal": -3.1777355889834373}

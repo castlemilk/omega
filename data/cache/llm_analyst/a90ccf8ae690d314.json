@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.12, "reasoning": "All signals extreme bearish: composite -0.325, imbalance/ricci/depth -0.93+. VETO.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.04, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

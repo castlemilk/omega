@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.35, "reasoning": "Composite -0.139 below threshold; signals split 50/50; recent shorts red.", "regime_override": "NORMAL", "signal_adjustments": {}, "confidence": 0.42, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

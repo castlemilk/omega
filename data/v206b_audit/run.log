@@ -1,0 +1,73 @@
+[2026-06-01T13:21:39+09:30] V206b audit starting
+--- pre-audit fingerprints ---
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/omega_victoria_state.db
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/omega_victoria_memory.db
+f1c1d714b195aa1795c50ed2db1795613d868a07340cbf0b1a563384fdfebdcf  data/victoria_state.db
+------------------------------
+[2026-06-01T13:21:39+09:30] START v206b_recent_r1 snapshot=data/snapshots/snap_20260414.json
+[2026-06-01T14:02:33+09:30] END   v206b_recent_r1 rc=0
+--- post-run fingerprints: recent_r1 (version=v206b_recent_r1) ---
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/v206b_audit/recent_r1/omega_victoria_memory.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/v206b_audit/recent_r1/omega_victoria_state.db
+f1c1d714b195aa1795c50ed2db1795613d868a07340cbf0b1a563384fdfebdcf  data/v206b_audit/recent_r1/victoria_state.db
+d6440696e9b30ebcccea19f81aa9a2188d3367a05b89a89c90c875cf833a7f87  data/v206b_audit/recent_r1/v206b_recent_r1_progress.json
+ef93a75bb773cf5c4e8600db7a4e88f359fb32b490af2c49fd82dbe39b52ac1e  data/v206b_audit/recent_r1/v206b_recent_r1_results.json
+835ddb32a7f1371414e6f59bc83880a0c4e78e76d6a2dc5f0a6226676af42a90  data/v206b_audit/recent_r1/v206b_recent_r1_trades.csv
+042d7908acada3fee7466c0f74acf729cee4fa0bd9bcd05bbe0fad7340d74e69  data/v206b_audit/recent_r1/v206b_recent_r1_decisions.jsonl
+51dc7a05e05ae0496a0d8cc1d9c409aaf6606b4dbc24ec87b29b07bb52ee7d03  data/v206b_audit/recent_r1/v206b_recent_r1_metrics.jsonl
+[2026-06-01T14:02:33+09:30] START v206b_recent_r2 snapshot=data/snapshots/snap_20260414.json
+[2026-06-01T14:43:16+09:30] END   v206b_recent_r2 rc=0
+--- post-run fingerprints: recent_r2 (version=v206b_recent_r2) ---
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/v206b_audit/recent_r2/omega_victoria_memory.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/v206b_audit/recent_r2/omega_victoria_state.db
+f1c1d714b195aa1795c50ed2db1795613d868a07340cbf0b1a563384fdfebdcf  data/v206b_audit/recent_r2/victoria_state.db
+6f62001176a89081e78100467006df7988a292e50fcb3b2278e0879696094c81  data/v206b_audit/recent_r2/v206b_recent_r2_progress.json
+f17b7cf86f1004811b65a0305f641856c9dc6c7998c230bccafe1d3e0f0c9eae  data/v206b_audit/recent_r2/v206b_recent_r2_results.json
+d899ce8b18b8bd229aeb0c99b5256df53d63c831e34b1b2cfd89c3fc3556300f  data/v206b_audit/recent_r2/v206b_recent_r2_trades.csv
+0c1bbdda96456f03da3cb4ce5a2e3a8cabafa66cd76aa8eb3b7ab34fba2996fa  data/v206b_audit/recent_r2/v206b_recent_r2_decisions.jsonl
+497fb2b7664dcd8649e19e573c5d0b11e4ed92e38259da9e6e4f81a4f27945fe  data/v206b_audit/recent_r2/v206b_recent_r2_metrics.jsonl
+[2026-06-01T14:43:16+09:30] START v206b_trend_r1 snapshot=data/snapshots/snap_trending_2023q4.json
+[2026-06-01T15:24:57+09:30] END   v206b_trend_r1 rc=0
+--- post-run fingerprints: trend_r1 (version=v206b_trend_r1) ---
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/v206b_audit/trend_r1/omega_victoria_memory.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/v206b_audit/trend_r1/omega_victoria_state.db
+f1c1d714b195aa1795c50ed2db1795613d868a07340cbf0b1a563384fdfebdcf  data/v206b_audit/trend_r1/victoria_state.db
+51b922e91f1588ea8fb83c94ef8651aaa918bded7494b0bb21679e2dd698e7b4  data/v206b_audit/trend_r1/v206b_trend_r1_progress.json
+8971c0e4c1f47c0d8f7d3345eb0c095cbda5cdcc786d8c05a810fdcea73524d5  data/v206b_audit/trend_r1/v206b_trend_r1_results.json
+8bbb3547a0aac9db65c4d9d20f97f7f4252bf16bbddd141211e817b08a14103d  data/v206b_audit/trend_r1/v206b_trend_r1_trades.csv
+e848f78a64e5c364c4b24abbff9c6b7f796032d9abe6d4c81a20f90f16cf24ef  data/v206b_audit/trend_r1/v206b_trend_r1_decisions.jsonl
+276c6231d47c3f956fe3a4d16595f5f9b8c68402e70941fc4b2b164146277804  data/v206b_audit/trend_r1/v206b_trend_r1_metrics.jsonl
+[2026-06-01T15:24:57+09:30] START v206b_trend_r2 snapshot=data/snapshots/snap_trending_2023q4.json
+[2026-06-01T16:06:36+09:30] END   v206b_trend_r2 rc=0
+--- post-run fingerprints: trend_r2 (version=v206b_trend_r2) ---
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/v206b_audit/trend_r2/omega_victoria_memory.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/v206b_audit/trend_r2/omega_victoria_state.db
+f1c1d714b195aa1795c50ed2db1795613d868a07340cbf0b1a563384fdfebdcf  data/v206b_audit/trend_r2/victoria_state.db
+05550b9070b03c984ec24c169d34fb0b8f031a4a044184161d52da5a529579d2  data/v206b_audit/trend_r2/v206b_trend_r2_progress.json
+6c477e679727833deb4233c5c935a7cc76293ff28cbf84e9417877b9db4637ff  data/v206b_audit/trend_r2/v206b_trend_r2_results.json
+7b5a570205d20dbb9426116546ae917b1a0884140a101f62a3277b686a37d5c4  data/v206b_audit/trend_r2/v206b_trend_r2_trades.csv
+bed2479668889bab4807163df9702f74be73dfc91fee82a3965b38779f2d3c26  data/v206b_audit/trend_r2/v206b_trend_r2_decisions.jsonl
+ccd044736d8247acb049e31f594238faa5973e6be66480285d7a3532627db9d4  data/v206b_audit/trend_r2/v206b_trend_r2_metrics.jsonl
+[2026-06-01T16:06:37+09:30] START v206b_crisis_r1 snapshot=data/snapshots/snap_crisis_2022h1.json
+[2026-06-01T16:47:34+09:30] END   v206b_crisis_r1 rc=0
+--- post-run fingerprints: crisis_r1 (version=v206b_crisis_r1) ---
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/v206b_audit/crisis_r1/omega_victoria_memory.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/v206b_audit/crisis_r1/omega_victoria_state.db
+f1c1d714b195aa1795c50ed2db1795613d868a07340cbf0b1a563384fdfebdcf  data/v206b_audit/crisis_r1/victoria_state.db
+148be5e35b8e7881fe1d4ad7949b6fa68156e186ed2730c55a4774fe464e0b39  data/v206b_audit/crisis_r1/v206b_crisis_r1_progress.json
+1d245cab8abb74a4394c15591a3648aeef6a61289beedd25c7c0176065abf006  data/v206b_audit/crisis_r1/v206b_crisis_r1_results.json
+24308e59a0a25fae2999e8b1e24ac3bd117015335a536037f2b4c7be1569b272  data/v206b_audit/crisis_r1/v206b_crisis_r1_trades.csv
+ff61472a2c6b68cc0a18ae47f51930d6854083fe7e5943c466ba163ffe6c0896  data/v206b_audit/crisis_r1/v206b_crisis_r1_decisions.jsonl
+c855525e1ff7f13363e3d4f133b475f693cf41b13f456fd5d2a3ca3fa5fe52ef  data/v206b_audit/crisis_r1/v206b_crisis_r1_metrics.jsonl
+[2026-06-01T16:47:34+09:30] START v206b_crisis_r2 snapshot=data/snapshots/snap_crisis_2022h1.json
+[2026-06-01T17:28:17+09:30] END   v206b_crisis_r2 rc=0
+--- post-run fingerprints: crisis_r2 (version=v206b_crisis_r2) ---
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/v206b_audit/crisis_r2/omega_victoria_memory.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/v206b_audit/crisis_r2/omega_victoria_state.db
+f1c1d714b195aa1795c50ed2db1795613d868a07340cbf0b1a563384fdfebdcf  data/v206b_audit/crisis_r2/victoria_state.db
+0a5ad2f23582ca9b17395f37b78cf60f8312d6fd296b4ded86a11a7f849080dd  data/v206b_audit/crisis_r2/v206b_crisis_r2_progress.json
+d17cb640c2ffba265095b9d2f65a40ec3ff6103fe66761606e518072b4132196  data/v206b_audit/crisis_r2/v206b_crisis_r2_results.json
+d8806ee84351fe670f56d081531143cebc7338e81015e9c61280096d66022c55  data/v206b_audit/crisis_r2/v206b_crisis_r2_trades.csv
+17569b2c91115522159afb0a7f50c1e529ed1473859a97988c29c733781e3336  data/v206b_audit/crisis_r2/v206b_crisis_r2_decisions.jsonl
+8037c20f7affc08f167e6dbd853068821c2dd235a25019415ca93d864b4f8ba6  data/v206b_audit/crisis_r2/v206b_crisis_r2_metrics.jsonl
+[2026-06-01T17:28:18+09:30] V206b audit complete

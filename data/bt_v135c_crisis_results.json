@@ -1,0 +1,49 @@
+{
+  "version": "bt_v135c_crisis",
+  "run": {
+    "date": "2026-04-16T10:42:43.916213+00:00",
+    "cycles": 150,
+    "sleep_seconds": 0.0,
+    "elapsed_s": 403.4,
+    "avg_cycle_s": 2.689,
+    "cg_key_used": true,
+    "db_url_used": true
+  },
+  "preflight": {
+    "ok": true,
+    "warnings": []
+  },
+  "intelligence": {
+    "improve_calls": 1,
+    "semantic_patterns_db": 30,
+    "semantic_patterns_node": 1
+  },
+  "observability": {
+    "metrics_jsonl": "/tmp/bt_v135c_crisis_metrics.jsonl",
+    "total_zero_trade_cycles": 120,
+    "max_zero_streak": 1,
+    "ring1_pass_rate_final": 1.0,
+    "conviction_filter_rate": 0.4825085324232082,
+    "circuit_breaker_trips": 0,
+    "final_vol_low_threshold": 0.0
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 0,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 150
+  },
+  "trades": {
+    "total_closed": 46,
+    "long_trades": 36,
+    "short_trades": 10,
+    "open_positions": 2,
+    "win_rate": 0.4783,
+    "total_pnl_usd": -6977.9,
+    "realised_pnl_engine": -6977.9,
+    "gross_profit": 20414.86,
+    "gross_loss": 27392.77,
+    "profit_factor": 0.745
+  }
+}

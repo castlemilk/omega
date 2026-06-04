@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "gates": {
+    "pnl_floor": true,
+    "regime_parity": true,
+    "drawdown_ceiling": true,
+    "trade_count_floor": true,
+    "signal_integrity": true,
+    "auto_apply_audit": true
+  },
+  "failures": [],
+  "v48_summary": {
+    "version": "bt_v135b_trend",
+    "pnl": -5651.28,
+    "trades": 48,
+    "win_rate": 0.375,
+    "max_drawdown": 0.0,
+    "regime_pnl": {
+      "normal": -494.40340000000106,
+      "crisis": -6133.7158,
+      "high_vol": 976.8403
+    }
+  },
+  "v49_summary": {
+    "version": "bt_v136b_trend",
+    "pnl": 7740.39,
+    "trades": 37,
+    "win_rate": 0.4595,
+    "max_drawdown": 0.0,
+    "regime_pnl": {
+      "normal": 1105.5694999999996,
+      "crisis": 4843.3812,
+      "high_vol": 1791.4364999999998
+    }
+  }
+}

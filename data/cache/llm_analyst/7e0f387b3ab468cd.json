@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.15, "reasoning": "5 consecutive LONG losses + negative composite (-0.206) + bearish technicals (price/SMA/book depth/Ricci)", "regime_override": null, "signal_adjustments": {}, "confidence": 0.92, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

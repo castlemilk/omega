@@ -1,0 +1,72 @@
+=== V211 2-pair 3-gate audit starting at 2026-06-03T03:28:22Z ===
+PYTHONHASHSEED env at driver: unset
+Pre-audit fingerprints:
+d3d87eec0dc65d8c6c21f98744d786f2e4e607a3c0904dde7ece96f0ed3cbb27  data/macro_cache.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/omega_victoria_state.db
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/omega_victoria_memory.db
+--- v211_recent_p1_r1 starting 2026-06-03T03:28:22Z ---
+v211_recent_p1_r1 exit=0 at 2026-06-03T04:09:17Z
+4acd665271ae7ca96f339352b55d23bdb3eaa6d1ca1e5479e3e23214c83f0026  /Users/benebsworth/projects/omega/data/v211_audit/recent_p1_r1/results.json
+2ae5fbcaa87a5def245d248ca370eb3c0ff6ef13827749df205e7753591cc057  /Users/benebsworth/projects/omega/data/v211_audit/recent_p1_r1/trades.csv
+e622bdac6bc8eccbef81c8b51fe62eba8c0c003fcec6498b63ed8c2f271b168b  /Users/benebsworth/projects/omega/data/v211_audit/recent_p1_r1/metrics.jsonl
+--- v211_recent_p1_r2 starting 2026-06-03T04:09:17Z ---
+v211_recent_p1_r2 exit=0 at 2026-06-03T04:49:50Z
+c8da82d54631d10b0baaeafd8faf54f77663aba818010cf4f712a4609935efd5  /Users/benebsworth/projects/omega/data/v211_audit/recent_p1_r2/results.json
+db587a723013cea04f10e91989e60fae322253f3a0962f734a9db01c2bd36076  /Users/benebsworth/projects/omega/data/v211_audit/recent_p1_r2/trades.csv
+2d5056fc33d45ea5364df5e687595f6b752fbd6b5be9ddc812c389ec9efb4ace  /Users/benebsworth/projects/omega/data/v211_audit/recent_p1_r2/metrics.jsonl
+--- v211_recent_p2_r1 starting 2026-06-03T04:49:50Z ---
+v211_recent_p2_r1 exit=0 at 2026-06-03T05:30:22Z
+3e1153c0a5a83362007ff0615734e1702a19775ec3a32af0f85dc6862a41bd9d  /Users/benebsworth/projects/omega/data/v211_audit/recent_p2_r1/results.json
+20ad8245b0537c70d57fbf15cda437d7aaf1a052d4e1ea3c5a9dd2fcc9f1b711  /Users/benebsworth/projects/omega/data/v211_audit/recent_p2_r1/trades.csv
+b8c8581564ab600a366c5909fef606699ec1017c4f183b4a2509f3bf847f7a4f  /Users/benebsworth/projects/omega/data/v211_audit/recent_p2_r1/metrics.jsonl
+--- v211_recent_p2_r2 starting 2026-06-03T05:30:22Z ---
+v211_recent_p2_r2 exit=0 at 2026-06-03T06:11:00Z
+1e5562358651807acc7af7a338bffbbcc88cde8299a5dcbe6bb66c03eee95f52  /Users/benebsworth/projects/omega/data/v211_audit/recent_p2_r2/results.json
+03eacc4576548bbf4707eabefed138e2f9241ac3fdb2f42adcbf5a4f6386543e  /Users/benebsworth/projects/omega/data/v211_audit/recent_p2_r2/trades.csv
+a193c9f30585385477a306a3c363853aaaa54d51d83e7b5306e18c5ecc311d30  /Users/benebsworth/projects/omega/data/v211_audit/recent_p2_r2/metrics.jsonl
+--- v211_trend_p1_r1 starting 2026-06-03T06:11:00Z ---
+v211_trend_p1_r1 exit=0 at 2026-06-03T06:52:10Z
+478dade99a30dd182569965a8c3b05528635c2e80412a0d26b685504c8b1eb8b  /Users/benebsworth/projects/omega/data/v211_audit/trend_p1_r1/results.json
+a2d617686bfe9763535b7590b632c8108ff71ea30247d339500b38de68f3737b  /Users/benebsworth/projects/omega/data/v211_audit/trend_p1_r1/trades.csv
+37f875c0c69004a61eecf2c704a1d2274ec62faf20e99b23575b0f8c4feb265d  /Users/benebsworth/projects/omega/data/v211_audit/trend_p1_r1/metrics.jsonl
+--- v211_trend_p1_r2 starting 2026-06-03T06:52:10Z ---
+v211_trend_p1_r2 exit=0 at 2026-06-03T07:32:54Z
+1859795d0cf976d59f435293a964cca37a40e50bebf8891b3814e24b883ddb28  /Users/benebsworth/projects/omega/data/v211_audit/trend_p1_r2/results.json
+68cde8bc40a48131131cac828d7b0cbb74403f282f87216d0d7d7d9ee226c65e  /Users/benebsworth/projects/omega/data/v211_audit/trend_p1_r2/trades.csv
+6defd79cd3c80aab25b62008669c9f09e3a267b07521e6d3ee7df7509888e76b  /Users/benebsworth/projects/omega/data/v211_audit/trend_p1_r2/metrics.jsonl
+--- v211_trend_p2_r1 starting 2026-06-03T07:32:54Z ---
+v211_trend_p2_r1 exit=0 at 2026-06-03T08:13:48Z
+e130045d16db2852bfad0c1540124033074235ee836c66c2cb5361201b921285  /Users/benebsworth/projects/omega/data/v211_audit/trend_p2_r1/results.json
+8fe68af5b6134bf3f477a9689e45ba9d74a01afc2caf8a0f6b4f51301b849b35  /Users/benebsworth/projects/omega/data/v211_audit/trend_p2_r1/trades.csv
+007ec9b1d3fc10b6fbe1bde8551dccbd666de8e118573df64a4b9f8d593bae3c  /Users/benebsworth/projects/omega/data/v211_audit/trend_p2_r1/metrics.jsonl
+--- v211_trend_p2_r2 starting 2026-06-03T08:13:48Z ---
+v211_trend_p2_r2 exit=0 at 2026-06-03T08:54:28Z
+a1593595e92d781616f4997c9a9a6dfb3b31e173eda25089546a8734cb824e79  /Users/benebsworth/projects/omega/data/v211_audit/trend_p2_r2/results.json
+64c0ca2d649bd6da50e31b641fab55bed297424640ad4762499273c037a0a9cd  /Users/benebsworth/projects/omega/data/v211_audit/trend_p2_r2/trades.csv
+84bde3355956860092f379c6c5273e70957eb971431f0db499d5503ce31f6bc8  /Users/benebsworth/projects/omega/data/v211_audit/trend_p2_r2/metrics.jsonl
+--- v211_crisis_p1_r1 starting 2026-06-03T08:54:28Z ---
+v211_crisis_p1_r1 exit=0 at 2026-06-03T09:35:20Z
+a232acc389e4673542cb4587e8ebe56fbb6efd1ec06edcdd403c01de5b36efa6  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p1_r1/results.json
+cc7b9cae1ccb106a34fa7096253125142682b96d9aa128479949ee3a9fa4408f  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p1_r1/trades.csv
+7f7e7202bf259a1a8e236007392347677f9c91a17dd7ba95c3e752482194ac74  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p1_r1/metrics.jsonl
+--- v211_crisis_p1_r2 starting 2026-06-03T09:35:20Z ---
+v211_crisis_p1_r2 exit=0 at 2026-06-03T10:16:17Z
+38fb7e2c0ccfaef31ca96bda1960dd4731fd080e0d93da9aa4c8f7381b1bdbe4  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p1_r2/results.json
+6d48906c08ecdb785ae6afbc37aeb8135e3e91ef0f89824cdf8d979e6f9223fe  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p1_r2/trades.csv
+90576c62a44a891867bd1572151200275029728549a100e95c8ff3352ea95c41  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p1_r2/metrics.jsonl
+--- v211_crisis_p2_r1 starting 2026-06-03T10:16:17Z ---
+v211_crisis_p2_r1 exit=0 at 2026-06-03T10:57:00Z
+d89337dc2d53f3cfb902d416236b635506fa668f51fe1e30ca3b8aa350a02e4d  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p2_r1/results.json
+77861e71cdae65c013f374fbe1e50ca43e9fce4f153268fdd6156533a8df13d3  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p2_r1/trades.csv
+c1633a9123c39b9e008e876957796045943efc919bcdf986b736e8a72e7228ee  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p2_r1/metrics.jsonl
+--- v211_crisis_p2_r2 starting 2026-06-03T10:57:00Z ---
+v211_crisis_p2_r2 exit=0 at 2026-06-03T11:37:46Z
+8b72e2c06f8151e43488c5ae7f2e3be7b9716e7bdbb279d12b555f6c3d93e47a  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p2_r2/results.json
+0d3f6ef42c751529e45b663dd794f0865400d04d3dc1548832c7c7f1711d7e2c  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p2_r2/trades.csv
+a8fdf3048129fd73965fe47a7f3da689c911bc75d37851ffa06c4c49798adcca  /Users/benebsworth/projects/omega/data/v211_audit/crisis_p2_r2/metrics.jsonl
+Post-audit fingerprints:
+d3d87eec0dc65d8c6c21f98744d786f2e4e607a3c0904dde7ece96f0ed3cbb27  data/macro_cache.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/omega_victoria_state.db
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/omega_victoria_memory.db
+FROZEN-CACHE VERIFIED: pre/post fingerprints identical
+=== V211 audit finished at 2026-06-03T11:37:46Z ===

@@ -1,0 +1,52 @@
+{
+  "version": "bt_v136a_trend_trades",
+  "total_pnl": 7740.3872,
+  "trade_count": 37,
+  "components": {
+    "alpha": 9196.1668,
+    "beta": 4422374.633,
+    "timing": -10982118.8204,
+    "selection": -0.0,
+    "residual": 6558288.4077
+  },
+  "per_symbol": {
+    "ADAUSDT": {
+      "pnl": -572.8901,
+      "selection": -3083.2859,
+      "trades": 12
+    },
+    "ETHUSDT": {
+      "pnl": 4446.3288,
+      "selection": 680.735,
+      "trades": 18
+    },
+    "ARBUSDT": {
+      "pnl": 4049.9783,
+      "selection": 2794.7804,
+      "trades": 6
+    },
+    "NEARUSDT": {
+      "pnl": -183.0298,
+      "selection": -392.2295,
+      "trades": 1
+    }
+  },
+  "per_regime": {
+    "normal": {
+      "pnl": 1105.5695,
+      "alpha": 3402.3738,
+      "trades": 22
+    },
+    "crisis": {
+      "pnl": 4843.3812,
+      "alpha": 4586.7776,
+      "trades": 12
+    },
+    "high_vol": {
+      "pnl": 1791.4365,
+      "alpha": 1207.0154,
+      "trades": 3
+    }
+  },
+  "generated_at": "2026-04-16T11:52:20.357141+00:00"
+}

@@ -1,0 +1,52 @@
+{
+  "version": "ablate_v93_baseline_trades",
+  "total_pnl": -107.4459,
+  "trade_count": 41,
+  "components": {
+    "alpha": -104.2874,
+    "beta": 29377.2033,
+    "timing": -29484.6492,
+    "selection": 0.0,
+    "residual": 104.2874
+  },
+  "per_symbol": {
+    "NEARUSDT": {
+      "pnl": -14.8437,
+      "selection": 21.8451,
+      "trades": 14
+    },
+    "ARBUSDT": {
+      "pnl": -111.6146,
+      "selection": -72.3051,
+      "trades": 15
+    },
+    "ETHUSDT": {
+      "pnl": 12.3377,
+      "selection": 28.0615,
+      "trades": 6
+    },
+    "ADAUSDT": {
+      "pnl": 6.6747,
+      "selection": 22.3985,
+      "trades": 6
+    }
+  },
+  "per_regime": {
+    "high_vol": {
+      "pnl": -164.6707,
+      "alpha": -136.6726,
+      "trades": 13
+    },
+    "normal": {
+      "pnl": -18.9624,
+      "alpha": -15.9754,
+      "trades": 21
+    },
+    "crisis": {
+      "pnl": 76.1872,
+      "alpha": 48.3605,
+      "trades": 7
+    }
+  },
+  "generated_at": "2026-04-11T10:39:39.143078+00:00"
+}

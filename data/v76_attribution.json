@@ -1,0 +1,32 @@
+{
+  "version": "v76",
+  "total_pnl": 36.0233,
+  "trade_count": 2,
+  "components": {
+    "alpha": 36.0233,
+    "beta": 53000.0,
+    "timing": -52963.9767,
+    "selection": 0.0,
+    "residual": -36.0233
+  },
+  "per_symbol": {
+    "BNBUSDT": {
+      "pnl": 17.1636,
+      "selection": -0.8481,
+      "trades": 1
+    },
+    "ETHUSDT": {
+      "pnl": 18.8597,
+      "selection": 0.8481,
+      "trades": 1
+    }
+  },
+  "per_regime": {
+    "normal": {
+      "pnl": 36.0233,
+      "alpha": 36.0233,
+      "trades": 2
+    }
+  },
+  "generated_at": "2026-04-08T09:35:39.983951+00:00"
+}

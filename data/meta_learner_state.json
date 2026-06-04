@@ -1,0 +1,417 @@
+{
+  "version": 2,
+  "updated_at": "2026-04-20T11:54:29.183905+00:00",
+  "surfaces": {
+    "bear_long": {
+      "center": 0.325667,
+      "temperature": 0.05,
+      "initial_center": 0.35,
+      "initial_temperature": 0.12,
+      "n_adjustments": 8
+    },
+    "bear_short": {
+      "center": 0.311297,
+      "temperature": 0.05,
+      "initial_center": 0.35,
+      "initial_temperature": 0.12,
+      "n_adjustments": 8
+    },
+    "composite_long": {
+      "center": 0.182558,
+      "temperature": 0.15,
+      "initial_center": 0.08,
+      "initial_temperature": 0.04,
+      "n_adjustments": 21
+    },
+    "composite_short": {
+      "center": 0.139276,
+      "temperature": 0.05,
+      "initial_center": 0.05,
+      "initial_temperature": 0.03,
+      "n_adjustments": 4
+    }
+  },
+  "regime_buffers": {
+    "crisis": {
+      "trades": [
+        {
+          "pnl": 78.72638208537542,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 4492.223507131244,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -1526.7857142857094,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 78.72638208537542,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 4492.223507131244,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -1526.7857142857094,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 78.72638208537542,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 4492.223507131244,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -1526.7857142857094,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 2378.361912485822,
+          "side": "long",
+          "entry_confidence": 0.15494235072540963,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 78.72638208537542,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 1708.0808264158086,
+          "side": "short",
+          "entry_confidence": 0.09505764927459037,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -1070.5510705510696,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 2399.0105058301406,
+          "side": "long",
+          "entry_confidence": 0.15628753775314752,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 78.72638208537542,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 1683.9093032658398,
+          "side": "short",
+          "entry_confidence": 0.09371246224685247,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -1070.5510705510696,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 78.72638208537542,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 4492.223507131244,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -1526.7857142857094,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        }
+      ],
+      "pf": 3.226215379719798
+    },
+    "high_vol": {
+      "trades": [
+        {
+          "pnl": 243.26594973815403,
+          "side": "long",
+          "entry_confidence": 0.08692219159300593,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -490.38241299824074,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -644.0887238293383,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 2966.3291412942103,
+          "side": "long",
+          "entry_confidence": 0.21747381370180027,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -644.0887238293383,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 150.34481838092643,
+          "side": "long",
+          "entry_confidence": 0.08454273740583207,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -123.75743702082623,
+          "side": "short",
+          "entry_confidence": 0.06309231007295026,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 2917.3845093271984,
+          "side": "long",
+          "entry_confidence": 0.21388548102963664,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -154.59229072565233,
+          "side": "short",
+          "entry_confidence": 0.06000426843624344,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 150.22888231066733,
+          "side": "long",
+          "entry_confidence": 0.08447754358771893,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -45.06950982222702,
+          "side": "long",
+          "entry_confidence": 0.08373914924969773,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -177.0134965783619,
+          "side": "short",
+          "entry_confidence": 0.06870695372756769,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 150.50764845495397,
+          "side": "long",
+          "entry_confidence": 0.08463430092187826,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 1180.8045896121885,
+          "side": "long",
+          "entry_confidence": 0.081626549828424,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -490.38241299824074,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -177.0134965783619,
+          "side": "short",
+          "entry_confidence": 0.06870695372756769,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 150.5749597474221,
+          "side": "long",
+          "entry_confidence": 0.08467215178354985,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": 66.71877384112494,
+          "side": "long",
+          "entry_confidence": 0.21900437513348633,
+          "entry_value": 0.3
+        },
+        {
+          "pnl": -60.3978111520525,
+          "side": "long",
+          "entry_confidence": 0.07144198233414147,
+          "entry_value": 0.3
+        }
+      ],
+      "pf": 2.65271902812086
+    },
+    "normal": {
+      "trades": [
+        {
+          "pnl": -486.0096703097521,
+          "side": "long",
+          "entry_confidence": 0.08836539460177303,
+          "entry_value": 0.08836539460177303
+        },
+        {
+          "pnl": 2155.7468688165804,
+          "side": "long",
+          "entry_confidence": 0.21583441542006962,
+          "entry_value": 0.21583441542006962
+        },
+        {
+          "pnl": -236.30488680233137,
+          "side": "short",
+          "entry_confidence": 0.06903937350722754,
+          "entry_value": 0.06903937350722754
+        },
+        {
+          "pnl": -469.7835578732415,
+          "side": "long",
+          "entry_confidence": 0.18096062649277245,
+          "entry_value": 0.18096062649277245
+        },
+        {
+          "pnl": -684.7845720539432,
+          "side": "long",
+          "entry_confidence": 0.08765242522290465,
+          "entry_value": 0.08765242522290465
+        },
+        {
+          "pnl": -423.1589511980933,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.25
+        },
+        {
+          "pnl": -21.290635745509682,
+          "side": "long",
+          "entry_confidence": 0.12391150003886621,
+          "entry_value": 0.12391150003886621
+        },
+        {
+          "pnl": 356.58512432447185,
+          "side": "long",
+          "entry_confidence": 0.12608849996113383,
+          "entry_value": 0.12608849996113383
+        },
+        {
+          "pnl": 1722.4399577002189,
+          "side": "long",
+          "entry_confidence": 0.10877582776345937,
+          "entry_value": 0.10877582776345937
+        },
+        {
+          "pnl": 932.0557491289187,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.25
+        },
+        {
+          "pnl": -464.31153558699754,
+          "side": "long",
+          "entry_confidence": 0.12397596671858989,
+          "entry_value": 0.12397596671858989
+        },
+        {
+          "pnl": -478.3527110240681,
+          "side": "long",
+          "entry_confidence": 0.08697322018619415,
+          "entry_value": 0.08697322018619415
+        },
+        {
+          "pnl": -1282.9745495844315,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.25
+        },
+        {
+          "pnl": -855.6888439087345,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.25
+        },
+        {
+          "pnl": 732.9346893989008,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.25
+        },
+        {
+          "pnl": 0.0,
+          "side": "long",
+          "entry_confidence": 0.12368892414118629,
+          "entry_value": 0.12368892414118629
+        },
+        {
+          "pnl": -27.73020326208942,
+          "side": "long",
+          "entry_confidence": 0.1263110758588137,
+          "entry_value": 0.1263110758588137
+        },
+        {
+          "pnl": 2347.694378996969,
+          "side": "short",
+          "entry_confidence": 0.25,
+          "entry_value": 0.25
+        },
+        {
+          "pnl": -817.9715810010316,
+          "side": "long",
+          "entry_confidence": 0.1487823983820797,
+          "entry_value": 0.1487823983820797
+        },
+        {
+          "pnl": -590.7642117777452,
+          "side": "long",
+          "entry_confidence": 0.10121760161792026,
+          "entry_value": 0.10121760161792026
+        }
+      ],
+      "pf": 1.2059226393467202
+    },
+    "trending": {
+      "trades": [],
+      "pf": null
+    }
+  },
+  "signal_ic": {
+    "momentum": 0.0,
+    "mean_reversion": 0.0,
+    "microstructure": 0.0,
+    "macro": 0.0,
+    "sentiment": 0.0,
+    "geometry": 0.0
+  }
+}

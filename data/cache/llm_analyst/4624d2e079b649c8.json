@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.18, "reasoning": "All signals bearish (SMA -1.95/-1.77, price -1.69): unanimous veto", "regime_override": null, "signal_adjustments": {}, "confidence": 0.93, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

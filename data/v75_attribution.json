@@ -1,0 +1,37 @@
+{
+  "version": "v75",
+  "total_pnl": 110.9023,
+  "trade_count": 3,
+  "components": {
+    "alpha": 102.7404,
+    "beta": -23292.3863,
+    "timing": -23181.484,
+    "selection": -0.0,
+    "residual": 46482.0323
+  },
+  "per_symbol": {
+    "SOLUSDT": {
+      "pnl": 97.1355,
+      "selection": 23.2006,
+      "trades": 2
+    },
+    "BNBUSDT": {
+      "pnl": 13.7668,
+      "selection": -23.2006,
+      "trades": 1
+    }
+  },
+  "per_regime": {
+    "crisis": {
+      "pnl": 53.1915,
+      "alpha": 53.1915,
+      "trades": 1
+    },
+    "normal": {
+      "pnl": 57.7108,
+      "alpha": 49.5489,
+      "trades": 2
+    }
+  },
+  "generated_at": "2026-04-08T07:11:25.360878+00:00"
+}

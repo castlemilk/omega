@@ -1,0 +1,15 @@
+{
+  "version": "ablate_observability_only_trades",
+  "total_pnl": 0,
+  "trade_count": 0,
+  "components": {
+    "alpha": 0.0,
+    "beta": 0.0,
+    "timing": 0.0,
+    "selection": 0.0,
+    "residual": 0.0
+  },
+  "per_symbol": {},
+  "per_regime": {},
+  "generated_at": "2026-04-11T11:06:14.608837+00:00"
+}

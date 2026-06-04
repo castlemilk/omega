@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.12, "reasoning": "All signals bearish; quant composite -0.27; crisis regime suppression.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.96, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

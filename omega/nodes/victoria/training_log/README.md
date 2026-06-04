@@ -15,23 +15,25 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-06-03, post-V210)
+## High-water marks (as of 2026-06-03, post-V211)
 
-Noise-floor status (V209 3-gate × 2-pair audit at V208a HEAD,
-V210 cycle-1 bisect on the same artifacts): **crisis fence confirmed
-locked at −$17,763 ± $28** (working ceiling, 35× improvement over
-V206b's $1,978 crisis floor). Recent and trend noise-floor
-**unresolved**, V210/V211 in progress: V210 localized the residual
-channel to `signals.items()` unsorted aggregation at `strategy.py:1722`
-(basket_std) and `:2130` (basket_mean). V211 = canonical-sort fix on
-those two call-sites with pre-registered ≥2-pair audit acceptance.
+Noise-floor status (V211 2-pair × 3-gate audit, 12 runs): **eval-noise
+floor finally trustworthy at $1–166 across all three gates**. V211
+applied two `sorted()` wraps to the basket_std (`strategy.py:1722`) and
+basket_mean (`:2130`) aggregations — the channel V210 localized. Recent
+collapsed ~2,400× ($1,386 → $1), trend ~9× ($750 → $166), crisis
+~2.3× ($28 → $12). Crisis V209 ceiling (−$17,763) **rescinded** — it
+was a partial-canonicalization artifact; the structurally correct
+deterministic crisis number at V211 HEAD is −$24,828 (62 trades, same
+WR/PF; V210 predicted asymmetric crisis cycle-1 drift = 1e-2 would
+move selection once the basket sort closed). All three gates
+re-anchored at V211 single-seed=42 headlines below.
 
-
-| Gate    | Best version                          | PnL (seeded) | Trades | WR         | PF        | Notes                                                  |
-|---------|---------------------------------------|-------------:|-------:|-----------:|----------:|--------------------------------------------------------|
-| recent  | ~~V199~~ **DEMOTED**                  | ~~+$2,478~~  | 67     | 34.3%      | 1.13      | V203 σ=$2,547 (n=4); V209 within-pair σ ≥$1,386 at fenced+sorted HEAD. Noise-floor **unresolved** (V210/V211). No surviving recent high-water. |
-| trend   | ~~V204~~ **RESCINDED (V206b)**        | ~~+$22,105~~ | 77     | 40.26%     | 2.30      | V209 trend r1/r2 read +$14,929 / +$16,429 (within-pair σ ≥$750). Noise-floor **unresolved** (V210/V211). V204 +$22,105 unreproducible at HEAD; inside V172-era trend noise envelope per V206b's ≥$14,000 V172 spread. No surviving trend high-water. |
-| crisis  | **V209 (locked working ceiling)**     | **−$17,763** |     65 |    32.31%  |     0.614 | V209 crisis r1/r2 = −$17,791 / −$17,735, within-pair σ ≈ $28 (n=1 pair). +$5,046 better than V206b's −$22,809 ceiling — clears 2σ by >100×, signal not noise. V210 confirmed crisis selection-stable (65/65 trade match across r1/r2) — robustness from regime-architecture (strong-directional short-bias), not from the fences. **Locked crisis ceiling: −$17,763 ± $28 on seed=42 + PYTHONHASHSEED=42 + frozen funding cache + V208a canonical sort.** See V209.md + REFLECTION_V209.md + V210.md. |
+| Gate    | Best version                          | PnL (V211 anchor) | Trades | WR    | PF    | Noise σ | Notes                                                  |
+|---------|---------------------------------------|------------------:|-------:|------:|------:|--------:|--------------------------------------------------------|
+| recent  | **V211 (re-baselined)**               |        +$2,177.06 |     69 | 0.3333| 1.112 | **$1**  | Within-pair max $0.95, cross-pair max $0.95, Δtrades=0 across 4 runs. ~2,400× collapse vs V210's ≥$1,386 floor. V199 +$2,478 stays DEMOTED — was unreproducible at HEAD and rode the unsorted basket channel. |
+| trend   | **V211 (re-baselined)**               |        +$8,328.87 |    106 | 0.3774| 1.281 | **$166**| 3 of 4 runs identical at 106 trades / ≈$8,330; trend_p1_r2 outlier at 105 trades / $8,165 (residual 4th channel — parking lot for V212/V213). V204 +$22,105 stays RESCINDED. |
+| crisis  | **V211 (re-baselined)**               |       −$24,827.90 |     62 | 0.3226| 0.512 | **$12** | Within-pair max $11.82, cross-pair max $11.82, Δtrades=0 across 4 runs. V209 −$17,763 ceiling **RESCINDED** — V210 predicted asymmetric crisis cycle-1 drift = 1e-2; the basket sort canonicalized the deterministic answer to −$24,828. Same WR/PF as V209's 65-trade version, 3 fewer trades. Whether −$24,828 vs alternative canonicalizations is "the" structural answer is a V212+ parking-lot question; for now this is the working floor. |
 
 ### V203 variance baseline (2σ noise floors for future claims)
 
@@ -85,6 +87,7 @@ half-Kelly restoration + crisis trail tightener.
 | [V209.md](V209.md) | **Full 3-gate × 2-pair audit at V208a HEAD** | **Partial pass.** Crisis $56 spread (Δ=0) — new working ceiling −$17,763 ± $28 (+$5,046 vs V206b). Recent $2,773 / trend $1,500 spreads, trade Δ=3 each — V208a's $0.06 recent floor did NOT reproduce. Cycle-1 composite drift unchanged on recent. Second gate-specific channel alive. **V210 = mandatory reflection** (eval-noise trigger fired). |
 | [REFLECTION_V209.md](REFLECTION_V209.md) | Mandatory reflection (trigger #2) | V208a $0.06 was a one-pair fluke; n=1 spreads do not establish σ. Noise-floor claim rule: ≥2-pair audit OR structural argument. Crisis fence is real (selection-stable from regime architecture, not from the determinism fixes). Operating thresholds until V211: σ_recent≥$1,386, σ_trend≥$750, σ_crisis≈$28. |
 | [V210.md](V210.md) | Cycle-1 bisect on V209 artifacts | **Localized third channel** to `signals.items()` unsorted at `strategy.py:1722` (basket_std) and `:2130` (basket_mean). Crisis 65/65 trade match (selection-stable); recent first bifurcates cycle 184; trend first bifurcates cycle 38. Sub-signal values identical at every common trade event — sub-signal layer is clean. V211 = canonical-sort fix on the two unsorted aggregations, pre-registered ≥2-pair audit acceptance. |
+| [V211.md](V211.md) | **Sort basket_std + basket_mean** | **Pre-registered acceptance met on all 3 gates.** 2-pair × 3-gate audit (12 runs). Recent noise floor $1,386 → $1 (~2,400×); trend $750 → $166 (~9×); crisis $28 → $12 (~2.3×). Crisis V209 ceiling −$17,763 RESCINDED — basket sort canonicalized to −$24,828 (62 trades, same WR/PF); V210 predicted this asymmetric move. Trend p1_r2 outlier (105 vs 106 trades) flags one residual 4th channel — parking lot. V212 = n=4 variance batch + strategy_selector audit at V211 HEAD. |
 
 ## The loop
 

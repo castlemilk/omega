@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.35, "reasoning": "Veto: technicals vs sentiment conflict (vol +1.0, fear_greed +0.98), recent shorts 3L-1W.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.42, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

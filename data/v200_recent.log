@@ -1,0 +1,808 @@
+hmmlearn not available — using numpy GMM fallback
+20:09:52 BACKTEST MODE: WS signals disabled (whale_prints, ws_microstructure)
+20:09:52 ======================================================================
+20:09:52 Training Run v200_recent — 200 cycles  sleep=10s
+20:09:52 CoinGecko key  : CG-YPzBAPag5...
+20:09:52 Database URL   : postgresql://omega:omega@localhost:5432/...
+20:09:52 Metrics JSONL  : /tmp/v200_recent_metrics.jsonl
+20:09:52 Log file       : /tmp/v200_recent_training.log
+20:09:52 Features ON    : ffg_gate1_enabled, ffg_gate4_enabled
+20:09:52 ======================================================================
+20:09:53 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED_API_KEY not set — using DEMO_KEY (30 req/day limit). Set FRED_API_KEY env var for full access.
+20:09:53 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED 400 for DGS2 — marking unavailable for this session (set FRED_API_KEY for full access)
+20:09:53 WARNING omega.nodes.victoria.data_cache: MacroDataCache: no data returned for DGS2
+20:09:54 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED 400 for DGS10 — marking unavailable for this session (set FRED_API_KEY for full access)
+20:09:54 WARNING omega.nodes.victoria.data_cache: MacroDataCache: no data returned for DGS10
+20:09:54 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED 400 for DTWEXBGS — marking unavailable for this session (set FRED_API_KEY for full access)
+20:09:54 WARNING omega.nodes.victoria.data_cache: MacroDataCache: no data returned for DTWEXBGS
+20:09:55 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED 400 for VIXCLS — marking unavailable for this session (set FRED_API_KEY for full access)
+20:09:55 WARNING omega.nodes.victoria.data_cache: MacroDataCache: no data returned for VIXCLS
+20:09:55 BACKTEST MODE: ingestion replaced by ReplayIngestionNode (snap_20260414, 60 steps)
+20:09:55 ImprovementEngine: SyntheticEvaluator injected
+20:09:55 Decision snapshots → /tmp/v200_recent_decisions.jsonl (+ Postgres if configured)
+20:09:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/lifecycle unreachable ([Errno 61] Connection refused) — continuing
+20:09:55 SignalDecayDetector: loaded from data/signal_ic_history.json
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 0) ═══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [91mUNKN ⚠️[0m
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m [93mnone yet[0m
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m [93mn/a[0m
+  [1mTRADES:       [0m open=0 closed=0 | PnL=$+0.00 | WR=0%
+  [1mLONG/SHORT:   [0m longs=0 shorts=0
+  [1mBLOCKERS:     [0m [91mRegime detector not firing | No signal data yet (first cycle?)[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:09:56 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED_API_KEY not set — using DEMO_KEY (30 req/day limit). Set FRED_API_KEY env var for full access.
+20:10:08 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:10:08 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:10:08 Cycle   1/200 [NORM] OK       | fresh=0.0min | open= 0 closed=  0 | PnL=$+0 wr=0% | improve=0 sem_db=30 | 13.7s/c ETA 2718s | zero_streak=1
+20:10:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:10:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:10:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:10:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:10:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:10:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:10:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:10:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:10:55 Cycle   5/200 [CRIS] OK       | fresh=0.0min | open= 1 closed=  1 | PnL=$-895 wr=0% | improve=0 sem_db=30 | 12.1s/c ETA 2367s | zero_streak=2
+20:11:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:11:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:11:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:11:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:11:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:11:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:11:42 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:11:42 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:11:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 10) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.00)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 10/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.00 (HOLD) | ETH: -0.03 (HOLD) | SOL: -0.01 (HOLD) | BNB: -0.03 (HOLD) | XRP: +0.03 (HOLD) | ADA: +0.08 ([92mBUY[0m) | DOT: +0.01 (HOLD) | AVAX: -0.03 (HOLD) | LINK: +0.05 (HOLD) | MATIC: +0.16 ([92mBUY[0m) | NEAR: +0.02 (HOLD) | SUI: -0.05 (HOLD) | ARB: -0.19 ([91mSELL[0m)
+  [1mTRADES:       [0m open=2 closed=2 | PnL=$-1814.78 | WR=0%
+  [1mLONG/SHORT:   [0m longs=3 shorts=1
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:12:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:12:09 Cycle  10/200 [NORM] OK       | fresh=0.0min | open= 2 closed=  2 | PnL=$-1815 wr=0% | improve=0 sem_db=30 | 13.5s/c ETA 2562s | zero_streak=4
+20:12:21 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:12:21 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:12:33 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:12:33 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:12:43 WARNING omega.nodes.victoria.vrp_signal: VRP circuit breaker: zscore=-2.75 < -2.0sigma — extreme COMPLACENCY; flagging for manual review (iv=0.37 rv=0.77)
+20:12:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:12:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:12:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:12:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:13:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:13:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:13:09 Cycle  15/200 [CRIS] OK       | fresh=0.0min | open= 0 closed=  5 | PnL=$-3685 wr=0% | improve=1 sem_db=30 | 12.9s/c ETA 2392s | zero_streak=0
+20:13:21 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:13:21 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:13:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:13:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:13:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:13:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:13:56 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:13:56 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:14:08 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 20) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 10/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.00 (HOLD) | ETH: +0.00 (HOLD) | SOL: +0.03 (HOLD) | BNB: +0.03 (HOLD) | XRP: -0.11 ([91mSELL[0m) | ADA: -0.08 ([91mSELL[0m) | DOT: +0.25 ([92mBUY[0m) | AVAX: -0.07 ([91mSELL[0m) | LINK: +0.00 (HOLD) | MATIC: -0.14 ([91mSELL[0m) | NEAR: +0.29 ([92mBUY[0m) | SUI: -0.11 ([91mSELL[0m) | ARB: -0.10 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=5 | PnL=$-3684.72 | WR=0%
+  [1mLONG/SHORT:   [0m longs=5 shorts=1
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:14:21 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:14:21 Cycle  20/200 [CRIS] OK       | fresh=0.0min | open= 1 closed=  5 | PnL=$-3685 wr=0% | improve=1 sem_db=30 | 13.3s/c ETA 2395s | zero_streak=5
+20:14:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:14:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:14:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:14:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:14:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:14:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:15:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:15:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:15:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:15:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:15:19 Cycle  25/200 [HIGH] OK       | fresh=0.0min | open= 0 closed=  6 | PnL=$-2749 wr=17% | improve=1 sem_db=30 | 13.0s/c ETA 2270s | zero_streak=3
+20:15:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:15:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:15:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:15:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:15:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:15:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:16:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:16:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3023: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3024: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+20:16:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 30) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mHIGH_VOL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 10/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.05 (HOLD) | ETH: +0.05 (HOLD) | SOL: +0.01 (HOLD) | BNB: +0.05 (HOLD) | XRP: -0.03 (HOLD) | ADA: -0.12 ([91mSELL[0m) | DOT: -0.10 ([91mSELL[0m) | AVAX: +0.10 ([92mBUY[0m) | LINK: +0.01 (HOLD) | MATIC: -0.33 ([91mSELL[0m) | NEAR: +0.21 ([92mBUY[0m) | SUI: +0.13 ([92mBUY[0m) | ARB: -0.02 (HOLD)
+  [1mTRADES:       [0m open=1 closed=6 | PnL=$-2749.11 | WR=17%
+  [1mLONG/SHORT:   [0m longs=5 shorts=2
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:16:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:16:31 Cycle  30/200 [HIGH] OK       | fresh=0.0min | open= 1 closed=  6 | PnL=$-2749 wr=17% | improve=1 sem_db=30 | 13.2s/c ETA 2249s | zero_streak=8
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3023: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3024: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+20:16:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:16:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:16:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:16:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:17:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:17:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:17:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:17:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:17:30 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:17:30 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:17:30 Cycle  35/200 [NORM] OK       | fresh=0.0min | open= 1 closed=  7 | PnL=$-3522 wr=14% | improve=1 sem_db=30 | 13.0s/c ETA 2146s | zero_streak=4
+20:17:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:17:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:17:53 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:17:53 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:18:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:18:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:18:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:18:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:18:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 40) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.01 (HOLD) | ETH: +0.05 (HOLD) | SOL: +0.05 ([92mBUY[0m) | BNB: -0.01 (HOLD) | XRP: +0.03 (HOLD) | ADA: -0.01 (HOLD) | DOT: -0.06 ([91mSELL[0m) | AVAX: -0.00 (HOLD) | LINK: +0.00 (HOLD) | MATIC: +0.02 (HOLD) | NEAR: -0.01 (HOLD) | SUI: -0.03 (HOLD) | ARB: -0.06 ([91mSELL[0m)
+  [1mTRADES:       [0m open=3 closed=9 | PnL=$-3548.42 | WR=22%
+  [1mLONG/SHORT:   [0m longs=7 shorts=5
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:18:39 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:18:39 Cycle  40/200 [NORM] OK       | fresh=0.0min | open= 3 closed=  9 | PnL=$-3548 wr=22% | improve=1 sem_db=30 | 13.1s/c ETA 2098s | zero_streak=0
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3023: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3024: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+20:18:50 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:18:50 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:19:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:19:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:19:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:19:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:19:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:19:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:19:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:19:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:19:36 Cycle  45/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 11 | PnL=$-1961 wr=27% | improve=1 sem_db=30 | 12.9s/c ETA 2001s | zero_streak=3
+20:19:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:19:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:19:59 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:19:59 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:20:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:20:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:20:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:20:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:20:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 50) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mHIGH_VOL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 12/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.06 ([92mBUY[0m) | ETH: +0.09 ([92mBUY[0m) | SOL: -0.07 ([91mSELL[0m) | BNB: +0.00 (HOLD) | XRP: -0.01 (HOLD) | ADA: -0.04 (HOLD) | DOT: -0.07 ([91mSELL[0m) | AVAX: +0.01 (HOLD) | LINK: +0.05 ([92mBUY[0m) | MATIC: +0.10 ([92mBUY[0m) | NEAR: -0.07 ([91mSELL[0m) | SUI: -0.06 ([91mSELL[0m) | ARB: +0.01 (HOLD)
+  [1mTRADES:       [0m open=1 closed=15 | PnL=$-2109.01 | WR=27%
+  [1mLONG/SHORT:   [0m longs=8 shorts=8
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:20:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:20:48 Cycle  50/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 15 | PnL=$-2109 wr=27% | improve=1 sem_db=30 | 13.1s/c ETA 1960s | zero_streak=0
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3023: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3024: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+20:21:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:21:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3023: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[:, None]
+/opt/homebrew/lib/python3.14/site-packages/numpy/lib/_function_base_impl.py:3024: RuntimeWarning: invalid value encountered in divide
+  c /= stddev[None, :]
+20:21:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:21:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:21:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:21:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:21:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:21:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:21:59 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:21:59 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:21:59 Cycle  55/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 15 | PnL=$-2109 wr=27% | improve=1 sem_db=30 | 13.2s/c ETA 1910s | zero_streak=5
+20:22:11 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:22:11 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:22:22 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:22:22 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:22:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:22:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:22:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:22:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:22:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 60) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.07 ([92mBUY[0m) | ETH: +0.12 ([92mBUY[0m) | SOL: -0.04 (HOLD) | BNB: -0.10 ([91mSELL[0m) | XRP: -0.06 ([91mSELL[0m) | ADA: -0.09 ([91mSELL[0m) | DOT: -0.09 ([91mSELL[0m) | AVAX: +0.02 (HOLD) | LINK: -0.01 (HOLD) | MATIC: -0.34 ([91mSELL[0m) | NEAR: +0.23 ([92mBUY[0m) | SUI: +0.05 (HOLD) | ARB: +0.25 ([92mBUY[0m)
+  [1mTRADES:       [0m open=0 closed=16 | PnL=$-1174.84 | WR=31%
+  [1mLONG/SHORT:   [0m longs=8 shorts=8
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:22:58 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:22:58 Cycle  60/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 16 | PnL=$-1175 wr=31% | improve=1 sem_db=30 | 13.0s/c ETA 1827s | zero_streak=1
+20:23:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:23:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:23:19 WARNING omega.nodes.victoria.vrp_signal: VRP circuit breaker: zscore=-3.41 < -2.0sigma — extreme COMPLACENCY; flagging for manual review (iv=0.37 rv=0.73)
+20:23:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:23:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:23:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:23:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:23:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:23:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:23:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:23:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:23:54 Cycle  65/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 19 | PnL=$-3957 wr=32% | improve=1 sem_db=30 | 12.9s/c ETA 1743s | zero_streak=1
+20:24:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:24:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:24:17 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:24:17 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:24:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:24:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:24:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:24:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:24:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 70) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.02 (HOLD) | ETH: -0.04 (HOLD) | SOL: -0.02 (HOLD) | BNB: -0.06 ([91mSELL[0m) | XRP: +0.05 (HOLD) | ADA: +0.10 ([92mBUY[0m) | DOT: +0.01 (HOLD) | AVAX: +0.02 (HOLD) | LINK: +0.05 (HOLD) | MATIC: +0.16 ([92mBUY[0m) | NEAR: +0.02 (HOLD) | SUI: -0.04 (HOLD) | ARB: -0.23 ([91mSELL[0m)
+  [1mTRADES:       [0m open=2 closed=20 | PnL=$-4669.60 | WR=30%
+  [1mLONG/SHORT:   [0m longs=13 shorts=9
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:24:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:24:51 Cycle  70/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 20 | PnL=$-4670 wr=30% | improve=1 sem_db=30 | 12.8s/c ETA 1665s | zero_streak=3
+20:25:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:25:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:25:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:25:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:25:30 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:25:30 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:25:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:25:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:25:52 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:25:52 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:25:52 Cycle  75/200 [CRIS] OK       | fresh=0.0min | open= 3 closed= 23 | PnL=$-5561 wr=26% | improve=1 sem_db=30 | 12.8s/c ETA 1596s | zero_streak=1
+20:26:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:26:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:26:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:26:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:26:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:26:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:26:39 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:26:39 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:26:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 80) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.03 (HOLD) | ETH: -0.03 (HOLD) | SOL: +0.00 (HOLD) | BNB: +0.01 (HOLD) | XRP: -0.12 ([91mSELL[0m) | ADA: -0.06 ([91mSELL[0m) | DOT: +0.31 ([92mBUY[0m) | AVAX: -0.01 (HOLD) | LINK: -0.01 (HOLD) | MATIC: -0.10 ([91mSELL[0m) | NEAR: +0.31 ([92mBUY[0m) | SUI: -0.13 ([91mSELL[0m) | ARB: -0.12 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=25 | PnL=$-5287.40 | WR=28%
+  [1mLONG/SHORT:   [0m longs=16 shorts=10
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:26:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:26:51 Cycle  80/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 25 | PnL=$-5287 wr=28% | improve=1 sem_db=30 | 12.7s/c ETA 1525s | zero_streak=1
+20:27:02 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:27:02 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:27:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:27:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:27:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:27:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:27:37 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:27:37 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:27:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:27:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:27:48 Cycle  85/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 26 | PnL=$-3778 wr=31% | improve=1 sem_db=30 | 12.6s/c ETA 1453s | zero_streak=2
+20:28:00 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:28:00 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:28:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:28:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:28:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:28:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:28:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:28:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:28:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 90) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mHIGH_VOL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.04 (HOLD) | ETH: +0.04 (HOLD) | SOL: +0.01 (HOLD) | BNB: +0.05 (HOLD) | XRP: -0.04 (HOLD) | ADA: -0.13 ([91mSELL[0m) | DOT: -0.04 (HOLD) | AVAX: +0.09 ([92mBUY[0m) | LINK: +0.00 (HOLD) | MATIC: -0.32 ([91mSELL[0m) | NEAR: +0.22 ([92mBUY[0m) | SUI: +0.11 ([92mBUY[0m) | ARB: -0.03 (HOLD)
+  [1mTRADES:       [0m open=2 closed=28 | PnL=$-4012.09 | WR=29%
+  [1mLONG/SHORT:   [0m longs=17 shorts=13
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:28:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:28:48 Cycle  90/200 [HIGH] OK       | fresh=0.0min | open= 2 closed= 28 | PnL=$-4012 wr=29% | improve=1 sem_db=30 | 12.6s/c ETA 1385s | zero_streak=3
+20:28:59 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:28:59 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:29:10 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:29:11 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:29:22 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:29:22 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:29:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:29:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:29:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:29:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:29:45 Cycle  95/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 30 | PnL=$-735 wr=30% | improve=1 sem_db=30 | 12.5s/c ETA 1316s | zero_streak=1
+20:29:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:29:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:30:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:30:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:30:23 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:30:23 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:30:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:30:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:30:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 100) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.01 (HOLD) | ETH: +0.07 ([92mBUY[0m) | SOL: +0.06 ([92mBUY[0m) | BNB: -0.01 (HOLD) | XRP: +0.06 ([92mBUY[0m) | ADA: -0.01 (HOLD) | DOT: -0.03 (HOLD) | AVAX: -0.00 (HOLD) | LINK: -0.01 (HOLD) | MATIC: -0.07 ([91mSELL[0m) | NEAR: +0.02 (HOLD) | SUI: -0.03 (HOLD) | ARB: -0.07 ([91mSELL[0m)
+  [1mTRADES:       [0m open=4 closed=31 | PnL=$-823.42 | WR=29%
+  [1mLONG/SHORT:   [0m longs=19 shorts=16
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:30:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:30:45 Cycle 100/200 [NORM] OK       | fresh=0.0min | open= 4 closed= 31 | PnL=$-823 wr=29% | improve=1 sem_db=30 | 12.5s/c ETA 1251s | zero_streak=0
+20:30:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:30:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:31:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:31:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:31:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:31:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:31:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:31:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:31:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:31:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:31:43 Cycle 105/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 34 | PnL=$+825 wr=32% | improve=1 sem_db=30 | 12.5s/c ETA 1184s | zero_streak=2
+20:31:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:31:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:32:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:32:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:32:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:32:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:32:29 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:32:29 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:32:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 110) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.05 (HOLD) | ETH: +0.07 ([92mBUY[0m) | SOL: -0.06 ([91mSELL[0m) | BNB: +0.01 (HOLD) | XRP: -0.00 (HOLD) | ADA: -0.06 ([91mSELL[0m) | DOT: -0.08 ([91mSELL[0m) | AVAX: -0.02 (HOLD) | LINK: +0.04 (HOLD) | MATIC: +0.26 ([92mBUY[0m) | NEAR: -0.08 ([91mSELL[0m) | SUI: -0.08 ([91mSELL[0m) | ARB: -0.03 (HOLD)
+  [1mTRADES:       [0m open=2 closed=37 | PnL=$+819.81 | WR=32%
+  [1mLONG/SHORT:   [0m longs=20 shorts=19
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:32:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:32:40 Cycle 110/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 37 | PnL=$+820 wr=32% | improve=1 sem_db=30 | 12.4s/c ETA 1117s | zero_streak=1
+20:32:52 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:32:52 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:33:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:33:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:33:15 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:33:15 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:33:26 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:33:26 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:33:38 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:33:38 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:33:38 Cycle 115/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 38 | PnL=$+680 wr=32% | improve=1 sem_db=30 | 12.4s/c ETA 1052s | zero_streak=4
+20:33:49 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:33:49 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:34:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:34:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:34:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:34:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:34:23 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:34:23 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:34:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 120) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 12/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.07 ([92mBUY[0m) | ETH: +0.10 ([92mBUY[0m) | SOL: -0.06 ([91mSELL[0m) | BNB: -0.10 ([91mSELL[0m) | XRP: -0.06 ([91mSELL[0m) | ADA: -0.07 ([91mSELL[0m) | DOT: -0.07 ([91mSELL[0m) | AVAX: -0.00 (HOLD) | LINK: -0.03 (HOLD) | MATIC: -0.29 ([91mSELL[0m) | NEAR: +0.22 ([92mBUY[0m) | SUI: +0.03 (HOLD) | ARB: +0.27 ([92mBUY[0m)
+  [1mTRADES:       [0m open=0 closed=39 | PnL=$+1613.75 | WR=33%
+  [1mLONG/SHORT:   [0m longs=20 shorts=19
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:34:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:34:34 Cycle 120/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 39 | PnL=$+1614 wr=33% | improve=1 sem_db=30 | 12.3s/c ETA 986s | zero_streak=0
+20:34:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:34:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:34:56 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:34:56 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:35:06 WARNING omega.nodes.victoria.vrp_signal: VRP circuit breaker: zscore=-3.41 < -2.0sigma — extreme COMPLACENCY; flagging for manual review (iv=0.37 rv=0.73)
+20:35:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:35:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:35:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:35:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:35:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:35:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:35:31 Cycle 125/200 [CRIS] OK       | fresh=0.0min | open= 0 closed= 42 | PnL=$-1169 wr=33% | improve=1 sem_db=30 | 12.3s/c ETA 922s | zero_streak=0
+20:35:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:35:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:35:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:35:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:36:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:36:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:36:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:36:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:36:29 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 130) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.03 (HOLD) | ETH: -0.05 ([91mSELL[0m) | SOL: -0.04 (HOLD) | BNB: -0.08 ([91mSELL[0m) | XRP: +0.06 ([92mBUY[0m) | ADA: +0.12 ([92mBUY[0m) | DOT: +0.01 (HOLD) | AVAX: +0.03 (HOLD) | LINK: +0.05 (HOLD) | MATIC: +0.17 ([92mBUY[0m) | NEAR: +0.01 (HOLD) | SUI: -0.04 (HOLD) | ARB: -0.20 ([91mSELL[0m)
+  [1mTRADES:       [0m open=2 closed=43 | PnL=$-1881.04 | WR=33%
+  [1mLONG/SHORT:   [0m longs=25 shorts=20
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:36:29 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:36:29 Cycle 130/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 43 | PnL=$-1881 wr=33% | improve=1 sem_db=30 | 12.3s/c ETA 858s | zero_streak=2
+20:36:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:36:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:36:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:36:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:37:02 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:37:02 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:37:14 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:37:14 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:37:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:37:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:37:25 Cycle 135/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 46 | PnL=$-2772 wr=30% | improve=1 sem_db=30 | 12.2s/c ETA 795s | zero_streak=0
+20:37:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:37:36 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:37:47 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:37:47 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:37:58 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:37:58 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:38:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:38:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:38:21 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 140) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.05 ([91mSELL[0m) | ETH: -0.03 (HOLD) | SOL: -0.00 (HOLD) | BNB: -0.00 (HOLD) | XRP: -0.11 ([91mSELL[0m) | ADA: -0.00 (HOLD) | DOT: +0.30 ([92mBUY[0m) | AVAX: -0.00 (HOLD) | LINK: +0.01 (HOLD) | MATIC: -0.13 ([91mSELL[0m) | NEAR: +0.30 ([92mBUY[0m) | SUI: -0.12 ([91mSELL[0m) | ARB: -0.16 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=48 | PnL=$-2498.76 | WR=31%
+  [1mLONG/SHORT:   [0m longs=28 shorts=21
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:38:21 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:38:21 Cycle 140/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 48 | PnL=$-2499 wr=31% | improve=1 sem_db=30 | 12.2s/c ETA 731s | zero_streak=0
+20:38:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:38:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:38:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:38:44 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:38:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:38:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:39:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:39:06 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:39:17 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:39:17 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:39:17 Cycle 145/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 49 | PnL=$-989 wr=33% | improve=1 sem_db=30 | 12.2s/c ETA 669s | zero_streak=1
+20:39:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:39:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:39:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:39:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:39:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:39:51 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:40:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:40:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:40:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 150) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.04 (HOLD) | ETH: +0.03 (HOLD) | SOL: +0.00 (HOLD) | BNB: +0.05 (HOLD) | XRP: -0.03 (HOLD) | ADA: -0.14 ([91mSELL[0m) | DOT: +0.00 (HOLD) | AVAX: +0.07 ([92mBUY[0m) | LINK: +0.00 (HOLD) | MATIC: -0.28 ([91mSELL[0m) | NEAR: +0.22 ([92mBUY[0m) | SUI: +0.08 ([92mBUY[0m) | ARB: -0.04 (HOLD)
+  [1mTRADES:       [0m open=2 closed=51 | PnL=$-1223.31 | WR=31%
+  [1mLONG/SHORT:   [0m longs=29 shorts=24
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:40:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:40:16 Cycle 150/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 51 | PnL=$-1223 wr=31% | improve=1 sem_db=30 | 12.1s/c ETA 607s | zero_streak=2
+20:40:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:40:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:40:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:40:45 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:40:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:40:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:41:08 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:41:08 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:41:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:41:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:41:20 Cycle 155/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 53 | PnL=$+2054 wr=32% | improve=1 sem_db=30 | 12.2s/c ETA 547s | zero_streak=0
+20:41:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:41:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:41:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:41:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:41:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:41:55 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:42:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:42:07 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:42:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 160) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.00 (HOLD) | ETH: +0.08 ([92mBUY[0m) | SOL: +0.04 (HOLD) | BNB: -0.01 (HOLD) | XRP: +0.07 ([92mBUY[0m) | ADA: -0.00 (HOLD) | DOT: +0.01 (HOLD) | AVAX: -0.01 (HOLD) | LINK: -0.01 (HOLD) | MATIC: -0.13 ([91mSELL[0m) | NEAR: +0.03 (HOLD) | SUI: -0.01 (HOLD) | ARB: -0.06 ([91mSELL[0m)
+  [1mTRADES:       [0m open=4 closed=53 | PnL=$+2054.32 | WR=32%
+  [1mLONG/SHORT:   [0m longs=31 shorts=26
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:42:18 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:42:18 Cycle 160/200 [NORM] OK       | fresh=0.0min | open= 4 closed= 53 | PnL=$+2054 wr=32% | improve=1 sem_db=30 | 12.1s/c ETA 486s | zero_streak=5
+20:42:29 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:42:29 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:42:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:42:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:42:53 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:42:53 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:43:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:43:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:43:15 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:43:15 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:43:15 Cycle 165/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 57 | PnL=$+3614 wr=33% | improve=1 sem_db=30 | 12.1s/c ETA 424s | zero_streak=1
+20:43:27 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:43:27 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:43:39 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:43:39 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:43:50 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:43:50 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:44:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:44:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:44:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 170) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.03 (HOLD) | ETH: +0.04 (HOLD) | SOL: -0.06 ([91mSELL[0m) | BNB: +0.02 (HOLD) | XRP: -0.01 (HOLD) | ADA: -0.06 ([91mSELL[0m) | DOT: -0.11 ([91mSELL[0m) | AVAX: -0.04 (HOLD) | LINK: +0.01 (HOLD) | MATIC: +0.47 ([92mBUY[0m) | NEAR: -0.11 ([91mSELL[0m) | SUI: -0.11 ([91mSELL[0m) | ARB: -0.06 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=60 | PnL=$+3608.65 | WR=33%
+  [1mLONG/SHORT:   [0m longs=31 shorts=30
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:44:12 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:44:12 Cycle 170/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 60 | PnL=$+3609 wr=33% | improve=1 sem_db=30 | 12.1s/c ETA 363s | zero_streak=0
+20:44:23 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:44:23 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:44:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:44:34 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:44:46 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:44:46 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:44:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:44:57 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:45:08 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:45:08 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:45:08 Cycle 175/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 61 | PnL=$+3468 wr=33% | improve=1 sem_db=30 | 12.1s/c ETA 302s | zero_streak=3
+20:45:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:45:19 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:45:30 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:45:30 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:45:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:45:41 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:45:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:45:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:46:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 180) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 12/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.07 ([92mBUY[0m) | ETH: +0.10 ([92mBUY[0m) | SOL: -0.06 ([91mSELL[0m) | BNB: -0.10 ([91mSELL[0m) | XRP: -0.07 ([91mSELL[0m) | ADA: -0.04 (HOLD) | DOT: -0.06 ([91mSELL[0m) | AVAX: -0.00 (HOLD) | LINK: -0.01 (HOLD) | MATIC: -0.33 ([91mSELL[0m) | NEAR: +0.19 ([92mBUY[0m) | SUI: +0.05 ([92mBUY[0m) | ARB: +0.25 ([92mBUY[0m)
+  [1mTRADES:       [0m open=1 closed=61 | PnL=$+3468.47 | WR=33%
+  [1mLONG/SHORT:   [0m longs=32 shorts=30
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:46:04 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:46:04 Cycle 180/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 61 | PnL=$+3468 wr=33% | improve=1 sem_db=30 | 12.1s/c ETA 241s | zero_streak=8
+20:46:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:46:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:46:27 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:46:27 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:46:38 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:46:38 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:46:48 WARNING omega.nodes.victoria.vrp_signal: VRP circuit breaker: zscore=-3.41 < -2.0sigma — extreme COMPLACENCY; flagging for manual review (iv=0.37 rv=0.73)
+20:46:49 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:46:49 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:47:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:47:01 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:47:01 Cycle 185/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 64 | PnL=$+1520 wr=33% | improve=1 sem_db=30 | 12.0s/c ETA 181s | zero_streak=1
+20:47:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:47:13 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:47:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:47:24 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:47:35 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:47:35 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:47:47 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:47:47 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:47:58 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 190) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.03 (HOLD) | ETH: -0.07 ([91mSELL[0m) | SOL: -0.05 (HOLD) | BNB: -0.12 ([91mSELL[0m) | XRP: +0.07 ([92mBUY[0m) | ADA: +0.12 ([92mBUY[0m) | DOT: +0.01 (HOLD) | AVAX: +0.03 (HOLD) | LINK: +0.03 (HOLD) | MATIC: +0.18 ([92mBUY[0m) | NEAR: +0.00 (HOLD) | SUI: -0.04 (HOLD) | ARB: -0.15 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=66 | PnL=$+907.79 | WR=33%
+  [1mLONG/SHORT:   [0m longs=37 shorts=30
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:47:58 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:47:58 Cycle 190/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 66 | PnL=$+908 wr=33% | improve=1 sem_db=30 | 12.0s/c ETA 120s | zero_streak=1
+20:48:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:48:09 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:48:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:48:20 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:48:31 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:48:32 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:48:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:48:43 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:48:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:48:54 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:48:54 Cycle 195/200 [CRIS] OK       | fresh=0.0min | open= 3 closed= 68 | PnL=$+327 wr=32% | improve=1 sem_db=30 | 12.0s/c ETA 60s | zero_streak=1
+20:49:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:49:05 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:49:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:49:16 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:49:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:49:28 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:49:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+20:49:40 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:49:52 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable ([Errno 61] Connection refused) — continuing
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 200) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.07 ([91mSELL[0m) | ETH: -0.03 (HOLD) | SOL: +0.01 (HOLD) | BNB: -0.02 (HOLD) | XRP: -0.11 ([91mSELL[0m) | ADA: +0.04 (HOLD) | DOT: +0.29 ([92mBUY[0m) | AVAX: +0.02 (HOLD) | LINK: +0.03 (HOLD) | MATIC: -0.13 ([91mSELL[0m) | NEAR: +0.25 ([92mBUY[0m) | SUI: -0.10 ([91mSELL[0m) | ARB: -0.19 ([91mSELL[0m)
+  [1mTRADES:       [0m open=2 closed=70 | PnL=$+426.89 | WR=33%
+  [1mLONG/SHORT:   [0m longs=40 shorts=32
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+20:49:52 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/decisions unreachable ([Errno 61] Connection refused) — continuing
+20:49:52 Cycle 200/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 70 | PnL=$+427 wr=33% | improve=1 sem_db=30 | 12.0s/c ETA 0s | zero_streak=2
+20:49:52 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v200_recent/lifecycle unreachable ([Errno 61] Connection refused) — continuing
+20:49:52 V200_RECENT gates FAILED vs v199_recent — 2 failures:
+20:49:52   ✗ pnl_floor: v49 426.89 < v48 2477.87
+20:49:52   ✗ regime_parity[crisis]: v49 -14717.00 < v48 -12563.95 (delta -2153.05)
+20:49:52 Gate report: /Users/benebsworth/projects/omega/data/v200_recent_gate_result.json
+20:49:52 Attribution — alpha: $+3810.97  beta: $-2610918.26  timing: $+2611286.01  selection: $+0.00
+20:49:52 Attribution report  : /Users/benebsworth/projects/omega/data/v200_recent_attribution.json
+20:49:52 
+20:49:52 ======================================================================
+20:49:52 V200_RECENT COMPLETE — 200 cycles in 2397s (11.99s/cycle)
+20:49:52 ======================================================================
+20:49:52 improve_calls         : 1
+20:49:52 semantic_patterns_db  : 30
+20:49:52 Closed trades         : 70  (long=39  short=31)
+20:49:52 Total PnL             : $+426.89  (engine realised: $+426.89)
+20:49:52 Win rate              : 32.9%  (23/70)
+20:49:52 Profit factor         : 1.02
+20:49:52 --- Observability ---
+20:49:52 Zero-trade cycles     : 136 / 200  (68%)
+20:49:52 Circuit breaker trips : 0
+20:49:52 Final vol threshold   : 0.000
+20:49:52 Metrics JSONL         : /tmp/v200_recent_metrics.jsonl
+20:49:52 Results               : /Users/benebsworth/projects/omega/data/v200_recent_results.json
+20:49:52 ======================================================================

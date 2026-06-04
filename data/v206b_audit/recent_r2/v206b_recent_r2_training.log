@@ -1,0 +1,75 @@
+14:02:35 INFO     RNG seed set to 42 (deterministic mode)
+14:02:35 INFO     BACKTEST MODE: WS signals disabled (whale_prints, ws_microstructure)
+14:02:35 INFO     ======================================================================
+14:02:35 INFO     Training Run v206b_recent_r2 — 200 cycles  sleep=10s
+14:02:35 INFO     CoinGecko key  : CG-YPzBAPag5...
+14:02:35 INFO     Database URL   : postgresql://omega:omega@localhost:5432/...
+14:02:35 INFO     Metrics JSONL  : /tmp/v206b_recent_r2_metrics.jsonl
+14:02:35 INFO     Log file       : /tmp/v206b_recent_r2_training.log
+14:02:35 INFO     Features ON    : ffg_gate1_enabled, ffg_gate4_enabled
+14:02:35 INFO     ======================================================================
+14:02:37 INFO     BACKTEST MODE: ingestion replaced by ReplayIngestionNode (snap_20260414, 60 steps)
+14:02:37 INFO     ImprovementEngine: SyntheticEvaluator injected
+14:02:37 INFO     Decision snapshots → /tmp/v206b_recent_r2_decisions.jsonl (+ Postgres if configured)
+14:02:37 INFO     SignalDecayDetector: loaded from data/signal_ic_history.json
+14:02:48 INFO     Cycle   1/200 [NORM] OK       | fresh=0.0min | open= 0 closed=  0 | PnL=$+0 wr=0% | improve=0 sem_db=30 | 11.1s/c ETA 2210s | zero_streak=1
+14:03:34 INFO     Cycle   5/200 [CRIS] OK       | fresh=0.0min | open= 1 closed=  1 | PnL=$-895 wr=0% | improve=0 sem_db=30 | 11.4s/c ETA 2230s | zero_streak=2
+14:04:44 INFO     Cycle  10/200 [NORM] OK       | fresh=0.0min | open= 2 closed=  2 | PnL=$-1815 wr=0% | improve=0 sem_db=30 | 12.7s/c ETA 2420s | zero_streak=4
+14:05:43 INFO     Cycle  15/200 [CRIS] OK       | fresh=0.0min | open= 0 closed=  5 | PnL=$-3685 wr=0% | improve=1 sem_db=30 | 12.5s/c ETA 2304s | zero_streak=0
+14:06:56 INFO     Cycle  20/200 [CRIS] OK       | fresh=0.0min | open= 1 closed=  6 | PnL=$-3876 wr=0% | improve=1 sem_db=30 | 13.0s/c ETA 2334s | zero_streak=3
+14:07:55 INFO     Cycle  25/200 [HIGH] OK       | fresh=0.0min | open= 0 closed=  7 | PnL=$-3373 wr=14% | improve=1 sem_db=30 | 12.7s/c ETA 2226s | zero_streak=3
+14:09:02 INFO     Cycle  30/200 [HIGH] OK       | fresh=0.0min | open= 1 closed=  7 | PnL=$-3373 wr=14% | improve=1 sem_db=30 | 12.8s/c ETA 2184s | zero_streak=8
+14:10:00 INFO     Cycle  35/200 [NORM] OK       | fresh=0.0min | open= 1 closed=  8 | PnL=$-4146 wr=12% | improve=1 sem_db=30 | 12.7s/c ETA 2091s | zero_streak=4
+14:11:11 INFO     Cycle  40/200 [NORM] OK       | fresh=0.0min | open= 3 closed= 10 | PnL=$-4171 wr=20% | improve=1 sem_db=30 | 12.9s/c ETA 2057s | zero_streak=0
+14:12:09 INFO     Cycle  45/200 [NORM] OK       | fresh=0.0min | open= 3 closed= 12 | PnL=$-2585 wr=25% | improve=1 sem_db=30 | 12.7s/c ETA 1970s | zero_streak=3
+14:13:22 INFO     Cycle  50/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 17 | PnL=$-2422 wr=29% | improve=1 sem_db=30 | 12.9s/c ETA 1937s | zero_streak=0
+14:14:33 INFO     Cycle  55/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 17 | PnL=$-2422 wr=29% | improve=1 sem_db=30 | 13.0s/c ETA 1888s | zero_streak=5
+14:15:32 INFO     Cycle  60/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 18 | PnL=$-1327 wr=33% | improve=1 sem_db=30 | 12.9s/c ETA 1809s | zero_streak=1
+14:16:30 INFO     Cycle  65/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 22 | PnL=$-4586 wr=32% | improve=1 sem_db=30 | 12.8s/c ETA 1731s | zero_streak=1
+14:17:29 INFO     Cycle  70/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 23 | PnL=$-5344 wr=30% | improve=1 sem_db=30 | 12.7s/c ETA 1656s | zero_streak=3
+14:18:32 INFO     Cycle  75/200 [CRIS] OK       | fresh=0.0min | open= 3 closed= 26 | PnL=$-6176 wr=27% | improve=1 sem_db=30 | 12.7s/c ETA 1592s | zero_streak=1
+14:19:29 INFO     Cycle  80/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 28 | PnL=$-5985 wr=29% | improve=1 sem_db=30 | 12.7s/c ETA 1518s | zero_streak=1
+14:20:28 INFO     Cycle  85/200 [NORM] OK       | fresh=0.0min | open= 3 closed= 30 | PnL=$-4740 wr=30% | improve=1 sem_db=30 | 12.6s/c ETA 1450s | zero_streak=2
+14:21:28 INFO     Cycle  90/200 [HIGH] OK       | fresh=0.0min | open= 3 closed= 31 | PnL=$-4573 wr=32% | improve=1 sem_db=30 | 12.6s/c ETA 1382s | zero_streak=3
+14:22:26 INFO     Cycle  95/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 34 | PnL=$-2509 wr=35% | improve=1 sem_db=30 | 12.5s/c ETA 1314s | zero_streak=1
+14:23:27 INFO     Cycle 100/200 [NORM] OK       | fresh=0.0min | open= 4 closed= 35 | PnL=$-2597 wr=34% | improve=1 sem_db=30 | 12.5s/c ETA 1250s | zero_streak=0
+14:24:25 INFO     Cycle 105/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 38 | PnL=$-949 wr=37% | improve=1 sem_db=30 | 12.5s/c ETA 1184s | zero_streak=2
+14:25:23 INFO     Cycle 110/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 42 | PnL=$-641 wr=38% | improve=1 sem_db=30 | 12.4s/c ETA 1118s | zero_streak=0
+14:26:22 INFO     Cycle 115/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 43 | PnL=$-782 wr=37% | improve=1 sem_db=30 | 12.4s/c ETA 1053s | zero_streak=4
+14:27:20 INFO     Cycle 120/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 44 | PnL=$+313 wr=39% | improve=1 sem_db=30 | 12.4s/c ETA 989s | zero_streak=0
+14:28:18 INFO     Cycle 125/200 [CRIS] OK       | fresh=0.0min | open= 0 closed= 48 | PnL=$-2946 wr=38% | improve=1 sem_db=30 | 12.3s/c ETA 925s | zero_streak=0
+14:29:17 INFO     Cycle 130/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 49 | PnL=$-3704 wr=37% | improve=1 sem_db=30 | 12.3s/c ETA 862s | zero_streak=2
+14:30:15 INFO     Cycle 135/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 52 | PnL=$-4496 wr=35% | improve=1 sem_db=30 | 12.3s/c ETA 798s | zero_streak=0
+14:31:16 INFO     Cycle 140/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 54 | PnL=$-4238 wr=35% | improve=1 sem_db=30 | 12.3s/c ETA 737s | zero_streak=0
+14:32:14 INFO     Cycle 145/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 56 | PnL=$-2984 wr=36% | improve=1 sem_db=30 | 12.3s/c ETA 674s | zero_streak=1
+14:33:20 INFO     Cycle 150/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 57 | PnL=$-2822 wr=37% | improve=1 sem_db=30 | 12.3s/c ETA 615s | zero_streak=2
+14:34:19 INFO     Cycle 155/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 59 | PnL=$-1380 wr=37% | improve=1 sem_db=30 | 12.3s/c ETA 552s | zero_streak=0
+14:35:18 INFO     Cycle 160/200 [NORM] OK       | fresh=0.0min | open= 4 closed= 59 | PnL=$-1380 wr=37% | improve=1 sem_db=30 | 12.3s/c ETA 490s | zero_streak=5
+14:36:18 INFO     Cycle 165/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 63 | PnL=$+180 wr=38% | improve=1 sem_db=30 | 12.2s/c ETA 429s | zero_streak=1
+14:37:18 INFO     Cycle 170/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 66 | PnL=$-55 wr=38% | improve=1 sem_db=30 | 12.2s/c ETA 367s | zero_streak=0
+14:38:17 INFO     Cycle 175/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 68 | PnL=$+347 wr=38% | improve=1 sem_db=30 | 12.2s/c ETA 306s | zero_streak=3
+14:39:18 INFO     Cycle 180/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 68 | PnL=$+347 wr=38% | improve=1 sem_db=30 | 12.2s/c ETA 245s | zero_streak=8
+14:40:16 INFO     Cycle 185/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 72 | PnL=$-1887 wr=38% | improve=1 sem_db=30 | 12.2s/c ETA 183s | zero_streak=1
+14:41:15 INFO     Cycle 190/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 74 | PnL=$-2516 wr=38% | improve=1 sem_db=30 | 12.2s/c ETA 122s | zero_streak=1
+14:42:15 INFO     Cycle 195/200 [CRIS] OK       | fresh=0.0min | open= 3 closed= 76 | PnL=$-3002 wr=37% | improve=1 sem_db=30 | 12.2s/c ETA 61s | zero_streak=1
+14:43:16 INFO     Cycle 200/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 78 | PnL=$-2894 wr=37% | improve=1 sem_db=30 | 12.2s/c ETA 0s | zero_streak=2
+14:43:16 WARNING  V206B_RECENT_R2: no baseline version found for gate comparison
+14:43:16 INFO     Attribution — alpha: $-265.82  beta: $+9777137.39  timing: $-9779852.14  selection: $+0.00
+14:43:16 INFO     Attribution report  : /Users/benebsworth/projects/omega/data/v206b_recent_r2_attribution.json
+14:43:16 INFO     
+14:43:16 INFO     ======================================================================
+14:43:16 INFO     V206B_RECENT_R2 COMPLETE — 200 cycles in 2439s (12.20s/cycle)
+14:43:16 INFO     ======================================================================
+14:43:16 INFO     improve_calls         : 1
+14:43:16 INFO     semantic_patterns_db  : 30
+14:43:16 INFO     Closed trades         : 78  (long=46  short=32)
+14:43:16 INFO     Total PnL             : $-2894.01  (engine realised: $-2894.01)
+14:43:16 INFO     Win rate              : 37.2%  (29/78)
+14:43:16 INFO     Profit factor         : 0.88
+14:43:16 INFO     --- Observability ---
+14:43:16 INFO     Zero-trade cycles     : 134 / 200  (67%)
+14:43:16 INFO     Circuit breaker trips : 0
+14:43:16 INFO     Final vol threshold   : 0.000
+14:43:16 INFO     Metrics JSONL         : /tmp/v206b_recent_r2_metrics.jsonl
+14:43:16 INFO     Results               : /Users/benebsworth/projects/omega/data/v206b_recent_r2_results.json
+14:43:16 INFO     ======================================================================

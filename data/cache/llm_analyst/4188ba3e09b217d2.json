@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.25, "reasoning": "Single positive signal vs 7 negatives; +0.067 conviction far below crisis LONG 0.20 threshold.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.88, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

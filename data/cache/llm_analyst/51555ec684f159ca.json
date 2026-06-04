@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.28, "reasoning": "Conviction critically weak (-0.095); fear/greed & momentum contradict SMAs", "regime_override": "NORMAL", "signal_adjustments": {}, "confidence": 0.32, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

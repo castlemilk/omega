@@ -1,0 +1,52 @@
+{
+  "version": "v199",
+  "total_pnl": 2477.8725,
+  "trade_count": 67,
+  "components": {
+    "alpha": 4449.6151,
+    "beta": 4935723.6285,
+    "timing": -4933295.1227,
+    "selection": 0.0,
+    "residual": -4400.2484
+  },
+  "per_symbol": {
+    "ADAUSDT": {
+      "pnl": -2343.8796,
+      "selection": -3379.4084,
+      "trades": 28
+    },
+    "ARBUSDT": {
+      "pnl": -814.7133,
+      "selection": -1369.4609,
+      "trades": 15
+    },
+    "NEARUSDT": {
+      "pnl": 3232.7414,
+      "selection": 2567.0443,
+      "trades": 18
+    },
+    "ETHUSDT": {
+      "pnl": 2403.724,
+      "selection": 2181.825,
+      "trades": 6
+    }
+  },
+  "per_regime": {
+    "normal": {
+      "pnl": 9724.9727,
+      "alpha": 8229.7735,
+      "trades": 34
+    },
+    "crisis": {
+      "pnl": -12563.9502,
+      "alpha": -9498.4112,
+      "trades": 25
+    },
+    "high_vol": {
+      "pnl": 5316.85,
+      "alpha": 5718.2527,
+      "trades": 8
+    }
+  },
+  "generated_at": "2026-05-28T07:15:42.522763+00:00"
+}

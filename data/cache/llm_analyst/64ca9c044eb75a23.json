@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.57, "reasoning": "Trade flow -1.0 strong, but composite weak -0.28; spread wide", "regime_override": null, "signal_adjustments": {}, "confidence": 0.45, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

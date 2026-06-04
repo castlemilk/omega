@@ -1,0 +1,42 @@
+{
+  "version": "bt_v137a_live_phaseb_trades",
+  "total_pnl": -13.6094,
+  "trade_count": 29,
+  "components": {
+    "alpha": -16.6583,
+    "beta": -633.6728,
+    "timing": -640.4653,
+    "selection": 0.0,
+    "residual": 1277.1871
+  },
+  "per_symbol": {
+    "ADAUSDT": {
+      "pnl": -13.7375,
+      "selection": -8.106,
+      "trades": 12
+    },
+    "ETHUSDT": {
+      "pnl": 0.1281,
+      "selection": 8.106,
+      "trades": 17
+    }
+  },
+  "per_regime": {
+    "normal": {
+      "pnl": -5.094,
+      "alpha": -7.578,
+      "trades": 21
+    },
+    "crisis": {
+      "pnl": -13.2579,
+      "alpha": -12.2894,
+      "trades": 6
+    },
+    "high_vol": {
+      "pnl": 4.7425,
+      "alpha": 3.2091,
+      "trades": 2
+    }
+  },
+  "generated_at": "2026-04-17T02:53:34.217409+00:00"
+}

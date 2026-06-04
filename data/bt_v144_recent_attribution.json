@@ -1,0 +1,42 @@
+{
+  "version": "bt_v144_recent_trades",
+  "total_pnl": -1345.7061,
+  "trade_count": 8,
+  "components": {
+    "alpha": -1267.5264,
+    "beta": 213.8879,
+    "timing": -139.594,
+    "selection": 0.0,
+    "residual": -152.4736
+  },
+  "per_symbol": {
+    "NEARUSDT": {
+      "pnl": -880.9248,
+      "selection": -544.4983,
+      "trades": 2
+    },
+    "ARBUSDT": {
+      "pnl": -1783.6658,
+      "selection": -1447.2393,
+      "trades": 2
+    },
+    "ADAUSDT": {
+      "pnl": 1318.8845,
+      "selection": 1991.7376,
+      "trades": 4
+    }
+  },
+  "per_regime": {
+    "normal": {
+      "pnl": -1046.7981,
+      "alpha": -1028.7935,
+      "trades": 2
+    },
+    "crisis": {
+      "pnl": -298.908,
+      "alpha": -238.7329,
+      "trades": 6
+    }
+  },
+  "generated_at": "2026-04-19T10:37:23.629599+00:00"
+}

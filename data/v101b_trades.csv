@@ -1,0 +1,4 @@
+cycle,timestamp,symbol,side,size,entry_price,exit_price,pnl,slippage,hold_cycles,conviction,regime,sit_out_reason
+11,2026-04-12T02:11:28.719147+00:00,NEARUSDT,long,11767.3268,1.345,1.349,34.9958,0.0,10,0.11767326823747354,crisis,normal
+11,2026-04-12T02:11:28.719175+00:00,ARBUSDT,long,14457.8355,0.113,0.1135,63.9727,0.0,10,0.1445783547168125,crisis,normal
+20,2026-04-12T02:13:10.811438+00:00,ADAUSDT,short,30000.0,0.2445,0.2446,-12.2699,0.0,6,0.3,crisis,normal

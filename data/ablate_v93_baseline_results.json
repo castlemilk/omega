@@ -1,0 +1,49 @@
+{
+  "version": "ablate_v93_baseline",
+  "run": {
+    "date": "2026-04-11T10:39:39.131692+00:00",
+    "cycles": 100,
+    "sleep_seconds": 10.0,
+    "elapsed_s": 1741.0,
+    "avg_cycle_s": 17.41,
+    "cg_key_used": true,
+    "db_url_used": true
+  },
+  "preflight": {
+    "ok": true,
+    "warnings": []
+  },
+  "intelligence": {
+    "improve_calls": 1,
+    "semantic_patterns_db": 8,
+    "semantic_patterns_node": 0
+  },
+  "observability": {
+    "metrics_jsonl": "/tmp/ablate_v93_baseline_metrics.jsonl",
+    "total_zero_trade_cycles": 81,
+    "max_zero_streak": 4,
+    "ring1_pass_rate_final": 1.0,
+    "conviction_filter_rate": 0.5150684931506849,
+    "circuit_breaker_trips": 0,
+    "final_vol_low_threshold": 0.0
+  },
+  "filters": {
+    "stale_data": 0,
+    "vol_low": 0,
+    "vol_high": 0,
+    "regime_uncertain": 0,
+    "normal": 100
+  },
+  "trades": {
+    "total_closed": 22,
+    "long_trades": 21,
+    "short_trades": 1,
+    "open_positions": 2,
+    "win_rate": 0.3182,
+    "total_pnl_usd": -76.14,
+    "realised_pnl_engine": -76.14,
+    "gross_profit": 75.58,
+    "gross_loss": 151.72,
+    "profit_factor": 0.498
+  }
+}

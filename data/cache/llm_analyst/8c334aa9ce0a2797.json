@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.12, "reasoning": "All 8 signals bearish; composite -0.17; shorts 1x profitable vs 0x longs.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.94, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

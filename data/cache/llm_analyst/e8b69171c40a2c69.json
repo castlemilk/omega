@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.45, "reasoning": "Marginal -0.08480 conviction conflicts with strong bullish fear_greed (+1.0165) signal.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.38, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}

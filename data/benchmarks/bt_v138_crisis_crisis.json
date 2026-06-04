@@ -1,0 +1,17 @@
+{
+  "version": "bt_v138_crisis",
+  "metrics": {
+    "pnl": -11826.7,
+    "profit_factor": 0.803,
+    "win_rate": 0.3362,
+    "n_trades": 116,
+    "long_pct": 0.6379310344827587,
+    "sharpe": null
+  },
+  "gate_result": {
+    "passed": false,
+    "failure_reasons": [
+      "n/a"
+    ]
+  }
+}

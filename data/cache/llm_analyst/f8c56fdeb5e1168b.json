@@ -1,0 +1,1 @@
+{"conviction_modifier": 0.45, "reasoning": "Weak composite (-0.156); spread_zscore +1.77 & fear_greed +0.99 contradict SHORT.", "regime_override": null, "signal_adjustments": {}, "confidence": 0.62, "provider": "cli", "model": "claude-haiku-4-5-20251001", "tokens_in": 0, "tokens_out": 0, "cost_usd": 0.0}
