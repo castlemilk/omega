@@ -649,6 +649,31 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V156 — Regime-adaptive strategy selector (restored V212)
+    # See omega/nodes/victoria/strategy_selector.py
+    # ------------------------------------------------------------------
+
+    strategy_selector_enabled: bool = False
+    """V156/V212: enable per-cycle regime-adaptive strategy mode switching.
+    Detects sustained bull/crisis regimes and applies mode-specific overrides:
+      TREND — disables crisis protections that fight bull markets
+      CRISIS — activates full crisis alpha stack
+      DEFAULT — base config unchanged
+    Hysteresis-gated transitions prevent oscillation.
+    """
+
+    strategy_selector_trend_window: int = 10
+    strategy_selector_crisis_window: int = 5
+    strategy_selector_trend_bull_threshold: float = 0.60
+    strategy_selector_crisis_bear_threshold: float = 0.55
+    strategy_selector_trend_exit_window: int = 5
+    strategy_selector_crisis_exit_window: int = 5
+    strategy_selector_trend_crisis_veto: bool = False
+    mode_transition_blend: bool = False
+    blend_cycles: int = 5
+    preset_override_mode: bool = False
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 
