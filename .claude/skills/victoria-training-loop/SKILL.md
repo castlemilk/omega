@@ -269,6 +269,127 @@ Then proceed with the normal loop. **Never start V###+1 work on
 top of an uncommitted V### that you didn't write yourself in this
 session.**
 
+## Matrix exploration
+
+The default loop is sequential: one V### = one bet, ~8h per cell.
+That's right when each bet's outcome decides the next bet — the
+V202→V203→V204 noise-diagnosis arc only made sense as a chain
+because each step refined the previous answer.
+
+When 2+ candidate bets are **independent** (different subsystems,
+different falsifiers, no shared parameter surface), sequential is
+wasteful. Matrix mode runs N cells in parallel against the same
+baseline and measures N bets in ~8h instead of N×8h.
+
+### When to use matrix vs sequential
+
+- **Sequential**: the next hypothesis depends on this one's result.
+  Refinement chains, debugging arcs, parameter walks.
+- **Matrix**: 2+ candidates touch disjoint subsystems and each has
+  its own falsifier. Examples: V199 carry plumbing vs V170 IC
+  weighting vs V166 normalization — three different files, three
+  different gates targeted, no shared state.
+
+If you can't articulate why two cells are independent, run them
+sequentially.
+
+### Naming convention
+
+`V###.A`, `V###.B`, `V###.C`. The parent `V###` ties the cells
+together as one matrix experiment; the letter identifies the cell.
+The high-water table records the winning cell as `V###.X` if any.
+
+Example: V213.A = restore V199 carry plumbing; V213.B = enable V170
+per-regime IC weighting; V213.C = activate V166 normalization. All
+three run against the same V211 baseline.
+
+### Isolation per cell
+
+Each cell lives in its own worktree at
+`.claude/worktrees/v###-<cell-letter>-<short-name>/` (same pattern
+as V204/V205 module pinning). Each worktree:
+
+- Has its own `strategy.py` (and any other) mutations.
+- Runs its own 2-pair × 3-gate audit (12 runs minimum).
+- Captures PIDs to `data/v###<letter>_pids.txt`.
+- Writes its own artifacts to `data/v###<letter>_audit/`.
+
+`main` stays untouched until one cell wins.
+
+### Pre-registration: one document per matrix
+
+ONE document `training_log/V###-matrix.md` covers all cells.
+Each cell gets a subsection: **Hypothesis**, **Files touched**,
+**Falsifier**, **Targeted gate**. The matrix doc is committed
+BEFORE any cell starts running — that's what makes it
+pre-registration. Per-cell sub-docs are not necessary; everything
+lives in the matrix doc.
+
+The matrix structure makes it harder to retrofit hypotheses
+cell-by-cell after seeing results — they're all on the page from
+the start.
+
+### Shared baseline
+
+All cells compare against the **same V###-1 baseline numbers**
+(e.g. V213 cells all compare against V211: recent +$2,177, trend
++$8,328, crisis −$24,828). Same noise floors apply (recent
+$200, trend $200, crisis $28 from V210 reflection). If the
+baseline changes mid-matrix (e.g. V212 ships during the run),
+hold the matrix to its original baseline — don't re-baseline
+partway through.
+
+### Concurrent execution
+
+Cells run truly in parallel. The standard pattern:
+
+```bash
+# In each cell's worktree:
+cd .claude/worktrees/v213-a-carry/
+nohup python3 scripts/run_training.py --version v213a --cycles 200 \
+    --snapshot recent > /tmp/v213a_recent.log 2>&1 &
+echo $! >> data/v213a_pids.txt
+disown
+```
+
+Tag every PID with the cell letter (`v213a_pids.txt`,
+`v213b_pids.txt`) so cleanup can distinguish them. The
+workspace-clean rule still applies before each cell's commit —
+each worktree must end clean.
+
+### Result aggregation
+
+When all cells complete, fill `V###-matrix.md` with a comparison
+table:
+
+| Cell | Hypothesis | Recent Δ | Trend Δ | Crisis Δ | Verdict |
+|---|---|---:|---:|---:|---|
+| V213.A | carry plumbing | … | … | … | pass/fail |
+| V213.B | V170 IC | … | … | … | pass/fail |
+| V213.C | V166 norm | … | … | … | pass/fail |
+
+**Only ONE cell's code can merge to main per V###** (or zero, if
+no cell wins beyond the adjusted noise threshold on any gate). If
+multiple cells pass, V###+1 either stacks the strongest pair OR
+runs them as a 2×2 interaction matrix (`V###.AB`) — do not silently
+merge two cells.
+
+### Failure modes specific to matrix mode
+
+- **Shared runtime state contamination.** Cells that both write to
+  `data/macro_cache.db`, `state.db`, or other shared paths
+  contaminate each other. Pre-flight: each worktree's `.gitignore`
+  must isolate cache writes, and use `OMEGA_FROZEN_CACHE` (V207a)
+  to pin the macro cache snapshot.
+- **Many-comparisons false positives.** Running N cells inflates
+  the chance of a spurious 2σ move. Adjust the noise threshold:
+  **2.5σ for N=3, 3σ for N=5**. Document the chosen threshold in
+  the matrix pre-reg's falsifiers section.
+- **Reflection still applies.** If a matrix run shows ALL cells
+  within noise on every gate, the reflection triggers fire as if
+  the cells had run sequentially — don't just expand the matrix
+  to N+1.
+
 ## File layout
 
 ```
