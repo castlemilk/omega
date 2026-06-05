@@ -1,0 +1,57 @@
+=== V212 2-pair 3-gate audit starting at 2026-06-04T06:02:16Z ===
+PYTHONHASHSEED env at driver: unset
+VICTORIA_FEATURES: {"strategy_selector_enabled": true}
+Pre-audit fingerprints:
+d3d87eec0dc65d8c6c21f98744d786f2e4e607a3c0904dde7ece96f0ed3cbb27  data/macro_cache.db
+6cf72f7cb837dd23c00937e9aa610b9966ad0dd70c29df414da2f710d098de78  data/omega_victoria_state.db
+18a36369a160f400b13906cb44861d1bcfc9edd2838a7a734dd82bbe1c688428  data/omega_victoria_memory.db
+--- v212_recent_p1_r1 starting 2026-06-04T06:02:16Z ---
+v212_recent_p1_r1 exit=0 at 2026-06-04T06:44:05Z
+8a0f66941397c65b37857fc1a673368c619e856958f22f13320f863490fa8cbb  /Users/benebsworth/projects/omega/data/v212_audit/recent_p1_r1/results.json
+387704e5bf420a0deb189462384224d8b93551adbbbfeac8f995a697ab5ecb1f  /Users/benebsworth/projects/omega/data/v212_audit/recent_p1_r1/trades.csv
+d5f0aed45e9edd448bb6960e5417820f7cee6aec3d23192d1e3a4a7b7c209969  /Users/benebsworth/projects/omega/data/v212_audit/recent_p1_r1/metrics.jsonl
+--- v212_recent_p1_r2 starting 2026-06-04T06:44:05Z ---
+v212_recent_p1_r2 exit=0 at 2026-06-04T07:24:53Z
+0e46c70f3c13654e8868dd95ec1766b4aef26224c945af96c4fe7dc884c401e7  /Users/benebsworth/projects/omega/data/v212_audit/recent_p1_r2/results.json
+98386dc692c2b887a5b736457b994f5a1a32350eeaae03dd727fd7b73c48ea49  /Users/benebsworth/projects/omega/data/v212_audit/recent_p1_r2/trades.csv
+7c627c088131eef2cf570c98fbc84c3884923dfcf8d80dd285a23034fe2d2d14  /Users/benebsworth/projects/omega/data/v212_audit/recent_p1_r2/metrics.jsonl
+--- v212_recent_p2_r1 starting 2026-06-04T07:24:53Z ---
+v212_recent_p2_r1 exit=1 at 2026-06-04T08:02:42Z
+MISSING v212_recent_p2_r1_results.json
+MISSING v212_recent_p2_r1_trades.csv
+MISSING v212_recent_p2_r1_metrics.jsonl
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/recent_p2_r1/results.json: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/recent_p2_r1/trades.csv: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/recent_p2_r1/metrics.jsonl: No such file or directory
+--- v212_recent_p2_r2 starting 2026-06-04T08:02:42Z ---
+v212_recent_p2_r2 exit=1 at 2026-06-04T08:02:42Z
+MISSING v212_recent_p2_r2_results.json
+MISSING v212_recent_p2_r2_trades.csv
+MISSING v212_recent_p2_r2_metrics.jsonl
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/recent_p2_r2/results.json: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/recent_p2_r2/trades.csv: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/recent_p2_r2/metrics.jsonl: No such file or directory
+--- v212_trend_p1_r1 starting 2026-06-04T08:02:42Z ---
+v212_trend_p1_r1 exit=1 at 2026-06-04T08:02:42Z
+MISSING v212_trend_p1_r1_results.json
+MISSING v212_trend_p1_r1_trades.csv
+MISSING v212_trend_p1_r1_metrics.jsonl
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/trend_p1_r1/results.json: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/trend_p1_r1/trades.csv: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/trend_p1_r1/metrics.jsonl: No such file or directory
+--- v212_trend_p1_r2 starting 2026-06-04T08:02:42Z ---
+v212_trend_p1_r2 exit=1 at 2026-06-04T08:02:42Z
+MISSING v212_trend_p1_r2_results.json
+MISSING v212_trend_p1_r2_trades.csv
+MISSING v212_trend_p1_r2_metrics.jsonl
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/trend_p1_r2/results.json: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/trend_p1_r2/trades.csv: No such file or directory
+sha256sum: /Users/benebsworth/projects/omega/data/v212_audit/trend_p1_r2/metrics.jsonl: No such file or directory
+--- v212_trend_p2_r1 starting 2026-06-04T08:02:42Z ---
+v212_trend_p2_r1 exit=1 at 2026-06-04T08:02:42Z
+MISSING v212_trend_p2_r1_results.json
+MISSING v212_trend_p2_r1_trades.csv
+MISSING v212_trend_p2_r1_metrics.jsonl
+--- v212_trend_p2_r2 starting 2026-06-04T08:02:42Z ---
+v212_trend_p2_r2 exit=1 at 2026-06-04T08:02:42Z
+Post-audit fingerprints:

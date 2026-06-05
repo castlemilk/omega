@@ -1,0 +1,385 @@
+00:09:01 RNG seed set to 42 (deterministic mode)
+00:09:01 BACKTEST MODE: WS signals disabled (whale_prints, ws_microstructure)
+00:09:01 ======================================================================
+00:09:01 Training Run v212_trend_p2_r2 — 200 cycles  sleep=10s
+00:09:01 CoinGecko key  : CG-YPzBAPag5...
+00:09:01 Database URL   : postgresql://omega:omega@localhost:5432/...
+00:09:01 Metrics JSONL  : /tmp/v212_trend_p2_r2_metrics.jsonl
+00:09:01 Log file       : /tmp/v212_trend_p2_r2_training.log
+00:09:01 Features ON    : ffg_gate1_enabled, ffg_gate4_enabled, strategy_selector_enabled
+00:09:01 ======================================================================
+00:09:02 V207a: OMEGA_FROZEN_CACHE=1 — skipping macro warm_up (no live FRED/funding fetches)
+00:09:02 BACKTEST MODE: ingestion replaced by ReplayIngestionNode (snap_trending_2023q4, 153 steps)
+00:09:02 ImprovementEngine: SyntheticEvaluator injected
+00:09:02 Decision snapshots → /tmp/v212_trend_p2_r2_decisions.jsonl (+ Postgres if configured)
+00:09:02 SignalDecayDetector: loaded from data/signal_ic_history.json
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 0) ═══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [91mUNKN ⚠️[0m
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m [93mnone yet[0m
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m [93mn/a[0m
+  [1mTRADES:       [0m open=0 closed=0 | PnL=$+0.00 | WR=0%
+  [1mLONG/SHORT:   [0m longs=0 shorts=0
+  [1mBLOCKERS:     [0m [91mRegime detector not firing | No signal data yet (first cycle?)[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:09:27 Cycle   1/200 [NORM] OK       | fresh=0.0min | open= 2 closed=  0 | PnL=$+0 wr=0% | improve=0 sem_db=30 | 24.8s/c ETA 4930s | zero_streak=1
+00:10:21 Cycle   5/200 [NORM] OK       | fresh=0.0min | open= 4 closed=  3 | PnL=$-626 wr=33% | improve=0 sem_db=30 | 15.7s/c ETA 3071s | zero_streak=0
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 10) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.00)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 10/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.24 ([91mSELL[0m) | ETH: -0.19 ([91mSELL[0m) | SOL: +0.07 ([92mBUY[0m) | BNB: -0.08 ([91mSELL[0m) | XRP: +0.07 ([92mBUY[0m) | ADA: +0.07 ([92mBUY[0m) | DOT: +0.07 ([92mBUY[0m) | AVAX: -0.11 ([91mSELL[0m) | LINK: +0.07 ([92mBUY[0m) | MATIC: +0.07 ([92mBUY[0m) | NEAR: +0.07 ([92mBUY[0m) | SUI: +0.07 ([92mBUY[0m) | ARB: +0.07 ([92mBUY[0m)
+  [1mTRADES:       [0m open=2 closed=6 | PnL=$+627.72 | WR=50%
+  [1mLONG/SHORT:   [0m longs=5 shorts=3
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:11:38 Cycle  10/200 [CRIS] OK       | fresh=0.0min | open= 2 closed=  6 | PnL=$+628 wr=50% | improve=0 sem_db=30 | 15.6s/c ETA 2965s | zero_streak=1
+00:12:44 Cycle  15/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 10 | PnL=$-215 wr=50% | improve=1 sem_db=30 | 14.8s/c ETA 2738s | zero_streak=0
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 20) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 10/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.13 ([91mSELL[0m) | ETH: -0.11 ([91mSELL[0m) | SOL: +0.27 ([92mBUY[0m) | BNB: -0.16 ([91mSELL[0m) | XRP: -0.36 ([91mSELL[0m) | ADA: +0.04 (HOLD) | DOT: +0.05 ([92mBUY[0m) | AVAX: +0.03 (HOLD) | LINK: +0.01 (HOLD) | MATIC: +0.27 ([92mBUY[0m) | NEAR: +0.27 ([92mBUY[0m) | SUI: +0.08 ([92mBUY[0m) | ARB: -0.26 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=11 | PnL=$-75.69 | WR=55%
+  [1mLONG/SHORT:   [0m longs=7 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:13:59 Cycle  20/200 [CRIS] OK       | fresh=0.0min | open= 0 closed= 11 | PnL=$-76 wr=55% | improve=1 sem_db=30 | 14.8s/c ETA 2667s | zero_streak=3
+00:15:06 Cycle  25/200 [HIGH] OK       | fresh=0.0min | open= 0 closed= 11 | PnL=$-76 wr=55% | improve=1 sem_db=30 | 14.5s/c ETA 2543s | zero_streak=8
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 30) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mHIGH_VOL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 10/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.05 (HOLD) | ETH: +0.04 (HOLD) | SOL: +0.03 (HOLD) | BNB: -0.23 ([91mSELL[0m) | XRP: -0.13 ([91mSELL[0m) | ADA: +0.09 ([92mBUY[0m) | DOT: -0.05 ([91mSELL[0m) | AVAX: +0.30 ([92mBUY[0m) | LINK: -0.03 (HOLD) | MATIC: -0.39 ([91mSELL[0m) | NEAR: +0.20 ([92mBUY[0m) | SUI: +0.31 ([92mBUY[0m) | ARB: -0.18 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=11 | PnL=$-75.69 | WR=55%
+  [1mLONG/SHORT:   [0m longs=7 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:16:17 Cycle  30/200 [HIGH] OK       | fresh=0.0min | open= 0 closed= 11 | PnL=$-76 wr=55% | improve=1 sem_db=30 | 14.5s/c ETA 2463s | zero_streak=13
+00:17:04 ZERO_STREAK_ALERT cycle=34 streak=16 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:17:16 ZERO_STREAK_ALERT cycle=35 streak=17 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:17:16 Cycle  35/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 11 | PnL=$-76 wr=55% | improve=1 sem_db=30 | 14.1s/c ETA 2326s | zero_streak=18
+00:17:27 ZERO_STREAK_ALERT cycle=36 streak=18 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:17:39 ZERO_STREAK_ALERT cycle=37 streak=19 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:17:51 ZERO_STREAK_ALERT cycle=38 streak=20 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:18:03 ZERO_STREAK_ALERT cycle=39 streak=21 basket_std=0.2000 basket_mean=0.0000 composites={}
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 40) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 10/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.13 ([92mBUY[0m) | ETH: +0.05 (HOLD) | SOL: +0.08 ([92mBUY[0m) | BNB: -0.36 ([91mSELL[0m) | XRP: -0.20 ([91mSELL[0m) | ADA: +0.13 ([92mBUY[0m) | DOT: +0.13 ([92mBUY[0m) | AVAX: +0.13 ([92mBUY[0m) | LINK: -0.06 ([91mSELL[0m) | MATIC: -0.08 ([91mSELL[0m) | NEAR: +0.13 ([92mBUY[0m) | SUI: -0.02 (HOLD) | ARB: -0.07 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=11 | PnL=$-75.69 | WR=55%
+  [1mLONG/SHORT:   [0m longs=8 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:18:28 Cycle 40: SemanticMemoryNode stored 1 patterns
+00:18:28 ZERO_STREAK_ALERT cycle=40 streak=22 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:18:28 Cycle  40/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 11 | PnL=$-76 wr=55% | improve=1 sem_db=30 | 14.1s/c ETA 2261s | zero_streak=23
+00:18:39 ZERO_STREAK_ALERT cycle=41 streak=23 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:18:51 ZERO_STREAK_ALERT cycle=42 streak=24 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:19:03 ZERO_STREAK_ALERT cycle=43 streak=25 basket_std=0.2000 basket_mean=0.0000 composites={}
+00:19:29 Cycle  45/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 12 | PnL=$+275 wr=58% | improve=1 sem_db=30 | 13.9s/c ETA 2158s | zero_streak=2
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 50) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.09 ([91mSELL[0m) | ETH: -0.13 ([91mSELL[0m) | SOL: +0.27 ([92mBUY[0m) | BNB: -0.01 (HOLD) | XRP: -0.22 ([91mSELL[0m) | ADA: +0.35 ([92mBUY[0m) | DOT: +0.31 ([92mBUY[0m) | AVAX: +0.35 ([92mBUY[0m) | LINK: -0.37 ([91mSELL[0m) | MATIC: -0.14 ([91mSELL[0m) | NEAR: +0.04 (HOLD) | SUI: -0.25 ([91mSELL[0m) | ARB: -0.11 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=15 | PnL=$-679.41 | WR=47%
+  [1mLONG/SHORT:   [0m longs=12 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:20:39 Cycle  50/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 15 | PnL=$-679 wr=47% | improve=1 sem_db=30 | 13.9s/c ETA 2091s | zero_streak=1
+00:21:50 Cycle  55/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 16 | PnL=$-1163 wr=44% | improve=1 sem_db=30 | 14.0s/c ETA 2023s | zero_streak=4
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 60) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.31 ([91mSELL[0m) | ETH: -0.25 ([91mSELL[0m) | SOL: +0.17 ([92mBUY[0m) | BNB: +0.17 ([92mBUY[0m) | XRP: -0.29 ([91mSELL[0m) | ADA: -0.25 ([91mSELL[0m) | DOT: +0.17 ([92mBUY[0m) | AVAX: +0.02 (HOLD) | LINK: -0.13 ([91mSELL[0m) | MATIC: +0.17 ([92mBUY[0m) | NEAR: +0.17 ([92mBUY[0m) | SUI: +0.17 ([92mBUY[0m) | ARB: +0.17 ([92mBUY[0m)
+  [1mTRADES:       [0m open=0 closed=18 | PnL=$-1402.97 | WR=44%
+  [1mLONG/SHORT:   [0m longs=13 shorts=5
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:22:48 Cycle  60/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 18 | PnL=$-1403 wr=44% | improve=1 sem_db=30 | 13.8s/c ETA 1927s | zero_streak=1
+00:23:46 Cycle  65/200 [CRIS] OK       | fresh=0.0min | open= 0 closed= 18 | PnL=$-1403 wr=44% | improve=1 sem_db=30 | 13.6s/c ETA 1836s | zero_streak=6
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 70) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 12/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.17 ([92mBUY[0m) | ETH: +0.04 (HOLD) | SOL: -0.07 ([91mSELL[0m) | BNB: +0.40 ([92mBUY[0m) | XRP: -0.19 ([91mSELL[0m) | ADA: -0.34 ([91mSELL[0m) | DOT: -0.29 ([91mSELL[0m) | AVAX: -0.37 ([91mSELL[0m) | LINK: -0.25 ([91mSELL[0m) | MATIC: -0.20 ([91mSELL[0m) | NEAR: +0.04 (HOLD) | SUI: +0.43 ([92mBUY[0m) | ARB: +0.62 ([92mBUY[0m)
+  [1mTRADES:       [0m open=1 closed=18 | PnL=$-1402.97 | WR=44%
+  [1mLONG/SHORT:   [0m longs=13 shorts=6
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:24:51 Cycle  70/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 18 | PnL=$-1403 wr=44% | improve=1 sem_db=30 | 13.6s/c ETA 1762s | zero_streak=11
+00:25:51 Cycle  75/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 20 | PnL=$-3493 wr=40% | improve=1 sem_db=30 | 13.4s/c ETA 1681s | zero_streak=2
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 80) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 12/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.13 ([91mSELL[0m) | ETH: +0.30 ([92mBUY[0m) | SOL: -0.13 ([91mSELL[0m) | BNB: -0.01 (HOLD) | XRP: -0.11 ([91mSELL[0m) | ADA: -0.21 ([91mSELL[0m) | DOT: -0.17 ([91mSELL[0m) | AVAX: -0.18 ([91mSELL[0m) | LINK: +0.14 ([92mBUY[0m) | MATIC: -0.21 ([91mSELL[0m) | NEAR: -0.29 ([91mSELL[0m) | SUI: +0.51 ([92mBUY[0m) | ARB: +0.50 ([92mBUY[0m)
+  [1mTRADES:       [0m open=1 closed=20 | PnL=$-3493.14 | WR=40%
+  [1mLONG/SHORT:   [0m longs=13 shorts=8
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:26:49 Cycle  80/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 20 | PnL=$-3493 wr=40% | improve=1 sem_db=30 | 13.3s/c ETA 1600s | zero_streak=7
+00:27:47 Cycle  85/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 21 | PnL=$-1779 wr=43% | improve=1 sem_db=30 | 13.2s/c ETA 1521s | zero_streak=1
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 90) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.05 ([92mBUY[0m) | ETH: -0.11 ([91mSELL[0m) | SOL: +0.02 (HOLD) | BNB: +0.14 ([92mBUY[0m) | XRP: -0.04 (HOLD) | ADA: -0.10 ([91mSELL[0m) | DOT: -0.15 ([91mSELL[0m) | AVAX: -0.11 ([91mSELL[0m) | LINK: +0.07 ([92mBUY[0m) | MATIC: -0.11 ([91mSELL[0m) | NEAR: -0.22 ([91mSELL[0m) | SUI: +0.76 ([92mBUY[0m) | ARB: -0.20 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=23 | PnL=$-1928.13 | WR=43%
+  [1mLONG/SHORT:   [0m longs=13 shorts=10
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:28:45 Cycle  90/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 23 | PnL=$-1928 wr=43% | improve=1 sem_db=30 | 13.1s/c ETA 1445s | zero_streak=1
+00:29:45 Cycle  95/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 23 | PnL=$-1928 wr=43% | improve=1 sem_db=30 | 13.1s/c ETA 1374s | zero_streak=6
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 100) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mHIGH_VOL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.01 (HOLD) | ETH: -0.13 ([91mSELL[0m) | SOL: +0.06 ([92mBUY[0m) | BNB: -0.15 ([91mSELL[0m) | XRP: -0.24 ([91mSELL[0m) | ADA: -0.05 ([91mSELL[0m) | DOT: -0.06 ([91mSELL[0m) | AVAX: +0.17 ([92mBUY[0m) | LINK: +0.39 ([92mBUY[0m) | MATIC: -0.03 (HOLD) | NEAR: -0.21 ([91mSELL[0m) | SUI: +0.39 ([92mBUY[0m) | ARB: -0.16 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=25 | PnL=$-1851.91 | WR=44%
+  [1mLONG/SHORT:   [0m longs=13 shorts=12
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:30:44 Cycle 100/200 [HIGH] OK       | fresh=0.0min | open= 0 closed= 25 | PnL=$-1852 wr=44% | improve=1 sem_db=30 | 13.0s/c ETA 1302s | zero_streak=0
+00:31:42 Cycle 105/200 [HIGH] OK       | fresh=0.0min | open= 0 closed= 26 | PnL=$-2194 wr=42% | improve=1 sem_db=30 | 13.0s/c ETA 1230s | zero_streak=2
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 110) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mHIGH_VOL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.07 ([92mBUY[0m) | ETH: +0.07 ([92mBUY[0m) | SOL: +0.02 (HOLD) | BNB: -0.06 ([91mSELL[0m) | XRP: -0.23 ([91mSELL[0m) | ADA: +0.01 (HOLD) | DOT: -0.09 ([91mSELL[0m) | AVAX: +0.07 ([92mBUY[0m) | LINK: +0.07 ([92mBUY[0m) | MATIC: -0.06 ([91mSELL[0m) | NEAR: +0.07 ([92mBUY[0m) | SUI: +0.07 ([92mBUY[0m) | ARB: +0.01 (HOLD)
+  [1mTRADES:       [0m open=0 closed=26 | PnL=$-2193.87 | WR=42%
+  [1mLONG/SHORT:   [0m longs=13 shorts=13
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:32:41 Cycle 110/200 [HIGH] OK       | fresh=0.0min | open= 0 closed= 26 | PnL=$-2194 wr=42% | improve=1 sem_db=30 | 12.9s/c ETA 1161s | zero_streak=7
+00:33:40 Cycle 115/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 26 | PnL=$-2194 wr=42% | improve=1 sem_db=30 | 12.8s/c ETA 1092s | zero_streak=12
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 120) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.37)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.06 ([92mBUY[0m) | ETH: +0.34 ([92mBUY[0m) | SOL: -0.28 ([91mSELL[0m) | BNB: +0.41 ([92mBUY[0m) | XRP: -0.08 ([91mSELL[0m) | ADA: +0.03 (HOLD) | DOT: +0.06 ([92mBUY[0m) | AVAX: -0.29 ([91mSELL[0m) | LINK: -0.29 ([91mSELL[0m) | MATIC: +0.32 ([92mBUY[0m) | NEAR: +0.37 ([92mBUY[0m) | SUI: -0.29 ([91mSELL[0m) | ARB: -0.36 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=28 | PnL=$-2514.98 | WR=39%
+  [1mLONG/SHORT:   [0m longs=13 shorts=15
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:34:39 Cycle 120/200 [NORM] OK       | fresh=0.0min | open= 0 closed= 28 | PnL=$-2515 wr=39% | improve=1 sem_db=30 | 12.8s/c ETA 1024s | zero_streak=1
+00:35:37 Cycle 125/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 28 | PnL=$-2515 wr=39% | improve=1 sem_db=30 | 12.8s/c ETA 957s | zero_streak=6
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 130) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.17 ([92mBUY[0m) | ETH: +0.17 ([92mBUY[0m) | SOL: +0.17 ([92mBUY[0m) | BNB: +0.08 ([92mBUY[0m) | XRP: +0.02 (HOLD) | ADA: +0.17 ([92mBUY[0m) | DOT: +0.17 ([92mBUY[0m) | AVAX: -0.08 ([91mSELL[0m) | LINK: -0.19 ([91mSELL[0m) | MATIC: +0.04 (HOLD) | NEAR: +0.17 ([92mBUY[0m) | SUI: -0.75 ([91mSELL[0m) | ARB: -0.12 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=30 | PnL=$-2740.12 | WR=37%
+  [1mLONG/SHORT:   [0m longs=13 shorts=17
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:36:36 Cycle 130/200 [CRIS] OK       | fresh=0.0min | open= 0 closed= 30 | PnL=$-2740 wr=37% | improve=1 sem_db=30 | 12.7s/c ETA 891s | zero_streak=1
+00:37:35 Cycle 135/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 30 | PnL=$-2740 wr=37% | improve=1 sem_db=30 | 12.7s/c ETA 825s | zero_streak=6
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 140) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 12/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.03 (HOLD) | ETH: -0.10 ([91mSELL[0m) | SOL: +0.30 ([92mBUY[0m) | BNB: +0.30 ([92mBUY[0m) | XRP: -0.09 ([91mSELL[0m) | ADA: -0.20 ([91mSELL[0m) | DOT: +0.15 ([92mBUY[0m) | AVAX: +0.30 ([92mBUY[0m) | LINK: -0.31 ([91mSELL[0m) | MATIC: -0.06 ([91mSELL[0m) | NEAR: +0.30 ([92mBUY[0m) | SUI: -0.16 ([91mSELL[0m) | ARB: -0.43 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=31 | PnL=$-2933.35 | WR=35%
+  [1mLONG/SHORT:   [0m longs=13 shorts=19
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:38:34 Cycle 140/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 31 | PnL=$-2933 wr=35% | improve=1 sem_db=30 | 12.7s/c ETA 759s | zero_streak=4
+00:39:37 Cycle 145/200 [CRIS] OK       | fresh=0.0min | open= 2 closed= 31 | PnL=$-2933 wr=35% | improve=1 sem_db=30 | 12.7s/c ETA 696s | zero_streak=9
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 150) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.03 (HOLD) | ETH: -0.18 ([91mSELL[0m) | SOL: +0.35 ([92mBUY[0m) | BNB: +0.16 ([92mBUY[0m) | XRP: -0.03 (HOLD) | ADA: -0.22 ([91mSELL[0m) | DOT: -0.24 ([91mSELL[0m) | AVAX: +0.23 ([92mBUY[0m) | LINK: -0.04 (HOLD) | MATIC: -0.27 ([91mSELL[0m) | NEAR: +0.15 ([92mBUY[0m) | SUI: +0.44 ([92mBUY[0m) | ARB: -0.39 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=34 | PnL=$-233.53 | WR=35%
+  [1mLONG/SHORT:   [0m longs=13 shorts=22
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:40:36 Cycle 150/200 [CRIS] OK       | fresh=0.0min | open= 1 closed= 34 | PnL=$-234 wr=35% | improve=1 sem_db=30 | 12.6s/c ETA 631s | zero_streak=3
+00:41:34 Cycle 155/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 34 | PnL=$-234 wr=35% | improve=1 sem_db=30 | 12.6s/c ETA 567s | zero_streak=8
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 160) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mHIGH_VOL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 12/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.07 ([91mSELL[0m) | ETH: -0.16 ([91mSELL[0m) | SOL: +0.06 ([92mBUY[0m) | BNB: -0.25 ([91mSELL[0m) | XRP: +0.06 ([92mBUY[0m) | ADA: +0.06 ([92mBUY[0m) | DOT: +0.06 ([92mBUY[0m) | AVAX: +0.06 ([92mBUY[0m) | LINK: +0.06 ([92mBUY[0m) | MATIC: +0.02 (HOLD) | NEAR: +0.06 ([92mBUY[0m) | SUI: -0.02 (HOLD) | ARB: +0.06 ([92mBUY[0m)
+  [1mTRADES:       [0m open=0 closed=35 | PnL=$+2333.73 | WR=37%
+  [1mLONG/SHORT:   [0m longs=13 shorts=22
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:42:33 Cycle 160/200 [HIGH] OK       | fresh=0.0min | open= 0 closed= 35 | PnL=$+2334 wr=37% | improve=1 sem_db=30 | 12.6s/c ETA 503s | zero_streak=2
+00:43:29 Cycle 165/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 35 | PnL=$+2334 wr=37% | improve=1 sem_db=30 | 12.5s/c ETA 438s | zero_streak=7
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 170) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.22 ([91mSELL[0m) | ETH: -0.04 (HOLD) | SOL: +0.09 ([92mBUY[0m) | BNB: -0.23 ([91mSELL[0m) | XRP: -0.16 ([91mSELL[0m) | ADA: +0.09 ([92mBUY[0m) | DOT: +0.09 ([92mBUY[0m) | AVAX: +0.09 ([92mBUY[0m) | LINK: +0.09 ([92mBUY[0m) | MATIC: +0.09 ([92mBUY[0m) | NEAR: +0.06 ([92mBUY[0m) | SUI: +0.09 ([92mBUY[0m) | ARB: -0.04 (HOLD)
+  [1mTRADES:       [0m open=1 closed=35 | PnL=$+2333.73 | WR=37%
+  [1mLONG/SHORT:   [0m longs=13 shorts=23
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:44:26 Cycle 170/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 35 | PnL=$+2334 wr=37% | improve=1 sem_db=30 | 12.5s/c ETA 375s | zero_streak=12
+00:45:25 Cycle 175/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 37 | PnL=$+2067 wr=38% | improve=1 sem_db=30 | 12.5s/c ETA 312s | zero_streak=1
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 180) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.06 ([92mBUY[0m) | ETH: +0.06 ([92mBUY[0m) | SOL: +0.19 ([92mBUY[0m) | BNB: -0.19 ([91mSELL[0m) | XRP: -0.28 ([91mSELL[0m) | ADA: +0.08 ([92mBUY[0m) | DOT: -0.10 ([91mSELL[0m) | AVAX: +0.48 ([92mBUY[0m) | LINK: -0.06 ([91mSELL[0m) | MATIC: -0.30 ([91mSELL[0m) | NEAR: +0.43 ([92mBUY[0m) | SUI: -0.04 (HOLD) | ARB: -0.34 ([91mSELL[0m)
+  [1mTRADES:       [0m open=1 closed=38 | PnL=$+1051.37 | WR=37%
+  [1mLONG/SHORT:   [0m longs=16 shorts=23
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:46:23 Cycle 180/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 38 | PnL=$+1051 wr=37% | improve=1 sem_db=30 | 12.5s/c ETA 249s | zero_streak=3
+00:47:21 Cycle 185/200 [HIGH] OK       | fresh=0.0min | open= 1 closed= 39 | PnL=$+1185 wr=38% | improve=1 sem_db=30 | 12.4s/c ETA 186s | zero_streak=2
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 190) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.08 ([92mBUY[0m) | ETH: +0.07 ([92mBUY[0m) | SOL: +0.07 ([92mBUY[0m) | BNB: -0.28 ([91mSELL[0m) | XRP: -0.13 ([91mSELL[0m) | ADA: -0.03 (HOLD) | DOT: +0.04 (HOLD) | AVAX: +0.02 (HOLD) | LINK: +0.12 ([92mBUY[0m) | MATIC: -0.12 ([91mSELL[0m) | NEAR: +0.16 ([92mBUY[0m) | SUI: +0.04 (HOLD) | ARB: -0.04 (HOLD)
+  [1mTRADES:       [0m open=1 closed=40 | PnL=$+942.37 | WR=38%
+  [1mLONG/SHORT:   [0m longs=17 shorts=24
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:48:19 Cycle 190/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 40 | PnL=$+942 wr=38% | improve=1 sem_db=30 | 12.4s/c ETA 124s | zero_streak=2
+00:49:18 Cycle 195/200 [NORM] OK       | fresh=0.0min | open= 1 closed= 40 | PnL=$+942 wr=38% | improve=1 sem_db=30 | 12.4s/c ETA 62s | zero_streak=7
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 200) ═════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 11/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.11 ([91mSELL[0m) | ETH: -0.14 ([91mSELL[0m) | SOL: +0.19 ([92mBUY[0m) | BNB: -0.02 (HOLD) | XRP: -0.27 ([91mSELL[0m) | ADA: +0.19 ([92mBUY[0m) | DOT: +0.19 ([92mBUY[0m) | AVAX: +0.19 ([92mBUY[0m) | LINK: -0.34 ([91mSELL[0m) | MATIC: +0.06 ([92mBUY[0m) | NEAR: +0.19 ([92mBUY[0m) | SUI: -0.17 ([91mSELL[0m) | ARB: +0.03 (HOLD)
+  [1mTRADES:       [0m open=2 closed=41 | PnL=$+1292.88 | WR=39%
+  [1mLONG/SHORT:   [0m longs=19 shorts=24
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+00:50:19 Cycle 200/200 [NORM] OK       | fresh=0.0min | open= 2 closed= 41 | PnL=$+1293 wr=39% | improve=1 sem_db=30 | 12.4s/c ETA 0s | zero_streak=3
+00:50:19 V212_TREND_P2_R2 gates FAILED vs v211_trend_p2_r2 — 3 failures:
+00:50:19   ✗ pnl_floor: v49 1292.88 < v48 8330.79
+00:50:19   ✗ regime_parity[crisis]: v49 +2676.31 < v48 +12360.25 (delta -9683.94)
+00:50:19   ✗ regime_parity[normal]: v49 -3684.94 < v48 -3455.64 (delta -229.31)
+00:50:19 Gate report: /Users/benebsworth/projects/omega/data/v212_trend_p2_r2_gate_result.json
+00:50:19 Attribution — alpha: $+460.56  beta: $+4105636.73  timing: $+4107610.71  selection: $+0.00
+00:50:19 Attribution report  : /Users/benebsworth/projects/omega/data/v212_trend_p2_r2_attribution.json
+00:50:19 
+00:50:19 ======================================================================
+00:50:19 V212_TREND_P2_R2 COMPLETE — 200 cycles in 2477s (12.39s/cycle)
+00:50:19 ======================================================================
+00:50:19 improve_calls         : 1
+00:50:19 semantic_patterns_db  : 30
+00:50:19 Closed trades         : 41  (long=17  short=24)
+00:50:19 Total PnL             : $+1292.88  (engine realised: $+1292.88)
+00:50:19 Win rate              : 39.0%  (16/41)
+00:50:19 Profit factor         : 1.12
+00:50:19 --- Observability ---
+00:50:19 Zero-trade cycles     : 164 / 200  (82%)
+00:50:19 Circuit breaker trips : 0
+00:50:19 Final vol threshold   : 0.000
+00:50:19 Metrics JSONL         : /tmp/v212_trend_p2_r2_metrics.jsonl
+00:50:19 Results               : /Users/benebsworth/projects/omega/data/v212_trend_p2_r2_results.json
+00:50:19 ======================================================================

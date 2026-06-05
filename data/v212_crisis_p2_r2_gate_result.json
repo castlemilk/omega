@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "gates": {
+    "pnl_floor": true,
+    "regime_parity": true,
+    "drawdown_ceiling": true,
+    "trade_count_floor": true,
+    "signal_integrity": true,
+    "auto_apply_audit": true
+  },
+  "failures": [],
+  "v48_summary": {
+    "version": "v211_crisis_p2_r2",
+    "pnl": -24846.0,
+    "trades": 62,
+    "win_rate": 0.3226,
+    "max_drawdown": 0.0,
+    "regime_pnl": {
+      "normal": -22076.510800000004,
+      "crisis": -6470.1322,
+      "high_vol": 3700.6398
+    }
+  },
+  "v49_summary": {
+    "version": "v212_crisis_p2_r2",
+    "pnl": -20405.87,
+    "trades": 53,
+    "win_rate": 0.3774,
+    "max_drawdown": 0.0,
+    "regime_pnl": {
+      "normal": -19407.219800000003,
+      "crisis": -5289.034799999999,
+      "high_vol": 4290.3881
+    }
+  }
+}
