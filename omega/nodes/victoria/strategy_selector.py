@@ -45,12 +45,13 @@ Each cycle, call:
 This mutates `features` in-place with the mode-appropriate overrides.
 Callers see `selector.mode` for the current StrategyMode.
 """
+
 from __future__ import annotations
 
 import logging
 from collections import deque
 from enum import Enum
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from omega.nodes.victoria.features import VictoriaFeatures
@@ -80,16 +81,16 @@ class StrategyMode(Enum):
 #   5. long_trail_multiplier=0.5 cuts winners too early in sustained trends
 #   6. zero_mfe_early_exit_cycles=2 exits positions before trend develops
 _TREND_OVERRIDES: dict[str, Any] = {
-    "regime_hysteresis_enabled": False,       # don't lock crisis label
-    "high_vol_entry_block": False,             # allow entries in volatile bull
-    "bear_prob_long_block_threshold": 0.80,   # only block in confirmed bear
-    "llm_crisis_mode_enabled": False,          # don't veto trend longs
-    "long_trail_multiplier": 1.5,             # let winners run in trends
-    "short_trail_multiplier": 1.0,            # symmetric trailing in bull
-    "zero_mfe_early_exit_cycles": 0,          # no early exits in trends
-    "fear_greed_crisis_weight": 1.0,          # restore full fear/greed signal
-    "sma_crisis_weight": 1.0,                 # restore full SMA signal
-    "crisis_long_block": False,               # don't hard-block longs
+    "regime_hysteresis_enabled": False,  # don't lock crisis label
+    "high_vol_entry_block": False,  # allow entries in volatile bull
+    "bear_prob_long_block_threshold": 0.80,  # only block in confirmed bear
+    "llm_crisis_mode_enabled": False,  # don't veto trend longs
+    "long_trail_multiplier": 1.5,  # let winners run in trends
+    "short_trail_multiplier": 1.0,  # symmetric trailing in bull
+    "zero_mfe_early_exit_cycles": 0,  # no early exits in trends
+    "fear_greed_crisis_weight": 1.0,  # restore full fear/greed signal
+    "sma_crisis_weight": 1.0,  # restore full SMA signal
+    "crisis_long_block": False,  # don't hard-block longs
 }
 
 # CRISIS mode: activate the full V141 crisis alpha stack.
@@ -120,7 +121,7 @@ class StrategySelector:
     Instantiate once in StrategyNode.__init__, then call update() every cycle.
     """
 
-    def __init__(self, features: "VictoriaFeatures") -> None:
+    def __init__(self, features: VictoriaFeatures) -> None:
         cfg = features
 
         # Transition windows (from feature flags)
@@ -133,8 +134,8 @@ class StrategySelector:
 
         # State
         self._mode: StrategyMode = StrategyMode.DEFAULT
-        self._bull_prob_above: int = 0   # consecutive cycles bull_prob >= threshold
-        self._bull_prob_below: int = 0   # consecutive cycles bull_prob < threshold (exit counter)
+        self._bull_prob_above: int = 0  # consecutive cycles bull_prob >= threshold
+        self._bull_prob_below: int = 0  # consecutive cycles bull_prob < threshold (exit counter)
         self._bear_prob_above: int = 0
         self._bear_prob_below: int = 0
         self._cycle: int = 0
@@ -142,7 +143,7 @@ class StrategySelector:
         # V162: mode transition blend
         self._blend_enabled = bool(getattr(cfg, "mode_transition_blend", False))
         self._blend_total = max(1, int(getattr(cfg, "blend_cycles", 5)))
-        self._blend_remaining: int = 0        # cycles left in active blend
+        self._blend_remaining: int = 0  # cycles left in active blend
         self._blend_from: StrategyMode | None = None
         self._blend_to: StrategyMode | None = None
 
@@ -158,32 +159,31 @@ class StrategySelector:
         self._crisis_label_window: deque = deque(
             [False] * self._trend_window, maxlen=self._trend_window
         )
-        self._trend_veto_enabled: bool = getattr(
-            cfg, "strategy_selector_trend_crisis_veto", True
-        )
+        self._trend_veto_enabled: bool = getattr(cfg, "strategy_selector_trend_crisis_veto", True)
         self._crisis_contaminated: bool = False  # updated every cycle in update()
 
         # Snapshot of base feature values for every field we might override
         # (used to restore DEFAULT on mode exit)
         from dataclasses import asdict
+
         base = asdict(features)
         self._base_values: dict[str, Any] = {
-            k: base[k]
-            for k in set(_TREND_OVERRIDES) | set(_CRISIS_OVERRIDES)
-            if k in base
+            k: base[k] for k in set(_TREND_OVERRIDES) | set(_CRISIS_OVERRIDES) if k in base
         }
 
         logger.info(
             "StrategySelector: trend_window=%d(%.2f) crisis_window=%d(%.2f)",
-            self._trend_window, self._trend_bull_thresh,
-            self._crisis_window, self._crisis_bear_thresh,
+            self._trend_window,
+            self._trend_bull_thresh,
+            self._crisis_window,
+            self._crisis_bear_thresh,
         )
 
     @property
     def mode(self) -> StrategyMode:
         return self._mode
 
-    def update(self, signals: dict[str, Any], features: "VictoriaFeatures") -> StrategyMode:
+    def update(self, signals: dict[str, Any], features: VictoriaFeatures) -> StrategyMode:
         """Detect regime from signals, update mode, apply overrides to features.
 
         Called at the start of each cycle before _apply_regime_adaptive_thresholds.
@@ -258,9 +258,13 @@ class StrategySelector:
             logger.info(
                 "StrategySelector: %s → %s  (cycle=%d  bull_prob=%.2f  bear_prob=%.2f  "
                 "bull_above=%d  bear_above=%d  crisis_veto=%s)",
-                self._mode.value, new_mode.value, self._cycle,
-                bull_prob, bear_prob,
-                self._bull_prob_above, self._bear_prob_above,
+                self._mode.value,
+                new_mode.value,
+                self._cycle,
+                bull_prob,
+                bear_prob,
+                self._bull_prob_above,
+                self._bear_prob_above,
                 crisis_contaminated,
             )
             # V162: start a blend ramp from the old mode to the new one
@@ -272,7 +276,9 @@ class StrategySelector:
         elif crisis_contaminated and self._cycle % 50 == 0:
             logger.debug(
                 "StrategySelector: TREND veto active (cycle=%d  crisis_window_count=%d/%d)",
-                self._cycle, sum(self._crisis_label_window), self._trend_window,
+                self._cycle,
+                sum(self._crisis_label_window),
+                self._trend_window,
             )
 
         # V161: store contamination state for _apply_overrides to consume.
@@ -292,22 +298,20 @@ class StrategySelector:
         if self._bear_prob_above >= self._crisis_window:
             return StrategyMode.CRISIS
         # Crisis exit: require enough below-threshold cycles
-        if in_crisis:
-            if self._bear_prob_below < self._crisis_exit_window:
-                return StrategyMode.CRISIS  # still in hysteresis exit window
-            # Fallen through: exiting crisis
+        if in_crisis and self._bear_prob_below < self._crisis_exit_window:
+            return StrategyMode.CRISIS  # still in hysteresis exit window
+        # Fallen through: exiting crisis
 
         # Trend entry / stay (only when not in crisis)
         if self._bull_prob_above >= self._trend_window:
             return StrategyMode.TREND
         # Trend exit
-        if in_trend:
-            if self._bull_prob_below < self._trend_exit_window:
-                return StrategyMode.TREND  # still in hysteresis exit window
+        if in_trend and self._bull_prob_below < self._trend_exit_window:
+            return StrategyMode.TREND  # still in hysteresis exit window
 
         return StrategyMode.DEFAULT
 
-    def _apply_overrides(self, features: "VictoriaFeatures") -> None:
+    def _apply_overrides(self, features: VictoriaFeatures) -> None:
         """Mutate features in-place with the active mode's overrides.
 
         V161 dual-duty veto: when the crisis-label contamination window is hot
@@ -375,7 +379,9 @@ class StrategySelector:
                     if _current != value:
                         logger.warning(
                             "preset_override_mode: selector would set %s=%r (current=%r) — suppressed",
-                            field, value, _current,
+                            field,
+                            value,
+                            _current,
                         )
                     continue
                 setattr(features, field, value)
