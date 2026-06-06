@@ -1146,9 +1146,19 @@ class SignalGenerationNode(Node):
         # the best performer to composite > 0 (long candidate) and the worst to composite
         # < 0 (short candidate), making the strategy market-neutral by construction and
         # guaranteeing directional balance across any basket of ≥ 3 tickers.
+        # V213: canonical sort by ticker before the float reduction. ``signals``
+        # is populated in async-completion order on the parallel signal path
+        # (victoria_node ``acc`` accumulation), so iterating ``signals.items()``
+        # unsorted made ``sum(_cs_vals)`` order-dependent → a sub-noise wobble in
+        # ``_basket_mean`` that demeaning then subtracts from EVERY composite.
+        # Selector-OFF this stayed below the trade-selection threshold (V211 trend
+        # floor $166), but the strategy_selector's discrete regime-label counter
+        # amplified it ~35× (V212: trend spread $18,720). This is the residual 4th
+        # channel V211 flagged — V211 sorted strategy.py's basket aggregations
+        # (:1722/:2130) but missed signal_generation's own copy here.
         _cs_raw = [
             (t, s)
-            for t, s in signals.items()
+            for t, s in sorted(signals.items(), key=lambda kv: kv[0])
             if isinstance(s, dict) and "composite" in s and not t.startswith("_")
         ]
         if len(_cs_raw) >= 3:
@@ -1178,7 +1188,7 @@ class SignalGenerationNode(Node):
         # Log composite spread for monitoring
         _composites = [
             (t, s.get("composite", 0.0))
-            for t, s in signals.items()
+            for t, s in sorted(signals.items(), key=lambda kv: kv[0])  # V213: canonical order for the spread reduction
             if isinstance(s, dict) and s.get("composite") is not None and not t.startswith("_")
         ]
         if len(_composites) >= 3:
