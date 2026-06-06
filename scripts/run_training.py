@@ -533,6 +533,45 @@ def run(
         log.info("Features       : v93_baseline (all OFF)")
     log.info("=" * 70)
 
+    # ── V213 observability delta #1: subsystem wiring banner ──────────────
+    # Historically (V148–V202) subsystems ran flag-ON but code-INERT — the flag
+    # was undeclared on the dataclass (getattr→False no-op) or the module's
+    # ImportError was silently caught (V212: strategy_selector was inert for the
+    # whole V199–V211 arc). Four versions were spent tuning code that never ran.
+    # This banner makes "is this code path ACTUALLY running?" a one-grep answer:
+    # for each audited subsystem it prints the flag's declared/value state plus a
+    # live wiring probe (is the flag a real dataclass field? does the module
+    # import?). Grep a run log for "SILENTLY INERT" or "UNDECLARED" to catch the
+    # whole class of bug at cycle 0 instead of after a wasted version.
+    from dataclasses import asdict as _asdict
+    import importlib as _importlib
+
+    _SUBSYSTEM_PROBES = [
+        # (label, flag_name, module_to_import_or_None)
+        ("strategy_selector", "strategy_selector_enabled", "omega.nodes.victoria.strategy_selector"),
+        ("regime_signal_weighting", "regime_signal_weighting", None),
+        ("mode_transition_blend", "mode_transition_blend", None),
+        ("bayesian_regime", "bayesian_regime", "omega.nodes.victoria.bayesian_regime"),
+        ("hmm_regime", "hmm_regime", "omega.nodes.victoria.hmm_regime"),
+    ]
+    _declared_fields = set(_asdict(_active_features).keys())
+    log.info("[startup] subsystem wiring (flag → wired?):")
+    for _label, _flag, _mod in _SUBSYSTEM_PROBES:
+        if _flag not in _declared_fields:
+            _state = "UNDECLARED — getattr→False, flag is a silent no-op"
+        elif not bool(getattr(_active_features, _flag, False)):
+            _state = "off"
+        elif _mod is None:
+            _state = "ON → ACTIVE"
+        else:
+            try:
+                _importlib.import_module(_mod)
+                _state = "ON · module importable → ACTIVE"
+            except Exception as _imp_exc:  # noqa: BLE001
+                _state = f"ON · IMPORT FAILED ({type(_imp_exc).__name__}) → SILENTLY INERT"
+        log.info("[startup]   %-26s %s", _label + ":", _state)
+    log.info("=" * 70)
+
     # ── Startup preflight ─────────────────────────────────────────────────
     from omega.core.training_preflight import StartupPreflight
     preflight = StartupPreflight.run()
