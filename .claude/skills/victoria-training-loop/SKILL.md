@@ -132,7 +132,7 @@ Reflection is committed before any new pre-registration.
 
 ### What the reflection step must do
 
-The document answers all five and commits the answer:
+The document answers all six and commits the answer:
 
 1. **Eval stability.** Either (a) re-run the current best version
    on its gate with `--seed 42` and compare vs the recorded number,
@@ -160,6 +160,46 @@ The document answers all five and commits the answer:
    and meta-evaluation approaches that have NOT been tried in the
    last 10+ versions. The next version's hypothesis should come
    from this list, not from the last entry's "next steps."
+6. **Observability-gap audit** (see below). Required output:
+   *"What instrumentation would have caught this sooner? What's the
+   next blind spot?"* Propose 3–5 concrete deltas; ship the 2
+   cheapest/highest-impact with the next version; queue the rest in
+   `training_log/OBSERVABILITY-BACKLOG.md`.
+
+### Observability-gap audit (required output #6)
+
+Every reflection must end by asking, of the issue that triggered it:
+**what instrumentation would have caught this sooner, and what's the
+next blind spot?** This is the cheapest lever in the whole loop — the
+V148→V212 history shows the eval repeatedly burning versions because
+it couldn't answer basic questions about itself.
+
+Concrete templates (each is a real arc that wasted versions for lack
+of one cheap instrument):
+
+- **V148–V202 — runtime-inert subsystems.** Four-plus versions tuned
+  subsystems that never ran (flag undeclared → `getattr→False`; or
+  module `ImportError` silently caught). **Instrument:** a startup
+  banner that lists every "active" subsystem with a live wiring probe
+  (flag a real dataclass field? module importable?). Shipped V213 —
+  grep a run log for `SILENTLY INERT` / `UNDECLARED`.
+- **V207a–V211 — hand-hunting noise sources.** Four versions ran
+  manual cycle-1 bisects to localize a determinism channel.
+  **Instrument:** an automatic same-seed byte/PnL diff between
+  consecutive runs. Shipped V213 (`scripts/check_determinism.sh`).
+- **V212 — determinism break found only by a hand-written
+  4-replicate diagnostic.** **Instrument:** N≥2 replicates per gate
+  run by default + an automatic spread report + a `DETERMINISM:
+  PASS|FAIL` line. Shipped V213; queued #5 promotes it into the gate
+  runner so every run self-certifies its noise floor.
+
+For each proposed delta record: **what to add, where, effort
+(S/M/L), and ship-now vs queue.** Pick the 2 cheapest/highest-impact
+to ship with the next version (don't bloat it); document the rest in
+`training_log/OBSERVABILITY-BACKLOG.md`. When a shipped instrument
+surfaces a new finding (e.g. the V213 banner revealing
+`regime_signal_weighting` is an undeclared no-op), that finding feeds
+the next version's parking lot.
 
 ### Output
 
