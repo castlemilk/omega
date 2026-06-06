@@ -354,16 +354,12 @@ def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
 
     _wlog = _logging.getLogger("omega.victoria.strategy")
 
-    # V213: canonical iteration order. This path is selector-reachable (fires
-    # when regime_signal_weighting is enabled alongside the selector); the
-    # composite recompute below is an order-sensitive float reduction, so iterate
-    # tickers and signal keys in sorted order to keep it deterministic.
-    for ticker, ts in sorted(signals.items(), key=lambda kv: kv[0]):
+    for ticker, ts in signals.items():
         if not isinstance(ts, dict):
             continue
 
         modified = False
-        for sig_key, multiplier in sorted(weights.items(), key=lambda kv: kv[0]):
+        for sig_key, multiplier in weights.items():
             if sig_key in ts and isinstance(ts[sig_key], (int, float)):
                 ts[sig_key] = float(ts[sig_key]) * multiplier
                 modified = True
@@ -371,11 +367,10 @@ def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
         if not modified:
             continue
 
-        # Recompute composite as equal-weight mean of directional signals.
-        # V213: sort by key so the sum() reduction is order-independent.
+        # Recompute composite as equal-weight mean of directional signals
         directional_vals = [
             float(v)
-            for k, v in sorted(ts.items(), key=lambda kv: kv[0])
+            for k, v in ts.items()
             if (k.endswith("_signal") or k == "sma_crossover") and isinstance(v, (int, float))
         ]
         if directional_vals:
