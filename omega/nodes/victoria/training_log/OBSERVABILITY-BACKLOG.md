@@ -34,14 +34,33 @@ but never added to `VictoriaFeatures`, so the V157 regime-weight path is a silen
 no-op today. That is itself a finding the banner surfaces.)
 
 ### ✅ V213 delta #2 — auto-replicate determinism check  (effort: S/M)
-`scripts/check_determinism.sh GATE [N] [FEATURES] [VPREFIX] [FLOOR]` runs N
+`scripts/check_determinism.sh GATE [N] [FEATURES] [VPREFIX] [FLOOR] [SLEEP]` runs N
 replicates as **separate processes** (the gold standard for exposing
 id()/async-order non-determinism), restores run-written disk state between
 replicates (Fix-B isolation), and emits one `DETERMINISM: PASS|FAIL spread=$X`
 line + a `summary.json`. This is the instrument the V207–V211 arc lacked. Doubles
-as the V213 audit harness and the cheap pre-audit fix-validation tool.
+as the V213 audit harness and the cheap pre-audit fix-validation tool. **The
+`SLEEP` knob (added mid-V213) earned its keep immediately:** sweeping it
+(0/3/10) is what exposed that the selector channel is *sleep-triggered*, killing
+the V213 sort hypothesis.
+
+### ⚠️ V213 cross-sleep lesson — measure determinism at the CANONICAL condition
+V213 nearly shipped a wrong fix because the audit ran at **sleep=0** (chosen for
+speed) while every prior version's eval ran at **sleep=10**. At sleep=0 the
+target channel is dormant, so the sort *looked* load-bearing ($18,720→$132); the
+canonical sleep=10 control showed it FAILS with or without the sort. **Rule:
+determinism claims must be made at the same eval condition prior baselines used —
+sleep is a determinism variable here, not just wall-clock.** Always run the
+sleep=10 control before concluding. (Codified in the skill's reflection section.)
 
 ## Queued (V214+ candidates)
+
+> **V213 promoted #3 and #4 to V214's critical path.** V213 relocalized the
+> selector non-determinism to a **sleep/async-timing channel** (dormant at sleep
+> ≤3s, active at sleep=10, flips actual entries 81↔83). Localizing it needs
+> exactly #3 (mode-switch trace) + #4 (signal-values fingerprint) to find the
+> first sleep=10 cycle where two runs diverge. These are no longer "nice to
+> have" — they are the V214 tooling.
 
 ### V214 #3 — per-cycle mode-switch trace  (effort: S)
 When `strategy_selector` changes mode, emit a structured line to

@@ -192,6 +192,15 @@ of one cheap instrument):
   run by default + an automatic spread report + a `DETERMINISM:
   PASS|FAIL` line. Shipped V213; queued #5 promotes it into the gate
   runner so every run self-certifies its noise floor.
+- **V213 — a determinism fix validated at the wrong condition.** The
+  V213 sort *looked* load-bearing because the audit ran at sleep=0
+  while every prior eval ran at sleep=10; the channel is dormant at
+  sleep=0. **Rule (not just an instrument): always measure
+  determinism at the SAME eval condition prior baselines used.**
+  sleep is a determinism variable, not just wall-clock pacing — run
+  the canonical-condition control before concluding a fix worked.
+  Two variables changed at once (sleep + fix) ⇒ attribution is
+  impossible until you hold sleep fixed.
 
 For each proposed delta record: **what to add, where, effort
 (S/M/L), and ship-now vs queue.** Pick the 2 cheapest/highest-impact

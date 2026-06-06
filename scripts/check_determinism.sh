@@ -32,6 +32,7 @@ FEATURES="${3:-}"
 [ -z "$FEATURES" ] && FEATURES='{}'
 VPREFIX="${4:-v213_check}"
 FLOOR="${5:-200}"
+SLEEP="${6:-0}"   # seconds between cycles; 0 is fastest. NB prior versions' canonical eval used 10.
 
 ROOT=$(pwd)
 OUT="$ROOT/data/${VPREFIX}_${GATE}_determinism"
@@ -63,7 +64,7 @@ restore_state() {
   done
 }
 
-echo "=== determinism check: gate=$GATE N=$N features=$FEATURES floor=\$$FLOOR @ $(date -u +%FT%TZ) ===" | tee "$LOG"
+echo "=== determinism check: gate=$GATE N=$N sleep=$SLEEP features=$FEATURES floor=\$$FLOOR @ $(date -u +%FT%TZ) ===" | tee "$LOG"
 
 PNLS=(); TRADES=()
 for i in $(seq 1 "$N"); do
@@ -72,7 +73,7 @@ for i in $(seq 1 "$N"); do
   echo "--- $ver starting $(date -u +%FT%TZ) ---" | tee -a "$LOG"
   PYTHONHASHSEED=42 python3 scripts/run_training.py \
     --version "$ver" \
-    --cycles 200 --sleep 0 --seed 42 \
+    --cycles 200 --sleep "$SLEEP" --seed 42 \
     --backtest-snapshot "$SNAP" \
     --frozen-cache \
     --features "$FEATURES" \
