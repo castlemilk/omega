@@ -486,6 +486,14 @@ def run(
     results_file = DATA_DIR / f"{version}_results.json"
     signal_contribs_jsonl = DATA_DIR / f"{version}_signal_contribs.jsonl"
     trade_details_jsonl = Path(f"/tmp/{version}_trade_details.jsonl")
+    # ── V214 observability deltas #3 + #4 (always-on determinism bisect tools) ──
+    # #3 mode-switch trace: one line per regime/selector-mode transition.
+    # #4 signal-values fingerprint: one line per cycle (sha1 of sorted full-precision
+    #    signal scalars + the raw values). Diffing two same-seed runs' fingerprints
+    #    yields the FIRST cycle where signals diverge and the exact signal that moved
+    #    — the discriminator the V207–V213 determinism hunt lacked. See V214.md §3.
+    mode_transitions_jsonl = DATA_DIR / f"{version}_mode_transitions.jsonl"
+    signal_fingerprint_jsonl = DATA_DIR / f"{version}_signal_fingerprint.jsonl"
 
     db_url = os.environ.get("DATABASE_URL", "")
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
@@ -761,6 +769,10 @@ def run(
     # Pre-loop diagnostic (cycle 0 — before any trades)
     print_training_diagnostics(victoria, strat, 0, engine)
 
+    # V214 #3: track the prior cycle's mode so we only log transitions.
+    import hashlib as _hashlib
+    _prev_mode_v214: str | None = None
+
     try:
         for i in range(n_cycles):
             cycle_num = i + 1
@@ -886,6 +898,62 @@ def run(
             composite_score = _get_composite_score(last_signals)
             conviction_str = _extract_cycle_conviction(last_signals)
             proposals_gen, proposals_filt = _get_proposals_stats(strat)
+
+            # ── V214 #4: per-cycle signal-values fingerprint ──────────────
+            # Flatten every scalar signal (float, or dict-with-"value") into a
+            # sorted name→value map, hash the full-precision canonical form, and
+            # persist both. Two same-seed runs whose fingerprints first differ at
+            # cycle C have their determinism channel active by cycle C; the value
+            # map shows exactly which signal moved. Guarded — never breaks a run.
+            try:
+                _fp_vals: dict[str, float] = {}
+                for _k, _v in last_signals.items():
+                    if isinstance(_v, bool):
+                        continue
+                    if isinstance(_v, (int, float)):
+                        _fp_vals[_k] = float(_v)
+                    elif isinstance(_v, dict):
+                        _vv = _v.get("value")
+                        if isinstance(_vv, (int, float)) and not isinstance(_vv, bool):
+                            _fp_vals[f"{_k}.value"] = float(_vv)
+                _canon = ";".join(f"{_k}={_fp_vals[_k]!r}" for _k in sorted(_fp_vals))
+                _fp = _hashlib.sha1(_canon.encode()).hexdigest()[:16]
+                with open(signal_fingerprint_jsonl, "a") as _fpf:
+                    _fpf.write(json.dumps({
+                        "cycle": cycle_num,
+                        "regime": regime,
+                        "fp": _fp,
+                        "n": len(_fp_vals),
+                        "values": {_k: round(_fp_vals[_k], 12) for _k in sorted(_fp_vals)},
+                    }) + "\n")
+            except Exception as _fp_exc:
+                log.debug("V214 fingerprint write failed: %s", _fp_exc)
+
+            # ── V214 #3: mode-switch trace ────────────────────────────────
+            # Log only transitions of the active mode (selector mode if the
+            # selector is wired, else the regime label). Aligns two runs' mode
+            # timelines to the cycle where they first disagree.
+            try:
+                _sel = getattr(strat, "_strategy_selector", None)
+                if _sel is not None and hasattr(_sel, "mode"):
+                    _mode_now = getattr(_sel.mode, "value", str(_sel.mode))
+                else:
+                    _mode_now = regime
+                if _mode_now != _prev_mode_v214:
+                    with open(mode_transitions_jsonl, "a") as _mtf:
+                        _mtf.write(json.dumps({
+                            "cycle": cycle_num,
+                            "prev": _prev_mode_v214,
+                            "new": _mode_now,
+                            "regime": regime,
+                            "bull_prob": round(float(last_signals.get("_bull_prob", last_signals.get("_regime_w_bull_prob", -1.0))), 6),
+                            "bear_prob": round(float(last_signals.get("_bear_prob", last_signals.get("_regime_w_bear_prob", -1.0))), 6),
+                            "bull_above": getattr(_sel, "_bull_prob_above", None) if _sel is not None else None,
+                            "bear_above": getattr(_sel, "_bear_prob_above", None) if _sel is not None else None,
+                        }) + "\n")
+                    _prev_mode_v214 = _mode_now
+            except Exception as _mt_exc:
+                log.debug("V214 mode-trace write failed: %s", _mt_exc)
 
             # ring1_pass: true if any symbol cleared conviction filters
             ring1_pass = proposals_gen > proposals_filt or proposals_gen == 0
