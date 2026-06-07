@@ -541,6 +541,54 @@ def run(
         log.info("Features       : v93_baseline (all OFF)")
     log.info("=" * 70)
 
+    # ── V215 observability delta: frozen-backtest HTTP guard ─────────────
+    # V214 localized the determinism break to a hole in --frozen-cache: direct
+    # urllib fetches in signals_advanced.py (+ ~25 sibling signal modules)
+    # bypassed OMEGA_FROZEN_CACHE, so each replicate process fetched live data at
+    # its own startup wall-clock and the "sleep channel" was really wall-clock
+    # separation between replicates. This guard makes the freeze airtight AND
+    # loud: in frozen-cache mode ALL outbound urllib HTTP is blocked (raises
+    # URLError → caught by every signal's broad except → deterministic fallback)
+    # and logged. With network provably blocked, any residual determinism spread
+    # is definitionally NON-network. It would have prevented the entire V207–V214
+    # determinism hunt — grep data/{ver}_http_during_backtest.jsonl for leakers.
+    #
+    # Patch OpenerDirector.open (NOT urlopen): it is import-style-agnostic — every
+    # urlopen(), however imported (incl. `from urllib.request import urlopen` in
+    # whale_flow.py), routes through the global opener's .open() at call time, so a
+    # class-method patch catches all callers. urllib is the only HTTP mechanism in
+    # the Victoria layer (no requests/httpx/aiohttp), so this one patch is airtight.
+    # Socket-level blocking was rejected — it would kill the Postgres connection.
+    _http_guard_state = {"blocked": 0}
+    if os.environ.get("OMEGA_FROZEN_CACHE") == "1":
+        import urllib.error as _uerr
+        import urllib.request as _ureq
+
+        _http_log_path = DATA_DIR / f"{version}_http_during_backtest.jsonl"
+        try:
+            _http_log_path.unlink()  # fresh per run
+        except FileNotFoundError:
+            pass
+        _orig_opener_open = _ureq.OpenerDirector.open
+
+        def _frozen_blocked_open(_self, fullurl, *args, **kwargs):  # noqa: ANN001
+            _url = getattr(fullurl, "full_url", fullurl)
+            _http_guard_state["blocked"] += 1
+            try:
+                with open(_http_log_path, "a") as _hf:
+                    _hf.write(json.dumps({"url": str(_url)[:300]}) + "\n")
+            except Exception:  # noqa: BLE001
+                pass
+            raise _uerr.URLError(
+                f"OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: {str(_url)[:120]}"
+            )
+
+        _ureq.OpenerDirector.open = _frozen_blocked_open
+        log.info(
+            "V215: frozen-cache HTTP guard ARMED — all outbound urllib blocked + "
+            "logged to %s", _http_log_path,
+        )
+
     # ── V213 observability delta #1: subsystem wiring banner ──────────────
     # Historically (V148–V202) subsystems ran flag-ON but code-INERT — the flag
     # was undeclared on the dataclass (getattr→False no-op) or the module's
@@ -1368,6 +1416,13 @@ def run(
             "conviction_filter_rate": watchdog.conviction_filter_rate(),
             "circuit_breaker_trips": breaker._trip_count if breaker else 0,
             "final_vol_low_threshold": getattr(strat, "_vol_low_threshold", None),
+            # V215: outbound HTTP attempts blocked by the frozen-cache guard. In a
+            # frozen backtest this should be >0 (Deribit/carry/etc. leakers, now
+            # deterministically neutralized) and is forensic only — the two
+            # localized signals_advanced feeders are snapshot-fed before this. A
+            # non-zero count with a deterministic spread = leaks closed; any
+            # residual spread with the guard armed is definitionally non-network.
+            "http_blocked_count": _http_guard_state["blocked"],
         },
         "filters": sit_out_clean,
         "trades": {
