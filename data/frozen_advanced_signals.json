@@ -1,0 +1,7 @@
+{
+  "_comment": "V215 frozen snapshot of signals_advanced.py live HTTP fetches. Read by signals_advanced.py when OMEGA_FROZEN_CACHE=1 so frozen backtests are deterministic (closes the --frozen-cache hole V214 localized). Regenerate with scripts/freeze_advanced_snapshot.py.",
+  "_captured_utc": "2026-06-07T12:31:06.703873+00:00",
+  "btc_dominance_pct": 56.1233,
+  "market_cap_change_24h": 3.2258,
+  "long_short_ratio": 2.0184
+}
