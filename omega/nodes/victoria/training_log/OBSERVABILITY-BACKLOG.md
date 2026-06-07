@@ -20,6 +20,26 @@ basic questions about itself:
 The theme: instrumentation that turns a multi-version manual investigation into a
 one-command / one-grep answer.
 
+### ⚠️ V214 lesson — "subsystem-OPEN" claims need the same runtime-gate check as "subsystem-closed" ones
+
+V207b wrongly *closed* concurrency as a determinism channel by grepping only
+`strategy.py` for `ThreadPoolExecutor` (zero hits) and missing the indirect import
+chain. A prior V214 attempt then committed the **inverse** error: it *opened*
+`omega/core/dag_pipeline.py`'s `ThreadPoolExecutor` as "the real channel" **without
+checking whether that code runs in the eval at all**. It does not — `DAGPipeline`
+is gated behind `if os.getenv("DAG_PARALLEL")` (`victoria_node.py:927`), and
+`DAG_PARALLEL` is never set anywhere (run_training, check_determinism, Makefiles,
+.env, live shell — only *reads* exist). The serial eval path has zero in-process
+concurrency. A canonical-order "fix" there would have been theatre on dead code.
+
+**Rule:** before naming any subsystem as the cause OR the cure of a behavior,
+confirm it actually *executes* under the eval condition — check the env flag /
+feature flag / import that gates it, not just that the code exists. The V213
+**subsystem wiring banner** does this for the 5 audited subsystems; the cheap delta
+is to **add the DAG path (and `DAG_PARALLEL`) to the banner's probe list** so a run
+log says `dag_parallel: off → serial path` and no future attempt can assert the DAG
+is live without contradicting cycle-0 output. (Queued as V215 #7 below.)
+
 ## Shipped
 
 ### ✅ V213 delta #1 — subsystem wiring banner  (effort: S)
@@ -53,36 +73,39 @@ determinism claims must be made at the same eval condition prior baselines used 
 sleep is a determinism variable here, not just wall-clock.** Always run the
 sleep=10 control before concluding. (Codified in the skill's reflection section.)
 
-## Queued (V214+ candidates)
+### ✅ V214 delta #3 — per-cycle mode-switch trace  (effort: S)
+`scripts/run_training.py` cycle loop now writes
+`data/{version}_mode_transitions.jsonl` — one line per regime/selector-mode
+transition: `{cycle, prev, new, regime, bull_prob, bear_prob, bull_above,
+bear_above}`. The V212 diagnosis ("the selector arms a mode one cycle off between
+identical runs") took a manual `signal_contribs.jsonl` bisect; it is now a 2-file
+align. Always-on, try/except-guarded.
 
-> **V213 promoted #3 and #4 to V214's critical path.** V213 relocalized the
-> selector non-determinism to a **sleep/async-timing channel** (dormant at sleep
-> ≤3s, active at sleep=10, flips actual entries 81↔83). Localizing it needs
-> exactly #3 (mode-switch trace) + #4 (signal-values fingerprint) to find the
-> first sleep=10 cycle where two runs diverge. These are no longer "nice to
-> have" — they are the V214 tooling.
+### ✅ V214 delta #4 — per-cycle signal-values fingerprint  (effort: M)
+`scripts/run_training.py` cycle loop now writes
+`data/{version}_signal_fingerprint.jsonl` — one line per cycle: `{cycle, regime,
+fp (sha1 of sorted full-precision signal scalars), n, values:{name→value}}`.
+`scripts/fingerprint_diff.py A.jsonl B.jsonl` reports the **first cycle** where two
+same-seed runs diverge + the exact signals that moved (sorted by drift magnitude) +
+how long each stays split. This is the discriminator that localizes channels like
+the V213 cross-sectional-demean wobble — would have collapsed the V207–V211 arc to
+one diff. **This is V214's primary deliverable.**
 
-### V214 #3 — per-cycle mode-switch trace  (effort: S)
-When `strategy_selector` changes mode, emit a structured line to
-`data/{ver}_mode_switches.jsonl`: `{cycle, from, to, bull_prob, bear_prob,
-regime_label, bull_above, bear_above}`. The V212 diagnosis ("the selector arms a
-mode one cycle off between identical runs") took a manual `signal_contribs.jsonl`
-bisect; with this it is a 2-file `diff`. **Highest-value queued item** — it
-directly instruments the exact mechanism V213 is fencing.
+## Queued (V215+ candidates)
 
-### V214 #4 — per-cycle signal-values fingerprint  (effort: M)
-Each cycle, hash the canonically-sorted `signal_values` vector (and the
-post-demean composite vector) to `data/{ver}_sigfp.jsonl`. Diffing two runs'
-fingerprint streams pinpoints the **first cycle** where signal computation
-diverges — which is exactly what localizes channels like the V213
-cross-sectional-demean wobble. Would have collapsed the V207–V211 arc to one diff.
-
-### V214 #5 — determinism gate inside the gate runner  (effort: M)
+### V215 #5 — determinism gate inside the gate runner  (effort: M)
 Promote delta #2 from a standalone script into `run_training.py`'s gate runner:
 a `--check-determinism` flag (or auto-trigger when `--seed` is set) that runs the
 2-replicate pair and writes a `determinism: {spread, verdict, floor}` block into
 `{ver}_results.json`. Makes every gated run self-certify its own noise floor; no
 high-water claim can be made on a run whose determinism block says FAIL.
+
+### V215 #7 — add DAG/`DAG_PARALLEL` to the subsystem wiring banner  (effort: S)
+Extend `run_training.py`'s startup wiring banner (V213 #1) to probe the parallel
+DAG path: print `dag_parallel: off → serial signal path` (or `ON → DAGPipeline`)
+based on `os.getenv("DAG_PARALLEL")`. Closes the "subsystem-OPEN claim without
+runtime-gate check" gap (V214 lesson above) — makes "is the DAG live?" a cycle-0
+grep so no future version can assert it as a channel without contradiction.
 
 ### V215 #6 — async-order lint / runtime assertion  (effort: L)
 A debug-mode check (lint rule + optional runtime assert) that flags any
