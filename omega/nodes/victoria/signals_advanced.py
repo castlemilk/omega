@@ -16,15 +16,47 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import statistics
 import time
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 # Module-level cache for rate-limited endpoints (keyed by URL)
 _FETCH_CACHE: dict[str, tuple[float, Any]] = {}
 _DOM_CACHE_TTL = 3600  # BTC dominance rarely changes minute-to-minute; 1h cache
+
+# ── V215: frozen-backtest snapshot for the live-HTTP signal feeders ──────────
+# V214 localized the determinism break to the direct urllib fetches below: they
+# bypassed OMEGA_FROZEN_CACHE, so each replicate process fetched live at its own
+# startup wall-clock. When OMEGA_FROZEN_CACHE=1 we instead return values from a
+# committed one-time snapshot (data/frozen_advanced_signals.json), making frozen
+# backtests deterministic while keeping the two highest-signal feeders
+# (btc_dominance, long_short_ratio) at a realistic recent level rather than the
+# neutral no-data fallback. Regenerate with scripts/freeze_advanced_snapshot.py.
+_FROZEN_ADV: dict[str, Any] | None = None
+
+
+def _frozen_advanced() -> dict[str, Any] | None:
+    """Return the frozen snapshot dict when OMEGA_FROZEN_CACHE=1, else None.
+
+    Cached after first load. Returns ``{}`` (not None) if the flag is set but the
+    snapshot file is missing/unreadable — callers treat an empty dict as "frozen,
+    but no value available" and fall through to their deterministic no-data path.
+    """
+    global _FROZEN_ADV
+    if os.environ.get("OMEGA_FROZEN_CACHE") != "1":
+        return None
+    if _FROZEN_ADV is None:
+        try:
+            _path = Path(__file__).resolve().parents[3] / "data" / "frozen_advanced_signals.json"
+            with open(_path) as _fh:
+                _FROZEN_ADV = json.load(_fh)
+        except Exception:  # noqa: BLE001
+            _FROZEN_ADV = {}
+    return _FROZEN_ADV
 
 
 @dataclass
@@ -723,17 +755,25 @@ class LongShortRatioSignal:
         raw: dict[str, float] = {}
 
         if ls_ratio is None:
-            try:
-                import json
-                import urllib.request
+            # V215: in frozen backtest, read the committed snapshot instead of
+            # fetching live (closes the --frozen-cache hole V214 localized).
+            _frozen = _frozen_advanced()
+            if _frozen is not None:
+                ls_ratio = _frozen.get("long_short_ratio")
+                if ls_ratio is None:
+                    return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+            else:
+                try:
+                    import json
+                    import urllib.request
 
-                url = "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1"
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                ls_ratio = float(data[0]["longShortRatio"])
-            except Exception:
-                return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
+                    url = "https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=1h&limit=1"
+                    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req, timeout=5) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+                    ls_ratio = float(data[0]["longShortRatio"])
+                except Exception:
+                    return SignalValue(value=0.0, confidence=0.0, regime_tag="no_data", raw=raw)
 
         import math as _math
 
@@ -853,6 +893,15 @@ class BTCDominanceSignal:
 
         Returns (btc_dominance_pct, market_cap_change_24h_pct) or (None, None).
         """
+        # V215: in frozen backtest, read the committed snapshot instead of
+        # fetching live (closes the --frozen-cache hole V214 localized).
+        _frozen = _frozen_advanced()
+        if _frozen is not None:
+            _dom = _frozen.get("btc_dominance_pct")
+            if _dom is None:
+                return None, None
+            return float(_dom), _frozen.get("market_cap_change_24h")
+
         now = time.time()
 
         # Check cache first (either source)
