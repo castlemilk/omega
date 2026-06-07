@@ -114,6 +114,33 @@ The V213 channel was a `sorted()` that V211 applied in `strategy.py` but not in
 `signal_generation.py`'s copy of the same aggregation — a lint would have caught
 the asymmetry. Larger effort (needs an AST rule); lowest priority.
 
+### V216 #8 — backtest wall-clock-read tripwire (sizing/exit layer)  (effort: S)
+**Surfaced by V215.** The signal-fingerprint instrument proves the *signal* layer is
+hermetic, but V215's residual determinism FAIL was a wall-clock read in the *sizing*
+layer (`core/risk_manager.py:316` `time_risk_multiplier(now=None)` →
+`datetime.now(UTC)` → 50% size cut in 14:30–15:30 UTC). Add a lightweight tripwire:
+when `OMEGA_FROZEN_CACHE=1`, log (or assert) any `datetime.now`/`time.time` call site
+reached during the cycle loop in `strategy.py`/`risk_manager.py`/`paper_trading.py`
+that is **not** passed a bar timestamp. Would have flagged `time_risk_multiplier(now=
+None)` at cycle 0 instead of after a 4-replicate sleep=10 run. Pairs with the
+fingerprint (signals clean → any residual is *here*). Ship with V216's bar-time fix.
+
+## Shipped in V215  ✅
+
+- **Frozen-cache HTTP enforcement guard** (the strongest queued obs delta; supersedes
+  the spirit of #5's "self-certify"). `run_training.py` monkeypatches
+  `urllib.request.OpenerDirector.open` when `OMEGA_FROZEN_CACHE=1` → blocks + logs +
+  counts all outbound HTTP; count in `results.observability.http_blocked_count`,
+  per-URL log in `data/{ver}_http_during_backtest.jsonl`. **Import-style-agnostic**
+  (catches `from urllib.request import urlopen` too, e.g. `whale_flow.py`). Caught a
+  leak **far broader than V214's 3 signals** (2,637 calls/run across ~25 endpoints).
+  **Would have prevented the entire V207–V214 determinism hunt.** With network provably
+  blocked, any residual spread is *definitionally non-network* — the discrimination
+  that localized the V215 sizing-time channel in one run.
+- **Process rule:** fingerprint-first-bisect is the default first tool on any
+  determinism FAIL (signal-vs-non-signal); the HTTP guard proves network-vs-non-network.
+  Together they bisect the channel space in one N=4 run.
+
 ## How to use this file
 
 1. During a reflection's observability-gap audit, add new gaps as `V###+1 #N`
