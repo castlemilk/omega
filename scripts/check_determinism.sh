@@ -53,6 +53,11 @@ SNAP=$(snap_for "$GATE")
 [ -z "$SNAP" ] && { echo "FATAL: unknown gate '$GATE'"; exit 2; }
 [ -f "$SNAP" ] || { echo "FATAL: snapshot not found: $SNAP"; exit 2; }
 
+# V216 obs-delta #8: sizing-layer wall-clock tripwire preflight. Any unguarded
+# datetime.now()/time.time() in the sizing path leaks non-determinism into trade
+# sizing (the V215 channel) — fail before burning replicate runs.
+python3 scripts/check_no_wallclock.py || { echo "FATAL: wall-clock tripwire failed (see above)"; exit 3; }
+
 # Fix-B state isolation: snapshot run-written disk state once, restore per run.
 ISO="$OUT/.state_snapshot"; mkdir -p "$ISO"
 for f in data/signal_ic_history.json data/omega_victoria_state.db data/omega_victoria_memory.db data/macro_cache.db; do
