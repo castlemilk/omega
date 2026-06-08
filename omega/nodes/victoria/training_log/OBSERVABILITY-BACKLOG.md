@@ -125,6 +125,33 @@ that is **not** passed a bar timestamp. Would have flagged `time_risk_multiplier
 None)` at cycle 0 instead of after a 4-replicate sleep=10 run. Pairs with the
 fingerprint (signals clean → any residual is *here*). Ship with V216's bar-time fix.
 
+## Shipped in V216  ✅
+
+- **#8 sizing-layer wall-clock tripwire** — `scripts/check_no_wallclock.py`. AST-based
+  static checker: fails preflight if any sizing-path module (`strategy.py`,
+  `core/risk_manager.py`) reads `datetime.now`/`utcnow`/`time.time` without a
+  `# wallclock-ok: <reason>` annotation. AST (not grep) → never false-positives on
+  comments/docstrings. Wired into `check_determinism.sh` preflight. **Would have caught
+  the V215 `time_risk_multiplier` leak (and the V207–V214 wall-clock chase) at cycle 0**
+  instead of after a 4-replicate sleep=10 run. Realizes the spirit of the queued
+  "sizing-layer wall-clock tripwire" above (chose static-checker over runtime monkeypatch
+  because the bar-time fix intentionally retains live `datetime.now` fallbacks — the
+  annotation encodes "guarded" auditably).
+
+## Queued for V217 (from the V216 audit)  📋
+
+- **Per-field full-precision fingerprint hash (HIGH — V217's #1).** The current
+  `signal_fingerprint.jsonl` stores rounded named scalars + one opaque whole-`signals`-dict
+  `fp` hash. V216's third-channel diagnosis hit a wall: the `fp` diverges (recent-OFF cyc1,
+  crisis-ON cyc2) while *every* named scalar is byte-identical → "it's in the signals dict,
+  sub-rounding" is as far as the tool can localize. **Add a per-field full-precision hash**
+  (hash each `*.value` / hidden key at full float precision) so the diff **names the drifting
+  field** in one command. Effort: S. Ship with V217 before chasing the channel.
+- **`size_ratio.jsonl` default artifact (MED).** The r1/r4 trade-CSV size-ratio diff (median
+  0.500) localized the V215 sizing channel. Make it a per-run default (size ratio binned by
+  cycle vs a baseline run) for future sizing-channel bisects. Effort: S–M (post-run trade-CSV
+  alignment). Queued from V216 to keep that version focused on the fence.
+
 ## Shipped in V215  ✅
 
 - **Frozen-cache HTTP enforcement guard** (the strongest queued obs delta; supersedes
