@@ -29,14 +29,38 @@ from __future__ import annotations
 import os
 import sys
 
-# V207a: pin PYTHONHASHSEED before any further import. CPython chooses
-# the string-hash seed at process start from this env var; if unset,
-# it is randomized per-process, which permutes set/dict iteration
-# order and produces ~1e-4 FP drift in composite scoring (V206b
-# located this as one of the two noise channels). If we did not
-# inherit the desired value, re-exec ourselves with it pinned.
+# V207a + V217: pin determinism-critical env BEFORE any further import.
+# Two env vars must be present at *process start*, before numpy / its BLAS
+# backend load, or they have no effect:
+#   • PYTHONHASHSEED (V207a) — CPython reads it at start; if unset it is
+#     randomized per-process, permuting set/dict iteration order (~1e-4 FP
+#     drift in composite scoring; V206b located this channel).
+#   • BLAS thread count (V217) — Apple Accelerate (vecLib), OpenBLAS, and MKL
+#     read their *_NUM_THREADS / VECLIB_MAXIMUM_THREADS vars when the BLAS
+#     dylib first loads. Multi-threaded BLAS reduces in a non-deterministic
+#     parallel order, drifting the low-order bits of np.corrcoef / eigvalsh /
+#     matmul — the V216 third determinism channel (rmt_signal, basic_signals,
+#     and the derived consensus/divergence fields). Pinning to 1 thread makes
+#     the signal layer byte-identical across replicates (proven cheap A/B).
+# Because these must precede numpy import, we set them here and — if we did
+# not already inherit them — re-exec ourselves so the values are in place at
+# the true process start (execvpe keeps the same PID; fires at most once).
+_need_reexec = False
 if os.environ.get("PYTHONHASHSEED") != "42":
     os.environ["PYTHONHASHSEED"] = "42"
+    _need_reexec = True
+# Pin BLAS to a single thread only in frozen-backtest mode (live trading uses
+# a different entry point; gate on the frozen-cache flags so the eval — and
+# only the eval — is forced deterministic).
+if "--frozen-cache" in sys.argv or "--backtest-snapshot" in sys.argv:
+    for _blas_var in (
+        "OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS",
+        "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS",
+    ):
+        if os.environ.get(_blas_var) != "1":
+            os.environ[_blas_var] = "1"
+            _need_reexec = True
+if _need_reexec:
     os.execvpe(sys.executable, [sys.executable] + sys.argv, os.environ)
 
 import argparse
