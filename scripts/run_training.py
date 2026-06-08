@@ -44,6 +44,7 @@ import csv
 import json
 import logging
 import math
+import struct
 import time
 from datetime import datetime, timezone
 UTC = timezone.utc
@@ -494,6 +495,15 @@ def run(
     #    — the discriminator the V207–V213 determinism hunt lacked. See V214.md §3.
     mode_transitions_jsonl = DATA_DIR / f"{version}_mode_transitions.jsonl"
     signal_fingerprint_jsonl = DATA_DIR / f"{version}_signal_fingerprint.jsonl"
+    # ── V217 obs-delta #1: per-field full-precision fingerprint ──────────────
+    # One line per (cycle, signal_name) with the IEEE-754 double bit-exact hex of
+    # the field's value. The V216 third channel proved the whole-dict `fp` hash
+    # diverges while the rounded-to-12 `values` dump looks identical — so the
+    # combined hash cannot NAME the field. This artifact does: one per-field diff
+    # = one (cycle, signal_name) channel. Entries are sorted by (cycle, name) so
+    # the JSONL is line-comparable via `cmp`. See V217.md §step-1.
+    per_field_fingerprint_jsonl = DATA_DIR / f"{version}_per_field_fingerprint.jsonl"
+    per_field_fingerprint_jsonl.unlink(missing_ok=True)  # fresh per run (cmp-able)
 
     db_url = os.environ.get("DATABASE_URL", "")
     cg_key = os.environ.get("CG_API_KEY") or os.environ.get("COINGEKO_API_KEY") or ""
@@ -974,6 +984,20 @@ def run(
                         "n": len(_fp_vals),
                         "values": {_k: round(_fp_vals[_k], 12) for _k in sorted(_fp_vals)},
                     }) + "\n")
+                # ── V217 #1: per-field IEEE-754-bit-exact fingerprint ─────────
+                # One line per (cycle, signal_name). value_hex is the 16-char
+                # big-endian IEEE double of the field — bit-exact, so two runs
+                # that differ in the sub-12th decimal (the V216 dead-end) now
+                # differ in value_hex and `per_field_diff.py` NAMES the field.
+                # Sorted by name within the cycle; cycles emit in order, so the
+                # whole file is sorted by (cycle, name) and `cmp`-comparable.
+                with open(per_field_fingerprint_jsonl, "a") as _pff:
+                    for _k in sorted(_fp_vals):
+                        _pff.write(json.dumps({
+                            "cycle": cycle_num,
+                            "signal_name": _k,
+                            "value_hex": struct.pack("!d", _fp_vals[_k]).hex(),
+                        }) + "\n")
             except Exception as _fp_exc:
                 log.debug("V214 fingerprint write failed: %s", _fp_exc)
 
