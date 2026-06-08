@@ -140,6 +140,7 @@ Improvement arc:
 
 import logging
 import math
+import os
 import time
 import uuid
 from datetime import UTC, datetime
@@ -1612,6 +1613,41 @@ class StrategyNode(Node):
 
     # ------------------------------------------------------------------ portfolio construction
 
+    @staticmethod
+    def _backtest_now_ts(market_data: dict[str, Any]) -> datetime | None:
+        """V216: bar-time clock for sizing-side time-of-day windows in frozen backtest.
+
+        The V215 determinism leak was wall-clock non-hermeticity in *sizing*:
+        ``time_risk_multiplier`` (``core/risk_manager.py``) and the strategy damp window
+        read ``datetime.now(UTC)``, so a replicate straddling a UTC time window halved
+        its position sizes mid-run. This returns the current bar's UTC timestamp
+        (``market_data[sym]["timestamps"][-1]``) so those windows evaluate against the
+        frozen snapshot's clock, not the process wall-clock.
+
+        Gated on ``OMEGA_FROZEN_CACHE=1`` (auto-set by ``--backtest-snapshot``): returns
+        ``None`` in live mode so callers fall back to ``datetime.now(UTC)`` — the live
+        path is byte-unchanged. Returns ``None`` if no usable timestamp is present.
+        """
+        if os.environ.get("OMEGA_FROZEN_CACHE") != "1":
+            return None
+        if not isinstance(market_data, dict):
+            return None
+        latest: int | None = None
+        for _d in market_data.values():
+            if not isinstance(_d, dict):
+                continue
+            _ts = _d.get("timestamps")
+            if isinstance(_ts, list) and _ts:
+                try:
+                    v = int(_ts[-1])
+                except (TypeError, ValueError):
+                    continue
+                if latest is None or v > latest:
+                    latest = v
+        if latest is None:
+            return None
+        return datetime.fromtimestamp(latest, UTC)
+
     def _construct_portfolio(
         self, signals: dict[str, Any], market_data: dict[str, Any]
     ) -> dict[str, Any]:
@@ -1626,6 +1662,11 @@ class StrategyNode(Node):
         current_cycle = self._execution_count
         self._last_ticker_decisions = {}  # reset each cycle
         self._last_confluence = {}  # reset confluence cache each cycle
+
+        # V216: bar-time clock for sizing-side time-of-day windows. In frozen backtest
+        # this is the current bar's UTC timestamp (deterministic); None in live mode →
+        # callers fall back to datetime.now(UTC). Closes the V215 sizing wall-clock leak.
+        _bar_now = self._backtest_now_ts(market_data)
 
         # V156: apply regime-adaptive strategy mode overrides before threshold computation.
         if self._strategy_selector is not None:
@@ -2095,7 +2136,8 @@ class StrategyNode(Node):
         # --- Time-of-day filter ---
         # Based on PnL data: 09h UTC shorts +60.9% wr; 23h UTC shorts 28.3% wr (-$215/day).
         # Reduce position size 50% during the US-close reversal window (22-00h UTC).
-        _hour_utc = datetime.now(UTC).hour
+        # V216: bar-time in frozen backtest (deterministic); datetime.now in live.
+        _hour_utc = (_bar_now or datetime.now(UTC)).hour  # wallclock-ok: V216 bar-time fenced
         if _hour_utc in {22, 23, 0}:
             sit_out_size_mult *= 0.5
             logger.info(
@@ -3367,6 +3409,7 @@ class StrategyNode(Node):
             corr_matrix=_corr_matrix,
             tickers=_corr_tickers if _corr_tickers else None,
             convictions=_conv_scores if _conv_scores else None,
+            now=_bar_now,  # V216: bar-time in frozen backtest; None→datetime.now in live
         )
 
         _risk_metrics = self._risk.get_metrics()
@@ -3526,7 +3569,7 @@ class StrategyNode(Node):
         if self.features.decision_traces and self._trace_writer is not None:
             import datetime as _dt
 
-            _now_ts = _dt.datetime.now(_dt.UTC).isoformat()
+            _now_ts = _dt.datetime.now(_dt.UTC).isoformat()  # wallclock-ok: trace metadata only, not sizing
             _trace_version = self._trace_writer._version
             _geo_ricci = float(signals.get("_ricci_scalar", 0.0) or 0.0)
             _geo_orc = float(signals.get("_orc_mean_curvature", 0.0) or 0.0)
