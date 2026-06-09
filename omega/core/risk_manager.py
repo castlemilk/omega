@@ -327,7 +327,9 @@ class PositionRiskManager:
         now : datetime to evaluate (defaults to current UTC time).
         """
         if now is None:
-            now = datetime.now(UTC)  # wallclock-ok: live fallback; backtest threads bar-time via caller (V216)
+            now = datetime.now(
+                UTC
+            )  # wallclock-ok: live fallback; backtest threads bar-time via caller (V216)
 
         current_minutes = now.hour * 60 + now.minute
 

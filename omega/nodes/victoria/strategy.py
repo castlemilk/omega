@@ -3569,7 +3569,9 @@ class StrategyNode(Node):
         if self.features.decision_traces and self._trace_writer is not None:
             import datetime as _dt
 
-            _now_ts = _dt.datetime.now(_dt.UTC).isoformat()  # wallclock-ok: trace metadata only, not sizing
+            _now_ts = _dt.datetime.now(
+                _dt.UTC
+            ).isoformat()  # wallclock-ok: trace metadata only, not sizing
             _trace_version = self._trace_writer._version
             _geo_ricci = float(signals.get("_ricci_scalar", 0.0) or 0.0)
             _geo_orc = float(signals.get("_orc_mean_curvature", 0.0) or 0.0)

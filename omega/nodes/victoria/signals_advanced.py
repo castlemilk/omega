@@ -54,7 +54,7 @@ def _frozen_advanced() -> dict[str, Any] | None:
             _path = Path(__file__).resolve().parents[3] / "data" / "frozen_advanced_signals.json"
             with open(_path) as _fh:
                 _FROZEN_ADV = json.load(_fh)
-        except Exception:  # noqa: BLE001
+        except Exception:
             _FROZEN_ADV = {}
     return _FROZEN_ADV
 
