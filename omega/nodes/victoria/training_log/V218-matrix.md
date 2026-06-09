@@ -4,8 +4,62 @@
 **Author:** claude
 **Parent:** V217 — third determinism channel (multi-threaded Accelerate BLAS) closed;
 eval is 6/6 hermetic at sleep=10 (the precondition the matrix waited on since V213).
-**Status:** PRE-STAGED (not yet running). Per the skill, the matrix runs only on a fully
+**Status:** RUNNING (kickoff 2026-06-09). Per the skill, the matrix runs only on a fully
 hermetic eval. V217 delivered it.
+
+## Kickoff preflight (2026-06-09) — Step-1 observability-gap audit results
+
+Before launching, a wiring audit of the two code cells (A, B) surfaced a finding that
+**reclassifies cell B from a runnable bet to BLOCKED**, and ships the instrument that would
+have caught it at pre-reg time:
+
+- **Cell A — RUNNABLE.** `signals["carry"]` IS populated in the replay eval
+  (`victoria_node.py:1120`, fields `value`/`confidence`/`regime_tag`) — exactly what
+  cbbfb07's hunk-1 injection reads. Whether `_carry_value != 0.0` holds under `--frozen-cache`
+  is precisely what A's falsifier (≥1 carry-attributed trade) measures. Proceed.
+- **Cell B — BLOCKED (deeper than the pre-reg anticipated).** The pre-reg assumed pooled IC
+  weighting was the live baseline and only the *per-regime* branch was dormant. Static + log
+  audit shows the **entire IC-weighting subsystem is runtime-inert in the eval**:
+  1. `StrategyNode._signal_ics` is initialised empty (`strategy.py:437`) and its **only**
+     populate path is `update_signal_ics`, which has **zero callers** in the training/audit
+     path (not in `run_training.py` HEAD, not in `victoria_node.py`). Confirmed empirically:
+     **no `"StrategyNode: loaded ICs"` line appears in any V217 run log.**
+  2. `_compute_weighted_conviction` (`strategy.py:1025`) runs every cycle (called at `:1429`
+     inside `_passes_conviction_filters`) but hits `if not self._signal_ics: return composite`
+     at `:1032` — it **returns before ever reaching the `_per_regime` branch at `:1056`.**
+  3. `per_regime_ic_weighting` is **undeclared** on `VictoriaFeatures`; `from_env` filters
+     overrides to declared fields (`features.py:699`), so even passing it via env is a no-op.
+  4. `update_regime_ics` has **no cycle-feasible data source**: `signal_ic_history.json` is
+     pooled, not regime-tagged; the only regime-IC producer is the on-demand
+     `_analyze_regime_ic` *action* (`signal_research.py:311`), not a per-cycle hook.
+
+  → Per the advisor and the matrix one-bet rule, **B's scope is NOT expanded** (loading pooled
+  ICs to clear the early-return is a *second* bet — raw-composite → IC-weighted — that would
+  confound B's Δ). B runs as a **flag-only no-op** (declare the field, default True in its
+  worktree) to empirically confirm Δ=$0.00 even with the flag ON, then carries verdict
+  **BLOCKED**. Its pre-registered falsifier ("switch inert → no read") anticipated exactly this.
+  V219.B-corrected gets the real prerequisite: **wire pooled ICs from `signal_ic_history.json`
+  as its own one-bet version, then per-regime becomes testable.**
+
+**Observability shipped this kickoff (the instrument that catches this class at cycle 0):**
+- `run_training.py` startup banner extended: probes `per_regime_ic_weighting` (→ prints
+  `UNDECLARED — silent no-op` on main) **and** a new post-build `_signal_ics`-populated probe
+  (→ warns `IC-WEIGHTING INERT: _signal_ics empty` when the subsystem is unwired).
+- `scripts/v218_matrix_status.sh` — single-pane health monitor for the 3 concurrent cells
+  (PID liveness + log tail + per-cell gate progress).
+- `check_determinism.sh` gains `SNAP_OVERRIDE` env (lets cell E run its crisis gate against
+  `snap_crisis_2020q1.json` with no code diff). Remaining backlog item (`size_ratio.jsonl`
+  automated artifact) queued to `OBSERVABILITY-BACKLOG.md`.
+
+## σ band (resolves the stale-σ caveat below)
+
+Within-config spread is **$0** under the V217 hermetic regime (each cell re-confirms via its
+own trend determinism gate). The V203 2σ thresholds were measured under the OLD regime
+(multi-threaded BLAS + pre-fence sizing) and are NOT trusted for cross-config comparison.
+**Decision:** use a flat **$100 acceptance band** (noise-floor $0 × generous margin; well
+above the 2.5σ-at-N=3 inflation when σ≈$0). A cell's gate Δ counts as real signal only if
+**|Δ| > $100**. Cell E compares **absolute PnL** on the new 2020q1 snapshot, not Δ vs the
+2022h1 crisis baseline (different window).
 
 ## Why matrix now
 
@@ -55,16 +109,21 @@ residual within-cell spread (expected $0). Document the chosen band per cell bel
 - **Falsifier:** < 5 carry-attributed trades in 200 cycles → carry still gated out (tracer
   bug, not edge); recent Δ within 2σ → no edge.
 
-### V218.B — V170 per-regime IC weighting
-- **Hypothesis:** recomputing IC weights per regime label (crisis/high_vol/normal) instead
-  of pooled changes which sub-signals dominate the composite in crisis without touching the
-  reflection-flagged `crisis_short_bias` dead end.
-- **Change:** activate the dormant `update_regime_ics` path; verify weights actually diverge
-  per regime (tracer evidence).
-- **Files touched:** ensemble voter / IC weighting config.
-- **Targeted gate:** crisis (primary), trend (secondary).
-- **Falsifier:** per-regime weights identical to pooled (switch inert) → no read; crisis Δ
-  within 2σ → no effect.
+### V218.B — V170 per-regime IC weighting  →  **BLOCKED at kickoff (see preflight above)**
+- **Hypothesis (original):** recomputing IC weights per regime label (crisis/high_vol/normal)
+  instead of pooled changes which sub-signals dominate the composite in crisis without touching
+  the reflection-flagged `crisis_short_bias` dead end.
+- **Change (as run):** declare `per_regime_ic_weighting: bool = True` on `VictoriaFeatures` in
+  the cell-B worktree only — a **flag-only no-op** to empirically confirm the subsystem is
+  inert even with the flag ON. **NOT** expanded to load pooled ICs or build a regime-IC
+  accumulator (that would be a second bet; see preflight).
+- **Files touched:** `features.py` (one field declaration).
+- **Targeted gate:** crisis (primary), trend (secondary) — *moot; subsystem unwired*.
+- **Falsifier (FIRED at preflight):** "per-regime weights identical to pooled / switch inert →
+  no read." Confirmed: `_signal_ics` empty → `_compute_weighted_conviction` early-returns the
+  raw composite before the per-regime branch. Expected audit Δ = **$0.00 on all gates**.
+- **Verdict:** BLOCKED. Root cause = pooled `update_signal_ics` never called in the eval.
+  V219.B-corrected = wire pooled ICs first (its own version).
 
 ### V218.E — `snap_crisis_2020q1` generalisation check (no code change)
 - **Hypothesis:** if V217's crisis loss is snapshot-specific (LUNA/FTX 2022h1 dynamics) vs
