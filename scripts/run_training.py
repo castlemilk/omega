@@ -643,6 +643,11 @@ def run(
         ("mode_transition_blend", "mode_transition_blend", None),
         ("bayesian_regime", "bayesian_regime", "omega.nodes.victoria.bayesian_regime"),
         ("hmm_regime", "hmm_regime", "omega.nodes.victoria.hmm_regime"),
+        # V218.B preflight: per-regime IC weighting. Undeclared on main → banner
+        # prints "UNDECLARED — silent no-op", documenting the latent inertness.
+        # NB: even when declared+ON the path is unreachable unless _signal_ics is
+        # populated (see the post-build IC-WEIGHTING probe below).
+        ("per_regime_ic_weighting", "per_regime_ic_weighting", None),
     ]
     _declared_fields = set(_asdict(_active_features).keys())
     log.info("[startup] subsystem wiring (flag → wired?):")
@@ -767,6 +772,28 @@ def run(
     _strat = getattr(victoria, "_strategy", None)
     if _strat is not None:
         _strat._paper_engine = engine
+
+    # V218.B preflight obs-delta: IC-weighting wiring probe. The whole IC-weighted
+    # conviction path (pooled AND per-regime) is a no-op whenever _signal_ics is
+    # empty — _compute_weighted_conviction returns the raw composite before the
+    # weighting loop. update_signal_ics has historically had zero callers in the
+    # training path, so this silently held for the entire V199–V218 arc and a
+    # per-regime-IC bet (V218.B) was unrunnable. Surface it at cycle 0 instead of
+    # after a wasted version. Grep a run log for "IC-WEIGHTING INERT".
+    if _strat is not None:
+        _n_ics = len(getattr(_strat, "_signal_ics", {}) or {})
+        _n_regime_ics = len(getattr(_strat, "_regime_ics", {}) or {})
+        if _n_ics == 0:
+            log.warning(
+                "[startup]   IC-WEIGHTING INERT: _signal_ics empty (0 signals) — "
+                "conviction filter uses raw composite; pooled + per-regime IC "
+                "weighting are both no-ops (update_signal_ics never called)"
+            )
+        else:
+            log.info(
+                "[startup]   IC-weighting ACTIVE: _signal_ics=%d signals, _regime_ics=%d signals",
+                _n_ics, _n_regime_ics,
+            )
 
     _init_trades_csv(trades_csv)
 

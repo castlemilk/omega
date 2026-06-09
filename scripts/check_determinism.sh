@@ -49,7 +49,10 @@ snap_for() {
     *) echo "" ;;
   esac
 }
-SNAP=$(snap_for "$GATE")
+# V218.E: SNAP_OVERRIDE env lets a caller substitute the snapshot for a gate
+# without editing the script (cell E runs its "crisis" gate against
+# snap_crisis_2020q1.json with no code diff). Falls back to the gate default.
+SNAP="${SNAP_OVERRIDE:-$(snap_for "$GATE")}"
 [ -z "$SNAP" ] && { echo "FATAL: unknown gate '$GATE'"; exit 2; }
 [ -f "$SNAP" ] || { echo "FATAL: snapshot not found: $SNAP"; exit 2; }
 

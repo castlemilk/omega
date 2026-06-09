@@ -160,6 +160,13 @@ fingerprint (signals clean → any residual is *here*). Ship with V216's bar-tim
 - **#7 DAG / `DAG_PARALLEL` in the startup wiring banner (S).** Carried from V215/V216 — make
   "is the DAG live?" a cycle-0 grep so no future version can assert it as a channel without
   contradiction.
+- **#9 `size_ratio.jsonl` automated per-cycle sizing artifact (MED).** Surfaced by the
+  V215/V216 sizing wall-clock channels: there is still no first-class per-cycle record of the
+  applied size multiplier (`time_risk_multiplier` × damp × bar-time fence). A `size_ratio.jsonl`
+  (cycle, ticker, base_size, applied_multiplier, multiplier_sources) would make "why did this
+  replicate trade 46 vs 70?" a one-grep answer instead of a code-read. Queued (not shipped this
+  kickoff — V218 shipped the IC-wiring probe + matrix-status instead). Ship with a future
+  sizing-touching version.
 
 ## Shipped in V215  ✅
 
@@ -176,6 +183,22 @@ fingerprint (signals clean → any residual is *here*). Ship with V216's bar-tim
 - **Process rule:** fingerprint-first-bisect is the default first tool on any
   determinism FAIL (signal-vs-non-signal); the HTTP guard proves network-vs-non-network.
   Together they bisect the channel space in one N=4 run.
+
+## Shipped in V218  ✅
+
+- **IC-weighting wiring probe (S)** — `run_training.py`. Two parts: (1) the startup banner now
+  probes `per_regime_ic_weighting` (prints `UNDECLARED — silent no-op` on main); (2) a new
+  post-strategy-build probe logs `IC-WEIGHTING INERT: _signal_ics empty` whenever the IC-weighted
+  conviction path is a no-op. **Caught the V218.B blocker at kickoff** instead of after a wasted
+  version: the entire IC-weighting subsystem (pooled *and* per-regime) is runtime-inert in the
+  eval because `update_signal_ics` has zero callers in the training path, so a per-regime-IC bet
+  was unrunnable. Exactly the V148–V202 "runtime-inert subsystem" class, now a cycle-0 grep.
+- **`scripts/v218_matrix_status.sh` (S)** — single-pane health monitor for N concurrent matrix
+  cells (PID liveness + last DETERMINISM verdict + gate-completion count + log tail). Made
+  3-worktree parallel runs observable without per-cell manual `tail`/`pgrep`.
+- **`SNAP_OVERRIDE` env in `check_determinism.sh` (S)** — substitute a gate's snapshot at
+  invocation time (cell E's 2020q1 crisis run) with zero code diff; reusable for any future
+  snapshot-generalisation cell.
 
 ## How to use this file
 
