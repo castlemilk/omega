@@ -138,19 +138,28 @@ fingerprint (signals clean → any residual is *here*). Ship with V216's bar-tim
   because the bar-time fix intentionally retains live `datetime.now` fallbacks — the
   annotation encodes "guarded" auditably).
 
-## Queued for V217 (from the V216 audit)  📋
+## Shipped in V217  ✅
 
-- **Per-field full-precision fingerprint hash (HIGH — V217's #1).** The current
-  `signal_fingerprint.jsonl` stores rounded named scalars + one opaque whole-`signals`-dict
-  `fp` hash. V216's third-channel diagnosis hit a wall: the `fp` diverges (recent-OFF cyc1,
-  crisis-ON cyc2) while *every* named scalar is byte-identical → "it's in the signals dict,
-  sub-rounding" is as far as the tool can localize. **Add a per-field full-precision hash**
-  (hash each `*.value` / hidden key at full float precision) so the diff **names the drifting
-  field** in one command. Effort: S. Ship with V217 before chasing the channel.
+- **#1 per-field full-precision fingerprint hash** — `scripts/run_training.py` now emits
+  `data/{version}_per_field_fingerprint.jsonl`: one line per `(cycle, signal_name)` with
+  `value_hex = struct.pack('!d', value).hex()` (IEEE-754 double, bit-exact). New tool
+  `scripts/per_field_diff.py` names the first divergent `(cycle, signal_name)` between two
+  same-seed replicates. **Closes the V216 dead-end** where `fingerprint_diff.py` reported
+  `(fp differs but no scalar value differs)` because the `values` dump rounds to 12 places:
+  the per-field IEEE hash exposes any sub-12th-bit drift and names the field. Guaranteed to
+  localize — `fp` is a pure function of exactly those per-field values, so a `fp` mismatch
+  with matched key-sets means at least one field's bits differ by construction. Effort: S.
+
+## Queued (V218+)  📋
+
 - **`size_ratio.jsonl` default artifact (MED).** The r1/r4 trade-CSV size-ratio diff (median
   0.500) localized the V215 sizing channel. Make it a per-run default (size ratio binned by
   cycle vs a baseline run) for future sizing-channel bisects. Effort: S–M (post-run trade-CSV
-  alignment). Queued from V216 to keep that version focused on the fence.
+  alignment). Carried from V216.
+- **#6 transitive subsystem-closure runtime probe (MED).** Carried from V216.
+- **#7 DAG / `DAG_PARALLEL` in the startup wiring banner (S).** Carried from V215/V216 — make
+  "is the DAG live?" a cycle-0 grep so no future version can assert it as a channel without
+  contradiction.
 
 ## Shipped in V215  ✅
 

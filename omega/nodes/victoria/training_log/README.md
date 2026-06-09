@@ -58,6 +58,25 @@ highs — as the reference for any post-V216 comparison until V217 re-baselines.
 | trend   | **+$3,043.34** (35t, det)    | −$4,008.60 (32t, det)      | **−$7,051.94 (clean)**   | both PASS $0.00 |
 | crisis  | **−$3,438.69** (39t, det)    | −$2,412.42 (mean, non-det) | ≈ +$1,026 (soft)         | ON FAILs $1,790 |
 
+**V217 (2026-06-09) — no high-water; THIRD determinism channel CLOSED → eval is 6/6 HERMETIC.** V217 named the third channel with a per-field IEEE-754 fingerprint (`basic_signals.value` diverging at ~1e-18 — summation-order float noise around zero) and traced it to **multi-threaded Apple Accelerate (vecLib) BLAS parallel-reduction order**. The fix pins BLAS to a single thread in frozen-backtest mode (5 thread-count env vars set before numpy load, piggybacked on the existing `PYTHONHASHSEED` self-re-exec in `run_training.py`; live path byte-unchanged). The full 3-gate × {ON,OFF} grid then came back **6/6 PASS at exactly $0.00 spread at sleep=10** — the first fully byte-identical eval in the V207→V217 arc. **Matrix mode unlocks (V218).** Single-threaded BLAS re-bases all numbers vs V216-era (different reduction order); the V217-era table below supersedes V216-era for post-V217 comparison. All V211 pre-fence highs **stand** as historical reference. See `V217.md`.
+
+### V217-era hermetic baseline (2026-06-09, post BLAS thread-pin — FIRST FULLY 6/6 hermetic; use for all post-V217 comparison)
+
+Single-threaded BLAS + bar-time sizing fence (V216) + HTTP guard (V215). Every cell is
+byte-identical ($0.00 within-cell spread, constant trades) across N replicates at sleep=10,
+so the operating noise floor is **$0** and every selector Δ is clean signal (no "soft").
+Numerically distinct from both the V211 pre-fence highs and the V216-era 4/6 table.
+
+| Gate    | Selector OFF (baseline) | Selector ON   | Selector Δ (ON−OFF) | Determinism      |
+|---------|------------------------:|--------------:|--------------------:|------------------|
+| recent  | -$1,905.71 (38t)        | +$2,334.40 (39t) | **+$4,240.11** | both PASS $0.00 |
+| trend   | +$1,039.24 (35t)        | -$6,392.99 (37t) | **−$7,432.23** | both PASS $0.00 |
+| crisis  | -$2,199.50 (38t)        | -$3,420.26 (36t) | **−$1,220.76** | both PASS $0.00 |
+
+Selector read (clean): ON **helps recent** strongly, **hurts trend** strongly (flips
+profit→loss), **hurts crisis** mildly. Stays OFF on main; per-gate split is the V219
+regime-gated-selector case.
+
 ### V203 variance baseline (2σ noise floors for future claims)
 
 | Gate    | Cell measured                    | Mean PnL  | σ      | 2σ threshold |
