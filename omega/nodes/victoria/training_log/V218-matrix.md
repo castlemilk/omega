@@ -147,6 +147,23 @@ Only ONE cell's code merges to main (or zero if none clears the band). A + B bot
 V219 stacks the pair OR runs a 2×2 interaction; do not silently merge two cells. E never
 merges (no code); its result informs whether crisis work generalises.
 
+## Run config (launched 2026-06-09T09:17Z)
+
+- **Per cell:** 3-gate audit at **sleep=10, selector OFF, N=2** (one determinism pair per
+  gate). **trend runs first and doubles as the determinism abort gate** (spread > $200 ⇒
+  abort cell before recent/crisis). Orchestrator: `/tmp/v218_cell_orch.sh`; status monitor:
+  `scripts/v218_matrix_status.sh`.
+- **N=2 (not the protocol's 2-pair/N=4) rationale:** the eval is certified 6/6 hermetic at
+  V217 ($0.00 spread), so a single pair confirms within-cell determinism + yields the
+  deterministic PnL, while keeping the 3-cell parallel matrix inside the ~8h budget (each
+  200-cycle sleep=10 run is ~35min, sleep-dominated; N=4 across 3 cells ≈ 8.2h, at the edge).
+  trend-first preserves the cheap-abort property the protocol's separate det gate provided.
+- **Cell E crisis** uses `SNAP_OVERRIDE=data/snapshots/snap_crisis_2020q1.json`; its recent +
+  trend gates run the standard snapshots and should reproduce V217 OFF exactly (no code diff).
+- **Smoke-validated before launch:** the new IC-WEIGHTING INERT + `per_regime_ic_weighting`
+  banner probes fire correctly; runs proceed without `DATABASE_URL` (frozen mode degrades
+  heartbeat/DB writes to warnings).
+
 ## Results
 
 _(filled after the matrix runs — one row per cell)_
