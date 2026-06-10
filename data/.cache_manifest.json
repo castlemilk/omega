@@ -1,0 +1,9 @@
+{
+  "_note": "md5 manifest of frozen eval caches; verified at startup when OMEGA_FROZEN_CACHE=1. Mismatch => abort the run. Rebuild with scripts/build_cache_manifest.py.",
+  "files": {
+    "data/frozen_advanced_signals.json": "cc5359e18ef79d9f5227f47b3e8c9e3a",
+    "data/frozen_funding_cache.json": "384c326308dbae3d2966bf7dce3868bf",
+    "data/macro_cache.db": "397b943808e9ca5772dbfcc5a7fb4282"
+  },
+  "generated_at": "2026-06-10T03:41:19.479045+00:00"
+}

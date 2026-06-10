@@ -492,6 +492,124 @@ def run_meta_harness_iteration(log: logging.Logger, n_eval_cycles: int = 30) -> 
         log.warning("Meta-harness iteration failed: %s", exc)
 
 
+def _v219_substrate_preflight(log: logging.Logger) -> None:
+    """V219 — verify the frozen eval substrate is committed, intact, and usable.
+
+    Runs ONLY in frozen-backtest mode (OMEGA_FROZEN_CACHE=1) so the live trading
+    path is unaffected. Three checks, each fatal (exit 1) — a backtest must never
+    silently run on a corrupt/stale/inert substrate and call the result a baseline:
+
+      1. **Manifest md5** — hash every file in data/.cache_manifest.json and abort
+         on any drift from the committed hash. Catches an uncommitted/edited/
+         truncated cache (the exact V218 defect: V217's "hermetic" numbers rode an
+         uncommitted macro_cache.db). Runs BEFORE MacroDataCache is instantiated so
+         the bytes hashed are the committed bytes (a read-only WAL open does not
+         mutate the main .db — verified — but order it first regardless).
+      2. **Macro health** — call the REAL read path (MacroDataCache.get_values) for
+         every MACRO_SERIES and count how many return data. Counting DB rows would
+         report "usable" while the wall-clock/anchor read returns empty; exercising
+         the read path covers __failed__, 0.0, AND any window/anchor regression in
+         one check. 0 usable => "MACRO INERT: 0 series usable" + exit 1.
+      3. **Funding health** — funding_rate_cache (inside macro_cache.db) must be
+         non-empty. Empty => "FUNDING INERT" + exit 1. (Funding has no date filter,
+         so it never expires — the only failure mode is empty/missing.)
+    """
+    if os.environ.get("OMEGA_FROZEN_CACHE") != "1":
+        return
+
+    import hashlib
+    import sqlite3
+
+    log.info("[startup] V219 substrate preflight (frozen cache):")
+
+    # ── 1. Manifest md5 verification ─────────────────────────────────────────
+    manifest_path = DATA_DIR / ".cache_manifest.json"
+    if not manifest_path.exists():
+        log.error(
+            "[startup]   CACHE MANIFEST MISSING: %s — run "
+            "scripts/build_cache_manifest.py and commit. Aborting (frozen eval "
+            "must be reproducible from committed state).", manifest_path,
+        )
+        sys.exit(1)
+    try:
+        manifest = json.loads(manifest_path.read_text())
+        expected = manifest["files"]
+    except Exception as exc:
+        log.error("[startup]   CACHE MANIFEST UNREADABLE: %s — aborting.", exc)
+        sys.exit(1)
+
+    mismatches: list[str] = []
+    for rel, want_md5 in sorted(expected.items()):
+        p = ROOT / rel
+        if not p.exists():
+            mismatches.append(f"{rel}: MISSING")
+            continue
+        h = hashlib.md5()
+        with open(p, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                h.update(chunk)
+        got = h.hexdigest()
+        if got != want_md5:
+            mismatches.append(f"{rel}: {got} != {want_md5}")
+        else:
+            log.info("[startup]   manifest OK: %s  %s", want_md5, rel)
+    if mismatches:
+        log.error(
+            "[startup]   CACHE MANIFEST MISMATCH (%d file(s)) — frozen substrate "
+            "drifted from committed state; refusing to produce a baseline on it:",
+            len(mismatches),
+        )
+        for m in mismatches:
+            log.error("[startup]     %s", m)
+        log.error(
+            "[startup]   If this change is intentional, rerun "
+            "scripts/build_cache_manifest.py and commit. Aborting.")
+        sys.exit(1)
+
+    # ── 2. Macro health (via the real read path) ─────────────────────────────
+    from omega.nodes.victoria.data_cache import MACRO_SERIES, MacroDataCache
+
+    cache = MacroDataCache()
+    usable: list[str] = []
+    inert: list[str] = []
+    for series_id in MACRO_SERIES:
+        # 90d covers the widest consumer (yield_curve); dxy uses window+10 (~40d).
+        vals = cache.get_values(series_id, lookback_days=90)
+        if vals and any(v != 0.0 for v in vals):
+            usable.append(series_id)
+        else:
+            inert.append(series_id)
+    log.info(
+        "[startup]   MACRO HEALTH: %d/%d series usable via read path (usable=%s)",
+        len(usable), len(MACRO_SERIES), ",".join(usable) or "none",
+    )
+    if inert:
+        log.warning("[startup]   macro series with NO usable data: %s", ",".join(inert))
+    if not usable:
+        log.error(
+            "[startup]   MACRO INERT: 0 series usable — every macro signal would "
+            "compute on zeros (the V218 defect). Repair with "
+            "scripts/repair_macro_cache.py + rebuild manifest. Aborting.")
+        sys.exit(1)
+
+    # ── 3. Funding health ────────────────────────────────────────────────────
+    db_path = DATA_DIR / "macro_cache.db"
+    try:
+        conn = sqlite3.connect(str(db_path))
+        n_funding = conn.execute("SELECT COUNT(*) FROM funding_rate_cache").fetchone()[0]
+        conn.close()
+    except Exception as exc:
+        log.error("[startup]   FUNDING INERT: cannot read funding_rate_cache (%s). Aborting.", exc)
+        sys.exit(1)
+    if n_funding == 0:
+        log.error(
+            "[startup]   FUNDING INERT: funding_rate_cache is empty — carry/funding "
+            "signals would see no data. Repair + rebuild manifest. Aborting.")
+        sys.exit(1)
+    log.info("[startup]   FUNDING HEALTH: %d symbols cached", n_funding)
+    log.info("[startup]   V219 substrate preflight PASS")
+
+
 def run(
     version: str,
     n_cycles: int = 100,
@@ -666,6 +784,11 @@ def run(
                 _state = f"ON · IMPORT FAILED ({type(_imp_exc).__name__}) → SILENTLY INERT"
         log.info("[startup]   %-26s %s", _label + ":", _state)
     log.info("=" * 70)
+
+    # ── V219 substrate preflight (frozen cache: manifest md5 + macro/funding
+    #    health). Runs BEFORE MacroDataCache is instantiated below so the bytes
+    #    hashed are the committed bytes. No-op in live mode. ─────────────────
+    _v219_substrate_preflight(log)
 
     # ── Startup preflight ─────────────────────────────────────────────────
     from omega.core.training_preflight import StartupPreflight

@@ -22,3 +22,7 @@ data/.fuse_hidden*
 
 # Local analysis reports
 code-quality-report-*.md
+
+# V219: SQLite WAL sidecars for the frozen macro cache (never commit)
+data/macro_cache.db-shm
+data/macro_cache.db-wal

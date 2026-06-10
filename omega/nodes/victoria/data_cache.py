@@ -285,7 +285,30 @@ class MacroDataCache:
     # ── Read from cache ────────────────────────────────────────────────────────
 
     def _read_macro(self, series_id: str, lookback_days: int) -> list[dict[str, Any]]:
-        cutoff = (datetime.now(UTC) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+        # V219: in frozen-backtest mode anchor the lookback window to the cache's
+        # own latest observation, NOT wall-clock now(). The default now()-based
+        # cutoff was dormant while every series was '__failed__' (read returned []),
+        # so V216/V217 reached 6/6 hermetic without ever exercising it. Once real
+        # rows are committed, a now()-relative cutoff (a) makes the committed DB
+        # silently expire — as now() slides past (latest − lookback) the read goes
+        # empty and macro reverts to the inert state V219 exists to kill — and
+        # (b) false-PASSes determinism (same-day replicates share now()). Anchoring
+        # to MAX(date) makes the read a pure function of the committed bytes:
+        # deterministic across sessions, never expires. Live path unchanged.
+        if os.environ.get("OMEGA_FROZEN_CACHE") == "1":
+            anchor_row = self._conn.execute(
+                "SELECT MAX(date) FROM macro_cache "
+                "WHERE series_id = ? AND date != '__failed__'",
+                (series_id,),
+            ).fetchone()
+            if not anchor_row or not anchor_row[0]:
+                return []
+            anchor = datetime.fromisoformat(anchor_row[0])
+            if anchor.tzinfo is None:
+                anchor = anchor.replace(tzinfo=UTC)
+            cutoff = (anchor - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+        else:
+            cutoff = (datetime.now(UTC) - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
         rows = self._conn.execute(
             """
             SELECT date, value FROM macro_cache
