@@ -168,6 +168,33 @@ fingerprint (signals clean → any residual is *here*). Ship with V216's bar-tim
   kickoff — V218 shipped the IC-wiring probe + matrix-status instead). Ship with a future
   sizing-touching version.
 
+### Surfaced by the 2026-06 strategic audit (`STRATEGIC_AUDIT_2026-06.md`)
+
+- **#10 "every flag does something" preflight (MED) — the meta-fix for the inert-subsystem
+  failure mode.** The V148–V218 recurring waste (strategy_selector inert V199–V211,
+  `regime_signal_weighting` UNDECLARED, V170 IC never wired, V218.B IC subsystem inert) is the
+  same class every time: a flag is added, gated, never declared/wired, `getattr→False` silences
+  it, and nothing asserts it changed anything. The V213 banner *detects* this but is reactive
+  (prints a warning a human must read). Promote it to an **enforced preflight**: for each
+  declared feature flag, run 1 cycle ON + 1 cycle OFF at a fixed seed and **assert the
+  fingerprints differ** (or the flag carries a `# no-op-ok` annotation). A flag whose ON/OFF grid
+  is byte-identical FAILS preflight. This is the dual of the V217 determinism lesson ("a fix
+  isn't done until the ON/OFF grid is byte-*identical*") → "a feature isn't wired until its
+  ON/OFF grid is byte-*different*." Would have caught all of the above at cycle 0. Reuses the
+  V217 per-field fingerprint + `check_determinism.sh`. Effort M.
+- **#11 committed-macro-cache integrity check (S) — eval-integrity blocker.** V218 found the
+  "hermetic" V217 baseline depended on an **uncommitted** `data/macro_cache.db`
+  (`V218-matrix.md:188`); a no-op control diverged from the README baseline by >$6k. Add a
+  cycle-0 preflight that asserts `macro_cache.db`'s md5 matches a committed manifest (same
+  freeze discipline as the snapshots / `frozen_advanced_signals.json`). Until this lands, no
+  cross-version PnL comparison is reproducible from a clean checkout. Effort S. **Ship first** —
+  it is upstream of every other measurement.
+- **#12 composite-weight artifact (S).** The `signal_contribs.jsonl` already records per-signal
+  `weight`, but nothing asserts/aggregates it: today every weight is `1.0` (IC-weighting inert)
+  and no run flags that. Add a cycle-0 line — `COMPOSITE: equal-weight (IC inert)` vs
+  `IC-weighted (N signals)` — so "is the composite actually weighted?" is a grep, not a code
+  read. Pairs with the V218 IC-INERT probe. Effort S.
+
 ## Shipped in V215  ✅
 
 - **Frozen-cache HTTP enforcement guard** (the strongest queued obs delta; supersedes
