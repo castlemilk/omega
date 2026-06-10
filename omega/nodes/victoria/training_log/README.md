@@ -60,12 +60,40 @@ highs — as the reference for any post-V216 comparison until V217 re-baselines.
 
 **V217 (2026-06-09) — no high-water; THIRD determinism channel CLOSED → eval is 6/6 HERMETIC.** V217 named the third channel with a per-field IEEE-754 fingerprint (`basic_signals.value` diverging at ~1e-18 — summation-order float noise around zero) and traced it to **multi-threaded Apple Accelerate (vecLib) BLAS parallel-reduction order**. The fix pins BLAS to a single thread in frozen-backtest mode (5 thread-count env vars set before numpy load, piggybacked on the existing `PYTHONHASHSEED` self-re-exec in `run_training.py`; live path byte-unchanged). The full 3-gate × {ON,OFF} grid then came back **6/6 PASS at exactly $0.00 spread at sleep=10** — the first fully byte-identical eval in the V207→V217 arc. **Matrix mode unlocks (V218).** Single-threaded BLAS re-bases all numbers vs V216-era (different reduction order); the V217-era table below supersedes V216-era for post-V217 comparison. All V211 pre-fence highs **stand** as historical reference. See `V217.md`.
 
-### V217-era hermetic baseline (2026-06-09, post BLAS thread-pin — FIRST FULLY 6/6 hermetic; use for all post-V217 comparison)
+### V219-era committed-state baseline (2026-06-10, post macro-repair freeze — USE FOR ALL POST-V219 COMPARISON)
 
-Single-threaded BLAS + bar-time sizing fence (V216) + HTTP guard (V215). Every cell is
-byte-identical ($0.00 within-cell spread, constant trades) across N replicates at sleep=10,
-so the operating noise floor is **$0** and every selector Δ is clean signal (no "soft").
-Numerically distinct from both the V211 pre-fence highs and the V216-era 4/6 table.
+Real committed macro (V219 substrate freeze) + single-threaded BLAS (V217) + bar-time
+sizing fence (V216) + HTTP guard (V215). **Reproducible from a clean checkout** — macro
+inputs are byte-identical across replicates in every cell. 4-cell grid (sleep=10, N=2,
+selector OFF + a trend ON control). Real macro makes recent/crisis materially more
+negative than the V217-era (macro=0) numbers; trend stays weakly positive. **These
+supersede the V217-era table for any post-V219 comparison.**
+
+| Gate (sel. OFF) | Selector OFF (baseline)            | Selector ON (trend control) | Δ vs V217-era | Determinism      |
+|-----------------|-----------------------------------:|----------------------------:|--------------:|------------------|
+| recent          | **−$3,363.52 (22t)**               | not run                     | −$1,457.81    | PASS $6.52       |
+| trend           | **NON-DET $902.94–$1,499.85 (27/26t)** | −$2,915.74 (24t)        | ≈ +$162 (mid) | **FAIL $596.91** |
+| crisis          | **−$4,480.54 (30t)**               | not run                     | −$2,281.04    | PASS $0.00       |
+
+**3/4 hermetic; trend_OFF determinism falsifier fired.** The macro repair surfaced a
+**second order-channel in `basic_signals.value`** (same field as the V217 BLAS channel
+but distinct — the BLAS pin is verified active) — summation-order float noise (~1e-18,
+sign-flipping around zero), dormant while macro=0, now flipping one trade on the
+boundary-adjacent trend_OFF arm (27↔26 → $597). NOT a substrate defect: `_macro_bias_score`
+byte-identical across replicates (macro reads stable); recent_OFF carries the identical
+$6.52 noise with no trade flip. Strong-inference root: an `id()`-ordered accumulation that
+BLAS-pinning + PYTHONHASHSEED don't cover. (Falsifiers #2 tripwires 5/5 + #3 manifest
+stability both PASS.) **V220.A**
+re-closes it (canonical-sort/`fsum` the composite) before **V220.B** wires per-regime ICs
+— the non-deterministic trend baseline blocks clean IC measurement. trend_ON selector
+control PASSes $0.85 and still hurts trend (flips +$0.9–1.5K OFF → −$2.9K). See `V219.md`.
+
+### V217-era hermetic baseline (2026-06-09 — HISTORICAL "pre-substrate-fix"; NOT comparable to V219+; superseded above)
+
+Single-threaded BLAS + bar-time sizing fence (V216) + HTTP guard (V215), **but macro=0**
+(failed-FRED cache) — so these are session-bound, not reproducible from committed state
+(see ⚠️ below; V219 establishes the real-macro baseline). Every cell was byte-identical
+($0.00 within-cell spread) across N replicates at sleep=10. Kept as a historical anchor only.
 
 | Gate    | Selector OFF (baseline) | Selector ON   | Selector Δ (ON−OFF) | Determinism      |
 |---------|------------------------:|--------------:|--------------------:|------------------|
@@ -85,6 +113,8 @@ regime-gated-selector case.
 > session-bound until V219's eval-integrity fix (commit/freeze real macro + funding caches).
 
 **V218 (2026-06-09) — no high-water; matrix of 3 cells, all NO-MERGE; uncovered two eval-integrity defects + one diagnostic.** First matrix-mode run (3 independent cells, selector OFF, sleep=10, N=2, all 18 audit runs determinism PASS $0.00). **V218.A (V199 carry plumbing)** — **inert**: the funding-carry signal needs `market_data["funding_rate"]` (absent from replay snapshots) then falls back to a live Binance fetch the V215 HTTP guard blocks (200 blocked `fundingRate` calls/cycle), so carry=0 every cycle and A's trade CSV is **byte-identical to the no-op control**. Code is correct but untestable until funding is frozen (V219). **V218.B (V170 per-regime IC weighting)** — **BLOCKED** (caught at kickoff by the new `IC-WEIGHTING INERT` probe): the whole IC-weighting subsystem is unwired in the eval (`update_signal_ics` has zero callers → `_signal_ics` empty → `_compute_weighted_conviction` early-returns the raw composite before the per-regime branch). Ran as a flag-only no-op (flag ON, Δ=$0.00) confirming inertness; V219.B-corrected wires pooled ICs first. **V218.E (snap_crisis_2020q1)** — **CANDIDATE**: under identical code+cache the crisis gate flips **−$2,863 (2022h1) → +$13,052 (2020q1)** (crisis regime verified firing: 8 crisis trades on 2020q1), so V217's crisis loss is **at least partly a single-window artifact, not structural** — but both runs used the zero-macro cache, so the magnitude is pending a real-macro re-run. **Eval-integrity findings (V219 blocker):** (1) macro_cache is all-`__failed__`/0.0 → the eval runs with **VIX/yields=0**; (2) funding_rate_cache is uncommitted + warm-up-overwritten → non-reproducible. Shipped obs: `IC-WEIGHTING INERT` + `per_regime_ic_weighting` banner probes, `scripts/v218_matrix_status.sh`, `SNAP_OVERRIDE`. `main` unchanged. See `V218-matrix.md`.
+
+**V219 (2026-06-10) — no high-water; eval-substrate freeze SHIPPED; eval now 3/4 hermetic from committed state; trend_OFF determinism falsifier fired.** V219 fixed audit R1 (reproducible-from-committed-state eval): repaired `macro_cache.db` with real Yahoo values (FRED `DEMO_KEY`→HTTP 400; VIX/2Y/10Y/DXY proxies documented), committed `frozen_funding_cache.json`, added an md5 cache manifest + macro/funding health tripwires (`run_training.py` startup preflight), and anchored the frozen-mode macro read to the cache's `MAX(date)` instead of `now()` (kills silent expiry + same-day false-PASS). `main` strategy byte-unchanged. **Re-baseline grid (4 cells × N=2 @ sleep=10):** macro is no longer 0, so committed-state numbers shift — recent **−$3,364** (Δ −$1,458 vs V217-era), crisis **−$4,481** (Δ −$2,281), trend **weakly positive ~$900–$1,500**. **Determinism: 3/4 PASS** (crisis_OFF $0.00, trend_ON $0.85, recent_OFF $6.52) but **trend_OFF FAILs $596.91** — pre-registered falsifier #1. `per_field_diff.py` bisect names it: cycle-3 `basic_signals.value`, |Δ|=3.2e-18, a sub-ulp sign-flip around zero = **a second order-channel in the same field** as the V217 BLAS channel (the BLAS pin is verified active, so distinct from it; latent at macro=0, surfaced by real macro). **NOT a substrate defect** — `_macro_bias_score` byte-identical across replicates, macro reads reproducible; falsifiers #2 (tripwires 5/5) + #3 (manifest stable) PASS. Boundary-adjacency makes it flip one trade only on trend_OFF (27↔26). BLAS-pin + PYTHONHASHSEED don't cover it → strong-inference `id()`-ordered accumulation in the basic_signals composite. The non-det trend baseline blocks clean IC measurement, so **V220 splits: A = canonical-sort/`fsum` the composite (re-close the channel, 4/4 hermetic), then B = wire per-regime ICs** (audit R2). All V211 pre-fence highs stand as historical; V217-era table demoted to "pre-substrate-fix." See `V219.md`.
 
 ### V203 variance baseline (2σ noise floors for future claims)
 
