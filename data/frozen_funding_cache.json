@@ -1,0 +1,25 @@
+{
+  "_note": "Transparency snapshot of funding_rate_cache in macro_cache.db. NOT an authoritative read path \u2014 signals read funding from the DB via MacroDataCache.get_funding_rate. See V219.md.",
+  "rates": {
+    "AVAXUSDT": {
+      "fetched_at": "2026-06-09T20:42:54.633361+00:00",
+      "rate": -5.42883607469e-05
+    },
+    "BTCUSDT": {
+      "fetched_at": "2026-06-09T20:42:54.100388+00:00",
+      "rate": 2.54414859733e-05
+    },
+    "ETHUSDT": {
+      "fetched_at": "2026-06-09T20:42:54.277841+00:00",
+      "rate": -7.520540739e-07
+    },
+    "LINKUSDT": {
+      "fetched_at": "2026-06-09T20:42:54.837468+00:00",
+      "rate": 0.0001
+    },
+    "SOLUSDT": {
+      "fetched_at": "2026-06-09T20:42:54.454480+00:00",
+      "rate": 0.0001
+    }
+  }
+}
