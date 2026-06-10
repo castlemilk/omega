@@ -77,6 +77,15 @@ Selector read (clean): ON **helps recent** strongly, **hurts trend** strongly (f
 profit→loss), **hurts crisis** mildly. Stays OFF on main; per-gate split is the V219
 regime-gated-selector case.
 
+> ⚠️ **The V217-era OFF numbers above are NOT reproducible from committed state** (discovered
+> V218). They were measured on transient, uncommitted cache state: a failed-FRED `macro_cache`
+> (all-zero VIX/yields — the eval has been running with no macro) + a session-specific
+> `funding_rate_cache`. A committed-state no-op control (V218.B) gives +$4,530 / +$456 / −$2,863
+> (22/25/31t), not −$1,906 / +$1,039 / −$2,200 (38/35/38t). Treat the V217-era table as
+> session-bound until V219's eval-integrity fix (commit/freeze real macro + funding caches).
+
+**V218 (2026-06-09) — no high-water; matrix of 3 cells, all NO-MERGE; uncovered two eval-integrity defects + one diagnostic.** First matrix-mode run (3 independent cells, selector OFF, sleep=10, N=2, all 18 audit runs determinism PASS $0.00). **V218.A (V199 carry plumbing)** — **inert**: the funding-carry signal needs `market_data["funding_rate"]` (absent from replay snapshots) then falls back to a live Binance fetch the V215 HTTP guard blocks (200 blocked `fundingRate` calls/cycle), so carry=0 every cycle and A's trade CSV is **byte-identical to the no-op control**. Code is correct but untestable until funding is frozen (V219). **V218.B (V170 per-regime IC weighting)** — **BLOCKED** (caught at kickoff by the new `IC-WEIGHTING INERT` probe): the whole IC-weighting subsystem is unwired in the eval (`update_signal_ics` has zero callers → `_signal_ics` empty → `_compute_weighted_conviction` early-returns the raw composite before the per-regime branch). Ran as a flag-only no-op (flag ON, Δ=$0.00) confirming inertness; V219.B-corrected wires pooled ICs first. **V218.E (snap_crisis_2020q1)** — **CANDIDATE**: under identical code+cache the crisis gate flips **−$2,863 (2022h1) → +$13,052 (2020q1)** (crisis regime verified firing: 8 crisis trades on 2020q1), so V217's crisis loss is **at least partly a single-window artifact, not structural** — but both runs used the zero-macro cache, so the magnitude is pending a real-macro re-run. **Eval-integrity findings (V219 blocker):** (1) macro_cache is all-`__failed__`/0.0 → the eval runs with **VIX/yields=0**; (2) funding_rate_cache is uncommitted + warm-up-overwritten → non-reproducible. Shipped obs: `IC-WEIGHTING INERT` + `per_regime_ic_weighting` banner probes, `scripts/v218_matrix_status.sh`, `SNAP_OVERRIDE`. `main` unchanged. See `V218-matrix.md`.
+
 ### V203 variance baseline (2σ noise floors for future claims)
 
 | Gate    | Cell measured                    | Mean PnL  | σ      | 2σ threshold |

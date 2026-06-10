@@ -184,6 +184,23 @@ fingerprint (signals clean → any residual is *here*). Ship with V216's bar-tim
   determinism FAIL (signal-vs-non-signal); the HTTP guard proves network-vs-non-network.
   Together they bisect the channel space in one N=4 run.
 
+- **#10 macro-cache health tripwire (S, HIGH-IMPACT).** Surfaced V218: the `macro_cache` table
+  is all `date='__failed__'`/`value=0.0` (FRED warm-up silently failing) → the eval has been
+  running with **VIX=0, yields=0, dollar index=0** for an unknown number of versions. Add a
+  cycle-0 preflight that FAILS (or loudly warns) if any `macro_cache.value` is 0/`__failed__` —
+  the macro analogue of the IC-WEIGHTING-INERT probe. Would have caught a silent input outage
+  that compromises every macro/regime-derived signal.
+- **#11 deterministic cache manifest (MED, HIGH-IMPACT).** Surfaced V218: `macro_cache.db` +
+  `funding_rate_cache` are warm-up-overwritten and were never frozen, so the V217 "hermetic"
+  baseline was reproducible only within its own session (a committed-state no-op control diverged
+  by >$6k / 16 trades). Freeze both like the OHLCV snapshots (a committed `frozen_macro.db` +
+  `frozen_funding.json`) and check an md5 manifest at cycle 0. Makes cross-version PnL comparison
+  actually valid.
+- **#12 frozen funding feed for carry (S).** Surfaced V218.A: carry plumbing is untestable
+  because funding is absent from replay snapshots and live Binance is (correctly) HTTP-blocked.
+  Add `funding_rate` to the frozen snapshots or a `frozen_funding_feed.json` (analogous to
+  `frozen_advanced_signals.json`) so carry/derivatives signals can be exercised in backtest.
+
 ## Shipped in V218  ✅
 
 - **IC-weighting wiring probe (S)** — `run_training.py`. Two parts: (1) the startup banner now
