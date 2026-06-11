@@ -26,3 +26,18 @@ code-quality-report-*.md
 # V219: SQLite WAL sidecars for the frozen macro cache (never commit)
 data/macro_cache.db-shm
 data/macro_cache.db-wal
+
+# V220: ephemeral training-run artifacts. These are produced by background
+# determinism/grid runs and must NOT enter the index — a background run writing
+# them while a foreground session commits is the index-contention class that
+# wedged sessions across V210–V220. The committed per-version results.json /
+# trades.csv (referenced by the V###.md log) are added explicitly, not via glob.
+data/*_pids.txt
+data/*_determinism/
+data/*_audit/
+data/*_grid.log
+data/*_grid_summary.txt
+data/*_off_crisis_*
+data/*_off_recent_*
+data/*_off_trend_*
+SESSION_NOTES.md
