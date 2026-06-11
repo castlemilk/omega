@@ -253,6 +253,41 @@ and a subsystem audit at the moment the trajectory shape says
 - **Sequential ablations are contaminated by state drift**
   (commit `e4ab82d`). If you need a clean A/B, snapshot state first.
 
+### FP-order audit pattern (when a determinism gate FAILs)
+
+When a determinism cell FAILs with a *tiny* spread (sub-dollar to a
+few hundred $, driven by a 1-trade flip), the cause is almost always
+a **floating-point summation-order channel**, not a logic bug. Three
+precedents have now closed exactly this:
+
+- **V211** — `basket_std` / `basket_mean` cross-sectional aggregations
+  → two `sorted()` wraps (`strategy.py:1722`/`:2130`).
+- **V217** — Apple vecLib BLAS multi-threaded parallel-reduction order
+  → pin BLAS to 1 thread before numpy loads (`run_training.py:55-64`).
+- **V220** — `basic_signals` composite mean → `math.fsum` at
+  `victoria_node.py:960` + `signal_generation.py:_balanced_composite`.
+
+**Default first check before any deep bisect:** grep the divergent
+field's producer for unsorted FP reductions — `sum(`, `+=`, or
+`np.mean/np.sum` over dict/set/list iteration of floats whose order
+isn't pinned. Localise the field with `scripts/per_field_diff.py`
+(per-field IEEE-754 fingerprint), then fence the named site.
+
+**Fix preference:** `math.fsum(...)` over `sorted()`+`sum`. `fsum` is
+exact-rounded (full-precision sum, single rounding) so it is
+permutation-invariant *without* inventing a stable sort key — it
+closes *every* permutation, not just the one you sorted against.
+Reach for `sorted()` only when you also need the sorted sequence
+itself (e.g. a trimmed mean).
+
+**Watch for channel-shift (the V213 failure mode):** after fencing a
+site, re-run the per-field bisect on the *next* cell that drifts — a
+sort/fsum that merely *moves* the channel rather than closing it will
+make a previously-passing cell newly FAIL. The falsifier is always
+"all cells PASS", never "the one cell I targeted PASSes".
+**Measure determinism at the SAME `--sleep` prior baselines used** —
+sleep is a determinism variable (V213 lesson), not just pacing.
+
 ## Keep the workspace clean
 
 **One-line rule: never leave the repo dirty between iterations.**
@@ -262,18 +297,34 @@ interrupted commits) accumulate stale `.git/*.lock` files and
 uncommitted `training_log/V*.md` work that blocks the next
 iteration. This section is mandatory.
 
-### Before pre-registration (step 3)
+### Preflight — the FIRST bash call of every code task (step 0)
 
-1. `git status` must be clean OR you explicitly enumerate untracked
-   files in the response. Stale `data/v*_*` artifacts are expected;
-   untracked `.md` files in `training_log/` are NOT — see recovery
-   rule below.
-2. Check `.git/index.lock`, `.git/HEAD.lock`, `.git/objects/maintenance.lock`,
-   `.git/refs/heads/*.lock`. If any exist AND mtime > 60s old AND
-   no live `git` process holds them (`ps -ef | grep '[g]it '`),
-   delete them: `rm -f .git/index.lock .git/HEAD.lock .git/objects/maintenance.lock`.
-3. Confirm `git status` returns promptly (< 5s). If not, escalate
-   — don't try invasive surgery on `.git/`.
+**Run `bash scripts/prepare_session.sh` as the very first Bash call,
+before anything else — no exceptions.** It is idempotent and safe to
+re-run. It does, in one shot, what the old manual checklist did by
+hand: kills only stray `git` processes (never python runs), removes
+stale `.git/*.lock` files, re-asserts the Mac `core.fsmonitor=false` /
+`gc.auto=0` hardening, and verifies git responds within 5s.
+
+- **Exit 0** → `[prepare_session] OK (<sha>, branch <name>)`. Proceed.
+- **Non-zero** → the environment is genuinely unhealthy (a kernel /
+  FSEvents / disk wedge below git, which lock-removal can't fix).
+  **STOP and report to the user that manual cleanup is needed. Do NOT
+  retry the script in a loop and do NOT start hand-surgery on `.git/`.**
+  Retrying a real kernel wedge just burns the session.
+
+After preflight returns OK, `git status` must be clean OR you
+explicitly enumerate untracked files in the response. Stale
+`data/v*_*` artifacts are expected (now `.gitignore`d); untracked
+`.md` files in `training_log/` are NOT — see the recovery rule below.
+
+**Why this replaced the manual checklist:** the V210→V220 arc kept
+re-deriving the same lock-cleanup by hand and occasionally wedged
+*worse* by racing a live process or deleting the wrong thing.
+`prepare_session.sh` is the single audited, idempotent path. Root
+causes it neutralises: stale locks from a killed commit, an index
+held by a background nohup run, macOS fsmonitor hangs, and a fresh
+config that lost the hardening.
 
 ### During a gate run (step 5)
 
@@ -317,6 +368,26 @@ docs(training): V210 results (autosaved from wedged session)
 Then proceed with the normal loop. **Never start V###+1 work on
 top of an uncommitted V### that you didn't write yourself in this
 session.**
+
+### Concurrent-session discipline (one index, one writer)
+
+**Two code-task sessions must NOT run in the same cwd concurrently.**
+They share one `.git/index`; the moment both stage or commit, one
+wedges the other — this is the dominant lock-wedge cause that
+`prepare_session.sh` can only *recover* from, not prevent. Prefer
+single-task orchestration over multiple sessions in the same dir.
+
+If a version genuinely needs parallelism (matrix mode), give each
+parallel line of work its **own** index via a git worktree
+(`.claude/worktrees/v###-<cell>/` — see *Matrix exploration* below).
+Each worktree has a separate index, so concurrent commits don't
+contend. Never fan out parallel sessions against the shared main
+checkout.
+
+If `prepare_session.sh` itself times out (exit non-zero on the
+`git rev-parse` step), that is a genuine kernel/FSEvents wedge —
+**stop and report to the user; manual cleanup is needed.** Do not
+keep retrying.
 
 ## Matrix exploration
 
