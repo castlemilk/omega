@@ -957,7 +957,12 @@ class VictoriaNode(Node):
             ]
             signals["basic_signals"] = dict(raw_basic)
             if composites:
-                raw_value = sum(composites) / len(composites)
+                # V220: fsum is exact-rounded (full-precision sum, single rounding)
+                # → eliminates the float summation-order channel that surfaced as
+                # the cycle-3 basic_signals.value sub-ulp sign-flip at real-macro.
+                import math as _math
+
+                raw_value = _math.fsum(composites) / len(composites)
 
                 # ── Z-score normalisation ──────────────────────────────────────
                 # basic_signals used to output values in ±0.5–1.0 range (all

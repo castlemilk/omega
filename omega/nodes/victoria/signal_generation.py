@@ -174,11 +174,13 @@ def _balanced_composite(directional: list[float]) -> float:
     """
     if not directional:
         return 0.0
+    # V220: math.fsum (exact-rounded) over plain sum() removes the summation-order
+    # FP channel — the composite mean is now permutation-invariant at sub-ulp level.
     if len(directional) < 4:
-        return sum(directional) / len(directional)
+        return math.fsum(directional) / len(directional)
     n_trim = max(1, len(directional) // 5)
     trimmed = sorted(directional)[n_trim:-n_trim]
-    return sum(trimmed) / len(trimmed) if trimmed else sum(directional) / len(directional)
+    return math.fsum(trimmed) / len(trimmed) if trimmed else math.fsum(directional) / len(directional)
 
 
 _ANTI_PRED_IC_THRESHOLD = -0.05
