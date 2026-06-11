@@ -180,7 +180,9 @@ def _balanced_composite(directional: list[float]) -> float:
         return math.fsum(directional) / len(directional)
     n_trim = max(1, len(directional) // 5)
     trimmed = sorted(directional)[n_trim:-n_trim]
-    return math.fsum(trimmed) / len(trimmed) if trimmed else math.fsum(directional) / len(directional)
+    return (
+        math.fsum(trimmed) / len(trimmed) if trimmed else math.fsum(directional) / len(directional)
+    )
 
 
 _ANTI_PRED_IC_THRESHOLD = -0.05
