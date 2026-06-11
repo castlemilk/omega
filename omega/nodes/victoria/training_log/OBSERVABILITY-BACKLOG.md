@@ -168,6 +168,38 @@ fingerprint (signals clean → any residual is *here*). Ship with V216's bar-tim
   kickoff — V218 shipped the IC-wiring probe + matrix-status instead). Ship with a future
   sizing-touching version.
 
+### Surfaced by V220 — the eval peeled to the trade-PnL layer (SHIP WITH V221)
+
+V220 locked the entry-flip channel (trend trade count now 26/26) and exposed a
+**sizing/exit PnL-magnitude channel**: same 26 trades, $2,851 spread. The blind spot
+is that every existing fingerprint (V214 cycle-1 signals, V217 per-field IEEE-754)
+stops at the **signal layer** — a channel that emerges only in position sizing /
+exit-price / PnL accounting is invisible until it flips a trade count or blows up a
+spread. V221 bisects it; these instruments make the bisect (and the next magnitude
+channel) self-naming.
+
+- **#13 extend `per_field_diff.py` to TRADE-LEVEL fields (S) — SHIP V221.** The
+  divergence is now downstream of signals (cycle-1 fingerprints clean post-V217+V220).
+  Extend the per-field IEEE-754 diff to `entry_price`, `exit_price`, `position_size`,
+  `slippage`, `fees`; align the two replicates' trades by `(cycle, symbol, side)` and
+  diff the PnL contributors row-by-row. Names which sizing/exit field diverges first
+  at the trade-PnL level — the current tool reports "no divergence" because it only
+  reads the signal layer (the exact blind spot).
+- **#14 trade-ledger diff on the magnitude-FAIL path (S) — SHIP V221.** When the
+  determinism gate sees trade *count* matching but PnL spread > floor (the V220
+  signature), auto-emit the #13 trade-level diff. Makes the next sizing/exit magnitude
+  channel self-name instead of needing a hand bisect. Wire into `check_determinism.sh`
+  + `run_training.py`.
+- **#15 widen `check_no_wallclock.py` AST scan (M) — queue.** Currently scans only the
+  2 declared sizing modules; the V221 channel may live outside them (exit-price interp,
+  slippage/fee accrual). Widen to the full strategy/exit path.
+- **#16 channel-genealogy line in the determinism summary (M) — queue.** Each summary
+  records which prior fences are active (BLAS pin, fsum, bar-time, HTTP guard) and
+  which layer the residual sits in (signal vs trade) — so "which peel are we on?" is
+  in the artifact, not the log archaeology.
+- **#17 per-trade PnL-contributor decomposition (L) — queue.** Log size × price-move ×
+  side − fees per trade, so a magnitude divergence points to *which factor* drifted.
+
 ### Surfaced by the 2026-06 strategic audit (`STRATEGIC_AUDIT_2026-06.md`)
 
 - **#10 "every flag does something" preflight (MED) — the meta-fix for the inert-subsystem
