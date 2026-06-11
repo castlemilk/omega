@@ -30,14 +30,29 @@ data/macro_cache.db-wal
 # V220: ephemeral training-run artifacts. These are produced by background
 # determinism/grid runs and must NOT enter the index — a background run writing
 # them while a foreground session commits is the index-contention class that
-# wedged sessions across V210–V220. The committed per-version results.json /
-# trades.csv (referenced by the V###.md log) are added explicitly, not via glob.
-data/*_pids.txt
+# wedged sessions across V210–V220.
+#
+# Training run outputs (generated, never commit). The ONLY tracked data/ files
+# are the curated inputs: data/snapshots/*.json, data/frozen_advanced_signals.json,
+# data/.cache_manifest.json, data/macro_cache.db, data/frozen_funding_cache.json.
+# Per-run V### outputs (results/trades/progress/attribution/contribs/audit dirs)
+# are transcribed into the training_log/V###.md entry and never tracked raw.
+data/v[0-9]*_*.json
+data/v[0-9]*_*.jsonl
+data/v[0-9]*_*.csv
+data/v[0-9]*_*.log
+data/v[0-9]*_audit/
+data/v[0-9]*_pids.txt
+data/v[0-9]*_grid_summary.txt
+data/.v[0-9]*
+# determinism replicate dirs + grid logs (broader, non v-anchored ephemerals)
 data/*_determinism/
-data/*_audit/
-data/*_grid.log
-data/*_grid_summary.txt
-data/*_off_crisis_*
-data/*_off_recent_*
-data/*_off_trend_*
+data/v[0-9]*_grid.log
+# misc per-run scratch (driver .out logs, single-pid files, DONE markers,
+# interim finding notes) — all generated, never commit
+data/v[0-9]*.out
+data/v[0-9]*_pid.txt
+data/v[0-9]*_DONE.txt
+data/v[0-9]*_interim_finding.md
+data/v[0-9]*_grid_pid.txt
 SESSION_NOTES.md

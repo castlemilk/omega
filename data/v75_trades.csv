@@ -1,4 +1,0 @@
-cycle,timestamp,symbol,side,size,entry_price,exit_price,pnl,slippage,hold_cycles,conviction,regime,sit_out_reason
-21,2026-04-08T05:56:15.443619+00:00,SOLUSDT,short,30000.0,84.6,84.45,53.1915,0.0,10,0.3,crisis,normal
-37,2026-04-08T06:04:51.080355+00:00,SOLUSDT,short,13224.0174,84.26,83.98,43.944,0.0,10,0.1322401740787626,normal,normal
-37,2026-04-08T06:04:51.080381+00:00,BNBUSDT,short,11775.9826,615.88,615.16,13.7668,0.0,10,0.1177598259212374,normal,normal

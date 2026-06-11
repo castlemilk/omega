@@ -1,4 +1,0 @@
-cycle,timestamp,symbol,side,size,entry_price,exit_price,pnl,slippage,hold_cycles,conviction,regime,sit_out_reason
-7,2026-04-09T12:21:48.623275+00:00,ETHUSDT,long,5839.1807,2179.65,2178.76,-2.3843,0.0,6,0.058391807171953934,crisis,normal
-7,2026-04-09T12:21:48.623302+00:00,NEARUSDT,long,11222.5969,1.329,1.328,-8.4444,0.0,6,0.11222596896762453,crisis,normal
-7,2026-04-09T12:21:48.623311+00:00,ARBUSDT,long,12938.2224,0.1019,0.1018,-12.697,0.0,6,0.1293822238604215,crisis,normal
