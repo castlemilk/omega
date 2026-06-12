@@ -288,6 +288,58 @@ make a previously-passing cell newly FAIL. The falsifier is always
 **Measure determinism at the SAME `--sleep` prior baselines used** —
 sleep is a determinism variable (V213 lesson), not just pacing.
 
+### Layered-channel debugging (V211→V217→V219→V220→V221)
+
+The determinism arc has now peeled **five** order-channels, each exposed
+only after the previous was closed. This is not bad luck — it is the
+structural shape of FP-order non-determinism, and recognising it saves
+versions:
+
+| V | Channel | Layer | Named by |
+|---|---|---|---|
+| V211 | `basket_std`/`basket_mean` cross-sectional sums | signal aggregation | hand bisect → `sorted()` |
+| V217 | Apple vecLib BLAS parallel-reduction order | numpy/BLAS | per-field IEEE-754 fingerprint |
+| V219→V220 | `basic_signals.value` sub-ulp sign-flip | composite mean → **entry decision** | `per_field_diff.py` → `math.fsum` |
+| V220 (exposed) | trade PnL magnitude | **trade-PnL accounting** | trade count locked, PnL still spread |
+| V221 | cross-sectional **demean** `_basket_mean` (`signal_generation.py:1160`) | candidate **selection** → sizing | `trade_field_diff.py` → `math.fsum` |
+
+**The four rules of the pattern:**
+
+1. **Each fence can reveal a deeper channel.** Closing one is progress
+   even when the gate still FAILs — the *new* FAIL names the next layer.
+   Don't read "still FAIL" as "fix didn't work"; bisect again.
+
+2. **Binary (threshold/decision) channels MASK analog (magnitude/sizing)
+   channels.** While an entry flip (27↔26) is open, its single-trade
+   swing dominates the spread and hides a continuous sizing wobble
+   beneath. Lock the binary channel (e.g. trade count) and the analog
+   one steps into view. Expect the spread to sometimes *grow* when you
+   close a binary channel — that is the analog channel becoming visible,
+   not a regression.
+
+3. **Bisect at the RIGHT LAYER, with the right tool.** Signal layer →
+   `per_field_diff.py` (per-(cycle,signal) IEEE-754 hex). Trade layer →
+   `trade_field_diff.py` (per-(cycle,symbol,side) ledger-field hex). If
+   the signal layer reads "clean" but PnL diverges, the channel is
+   downstream — switch tools, don't conclude "hermetic." V220 burned its
+   whole bet because `per_field_diff.py` stops at the signal layer.
+
+4. **Don't chase "the fix" until you've NAMED the field.** A guessed
+   fence at the wrong site either no-ops or shifts the channel (V213).
+   Name the first divergent (trade, field), trace it to its producer,
+   *then* fence. The trace matters: V221's symptom was `size`, but the
+   root was a demean `sum()` three call-frames upstream — fencing `size`
+   directly would have done nothing.
+
+**Selection vs sizing nuance (V221):** a reduction that *looks* like
+sizing (`size` diverges) can actually be a **selection** channel — a
+demean/normalisation whose sub-ulp wobble flips a near-boundary ticker
+in/out of the basket, changing N and thus every `1/N` weight. The tell:
+`entry_price`/`exit_price` are bit-identical but `size` jumps by a clean
+ratio (5000:6666 = 3:4 = `budget/N`). Grep the *selection* path
+(cross-sectional demean, rank/threshold, basket normalisation), not just
+the arithmetic sizing path, when sizes diverge at clean ratios.
+
 ## Keep the workspace clean
 
 **One-line rule: never leave the repo dirty between iterations.**
