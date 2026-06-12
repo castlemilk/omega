@@ -178,13 +178,6 @@ exit-price / PnL accounting is invisible until it flips a trade count or blows u
 spread. V221 bisects it; these instruments make the bisect (and the next magnitude
 channel) self-naming.
 
-- **#13 extend `per_field_diff.py` to TRADE-LEVEL fields (S) — SHIP V221.** The
-  divergence is now downstream of signals (cycle-1 fingerprints clean post-V217+V220).
-  Extend the per-field IEEE-754 diff to `entry_price`, `exit_price`, `position_size`,
-  `slippage`, `fees`; align the two replicates' trades by `(cycle, symbol, side)` and
-  diff the PnL contributors row-by-row. Names which sizing/exit field diverges first
-  at the trade-PnL level — the current tool reports "no divergence" because it only
-  reads the signal layer (the exact blind spot).
 - **#14 trade-ledger diff on the magnitude-FAIL path (S) — SHIP V222** *(was V221;
   the V221 bisect ran #13 by hand before the auto-wire existed)*. When the
   determinism gate sees trade *count* matching but PnL spread > floor (the V220
@@ -269,6 +262,16 @@ channel) self-naming.
   because funding is absent from replay snapshots and live Binance is (correctly) HTTP-blocked.
   Add `funding_rate` to the frozen snapshots or a `frozen_funding_feed.json` (analogous to
   `frozen_advanced_signals.json`) so carry/derivatives signals can be exercised in backtest.
+
+## Shipped in V221  ✅
+
+- **#13 `scripts/trade_field_diff.py` — trade-level IEEE-754 ledger diff (S)** — aligns two
+  replicates' trades by `(cycle, symbol, side, occurrence)`, hex-encodes every numeric ledger
+  field (`struct.pack('!d', v)`), reports trade-set drift + the first divergent (trade, field);
+  wall-clock fields excluded by construction. **Named both V221 channels:** the c4 ARBUSDT
+  `size` 5000↔6666 (= `budget/N` 3:4 → demean selection channel) and, post-fence, the c5
+  ETHUSDT `size` divergence whose contribs trace exposed the funding presence flap. The signal
+  layer read "clean" both times — exactly the blind spot this tool was queued for.
 
 ## Shipped in V218  ✅
 
