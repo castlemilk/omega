@@ -178,12 +178,12 @@ exit-price / PnL accounting is invisible until it flips a trade count or blows u
 spread. V221 bisects it; these instruments make the bisect (and the next magnitude
 channel) self-naming.
 
-- **#14 trade-ledger diff on the magnitude-FAIL path (S) — SHIP V222** *(was V221;
-  the V221 bisect ran #13 by hand before the auto-wire existed)*. When the
-  determinism gate sees trade *count* matching but PnL spread > floor (the V220
-  signature), auto-emit the #13 trade-level diff. Makes the next sizing/exit magnitude
-  channel self-name instead of needing a hand bisect. Wire into `check_determinism.sh`
-  + `run_training.py`.
+- ~~#14 trade-ledger diff on the magnitude-FAIL path~~ → **Shipped in V222 ✅**
+  (`check_determinism.sh` post-verdict block): when verdict=FAIL AND
+  trade_range=0 AND N≥2, auto-runs `trade_field_diff.py` on the r1/r2 pair,
+  tees to the run log + `$OUT/trade_field_diff.txt`. Validated against the
+  V221 pre-fence FAIL pair — reproduces the hand-bisect (c5 ETHUSDT `size`)
+  byte-for-byte.
 - **#15 widen `check_no_wallclock.py` AST scan (M) — queue.** Currently scans only the
   2 declared sizing modules; the V221 channel may live outside them (exit-price interp,
   slippage/fee accrual). Widen to the full strategy/exit path.

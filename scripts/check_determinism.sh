@@ -118,6 +118,27 @@ print(f"DETERMINISM: {verdict} gate={gate} spread=${spread:,.2f} (floor ${floor:
       f"trade_range={trange} pnls={pnls} trades={trades}")
 PY
 
+# V222 obs-delta #14: auto trade-diff on magnitude-FAIL. When the verdict is
+# FAIL but the trade COUNT is locked (the V220 signature: same trades, different
+# PnL), the channel is in sizing/exit/PnL accounting — the signal-layer
+# fingerprint is structurally blind to it (V220 burned its bet on exactly this;
+# V221 ran trade_field_diff.py by hand). Auto-name the first divergent
+# (trade, field) so the next magnitude channel is self-naming.
+VERDICT=$(python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print(d['verdict'], d['trade_range'])" "$SUMMARY" 2>/dev/null || echo "ERR ERR")
+read -r _verdict _trange <<< "$VERDICT"
+if [ "$_verdict" = "FAIL" ] && [ "$_trange" = "0" ] && [ "$N" -ge 2 ]; then
+  echo "--- magnitude-FAIL (trade_range=0): auto trade-level diff (obs #14) ---" | tee -a "$LOG"
+  A_CSV="$OUT/${VPREFIX}_${GATE}_r1_trades.csv"
+  B_CSV="$OUT/${VPREFIX}_${GATE}_r2_trades.csv"
+  if [ -f "$A_CSV" ] && [ -f "$B_CSV" ]; then
+    python3 scripts/trade_field_diff.py "$A_CSV" "$B_CSV" \
+      --label-a "${GATE}_r1" --label-b "${GATE}_r2" \
+      2>&1 | tee "$OUT/trade_field_diff.txt" | tee -a "$LOG" || true
+  else
+    echo "auto trade-diff skipped: replicate trades.csv missing ($A_CSV / $B_CSV)" | tee -a "$LOG"
+  fi
+fi
+
 # Cleanup: confirm no replicate PID survived.
 for pid in $(cat "$PIDFILE" 2>/dev/null); do
   kill -0 "$pid" 2>/dev/null && { echo "STILL ALIVE: $pid — killing" | tee -a "$LOG"; kill "$pid"; }
