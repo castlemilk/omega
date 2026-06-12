@@ -122,8 +122,18 @@ class FundingRateSignal:
         if len(hist) < 2:
             return 0.0
 
-        mean = sum(hist) / len(hist)
-        variance = sum((x - mean) ** 2 for x in hist) / max(1, len(hist) - 1)
+        # V221: constant history ⇒ no deviation signal, by definition. Without
+        # this fence, mean = fl(n·r)/n ≠ r for history lengths where n·r rounds
+        # (n=3,6,7,…), so every deviation is the SAME rounding residual and the
+        # z-score collapses to exactly ±√((n-1)/n) — the 1e-8 std fallback
+        # amplifies sub-ulp FP residue into an O(1) signal that flickers with
+        # history length. A ±1 call-count offset between same-seed replicates
+        # phase-shifts that flicker → the post-demean-fence $255 trend_OFF spread.
+        if max(hist) == min(hist):
+            return 0.0
+
+        mean = math.fsum(hist) / len(hist)
+        variance = math.fsum((x - mean) ** 2 for x in hist) / max(1, len(hist) - 1)
         std = math.sqrt(variance) if variance > 0 else 1e-8
 
         latest = hist[-1]
