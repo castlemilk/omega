@@ -1157,7 +1157,18 @@ class SignalGenerationNode(Node):
         ]
         if len(_cs_raw) >= 3:
             _cs_vals = [s["composite"] for _, s in _cs_raw]
-            _basket_mean = sum(_cs_vals) / len(_cs_vals)
+            # V221: math.fsum (exact-rounded) over plain sum() removes the
+            # summation-order FP channel — `_cs_raw` iterates `signals.items()`
+            # in an order that varies across replicate processes, so a plain
+            # sum() of the same composites rounds to a sub-ulp-different
+            # `_basket_mean`. That mean is subtracted from EVERY composite
+            # (below), so the wobble shifts the long/short boundary and flips a
+            # near-zero-demeaned ticker between baskets → basket N changes →
+            # 1/N sizing jumps (the V220 trend_OFF $2,851 magnitude channel,
+            # bisected to cycle-4 ARBUSDT `size` 5000↔6666). fsum is
+            # permutation-invariant without re-ordering (unlike the V213 sort,
+            # which merely shifted the channel onto the then-open network path).
+            _basket_mean = math.fsum(_cs_vals) / len(_cs_vals)
             for _t, _ts in _cs_raw:
                 _ts["_raw_composite"] = _ts["composite"]  # preserve pre-demean value
                 _ts["_basket_mean"] = _basket_mean
