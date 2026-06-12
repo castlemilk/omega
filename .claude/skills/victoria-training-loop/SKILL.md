@@ -340,6 +340,30 @@ ratio (5000:6666 = 3:4 = `budget/N`). Grep the *selection* path
 (cross-sectional demean, rank/threshold, basket normalisation), not just
 the arithmetic sizing path, when sizes diverge at clean ratios.
 
+**Presence-flap channels & epsilon-guard amplifiers (V221 residual, 6th
+peel):** not every channel is a summation-order reduction. A signal whose
+*presence* in the composite flaps between replicates (inserted only `if
+value != 0.0`) diverges by O(0.1), not sub-ulp. The V221 residual:
+`FundingRateSignal._zscore_signal` guarded zero variance with `std=1e-8`
+— for a CONSTANT cached rate r, `fl(n·r)/n ≠ r` at history lengths where
+n·r rounds (n=3,6,7,…), every deviation is the same rounding residual,
+and z collapses to exactly ±√((n-1)/n): the epsilon guard **amplifies
+sub-ulp residue into an O(1) signal** that flickers with n. A ±1
+call-count offset between replicates phase-shifts the flicker. Fix shape:
+semantic degeneracy fence (`if max(hist) == min(hist): return 0.0`), not
+a smaller epsilon. Two diagnostics to remember:
+
+1. **Exact algebraic constants are a fingerprint.** A divergent value
+   equal to √(2/3)/2, 1/√2, √(4/5)/2… screams degenerate-variance
+   z-score, just as clean ratios (3:4) scream `budget/N` selection.
+2. **Post-demean aggregate fingerprints are structurally blind.** After
+   cross-sectional demeaning, mean(composites) ≈ 0 by construction, so
+   the aggregate `basic_signals.value` fingerprint reads "sub-ulp" even
+   while a per-ticker composite shifted by 0.14. When the aggregate says
+   sub-ulp but trades flip, diff `signal_contribs.jsonl` (per-trade
+   `signal_traces` lists each composite's sub-signal names) — the extra/
+   missing NAME names the channel instantly.
+
 ## Keep the workspace clean
 
 **One-line rule: never leave the repo dirty between iterations.**

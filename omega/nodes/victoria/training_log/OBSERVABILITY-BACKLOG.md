@@ -185,7 +185,8 @@ channel) self-naming.
   diff the PnL contributors row-by-row. Names which sizing/exit field diverges first
   at the trade-PnL level — the current tool reports "no divergence" because it only
   reads the signal layer (the exact blind spot).
-- **#14 trade-ledger diff on the magnitude-FAIL path (S) — SHIP V221.** When the
+- **#14 trade-ledger diff on the magnitude-FAIL path (S) — SHIP V222** *(was V221;
+  the V221 bisect ran #13 by hand before the auto-wire existed)*. When the
   determinism gate sees trade *count* matching but PnL spread > floor (the V220
   signature), auto-emit the #13 trade-level diff. Makes the next sizing/exit magnitude
   channel self-name instead of needing a hand bisect. Wire into `check_determinism.sh`
@@ -199,6 +200,15 @@ channel) self-naming.
   in the artifact, not the log archaeology.
 - **#17 per-trade PnL-contributor decomposition (L) — queue.** Log size × price-move ×
   side − fees per trade, so a magnitude divergence points to *which factor* drifted.
+- **#18 per-ticker PRE-demean composite fingerprint (S) — queue (surfaced V221).** The
+  aggregate `per_field_fingerprint.jsonl` records `basic_signals.value` POST-demean, where
+  mean(composites) ≈ 0 by construction — an O(0.1) per-ticker presence flap read as "sub-ulp"
+  for a whole session. Fingerprint `(cycle, ticker) → raw_composite hex + sub-signal name set`
+  so a presence flap (a signal entering/leaving one ticker's composite) is named directly.
+- **#19 epsilon-guard amplifier tripwire (S) — queue (surfaced V221).** AST-grep for
+  `else 1e-N` std/var fallbacks followed by division (the `funding_rate.py:137` class —
+  constant input + tiny-epsilon guard = sub-ulp residue amplified to O(1) output). Known
+  sibling: `geometry/market_manifold.py:424`.
 
 ### Surfaced by the 2026-06 strategic audit (`STRATEGIC_AUDIT_2026-06.md`)
 
