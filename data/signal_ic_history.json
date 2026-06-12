@@ -1,4 +1,43 @@
 {
-  "updated_at": "2026-06-03T11:37:21.268745+00:00",
-  "signals": {}
+  "updated_at": "2026-06-13T00:00:00+00:00",
+  "signals": {},
+  "seeded_pooled_ics": {
+    "sma_crossover": 0.54,
+    "ricci_curvature_signal": 0.46,
+    "fear_greed_signal": 0.0,
+    "ollivier_ricci_signal": 0.0,
+    "rsi_signal": 0.05,
+    "bb_signal": 0.05,
+    "zscore_signal": 0.05,
+    "volume_signal": 0.05,
+    "vol_regime_signal": 0.05,
+    "btc_beta_signal": 0.05,
+    "funding_rate_signal": 0.05,
+    "dxy_signal": 0.05,
+    "vix_signal": 0.05,
+    "yield_curve_signal": 0.05,
+    "spy_signal": 0.05,
+    "rmt_signal": 0.05,
+    "vrp_signal": 0.05,
+    "market_data_signal": 0.05
+  },
+  "seeded_regime_ics": {
+    "sma_crossover": {
+      "normal": 0.48,
+      "crisis": 0.52,
+      "high_vol": 0.52
+    },
+    "ricci_curvature_signal": {
+      "normal": 0.42,
+      "crisis": 0.46,
+      "high_vol": 0.46
+    }
+  },
+  "seed_provenance": {
+    "version": "V222",
+    "source": "docs/research/retrospective-alpha-review.md:19-26 (per-regime WIN RATES used as relative weight priors; not Pearson ICs — see training_log/V222.md 'Seeding rationale')",
+    "mapping": "normal<-recent column, crisis<-crisis column, high_vol<-crisis column (stress proxy); trending column folded into pooled mean only",
+    "defaults": "0.05 mild positive prior (Grinold-Kahn floor) for unmeasured signals; 0.0 for research-flagged dead weight (fear_greed_signal, ollivier_ricci_signal) -> excluded from weighting",
+    "consumers": "scripts/run_training.py V222 seed loader -> StrategyNode.update_signal_ics / update_regime_ics; the 'signals' key above remains the SignalDecayDetector observation store and is NOT read for seeding"
+  }
 }
