@@ -108,6 +108,48 @@ amplifier) and the demean order wobble — both real PnL inputs that are now det
 Selector still hurts trend (−$8,435 Δ, both arms hermetic — the cleanest selector
 measurement yet). All V211 pre-fence highs stand as historical anchors.
 
+> ⚠️ **V222 control caveat — the V221-era trend/crisis numbers above are superseded for
+> cross-version use.** The V222 IC-off control (`ic_seed_weighting:false`) reproduces
+> recent **bit-exact** (+$4,901.01) but drifts on trend (+$631.85 → −$217.71) and crisis
+> (−$3,599.74 → −$3,530.13), same trade counts (23/23, 31/31). Root cause: V222's `math.fsum`
+> fence on `_ic_weighted_composite` (`signal_generation.py:246,253`) is **load-bearing, not
+> dormant** — the `SignalDecayDetector` self-accumulates ≥3-signal IC mid-run and activates
+> the weighted branch on the longer trend/crisis runs (recent stays equal-weight → bit-exact).
+> A benign V211-class FP-order re-canonicalization (both versions deterministic at $0.00).
+> Use the **V222-era IC grid** below for post-V222 trend/crisis comparison.
+
+### V222-era IC grid (2026-06-13, sleep=10 — USE FOR POST-V222 trend/crisis COMPARISON)
+
+7/7 hermetic at $0.00. IC-off controls re-anchor committed-state trend/crisis post the
+`_ic_weighted_composite` fence (recent unchanged from V221-era). No high-water — IC-on loses
+on recent & crisis, wins on trend but not past any standing best.
+
+| Gate (sel. OFF) | IC-off (V222 control) | IC-on (seeded) | IC Δ (on−off) | Determinism |
+|-----------------|----------------------:|---------------:|--------------:|-------------|
+| recent | **+$4,901.01 (22t)** | +$1,995.86 (30t) | −$2,905.15 | PASS $0.00 |
+| trend  | **−$217.71 (23t)**   | +$3,113.04 (35t) | **+$3,330.75** | PASS $0.00 |
+| crisis | **−$3,530.13 (31t)** | −$8,301.35 (35t) | −$4,771.22 | PASS $0.00 |
+
+(IC-on selector-ON trend control: −$3,822.92 / 32t, PASS $0.00 — better than V221's
+selector-ON −$7,802.98 by +$3,980, still net-negative.)
+
+**V222 (2026-06-13) — no high-water; IC wiring REFUTED in direction; effect is
+regime-conditional.** V222 wired the IC subsystem (seeded pooled + per-regime ICs from
+`retrospective-alpha-review.md` win rates, removed the empty-IC early-return, declared
+`per_regime_ic_weighting`, fsum-fenced the conviction accumulators). 7-cell grid (3 IC-on
+selector-OFF + 1 IC-on selector-ON + 3 IC-off controls): **7/7 hermetic at $0.00** (V221's
+property holds; no new live channel). Pre-registered bet "recent goes UP" is **REFUTED** —
+recent went **DOWN −$2,905** (+$4,901 → +$1,996). Within-V222 IC Δ (clean, fence is
+common-mode → cancels): **trend +$3,330.75 (IC HELPS), crisis −$4,771.22 (IC HURTS), recent
+−$2,905.15 (HURTS)**. IC weighting raises trade count on every gate (22→30, 23→35, 31→35) by
+concentrating conviction on `sma_crossover`(0.54)+`ricci_curvature`(0.46) — net good in
+trend, net bad in crisis/normal. Recent's whole edge was its **crisis sub-window** (+$6,292
+of +$4,901); IC weighting gutted it to +$2,632. Wiring is correct & deterministic; the
+**WR-derived crisis IC priors are over-confident** and the higher conviction inflates trade
+count through an un-recalibrated threshold. **V223 = regime-conditional IC weighting** (seed
+ICs only in trend/bull/normal; equal-weight fallback in crisis/high_vol — bank trend, kill
+crisis). All V211 pre-fence highs stand. See `V222.md`.
+
 **V221 (2026-06-12) — no high-water; BOTH residual channels CLOSED → 4/4 HERMETIC at $0.00, CONFIRMED.** V221 bisected V220's "sizing/exit PnL-magnitude channel" with the new trade-level tool (`scripts/trade_field_diff.py`, obs #13) and found it was two stacked *selection-side* channels: (1) the **cross-sectional demean order channel** — unsorted `signals.items()` iteration summed into `_basket_mean`, whose sub-ulp wobble flipped near-boundary basket membership (N 4↔3 → `budget/N` size jumps 5000↔6666; `math.fsum` fence at `signal_generation.py:1160`, `74fbf4e`; trend_OFF $2,851 → $255.59); then (2) the **funding z-score epsilon-guard amplifier** — `std=1e-8` zero-variance fallback in `signals/funding_rate.py` amplifying the rounding residue of a CONSTANT cached rate (`fl(n·r)/n ≠ r` at n=3,6,7,…) into an exact ±√((n-1)/n) signal (observed 0.408248 = √(2/3)/2 bit-for-bit) whose presence flickered with history length, phase-shifted across replicates by a ±1 swallowed-read offset (constant-history fence; $255.59 → **$0.00**). Methodology: the aggregate per-field fingerprint read "sub-ulp" because it samples `basic_signals.value` POST-demean (mean ≈ 0 by construction) — `signal_contribs.jsonl` per-trade `signal_traces` named the presence flap instantly (queued #18 pre-demean per-ticker fingerprint, #19 epsilon-amplifier AST tripwire; sibling site `geometry/market_manifold.py:424` documented dormant). Known dormant residual: trend_ON cycle-65 sub-ulp post-demean wobble, 1/136 cycles, never reaches trades. **Eval 4/4 hermetic from committed state for the first time → V222 IC wiring unblocked** (seed pooled ICs first — V218.B trap; fsum `_ic_weighted_composite`'s `total_w`/`weighted_mean` on activation). See `V221.md`.
 
 **V220 (2026-06-11) — no high-water; entry-flip channel CLOSED, larger sizing/exit PnL-magnitude channel EXPOSED → REFUTED.** V220 fsum-fenced the `basic_signals` composite reduction (`victoria_node.py:965` + `signal_generation.py:_balanced_composite`; commits `78b2a0d`/`fad28da`) to close the V219 sub-ulp `basic_signals.value` sign-flip. **Falsifier #1 fired:** `trend_OFF` spread **$2,851** (floor $200) — hypothesis REFUTED. But the fence worked *at its layer*: V219's trend entry-flip (27↔26 → $597) is **gone — trade count now locked 26/26 on both trend arms.** With entries byte-stable, `trend_OFF` PnL still ranges **$697→$3,549 on the same 26 trades** — a **sizing/exit PnL-magnitude channel** the binary entry-flip was masking. `recent_OFF` regressed PASS→FAIL ($6.52→$1,168, 21↔22 — same magnitude channel surfacing on a 2nd gate); `crisis_OFF` stays hermetic ($0.72, 30/30). 4-cell grid: **1/4 PASS** (was 3/4 at V219). The eval has now peeled four order-channels (V211 basket → V217 BLAS → V219/V220 sub-ulp entry-flip → V220 sizing/exit magnitude); each fence reveals the next. **V221 = bisect the sizing/exit channel at the trade-PnL level (extend `per_field_diff.py` to entry/exit price, position size, slippage, fees); IC wiring pushed to V222, blocked until 4/4 determinism is restored.** All V211 highs **stand** (pre-fence anchor). See `V220.md` + `REFLECTION_V220.md`.
