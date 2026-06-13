@@ -206,13 +206,25 @@ class SignalDecayDetector:
             logger.warning("SignalDecayDetector: failed to load history: %s", exc)
 
     def persist(self) -> None:
-        """Write IC history to disk."""
+        """Write IC history to disk.
+
+        V222: read-modify-write — unknown top-level keys (the committed
+        seeded_pooled_ics / seeded_regime_ics / seed_provenance seed tables)
+        are preserved, not wiped. This detector owns only `updated_at` and
+        `signals`.
+        """
         try:
             self._path.parent.mkdir(parents=True, exist_ok=True)
-            payload = {
-                "updated_at": datetime.now(UTC).isoformat(),
-                "signals": {name: rec.to_dict() for name, rec in self._records.items()},
-            }
+            payload: dict[str, Any] = {}
+            if self._path.exists():
+                try:
+                    existing = json.loads(self._path.read_text())
+                    if isinstance(existing, dict):
+                        payload = existing
+                except Exception:
+                    payload = {}
+            payload["updated_at"] = datetime.now(UTC).isoformat()
+            payload["signals"] = {name: rec.to_dict() for name, rec in self._records.items()}
             self._path.write_text(json.dumps(payload, indent=2))
         except Exception as exc:
             logger.warning("SignalDecayDetector: failed to persist: %s", exc)

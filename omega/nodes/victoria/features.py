@@ -674,6 +674,25 @@ class VictoriaFeatures:
     preset_override_mode: bool = False
 
     # ------------------------------------------------------------------
+    # V222 — IC subsystem wiring
+    # ------------------------------------------------------------------
+
+    ic_seed_weighting: bool = True
+    """V222: load seeded pooled + per-regime ICs from data/signal_ic_history.json
+    (keys seeded_pooled_ics / seeded_regime_ics) at training startup and feed
+    them to StrategyNode.update_signal_ics / update_regime_ics. With this OFF
+    (the IC-off control), _signal_ics stays empty and _compute_weighted_conviction
+    degrades to the raw composite — bit-identical to pre-V222 behavior.
+    """
+
+    per_regime_ic_weighting: bool = True
+    """V170 flag, first DECLARED in V222 (was undeclared → getattr→False silent
+    no-op, documented by the startup wiring banner since V218). When ON,
+    _compute_weighted_conviction looks up the current regime's IC for each
+    signal in _regime_ics before falling back to the pooled _signal_ics value.
+    """
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 

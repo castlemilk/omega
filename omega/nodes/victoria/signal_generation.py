@@ -243,14 +243,18 @@ def _ic_weighted_composite(
         ]
         return _balanced_composite(signal_vals), "equal_weight"
 
-    total_w = sum(weights)
+    # V222 fence (shipped at IC activation per V221's instruction): these were
+    # plain sum() over dict-iteration-ordered floats — the V211/V220/V221
+    # FP-order channel class, dormant only while this path fell back to
+    # equal-weight. fsum is exact-rounded → permutation-invariant.
+    total_w = math.fsum(weights)
     if total_w == 0.0:
         signal_vals = [
             v for k, v in signals_dict.items() if k.endswith("_signal") or k == "sma_crossover"
         ]
         return _balanced_composite(signal_vals), "equal_weight"
 
-    weighted_mean = sum(w * v for w, v in zip(weights, values, strict=False)) / total_w
+    weighted_mean = math.fsum(w * v for w, v in zip(weights, values, strict=False)) / total_w
     clamped = max(-1.0, min(1.0, weighted_mean))
     return clamped, "ic_weighted"
 

@@ -896,6 +896,44 @@ def run(
     if _strat is not None:
         _strat._paper_engine = engine
 
+    # ── V222: seed pooled + per-regime ICs from committed state ──────────
+    # The IC-weighted conviction path was inert for the entire V199–V221 arc
+    # because update_signal_ics had zero callers here (the V218.B probe below
+    # documented it every startup). Load the committed seed tables from
+    # data/signal_ic_history.json BEFORE the probe so the probe line flips to
+    # "IC-weighting ACTIVE" — flag ic_seed_weighting=false is the IC-off control.
+    if _strat is not None and bool(getattr(_active_features, "ic_seed_weighting", False)):
+        try:
+            import json as _ic_json
+            _ic_raw = _ic_json.loads((DATA_DIR / "signal_ic_history.json").read_text())
+            _seed_pooled = {
+                str(k): float(v)
+                for k, v in (_ic_raw.get("seeded_pooled_ics") or {}).items()
+            }
+            _seed_regime = {
+                str(k): {str(r): float(x) for r, x in d.items()}
+                for k, d in (_ic_raw.get("seeded_regime_ics") or {}).items()
+                if isinstance(d, dict)
+            }
+            if _seed_pooled:
+                _strat.update_signal_ics(_seed_pooled)
+            if _seed_regime:
+                _strat.update_regime_ics(_seed_regime)
+            log.info(
+                "[startup]   IC seeds loaded: pooled=%d signals, per-regime=%d signals",
+                len(_seed_pooled), len(_seed_regime),
+            )
+            log.info(
+                "[startup]   IC weights applied: %s",
+                {k: round(v, 2) for k, v in sorted(_seed_pooled.items())},
+            )
+        except Exception as _ic_exc:
+            log.warning(
+                "[startup]   IC seed load FAILED (%s: %s) — conviction filter "
+                "falls back to raw composite (IC-WEIGHTING INERT)",
+                type(_ic_exc).__name__, _ic_exc,
+            )
+
     # V218.B preflight obs-delta: IC-weighting wiring probe. The whole IC-weighted
     # conviction path (pooled AND per-regime) is a no-op whenever _signal_ics is
     # empty — _compute_weighted_conviction returns the raw composite before the

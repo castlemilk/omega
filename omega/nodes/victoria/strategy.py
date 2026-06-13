@@ -439,6 +439,10 @@ class StrategyNode(Node):
         # Looked up first when per_regime_ic_weighting=True; falls back to pooled
         # _signal_ics when missing.
         self._regime_ics: dict[str, dict[str, float]] = {}
+        # V222: consolidated regime label for the current cycle, cached by
+        # _apply_regime_adaptive_thresholds for per-regime IC lookups (the
+        # per-ticker signal dicts don't carry "_regime").
+        self._cycle_regime_label: str = ""
         # V166: rolling per-signal history for live normalization (z-score). Keyed
         # by signal name (not per-ticker — pooling across tickers gives more samples
         # for the same signal's intrinsic distribution).
@@ -1028,12 +1032,17 @@ class StrategyNode(Node):
 
         If no ICs have been loaded, falls back to the raw composite score so
         the filter still runs with equal weighting.
-        """
-        if not self._signal_ics:
-            return float(signals_dict.get("composite", 0.0))
 
-        weighted_sum = 0.0
-        total_ic = 0.0
+        V222: the empty-`_signal_ics` early-return is gone (it was the
+        inertness point — `update_signal_ics` had zero callers in the training
+        path, so this method ALWAYS returned the raw composite). The
+        `total_ic == 0.0` fallback below covers the unseeded case identically.
+        Accumulations are `math.fsum`-fenced: this loop iterates
+        `signals_dict.items()` — the dict-iteration-order FP-reduction channel
+        class V211/V220/V221 closed elsewhere — and V222 is what activates it.
+        """
+        _weighted_terms: list[float] = []
+        _ic_terms: list[float] = []
         # V166: live signal normalization. When enabled, z-score each signal
         # value against its rolling history before weighting. Compensates for
         # tighter live signal distributions vs backtest (the calibration mismatch
@@ -1044,7 +1053,15 @@ class StrategyNode(Node):
         # per_regime_ic_weighting is on. Falls back to pooled IC when the signal
         # has no entry for the current regime (or the regime label is unknown).
         _per_regime = bool(getattr(self.features, "per_regime_ic_weighting", False))
-        _regime_label = str(signals_dict.get("_regime", "")) or "unknown"
+        # V222: per-ticker signal dicts do NOT carry "_regime" (it lives on the
+        # top-level signals dict), so reading it here was a silent pooled-only
+        # fallback. _apply_regime_adaptive_thresholds caches the cycle's
+        # consolidated label on the node; use it when the per-ticker key is absent.
+        _regime_label = (
+            str(signals_dict.get("_regime", "")).lower()
+            or getattr(self, "_cycle_regime_label", "")
+            or "unknown"
+        )
         # V172_pruned: drop excluded signals entirely (anti-predictive ones).
         _excluded = set(getattr(self.features, "excluded_signals", None) or [])
         for k, v in signals_dict.items():
@@ -1080,12 +1097,13 @@ class StrategyNode(Node):
                     fv = (fv - _mean) / _std if _std > 1e-9 else fv
                     # Clamp z-score to [-3, +3] to avoid blowups from outliers
                     fv = max(-3.0, min(3.0, fv))
-            weighted_sum += fv * ic
-            total_ic += abs(ic)  # V169b: normalize by |IC| so negatives don't shrink the divisor
+            _weighted_terms.append(fv * ic)
+            _ic_terms.append(abs(ic))  # V169b: normalize by |IC| so negatives don't shrink the divisor
 
+        total_ic = math.fsum(_ic_terms)
         if total_ic == 0.0:
             return float(signals_dict.get("composite", 0.0))
-        return weighted_sum / total_ic
+        return math.fsum(_weighted_terms) / total_ic
 
     def _apply_regime_adaptive_thresholds(self, signals: dict) -> None:
         """Set per-direction conviction thresholds based on detected market regime.
@@ -1112,6 +1130,10 @@ class StrategyNode(Node):
         # _regime_hmm is the raw HMM label (only "bull"/"bear"/"sideways").
         # Use _regime for high_vol detection since that's where the VRP FEAR→high_vol mapping lands.
         regime_label = str(signals.get("_regime", "")).lower()
+        # V222: cache for _compute_weighted_conviction's per-regime IC lookup —
+        # per-ticker dicts don't carry "_regime"; this method sees the top-level
+        # dict once per cycle before the per-ticker loop.
+        self._cycle_regime_label = regime_label
 
         # V53: also treat HMM vol-regime "crisis" as crisis even if Wasserstein is flat
         # (Wasserstein can return 1/3 priors when its signal keys don't match the signal dict).
@@ -3569,7 +3591,9 @@ class StrategyNode(Node):
         if self.features.decision_traces and self._trace_writer is not None:
             import datetime as _dt
 
-            _now_ts = _dt.datetime.now(_dt.UTC).isoformat()  # wallclock-ok: trace metadata only, not sizing
+            _now_ts = _dt.datetime.now(
+                _dt.UTC
+            ).isoformat()  # wallclock-ok: trace metadata only, not sizing
             _trace_version = self._trace_writer._version
             _geo_ricci = float(signals.get("_ricci_scalar", 0.0) or 0.0)
             _geo_orc = float(signals.get("_orc_mean_curvature", 0.0) or 0.0)
