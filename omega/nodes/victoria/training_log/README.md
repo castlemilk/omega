@@ -133,6 +133,32 @@ on recent & crisis, wins on trend but not past any standing best.
 (IC-on selector-ON trend control: −$3,822.92 / 32t, PASS $0.00 — better than V221's
 selector-ON −$7,802.98 by +$3,980, still net-negative.)
 
+**V223 (2026-06-14) — no high-water; regime-gated IC beats always-on IC on every cell
+but loses to equal-weight net.** V223 added one flag (`regime_conditional_ic_weighting`,
+default OFF) gating the IC-weighted conviction path on the **runtime regime label**: bypass
+to equal-weight raw composite on `crisis`/`high_vol` cycles (denylist — the brief's allowlist
+wording was refuted against the real label space), IC-on everywhere else. Bit-safe by
+construction (membership test + early `return` of the existing IC-off expression — no new
+float-sum site). 4-cell × N=2 grid: **8/8 hermetic at $0.00**, `check_no_wallclock` PASS.
+The pre-grid 200-cycle regime probe (shipped IC-gate tally) found **snapshot name ≠ runtime
+regime** — every snapshot is a mix (trend 48% bypass, crisis 40%, recent 57%), so the gate
+is *true per-cycle regime conditioning*, not snapshot toggling. Results vs **V222-IC-on**:
+trend **+$3,273.56 (Δ +$161)**, crisis **−$7,831.73 (Δ +$470)**, recent **+$3,849.56
+(Δ +$1,854)**, trend+selector **−$4,101.98 (Δ −$279)** — V223 dominates always-on IC on
+every cell. **But vs equal-weight IC-off the verdict flips:** net over the 3 cells is IC-off
+**+$1,153** > V223 **−$709** > IC-on **−$3,192**. Disentanglement: trend Δ within ±$200 (NOT
+the fsum-artifact falsifier — the +$3.5k trend IC edge is **real** and the gate preserves it,
+holding at full IC-on level despite 97/200 bypass cycles); recent recovered 64% of the
+IC-on→off gap; **crisis recovered only 10%** because its loss lives in the 121 *normal*-labeled
+cycles the denylist leaves IC-on, not the 79 bypassed ones — the pooled seed ICs are
+mis-oriented on crisis-period normal cycles, which gating structurally cannot fix. Standing
+main stays **V221-era equal-weight (IC-off)**; flag kept but defaults OFF (correct structure
+for IC, net-better than always-on, not promoted). IC now refuted twice vs equal-weight (V222
+always-on, V223 gated). **V224 = IC re-estimation on a snapshot holdout (audit R3)** — replace
+pooled seed ICs with data-derived per-(regime, signal) ICs (fsum-fenced), keep the gate ON;
+pre-committed fork: R3 beats equal-weight on ≥2 cells → IC rehabilitated & gate+R3 becomes
+main; else IC retired for good and V225 pivots to a new signal class. See `V223.md`.
+
 **V222 (2026-06-13) — no high-water; IC wiring REFUTED in direction; effect is
 regime-conditional.** V222 wired the IC subsystem (seeded pooled + per-regime ICs from
 `retrospective-alpha-review.md` win rates, removed the empty-IC early-return, declared
