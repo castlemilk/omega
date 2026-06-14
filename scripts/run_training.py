@@ -1686,6 +1686,20 @@ def run(
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2)
 
+    # V223: visible run-end IC-gate summary. The per-cycle strategy-logger trace
+    # is at INFO (suppressed when the run logs at WARNING), so surface the tally
+    # here on the training.* logger (visible) — confirms the regime gate fired as
+    # designed without parsing JSON: a crisis snapshot should show a meaningful
+    # BYPASS count, a trend/normal snapshot mostly IC-ON.
+    _ic_on = getattr(strat, "_ic_on_cycles", 0)
+    _ic_off = getattr(strat, "_ic_off_cycles", 0)
+    _gate_on = bool(getattr(getattr(strat, "features", None), "regime_conditional_ic_weighting", False))
+    log.info(
+        "[V223] IC-gate summary: regime_conditional=%s → IC-ON %d cycles, "
+        "BYPASS(crisis/high_vol) %d cycles (of %d)",
+        _gate_on, _ic_on, _ic_off, _ic_on + _ic_off,
+    )
+
     # V49 hard gates — compare this run against the previous version.
     baseline_label = _find_baseline_version(version)
     if baseline_label is not None:
