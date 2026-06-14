@@ -443,6 +443,13 @@ class StrategyNode(Node):
         # _apply_regime_adaptive_thresholds for per-regime IC lookups (the
         # per-ticker signal dicts don't carry "_regime").
         self._cycle_regime_label: str = ""
+        # V223: regime-conditional IC gate state. _last_ic_active records whether
+        # the most recent _compute_weighted_conviction call used IC weights (vs
+        # bypassed to equal-weight in crisis/high_vol). The two counters tally
+        # IC-on vs IC-off cycles for the run-end summary surfaced in results JSON.
+        self._last_ic_active: bool = False
+        self._ic_on_cycles: int = 0
+        self._ic_off_cycles: int = 0
         # V166: rolling per-signal history for live normalization (z-score). Keyed
         # by signal name (not per-ticker — pooling across tickers gives more samples
         # for the same signal's intrinsic distribution).
@@ -1062,6 +1069,20 @@ class StrategyNode(Node):
             or getattr(self, "_cycle_regime_label", "")
             or "unknown"
         )
+        # V223: regime-conditional IC weighting. V222 forensics showed IC
+        # weighting HELPS trend (+$3,331) but HURTS crisis (−$4,771) and recent
+        # (−$2,905, whose edge lived in a crisis sub-window). Denylist the two
+        # harmful RUNTIME regimes: bypass to the equal-weight raw composite there
+        # (bit-for-bit the IC-off control path == line below), keep IC weights
+        # everywhere else. Keys on the runtime _regime label, never the snapshot
+        # name. Membership test + early return only — no new float-sum site, so
+        # the V211/V220/V221 determinism guarantees are untouched.
+        _ic_off_regimes = ("crisis", "high_vol")
+        _v223_gate = bool(getattr(self.features, "regime_conditional_ic_weighting", False))
+        if _v223_gate and _regime_label in _ic_off_regimes:
+            self._last_ic_active = False
+            return float(signals_dict.get("composite", 0.0))
+        self._last_ic_active = _v223_gate and bool(self._signal_ics)
         # V172_pruned: drop excluded signals entirely (anti-predictive ones).
         _excluded = set(getattr(self.features, "excluded_signals", None) or [])
         for k, v in signals_dict.items():
@@ -1134,6 +1155,32 @@ class StrategyNode(Node):
         # per-ticker dicts don't carry "_regime"; this method sees the top-level
         # dict once per cycle before the per-ticker loop.
         self._cycle_regime_label = regime_label
+
+        # V223: per-cycle IC-gate trace + tally. Runs exactly once per cycle here
+        # (the only site that sees the consolidated label before the per-ticker
+        # loop). _ic_active mirrors the gate decision in _compute_weighted_conviction:
+        # IC weights are applied unless the regime-conditional flag is ON AND the
+        # runtime label is one of the denied {crisis, high_vol} regimes AND seeds
+        # are loaded. Integer counters only — no determinism impact.
+        _v223_gate = bool(getattr(self.features, "regime_conditional_ic_weighting", False))
+        _ic_active = bool(self._signal_ics) and not (
+            _v223_gate and regime_label in ("crisis", "high_vol")
+        )
+        if _ic_active:
+            self._ic_on_cycles += 1
+        else:
+            self._ic_off_cycles += 1
+        logger.info(
+            "V223 IC-gate: regime=%s ic_active=%s gate=%s "
+            "(n_pooled_ics=%d n_regime_ics=%d on=%d off=%d)",
+            regime_label or "unknown",
+            _ic_active,
+            _v223_gate,
+            len(self._signal_ics),
+            len(self._regime_ics),
+            self._ic_on_cycles,
+            self._ic_off_cycles,
+        )
 
         # V53: also treat HMM vol-regime "crisis" as crisis even if Wasserstein is flat
         # (Wasserstein can return 1/3 priors when its signal keys don't match the signal dict).

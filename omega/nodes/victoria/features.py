@@ -692,6 +692,18 @@ class VictoriaFeatures:
     signal in _regime_ics before falling back to the pooled _signal_ics value.
     """
 
+    regime_conditional_ic_weighting: bool = False
+    """V223: gate the IC-weighted conviction path on the cycle's RUNTIME regime
+    label. When ON, _compute_weighted_conviction bypasses to the equal-weight
+    raw composite (bit-identical to the V222 IC-off control path) in the regimes
+    where V222 forensics showed IC weighting HURTS — crisis (−$4,771) and
+    high_vol — and keeps IC weights everywhere else (normal/sideways/bull/bear/
+    default/unknown), banking V222's +$3,331 trend gain. Denylist on
+    {crisis, high_vol}, NOT an allowlist: the runtime label space is
+    {bull,bear,sideways,high_vol,crisis,default} and "trend"/"normal" are
+    snapshot names, not runtime labels. Default OFF = bit-identical to V222.
+    """
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------

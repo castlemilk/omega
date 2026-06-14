@@ -1659,6 +1659,14 @@ def run(
             # non-zero count with a deterministic spread = leaks closed; any
             # residual spread with the guard armed is definitionally non-network.
             "http_blocked_count": _http_guard_state["blocked"],
+            # V223: regime-conditional IC gate tally. With regime_conditional_ic_
+            # weighting ON, ic_off_cycles counts cycles whose runtime regime was
+            # crisis/high_vol (IC bypassed → equal-weight composite); ic_on_cycles
+            # counts the rest (IC weights applied). Confirms the gate fired as
+            # designed per snapshot without a hand bisect (crisis snapshot →
+            # mostly off; trend snapshot → mostly on). Integer-only, no det impact.
+            "ic_on_cycles": getattr(strat, "_ic_on_cycles", 0),
+            "ic_off_cycles": getattr(strat, "_ic_off_cycles", 0),
         },
         "filters": sit_out_clean,
         "trades": {
