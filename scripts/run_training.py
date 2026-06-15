@@ -1667,6 +1667,10 @@ def run(
             # mostly off; trend snapshot → mostly on). Integer-only, no det impact.
             "ic_on_cycles": getattr(strat, "_ic_on_cycles", 0),
             "ic_off_cycles": getattr(strat, "_ic_off_cycles", 0),
+            # V224: which IC table fed the weighted composite — "seed"
+            # (hand-seeded pooled/per-regime) or "R3" (empirical OOS-holdout ICs
+            # loaded under OMEGA_R3_ICS=1). Confirms the re-estimation path fired.
+            "ic_source": getattr(strat, "_ic_source", "seed"),
         },
         "filters": sit_out_clean,
         "trades": {

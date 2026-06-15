@@ -450,6 +450,13 @@ class StrategyNode(Node):
         self._last_ic_active: bool = False
         self._ic_on_cycles: int = 0
         self._ic_off_cycles: int = 0
+        # V224: per-(signal × regime) IC-vector observability. Records which
+        # runtime regimes have already had their applied IC vector logged (one
+        # line per distinct regime) so the trace confirms R3/seed ICs are loaded
+        # and which column the gate consumes, without per-cycle spam. _ic_source
+        # ("seed" | "R3") is stamped by the run loader to label the trace.
+        self._logged_ic_regimes: set[str] = set()
+        self._ic_source: str = "seed"
         # V166: rolling per-signal history for live normalization (z-score). Keyed
         # by signal name (not per-ticker — pooling across tickers gives more samples
         # for the same signal's intrinsic distribution).
@@ -1083,6 +1090,26 @@ class StrategyNode(Node):
             self._last_ic_active = False
             return float(signals_dict.get("composite", 0.0))
         self._last_ic_active = _v223_gate and bool(self._signal_ics)
+        # V224 observability: log the exact IC applied per signal for this regime
+        # column the first time it is seen with IC active. Confirms the empirical
+        # (R3) vs seed ICs are loaded and which per-regime column the gate
+        # consumes. Deterministic (set membership), ≤6 lines/run, logging-only —
+        # never fed into any numeric path, no determinism impact.
+        if self._last_ic_active and _regime_label not in self._logged_ic_regimes:
+            self._logged_ic_regimes.add(_regime_label)
+            _ic_vec: dict[str, float] = {}
+            for _k in sorted(self._signal_ics):
+                _ic_k = self._signal_ics.get(_k, 0.0)
+                if _per_regime and self._regime_ics:
+                    _rk = self._regime_ics.get(_k, {}).get(_regime_label)
+                    if _rk is not None:
+                        _ic_k = float(_rk)
+                if abs(_ic_k) >= 1e-4:
+                    _ic_vec[_k] = round(_ic_k, 4)
+            logger.info(
+                "[V224] IC-vector regime=%s source=%s n=%d: %s",
+                _regime_label, self._ic_source, len(_ic_vec), _ic_vec,
+            )
         # V172_pruned: drop excluded signals entirely (anti-predictive ones).
         _excluded = set(getattr(self.features, "excluded_signals", None) or [])
         for k, v in signals_dict.items():
