@@ -905,23 +905,56 @@ def run(
     if _strat is not None and bool(getattr(_active_features, "ic_seed_weighting", False)):
         try:
             import json as _ic_json
-            _ic_raw = _ic_json.loads((DATA_DIR / "signal_ic_history.json").read_text())
-            _seed_pooled = {
-                str(k): float(v)
-                for k, v in (_ic_raw.get("seeded_pooled_ics") or {}).items()
-            }
-            _seed_regime = {
-                str(k): {str(r): float(x) for r, x in d.items()}
-                for k, d in (_ic_raw.get("seeded_regime_ics") or {}).items()
-                if isinstance(d, dict)
-            }
+            import os as _ic_os
+            # V224: under OMEGA_R3_ICS=1, load empirical OOS-holdout ICs from
+            # data/empirical_ic_history.json instead of the hand-seeded table.
+            # One committed file holds a per-target (leave-one-snapshot-out)
+            # block; select the block by snapshot name so the ICs used while
+            # trading X were fit on the OTHER snapshots only (zero look-ahead).
+            # Default (env unset) keeps the V222/V223 seed path bit-for-bit.
+            if _ic_os.environ.get("OMEGA_R3_ICS") == "1":
+                _emp = _ic_json.loads((DATA_DIR / "empirical_ic_history.json").read_text())
+                _snap_stem = str(backtest_snapshot or "")
+                if "trending" in _snap_stem:
+                    _r3_target = "trend"
+                elif "crisis" in _snap_stem:
+                    _r3_target = "crisis"
+                else:
+                    _r3_target = "recent"
+                _r3_blk = _emp.get(_r3_target) or {}
+                _seed_pooled = {
+                    str(k): float(v)
+                    for k, v in (_r3_blk.get("empirical_pooled_ics") or {}).items()
+                }
+                _seed_regime = {
+                    str(k): {str(r): float(x) for r, x in d.items()}
+                    for k, d in (_r3_blk.get("empirical_regime_ics") or {}).items()
+                    if isinstance(d, dict)
+                }
+                _strat._ic_source = "R3"
+                log.info(
+                    "[startup]   V224 R3 empirical ICs: target=%s fit_on=%s",
+                    _r3_target, _r3_blk.get("fit_on"),
+                )
+            else:
+                _ic_raw = _ic_json.loads((DATA_DIR / "signal_ic_history.json").read_text())
+                _seed_pooled = {
+                    str(k): float(v)
+                    for k, v in (_ic_raw.get("seeded_pooled_ics") or {}).items()
+                }
+                _seed_regime = {
+                    str(k): {str(r): float(x) for r, x in d.items()}
+                    for k, d in (_ic_raw.get("seeded_regime_ics") or {}).items()
+                    if isinstance(d, dict)
+                }
+                _strat._ic_source = "seed"
             if _seed_pooled:
                 _strat.update_signal_ics(_seed_pooled)
             if _seed_regime:
                 _strat.update_regime_ics(_seed_regime)
             log.info(
-                "[startup]   IC seeds loaded: pooled=%d signals, per-regime=%d signals",
-                len(_seed_pooled), len(_seed_regime),
+                "[startup]   IC seeds loaded (%s): pooled=%d signals, per-regime=%d signals",
+                getattr(_strat, "_ic_source", "seed"), len(_seed_pooled), len(_seed_regime),
             )
             log.info(
                 "[startup]   IC weights applied: %s",
