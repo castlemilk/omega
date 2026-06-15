@@ -1,0 +1,178 @@
+{
+  "_provenance": {
+    "horizon_bars": 1,
+    "method": "leave-one-snapshot-out Spearman, 1-bar forward return, ordinal (value,cycle,ticker,snap) tie-break, fsum-fenced",
+    "n_min": 30,
+    "regime_keys": [
+      "normal",
+      "crisis",
+      "high_vol"
+    ],
+    "version": "V224",
+    "window": 30
+  },
+  "crisis": {
+    "_sample_counts": {
+      "dxy_signal": {
+        "normal": 13
+      },
+      "ollivier_ricci_signal": {
+        "crisis": 728,
+        "high_vol": 286,
+        "normal": 819
+      },
+      "ricci_curvature_signal": {
+        "crisis": 728,
+        "high_vol": 286,
+        "normal": 819
+      },
+      "sma_crossover": {
+        "crisis": 728,
+        "high_vol": 286,
+        "normal": 936
+      },
+      "spy_signal": {
+        "high_vol": 13,
+        "normal": 26
+      }
+    },
+    "empirical_pooled_ics": {
+      "ollivier_ricci_signal": 0.043366,
+      "ricci_curvature_signal": 0.062173,
+      "sma_crossover": 0.01832,
+      "spy_signal": 0.022267
+    },
+    "empirical_regime_ics": {
+      "ollivier_ricci_signal": {
+        "crisis": 0.146474,
+        "high_vol": 0.05612,
+        "normal": -0.087353
+      },
+      "ricci_curvature_signal": {
+        "crisis": 0.026713,
+        "high_vol": 0.056593,
+        "normal": 0.09357
+      },
+      "sma_crossover": {
+        "crisis": -0.179153,
+        "high_vol": -0.065208,
+        "normal": 0.071003
+      }
+    },
+    "fit_on": [
+      "recent",
+      "trend"
+    ]
+  },
+  "recent": {
+    "_sample_counts": {
+      "dxy_signal": {
+        "normal": 24
+      },
+      "ollivier_ricci_signal": {
+        "crisis": 466,
+        "high_vol": 233,
+        "normal": 904
+      },
+      "ricci_curvature_signal": {
+        "crisis": 466,
+        "high_vol": 222,
+        "normal": 882
+      },
+      "sma_crossover": {
+        "crisis": 466,
+        "high_vol": 233,
+        "normal": 1002
+      },
+      "spy_signal": {
+        "high_vol": 13,
+        "normal": 70
+      }
+    },
+    "empirical_pooled_ics": {
+      "ollivier_ricci_signal": 0.051941,
+      "ricci_curvature_signal": -0.023457,
+      "sma_crossover": 0.053666,
+      "spy_signal": 0.019437
+    },
+    "empirical_regime_ics": {
+      "ollivier_ricci_signal": {
+        "crisis": 0.205349,
+        "high_vol": -0.125443,
+        "normal": 0.06958
+      },
+      "ricci_curvature_signal": {
+        "crisis": 0.028128,
+        "high_vol": 0.17884,
+        "normal": -0.094666
+      },
+      "sma_crossover": {
+        "crisis": 0.00618,
+        "high_vol": 0.050552,
+        "normal": 0.033609
+      },
+      "spy_signal": {
+        "normal": 0.107655
+      }
+    },
+    "fit_on": [
+      "crisis",
+      "trend"
+    ]
+  },
+  "trend": {
+    "_sample_counts": {
+      "dxy_signal": {
+        "normal": 11
+      },
+      "ollivier_ricci_signal": {
+        "crisis": 570,
+        "high_vol": 207,
+        "normal": 839
+      },
+      "ricci_curvature_signal": {
+        "crisis": 570,
+        "high_vol": 196,
+        "normal": 817
+      },
+      "sma_crossover": {
+        "crisis": 570,
+        "high_vol": 207,
+        "normal": 924
+      },
+      "spy_signal": {
+        "normal": 44
+      }
+    },
+    "empirical_pooled_ics": {
+      "ollivier_ricci_signal": 0.012718,
+      "ricci_curvature_signal": 0.114261,
+      "sma_crossover": -0.013551,
+      "spy_signal": 0.198309
+    },
+    "empirical_regime_ics": {
+      "ollivier_ricci_signal": {
+        "crisis": 0.065192,
+        "high_vol": -0.510426,
+        "normal": -0.063423
+      },
+      "ricci_curvature_signal": {
+        "crisis": 0.048362,
+        "high_vol": 0.104044,
+        "normal": 0.117965
+      },
+      "sma_crossover": {
+        "crisis": -0.049212,
+        "high_vol": -0.018039,
+        "normal": -0.086176
+      },
+      "spy_signal": {
+        "normal": 0.198309
+      }
+    },
+    "fit_on": [
+      "crisis",
+      "recent"
+    ]
+  }
+}
