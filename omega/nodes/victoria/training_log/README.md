@@ -133,6 +133,45 @@ on recent & crisis, wins on trend but not past any standing best.
 (IC-on selector-ON trend control: −$3,822.92 / 32t, PASS $0.00 — better than V221's
 selector-ON −$7,802.98 by +$3,980, still net-negative.)
 
+### V224-era baseline (2026-06-15, IC RETIRED — equal-weight is main, USE FOR POST-V224 COMPARISON)
+
+9/9 hermetic at sleep=10. The decisive comparison is **R3 empirical IC (gate ON) vs
+within-grid equal-weight (IC-off)**, same commit `053d3d0` + caches. Equal-weight wins
+net and on 2/3 gates → IC retired. These equal-weight numbers are the standing main.
+
+| Gate (sel. OFF) | Equal-weight / IC-off (MAIN) | R3 empirical IC (gated) | Δ (R3 − eqw) | Determinism |
+|-----------------|-----------------------------:|------------------------:|-------------:|-------------|
+| trend  | **−$1,330.48 (23t)** | +$875.14 (27t)   | +$2,205.62 (IC wins) | both PASS $0.00 |
+| crisis | **−$3,621.25 (31t)** | −$6,429.37 (37t) | −$2,808.12 (IC loses) | both PASS $0.00 |
+| recent | **+$4,746.68 (23t)** | +$4,556.55 (24t) | −$190.13 (wash, < floor) | PASS $0.00 / $32.75 |
+
+Net: equal-weight **−$205.05** > R3 empirical **−$997.68** > seed-on **−$4,837.73**. The
+recent +$4,746.68 is just under the V221-era recent high (+$4,901.01 stands). The trend IC
+edge (+$2,206 vs equal-weight, hermetic, 3×-replicated V222→V224) is the one durable IC
+finding — parked as a future trend-only overlay, out of scope for V225.
+
+**V224 (2026-06-15) — no high-water; IC RETIRED (third refutation).** V224 replaced the
+discredited pooled win-rate seeds with **empirical per-(regime, signal) ICs** fit on a
+leave-one-snapshot-out OOS holdout (LOSO Spearman, 1-bar fwd return, ordinal tie-break,
+fsum-fenced — `estimate_ics.py`, byte-reproducible), loaded under `OMEGA_R3_ICS=1`, gate
+ON. The empirical ICs alone refuted the seed assumption (sma_crossover·normal +0.48→+0.05;
+crisis +0.52→**−0.18** sign-flip; ollivier_ricci excluded-by-seed but real IC −0.51→+0.21 —
+the seeds were win-rate priors, not correlations). **Post-grid control bug:** the original
+"IC-off" cells ran `features='{}'`, but `ic_seed_weighting` defaults True → they ran
+**seed-IC-on**, not equal-weight (the pre-registered control). A corrective equal-weight
+run (`ic_seed_weighting:false`, same commit) supplied the real baseline. **Decisive (R3 vs
+within-grid equal-weight): R3 wins 1/3** — trend +$2,206 (real, hermetic, replicated), but
+crisis −$2,808 and recent −$190 (wash). Needed ≥2 → **IC retired.** Mechanism: empirical
+re-estimation *narrowed* the crisis loss vs seed (+$1,860) but crisis is still worse than
+equal-weight — the harm is **conviction concentration itself** on the 121 normal-labeled
+crisis cycles, not wrong IC magnitudes (better ICs hurt less, still lose). Third refutation
+(V222 always-on, V223 gated, V224 empirical-OOS). Equal-weight stays main; IC + regime-gate
+path mothballed (flag-default-OFF, dormant). 9/9 determinism PASS — empirical ICs opened no
+new selection channel. **V225 = pivot off IC to a new orthogonal crisis-predictive signal
+class** (lead: options-skew / Deribit 25Δ put-call skew + term structure; fallback:
+cross-asset funding-spread) as an *additive* composite member, NOT an IC re-weight; no-harm
+falsifier (beat crisis > $200 without regressing trend/recent > $200). See `V224.md`.
+
 **V223 (2026-06-14) — no high-water; regime-gated IC beats always-on IC on every cell
 but loses to equal-weight net.** V223 added one flag (`regime_conditional_ic_weighting`,
 default OFF) gating the IC-weighted conviction path on the **runtime regime label**: bypass

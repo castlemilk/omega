@@ -41,8 +41,14 @@ run_cell trend  2 "$R3F" v224_r3 1
 run_cell crisis 2 "$R3F" v224_r3 1
 run_cell recent 2 "$R3F" v224_r3 1
 # IC-off controls (decisive within-grid baseline).
-run_cell trend  2 '{}' v224_off 0
-run_cell crisis 2 '{}' v224_off 0
-run_cell recent 2 '{}' v224_off 0
+# BUGFIX (post-grid): the decisive control is EQUAL-WEIGHT, which requires
+# ic_seed_weighting:false explicitly — features='{}' leaves the flag at its
+# True default (features.py:680) and runs SEED-IC on all 200 cycles, NOT
+# equal-weight. The original '{}' cells measured R3-vs-seed (already-refuted),
+# not the pre-registered R3-vs-equal-weight (V224.md:144). See
+# scripts/v224_eqw_controls.sh for the corrective equal-weight run.
+run_cell trend  2 '{"ic_seed_weighting": false}' v224_off 0
+run_cell crisis 2 '{"ic_seed_weighting": false}' v224_off 0
+run_cell recent 2 '{"ic_seed_weighting": false}' v224_off 0
 
 echo "=== V224 grid complete $(date -u +%FT%TZ) ===" | tee -a "$SUM"
