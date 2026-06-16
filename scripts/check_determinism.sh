@@ -100,6 +100,18 @@ PY
 )
   echo "$ver rc=$rc pnl=$pnl trades=$ntr $(date -u +%FT%TZ)" | tee -a "$LOG"
   [ "$pnl" = "ERR" ] && { echo "FATAL: $ver produced no parseable results" | tee -a "$LOG"; exit 1; }
+  # V225 obs: control-identity assertion. Opt-in via EXPECT_SKEW/EXPECT_IC env —
+  # verifies the run's ACTUAL identity (crisis_skew_enabled / skew_on_cycles /
+  # ic_on_cycles) matches what the cell label claims, catching the V224
+  # mislabeled-control bug at cell time. No-op when EXPECT_SKEW is unset (legacy
+  # IC grids unaffected).
+  if [ -n "${EXPECT_SKEW:-}" ]; then
+    python3 scripts/assert_cell_identity.py \
+      --results "data/${ver}_results.json" \
+      --expect-skew "${EXPECT_SKEW}" --expect-ic "${EXPECT_IC:-off}" \
+      2>&1 | tee -a "$LOG" \
+      || { echo "FATAL: $ver cell-identity assertion FAILED — run does not match label" | tee -a "$LOG"; exit 4; }
+  fi
   PNLS+=("$pnl"); TRADES+=("$ntr")
 done
 
