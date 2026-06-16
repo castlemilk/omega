@@ -49,7 +49,7 @@ def main() -> None:
     try:
         with open(args.results) as fh:
             results = json.load(fh)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         _fail(f"cannot read results {args.results!r}: {exc}")
 
     obs = results.get("observability")
