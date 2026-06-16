@@ -705,6 +705,23 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V225 — additive crisis-skew signal (new orthogonal signal class)
+    # ------------------------------------------------------------------
+
+    crisis_skew_enabled: bool = False
+    """V225: inject an additive, one-sided risk-off term derived from realized
+    downside-semivariance skew + drawdown acceleration over the close window
+    (omega/nodes/victoria/signals/crisis_skew.py). When ON, the term (∈ [-1,0],
+    weighted by _SKEW_W=0.5) is ADDED to the per-ticker composite AFTER it is set
+    — NOT routed through the equal-weight basket selector (so the one-sided term
+    is never trimmed away by _balanced_composite's 20% trim, which would mute it
+    exactly in crisis). NOT an IC re-weight (IC retired in V224). Targets the
+    chronically-negative crisis gate; ≈0 in benign tape so trend/recent are
+    untouched by construction. Default OFF = bit-identical to the V224
+    equal-weight incumbent.
+    """
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 

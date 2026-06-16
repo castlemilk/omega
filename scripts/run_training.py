@@ -77,7 +77,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from omega.eval.v49_gates import check_v49_gates  # noqa: E402, I001
+from omega.eval.v49_gates import check_v49_gates
 
 
 # ---------------------------------------------------------------------------
@@ -723,13 +723,13 @@ def run(
             pass
         _orig_opener_open = _ureq.OpenerDirector.open
 
-        def _frozen_blocked_open(_self, fullurl, *args, **kwargs):  # noqa: ANN001
+        def _frozen_blocked_open(_self, fullurl, *args, **kwargs):
             _url = getattr(fullurl, "full_url", fullurl)
             _http_guard_state["blocked"] += 1
             try:
                 with open(_http_log_path, "a") as _hf:
                     _hf.write(json.dumps({"url": str(_url)[:300]}) + "\n")
-            except Exception:  # noqa: BLE001
+            except Exception:
                 pass
             raise _uerr.URLError(
                 f"OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: {str(_url)[:120]}"
@@ -766,6 +766,8 @@ def run(
         # NB: even when declared+ON the path is unreachable unless _signal_ics is
         # populated (see the post-build IC-WEIGHTING probe below).
         ("per_regime_ic_weighting", "per_regime_ic_weighting", None),
+        # V225: additive crisis-skew signal. Module must import + flag declared.
+        ("crisis_skew", "crisis_skew_enabled", "omega.nodes.victoria.signals.crisis_skew"),
     ]
     _declared_fields = set(_asdict(_active_features).keys())
     log.info("[startup] subsystem wiring (flag → wired?):")
@@ -780,9 +782,19 @@ def run(
             try:
                 _importlib.import_module(_mod)
                 _state = "ON · module importable → ACTIVE"
-            except Exception as _imp_exc:  # noqa: BLE001
+            except Exception as _imp_exc:
                 _state = f"ON · IMPORT FAILED ({type(_imp_exc).__name__}) → SILENTLY INERT"
         log.info("[startup]   %-26s %s", _label + ":", _state)
+    # V225: explicit crisis-skew status line (Step-6 banner check). Mirrors the
+    # requested `<signal>: ENABLED, frozen=N` format — one-grep confirmation that
+    # the additive term is live and reading frozen (not live) inputs.
+    _skew_on = bool(getattr(_active_features, "crisis_skew_enabled", False))
+    _frozen = 1 if os.environ.get("OMEGA_FROZEN_CACHE") == "1" else 0
+    log.info(
+        "[startup]   crisis_skew: %s, frozen=%d (additive post-demean, W=0.5, source=OHLCV)",
+        "ENABLED" if _skew_on else "disabled",
+        _frozen,
+    )
     log.info("=" * 70)
 
     # ── V219 substrate preflight (frozen cache: manifest md5 + macro/funding
@@ -1657,6 +1669,13 @@ def run(
 
     sit_out_clean = {k: v for k, v in sit_out_counts.items() if not k.startswith("_")}
 
+    # V225: pull the run-scoped crisis-skew fire counter (module-global on the
+    # signal-generation module, mirroring _http_guard_state) for observability.
+    try:
+        from omega.nodes.victoria.signal_generation import _CRISIS_SKEW_STATE as _crisis_skew_state_ref
+    except Exception:
+        _crisis_skew_state_ref = {}
+
     results = {
         "version": version,
         "run": {
@@ -1704,6 +1723,15 @@ def run(
             # (hand-seeded pooled/per-regime) or "R3" (empirical OOS-holdout ICs
             # loaded under OMEGA_R3_ICS=1). Confirms the re-estimation path fired.
             "ic_source": getattr(strat, "_ic_source", "seed"),
+            # V225: additive crisis-skew term. crisis_skew_enabled reflects the
+            # parsed feature flag (NOT the env), skew_on_cycles counts node-cycles
+            # where >=1 ticker got a non-zero skew term applied (proves the term
+            # actually FIRED, not flag-on-but-inert). Read by assert_cell_identity.
+            "crisis_skew_enabled": bool(
+                getattr(getattr(strat, "features", None), "crisis_skew_enabled", False)
+            ),
+            "skew_on_cycles": _crisis_skew_state_ref.get("skew_on_cycles", 0),
+            "skew_ticker_terms": _crisis_skew_state_ref.get("ticker_terms", 0),
         },
         "filters": sit_out_clean,
         "trades": {

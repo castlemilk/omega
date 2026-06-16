@@ -41,6 +41,20 @@ except ImportError:
     _HAS_FUNDING_RATE = False
 
 try:
+    from omega.nodes.victoria.signals.crisis_skew import CrisisSkewSignal as _CrisisSkewSignal
+
+    _HAS_CRISIS_SKEW = True
+except ImportError:
+    _HAS_CRISIS_SKEW = False
+
+# V225: additive crisis-skew weight + run-scoped fire counter for the cell-identity
+# assertion (mirrors run_training's _http_guard_state module-global pattern). The
+# results-writer reads skew_on_cycles from here. Logging/observability only —
+# never fed into a numeric path, so it has zero determinism impact.
+_SKEW_W = 0.5
+_CRISIS_SKEW_STATE = {"enabled": False, "skew_on_cycles": 0, "ticker_terms": 0}
+
+try:
     from omega.nodes.victoria.signals.fear_greed import FearGreedSignal as _FearGreedSignal
 
     _HAS_FEAR_GREED = True
@@ -309,6 +323,12 @@ class SignalGenerationNode(Node):
         if _HAS_FUNDING_RATE:
             with contextlib.suppress(Exception):
                 self._funding_signal = _FundingRateSignal(window=30)
+
+        # V225: crisis-skew signal (additive, post-composite, flag-gated)
+        self._crisis_skew: Any | None = None
+        if _HAS_CRISIS_SKEW:
+            with contextlib.suppress(Exception):
+                self._crisis_skew = _CrisisSkewSignal()
 
         # Fear & Greed contrarian signal (market-level, applied to all tickers)
         self._fear_greed_signal: Any | None = None
@@ -1043,6 +1063,18 @@ class SignalGenerationNode(Node):
             ts["price"] = prices[-1] if prices else None
             ts["ticker"] = ticker
 
+            # V225: compute the crisis-skew value here (where the close window is
+            # in scope) and STASH it under a non-`_signal` key so the basket
+            # selector at :1022 never picks it up. It is APPLIED post-demean below
+            # (a broad risk-off tilt is a common-mode component the cross-sectional
+            # demean would otherwise remove). Flag-gated; ≈0 in benign tape.
+            if (
+                self._crisis_skew is not None
+                and self._features
+                and getattr(self._features, "crisis_skew_enabled", False)
+            ):
+                ts["crisis_skew"] = self._crisis_skew.compute(prices)
+
             # 1-day return
             if len(prices) >= 2 and prices[-2] != 0:
                 ts["return_1d"] = (prices[-1] - prices[-2]) / prices[-2]
@@ -1193,6 +1225,29 @@ class SignalGenerationNode(Node):
                     _ts["composite"],
                     _basket_mean,
                 )
+
+        # V225: apply the additive crisis-skew term AFTER the cross-sectional
+        # demean. Applied here (not pre-demean) so the broad, common-mode risk-off
+        # tilt survives — demean would subtract the shared crisis component and
+        # gut exactly the signal we want. Each ticker's term is independent (no
+        # cross-ticker accumulation), so application order is irrelevant; the
+        # 2-element fsum add is exact-rounded → permutation-invariant. One-sided
+        # ([-1,0]) ⇒ ≈0 in benign tape, so trend/recent are untouched. Counters
+        # are observability-only (cell-identity assertion), never a numeric path.
+        if self._crisis_skew is not None and getattr(self._features, "crisis_skew_enabled", False):
+            _CRISIS_SKEW_STATE["enabled"] = True
+            _skew_fired_this_cycle = False
+            for _t, _s in signals.items():
+                if not isinstance(_s, dict) or _t.startswith("_"):
+                    continue
+                _skew_val = _s.get("crisis_skew", 0.0)
+                if _skew_val != 0.0 and _s.get("composite") is not None:
+                    _adj = math.fsum([_s["composite"], _SKEW_W * _skew_val])
+                    _s["composite"] = max(-1.0, min(1.0, _adj))
+                    _CRISIS_SKEW_STATE["ticker_terms"] += 1
+                    _skew_fired_this_cycle = True
+            if _skew_fired_this_cycle:
+                _CRISIS_SKEW_STATE["skew_on_cycles"] += 1
 
         # Log composite spread for monitoring
         _composites = [
