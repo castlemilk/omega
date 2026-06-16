@@ -150,6 +150,45 @@ recent +$4,746.68 is just under the V221-era recent high (+$4,901.01 stands). Th
 edge (+$2,206 vs equal-weight, hermetic, 3×-replicated V222→V224) is the one durable IC
 finding — parked as a future trend-only overlay, out of scope for V225.
 
+### V225-era baseline (2026-06-16, additive crisis-skew REFUTED — equal-weight stays main)
+
+6/6 hermetic at sleep=10, N=2; 12/12 cell-identity PASS (new `assert_cell_identity.py`).
+Decisive comparison = **additive crisis-skew (ON) vs within-grid equal-weight (OFF)**, same
+commit `58bcec1` + caches. Skew **harms all three gates** → reverted (flag default OFF, code
+dormant). The within-grid equal-weight (OFF) numbers reproduce the V221/V222-era highs
+exactly and are the standing main.
+
+| Gate | Equal-weight / skew-OFF (MAIN) | Crisis-skew ON | Δ (ON − OFF) | Determinism |
+|------|-------------------------------:|---------------:|-------------:|-------------|
+| trend  | **−$217.71 (23t)**   | −$4,787.34 (31t) | −$4,569.63 (skew harms) | both PASS $0.00 |
+| crisis | **−$3,519.91 (31t)** | −$4,490.21 (30t) | −$970.30 (skew harms target gate) | both PASS $0.00 |
+| recent | **+$4,901.01 (22t)** | +$3,230.45 (35t) | −$1,670.56 (skew harms) | both PASS $0.00 |
+
+Net: equal-weight **+$1,163.39** ≫ skew-ON **−$6,047.10**. The skew fired ~200/200 cycles in
+*every* gate (`skew_on_cycles` 188/195/200) — an always-on bearish tilt, not a crisis signal.
+recent skew-OFF +$4,901.01 **ties the V221-era recent high** (control arm, not a skew result;
+no skew-ON cell beat its control → **no high-water broken**). V226 = make the brake
+regime-conditional (fire only in {crisis,high_vol}, drop W) or escalate to a paid implied-skew
+vendor.
+
+**V225 (2026-06-16) — no high-water; additive crisis-skew REFUTED (harmful, not orthogonal).**
+The V225 brief's lead (Deribit 25-delta historical skew) was unobtainable (no free historical
+implied IV; DVOL misses 2020-Q1, is a level not a skew) and the literal cross-venue
+funding-spread fallback unbuildable (snapshots hold one static funding scalar, no venue axis/
+history) — so per the pre-committed "default to the deterministic fallback" rule, V225
+implemented `crisis_skew_signal`: realized downside-semivariance skew + drawdown acceleration
+from already-frozen OHLCV, added as a one-sided ([-1,0]) **additive post-demean term** (W=0.5,
+applied after the cross-sectional demean so the common-mode tilt survives), flag
+`crisis_skew_enabled` default OFF. Grid: **6/6 hermetic at $0.00, 12/12 cell-identity PASS**
+(the new `assert_cell_identity.py` closes the V224 mislabeled-control bug class). Decisive
+within-grid result: skew **regresses all three gates** (trend −$4,570, crisis −$970 *worse*,
+recent −$1,671) → **HARMFUL/REVERT fork fires.** Mechanism named by observability:
+`skew_on_cycles` ≈ 200 in every gate → the realized term is a near-constant bearish tilt, NOT
+crisis-specific (the "≈0 outside crisis" assumption refuted — every 30-bar window has enough
+downside semivariance + drawdown wobble to fire). Reverted: flag stays default OFF (main =
+unchanged equal-weight), code dormant for a regime-gated V226 retry. Shipped + kept:
+`assert_cell_identity.py` (control-identity preflight). See `V225.md`.
+
 **V224 (2026-06-15) — no high-water; IC RETIRED (third refutation).** V224 replaced the
 discredited pooled win-rate seeds with **empirical per-(regime, signal) ICs** fit on a
 leave-one-snapshot-out OOS holdout (LOSO Spearman, 1-bar fwd return, ordinal tie-break,
