@@ -789,10 +789,16 @@ def run(
     # requested `<signal>: ENABLED, frozen=N` format — one-grep confirmation that
     # the additive term is live and reading frozen (not live) inputs.
     _skew_on = bool(getattr(_active_features, "crisis_skew_enabled", False))
+    _skew_gated = bool(getattr(_active_features, "crisis_skew_regime_gate_enabled", False))
     _frozen = 1 if os.environ.get("OMEGA_FROZEN_CACHE") == "1" else 0
+    # V226: banner shows the regime-gate state + the effective W (0.2 gated / 0.5
+    # always-on V225 path) — one-grep confirmation that the gated retry is live.
     log.info(
-        "[startup]   crisis_skew: %s, frozen=%d (additive post-demean, W=0.5, source=OHLCV)",
-        "ENABLED" if _skew_on else "disabled",
+        "[startup]   crisis_skew: %s (regime_gated=%d, W=%s), frozen=%d "
+        "(additive post-demean, source=OHLCV)",
+        "ON" if _skew_on else "off",
+        1 if _skew_gated else 0,
+        "0.2" if _skew_gated else "0.5",
         _frozen,
     )
     log.info("=" * 70)
@@ -1732,6 +1738,16 @@ def run(
             ),
             "skew_on_cycles": _crisis_skew_state_ref.get("skew_on_cycles", 0),
             "skew_ticker_terms": _crisis_skew_state_ref.get("ticker_terms", 0),
+            # V226: regime-gate state. crisis_skew_regime_gate_enabled reflects the
+            # parsed flag; gate_accept/skip_cycles is the per-snapshot accept/skip
+            # distribution (read by the gate-aware cell-identity assertion). On a
+            # crisis snapshot accept dominates; on trend/recent skip dominates — that
+            # asymmetry IS the no-harm proof the V225 always-on term failed.
+            "crisis_skew_regime_gate_enabled": bool(
+                getattr(getattr(strat, "features", None), "crisis_skew_regime_gate_enabled", False)
+            ),
+            "skew_gate_accept_cycles": _crisis_skew_state_ref.get("gate_accept_cycles", 0),
+            "skew_gate_skip_cycles": _crisis_skew_state_ref.get("gate_skip_cycles", 0),
         },
         "filters": sit_out_clean,
         "trades": {

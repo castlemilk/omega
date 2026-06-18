@@ -52,7 +52,39 @@ except ImportError:
 # results-writer reads skew_on_cycles from here. Logging/observability only —
 # never fed into a numeric path, so it has zero determinism impact.
 _SKEW_W = 0.5
-_CRISIS_SKEW_STATE = {"enabled": False, "skew_on_cycles": 0, "ticker_terms": 0}
+# V226: weight used when the regime gate is ON. V225's near-constant always-on tilt
+# (W=0.5, skew_on_cycles≈200 in every gate) was refuted; the gated retry both
+# conditions firing AND drops the weight. The V225 W=0.5 path stays reachable
+# (gate OFF) for reproducibility.
+_SKEW_W_GATED = 0.2
+# gate_accept/skip_cycles + cycle_idx added V226 for the per-cycle gate-decision
+# observability and the gate-aware cell-identity assertion. Integer counters only —
+# never fed into a numeric path, so zero determinism impact.
+_CRISIS_SKEW_STATE = {
+    "enabled": False,
+    "skew_on_cycles": 0,
+    "ticker_terms": 0,
+    "regime_gate_enabled": False,
+    "gate_accept_cycles": 0,
+    "gate_skip_cycles": 0,
+    "cycle_idx": 0,
+}
+
+
+def _regime_gated_skew(raw_value: float, regime_label: str, gate_enabled: bool) -> float:
+    """V226: regime-gate the additive crisis-skew term (pure branch, no float sum).
+
+    When the regime gate is ON, the one-sided risk-off term applies ONLY in a genuine
+    risk-off regime ({crisis, high_vol}); in any other label it returns 0.0. V225's
+    always-on term was a near-constant bearish tilt (skew_on_cycles≈200 in every gate)
+    — refuted — so the gate collapses firing to the genuine crisis subset. When the
+    gate is OFF, the raw V225 value passes through unchanged (the always-on 0.5-W path
+    stays byte-reachable for reproducibility). No accumulation: this is a boolean
+    branch, so it adds no FP summation-order channel.
+    """
+    if gate_enabled and (regime_label or "").lower() not in ("crisis", "high_vol"):
+        return 0.0
+    return raw_value
 
 try:
     from omega.nodes.victoria.signals.fear_greed import FearGreedSignal as _FearGreedSignal
@@ -329,6 +361,12 @@ class SignalGenerationNode(Node):
         if _HAS_CRISIS_SKEW:
             with contextlib.suppress(Exception):
                 self._crisis_skew = _CrisisSkewSignal()
+        # V226: prior-cycle consolidated regime label, injected each cycle by
+        # victoria_node (from self._last_signals["_regime"], the same VRP-mapped
+        # label strategy._cycle_regime_label reads). Used by the regime-gated
+        # crisis-skew term to decide accept/skip. Empty until the first cycle's
+        # regime is known (gate then skips early cycles — acceptable).
+        self._cycle_regime_label: str = ""
 
         # Fear & Greed contrarian signal (market-level, applied to all tickers)
         self._fear_greed_signal: Any | None = None
@@ -1236,13 +1274,35 @@ class SignalGenerationNode(Node):
         # are observability-only (cell-identity assertion), never a numeric path.
         if self._crisis_skew is not None and getattr(self._features, "crisis_skew_enabled", False):
             _CRISIS_SKEW_STATE["enabled"] = True
+            _CRISIS_SKEW_STATE["cycle_idx"] += 1
+            # V226: the regime gate is a cycle-level decision (the label is the same
+            # for every ticker this cycle). Compute accept/skip once and log once.
+            _gate_on = getattr(self._features, "crisis_skew_regime_gate_enabled", False)
+            _CRISIS_SKEW_STATE["regime_gate_enabled"] = bool(_gate_on)
+            _regime_lbl = (self._cycle_regime_label or "").lower()
+            _gate_skip = bool(_gate_on) and _regime_lbl not in ("crisis", "high_vol")
+            if _gate_skip:
+                _CRISIS_SKEW_STATE["gate_skip_cycles"] += 1
+            else:
+                _CRISIS_SKEW_STATE["gate_accept_cycles"] += 1
+            # V226 per-cycle gate-decision observability: one-grep confirmation of
+            # WHEN the gate suppresses the term, per snapshot. (V225 lacked this and
+            # only learned post-grid that the term fired every cycle.)
+            logger.info(
+                "crisis_skew gate_decision=%s regime_label=%s cycle_idx=%d",
+                "skip" if _gate_skip else "accept",
+                _regime_lbl or "unknown",
+                _CRISIS_SKEW_STATE["cycle_idx"],
+            )
+            # V226: weight depends on the gate (0.2 gated / 0.5 always-on V225 path).
+            _skew_w = _SKEW_W_GATED if _gate_on else _SKEW_W
             _skew_fired_this_cycle = False
             for _t, _s in signals.items():
                 if not isinstance(_s, dict) or _t.startswith("_"):
                     continue
                 _skew_val = _s.get("crisis_skew", 0.0)
                 if _skew_val != 0.0 and _s.get("composite") is not None:
-                    _adj = math.fsum([_s["composite"], _SKEW_W * _skew_val])
+                    _adj = math.fsum([_s["composite"], _skew_w * _skew_val])
                     _s["composite"] = max(-1.0, min(1.0, _adj))
                     _CRISIS_SKEW_STATE["ticker_terms"] += 1
                     _skew_fired_this_cycle = True

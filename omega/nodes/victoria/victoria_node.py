@@ -938,6 +938,17 @@ class VictoriaNode(Node):
 
         signals: dict[str, Any] = {}
 
+        # V226: thread the prior-cycle consolidated regime label into the signal
+        # generator so the regime-gated crisis_skew term (signal_generation.py) can
+        # decide accept/skip. THIS cycle's regime is only finalised after signals run
+        # (VRP→regime mapping below, victoria_node.py:~1062), so the gate uses the
+        # last cycle's authoritative `_regime` — the same VRP-mapped {crisis,high_vol,
+        # normal,…} label strategy._cycle_regime_label reads. 1-cycle lag is immaterial
+        # for persistent regimes. Empty on cycle 0 (gate skips until regime is known).
+        self._signals._cycle_regime_label = str(
+            self._last_signals.get("_regime", "") or regime
+        ).lower()
+
         # 1. Basic technical signals (SMA/RSI/MACD/BB)
         basic_out = self._signals.execute(
             NodeInput(

@@ -44,6 +44,12 @@ def main() -> None:
                     help="what the cell label CLAIMS for crisis_skew")
     ap.add_argument("--expect-ic", choices=("on", "off"), default="off",
                     help="what the cell label CLAIMS for IC weighting (default off)")
+    ap.add_argument("--expect-gate", choices=("on", "off"), default="off",
+                    help="V226: what the cell label CLAIMS for the crisis_skew regime "
+                         "gate. When 'on', a skew-ON cell may legitimately fire 0 cycles "
+                         "(the gate suppresses the term outside crisis/high_vol), so the "
+                         "skew_on_cycles>0 inertness check is relaxed to 'gate was "
+                         "evaluated' (accept+skip cycles > 0).")
     args = ap.parse_args()
 
     try:
@@ -66,8 +72,38 @@ def main() -> None:
             f"(label/run mismatch — the V224 control-bug class)"
         )
 
+    # V226: gate-aware identity. crisis_skew_regime_gate_enabled must match the
+    # cell's claimed --expect-gate (a skew-ON cell that claims gate-ON but ran the
+    # always-on V225 path — or vice versa — is mislabeled, the V224 bug class).
+    want_gate = args.expect_gate == "on"
+    got_gate = bool(obs.get("crisis_skew_regime_gate_enabled", False))
+    if got_gate != want_gate:
+        _fail(
+            f"crisis_skew_regime_gate_enabled={got_gate} but cell claims gate="
+            f"{args.expect_gate!r} (label/run mismatch — the V224 control-bug class)"
+        )
+
     skew_cycles = int(obs.get("skew_on_cycles", 0))
-    if want_skew and skew_cycles <= 0:
+    gate_accept = int(obs.get("skew_gate_accept_cycles", 0))
+    gate_skip = int(obs.get("skew_gate_skip_cycles", 0))
+    if want_skew and want_gate:
+        # Gated skew-ON: the term may legitimately fire 0 cycles (gate suppresses it
+        # outside crisis/high_vol — exactly the no-harm goal on trend/recent). The
+        # inertness guard becomes "the gate was actually EVALUATED" — accept+skip
+        # must cover the run; otherwise the gate code path never ran (silent
+        # inertness). skew_on_cycles must not exceed gate_accept (a fired cycle is
+        # by definition an accepted cycle).
+        if gate_accept + gate_skip <= 0:
+            _fail(
+                "crisis_skew gate ON but accept+skip cycles=0 — the gate code path "
+                "never ran (silent-inertness class V148–V202)"
+            )
+        if skew_cycles > gate_accept:
+            _fail(
+                f"skew_on_cycles={skew_cycles} > gate_accept_cycles={gate_accept} — a "
+                f"fired cycle must be a gate-accepted cycle (gate accounting broken)"
+            )
+    elif want_skew and skew_cycles <= 0:
         _fail(
             f"crisis_skew_enabled=True but skew_on_cycles={skew_cycles} — the term is "
             f"flag-ON but INERT (never fired; silent-inertness class V148–V202)"
@@ -91,8 +127,9 @@ def main() -> None:
     ic_source = obs.get("ic_source", "?")
     print(
         f"CELL-IDENTITY: PASS — skew={args.expect_skew} (enabled={got_skew}, "
-        f"on_cycles={skew_cycles}); ic={args.expect_ic} (on_cycles={ic_on}, "
-        f"source={ic_source})"
+        f"on_cycles={skew_cycles}); gate={args.expect_gate} (enabled={got_gate}, "
+        f"accept={gate_accept}, skip={gate_skip}); ic={args.expect_ic} "
+        f"(on_cycles={ic_on}, source={ic_source})"
     )
     sys.exit(0)
 
