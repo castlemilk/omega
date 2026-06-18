@@ -1111,7 +1111,16 @@ class SignalGenerationNode(Node):
                 and self._features
                 and getattr(self._features, "crisis_skew_enabled", False)
             ):
-                ts["crisis_skew"] = self._crisis_skew.compute(prices)
+                # V226: regime-gate at the value-calc path. When the gate flag is ON,
+                # the term is zeroed outside {crisis, high_vol} (the prior-cycle label
+                # threaded by victoria_node) — collapsing V225's always-on firing to
+                # the genuine crisis subset. Gate OFF ⇒ raw V225 value (always-on).
+                # Pure branch — no new float-accumulation site.
+                ts["crisis_skew"] = _regime_gated_skew(
+                    self._crisis_skew.compute(prices),
+                    self._cycle_regime_label,
+                    getattr(self._features, "crisis_skew_regime_gate_enabled", False),
+                )
 
             # 1-day return
             if len(prices) >= 2 and prices[-2] != 0:

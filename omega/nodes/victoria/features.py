@@ -721,6 +721,17 @@ class VictoriaFeatures:
     equal-weight incumbent.
     """
 
+    crisis_skew_regime_gate_enabled: bool = False
+    """V226: regime-gate the V225 crisis_skew term. V225's always-on tilt fired
+    ~200/200 cycles in EVERY gate (refuted "≈0 outside crisis") and regressed all
+    three gates — a directional bias, not a crisis signal. When this flag is ON, the
+    term applies ONLY when the prior-cycle consolidated regime label ∈ {crisis,
+    high_vol} (signal_generation._regime_gated_skew zeroes it otherwise) AND the
+    weight drops to _SKEW_W_GATED=0.2 (vs _SKEW_W=0.5). Requires crisis_skew_enabled.
+    Default OFF ⇒ the V225 always-on W=0.5 path stays byte-reachable for
+    reproducibility. Needs the prior-cycle `_regime` threaded by victoria_node.
+    """
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
