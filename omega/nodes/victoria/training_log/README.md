@@ -150,6 +150,47 @@ recent +$4,746.68 is just under the V221-era recent high (+$4,901.01 stands). Th
 edge (+$2,206 vs equal-weight, hermetic, 3×-replicated V222→V224) is the one durable IC
 finding — parked as a future trend-only overlay, out of scope for V225.
 
+### V226-era grid (2026-06-18, regime-gated crisis-skew REVERTED — equal-weight stays main)
+
+11/12 replicate-pairs hermetic at sleep=10, N=2; 12/12 cell-identity PASS. Decisive =
+**regime-gated crisis-skew (ON, W=0.2, fire only in {crisis,high_vol}) vs within-grid
+equal-weight (OFF)**, same commit `ead8f2a` + caches. The gate **fails its purpose** — it
+suppressed only ~half the cycles (`skew_on_cycles` 91/77/113) because the 1-cycle-lagged
+VRP→regime label calls ~half of *every* window {crisis,high_vol} — and the gated brake is
+still harmful. **REVERT; flags stay default OFF, main numerically unchanged.**
+
+| Gate | Equal-weight / skew-OFF (MAIN) | Gated skew-ON (W=0.2) | Δ (ON − OFF) | skew_on_cyc | Determinism |
+|------|-------------------------------:|----------------------:|-------------:|:-----------:|-------------|
+| trend  | **−$1,330.48 (23t)** | −$3,781.72 (27t) | −$2,451.24 (gate harms; +4 net shorts) | 91 | both PASS $0.00 |
+| crisis | **−$3,621.25 (31t)** | −$4,188.88 (32t) | −$567.63 (gated brake worsens target gate) | 77 | both PASS $0.00 |
+| recent | **+$3,279.02 → +$4,901.01 (22t)** | +$4,975.56 (25t) | +$74…+$1,696 (control non-det) | 113 | ON PASS; **OFF FAIL $1,621.99** |
+
+Realized downside-semivariance skew is now **twice-refuted** as a directional overlay
+(always-on V225 + gated V226). No skew-ON cell is a usable result → **no high-water broken**.
+Incidental: skew-OFF recent FAILed determinism ($1,621.99, NEARUSDT cycle 95↔93 entry flip) —
+the V216→V221 signal-layer float-ordering channel resurfacing on the 06-18 snapshot, *not*
+crisis_skew (it's the skew-disabled arm; r2 reproduces V225's +$4,901.01 exactly). V227 =
+paid implied-skew vendor (forward-looking, last skew attempt) + regime-label forensics + close
+the resurfaced recent determinism channel.
+
+**V226 (2026-06-18) — no high-water; regime-gated crisis-skew REVERTED (gate fails + brake
+still harmful).** V226 added a regime gate on V225's `crisis_skew` term — fire only when the
+prior-cycle VRP-mapped label ∈ {crisis,high_vol}, W dropped 0.5→0.2, behind
+`crisis_skew_regime_gate_enabled` (default OFF; grid ON). Pre-reg **forks #4 + #3 fired:**
+trend gated-ON regresses **−$2,451** vs within-grid equal-weight (fork #4 — still a directional
+bearish tilt, +4 net shorts), crisis got **−$568 worse** (target-gate thesis refuted), and the
+gate left `skew_on_cycles` at **91 (trend) / 113 (recent) ≫ 40** (fork #3 — the VRP→regime
+label calls ~half of every window {crisis,high_vol}, so the gate is a coin-flip, not a crisis
+selector). The realized-semivariance proxy is twice-refuted; reverted (flags default OFF, gate
+code dormant inside the flag block → main equal-weight numerically unchanged, no back-out
+needed). Grid was **11/12 hermetic + 12/12 cell-identity PASS**; the one FAIL is the skew-OFF
+recent control ($1,621.99) — the resurfaced V216→V221 signal-layer float channel, orthogonal
+to the skew work. V227 = escalate to a **paid implied-skew vendor** (Deribit 25-Δ RR / DVOL,
+V215 freeze recipe — the last realistic skew attempt; if it also fails, close the crisis-overlay
+program), tighten the gate to a **drawdown-magnitude threshold**, and run determinism forensics
+on the recent channel. The banked trend-IC overlay (+$2,206 hermetic) stays the only positive
+durable finding. See `V226.md`.
+
 ### V225-era baseline (2026-06-16, additive crisis-skew REFUTED — equal-weight stays main)
 
 6/6 hermetic at sleep=10, N=2; 12/12 cell-identity PASS (new `assert_cell_identity.py`).
