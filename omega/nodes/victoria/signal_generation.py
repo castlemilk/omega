@@ -19,8 +19,10 @@ Improvement arc:
 from __future__ import annotations
 
 import contextlib
+import json as _json
 import logging
 import math
+import os
 import time
 import uuid
 from typing import Any
@@ -57,6 +59,28 @@ _SKEW_W = 0.5
 # conditions firing AND drops the weight. The V225 W=0.5 path stays reachable
 # (gate OFF) for reproducibility.
 _SKEW_W_GATED = 0.2
+# V227 Track B: lookback (daily bars) for the realized-drawdown gate condition.
+# "Recent" drawdown — a week of daily bars — so an old peak doesn't keep the gate
+# armed through a benign recovery (the failure mode of a full-window peak).
+_DD_LOOKBACK = 5
+
+
+def _realized_drawdown_mag(closes: list[float] | None) -> float:
+    """Realized drawdown magnitude over the last _DD_LOOKBACK bars, in [0, 1].
+
+    ``1 - close[-1] / max(close[-LOOKBACK:])`` — the fractional drop from the
+    recent rolling peak. 0.0 (never negative/NaN) on degenerate input. Pure max +
+    one divide; no float-accumulation site, so no determinism channel.
+    """
+    if not closes or len(closes) < 2:
+        return 0.0
+    window = closes[-_DD_LOOKBACK:]
+    peak = max(window)
+    last = closes[-1]
+    if peak <= 0.0:
+        return 0.0
+    dd = 1.0 - last / peak
+    return dd if dd > 0.0 else 0.0
 # gate_accept/skip_cycles + cycle_idx added V226 for the per-cycle gate-decision
 # observability and the gate-aware cell-identity assertion. Integer counters only —
 # never fed into a numeric path, so zero determinism impact.
@@ -71,19 +95,34 @@ _CRISIS_SKEW_STATE = {
 }
 
 
-def _regime_gated_skew(raw_value: float, regime_label: str, gate_enabled: bool) -> float:
-    """V226: regime-gate the additive crisis-skew term (pure branch, no float sum).
+def _regime_gated_skew(
+    raw_value: float,
+    regime_label: str,
+    gate_enabled: bool,
+    drawdown_mag: float = 0.0,
+    dd_threshold: float = 0.0,
+) -> float:
+    """V226/V227: regime-gate the additive crisis-skew term (pure branch, no sum).
 
     When the regime gate is ON, the one-sided risk-off term applies ONLY in a genuine
     risk-off regime ({crisis, high_vol}); in any other label it returns 0.0. V225's
     always-on term was a near-constant bearish tilt (skew_on_cycles≈200 in every gate)
     — refuted — so the gate collapses firing to the genuine crisis subset. When the
     gate is OFF, the raw V225 value passes through unchanged (the always-on 0.5-W path
-    stays byte-reachable for reproducibility). No accumulation: this is a boolean
-    branch, so it adds no FP summation-order channel.
+    stays byte-reachable for reproducibility).
+
+    V227 Track B: when ``dd_threshold > 0`` the gate ALSO requires the realized
+    drawdown magnitude to exceed it — V226 showed the categorical VRP label alone
+    over-fired (~half of trend/recent cycles). The drawdown condition is the
+    stricter "is this actually a crash" test the categorical label wasn't.
+
+    No accumulation: boolean branches only, so it adds no FP summation-order channel.
     """
-    if gate_enabled and (regime_label or "").lower() not in ("crisis", "high_vol"):
-        return 0.0
+    if gate_enabled:
+        if (regime_label or "").lower() not in ("crisis", "high_vol"):
+            return 0.0
+        if dd_threshold > 0.0 and drawdown_mag < dd_threshold:
+            return 0.0
     return raw_value
 
 try:
@@ -1116,10 +1155,23 @@ class SignalGenerationNode(Node):
                 # threaded by victoria_node) — collapsing V225's always-on firing to
                 # the genuine crisis subset. Gate OFF ⇒ raw V225 value (always-on).
                 # Pure branch — no new float-accumulation site.
+                # V227 Track B: realized-drawdown gate condition. dd_threshold > 0
+                # ⇒ the term additionally requires a ≥threshold recent drawdown
+                # (the stricter "is this a crash" test the VRP label lacked).
+                _dd_thresh = float(
+                    getattr(self._features, "crisis_skew_drawdown_threshold", 0.0) or 0.0
+                )
+                # Always compute the drawdown magnitude (cheap max over 5 bars) so
+                # the gate-decision log can report the distribution for calibration,
+                # even in a threshold=0 (V226-equivalent) run.
+                _dd_mag = _realized_drawdown_mag(prices)
+                ts["_skew_dd_mag"] = _dd_mag
                 ts["crisis_skew"] = _regime_gated_skew(
                     self._crisis_skew.compute(prices),
                     self._cycle_regime_label,
                     getattr(self._features, "crisis_skew_regime_gate_enabled", False),
+                    _dd_mag,
+                    _dd_thresh,
                 )
 
             # 1-day return
@@ -1297,12 +1349,42 @@ class SignalGenerationNode(Node):
             # V226 per-cycle gate-decision observability: one-grep confirmation of
             # WHEN the gate suppresses the term, per snapshot. (V225 lacked this and
             # only learned post-grid that the term fired every cycle.)
+            # V227 Track B calibration observability: report the max realized
+            # drawdown across this cycle's tickers + the active threshold so a
+            # single threshold=0 run reveals the drawdown distribution among
+            # regime-accepted cycles → pick X keeping skew_on_cycles < 40.
+            _dd_thresh_log = float(
+                getattr(self._features, "crisis_skew_drawdown_threshold", 0.0) or 0.0
+            )
+            _dd_mags = [
+                float(_s.get("_skew_dd_mag", 0.0))
+                for _t, _s in signals.items()
+                if isinstance(_s, dict) and not _t.startswith("_")
+            ]
+            _dd_max = max(_dd_mags) if _dd_mags else 0.0
             logger.info(
-                "crisis_skew gate_decision=%s regime_label=%s cycle_idx=%d",
+                "crisis_skew gate_decision=%s regime_label=%s cycle_idx=%d "
+                "dd_max=%.4f dd_threshold=%.4f",
                 "skip" if _gate_skip else "accept",
                 _regime_lbl or "unknown",
                 _CRISIS_SKEW_STATE["cycle_idx"],
+                _dd_max,
+                _dd_thresh_log,
             )
+            # V227 Track B calibration sink: training-run logger.info is dropped
+            # (root level WARNING), so optionally tee the gate decision + dd_max to
+            # a JSONL named by OMEGA_SKEW_DD_LOG. Observability only, guarded —
+            # like the V214 fingerprint writers, it never touches a numeric path.
+            _dd_log_path = os.environ.get("OMEGA_SKEW_DD_LOG")
+            if _dd_log_path:
+                with contextlib.suppress(Exception), open(_dd_log_path, "a") as _ddf:
+                    _ddf.write(_json.dumps({
+                        "cycle": _CRISIS_SKEW_STATE["cycle_idx"],
+                        "regime": _regime_lbl or "unknown",
+                        "decision": "skip" if _gate_skip else "accept",
+                        "dd_max": round(_dd_max, 6),
+                        "dd_threshold": _dd_thresh_log,
+                    }) + "\n")
             # V226: weight depends on the gate (0.2 gated / 0.5 always-on V225 path).
             _skew_w = _SKEW_W_GATED if _gate_on else _SKEW_W
             _skew_fired_this_cycle = False

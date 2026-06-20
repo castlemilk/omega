@@ -708,7 +708,7 @@ class VictoriaFeatures:
     # V225 — additive crisis-skew signal (new orthogonal signal class)
     # ------------------------------------------------------------------
 
-    crisis_skew_enabled: bool = False
+    crisis_skew_enabled: bool = True
     """V225: inject an additive, one-sided risk-off term derived from realized
     downside-semivariance skew + drawdown acceleration over the close window
     (omega/nodes/victoria/signals/crisis_skew.py). When ON, the term (∈ [-1,0],
@@ -717,19 +717,35 @@ class VictoriaFeatures:
     is never trimmed away by _balanced_composite's 20% trim, which would mute it
     exactly in crisis). NOT an IC re-weight (IC retired in V224). Targets the
     chronically-negative crisis gate; ≈0 in benign tape so trend/recent are
-    untouched by construction. Default OFF = bit-identical to the V224
+    untouched by construction. **V227 SHIP: default flipped ON** — with the
+    drawdown-gated config below it improves crisis +$630 (−$3,621→−$2,991) at
+    trend +$0.02 / recent −$64 (fork #1). Set False to recover the pre-V225
     equal-weight incumbent.
     """
 
-    crisis_skew_regime_gate_enabled: bool = False
+    crisis_skew_regime_gate_enabled: bool = True
     """V226: regime-gate the V225 crisis_skew term. V225's always-on tilt fired
     ~200/200 cycles in EVERY gate (refuted "≈0 outside crisis") and regressed all
     three gates — a directional bias, not a crisis signal. When this flag is ON, the
     term applies ONLY when the prior-cycle consolidated regime label ∈ {crisis,
     high_vol} (signal_generation._regime_gated_skew zeroes it otherwise) AND the
     weight drops to _SKEW_W_GATED=0.2 (vs _SKEW_W=0.5). Requires crisis_skew_enabled.
-    Default OFF ⇒ the V225 always-on W=0.5 path stays byte-reachable for
-    reproducibility. Needs the prior-cycle `_regime` threaded by victoria_node.
+    Needs the prior-cycle `_regime` threaded by victoria_node. **V227 SHIP: default
+    flipped ON** — but V226's categorical-label gate alone over-fired (fork #3);
+    the win required the V227 drawdown threshold below. Set False to recover the
+    V225 always-on W=0.5 path.
+    """
+
+    crisis_skew_drawdown_threshold: float = 0.12
+    """V227 (Track B): tighten the regime gate with a realized-drawdown-magnitude
+    condition. V226 showed the categorical VRP→regime label is a coin-flip — it
+    classified ~half of trend/recent windows as {crisis,high_vol} (skew_on_cycles
+    91/113 ≫ the 40 no-harm threshold), leaking the harmful tilt into benign tape.
+    When this is > 0.0 (and the regime gate is ON), the term fires ONLY when the
+    regime label is risk-off AND the per-ticker realized drawdown over the last
+    _DD_LOOKBACK daily bars exceeds this fraction (e.g. 0.10 = a ≥10% pullback from
+    the recent peak). 0.0 ⇒ V226 regime-only behaviour (byte-reachable). Requires
+    crisis_skew_enabled + crisis_skew_regime_gate_enabled.
     """
 
     # ------------------------------------------------------------------
