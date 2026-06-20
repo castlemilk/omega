@@ -53,6 +53,45 @@ numbers are the new standing main** (flags default ON post-V227).
 Crisis post-fence high-water improves −$3,621.25 → **−$2,991.17** (V227). recent
 +$4,901.01 high stands (gated skew is −$64 < floor on recent). trend flat.
 
+**V228 (2026-06-20) — no high-water; stacking the drawdown-gated crisis-skew with the
+trend-IC overlay does NOT compose net-positive (fork #2).** V228 turned BOTH shipped-
+behind-flags overlays ON simultaneously — V227's drawdown-gated crisis-skew (default ON)
++ the V224 trend-IC overlay (R3 empirical, `OMEGA_R3_ICS=1` + `regime_conditional_ic_
+weighting`). Pure flag-stack, **no production code change**; the composition site was
+already `math.fsum`-fenced (V221/V222). 6/6 cells N=2 @ sleep=10 **all DETERMINISM PASS
+$0.00 + all CELL-IDENTITY PASS** (both overlays confirmed firing every ON cell: skew
+on_cycles 12/29/21, ic on_cycles 103/121/87, source R3) — the V227 brief's one technical
+question ("do they compose without a new determinism channel?") is answered **yes**.
+**But the strategic result is fork #2:** the overlays compose **cleanly additively**, and
+additivity drags the trend-IC overlay's *known V224 crisis harm* (−$2,808) into the stack:
+**trend +$1,092.87 ✓ (= V224 IC-ON +$875.16 to the cent, skew inert on trend), crisis
+−$1,992.57 ✗, recent −$408.79 ✗** (net stack −$246 vs net both-OFF +$1,062 = −$1,308
+worse). Decomposition confirms no novel interaction (crisis predicted −$5,799 vs observed
+−$5,614). The trend-IC overlay **is not regime-orthogonal in net** — its categorical
+`{crisis,high_vol}` bypass leaves 121/200 crisis-snapshot cycles *normal*-labeled → IC-on →
+the V224 conviction-concentration loss, which no crisis-skew gain offsets. **SHIP NEITHER
+STACKED**; V227's crisis-skew stays the incumbent (flags unchanged), the trend-IC overlay
+stays default-OFF (a trend-only finding, as V224 retired it). Standing main **unchanged
+from V227**; both-OFF controls reproduced the V227 mains to the cent (eval stable, no
+reflection trigger). V229 = drawdown-gate the IC overlay the same way V227 fixed the skew
+(realized-drawdown bypass, not categorical label), to make the +$875 trend edge crisis-safe;
+else pivot to a third crisis-safe signal class. See `V228.md`.
+
+### V228-era grid (2026-06-20, stack REFUTED — V227 main unchanged)
+
+6/6 hermetic at sleep=10, N=2; 6/6 cell-identity PASS. Decisive = stack-ON (crisis-skew +
+trend-IC) vs within-grid both-OFF equal-weight, same commit + frozen caches. Both-OFF
+reproduces the V227 mains exactly. No skew-ON-or-IC-ON cell beats its both-OFF control net.
+
+| Gate | both-OFF / equal-weight (MAIN) | stack-ON (skew + trend-IC) | Δ (ON−OFF) | skew_on / ic_on | Determinism |
+|------|-------------------------------:|---------------------------:|-----------:|:---------------:|-------------|
+| trend  | **−$217.71 (23t)**   | +$875.16 (27t)   | +$1,092.87 | 12 / 103 | PASS $0.00 |
+| crisis | **−$3,621.25 (31t)** | −$5,613.82 (38t) | −$1,992.57 | 29 / 121 | PASS $0.00 |
+| recent | **+$4,901.01 (22t)** | +$4,492.22 (24t) | −$408.79   | 21 / 87  | PASS $0.00 |
+
+(crisis high-water stays V227 −$2,991.17; recent stays V221-era +$4,901.01; the trend-IC
++$875 was already banked in V224 and cannot be promoted to main — loses on crisis/recent.)
+
 **V212 (2026-06-05) — no high-water; selector activation breaks regime-gate determinism.** V212 restored + enabled the V156 `strategy_selector` (inert on `main` for the whole V199–V211 arc). Pre-reg **falsifier #3 fired**: with byte-identical frozen inputs (V211↔V212 fingerprints identical, cross-day drift = 0), the selector keeps **recent** deterministic ($0.66 spread) but **regresses it −$583** (real), while **trend** and **crisis** become non-reproducible — 4 identical-input runs span **$18,720** (trend) and **$8,399** (crisis), far beyond their $166/$12 floors. The apparent trend +$5,821 / crisis +$7,312 "gains" are non-determinism artifacts, not high-waters. All three V211 highs **stand**. Selector stays flag-OFF. V213 = isolate/fence the selector-induced non-determinism before re-measuring. See `V212.md`.
 
 **V213 (2026-06-06) — no high-water; sort hypothesis REFUTED, channel relocalized to a sleep/async trigger.** V213 pre-registered that the selector non-determinism was the residual basket_mean cross-sectional-demean order channel (`signal_generation.py:1149`) and shipped a canonical sort. A control matrix **refuted it on both branches**: (1) at the canonical **sleep=10**, ON-trend FAILS with *and* without the sort ($3,724 vs $3,431, same 81↔83 entry flip) — the sort is **not load-bearing**; (2) the apparent sleep=0 collapse ($18,720→$132) was a **cross-sleep confound** (V212 ran sleep=10, the V213 audit sleep=0; at sleep=0/3 the channel is dormant regardless of the sort); (3) the sort is **harmful** — a pre-sort control proved it regressed OFF-trend determinism $89→$1,442 by shifting the baseline onto a separate latent channel. **Fix A reverted** (`23c9b3c`). The real channel is a **sleep/wall-clock/async-timing** dependency (dormant ≤3s, active at 10s, flips actual entries). All V211 highs **stand**; selector still not evaluable. Kept: the two observability deltas (subsystem wiring banner + `check_determinism.sh` with a `--sleep` knob) that *enabled* the refutation. V214 = chase the sleep/async channel. See `V213.md`.
