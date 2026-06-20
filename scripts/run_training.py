@@ -65,10 +65,12 @@ if _need_reexec:
 
 import argparse
 import csv
+import hashlib
 import json
 import logging
 import math
 import struct
+import subprocess
 import time
 from datetime import datetime, timezone
 UTC = timezone.utc
@@ -78,6 +80,61 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from omega.eval.v49_gates import check_v49_gates
+
+
+# ---------------------------------------------------------------------------
+# V228 resiliency #5: run-artifact provenance manifest
+# ---------------------------------------------------------------------------
+
+def _run_provenance(version: str, snapshot: str | None, active_flags) -> dict:
+    """Record the exact substrate a result was produced from, embedded in
+    results.json under "provenance": git SHA (+ dirty flag), frozen-cache md5s
+    (V219 manifest), resolved feature flags, snapshot, and the cell label.
+
+    This closes the V218-class failure: V217 claimed a hermetic baseline that
+    silently depended on an *uncommitted* macro cache, so the number could not
+    be reproduced from a clean checkout. With provenance embedded, every
+    results.json self-certifies "this PnL came from commit X + cache md5s Y at
+    cell Z" — a later reader can detect a dirty tree or drifted cache without
+    re-deriving it by hand.
+
+    All lookups are best-effort and never raise: provenance is metadata, not
+    compute, and must not crash a 200-cycle run. It is NOT compared by
+    check_determinism.sh (which reads only total_pnl_usd/total_closed), so the
+    varying git/timestamp fields do not affect the determinism verdict.
+    """
+    prov: dict = {"cell_label": version}
+    try:
+        sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=str(ROOT),
+            capture_output=True, text=True, timeout=5,
+        )
+        prov["git_sha"] = sha.stdout.strip() or None
+        dirty = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=str(ROOT),
+            capture_output=True, text=True, timeout=5,
+        )
+        prov["git_dirty"] = bool(dirty.stdout.strip())
+    except Exception:
+        prov["git_sha"] = None
+        prov["git_dirty"] = None
+    try:
+        man = ROOT / "data" / ".cache_manifest.json"
+        if man.exists():
+            prov["cache_manifest"] = json.loads(man.read_text()).get("files", {})
+            prov["cache_manifest_md5"] = hashlib.md5(man.read_bytes()).hexdigest()
+        else:
+            prov["cache_manifest"] = None
+    except Exception:
+        prov["cache_manifest"] = None
+    try:
+        prov["features"] = active_flags
+    except Exception:
+        prov["features"] = None
+    prov["snapshot"] = snapshot
+    prov["frozen_cache"] = os.environ.get("OMEGA_FROZEN_CACHE") == "1"
+    prov["r3_ics"] = os.environ.get("OMEGA_R3_ICS") == "1"
+    return prov
 
 
 # ---------------------------------------------------------------------------
@@ -1684,6 +1741,10 @@ def run(
 
     results = {
         "version": version,
+        # V228 resiliency #5: provenance manifest — git SHA + cache md5s +
+        # resolved flags + snapshot + cell label, so this result self-certifies
+        # its substrate (closes the V218 uncommitted-cache hermetic-claim class).
+        "provenance": _run_provenance(version, backtest_snapshot, _active_flags),
         "run": {
             "date": datetime.now(UTC).isoformat(),
             "cycles": n_cycles,

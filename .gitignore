@@ -45,6 +45,8 @@ data/v[0-9]*_audit/
 data/v[0-9]*_pids.txt
 data/v[0-9]*_grid_summary.txt
 data/.v[0-9]*
+# V228 resiliency #3: runtime session-continuity manifest (regenerated per session)
+data/SESSION_STATE.json
 # determinism replicate dirs + grid logs (broader, non v-anchored ephemerals)
 data/*_determinism/
 data/v[0-9]*_grid.log

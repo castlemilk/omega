@@ -43,3 +43,8 @@ if ! timeout 5 git rev-parse HEAD > /dev/null 2>&1; then
 fi
 
 echo "[prepare_session] OK ($(git rev-parse --short HEAD), branch $(git rev-parse --abbrev-ref HEAD))"
+
+# 5. V228 resiliency #3: surface the session-continuity manifest first thing, so a
+#    task entering after a laptop restart sees "V### is at step N, next is X, last
+#    commit is Y, grid alive/dead" without re-deriving it. Read-only; never fails.
+python3 scripts/session_state.py show 2>/dev/null || true
