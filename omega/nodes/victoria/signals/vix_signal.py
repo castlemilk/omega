@@ -45,6 +45,7 @@ Caching: 1-hour TTL (VIX updates every 15 min during US market hours).
 
 import logging
 import math
+import os
 import time
 from typing import Any
 
@@ -97,6 +98,14 @@ class VIXSignal:
               Positive = capitulation reversal signal
               0.0 = neutral or stale data
         """
+        # V227 Track C: frozen-backtest determinism fence — dormant sibling of the
+        # spy_signal channel. yfinance fetches via requests/curl_cffi, bypassing the
+        # V215 urllib HTTP guard, so under a frozen backtest this would hit LIVE
+        # Yahoo and leak wall-clock-dependent VIX data into the composite. Fenced
+        # the same way; live trading (OMEGA_FROZEN_CACHE unset) is unchanged.
+        if os.environ.get("OMEGA_FROZEN_CACHE") == "1":
+            return 0.0
+
         if not _HAS_YFINANCE:
             return 0.0
 

@@ -61,6 +61,12 @@ SNAP="${SNAP_OVERRIDE:-$(snap_for "$GATE")}"
 # sizing (the V215 channel) — fail before burning replicate runs.
 python3 scripts/check_no_wallclock.py || { echo "FATAL: wall-clock tripwire failed (see above)"; exit 3; }
 
+# V227 obs-delta: non-urllib HTTP frozen-fence preflight. yfinance/curl_cffi
+# fetches bypass the V215 urllib guard; any HTTP signal module must carry an
+# OMEGA_FROZEN_CACHE fence (the V226 spy_signal determinism channel that cost a
+# whole determinism FAIL because the urllib leak-log was blind to curl_cffi).
+python3 scripts/check_frozen_http_fence.py || { echo "FATAL: frozen-HTTP-fence tripwire failed (see above)"; exit 3; }
+
 # Fix-B state isolation: snapshot run-written disk state once, restore per run.
 ISO="$OUT/.state_snapshot"; mkdir -p "$ISO"
 for f in data/signal_ic_history.json data/omega_victoria_state.db data/omega_victoria_memory.db data/macro_cache.db; do

@@ -33,6 +33,7 @@ Returns 0.0 if yfinance not installed or SPY fetch fails.
 
 import logging
 import math
+import os
 import time
 from typing import Any
 
@@ -102,6 +103,19 @@ class SPYSignal:
         Returns:
             float in [-0.3, 0.3]. Positive = risk-on. Zero = decoupled.
         """
+        # V227 Track C: frozen-backtest determinism fence. The V215 HTTP guard
+        # patches urllib.request.OpenerDirector.open, but yfinance (1.3.0) fetches
+        # via requests/curl_cffi — it bypasses the urllib guard entirely, so in a
+        # frozen backtest this signal silently hit LIVE Yahoo and returned
+        # wall-clock-dependent data. That flapped spy_signal in/out of the
+        # per-ticker composite between same-seed replicates run minutes apart
+        # (V226 recent-OFF: cycle-83 NEARUSDT spy_signal=-0.1833 present in r1,
+        # absent in r2 → conviction crossed threshold → entry cycle 95↔93 →
+        # $1,621.99 PnL spread). Under OMEGA_FROZEN_CACHE the signal is inert;
+        # live trading (flag unset) is unchanged.
+        if os.environ.get("OMEGA_FROZEN_CACHE") == "1":
+            return 0.0
+
         if not _HAS_YFINANCE:
             return 0.0
 
