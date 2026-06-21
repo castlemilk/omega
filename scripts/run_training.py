@@ -1786,6 +1786,12 @@ def run(
             # mostly off; trend snapshot → mostly on). Integer-only, no det impact.
             "ic_on_cycles": getattr(strat, "_ic_on_cycles", 0),
             "ic_off_cycles": getattr(strat, "_ic_off_cycles", 0),
+            # V229: per-ticker IC drawdown-gate bypasses. With ic_drawdown_gate_enabled
+            # ON, counts conviction calls that bypassed IC to equal-weight because the
+            # per-ticker realized drawdown exceeded ic_drawdown_threshold (independent of
+            # the V223 categorical label). High on the crisis snapshot (the normal-labeled
+            # high-drawdown cycles V223 misses), low on trend/recent. 0 when the gate is OFF.
+            "ic_dd_skips": getattr(strat, "_ic_skip_cycles", 0),
             # V224: which IC table fed the weighted composite — "seed"
             # (hand-seeded pooled/per-regime) or "R3" (empirical OOS-holdout ICs
             # loaded under OMEGA_R3_ICS=1). Confirms the re-estimation path fired.

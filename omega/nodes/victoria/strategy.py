@@ -450,6 +450,12 @@ class StrategyNode(Node):
         self._last_ic_active: bool = False
         self._ic_on_cycles: int = 0
         self._ic_off_cycles: int = 0
+        # V229: per-ticker drawdown-gate bypasses of the IC overlay. Counts
+        # _compute_weighted_conviction calls that bypassed IC to equal-weight
+        # because the per-ticker realized drawdown exceeded ic_drawdown_threshold
+        # (independent of the V223 categorical label). Surfaced in results JSON as
+        # ic_dd_skips; high on the crisis snapshot, low on trend/recent.
+        self._ic_skip_cycles: int = 0
         # V224: per-(signal × regime) IC-vector observability. Records which
         # runtime regimes have already had their applied IC vector logged (one
         # line per distinct regime) so the trace confirms R3/seed ICs are loaded
@@ -1089,6 +1095,42 @@ class StrategyNode(Node):
         if _v223_gate and _regime_label in _ic_off_regimes:
             self._last_ic_active = False
             return float(signals_dict.get("composite", 0.0))
+        # V229: drawdown-gate the IC overlay. V228 localized the IC crisis harm to
+        # the ~121/200 crisis-snapshot cycles that are *normal*-labeled — the V223
+        # categorical bypass above misses them, so IC fires and concentrates
+        # conviction into the crash (−$2,808). Independent of the label, bypass IC to
+        # the equal-weight composite (the IDENTICAL return the V223 branch uses) when
+        # THIS ticker's realized drawdown over the last _DD_LOOKBACK bars exceeds
+        # ic_drawdown_threshold — the same per-ticker discriminator V227 validated for
+        # the crisis-skew (crisis +$630). Pure boolean branch returning a pre-computed
+        # scalar; no new float-accumulation site (the dd-mag is a max+divide upstream
+        # in signal_generation, stashed as ts["_skew_dd_mag"]). Default OFF ⇒ this
+        # block is skipped entirely ⇒ byte-identical to the V228 stack.
+        if bool(getattr(self.features, "ic_drawdown_gate_enabled", False)):
+            _ic_dd_thresh = float(getattr(self.features, "ic_drawdown_threshold", 0.12))
+            _dd_mag = float(signals_dict.get("_skew_dd_mag", 0.0))
+            if _ic_dd_thresh > 0.0 and _dd_mag > _ic_dd_thresh:
+                self._last_ic_active = False
+                self._ic_skip_cycles += 1
+                _ic_dd_log = os.environ.get("OMEGA_IC_DD_LOG")
+                if _ic_dd_log:
+                    import contextlib
+                    import json as _json
+                    with contextlib.suppress(Exception), open(_ic_dd_log, "a") as _f:
+                        _f.write(
+                            _json.dumps(
+                                {
+                                    "ticker": signals_dict.get("ticker"),
+                                    "regime": _regime_label,
+                                    "decision": "skip",
+                                    "reason": "drawdown",
+                                    "dd_mag": round(_dd_mag, 6),
+                                    "dd_threshold": _ic_dd_thresh,
+                                }
+                            )
+                            + "\n"
+                        )
+                return float(signals_dict.get("composite", 0.0))
         self._last_ic_active = _v223_gate and bool(self._signal_ics)
         # V224 observability: log the exact IC applied per signal for this regime
         # column the first time it is seen with IC active. Confirms the empirical

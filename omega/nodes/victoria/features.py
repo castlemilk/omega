@@ -749,6 +749,32 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V229 — drawdown-gate the trend-IC overlay (the V227 fix, applied to IC)
+    # ------------------------------------------------------------------
+
+    ic_drawdown_gate_enabled: bool = False
+    """V229: drawdown-gate the V223 IC overlay (regime_conditional_ic_weighting).
+    V228 localized that the categorical {crisis,high_vol} bypass is per-cycle on the
+    RUNTIME label, so ~121/200 crisis-snapshot cycles are *normal*-labeled → IC fires
+    → conviction concentrates into the crash (−$2,808). When this is ON,
+    _compute_weighted_conviction ADDITIONALLY bypasses IC to the equal-weight raw
+    composite (the same return the V223 branch uses) whenever the per-ticker realized
+    drawdown over the last _DD_LOOKBACK bars exceeds ic_drawdown_threshold — REGARDLESS
+    of the categorical label. This is the same per-ticker discriminator V227 validated
+    for the crisis-skew (crisis +$630), now catching the normal-labeled high-drawdown
+    cycles the V223 label misses. Independent early-return, no new float-sum site.
+    Default OFF ⇒ byte-identical to the V228 stack. Requires the IC overlay to be on
+    (ic_seed_weighting + the seeded/R3 ICs) to have any effect.
+    """
+
+    ic_drawdown_threshold: float = 0.12
+    """V229: realized-drawdown fraction above which the IC overlay is bypassed to
+    equal-weight. Starts at the V227-validated 0.12 (≥12% pullback from the 5-bar
+    peak). Only consulted when ic_drawdown_gate_enabled is True. Strict `>` (a
+    drawdown exactly at the threshold keeps IC, matching the V227 skew convention).
+    """
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 

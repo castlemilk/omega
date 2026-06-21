@@ -1140,6 +1140,16 @@ class SignalGenerationNode(Node):
             ts["price"] = prices[-1] if prices else None
             ts["ticker"] = ticker
 
+            # V227/V229: realized drawdown magnitude (last _DD_LOOKBACK bars), a
+            # pure max+divide (no float-accumulation channel). Stashed UNCONDITIONALLY
+            # here — V227 stashed it only inside the crisis_skew block, but V229's IC
+            # drawdown-gate (strategy._compute_weighted_conviction) reads `_skew_dd_mag`
+            # whether or not the skew feature is on, so it must always be present. The
+            # crisis-skew block below reuses this value (byte-identical; just computed
+            # one position earlier).
+            _dd_mag = _realized_drawdown_mag(prices)
+            ts["_skew_dd_mag"] = _dd_mag
+
             # V225: compute the crisis-skew value here (where the close window is
             # in scope) and STASH it under a non-`_signal` key so the basket
             # selector at :1022 never picks it up. It is APPLIED post-demean below
@@ -1161,11 +1171,9 @@ class SignalGenerationNode(Node):
                 _dd_thresh = float(
                     getattr(self._features, "crisis_skew_drawdown_threshold", 0.0) or 0.0
                 )
-                # Always compute the drawdown magnitude (cheap max over 5 bars) so
-                # the gate-decision log can report the distribution for calibration,
-                # even in a threshold=0 (V226-equivalent) run.
-                _dd_mag = _realized_drawdown_mag(prices)
-                ts["_skew_dd_mag"] = _dd_mag
+                # _dd_mag / ts["_skew_dd_mag"] are computed unconditionally above
+                # (V229 hoist); reuse them here (byte-identical to the V227 in-block
+                # computation). The gate-decision log still reports the distribution.
                 ts["crisis_skew"] = _regime_gated_skew(
                     self._crisis_skew.compute(prices),
                     self._cycle_regime_label,
