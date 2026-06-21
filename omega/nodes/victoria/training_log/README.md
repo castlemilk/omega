@@ -53,6 +53,49 @@ numbers are the new standing main** (flags default ON post-V227).
 Crisis post-fence high-water improves −$3,621.25 → **−$2,991.17** (V227). recent
 +$4,901.01 high stands (gated skew is −$64 < floor on recent). trend flat.
 
+**V229 (2026-06-21) — no high-water; drawdown-gating the trend-IC overlay does NOT make
+IC crisis-safe at ANY X (fork #1 REFUTED) → IC retired for crisis (5th refutation); V230
+pivots to a third signal class.** V229 applied V227's fix (replace the categorical
+{crisis,high_vol} bypass with a per-ticker realized-drawdown discriminator) to the trend-IC
+overlay: bypass IC to equal-weight when `_realized_drawdown_mag > ic_drawdown_threshold`
+regardless of the label, catching the 121/200 normal-labeled crisis cycles V228 blamed.
+Two new flags (`ic_drawdown_gate_enabled` default OFF, `ic_drawdown_threshold=0.12`);
+`_skew_dd_mag` stash hoisted unconditional; pure boolean branch, **no new float-sum**;
+new `ic_dd_skips` counter + `OMEGA_IC_DD_LOG` sink. **6/6 grid hermetic at $0.00, 6/6
+cell-identity PASS** (after fixing the cosmetic OFF-cell gate-flag false-FAIL in
+`assert_cell_identity.py`); both-OFF reproduces the V227 mains to the cent. **Primary
+(X=0.12): crisis Δ −$2,008.59 ≫ −$200 → fork #1 REFUTED** — the gate fired 42×/run on
+crisis with only −$16 effect, so **the crisis IC harm is structural, NOT drawdown-tail-
+localized**. The pre-registered X-sweep confirms **no X recovers crisis** (X=0.08
+**catastrophic −$8,999**, X=0.05 floor −$1,559 — crisis Δ is non-monotonic because
+per-ticker IC↔equal-weight mixing churns basket SELECTION, not a clean fade to the IC-off
+number). **IC is now structurally crisis-incompatible across 5 refutations** (V222/V223/
+V224/V228/V229); the crisis-IC-overlay program is closed. **Bonus, banked trend-only:** the
+drawdown gate makes the trend-IC overlay a *better* trend lever — **trend +$1,428 hermetic
+(N=2, X=0.12)** vs V224 IC-only +$875 and equal-weight main −$218, up to **+$2,786** (N=1,
+X=0.08), trend edge *grows* as X drops. **NOT promotable to main** (crisis −$2,009, recent
+−$212), so it supersedes V224 IC as the strongest parked trend-only overlay. Standing main
+**unchanged from V227**; `ic_drawdown_gate_enabled` default OFF. V230 = pivot to a third
+orthogonal crisis-safe signal class (options-implied skew via paid vendor, additive — NOT an
+IC re-weight). See `V229.md`.
+
+### V229-era grid (2026-06-21, drawdown-gated IC REFUTED for crisis — V227 main unchanged)
+
+6/6 hermetic at $0.00 (X=0.12, N=2, sleep=10) + a 4-cell X-sweep (N=1). Decisive =
+V229-stack-ON (crisis-skew + trend-IC + ic_drawdown_gate) vs within-grid both-OFF
+equal-weight, same commit + frozen caches. Both-OFF reproduces the V227 mains exactly.
+
+| Gate | both-OFF / equal-weight (MAIN) | stack-ON (X=0.12) | Δ (ON−OFF) | ic_dd skips/run | Determinism |
+|------|-------------------------------:|------------------:|-----------:|:---------------:|-------------|
+| trend  | **−$217.71 (23t)**   | +$1,428.16 (26t) | +$1,645.87 | 9  | PASS $0.00 |
+| crisis | **−$3,621.25 (31t)** | −$5,629.84 (37t) | −$2,008.59 | 42 | PASS $0.00 |
+| recent | **+$4,901.01 (22t)** | +$4,688.60 (24t) | −$212.41   | 6  | PASS $0.00 |
+
+X-sweep (N=1, the calibration step): trend Δ +$1,646/+$3,004/+$2,676 and crisis Δ
+−$2,009/**−$8,999**/−$1,559 at X = 0.12/0.08/0.05 — no X recovers crisis; trend strong at
+all X. (crisis high-water stays V227 −$2,991.17; recent stays V221-era +$4,901.01; the
+drawdown-gated-IC trend +$1,428 is a trend-only overlay, un-promotable — loses crisis/recent.)
+
 **V228 (2026-06-20) — no high-water; stacking the drawdown-gated crisis-skew with the
 trend-IC overlay does NOT compose net-positive (fork #2).** V228 turned BOTH shipped-
 behind-flags overlays ON simultaneously — V227's drawdown-gated crisis-skew (default ON)
