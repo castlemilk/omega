@@ -75,9 +75,15 @@ def main() -> None:
     # V226: gate-aware identity. crisis_skew_regime_gate_enabled must match the
     # cell's claimed --expect-gate (a skew-ON cell that claims gate-ON but ran the
     # always-on V225 path — or vice versa — is mislabeled, the V224 bug class).
+    # V229: only meaningful when skew is ON. The regime gate is consulted ONLY inside
+    # the crisis_skew_enabled block (signal_generation), so when skew is OFF the gate
+    # flag is inert (skew_on_cycles=0 regardless). Since V227 flipped its default to
+    # True, an equal-weight control (skew OFF) carries gate=True-but-inert and would
+    # spuriously FAIL this check — the cosmetic OFF-cell FAIL seen in the V228/V229
+    # grids. Skip the gate-identity check when the cell is skew-OFF.
     want_gate = args.expect_gate == "on"
     got_gate = bool(obs.get("crisis_skew_regime_gate_enabled", False))
-    if got_gate != want_gate:
+    if want_skew and got_gate != want_gate:
         _fail(
             f"crisis_skew_regime_gate_enabled={got_gate} but cell claims gate="
             f"{args.expect_gate!r} (label/run mismatch — the V224 control-bug class)"
