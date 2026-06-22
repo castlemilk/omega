@@ -48,8 +48,11 @@ windows_for() {
 log() { echo "$@" | tee -a "$SUM"; }
 
 # Build the ordered cell list: crisis (binding) -> trend -> recent; ON then OFF per window.
+# GATES defaults to crisis-only (the V230 binding falsifier; ~8h). Set GATES="crisis trend
+# recent" to run the full 3-gate distribution (~16h). Crisis is always FIRST.
+GATES="${GATES:-crisis}"
 CELLS=()        # "gate|snap|arm"
-for gate in crisis trend recent; do
+for gate in $GATES; do
   for snap in $(windows_for "$gate"); do
     CELLS+=("$gate|$snap|on")
     CELLS+=("$gate|$snap|off")
