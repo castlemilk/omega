@@ -123,15 +123,20 @@ PY
 done
 
 # Spread + verdict
-python3 - "$FLOOR" "$SUMMARY" "$GATE" "$FEATURES" "${PNLS[@]}" "::" "${TRADES[@]}" <<'PY' | tee -a "$LOG"
+# V231: prepend $SNAP + $WINDOW_LABEL provenance (argv[1],[2]) so the distributional
+# aggregator can key each cell on its snapshot/window without re-deriving paths.
+# Functionally a no-op for legacy single-window callers (WINDOW_LABEL defaults to "default").
+python3 - "$SNAP" "${WINDOW_LABEL:-default}" "$FLOOR" "$SUMMARY" "$GATE" "$FEATURES" "${PNLS[@]}" "::" "${TRADES[@]}" <<'PY' | tee -a "$LOG"
 import json,sys
-floor=float(sys.argv[1]); summary=sys.argv[2]; gate=sys.argv[3]; feats=sys.argv[4]
-rest=sys.argv[5:]; sep=rest.index("::")
+snap=sys.argv[1]; window=sys.argv[2]
+floor=float(sys.argv[3]); summary=sys.argv[4]; gate=sys.argv[5]; feats=sys.argv[6]
+rest=sys.argv[7:]; sep=rest.index("::")
 pnls=[float(x) for x in rest[:sep]]; trades=[int(x) for x in rest[sep+1:]]
 spread=max(pnls)-min(pnls); trange=max(trades)-min(trades)
 verdict="PASS" if spread < floor else "FAIL"
 out={"gate":gate,"features":feats,"n":len(pnls),"pnls":pnls,"trades":trades,
-     "pnl_spread":round(spread,2),"trade_range":trange,"floor":floor,"verdict":verdict}
+     "pnl_spread":round(spread,2),"trade_range":trange,"floor":floor,"verdict":verdict,
+     "snapshot":snap,"window":window}
 json.dump(out,open(summary,"w"),indent=2)
 print(f"DETERMINISM: {verdict} gate={gate} spread=${spread:,.2f} (floor ${floor:,.0f}) "
       f"trade_range={trange} pnls={pnls} trades={trades}")
