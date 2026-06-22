@@ -1,27 +1,33 @@
 {
   "version": "v231",
-  "step": "RUNNING \u2014 distributional eval harness (instrument-only). Pre-reg V231.md + 3 tracks committed. Harness (check_determinism.sh provenance + v231_dist_grid.sh + v231_dist_aggregate.py) committed 3436c50. Snapshots crisis_2024aug + trending_2024q1 (both 13/13) committed 8fec1fb. Smoke PASS ($0.00, provenance OK, aggregator \u0394-parse OK). Crisis-binding grid (6 cells, N=2, sleep=10, ~8h) launched via nohup, PID in data/v231_dist_grid_pid.txt. NO strategy.py change.",
-  "next_action": "Grid running crisis\u00d73 windows \u00d7 {ON=V227 skew gated X=0.12, OFF=equal-weight} \u00d7 N=2. On completion: fill V231.md distributional table from data/v231_dist/distribution.json; apply V230 falsifier \u2014 crisis pnl_off.spread \u2265~$2k \u21d2 instrument inadequate (V232 ships Track B brake ON the distribution); <$2k AND V227 \u0394 mean>0&min>0 reproduce every window \u21d2 falsified (V232 ships brake direct). V232 brief skeleton pre-written (both branches) in V232_BRIEF_SKELETON.md. Trend B2 + recent deferred to V232 (Track 3). RESUME: re-run scripts/v231_dist_grid.sh (skips PASS cells). macro_cache.db MUST stay committed-clean (hash 397b943...) \u2014 freeze_snapshot mutates it; git checkout if drifted.",
+  "step": "COMPLETE \u2014 distributional eval harness (instrument-only). Grid 6/6 PASS $0.00. FALSIFIER BRANCH A FIRED: crisis cross-window spread $25,435 >> $2k => single-window gate INADEQUATE (V231 hypothesis CONFIRMED). V227 +$630 does NOT generalize (min-\u0394 -$424.50 on 2020q1, $0.00 on 2024aug, +$630.08 on 2022h1 only; mean-\u0394 +$68.53 fails mean>0 AND min>0). Standing-main -$2,991 'crisis' number = 2022h1 single window (reproduced to the cent). NO strategy.py change.",
+  "next_action": "V232 = ship Track B #1 (realized-vol term-structure inversion additive brake, signals/rv_term_structure.py, V227 recipe, post-demean fsum-add, V227 drawdown-AND-gate) MEASURED ON THE V231 CRISIS DISTRIBUTION (3 windows). Verdict bar = mean-\u0394>0 AND min-\u0394>0 (the bar V227 failed). PRE-REQ: trace why V227 gate was inert on 2024aug (ON==OFF) before building \u2014 brake reuses same gate. V232.md pre-reg written. Eval: GATES=crisis bash scripts/v231_dist_grid.sh with arms={brake-ON,brake-OFF}. macro_cache.db MUST stay committed-clean (397b943...); freeze_snapshot mutates it.",
   "notes": [
-    "V231 instrument-only: NO strategy.py/flag/signal change. Pure eval upgrade \u2014 cannot move PnL, only the yardstick.",
-    "DATA_DIR=ROOT/data is a hardcoded global (run_training.py:167) \u2192 concurrent in-checkout cells corrupt shared data/*.db. Grid runs SEQUENTIAL (MAXP=1); safe MAXP>1 needs git worktrees (matrix mode). Crisis-ordered-first so the binding distribution lands before any interruption.",
-    "Calibration: ~2.2s/cycle compute \u2192 ~40min/run at sleep=10. sleep=10 MANDATORY (V213: a determinism channel is dormant at sleep=0; V227/V229 baselines used sleep=10).",
-    "V218.E reproduced (Track 3): crisis 2022h1 -$2,862.86/31t vs crisis 2020q1 +$13,051.74/28t \u2014 ~$16k between-window variance under identical code (macro=0 in both, so +$13k magnitude not bankable but sign-flip real). The existence proof for V231.",
-    "Crisis universe non-uniform across windows (2020q1 7/13, 2022h1 11/13, 2024aug 13/13) \u2014 pre-2020/pre-2023 tokens genuinely absent. Documented confound; 2024aug is the cleanest.",
+    "V231 RESULT: crisis distribution N=3 \u2014 OFF +$15,928(2020q1)/-$3,621(2022h1)/-$9,508(2024aug); ON +$15,503/-$2,991/-$9,508. Spread $25,435. \u0394 mean +$68.53 min -$424.50. Harness faithful: 2022h1-ON -$2,991.17 == the standing-main crisis number quoted V228-V230.",
+    "Branch A pre-registered consequence: V232 ships Track B RV-term-structure brake measured ON the distribution (not single-window). Trend B2 + recent deferred (data forks).",
+    "PARKING LOT: skew inert on 2024aug (ON==OFF byte-identical) \u2014 V227 regime/drawdown AND-gate never fired on the 13/13 yen-carry window. Trace before V232 (brake reuses the gate).",
+    "Crisis universe non-uniform (2020q1 7/13 outlier +$15.9k equal-weight; 2022h1 11/13; 2024aug 13/13). Documented confound.",
+    "Harness: check_determinism.sh provenance + v231_dist_grid.sh (GATES env, MAXP=1, resumable) + v231_dist_aggregate.py. DATA_DIR hardcoded global => sequential; worktrees for parallel.",
     "python3 pinned to /opt/homebrew/bin/python3."
   ],
-  "last_commit": "5675f26",
-  "updated_at": "2026-06-22T13:11:00+00:00",
+  "last_commit": "fe577f6",
+  "updated_at": "2026-06-23T00:00:00+00:00",
   "grid": {
     "exists": false,
     "alive": [],
     "dead": []
   },
   "v231_dist": {
-    "phase": "running",
-    "cells_done": 0,
+    "phase": "complete",
+    "cells_done": 6,
     "cells_total": 6,
     "max_parallel": 1,
-    "manifest": "data/v231_dist/grid_state.json"
+    "crisis_spread": 25435.39,
+    "crisis_mean_off": 932.79,
+    "crisis_mean_on": 1001.32,
+    "crisis_mean_delta": 68.53,
+    "crisis_min_delta": -424.5,
+    "falsifier": "Branch A (instrument inadequate)",
+    "distribution": "data/v231_dist/distribution.json"
   }
 }
