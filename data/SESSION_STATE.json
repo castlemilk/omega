@@ -1,0 +1,19 @@
+{
+  "version": "v230",
+  "step": "COMPLETE — synthesis sprint (reflection action). Reflection triggers honored (IC-as-selection refuted 5× + no high-water for several versions). Three parallel tracks ran: A=vendor due diligence (NO spend, free DVOL MVP covers only 2/3 windows), B=free-data signal audit (top pick: realized-vol term-structure inversion additive brake, OHLCV-only, all 3 windows), C=direction (STEP BACK to the eval instrument, not the strategy). V230_DECISION.md + V230_TRACK_{A,B,C}.md + REFLECTION_V229.md written. No strategy.py / flag / grid changes.",
+  "next_action": "V231 = build distributional (≥3-window-per-regime) eval harness + flag-wiring preflight; re-measure standing main + V227 + V229 across it. Harness/eval ONLY, no strategy.py logic change. THEN V232 = ship Track B #1 (realized-vol term-structure inversion additive brake, V227 recipe) measured on the distribution. V233+ = free DVOL options-skew MVP (Track A) if appetite remains.",
+  "notes": [
+    "Structural lesson (V227→V229): drawdown-magnitude gate works as an ADDITIVE BRAKE but FAILS as a SELECTION re-weight (V229 crisis Δ -2008 at every X). IC-as-selection closed by 5 refutations. Every future crisis signal must be additive-brake shaped, not a re-weight.",
+    "Track C decisive caveat: +$630 crisis (V227) is real within-window (~52σ over $12 floor) but between-window crisis variance ~$16k (V218.E: identical code, crisis -$2,863→+$13,052 across the 2 crisis windows). We are Goodharting 3 single windows — hence V231 = fix the eval instrument before the next signal bet.",
+    "Track B data ground-truth: only daily OHLCV is a true time series in all 3 frozen snapshots. funding/OI/basis = static scalars; macro (DXY/VIX) history doesn't span crisis dates. So near-term signals must be OHLCV-derived; basis/funding/macro signals need a separate feed-build version first.",
+    "Track A: DVOL launched ~Mar 2021 → no 2020-Q1 coverage. Free MVP = Deribit public/get_volatility_index_data (one-shot V215 freeze, $0). 25-Δ risk-reversal history NOT free (no historical order books); Tardis Business ~$300 min as one-time freeze-then-cancel only if MVP shows signal. NO spend now.",
+    "python3 pinned to /opt/homebrew/bin/python3 (3.14.5). No grid this version (synthesis only)."
+  ],
+  "last_commit": "e03339c",
+  "updated_at": "2026-06-22T00:00:00+00:00",
+  "grid": {
+    "exists": false,
+    "alive": [],
+    "dead": []
+  }
+}
