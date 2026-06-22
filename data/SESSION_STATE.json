@@ -1,19 +1,27 @@
 {
-  "version": "v230",
-  "step": "COMPLETE — synthesis sprint (reflection action). Reflection triggers honored (IC-as-selection refuted 5× + no high-water for several versions). Three parallel tracks ran: A=vendor due diligence (NO spend, free DVOL MVP covers only 2/3 windows), B=free-data signal audit (top pick: realized-vol term-structure inversion additive brake, OHLCV-only, all 3 windows), C=direction (STEP BACK to the eval instrument, not the strategy). V230_DECISION.md + V230_TRACK_{A,B,C}.md + REFLECTION_V229.md written. No strategy.py / flag / grid changes.",
-  "next_action": "V231 = build distributional (≥3-window-per-regime) eval harness + flag-wiring preflight; re-measure standing main + V227 + V229 across it. Harness/eval ONLY, no strategy.py logic change. THEN V232 = ship Track B #1 (realized-vol term-structure inversion additive brake, V227 recipe) measured on the distribution. V233+ = free DVOL options-skew MVP (Track A) if appetite remains.",
+  "version": "v231",
+  "step": "RUNNING \u2014 distributional eval harness (instrument-only). Pre-reg V231.md + 3 tracks committed. Harness (check_determinism.sh provenance + v231_dist_grid.sh + v231_dist_aggregate.py) committed 3436c50. Snapshots crisis_2024aug + trending_2024q1 (both 13/13) committed 8fec1fb. Smoke PASS ($0.00, provenance OK, aggregator \u0394-parse OK). Crisis-binding grid (6 cells, N=2, sleep=10, ~8h) launched via nohup, PID in data/v231_dist_grid_pid.txt. NO strategy.py change.",
+  "next_action": "Grid running crisis\u00d73 windows \u00d7 {ON=V227 skew gated X=0.12, OFF=equal-weight} \u00d7 N=2. On completion: fill V231.md distributional table from data/v231_dist/distribution.json; apply V230 falsifier \u2014 crisis pnl_off.spread \u2265~$2k \u21d2 instrument inadequate (V232 ships Track B brake ON the distribution); <$2k AND V227 \u0394 mean>0&min>0 reproduce every window \u21d2 falsified (V232 ships brake direct). V232 brief skeleton pre-written (both branches) in V232_BRIEF_SKELETON.md. Trend B2 + recent deferred to V232 (Track 3). RESUME: re-run scripts/v231_dist_grid.sh (skips PASS cells). macro_cache.db MUST stay committed-clean (hash 397b943...) \u2014 freeze_snapshot mutates it; git checkout if drifted.",
   "notes": [
-    "Structural lesson (V227→V229): drawdown-magnitude gate works as an ADDITIVE BRAKE but FAILS as a SELECTION re-weight (V229 crisis Δ -2008 at every X). IC-as-selection closed by 5 refutations. Every future crisis signal must be additive-brake shaped, not a re-weight.",
-    "Track C decisive caveat: +$630 crisis (V227) is real within-window (~52σ over $12 floor) but between-window crisis variance ~$16k (V218.E: identical code, crisis -$2,863→+$13,052 across the 2 crisis windows). We are Goodharting 3 single windows — hence V231 = fix the eval instrument before the next signal bet.",
-    "Track B data ground-truth: only daily OHLCV is a true time series in all 3 frozen snapshots. funding/OI/basis = static scalars; macro (DXY/VIX) history doesn't span crisis dates. So near-term signals must be OHLCV-derived; basis/funding/macro signals need a separate feed-build version first.",
-    "Track A: DVOL launched ~Mar 2021 → no 2020-Q1 coverage. Free MVP = Deribit public/get_volatility_index_data (one-shot V215 freeze, $0). 25-Δ risk-reversal history NOT free (no historical order books); Tardis Business ~$300 min as one-time freeze-then-cancel only if MVP shows signal. NO spend now.",
-    "python3 pinned to /opt/homebrew/bin/python3 (3.14.5). No grid this version (synthesis only)."
+    "V231 instrument-only: NO strategy.py/flag/signal change. Pure eval upgrade \u2014 cannot move PnL, only the yardstick.",
+    "DATA_DIR=ROOT/data is a hardcoded global (run_training.py:167) \u2192 concurrent in-checkout cells corrupt shared data/*.db. Grid runs SEQUENTIAL (MAXP=1); safe MAXP>1 needs git worktrees (matrix mode). Crisis-ordered-first so the binding distribution lands before any interruption.",
+    "Calibration: ~2.2s/cycle compute \u2192 ~40min/run at sleep=10. sleep=10 MANDATORY (V213: a determinism channel is dormant at sleep=0; V227/V229 baselines used sleep=10).",
+    "V218.E reproduced (Track 3): crisis 2022h1 -$2,862.86/31t vs crisis 2020q1 +$13,051.74/28t \u2014 ~$16k between-window variance under identical code (macro=0 in both, so +$13k magnitude not bankable but sign-flip real). The existence proof for V231.",
+    "Crisis universe non-uniform across windows (2020q1 7/13, 2022h1 11/13, 2024aug 13/13) \u2014 pre-2020/pre-2023 tokens genuinely absent. Documented confound; 2024aug is the cleanest.",
+    "python3 pinned to /opt/homebrew/bin/python3."
   ],
-  "last_commit": "e03339c",
-  "updated_at": "2026-06-22T00:00:00+00:00",
+  "last_commit": "5675f26",
+  "updated_at": "2026-06-22T13:11:00+00:00",
   "grid": {
     "exists": false,
     "alive": [],
     "dead": []
+  },
+  "v231_dist": {
+    "phase": "running",
+    "cells_done": 0,
+    "cells_total": 6,
+    "max_parallel": 1,
+    "manifest": "data/v231_dist/grid_state.json"
   }
 }
