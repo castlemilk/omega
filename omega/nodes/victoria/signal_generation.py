@@ -49,6 +49,15 @@ try:
 except ImportError:
     _HAS_CRISIS_SKEW = False
 
+try:
+    from omega.nodes.victoria.signals.rv_term_structure import (
+        RVTermStructureSignal as _RVTermStructureSignal,
+    )
+
+    _HAS_RV_TERM = True
+except ImportError:
+    _HAS_RV_TERM = False
+
 # V225: additive crisis-skew weight + run-scoped fire counter for the cell-identity
 # assertion (mirrors run_training's _http_guard_state module-global pattern). The
 # results-writer reads skew_on_cycles from here. Logging/observability only —
@@ -87,6 +96,21 @@ def _realized_drawdown_mag(closes: list[float] | None) -> float:
 _CRISIS_SKEW_STATE = {
     "enabled": False,
     "skew_on_cycles": 0,
+    "ticker_terms": 0,
+    "regime_gate_enabled": False,
+    "gate_accept_cycles": 0,
+    "gate_skip_cycles": 0,
+    "cycle_idx": 0,
+}
+
+# V232: gated weight for the additive RV-term-structure brake (analog of
+# _SKEW_W_GATED). Same magnitude as the crisis_skew gated path so the brake's
+# post-demean influence is comparable. + run-scoped fire counter for the
+# cell-identity assertion (integer counters only → zero determinism impact).
+_RV_BRAKE_W = 0.2
+_RV_BRAKE_STATE = {
+    "enabled": False,
+    "brake_on_cycles": 0,
     "ticker_terms": 0,
     "regime_gate_enabled": False,
     "gate_accept_cycles": 0,
@@ -400,6 +424,9 @@ class SignalGenerationNode(Node):
         if _HAS_CRISIS_SKEW:
             with contextlib.suppress(Exception):
                 self._crisis_skew = _CrisisSkewSignal()
+        # V232: RV-term-structure brake is instantiated AFTER self._features is
+        # set (its window/threshold params come from features) — see below.
+        self._rv_term_brake: Any | None = None
         # V226: prior-cycle consolidated regime label, injected each cycle by
         # victoria_node (from self._last_signals["_regime"], the same VRP-mapped
         # label strategy._cycle_regime_label reads). Used by the regime-gated
@@ -451,6 +478,21 @@ class SignalGenerationNode(Node):
 
         # V103: load feature flags + optional new-architecture components
         self._features: Any = _VictoriaFeatures.from_env() if _HAS_FEATURES else None
+
+        # V232: instantiate the RV-term-structure brake now that _features exists.
+        # Window/threshold params come from features so a grid can sweep them;
+        # defaults match the signal module's constants. Construction is cheap and
+        # unconditional (the per-cycle flag gates whether it's APPLIED, mirroring
+        # crisis_skew) so a later from_env() flag flip still finds it wired.
+        if _HAS_RV_TERM:
+            with contextlib.suppress(Exception):
+                self._rv_term_brake = _RVTermStructureSignal(
+                    short_window=int(getattr(self._features, "rv_short_window", 3) or 3),
+                    long_window=int(getattr(self._features, "rv_long_window", 14) or 14),
+                    inversion_threshold=float(
+                        getattr(self._features, "rv_inversion_threshold", 1.5) or 1.5
+                    ),
+                )
 
         # V103 ws_microstructure: background WS feeds for microstructure signals
         self._ws_feeds: Any = None
@@ -1182,6 +1224,28 @@ class SignalGenerationNode(Node):
                     _dd_thresh,
                 )
 
+            # V232: compute the RV-term-structure brake here (close window in
+            # scope) and STASH under a non-`_signal` key so the basket selector
+            # never picks it up. APPLIED post-demean below, AFTER crisis_skew but
+            # BEFORE the V223/V229 IC gates (those read `composite` downstream in
+            # strategy._compute_weighted_conviction). Reuses the V227 drawdown
+            # AND-gate (_regime_gated_skew) and the unconditionally-hoisted _dd_mag.
+            if (
+                self._rv_term_brake is not None
+                and self._features
+                and getattr(self._features, "rv_term_brake_enabled", False)
+            ):
+                _rv_dd_thresh = float(
+                    getattr(self._features, "rv_term_brake_drawdown_threshold", 0.0) or 0.0
+                )
+                ts["rv_term_brake"] = _regime_gated_skew(
+                    self._rv_term_brake.compute(prices),
+                    self._cycle_regime_label,
+                    getattr(self._features, "rv_term_brake_regime_gate_enabled", False),
+                    _dd_mag,
+                    _rv_dd_thresh,
+                )
+
             # 1-day return
             if len(prices) >= 2 and prices[-2] != 0:
                 ts["return_1d"] = (prices[-1] - prices[-2]) / prices[-2]
@@ -1407,6 +1471,40 @@ class SignalGenerationNode(Node):
                     _skew_fired_this_cycle = True
             if _skew_fired_this_cycle:
                 _CRISIS_SKEW_STATE["skew_on_cycles"] += 1
+
+        # V232: apply the additive RV-term-structure inversion brake AFTER the V227
+        # crisis_skew term (above) but BEFORE the V223/V229 IC gates (those read
+        # `composite` downstream in strategy._compute_weighted_conviction). Same
+        # post-demean rationale as crisis_skew: a broad common-mode risk-off tilt
+        # would be gutted by the cross-sectional demean if applied earlier. Each
+        # ticker's term is independent (no cross-ticker accumulation); the 2-element
+        # math.fsum add is exact-rounded → permutation-invariant (V221 discipline).
+        # One-sided ([-1,0]) ⇒ ≈0 in benign tape. Counters observability-only.
+        if self._rv_term_brake is not None and getattr(
+            self._features, "rv_term_brake_enabled", False
+        ):
+            _RV_BRAKE_STATE["enabled"] = True
+            _RV_BRAKE_STATE["cycle_idx"] += 1
+            _rv_gate_on = getattr(self._features, "rv_term_brake_regime_gate_enabled", False)
+            _RV_BRAKE_STATE["regime_gate_enabled"] = bool(_rv_gate_on)
+            _rv_regime_lbl = (self._cycle_regime_label or "").lower()
+            _rv_gate_skip = bool(_rv_gate_on) and _rv_regime_lbl not in ("crisis", "high_vol")
+            if _rv_gate_skip:
+                _RV_BRAKE_STATE["gate_skip_cycles"] += 1
+            else:
+                _RV_BRAKE_STATE["gate_accept_cycles"] += 1
+            _rv_brake_fired_this_cycle = False
+            for _t, _s in signals.items():
+                if not isinstance(_s, dict) or _t.startswith("_"):
+                    continue
+                _rv_val = _s.get("rv_term_brake", 0.0)
+                if _rv_val != 0.0 and _s.get("composite") is not None:
+                    _adj = math.fsum([_s["composite"], _RV_BRAKE_W * _rv_val])
+                    _s["composite"] = max(-1.0, min(1.0, _adj))
+                    _RV_BRAKE_STATE["ticker_terms"] += 1
+                    _rv_brake_fired_this_cycle = True
+            if _rv_brake_fired_this_cycle:
+                _RV_BRAKE_STATE["brake_on_cycles"] += 1
 
         # Log composite spread for monitoring
         _composites = [

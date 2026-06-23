@@ -825,6 +825,8 @@ def run(
         ("per_regime_ic_weighting", "per_regime_ic_weighting", None),
         # V225: additive crisis-skew signal. Module must import + flag declared.
         ("crisis_skew", "crisis_skew_enabled", "omega.nodes.victoria.signals.crisis_skew"),
+        # V232: additive RV-term-structure inversion brake. Module + flag declared.
+        ("rv_term_brake", "rv_term_brake_enabled", "omega.nodes.victoria.signals.rv_term_structure"),
     ]
     _declared_fields = set(_asdict(_active_features).keys())
     log.info("[startup] subsystem wiring (flag → wired?):")
@@ -856,6 +858,20 @@ def run(
         "ON" if _skew_on else "off",
         1 if _skew_gated else 0,
         "0.2" if _skew_gated else "0.5",
+        _frozen,
+    )
+    # V232: explicit RV-term-structure brake status line (mirrors the crisis_skew
+    # banner). One-grep confirmation the brake is live, gated, and OHLCV-fed.
+    _rv_on = bool(getattr(_active_features, "rv_term_brake_enabled", False))
+    _rv_gated = bool(getattr(_active_features, "rv_term_brake_regime_gate_enabled", False))
+    log.info(
+        "[startup]   rv_term_brake: %s (regime_gated=%d, W=0.2, X=%s, short=%s/long=%s), "
+        "frozen=%d (additive post-demean, source=OHLCV)",
+        "ON" if _rv_on else "off",
+        1 if _rv_gated else 0,
+        getattr(_active_features, "rv_inversion_threshold", 1.5),
+        getattr(_active_features, "rv_short_window", 3),
+        getattr(_active_features, "rv_long_window", 14),
         _frozen,
     )
     log.info("=" * 70)
@@ -1739,6 +1755,13 @@ def run(
     except Exception:
         _crisis_skew_state_ref = {}
 
+    # V232: run-scoped RV-term-structure brake counter (same module-global pattern
+    # as the crisis-skew state). Read by assert_cell_identity (--expect-brake).
+    try:
+        from omega.nodes.victoria.signal_generation import _RV_BRAKE_STATE as _rv_brake_state_ref
+    except Exception:
+        _rv_brake_state_ref = {}
+
     results = {
         "version": version,
         # V228 resiliency #5: provenance manifest — git SHA + cache md5s +
@@ -1815,6 +1838,23 @@ def run(
             ),
             "skew_gate_accept_cycles": _crisis_skew_state_ref.get("gate_accept_cycles", 0),
             "skew_gate_skip_cycles": _crisis_skew_state_ref.get("gate_skip_cycles", 0),
+            # V232: additive RV-term-structure inversion brake. rv_brake_enabled
+            # reflects the parsed flag; rv_brake_on_cycles counts node-cycles where
+            # >=1 ticker got a non-zero brake term applied (proves it FIRED, not
+            # flag-on-but-inert). Like the gated skew, a brake-ON cell may
+            # legitimately fire 0 cycles when the V227 drawdown-AND-gate suppresses
+            # it (the documented 2024aug behaviour) — assert_cell_identity does NOT
+            # require >0 on brake-ON. Read by assert_cell_identity (--expect-brake).
+            "rv_brake_enabled": bool(
+                getattr(getattr(strat, "features", None), "rv_term_brake_enabled", False)
+            ),
+            "rv_brake_regime_gate_enabled": bool(
+                getattr(getattr(strat, "features", None), "rv_term_brake_regime_gate_enabled", False)
+            ),
+            "rv_brake_on_cycles": _rv_brake_state_ref.get("brake_on_cycles", 0),
+            "rv_brake_ticker_terms": _rv_brake_state_ref.get("ticker_terms", 0),
+            "rv_brake_gate_accept_cycles": _rv_brake_state_ref.get("gate_accept_cycles", 0),
+            "rv_brake_gate_skip_cycles": _rv_brake_state_ref.get("gate_skip_cycles", 0),
         },
         "filters": sit_out_clean,
         "trades": {

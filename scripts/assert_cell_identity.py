@@ -50,6 +50,13 @@ def main() -> None:
                          "(the gate suppresses the term outside crisis/high_vol), so the "
                          "skew_on_cycles>0 inertness check is relaxed to 'gate was "
                          "evaluated' (accept+skip cycles > 0).")
+    ap.add_argument("--expect-brake", choices=("on", "off"), default="off",
+                    help="V232: what the cell label CLAIMS for the rv_term_structure "
+                         "brake. Like the gated skew, a brake-ON cell may legitimately "
+                         "fire 0 cycles when the V227 drawdown-AND-gate suppresses it "
+                         "(the documented 2024aug inertness the brake inherits) — so the "
+                         "inertness guard is RELAXED to 'flag set as claimed' + "
+                         "'fired count bounded by gate-accepted cycles', NOT 'fired > 0'.")
     args = ap.parse_args()
 
     try:
@@ -120,6 +127,32 @@ def main() -> None:
             f"in a cell labeled skew-OFF"
         )
 
+    # V232: brake identity. rv_brake_enabled must match --expect-brake. Because the
+    # brake reuses the V227 drawdown-AND-gate (inert on 2024aug, by design), a
+    # brake-ON cell may legitimately fire 0 cycles — so we do NOT require
+    # rv_brake_on_cycles>0. We require (a) the flag matches the claim and (b) a fired
+    # cycle is a gate-accepted cycle. A brake-OFF cell that fired is the V224 bug.
+    want_brake = args.expect_brake == "on"
+    got_brake = bool(obs.get("rv_brake_enabled", False))
+    if got_brake != want_brake:
+        _fail(
+            f"rv_brake_enabled={got_brake} but cell claims brake={args.expect_brake!r} "
+            f"(label/run mismatch — the V224 control-bug class)"
+        )
+    brake_cycles = int(obs.get("rv_brake_on_cycles", 0))
+    rv_gate_accept = int(obs.get("rv_brake_gate_accept_cycles", 0))
+    if want_brake and brake_cycles > rv_gate_accept:
+        _fail(
+            f"rv_brake_on_cycles={brake_cycles} > rv_brake_gate_accept_cycles="
+            f"{rv_gate_accept} — a braked cycle must be a gate-accepted cycle "
+            f"(brake/gate accounting broken)"
+        )
+    if not want_brake and brake_cycles != 0:
+        _fail(
+            f"brake claims OFF but rv_brake_on_cycles={brake_cycles} — the brake fired "
+            f"in a cell labeled brake-OFF"
+        )
+
     ic_on = int(obs.get("ic_on_cycles", 0))
     want_ic = args.expect_ic == "on"
     if not want_ic and ic_on != 0:
@@ -134,8 +167,9 @@ def main() -> None:
     print(
         f"CELL-IDENTITY: PASS — skew={args.expect_skew} (enabled={got_skew}, "
         f"on_cycles={skew_cycles}); gate={args.expect_gate} (enabled={got_gate}, "
-        f"accept={gate_accept}, skip={gate_skip}); ic={args.expect_ic} "
-        f"(on_cycles={ic_on}, source={ic_source})"
+        f"accept={gate_accept}, skip={gate_skip}); brake={args.expect_brake} "
+        f"(enabled={got_brake}, on_cycles={brake_cycles}, accept={rv_gate_accept}); "
+        f"ic={args.expect_ic} (on_cycles={ic_on}, source={ic_source})"
     )
     sys.exit(0)
 

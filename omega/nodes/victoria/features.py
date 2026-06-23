@@ -775,6 +775,52 @@ class VictoriaFeatures:
     """
 
     # ------------------------------------------------------------------
+    # V232 — realized-vol term-structure inversion additive brake
+    # ------------------------------------------------------------------
+
+    rv_term_brake_enabled: bool = False
+    """V232: inject an additive, one-sided risk-off brake from realized-vol
+    term-structure inversion — short-window RV (rv_short_window) divided by
+    long-window RV (rv_long_window); on inversion (ratio > rv_inversion_threshold)
+    a proportional term ∈ [-1,0] (weight _RV_BRAKE_W=0.2) is ADDED to the per-ticker
+    composite POST-demean, AFTER the V227 crisis_skew term but BEFORE the V223/V229
+    IC gates (omega/nodes/victoria/signals/rv_term_structure.py). Orthogonal to
+    crisis_skew (vol-of-vol on two timescales, leading; not a drawdown level,
+    lagging). Default OFF ⇒ the OFF arm reproduces standing-main (V227-included)
+    byte-for-byte. V232 measures it on the V231 crisis DISTRIBUTION (3 windows);
+    ships iff mean-Δ>0 AND min-Δ>0 — the bar V227 failed.
+    """
+
+    rv_term_brake_regime_gate_enabled: bool = False
+    """V232: reuse the proven V226/V227 regime+drawdown AND-gate for the RV brake
+    (signal_generation._regime_gated_skew). When ON the brake fires only when the
+    prior-cycle consolidated regime label ∈ {crisis, high_vol} AND the per-ticker
+    realized drawdown over the last _DD_LOOKBACK bars exceeds
+    rv_term_brake_drawdown_threshold. The gate is what suppresses R-inversion
+    firing in trend rallies (where the bare ratio is actually loudest — Track A).
+    A vol-OR / vol-only variant (fire on inversion alone) is a one-line change to
+    the gate condition — deferred to V233 if the brake is inert on 2024aug (the
+    documented V227 gate behaviour the brake inherits). Requires rv_term_brake_enabled.
+    """
+
+    rv_short_window: int = 3
+    """V232: short realized-vol window (daily bars) — the near-term leg of the ratio."""
+
+    rv_long_window: int = 14
+    """V232: long realized-vol window (daily bars) — the trailing-base leg."""
+
+    rv_inversion_threshold: float = 1.5
+    """V232: ratio (rv_short/rv_long) at which the brake STARTS to fire. X=1.5 ⇒
+    short-window RV 50% above the 14-day base. The proportional brake ramps from 0
+    at X to saturation (−1) at 2X. Calibrated on the V231 crisis snapshots (~34% of
+    crisis ticker-cycles fire at 1.5); the regime gate narrows actual firing."""
+
+    rv_term_brake_drawdown_threshold: float = 0.12
+    """V232: realized-drawdown fraction the brake gate additionally requires when
+    rv_term_brake_regime_gate_enabled is ON (mirrors crisis_skew_drawdown_threshold
+    = 0.12). 0.0 ⇒ regime-label-only gate (byte-reachable)."""
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 
