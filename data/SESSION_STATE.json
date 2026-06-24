@@ -1,34 +1,46 @@
 {
-  "version": "v232",
-  "step": "COMPLETE — RV-term-structure inversion brake REFUTED on the V231 crisis distribution. Grid 6/6 cells PASS $0.00 determinism. Falsifier (mean-Δ>0 AND min-Δ>0) FAILED both clauses: crisis mean-Δ -$345.82, min-Δ -$1,037.46. Per-window: 2020q1 Δ $0.00 (inert), 2022h1 Δ -$1,037.46 (fired & HURT, 33t both), 2024aug Δ $0.00 (GATE INERT). rv_term_brake_enabled stays default OFF. No high-water break; crisis high-water remains V227-skew standing main (mean +$1,001/spread $25k, N=3).",
-  "next_action": "V233 = pivot to the APPLICATION SITE, not a 4th signal (V233.md pre-reg written). Structural finding: 2024aug (-$9.5k, worst window) is immune to ANY post-demean weight-0.2 additive crisis term — BOTH V227 skew and V232 brake = $0.00 there (gate fires, demean+0.2 nudge never crosses a trade boundary). V233 tests pre-demean application + gated-weight escalation {0.2,0.4,0.6} using the EXISTING V227 skew as the probe (isolate the site variable). Falsifier: site fix moves 2024aug Δ off $0.00 loss-reducing without regressing 2020q1/2022h1. If 2024aug stays $0.00 under both → wall is downstream (sizing/exit) → run REFLECTION_V233.md. Only carry the xsec-corr-spike signal (Track B #2) through a PROVEN site.",
+  "version": "v233",
+  "step": "GRID PAUSED @ 5/12 \u2014 ENOSPC environment fault (host disk 100%, 879Gi/926Gi NON-omega; same fault as V232 incident). Launcher died 2026-06-24T18:09Z mid-cell on a run_training temp flush. NO orphan procs. ALL 5 completed cells PASS $0.00 determinism (incl. the HIGH-risk pre_demean_common_mode path \u2014 branch-5 determinism-FAIL RULED OUT so far). 7 cells remain. RESUMABLE: free host disk to >=2-3GB, then `N=2 GATES=crisis nohup bash scripts/v233_dist_grid.sh > /tmp/v233_grid.log 2>&1 &` (PASS cells auto-skip). Code + harness committed (2 commits).",
+  "next_action": "FINALIZER: when v233_dist phase==complete, read data/v233_dist/distribution.json + V233_dist_results.md. Apply 5-branch falsifier on the BINDING window snap_crisis_2024aug \u0394 (=pnl(config) \u2212 baseline \u2212$9,507.88): (1) 2024aug \u0394>0 AND 2020q1/2022h1 not regressed \u2192 SHIP winning site, V234=xsec-corr through it; (2) helps all \u2192 ship; (3) helps 2024aug, hurts others \u2192 window-conditional gate, V234 finds gate; (4) 2024aug stays $0.00 at all weights \u22640.6 \u2192 wall downstream \u2192 write REFLECTION_V233.md + V234=sizing/exit overlay; (5) determinism FAIL \u2192 per_field_diff bisect + fsum. Then: fill V233.md gate table, update README high-water if broken, write V234 brief, commit+push. If a crisis WINNER emerges, optionally run conditional trend/recent: N=1 CONFIGS=<winner> GATES='trend recent' bash scripts/v233_dist_grid.sh (~2h) for the leak spot-check.",
   "notes": [
-    "V232 RESULT (crisis N=3): OFF(skew) +$15,503.01/-$2,991.17/-$9,507.88 mean +$1,001.32; ON(skew+brake) +$15,503.01/-$4,028.63/-$9,507.88 mean +$655.50. Δ mean -$345.82, min -$1,037.46, max $0.00. delta_all_windows_positive=false. data/v232_dist/distribution.json + V232_dist_results.md.",
-    "OFF arm reproduces V231's V227-skew numbers to the cent (control faithful). 2022h1 OFF -$2,991.17 == the long-quoted standing-main crisis number.",
-    "REFUTED is STRONGER than V227: V227 skew helped 2022h1 (+$630); the brake HURTS 2022h1 (-$1,037) at unchanged 33 trades. RV-inversion is a generic large-move detector (fires 60% in trend vs 34% crisis — Track A); even in-gate it mis-times downside.",
-    "GATE-INERT structural finding (the important one): 2024aug immune to post-demean w=0.2 additive terms. Track A traced it pre-build (gate FIRES, drawdown 0.292=2.4x threshold; the $0.00 is downstream decision-inertness), grid confirmed. => V233 site fix, not signal #4. Reflection-trigger watch: crisis gate resisted V227/V231/V232 all at the same additive site.",
-    "OPS INCIDENT: host disk hit 100% (875Gi/926Gi non-omega) mid-grid → ENOSPC crash on 2024aug_on at cycle 70 (run_training trade_details flush). Environment fault, NOT code. Also saw rogue duplicate grid invocation (source unconfirmed — concurrent session?). Recovery: killed all grid/run_training, cleared partial cell, restored baseline state, resumed single orchestrator (4 PASS cells skipped). Disk later freed to 14.5GB.",
-    "Harness: v232_dist_grid.sh + v232_dist_aggregate.py (--prefix) + assert_cell_identity --expect-brake + check_determinism EXPECT_BRAKE. Resumable via grid_state.json. macro_cache.db committed-clean 397b943; freeze_snapshot mutates it.",
-    "python3 pinned /opt/homebrew/bin/python3. DATA_DIR hardcoded global => MAXP=1 sequential; NEVER run two grids in the same checkout (the duplicate-invocation hazard the skill warns about)."
+    "V233 SITE variants (signal_generation.py _compute_advanced_signals): pre-demean injection BEFORE _basket_mean (:1378), common-mode add-back AFTER (math.fsum + degeneracy guard), original post-demean site (:1463) guarded `and not _v233_predemean_active`. Flags in features.py: crisis_term_predemean_enabled (default False), crisis_term_predemean_mode {post_demean,pre_demean,pre_demean_common_mode}, crisis_term_gated_weight (default 0.2 = _SKEW_W_GATED byte-reachable).",
+    "Baseline (post_demean_w0.2 = V227 skew standing-main) REUSED from data/v232_dist/distribution.json pnl_off: 2020q1 +15,503.01 / 2022h1 -2,991.17 / 2024aug -9,507.88. NOT re-run. v233_dist_aggregate.py --baseline subtracts it per window.",
+    "Harness: v233_dist_grid.sh (single-arm CONFIG cells, EXPECT_PREDEMEAN threaded) + v233_dist_aggregate.py (--baseline \u0394, site_fix_wins flag on binding 2024aug) + v233_smoke.sh + assert_cell_identity --expect-predemean. Resumable via data/v233_dist/grid_state.json (cell PASS skipped).",
+    "Determinism risk (Track C): post_demean zero / pre_demean MEDIUM / pre_demean_common_mode HIGH (new cross-ticker term-mean reduction, presence-sensitive denominator). All math.fsum-fenced; if a cell FAILs $0.00 bisect per_field_diff.py / trade_field_diff.py + signal_contribs.jsonl presence-flap, suspect N_gated denominator.",
+    "python3 pinned /opt/homebrew/bin/python3. DATA_DIR hardcoded global => MAXP=1 sequential; NEVER run two grids in the same checkout. macro_cache.db committed-clean; smoke runs mutated signal_ic_history.json + training_version.txt \u2192 restored via git checkout before grid launch.",
+    "V232 RESULT (parent, REFUTED): crisis mean-\u0394 -$345.82, min -$1,037.46. 2024aug \u0394 $0.00 under BOTH V227 skew and V232 brake \u2014 the structural finding that motivated V233's site pivot."
   ],
-  "last_commit": "4e8bf6032a5e3118284f335f0afe16031b706c2e",
-  "updated_at": "2026-06-24T01:30:00+00:00",
+  "last_commit": "HEAD (2 V233 commits: feat code + docs harness)",
+  "updated_at": "2026-06-24T11:01:00+00:00",
   "grid": {
-    "exists": false,
-    "alive": [],
-    "dead": []
+    "exists": true,
+    "pids_file": "data/v233_pids.txt"
   },
-  "v232_dist": {
-    "phase": "complete",
-    "cells_done": 6,
-    "cells_total": 6,
+  "v233_dist": {
+    "phase": "paused_enospc",
+    "cells_done": 5,
+    "cells_total": 12,
+    "cells_remaining": [
+      "2022h1: pre_demean_w0.4, pre_demean_w0.6, pre_demean_common_mode_w0.2",
+      "2024aug (BINDING): pre_demean_w0.2, pre_demean_w0.4, pre_demean_w0.6, pre_demean_common_mode_w0.2"
+    ],
+    "n_replicates": 2,
     "max_parallel": 1,
-    "crisis_mean_off": 1001.32,
-    "crisis_mean_on": 655.5,
-    "crisis_mean_delta": -345.82,
-    "crisis_min_delta": -1037.46,
-    "crisis_spread": 25010.89,
-    "falsifier": "REFUTED (mean-Δ<=0 AND min-Δ<=0)",
-    "distribution": "data/v232_dist/distribution.json"
+    "manifest": "data/v233_dist/grid_state.json",
+    "baseline": "data/v232_dist/distribution.json",
+    "resume_cmd": "N=2 GATES=crisis nohup bash scripts/v233_dist_grid.sh > /tmp/v233_grid.log 2>&1 &",
+    "partial_deltas_vs_baseline": {
+      "snap_crisis_2020q1": {
+        "pre_demean_w0.2": "+395.52 (pnl 15898.53, 26t)",
+        "pre_demean_w0.4": "+395.52 (pnl 15898.53, 26t)",
+        "pre_demean_w0.6": "+402.78 (pnl 15905.79, 26t)",
+        "pre_demean_common_mode_w0.2": "-182.34 (pnl 15320.67, 28t)"
+      },
+      "snap_crisis_2022h1": {
+        "pre_demean_w0.2": "-4461.38 (pnl -7452.55, 31t) — pre-demean HURTS 2022h1 badly"
+      },
+      "snap_crisis_2024aug_BINDING": "NOT YET MEASURED — the decisive read"
+    },
+    "partial_read": "Leaning branch-3 (window-conditional): pre_demean helps 2020q1 modestly (+395) but HURTS 2022h1 hard (-4461 at w0.2). Weight escalation 0.2->0.6 barely moves 2020q1 (the gate fires few cycles there). BINDING 2024aug undecided — if it also stays ~$0.00 -> branch-4 (downstream wall) + REFLECTION_V233. If 2024aug moves loss-reducing but 2022h1 stays hurt -> branch-3 confirmed (needs a gate). DO NOT finalize falsifier until 2024aug cells land."
   }
 }
