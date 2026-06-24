@@ -1,28 +1,34 @@
 {
   "version": "v232",
-  "step": "IMPLEMENTED + smoke PASS \u2014 RV-term-structure inversion brake (signals/rv_term_structure.py) wired as additive post-demean composite member behind rv_term_brake_enabled (default OFF), reusing the V227 drawdown-AND-gate. Unit tests 15/15, tripwires PASS, assert_cell_identity --expect-brake PASS. Grid LAUNCHING (crisis-only, 12 cells, N=2, ~5-6h).",
-  "next_action": "When v232_dist grid completes: read data/v232_dist/distribution.json -> gates.crisis. Fill V232.md per-window table. Apply falsifier (ship iff delta.mean>0 AND delta_all_windows_positive). Evaluate GATE INERT FIRST (2024aug per-window delta == $0.00?). Write V233 brief from V233_BRIEF_SKELETON.md branch that fired. Update README high-water + SESSION_STATE. Commit + push.",
+  "step": "COMPLETE — RV-term-structure inversion brake REFUTED on the V231 crisis distribution. Grid 6/6 cells PASS $0.00 determinism. Falsifier (mean-Δ>0 AND min-Δ>0) FAILED both clauses: crisis mean-Δ -$345.82, min-Δ -$1,037.46. Per-window: 2020q1 Δ $0.00 (inert), 2022h1 Δ -$1,037.46 (fired & HURT, 33t both), 2024aug Δ $0.00 (GATE INERT). rv_term_brake_enabled stays default OFF. No high-water break; crisis high-water remains V227-skew standing main (mean +$1,001/spread $25k, N=3).",
+  "next_action": "V233 = pivot to the APPLICATION SITE, not a 4th signal (V233.md pre-reg written). Structural finding: 2024aug (-$9.5k, worst window) is immune to ANY post-demean weight-0.2 additive crisis term — BOTH V227 skew and V232 brake = $0.00 there (gate fires, demean+0.2 nudge never crosses a trade boundary). V233 tests pre-demean application + gated-weight escalation {0.2,0.4,0.6} using the EXISTING V227 skew as the probe (isolate the site variable). Falsifier: site fix moves 2024aug Δ off $0.00 loss-reducing without regressing 2020q1/2022h1. If 2024aug stays $0.00 under both → wall is downstream (sizing/exit) → run REFLECTION_V233.md. Only carry the xsec-corr-spike signal (Track B #2) through a PROVEN site.",
   "notes": [
-    "PRE-BUILD TRACE (Track A) overturned the pre-reg premise: V227 gate was NOT inert-from-non-firing on 2024aug \u2014 it fired (accept=45/skew on=10, max per-ticker drawdown 0.292 = 2.4x the 0.12 threshold, crossed on 39% of cycles). The $0.00 ON==OFF on 2024aug is DOWNSTREAM decision-inertness (the post-demean 0.2-weight nudge never flipped a trade). A new signal at the same site+weight+gate inherits the same null on the binding window.",
-    "GATE DECISION: KEEP V227 drawdown-AND-gate. R=RV3/RV14 fires MORE in trend (60%) than crisis (34%); the regime gate suppresses that trend-noise. Vol-only would not fix 2024aug decision-inertness anyway (Track A). If 2024aug \u0394==$0.00 in the grid => GATE INERT branch => V233 vol-OR + application-site (pre-demean/weight) fix.",
-    "SMOKE (snap_crisis_2024aug, frozen): banner ACTIVE; gated 60-cycle rv_brake_on_cycles=1 (accept=19/skip=41) \u2014 fires but throttled by the gate on the hardest window; ungated 30-cycle rv_brake_on_cycles=8/ticker_terms=20 \u2014 underlying signal alive. Strong prior: V232 lands GATE-INERT or PARTIAL on 2024aug; deeper-drawdown 2020q1/2022h1 should fire more.",
-    "ARMS: ON = skew(gate,X=0.12)+rv_term_brake_enabled:true; OFF = skew(gate,X=0.12)+brake:false. BOTH carry V227 skew (OFF is NOT equal-weight \u2014 differs from V231 OFF). Brake \u0394 measured on top of skew.",
-    "Harness: scripts/v232_dist_grid.sh (clone of v231; OUT=data/v232_dist, prefix v232, EXPECT_BRAKE) + scripts/v232_dist_aggregate.py (--prefix). assert_cell_identity.py +--expect-brake (relaxed: brake-ON may fire 0 cycles like the gated skew; require flag-match + on_cycles<=gate_accept). check_determinism.sh forwards EXPECT_BRAKE.",
-    "macro_cache.db committed-clean (397b943808e9ca5772dbfcc5a7fb4282); signal_ic_history.json restored to HEAD. freeze_snapshot mutates macro_cache.db \u2014 keep clean.",
-    "python3 pinned to /opt/homebrew/bin/python3. DATA_DIR hardcoded global => sequential (MAXP=1)."
+    "V232 RESULT (crisis N=3): OFF(skew) +$15,503.01/-$2,991.17/-$9,507.88 mean +$1,001.32; ON(skew+brake) +$15,503.01/-$4,028.63/-$9,507.88 mean +$655.50. Δ mean -$345.82, min -$1,037.46, max $0.00. delta_all_windows_positive=false. data/v232_dist/distribution.json + V232_dist_results.md.",
+    "OFF arm reproduces V231's V227-skew numbers to the cent (control faithful). 2022h1 OFF -$2,991.17 == the long-quoted standing-main crisis number.",
+    "REFUTED is STRONGER than V227: V227 skew helped 2022h1 (+$630); the brake HURTS 2022h1 (-$1,037) at unchanged 33 trades. RV-inversion is a generic large-move detector (fires 60% in trend vs 34% crisis — Track A); even in-gate it mis-times downside.",
+    "GATE-INERT structural finding (the important one): 2024aug immune to post-demean w=0.2 additive terms. Track A traced it pre-build (gate FIRES, drawdown 0.292=2.4x threshold; the $0.00 is downstream decision-inertness), grid confirmed. => V233 site fix, not signal #4. Reflection-trigger watch: crisis gate resisted V227/V231/V232 all at the same additive site.",
+    "OPS INCIDENT: host disk hit 100% (875Gi/926Gi non-omega) mid-grid → ENOSPC crash on 2024aug_on at cycle 70 (run_training trade_details flush). Environment fault, NOT code. Also saw rogue duplicate grid invocation (source unconfirmed — concurrent session?). Recovery: killed all grid/run_training, cleared partial cell, restored baseline state, resumed single orchestrator (4 PASS cells skipped). Disk later freed to 14.5GB.",
+    "Harness: v232_dist_grid.sh + v232_dist_aggregate.py (--prefix) + assert_cell_identity --expect-brake + check_determinism EXPECT_BRAKE. Resumable via grid_state.json. macro_cache.db committed-clean 397b943; freeze_snapshot mutates it.",
+    "python3 pinned /opt/homebrew/bin/python3. DATA_DIR hardcoded global => MAXP=1 sequential; NEVER run two grids in the same checkout (the duplicate-invocation hazard the skill warns about)."
   ],
-  "last_commit": "0f0d167",
-  "updated_at": "2026-06-23T00:00:00+00:00",
+  "last_commit": "4e8bf6032a5e3118284f335f0afe16031b706c2e",
+  "updated_at": "2026-06-24T01:30:00+00:00",
   "grid": {
     "exists": false,
     "alive": [],
     "dead": []
   },
   "v232_dist": {
-    "phase": "launching",
-    "cells_done": 0,
-    "cells_total": 12,
+    "phase": "complete",
+    "cells_done": 6,
+    "cells_total": 6,
     "max_parallel": 1,
-    "manifest": "data/v232_dist/grid_state.json"
+    "crisis_mean_off": 1001.32,
+    "crisis_mean_on": 655.5,
+    "crisis_mean_delta": -345.82,
+    "crisis_min_delta": -1037.46,
+    "crisis_spread": 25010.89,
+    "falsifier": "REFUTED (mean-Δ<=0 AND min-Δ<=0)",
+    "distribution": "data/v232_dist/distribution.json"
   }
 }
