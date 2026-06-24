@@ -57,6 +57,13 @@ def main() -> None:
                          "(the documented 2024aug inertness the brake inherits) — so the "
                          "inertness guard is RELAXED to 'flag set as claimed' + "
                          "'fired count bounded by gate-accepted cycles', NOT 'fired > 0'.")
+    ap.add_argument("--expect-predemean", default="post_demean",
+                    help="V233: the crisis-term application SITE the cell label CLAIMS. "
+                         "'post_demean' (default, predemean flag OFF) or a pre-demean mode "
+                         "'pre_demean' / 'pre_demean_common_mode'. Optionally suffix the "
+                         "gated weight as ':<w>' (e.g. 'pre_demean:0.4') to assert "
+                         "crisis_term_gated_weight too. Verifies the run actually used the "
+                         "site/weight its label claims (the V224 mislabeled-control class).")
     args = ap.parse_args()
 
     try:
@@ -153,6 +160,42 @@ def main() -> None:
             f"in a cell labeled brake-OFF"
         )
 
+    # V233: application-SITE identity. Parse the claimed site (and optional weight) and
+    # assert the run's parsed flags match. A pre_demean cell that actually ran
+    # post_demean (e.g. flag dropped from the cell JSON) is the V224 mislabeled-control
+    # class — the whole point of V233 is the SITE, so a site mismatch invalidates the
+    # cell. post_demean is satisfied by the predemean flag being OFF (mode is then
+    # don't-care, since the pre-demean code path never runs).
+    _pd_spec = str(args.expect_predemean)
+    _pd_want_mode, _sep, _pd_want_w = _pd_spec.partition(":")
+    want_predemean = _pd_want_mode in ("pre_demean", "pre_demean_common_mode")
+    got_predemean = bool(obs.get("crisis_term_predemean_enabled", False))
+    got_mode = str(obs.get("crisis_term_predemean_mode", "post_demean"))
+    if want_predemean:
+        if not got_predemean:
+            _fail(
+                f"cell claims site={_pd_want_mode!r} but crisis_term_predemean_enabled="
+                f"{got_predemean} — the pre-demean code path never ran (V224 class)"
+            )
+        if got_mode != _pd_want_mode:
+            _fail(
+                f"cell claims site={_pd_want_mode!r} but crisis_term_predemean_mode="
+                f"{got_mode!r} (label/run mismatch — V224 class)"
+            )
+    else:
+        if got_predemean and got_mode in ("pre_demean", "pre_demean_common_mode"):
+            _fail(
+                f"cell claims site='post_demean' but ran predemean_enabled={got_predemean} "
+                f"mode={got_mode!r} — the term applied at the wrong site (V224 class)"
+            )
+    if _pd_want_w:
+        got_w = float(obs.get("crisis_term_gated_weight", 0.2))
+        if abs(got_w - float(_pd_want_w)) > 1e-9:
+            _fail(
+                f"cell claims gated_weight={_pd_want_w} but crisis_term_gated_weight="
+                f"{got_w} (label/run mismatch — V224 class)"
+            )
+
     ic_on = int(obs.get("ic_on_cycles", 0))
     want_ic = args.expect_ic == "on"
     if not want_ic and ic_on != 0:
@@ -169,6 +212,8 @@ def main() -> None:
         f"on_cycles={skew_cycles}); gate={args.expect_gate} (enabled={got_gate}, "
         f"accept={gate_accept}, skip={gate_skip}); brake={args.expect_brake} "
         f"(enabled={got_brake}, on_cycles={brake_cycles}, accept={rv_gate_accept}); "
+        f"site={_pd_want_mode} (predemean={got_predemean}, mode={got_mode}, "
+        f"w={obs.get('crisis_term_gated_weight', 0.2)}); "
         f"ic={args.expect_ic} (on_cycles={ic_on}, source={ic_source})"
     )
     sys.exit(0)

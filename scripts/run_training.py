@@ -1855,6 +1855,20 @@ def run(
             "rv_brake_ticker_terms": _rv_brake_state_ref.get("ticker_terms", 0),
             "rv_brake_gate_accept_cycles": _rv_brake_state_ref.get("gate_accept_cycles", 0),
             "rv_brake_gate_skip_cycles": _rv_brake_state_ref.get("gate_skip_cycles", 0),
+            # V233: crisis-term application-SITE experiment. These reflect the parsed
+            # flags so assert_cell_identity (--expect-predemean) can verify each cell
+            # ran the site/weight its label claims (the V224 mislabeled-control class).
+            # The site reuses the crisis_skew counters above (skew_on_cycles etc.), so
+            # a pre_demean cell still proves the term FIRED via skew_on_cycles>0.
+            "crisis_term_predemean_enabled": bool(
+                getattr(getattr(strat, "features", None), "crisis_term_predemean_enabled", False)
+            ),
+            "crisis_term_predemean_mode": str(
+                getattr(getattr(strat, "features", None), "crisis_term_predemean_mode", "post_demean")
+            ),
+            "crisis_term_gated_weight": float(
+                getattr(getattr(strat, "features", None), "crisis_term_gated_weight", 0.2) or 0.2
+            ),
         },
         "filters": sit_out_clean,
         "trades": {

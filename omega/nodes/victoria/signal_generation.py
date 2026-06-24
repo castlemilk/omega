@@ -1357,6 +1357,71 @@ class SignalGenerationNode(Node):
         # the best performer to composite > 0 (long candidate) and the worst to composite
         # < 0 (short candidate), making the strategy market-neutral by construction and
         # guaranteeing directional balance across any basket of ≥ 3 tickers.
+        #
+        # V233 — crisis-term application-SITE experiment. Resolve the site flags ONCE
+        # for this cycle (cycle-level, like the regime gate). When the pre-demean site
+        # is active, inject the gated V227 crisis_skew term into the per-ticker
+        # composites HERE, BEFORE the basket-mean below, so the broad common-mode
+        # risk-off tilt enters the demean (and, in common_mode, is re-added after).
+        # Default (post_demean) leaves this inert and the existing post-demean block
+        # at the original site runs unchanged → standing-main byte-for-byte.
+        _v233_predemean_on = bool(getattr(self._features, "crisis_term_predemean_enabled", False))
+        _v233_mode = str(
+            getattr(self._features, "crisis_term_predemean_mode", "post_demean") or "post_demean"
+        )
+        _v233_predemean_active = _v233_predemean_on and _v233_mode in (
+            "pre_demean",
+            "pre_demean_common_mode",
+        )
+        _v233_gated_w = float(
+            getattr(self._features, "crisis_term_gated_weight", _SKEW_W_GATED) or _SKEW_W_GATED
+        )
+        _v233_gated_terms: list[tuple[str, float]] = []
+        if (
+            _v233_predemean_active
+            and self._crisis_skew is not None
+            and getattr(self._features, "crisis_skew_enabled", False)
+        ):
+            # Gate decision is cycle-level (same regime label for every ticker),
+            # identical to the post-demean block. The per-ticker crisis_skew value is
+            # ALREADY drawdown-gated upstream, so reading it here inherits the V227
+            # drawdown AND-gate. Counters reuse _CRISIS_SKEW_STATE so the cell-identity
+            # assertion sees the term fire. Every add is a 2-element math.fsum (V221).
+            _CRISIS_SKEW_STATE["enabled"] = True
+            _CRISIS_SKEW_STATE["cycle_idx"] += 1
+            _pd_gate_on = getattr(self._features, "crisis_skew_regime_gate_enabled", False)
+            _CRISIS_SKEW_STATE["regime_gate_enabled"] = bool(_pd_gate_on)
+            _pd_regime_lbl = (self._cycle_regime_label or "").lower()
+            _pd_gate_skip = bool(_pd_gate_on) and _pd_regime_lbl not in ("crisis", "high_vol")
+            if _pd_gate_skip:
+                _CRISIS_SKEW_STATE["gate_skip_cycles"] += 1
+            else:
+                _CRISIS_SKEW_STATE["gate_accept_cycles"] += 1
+            _pd_w = _v233_gated_w if _pd_gate_on else _SKEW_W
+            logger.info(
+                "crisis_skew[V233 site=%s] gate_decision=%s regime_label=%s "
+                "cycle_idx=%d weight=%.3f",
+                _v233_mode,
+                "skip" if _pd_gate_skip else "accept",
+                _pd_regime_lbl or "unknown",
+                _CRISIS_SKEW_STATE["cycle_idx"],
+                _pd_w,
+            )
+            if not _pd_gate_skip:
+                _pd_fired = False
+                for _t, _s in signals.items():
+                    if not isinstance(_s, dict) or _t.startswith("_"):
+                        continue
+                    _skew_val = _s.get("crisis_skew", 0.0)
+                    if _skew_val != 0.0 and _s.get("composite") is not None:
+                        _wt = _pd_w * _skew_val
+                        _adj = math.fsum([_s["composite"], _wt])
+                        _s["composite"] = max(-1.0, min(1.0, _adj))
+                        _v233_gated_terms.append((_t, _wt))
+                        _CRISIS_SKEW_STATE["ticker_terms"] += 1
+                        _pd_fired = True
+                if _pd_fired:
+                    _CRISIS_SKEW_STATE["skew_on_cycles"] += 1
         _cs_raw = [
             (t, s)
             for t, s in signals.items()
@@ -1380,6 +1445,17 @@ class SignalGenerationNode(Node):
                 _ts["_raw_composite"] = _ts["composite"]  # preserve pre-demean value
                 _ts["_basket_mean"] = _basket_mean
                 _ts["composite"] = _ts["composite"] - _basket_mean
+            # V233 common-mode add-back: the demean above subtracted the basket mean of
+            # the (now term-inclusive) composites, which erases the broad directional
+            # risk-off tilt the pre-demean injection added. Re-add the basket-mean of
+            # JUST the gated term to every ticker so the common-mode crisis bias
+            # survives. NEW cross-ticker reduction → math.fsum (V221 _basket_mean
+            # channel class). Degeneracy-guarded: no add when no ticker fired (never
+            # divide by a flapping count — the V221 presence-flap discipline).
+            if _v233_mode == "pre_demean_common_mode" and _v233_gated_terms:
+                _cm_mean = math.fsum([_w for _, _w in _v233_gated_terms]) / len(_v233_gated_terms)
+                for _t, _ts in _cs_raw:
+                    _ts["composite"] = max(-1.0, min(1.0, math.fsum([_ts["composite"], _cm_mean])))
             _demeaned = [s["composite"] for _, s in _cs_raw]
             logger.debug(
                 "cross-sectional demean: basket_mean=%.3f → demeaned range=[%.3f, %.3f]",
@@ -1405,7 +1481,13 @@ class SignalGenerationNode(Node):
         # 2-element fsum add is exact-rounded → permutation-invariant. One-sided
         # ([-1,0]) ⇒ ≈0 in benign tape, so trend/recent are untouched. Counters
         # are observability-only (cell-identity assertion), never a numeric path.
-        if self._crisis_skew is not None and getattr(self._features, "crisis_skew_enabled", False):
+        # V233: when the pre-demean site is active the term was already applied above
+        # (before the demean) — skip this default post-demean site to avoid double-add.
+        if (
+            self._crisis_skew is not None
+            and getattr(self._features, "crisis_skew_enabled", False)
+            and not _v233_predemean_active
+        ):
             _CRISIS_SKEW_STATE["enabled"] = True
             _CRISIS_SKEW_STATE["cycle_idx"] += 1
             # V226: the regime gate is a cycle-level decision (the label is the same
@@ -1458,7 +1540,10 @@ class SignalGenerationNode(Node):
                         "dd_threshold": _dd_thresh_log,
                     }) + "\n")
             # V226: weight depends on the gate (0.2 gated / 0.5 always-on V225 path).
-            _skew_w = _SKEW_W_GATED if _gate_on else _SKEW_W
+            # V233: the gated weight is read from crisis_term_gated_weight (default 0.2
+            # ⇒ byte-identical to _SKEW_W_GATED) so post_demean weight-escalation is
+            # reachable at this original site too.
+            _skew_w = _v233_gated_w if _gate_on else _SKEW_W
             _skew_fired_this_cycle = False
             for _t, _s in signals.items():
                 if not isinstance(_s, dict) or _t.startswith("_"):

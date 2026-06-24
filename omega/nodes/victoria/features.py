@@ -821,6 +821,42 @@ class VictoriaFeatures:
     = 0.12). 0.0 ⇒ regime-label-only gate (byte-reachable)."""
 
     # ------------------------------------------------------------------
+    # V233 — crisis-term application-SITE experiment (site, not signal)
+    # ------------------------------------------------------------------
+
+    crisis_term_predemean_enabled: bool = False
+    """V233: route the gated V227 crisis_skew term through an alternate APPLICATION
+    SITE instead of the default post-demean add (signal_generation.py:1463). When ON,
+    the term is applied BEFORE the cross-sectional demean (see
+    crisis_term_predemean_mode), so the broad common-mode risk-off tilt can survive
+    into the trade-decision boundary on a correlated crash. Motivated by the V232
+    structural finding: the worst crisis window (snap_crisis_2024aug, −$9,508) returns
+    Δ==$0.00 under BOTH V227 skew and V232 brake — the post-demean weight-0.2 additive
+    term never crosses a trade-decision boundary on the broad yen-carry grind-down.
+    This flag probes whether the SITE (not the signal) is the wall. Default OFF ⇒ the
+    OFF arm reproduces standing-main (post-demean, W=0.2) byte-for-byte. Requires
+    crisis_skew_enabled. No effect when crisis_term_predemean_mode == 'post_demean'.
+    """
+
+    crisis_term_predemean_mode: str = "post_demean"
+    """V233: which application site to use when crisis_term_predemean_enabled is ON.
+    - 'post_demean' (default): the current V227 site — W*term added per-ticker AFTER
+      the basket-mean subtraction (byte-identical to standing-main at W=0.2).
+    - 'pre_demean': W*term added per-ticker BEFORE the cross-sectional demean, so the
+      term is itself demeaned (tests whether the idiosyncratic part alone is enough).
+    - 'pre_demean_common_mode': pre_demean PLUS the basket-mean of the gated term is
+      re-added to every ticker after the demean, preserving the directional common-mode
+      risk-off bias the demean would otherwise erase. Only consulted when
+      crisis_term_predemean_enabled is True."""
+
+    crisis_term_gated_weight: float = 0.2
+    """V233: weight on the gated crisis_skew term (sweep {0.2, 0.4, 0.6}). 0.2
+    reproduces the V227 _SKEW_W_GATED=0.2 standing-main. Pure magnitude test — does the
+    term simply need to be louder once the gate fires? Applies in every site mode when
+    crisis_term_predemean_enabled is True; when the flag is OFF the standing-main
+    _SKEW_W_GATED=0.2 is used (byte-reachable at 0.2)."""
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 

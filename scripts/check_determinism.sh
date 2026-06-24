@@ -116,6 +116,7 @@ PY
       --results "data/${ver}_results.json" \
       --expect-skew "${EXPECT_SKEW}" --expect-ic "${EXPECT_IC:-off}" \
       --expect-gate "${EXPECT_GATE:-off}" --expect-brake "${EXPECT_BRAKE:-off}" \
+      --expect-predemean "${EXPECT_PREDEMEAN:-post_demean}" \
       2>&1 | tee -a "$LOG" \
       || { echo "FATAL: $ver cell-identity assertion FAILED — run does not match label" | tee -a "$LOG"; exit 4; }
   fi
