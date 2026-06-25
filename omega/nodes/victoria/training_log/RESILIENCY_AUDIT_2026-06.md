@@ -180,3 +180,52 @@ dead leaves no signal that it's done and ready to finalize. #2's sentinel file
 provenance but nothing *checks* it on read; a follow-up could have `assert_cell_identity.py`
 also assert `provenance.git_dirty == false` for any cell whose result is promoted to a
 high-water (catching a dirty-tree number before it enters the README table).
+
+---
+
+## External audit-output storage (gamma-systems-2) — the ENOSPC class
+
+**Date added:** 2026-06-25
+**Solves:** the **ENOSPC environment fault** that killed the V232 grid and paused
+V233 @ 5/12 (host `/System/Volumes/Data` hit 100% — ~880Gi of *non-omega* data
+left only ~5Gi free; a `run_training` temp flush mid-cell then failed). This is an
+*environment* fault, not a training-layer one: omega's own `data/` is only ~450M, so
+the existing resiliency machinery (manifest, PID cleanup, SESSION_STATE) had nothing
+to act on — the disk simply filled from outside.
+
+**Mechanism — `OMEGA_AUDIT_OUTPUT_DIR`.** A single env var redirects the large,
+write-heavy per-run artifacts off the host disk onto an external mount. Honored by
+three layers in lock-step, defaulting to `data/` when unset:
+
+| Layer | Honors via | What moves |
+|---|---|---|
+| `scripts/run_training.py` | `AUDIT_DIR = $OMEGA_AUDIT_OUTPUT_DIR or DATA_DIR` | `{ver}_results.json`, `_trades.csv`, `_progress.json`, `_signal_contribs.jsonl`, `_mode_transitions.jsonl`, `_signal_fingerprint.jsonl`, `_per_field_fingerprint.jsonl`, `_http_during_backtest.jsonl`, `_attribution.json`, `_gate_result.json`, trace-writer `decision_traces/` + gate-baseline lookup |
+| `scripts/check_determinism.sh` | `AUDIT_DIR="${OMEGA_AUDIT_OUTPUT_DIR:-$ROOT/data}"` | per-cell `*_determinism/` dir, PID file, the results/trades it copies in + asserts on |
+| `scripts/v233_dist_grid.sh` (template for v###_dist grids) | `AUDIT_DIR="${OMEGA_AUDIT_OUTPUT_DIR:-data}"` | `v###_dist/` grid dir, cell-summary resolution, the `--baseline` default, the aggregator `--root` |
+
+**Determinism-safe by construction.** Only *write artifacts* move. The frozen-cache
+*inputs* stay anchored to `data/` and are never redirected: `macro_cache.db`,
+`signal_ic_history.json`, `empirical_ic_history.json`, `.cache_manifest.json`,
+`training_version.txt`, the state/memory DBs, and `data/snapshots/`. `check_determinism.sh`'s
+Fix-B state isolation also still snapshots/restores from `data/`. So the hermetic
+$0.00 guarantee is untouched — verified on V233 resume: the 5 prior PASS cells
+auto-skipped from their moved location and the verdict math is identical.
+
+**Configure:**
+```bash
+export OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data
+N=2 GATES=crisis nohup bash scripts/v233_dist_grid.sh > /tmp/v233_grid.log 2>&1 &
+```
+The mount path is also recorded in `data/SESSION_STATE.json` (`audit_output_dir`) so a
+post-restart session re-discovers it.
+
+**Fallback if the mount is unavailable.** Leave `OMEGA_AUDIT_OUTPUT_DIR` unset → all
+three layers fall back to `data/` exactly as before this change (zero behavioral diff).
+`prepare_session.sh` / `df -h` will show host free space; if it's tight and gamma isn't
+mounted, free host disk before launching rather than risking a mid-cell ENOSPC. The
+external dirs live outside the repo so they are never git-tracked; the default-fallback
+`data/v[0-9]*_dist/` path is gitignored.
+
+**Risk consciously accepted:** if the mount drops mid-run, writes fail (same failure
+mode as a full disk, but now isolated to an external volume the operator chose). Worth
+it to keep a long grid off an already-pressured host disk.
