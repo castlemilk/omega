@@ -423,6 +423,31 @@ done
 A wedged python process holding open file descriptors is the most
 common cause of the next session's lock issues.
 
+### External audit-output storage (avoid ENOSPC during long grids)
+
+The host disk filling with *non-omega* data caused the ENOSPC faults
+that killed the V232 grid and paused V233 mid-cell (omega's own `data/`
+is only ~450M, so nothing in the training layer can recover from it —
+the disk fills from outside). Before launching any long `v###_dist`
+grid, check `df -h /` and, if host free space is tight, redirect the
+large audit/trace writes to an external mount:
+
+```bash
+export OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data
+N=2 GATES=crisis nohup bash scripts/v###_dist_grid.sh > /tmp/v###_grid.log 2>&1 &
+```
+
+`OMEGA_AUDIT_OUTPUT_DIR` is honored by `run_training.py`,
+`check_determinism.sh`, and the `v###_dist_grid.sh` template; it moves
+only WRITE artifacts (results/trades/progress/`*_fingerprint.jsonl`/
+trace dirs/determinism cells). **Frozen-cache INPUTS** (`macro_cache.db`,
+`signal_ic_history.json`, `.cache_manifest.json`, `data/snapshots/`)
+stay in `data/`, so determinism is unaffected. **The default falls back
+to `data/` if unset** — set it only when you want output off the host
+disk. The active mount path is recorded in `data/SESSION_STATE.json`
+(`audit_output_dir`). See `training_log/RESILIENCY_AUDIT_2026-06.md` →
+"External audit-output storage (gamma-systems-2)".
+
 ### Recovery: first action when entering a possibly-wedged repo
 
 Before doing anything else, run:
