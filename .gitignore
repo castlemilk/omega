@@ -49,6 +49,9 @@ data/.v[0-9]*
 data/SESSION_STATE.json
 # determinism replicate dirs + grid logs (broader, non v-anchored ephemerals)
 data/*_determinism/
+# distributional-grid output dirs (V231+); only matters when OMEGA_AUDIT_OUTPUT_DIR
+# is unset and audit output falls back to data/ — external mounts live outside the repo
+data/v[0-9]*_dist/
 data/v[0-9]*_grid.log
 # misc per-run scratch (driver .out logs, single-pid files, DONE markers,
 # interim finding notes) — all generated, never commit

@@ -35,9 +35,17 @@ FLOOR="${5:-200}"
 SLEEP="${6:-0}"   # seconds between cycles; 0 is fastest. NB prior versions' canonical eval used 10.
 
 ROOT=$(pwd)
-OUT="$ROOT/data/${VPREFIX}_${GATE}_determinism"
+# OMEGA_AUDIT_OUTPUT_DIR: redirect determinism-cell outputs + the per-replicate
+# run_training write artifacts (results/trades/jsonl) off the host disk onto an
+# external mount (e.g. gamma-systems-2) to avoid the ENOSPC class that paused
+# V232/V233. Defaults to $ROOT/data. run_training.py honors the SAME env var, so the
+# results.json/trades.csv this script copies from AUDIT_DIR land there too. Stable
+# frozen-cache INPUTS (signal_ic_history.json, *.db, snapshots) stay under data/.
+AUDIT_DIR="${OMEGA_AUDIT_OUTPUT_DIR:-$ROOT/data}"
+mkdir -p "$AUDIT_DIR"
+OUT="$AUDIT_DIR/${VPREFIX}_${GATE}_determinism"
 mkdir -p "$OUT"
-PIDFILE="$ROOT/data/${VPREFIX}_${GATE}_pids.txt"; : > "$PIDFILE"
+PIDFILE="$AUDIT_DIR/${VPREFIX}_${GATE}_pids.txt"; : > "$PIDFILE"
 SUMMARY="$OUT/summary.json"
 LOG="$OUT/run.log"
 
@@ -93,9 +101,9 @@ for i in $(seq 1 "$N"); do
     --features "$FEATURES" \
     > "$OUT/${ver}_stdout.log" 2> "$OUT/${ver}_stderr.log" &
   pid=$!; echo "$pid" >> "$PIDFILE"; wait "$pid"; rc=$?
-  cp -f "data/${ver}_results.json" "$OUT/${ver}_results.json" 2>/dev/null || true
-  cp -f "data/${ver}_trades.csv"   "$OUT/${ver}_trades.csv"   2>/dev/null || true
-  read -r pnl ntr < <(python3 - "data/${ver}_results.json" <<'PY'
+  cp -f "$AUDIT_DIR/${ver}_results.json" "$OUT/${ver}_results.json" 2>/dev/null || true
+  cp -f "$AUDIT_DIR/${ver}_trades.csv"   "$OUT/${ver}_trades.csv"   2>/dev/null || true
+  read -r pnl ntr < <(python3 - "$AUDIT_DIR/${ver}_results.json" <<'PY'
 import json,sys
 try:
     t=json.load(open(sys.argv[1]))["trades"]
@@ -113,7 +121,7 @@ PY
   # IC grids unaffected).
   if [ -n "${EXPECT_SKEW:-}" ]; then
     python3 scripts/assert_cell_identity.py \
-      --results "data/${ver}_results.json" \
+      --results "$AUDIT_DIR/${ver}_results.json" \
       --expect-skew "${EXPECT_SKEW}" --expect-ic "${EXPECT_IC:-off}" \
       --expect-gate "${EXPECT_GATE:-off}" --expect-brake "${EXPECT_BRAKE:-off}" \
       --expect-predemean "${EXPECT_PREDEMEAN:-post_demean}" \

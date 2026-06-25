@@ -35,11 +35,17 @@ export PATH=/opt/homebrew/bin:$PATH
 export DATABASE_URL="${DATABASE_URL:-postgres://omega:omega@localhost:5432/omega?sslmode=disable}"
 
 N="${N:-1}"; SLEEP="${SLEEP:-10}"; FLOOR="${FLOOR:-200}"
-OUT=data/v233_dist; mkdir -p "$OUT"
+# OMEGA_AUDIT_OUTPUT_DIR: redirect grid + determinism-cell outputs off the host disk
+# onto an external mount (e.g. gamma-systems-2) to avoid the ENOSPC class that paused
+# this grid at 5/12. Defaults to data/. check_determinism.sh + run_training.py honor
+# the SAME env var, so every per-cell artifact lands under AUDIT_DIR consistently.
+# SESSION_STATE + snapshots stay committed under data/.
+AUDIT_DIR="${OMEGA_AUDIT_OUTPUT_DIR:-data}"; mkdir -p "$AUDIT_DIR"
+OUT="$AUDIT_DIR/v233_dist"; mkdir -p "$OUT"
 STATE="$OUT/grid_state.json"
 SUM="$OUT/grid_progress.log"
 SESSION_STATE=data/SESSION_STATE.json
-BASELINE="${BASELINE:-data/v232_dist/distribution.json}"
+BASELINE="${BASELINE:-$AUDIT_DIR/v232_dist/distribution.json}"
 
 # Shared base for every config: V227 skew ON + gated + X=0.12, brake OFF, IC OFF.
 BASE='"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "ic_seed_weighting": false'
@@ -98,7 +104,7 @@ done
 TOTAL=${#CELLS[@]}
 
 cell_summary() { # gate wlabel config -> path
-  echo "data/v233_${1}_${2}_${3}_${1}_determinism/summary.json"
+  echo "$AUDIT_DIR/v233_${1}_${2}_${3}_${1}_determinism/summary.json"
 }
 cell_done() {   # gate wlabel config -> 0 if PASS summary exists
   local p; p="$(cell_summary "$1" "$2" "$3")"
@@ -168,7 +174,7 @@ for c in "${CELLS[@]}"; do
     bash scripts/check_determinism.sh "$gate" "$N" "$feats" "$vprefix" "$FLOOR" "$SLEEP" \
     > "$OUT/${vprefix}.log" 2>&1
   rc=$?
-  grep -h "DETERMINISM:" "data/${vprefix}_${gate}_determinism/run.log" 2>/dev/null | tail -1 | tee -a "$SUM"
+  grep -h "DETERMINISM:" "$AUDIT_DIR/${vprefix}_${gate}_determinism/run.log" 2>/dev/null | tail -1 | tee -a "$SUM"
   log "--- CELL $vprefix done rc=$rc $(date -u +%FT%TZ) ---"
   cell_done "$gate" "$wlabel" "$cfg" && done=$((done+1))
   write_manifest "$done" "$TOTAL" "running"
@@ -177,7 +183,7 @@ done
 
 log "=== V233 site grid complete $(date -u +%FT%TZ) — aggregating ==="
 write_manifest "$done" "$TOTAL" "aggregating"
-python3 scripts/v233_dist_aggregate.py --root data --prefix v233 \
+python3 scripts/v233_dist_aggregate.py --root "$AUDIT_DIR" --prefix v233 \
         --baseline "$BASELINE" \
         --out-json "$OUT/distribution.json" \
         --out-md "omega/nodes/victoria/training_log/V233_dist_results.md" | tee -a "$SUM"

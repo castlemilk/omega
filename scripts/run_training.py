@@ -167,6 +167,18 @@ _load_env()
 DATA_DIR = ROOT / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# OMEGA_AUDIT_OUTPUT_DIR — redirect large per-run WRITE artifacts (results, trades,
+# progress, JSONL traces/fingerprints, attribution, gate reports, trace-writer output)
+# off the host disk onto an external mount (e.g. gamma-systems-2) to avoid the ENOSPC
+# class that paused V232/V233. Defaults to DATA_DIR when unset.
+#
+# Only WRITE artifacts move. STABLE/COMMITTED INPUTS stay anchored to DATA_DIR so
+# frozen-cache determinism is untouched: training_version.txt, .cache_manifest.json,
+# macro_cache.db, signal_ic_history.json, empirical_ic_history.json, the state/memory
+# DBs, and data/snapshots/. Never point AUDIT_DIR at those.
+AUDIT_DIR = Path(os.environ.get("OMEGA_AUDIT_OUTPUT_DIR", "").strip() or str(DATA_DIR))
+AUDIT_DIR.mkdir(parents=True, exist_ok=True)
+
 _VERSION_FILE = DATA_DIR / "training_version.txt"
 
 
@@ -198,8 +210,8 @@ def _find_baseline_version(current: str) -> str | None:
     suffix = m.group("suffix")
     for candidate_num in range(num - 1, 0, -1):
         label = f"{prefix}{candidate_num}{suffix}"
-        results = DATA_DIR / f"{label}_results.json"
-        trades = DATA_DIR / f"{label}_trades.csv"
+        results = AUDIT_DIR / f"{label}_results.json"
+        trades = AUDIT_DIR / f"{label}_trades.csv"
         if results.exists() and trades.exists():
             return label
     return None
@@ -681,10 +693,10 @@ def run(
 
     # ── File paths ────────────────────────────────────────────────────────
     metrics_jsonl = Path(f"/tmp/{version}_metrics.jsonl")
-    trades_csv = DATA_DIR / f"{version}_trades.csv"
-    progress_file = DATA_DIR / f"{version}_progress.json"
-    results_file = DATA_DIR / f"{version}_results.json"
-    signal_contribs_jsonl = DATA_DIR / f"{version}_signal_contribs.jsonl"
+    trades_csv = AUDIT_DIR / f"{version}_trades.csv"
+    progress_file = AUDIT_DIR / f"{version}_progress.json"
+    results_file = AUDIT_DIR / f"{version}_results.json"
+    signal_contribs_jsonl = AUDIT_DIR / f"{version}_signal_contribs.jsonl"
     trade_details_jsonl = Path(f"/tmp/{version}_trade_details.jsonl")
     # ── V214 observability deltas #3 + #4 (always-on determinism bisect tools) ──
     # #3 mode-switch trace: one line per regime/selector-mode transition.
@@ -692,8 +704,8 @@ def run(
     #    signal scalars + the raw values). Diffing two same-seed runs' fingerprints
     #    yields the FIRST cycle where signals diverge and the exact signal that moved
     #    — the discriminator the V207–V213 determinism hunt lacked. See V214.md §3.
-    mode_transitions_jsonl = DATA_DIR / f"{version}_mode_transitions.jsonl"
-    signal_fingerprint_jsonl = DATA_DIR / f"{version}_signal_fingerprint.jsonl"
+    mode_transitions_jsonl = AUDIT_DIR / f"{version}_mode_transitions.jsonl"
+    signal_fingerprint_jsonl = AUDIT_DIR / f"{version}_signal_fingerprint.jsonl"
     # ── V217 obs-delta #1: per-field full-precision fingerprint ──────────────
     # One line per (cycle, signal_name) with the IEEE-754 double bit-exact hex of
     # the field's value. The V216 third channel proved the whole-dict `fp` hash
@@ -701,7 +713,7 @@ def run(
     # combined hash cannot NAME the field. This artifact does: one per-field diff
     # = one (cycle, signal_name) channel. Entries are sorted by (cycle, name) so
     # the JSONL is line-comparable via `cmp`. See V217.md §step-1.
-    per_field_fingerprint_jsonl = DATA_DIR / f"{version}_per_field_fingerprint.jsonl"
+    per_field_fingerprint_jsonl = AUDIT_DIR / f"{version}_per_field_fingerprint.jsonl"
     per_field_fingerprint_jsonl.unlink(missing_ok=True)  # fresh per run (cmp-able)
 
     db_url = os.environ.get("DATABASE_URL", "")
@@ -742,6 +754,8 @@ def run(
     log.info("CoinGecko key  : %s", cg_key[:12] + "..." if cg_key else "MISSING")
     log.info("Database URL   : %s", db_url[:40] + "..." if db_url else "NOT SET — SQLite fallback")
     log.info("Metrics JSONL  : %s", metrics_jsonl)
+    log.info("Audit/trace dir: %s%s", AUDIT_DIR,
+             " (OMEGA_AUDIT_OUTPUT_DIR)" if AUDIT_DIR != DATA_DIR else " (default)")
     log.info("Log file       : /tmp/%s_training.log", version)
     _active_flags = _active_features.active_flags()
     if _active_flags:
@@ -773,7 +787,7 @@ def run(
         import urllib.error as _uerr
         import urllib.request as _ureq
 
-        _http_log_path = DATA_DIR / f"{version}_http_during_backtest.jsonl"
+        _http_log_path = AUDIT_DIR / f"{version}_http_during_backtest.jsonl"
         try:
             _http_log_path.unlink()  # fresh per run
         except FileNotFoundError:
@@ -1094,7 +1108,7 @@ def run(
 
     # ── Observability init (gated by feature flags) ───────────────────────
     if strat is not None:
-        strat.init_trace_writer(version, str(DATA_DIR))
+        strat.init_trace_writer(version, str(AUDIT_DIR))
 
     # ── Metrics JSONL file (opened once, flushed each cycle) ──────────────
     metrics_jsonl.parent.mkdir(parents=True, exist_ok=True)
@@ -1905,9 +1919,9 @@ def run(
     # V49 hard gates — compare this run against the previous version.
     baseline_label = _find_baseline_version(version)
     if baseline_label is not None:
-        baseline_results = DATA_DIR / f"{baseline_label}_results.json"
-        baseline_trades = DATA_DIR / f"{baseline_label}_trades.csv"
-        gate_out = DATA_DIR / f"{version}_gate_result.json"
+        baseline_results = AUDIT_DIR / f"{baseline_label}_results.json"
+        baseline_trades = AUDIT_DIR / f"{baseline_label}_trades.csv"
+        gate_out = AUDIT_DIR / f"{version}_gate_result.json"
         try:
             gate_result = check_v49_gates(
                 v49_results=results_file,
@@ -1946,7 +1960,7 @@ def run(
         if trades_csv.exists():
             attr = PerformanceAttribution(trades_csv)
             attr_result = attr.compute()
-            attr_path = DATA_DIR / f"{version}_attribution.json"
+            attr_path = AUDIT_DIR / f"{version}_attribution.json"
             attr.save(attr_path)
             log.info(
                 "Attribution — alpha: $%+.2f  beta: $%+.2f  timing: $%+.2f  selection: $%+.2f",
