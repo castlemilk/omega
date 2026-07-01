@@ -3371,6 +3371,38 @@ class StrategyNode(Node):
                     * _cont_size_short_mult  # V148: regime-confidence continuous sizing
                 )
 
+        # V234: crisis size throttle — reuse the EXISTING V227 per-ticker drawdown-AND-gate
+        # (ts["_skew_dd_mag"], stashed unconditionally in signal_generation.py:1193) to scale
+        # DOWN a fired ticker's pre-normalisation weight. Acts DOWNSTREAM of the conviction
+        # deadband (strategy.py:1598/1613) where the V227–V233 composite-additive terms never
+        # crossed a trade-decision boundary (2024aug Δ==$0.00 for 7 versions). Gated on the
+        # per-ticker drawdown MAGNITUDE (not the regime label — the 2024aug loss concentrates in
+        # normal-labeled high-drawdown names; Track C forensics). Per-ticker independent scalar
+        # multiply: no new reduction, no cross-ticker term (V221 discipline). Default-inert:
+        # flag OFF ⇒ raw_weights identical to the standing main byte-for-byte.
+        _n_throttled = 0
+        if getattr(self.features, "crisis_size_throttle_enabled", False):
+            _throttle = float(getattr(self.features, "crisis_size_throttle", 0.5))
+            _throttle_thresh = float(
+                getattr(self.features, "crisis_skew_drawdown_threshold", 0.12)
+            )
+            if _throttle_thresh > 0.0:
+                for _ticker in list(raw_weights.keys()):
+                    _cand = long_candidates.get(_ticker) or short_candidates.get(_ticker)
+                    if _cand is None:
+                        continue
+                    if float(_cand.get("_skew_dd_mag", 0.0)) > _throttle_thresh:
+                        raw_weights[_ticker] = raw_weights[_ticker] * _throttle
+                        _n_throttled += 1
+            if _n_throttled:
+                logger.info(
+                    "crisis_size_throttle: %d tickers size_throttled *%.3f (dd>%.3f gate fired)",
+                    _n_throttled,
+                    _throttle,
+                    _throttle_thresh,
+                )
+        self._last_crisis_throttle_n: int = _n_throttled  # expose for observability
+
         # V102: crisis_short_bias size multipliers — scale shorts up (1.3x), longs down (0.5x)
         # in crisis/high_vol to tilt allocation toward the favored direction.
         # Applied before Kelly so the Kelly fraction operates on the already-skewed weights.
@@ -3429,7 +3461,11 @@ class StrategyNode(Node):
                     raw_weights[ticker] = w * (1.0 - _regime_w_bull)
 
         # Normalise so total |weight| = 1.0, then apply sit-out size multiplier
-        total_w = sum(abs(v) for v in raw_weights.values())
+        # V234: math.fsum (was sum()) — the size throttle changes the magnitudes entering
+        # this cross-ticker reduction; fsum is exact-rounded so the normaliser is
+        # permutation/magnitude-stable (V220/V221 FP-order discipline). Order is already
+        # pinned (dict insertion = sorted candidate order), so this is a defensive fence.
+        total_w = math.fsum(abs(v) for v in raw_weights.values())
         weights: dict[str, float] = (
             {ticker: v / total_w * sit_out_size_mult for ticker, v in raw_weights.items()}
             if total_w > 0

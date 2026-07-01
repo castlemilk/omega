@@ -856,6 +856,25 @@ class VictoriaFeatures:
     crisis_term_predemean_enabled is True; when the flag is OFF the standing-main
     _SKEW_W_GATED=0.2 is used (byte-reachable at 0.2)."""
 
+    crisis_size_throttle_enabled: bool = False
+    """V234: SIZING-LAYER crisis intervention. When ON, the EXISTING V227 per-ticker
+    drawdown-AND-gate (ts["_skew_dd_mag"] > crisis_skew_drawdown_threshold) scales DOWN
+    that ticker's pre-normalisation position weight by crisis_size_throttle. Acts
+    DOWNSTREAM of the conviction→trade decision boundary (strategy.py:1598/1613) where
+    the V227–V233 composite-additive crisis terms all died — the worst crisis window
+    (snap_crisis_2024aug, −$9,508) stayed byte-identical at Δ==$0.00 for 7 versions
+    because a composite nudge never crossed a threshold. The throttle changes per-trade
+    dollar VOLUME directly (Δsize≠0), a lever the composite path lacked. Gated on the
+    per-ticker drawdown MAGNITUDE, NOT the regime label (the 2024aug loss is concentrated
+    in normal-labeled high-drawdown names). Reuses the V227 gate — no new signal. Default
+    OFF ⇒ the OFF arm reproduces the standing main byte-for-byte."""
+
+    crisis_size_throttle: float = 0.5
+    """V234: multiplier applied to a fired ticker's pre-normalisation raw weight (sweep
+    {0.5, 0.25, 0.0}). 1.0 ⇒ no-op (byte-reachable). 0.0 ⇒ fully suppress the gated
+    position. Only consulted when crisis_size_throttle_enabled is True. Reuses
+    crisis_skew_drawdown_threshold (0.12) as the gate threshold — no new threshold."""
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
