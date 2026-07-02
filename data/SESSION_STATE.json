@@ -1,25 +1,15 @@
 {
-  "version": "v233",
-  "step": "V233 COMPLETE (12/12 PASS $0.00) \u2014 REFUTED, falsifier branch 4. 2024aug \u0394==$0.00 under pre-demean all weights; common_mode +$6.31 (0 trades flipped) w/ 2020q1 regression; pre-demean HARMFUL on 2022h1. Site dimension exhausted. No high-water break.",
-  "next_action": "V234 = sizing/exit-layer crisis intervention (V234.md pre-registered): reuse V227 drawdown gate to throttle SIZE + tighten EXIT (not conviction). Success = 2024aug ledger actually changes (\u0394trades\u22600). Build flags crisis_size_throttle_enabled/crisis_exit_tighten_enabled in strategy.py+features.py, default-inert; grid OMEGA_AUDIT_OUTPUT_DIR=gamma N=2 GATES=crisis.",
+  "version": "deep-review-2026-06-fable",
+  "step": "DEEP_REVIEW_2026-06_FABLE.md complete (post-V234). Campaign verdict: durable value is ~all instrumentation (determinism arc + V231 distributional harness); shipped strategy alpha surviving its own best measurement = 0; 8 consecutive refutations on snap_crisis_2024aug = Goodhart alarm on the TARGET, not the mechanism. New finding: effective tradeable universe is 4/13 symbols (blacklist from V55-V93 era, never re-validated); trend/recent gates have NEVER been distributionally tested (recent +$4,901 rests on N=1 window).",
+  "next_action": "V235 as pre-registered (2024aug candidate-selection) = DO NOT PROCEED; its own falsifier branch 3 fires on evidence already collected. PIVOT: V235' = walk-forward distributional eval for ALL regimes (~25-30 rolling 60-90d windows 2020-2026, V215 freeze recipe, regime-tagged, mean/p25/min as the gate unit) - instrument-only. Then V236 = portfolio-level crisis exposure cap (corr-spike/basket-dd gated, at the retained V234 raw_weights actuator, V232 bar + delta-trades!=0); V237 = ship banked trend-IC overlay measured on the trend distribution; V238+ = universe re-expansion + composite simplification (Fork A). See DEEP_REVIEW_2026-06_FABLE.md ranked table.",
   "notes": [
-    "V233 SITE variants (signal_generation.py _compute_advanced_signals): pre-demean injection BEFORE _basket_mean (:1378), common-mode add-back AFTER (math.fsum + degeneracy guard), original post-demean site (:1463) guarded `and not _v233_predemean_active`. Flags in features.py: crisis_term_predemean_enabled (default False), crisis_term_predemean_mode {post_demean,pre_demean,pre_demean_common_mode}, crisis_term_gated_weight (default 0.2 = _SKEW_W_GATED byte-reachable).",
-    "Baseline (post_demean_w0.2 = V227 skew standing-main) REUSED from data/v232_dist/distribution.json pnl_off: 2020q1 +15,503.01 / 2022h1 -2,991.17 / 2024aug -9,507.88. NOT re-run. v233_dist_aggregate.py --baseline subtracts it per window.",
-    "Harness: v233_dist_grid.sh (single-arm CONFIG cells, EXPECT_PREDEMEAN threaded) + v233_dist_aggregate.py (--baseline \u0394, site_fix_wins flag on binding 2024aug) + v233_smoke.sh + assert_cell_identity --expect-predemean. Resumable via data/v233_dist/grid_state.json (cell PASS skipped).",
-    "Determinism risk (Track C): post_demean zero / pre_demean MEDIUM / pre_demean_common_mode HIGH (new cross-ticker term-mean reduction, presence-sensitive denominator). All math.fsum-fenced; if a cell FAILs $0.00 bisect per_field_diff.py / trade_field_diff.py + signal_contribs.jsonl presence-flap, suspect N_gated denominator.",
-    "python3 pinned /opt/homebrew/bin/python3. DATA_DIR hardcoded global => MAXP=1 sequential; NEVER run two grids in the same checkout. macro_cache.db committed-clean; smoke runs mutated signal_ic_history.json + training_version.txt \u2192 restored via git checkout before grid launch.",
-    "V232 RESULT (parent, REFUTED): crisis mean-\u0394 -$345.82, min -$1,037.46. 2024aug \u0394 $0.00 under BOTH V227 skew and V232 brake \u2014 the structural finding that motivated V233's site pivot.",
-    "infra 2026-06-25: OMEGA_AUDIT_OUTPUT_DIR env redirects large audit/trace writes to gamma-systems-2 (/Volumes/gamma-systems-2/omega-victoria-data). Honored by run_training.py + check_determinism.sh + v233_dist_grid.sh; frozen-cache INPUTS (macro_cache.db/signal_ic_history.json/snapshots/manifest) stay in data/ \u2014 determinism unaffected. Existing v231/v232/v233 dist + 5 PASS v233 cells moved to gamma. Fallback: unset \u2192 data/. See RESILIENCY_AUDIT_2026-06.md."
+    "V235.md pre-registration stands as written but is superseded by the review recommendation; its pre-work (entry-time separator probe, ~2 short runs) may run only as an appendix, and any found separator is a hypothesis for the walk-forward eval, never a license for another single-window grid.",
+    "Loop process changes recommended (review Lens 4): (1) distributional acceptance mandatory for ALL gates, not crisis-only; (2) keep the V234-style pre-grid separator proof as a standing rule; (3) NEW Goodhart tripwire - >=3 consecutive refutations on the same window forces questioning the TARGET next version; (4) strategic audits on ~10-version cadence with pre-registered follow-ups; (5) retire single-window 'high-water' language once the distribution baseline exists.",
+    "Crisis program status: distribution mean already positive (+$1,001 ON / +$933 OFF, N=3, spread $25,435). If the V236 portfolio-level cap also fails the V232 bar, crisis formally closes (9 refutations) and becomes a monitored risk report, not an optimization target.",
+    "V234 RESULT (parent, REFUTED pre-grid): throttle inert at 0.12 - traded 2024aug candidates max _skew_dd_mag 0.0644 at entry; V227 gate and traded losers are disjoint sets; lagging selectors structurally blind to pre-reversal shorts.",
+    "infra unchanged: OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data; MAXP=1 sequential in-checkout; python3 pinned /opt/homebrew/bin/python3; macro_cache.db committed-clean discipline per victoria_snapshot_build_trap."
   ],
-  "last_commit": "HEAD (2 V233 commits: feat code + docs harness)",
-  "updated_at": "2026-06-29T16:00:00+00:00",
-  "grid": "DONE 12/12 complete; distribution.json + V233_dist_results.md on gamma",
-  "v233_dist": {
-    "phase": "complete",
-    "cells_done": 12,
-    "cells_total": 12,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v233_dist/grid_state.json"
-  },
+  "last_commit": "pending (review docs commit)",
+  "updated_at": "2026-07-02T00:00:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data"
 }
