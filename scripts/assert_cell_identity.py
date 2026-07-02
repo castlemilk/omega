@@ -64,6 +64,14 @@ def main() -> None:
                          "gated weight as ':<w>' (e.g. 'pre_demean:0.4') to assert "
                          "crisis_term_gated_weight too. Verifies the run actually used the "
                          "site/weight its label claims (the V224 mislabeled-control class).")
+    ap.add_argument("--expect-throttle", choices=("on", "off"), default="off",
+                    help="V234: what the cell label CLAIMS for crisis_size_throttle_enabled. "
+                         "Like the gated skew/brake, a throttle-ON cell may legitimately fire "
+                         "0 cycles when the V227 drawdown-AND-gate is inert on the window, so "
+                         "the guard is the flag value (set as claimed), NOT a fired>0 count.")
+    ap.add_argument("--expect-throttle-s", default="",
+                    help="V234: the crisis_size_throttle FACTOR the cell claims (e.g. '0.5'). "
+                         "Empty ⇒ don't assert the factor (throttle-OFF cells).")
     args = ap.parse_args()
 
     try:
@@ -196,6 +204,26 @@ def main() -> None:
                 f"{got_w} (label/run mismatch — V224 class)"
             )
 
+    # V234: size-throttle identity. crisis_size_throttle_enabled must match
+    # --expect-throttle; when ON, crisis_size_throttle must equal --expect-throttle-s. A
+    # throttle-OFF cell that ran the throttle (or a different factor) is the V224
+    # mislabeled-control class. The throttle reuses the V227 drawdown gate which can be
+    # inert on a window, so we do NOT require a fired>0 count — only the flag/factor match.
+    want_throttle = args.expect_throttle == "on"
+    got_throttle = bool(obs.get("crisis_size_throttle_enabled", False))
+    if got_throttle != want_throttle:
+        _fail(
+            f"crisis_size_throttle_enabled={got_throttle} but cell claims throttle="
+            f"{args.expect_throttle!r} (label/run mismatch — the V224 control-bug class)"
+        )
+    if want_throttle and args.expect_throttle_s:
+        got_s = float(obs.get("crisis_size_throttle", 1.0))
+        if abs(got_s - float(args.expect_throttle_s)) > 1e-9:
+            _fail(
+                f"cell claims crisis_size_throttle={args.expect_throttle_s} but ran "
+                f"crisis_size_throttle={got_s} (label/run mismatch — V224 class)"
+            )
+
     ic_on = int(obs.get("ic_on_cycles", 0))
     want_ic = args.expect_ic == "on"
     if not want_ic and ic_on != 0:
@@ -214,6 +242,8 @@ def main() -> None:
         f"(enabled={got_brake}, on_cycles={brake_cycles}, accept={rv_gate_accept}); "
         f"site={_pd_want_mode} (predemean={got_predemean}, mode={got_mode}, "
         f"w={obs.get('crisis_term_gated_weight', 0.2)}); "
+        f"throttle={args.expect_throttle} (enabled={got_throttle}, "
+        f"s={obs.get('crisis_size_throttle', 1.0)}); "
         f"ic={args.expect_ic} (on_cycles={ic_on}, source={ic_source})"
     )
     sys.exit(0)

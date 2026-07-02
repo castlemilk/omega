@@ -1883,6 +1883,18 @@ def run(
             "crisis_term_gated_weight": float(
                 getattr(getattr(strat, "features", None), "crisis_term_gated_weight", 0.2) or 0.2
             ),
+            # V234: crisis SIZING-LAYER throttle identity. Surfaces the parsed flags so
+            # assert_cell_identity (--expect-throttle) can verify each cell ran the
+            # throttle/factor its label claims (the V224 mislabeled-control class). The
+            # throttle reuses the V227 drawdown gate; like the gated skew it may legitimately
+            # fire 0 cycles on a benign window, so cell-identity checks the flag value not a
+            # fired>0 count.
+            "crisis_size_throttle_enabled": bool(
+                getattr(getattr(strat, "features", None), "crisis_size_throttle_enabled", False)
+            ),
+            "crisis_size_throttle": float(
+                getattr(getattr(strat, "features", None), "crisis_size_throttle", 1.0) or 1.0
+            ),
         },
         "filters": sit_out_clean,
         "trades": {
