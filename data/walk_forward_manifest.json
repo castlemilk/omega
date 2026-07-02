@@ -1,7 +1,7 @@
 {
   "_built_by": "scripts/walk_forward_freeze.py (V235)",
   "_recipe": "V215 freeze (ccxt/Binance 1d) + mechanical ex-post regime labels; _macro copied from snap_crisis_2024aug.json (see script docstring)",
-  "window_days": 60,
+  "window_days": 90,
   "stride_days": 90,
   "span": [
     "2020-01-01",
@@ -14,30 +14,30 @@
     "high_vol_tag": "ann_vol >= 0.9"
   },
   "regime_counts": {
-    "trend": 11,
-    "recent": 8,
-    "crisis": 7
+    "crisis": 12,
+    "trend": 10,
+    "recent": 10
   },
-  "n_windows": 26,
+  "n_windows": 32,
   "windows": [
     {
       "id": "snap_wf_20200101",
       "path": "data/snapshots/walk_forward/snap_wf_20200101.json",
       "date_range": [
         "2020-01-01",
-        "2020-03-01"
+        "2020-03-31"
       ],
-      "regime": "trend",
-      "high_vol": false,
+      "regime": "crisis",
+      "high_vol": true,
       "metrics": {
-        "basket_ret": 0.455779,
-        "ann_vol": 0.707188,
-        "max_dd": 0.241763,
+        "basket_ret": -0.055378,
+        "ann_vol": 1.32666,
+        "max_dd": 0.610387,
         "n_series": 7
       },
       "symbols": 7,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -45,19 +45,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20200331.json",
       "date_range": [
         "2020-03-31",
-        "2020-05-30"
+        "2020-06-29"
       ],
       "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.78892,
-        "ann_vol": 0.762188,
+        "basket_ret": 0.71279,
+        "ann_vol": 0.713239,
         "max_dd": 0.111315,
         "n_series": 7
       },
       "symbols": 7,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -65,22 +65,46 @@
       "path": "data/snapshots/walk_forward/snap_wf_20200629.json",
       "date_range": [
         "2020-06-29",
-        "2020-08-28"
+        "2020-09-27"
       ],
-      "regime": "trend",
+      "regime": "crisis",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.707999,
-        "ann_vol": 0.664868,
-        "max_dd": 0.156857,
+        "basket_ret": 0.472846,
+        "ann_vol": 0.823599,
+        "max_dd": 0.364179,
         "n_series": 7
       },
       "symbols": 7,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {
-        "SOLUSDT": 18,
-        "DOTUSDT": 11
+        "SOLUSDT": 48,
+        "DOTUSDT": 41,
+        "AVAXUSDT": 6
+      }
+    },
+    {
+      "id": "snap_wf_20200813",
+      "path": "data/snapshots/walk_forward/snap_wf_20200813.json",
+      "date_range": [
+        "2020-08-13",
+        "2020-11-11"
+      ],
+      "regime": "recent",
+      "high_vol": false,
+      "metrics": {
+        "basket_ret": -0.042886,
+        "ann_vol": 0.690445,
+        "max_dd": 0.253286,
+        "n_series": 9
+      },
+      "symbols": 9,
+      "min_bars": 86,
+      "max_bars": 91,
+      "dropped_symbols": {
+        "AVAXUSDT": 51,
+        "NEARUSDT": 29
       }
     },
     {
@@ -88,19 +112,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20200927.json",
       "date_range": [
         "2020-09-27",
-        "2020-11-26"
+        "2020-12-26"
       ],
-      "regime": "recent",
+      "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.0047,
-        "ann_vol": 0.571572,
-        "max_dd": 0.128226,
+        "basket_ret": 0.238511,
+        "ann_vol": 0.728233,
+        "max_dd": 0.158969,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 44,
-      "max_bars": 61,
+      "min_bars": 74,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -108,19 +132,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20201226.json",
       "date_range": [
         "2020-12-26",
-        "2021-02-24"
+        "2021-03-26"
       ],
       "regime": "trend",
       "high_vol": true,
       "metrics": {
-        "basket_ret": 4.834797,
-        "ann_vol": 1.276183,
-        "max_dd": 0.14509,
+        "basket_ret": 5.767465,
+        "ann_vol": 1.254579,
+        "max_dd": 0.196456,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -128,19 +152,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20210326.json",
       "date_range": [
         "2021-03-26",
-        "2021-05-25"
+        "2021-06-24"
       ],
       "regime": "crisis",
       "high_vol": true,
       "metrics": {
-        "basket_ret": 0.580604,
-        "ann_vol": 1.695595,
-        "max_dd": 0.50681,
+        "basket_ret": 0.181147,
+        "ann_vol": 1.588837,
+        "max_dd": 0.547382,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -148,19 +172,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20210624.json",
       "date_range": [
         "2021-06-24",
-        "2021-08-23"
+        "2021-09-22"
       ],
       "regime": "trend",
-      "high_vol": false,
+      "high_vol": true,
       "metrics": {
-        "basket_ret": 1.024997,
-        "ann_vol": 0.787921,
+        "basket_ret": 1.382874,
+        "ann_vol": 0.912279,
         "max_dd": 0.266529,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -168,19 +192,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20210922.json",
       "date_range": [
         "2021-09-22",
-        "2021-11-21"
+        "2021-12-21"
       ],
-      "regime": "trend",
+      "regime": "recent",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.316792,
-        "ann_vol": 0.696359,
-        "max_dd": 0.175173,
+        "basket_ret": 0.174377,
+        "ann_vol": 0.765885,
+        "max_dd": 0.292241,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -188,19 +212,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20211221.json",
       "date_range": [
         "2021-12-21",
-        "2022-02-19"
+        "2022-03-21"
       ],
       "regime": "crisis",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.237195,
-        "ann_vol": 0.835643,
-        "max_dd": 0.376378,
+        "basket_ret": -0.235299,
+        "ann_vol": 0.835344,
+        "max_dd": 0.416575,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -208,19 +232,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20220321.json",
       "date_range": [
         "2022-03-21",
-        "2022-05-20"
+        "2022-06-19"
       ],
       "regime": "crisis",
       "high_vol": true,
       "metrics": {
-        "basket_ret": -0.451445,
-        "ann_vol": 1.0288,
-        "max_dd": 0.573943,
+        "basket_ret": -0.60601,
+        "ann_vol": 1.032712,
+        "max_dd": 0.706693,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -228,19 +252,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20220619.json",
       "date_range": [
         "2022-06-19",
-        "2022-08-18"
+        "2022-09-17"
       ],
       "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.357604,
-        "ann_vol": 0.812205,
-        "max_dd": 0.170522,
+        "basket_ret": 0.228331,
+        "ann_vol": 0.791061,
+        "max_dd": 0.268192,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -248,19 +272,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20220917.json",
       "date_range": [
         "2022-09-17",
-        "2022-11-16"
+        "2022-12-16"
       ],
       "regime": "crisis",
-      "high_vol": true,
+      "high_vol": false,
       "metrics": {
-        "basket_ret": -0.223827,
-        "ann_vol": 0.931795,
-        "max_dd": 0.322686,
+        "basket_ret": -0.310027,
+        "ann_vol": 0.822047,
+        "max_dd": 0.36861,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -268,61 +292,123 @@
       "path": "data/snapshots/walk_forward/snap_wf_20221216.json",
       "date_range": [
         "2022-12-16",
-        "2023-02-14"
+        "2023-03-16"
       ],
       "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.412363,
-        "ann_vol": 0.619217,
-        "max_dd": 0.113554,
+        "basket_ret": 0.353846,
+        "ann_vol": 0.643828,
+        "max_dd": 0.248164,
         "n_series": 11
       },
       "symbols": 11,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
+    },
+    {
+      "id": "snap_wf_20230130",
+      "path": "data/snapshots/walk_forward/snap_wf_20230130.json",
+      "date_range": [
+        "2023-01-30",
+        "2023-04-30"
+      ],
+      "regime": "recent",
+      "high_vol": false,
+      "metrics": {
+        "basket_ret": 0.03183,
+        "ann_vol": 0.595128,
+        "max_dd": 0.238429,
+        "n_series": 11
+      },
+      "symbols": 11,
+      "min_bars": 91,
+      "max_bars": 91,
+      "dropped_symbols": {
+        "ARBUSDT": 39
+      }
     },
     {
       "id": "snap_wf_20230316",
       "path": "data/snapshots/walk_forward/snap_wf_20230316.json",
       "date_range": [
         "2023-03-16",
-        "2023-05-15"
+        "2023-06-14"
       ],
       "regime": "recent",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.010349,
-        "ann_vol": 0.52828,
-        "max_dd": 0.187904,
+        "basket_ret": -0.083701,
+        "ann_vol": 0.485223,
+        "max_dd": 0.248096,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 54,
-      "max_bars": 61,
+      "min_bars": 84,
+      "max_bars": 91,
       "dropped_symbols": {
-        "SUIUSDT": 13
+        "SUIUSDT": 43
       }
+    },
+    {
+      "id": "snap_wf_20230430",
+      "path": "data/snapshots/walk_forward/snap_wf_20230430.json",
+      "date_range": [
+        "2023-04-30",
+        "2023-07-29"
+      ],
+      "regime": "recent",
+      "high_vol": false,
+      "metrics": {
+        "basket_ret": -0.10295,
+        "ann_vol": 0.551855,
+        "max_dd": 0.27704,
+        "n_series": 13
+      },
+      "symbols": 13,
+      "min_bars": 88,
+      "max_bars": 91,
+      "dropped_symbols": {}
     },
     {
       "id": "snap_wf_20230614",
       "path": "data/snapshots/walk_forward/snap_wf_20230614.json",
       "date_range": [
         "2023-06-14",
-        "2023-08-13"
+        "2023-09-12"
+      ],
+      "regime": "crisis",
+      "high_vol": false,
+      "metrics": {
+        "basket_ret": -0.07048,
+        "ann_vol": 0.50562,
+        "max_dd": 0.304968,
+        "n_series": 13
+      },
+      "symbols": 13,
+      "min_bars": 91,
+      "max_bars": 91,
+      "dropped_symbols": {}
+    },
+    {
+      "id": "snap_wf_20230729",
+      "path": "data/snapshots/walk_forward/snap_wf_20230729.json",
+      "date_range": [
+        "2023-07-29",
+        "2023-10-27"
       ],
       "regime": "recent",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.177145,
-        "ann_vol": 0.521415,
-        "max_dd": 0.116773,
+        "basket_ret": -0.065255,
+        "ann_vol": 0.405161,
+        "max_dd": 0.255762,
         "n_series": 13
       },
       "symbols": 13,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -330,19 +416,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20230912.json",
       "date_range": [
         "2023-09-12",
-        "2023-11-11"
+        "2023-12-11"
       ],
       "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.684898,
-        "ann_vol": 0.42364,
-        "max_dd": 0.108309,
+        "basket_ret": 1.040377,
+        "ann_vol": 0.55199,
+        "max_dd": 0.121308,
         "n_series": 13
       },
       "symbols": 13,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -350,19 +436,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20231211.json",
       "date_range": [
         "2023-12-11",
-        "2024-02-09"
+        "2024-03-10"
       ],
       "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.323834,
-        "ann_vol": 0.647301,
+        "basket_ret": 0.729025,
+        "ann_vol": 0.605393,
         "max_dd": 0.154599,
         "n_series": 13
       },
       "symbols": 13,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -370,19 +456,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20240310.json",
       "date_range": [
         "2024-03-10",
-        "2024-05-09"
+        "2024-06-08"
       ],
       "regime": "crisis",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.188456,
-        "ann_vol": 0.746187,
+        "basket_ret": -0.17741,
+        "ann_vol": 0.686746,
         "max_dd": 0.322783,
         "n_series": 13
       },
       "symbols": 13,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -390,39 +476,61 @@
       "path": "data/snapshots/walk_forward/snap_wf_20240608.json",
       "date_range": [
         "2024-06-08",
-        "2024-08-07"
+        "2024-09-06"
       ],
       "regime": "crisis",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.296998,
-        "ann_vol": 0.647025,
+        "basket_ret": -0.315114,
+        "ann_vol": 0.664306,
         "max_dd": 0.344368,
         "n_series": 13
       },
       "symbols": 13,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
+    },
+    {
+      "id": "snap_wf_20240723",
+      "path": "data/snapshots/walk_forward/snap_wf_20240723.json",
+      "date_range": [
+        "2024-07-23",
+        "2024-10-21"
+      ],
+      "regime": "recent",
+      "high_vol": false,
+      "metrics": {
+        "basket_ret": 0.009524,
+        "ann_vol": 0.63036,
+        "max_dd": 0.286731,
+        "n_series": 12
+      },
+      "symbols": 12,
+      "min_bars": 91,
+      "max_bars": 91,
+      "dropped_symbols": {
+        "MATICUSDT": 50
+      }
     },
     {
       "id": "snap_wf_20240906",
       "path": "data/snapshots/walk_forward/snap_wf_20240906.json",
       "date_range": [
         "2024-09-06",
-        "2024-11-05"
+        "2024-12-05"
       ],
       "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.219924,
-        "ann_vol": 0.506199,
+        "basket_ret": 1.645429,
+        "ann_vol": 0.620164,
         "max_dd": 0.138743,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {
         "MATICUSDT": 5
       }
@@ -432,19 +540,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20241205.json",
       "date_range": [
         "2024-12-05",
-        "2025-02-03"
+        "2025-03-05"
       ],
       "regime": "crisis",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.224326,
-        "ann_vol": 0.7848,
-        "max_dd": 0.287363,
+        "basket_ret": -0.341239,
+        "ann_vol": 0.891761,
+        "max_dd": 0.412806,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -452,19 +560,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20250305.json",
       "date_range": [
         "2025-03-05",
-        "2025-05-04"
+        "2025-06-03"
       ],
       "regime": "recent",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.103115,
-        "ann_vol": 0.737412,
+        "basket_ret": -0.018992,
+        "ann_vol": 0.74098,
         "max_dd": 0.283235,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -472,19 +580,39 @@
       "path": "data/snapshots/walk_forward/snap_wf_20250603.json",
       "date_range": [
         "2025-06-03",
-        "2025-08-02"
+        "2025-09-01"
       ],
-      "regime": "recent",
+      "regime": "trend",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.058085,
-        "ann_vol": 0.619276,
+        "basket_ret": 0.206933,
+        "ann_vol": 0.688623,
         "max_dd": 0.224317,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
+      "dropped_symbols": {}
+    },
+    {
+      "id": "snap_wf_20250718",
+      "path": "data/snapshots/walk_forward/snap_wf_20250718.json",
+      "date_range": [
+        "2025-07-18",
+        "2025-10-16"
+      ],
+      "regime": "recent",
+      "high_vol": false,
+      "metrics": {
+        "basket_ret": -0.097424,
+        "ann_vol": 0.772539,
+        "max_dd": 0.248434,
+        "n_series": 12
+      },
+      "symbols": 12,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -492,19 +620,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20250901.json",
       "date_range": [
         "2025-09-01",
-        "2025-10-31"
+        "2025-11-30"
       ],
-      "regime": "recent",
+      "regime": "crisis",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.134598,
-        "ann_vol": 0.739284,
-        "max_dd": 0.284732,
+        "basket_ret": -0.33547,
+        "ann_vol": 0.73653,
+        "max_dd": 0.467654,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -512,19 +640,19 @@
       "path": "data/snapshots/walk_forward/snap_wf_20251130.json",
       "date_range": [
         "2025-11-30",
-        "2026-01-29"
+        "2026-02-28"
       ],
-      "regime": "recent",
+      "regime": "crisis",
       "high_vol": false,
       "metrics": {
-        "basket_ret": -0.145936,
-        "ann_vol": 0.630309,
-        "max_dd": 0.204979,
+        "basket_ret": -0.343169,
+        "ann_vol": 0.771739,
+        "max_dd": 0.443796,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     },
     {
@@ -532,20 +660,31 @@
       "path": "data/snapshots/walk_forward/snap_wf_20260228.json",
       "date_range": [
         "2026-02-28",
-        "2026-04-29"
+        "2026-05-29"
       ],
       "regime": "recent",
       "high_vol": false,
       "metrics": {
-        "basket_ret": 0.022943,
-        "ann_vol": 0.486705,
+        "basket_ret": 0.058391,
+        "ann_vol": 0.468239,
         "max_dd": 0.170276,
         "n_series": 12
       },
       "symbols": 12,
-      "min_bars": 61,
-      "max_bars": 61,
+      "min_bars": 91,
+      "max_bars": 91,
       "dropped_symbols": {}
     }
-  ]
+  ],
+  "_recent_supplements": {
+    "note": "recent bucket was 4/26 at the primary 90d/90d grid (90-day windows hit the 30% dd crisis bar more often); supplemented by STRATIFIED SAMPLING from the offset-45d series \u2014 every offset window was labeled and ONLY recent-labeled ones were kept (selection by regime label, never by PnL). Offset windows overlap each primary neighbor by 45d; supplements are 'recent' only.",
+    "windows": [
+      "snap_wf_20200813",
+      "snap_wf_20230130",
+      "snap_wf_20230430",
+      "snap_wf_20230729",
+      "snap_wf_20240723",
+      "snap_wf_20250718"
+    ]
+  }
 }

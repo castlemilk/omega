@@ -33,6 +33,10 @@ FEATURES="${3:-}"
 VPREFIX="${4:-v213_check}"
 FLOOR="${5:-200}"
 SLEEP="${6:-0}"   # seconds between cycles; 0 is fastest. NB prior versions' canonical eval used 10.
+# V235: CYCLES env caps the run length. Cap at (snapshot min bars - window - 1) to
+# prevent ReplayIngestionNode wrap — beyond that the replay LOOPS the series and
+# books PnL across a fictitious last-bar->first-bar seam (see providers/replay.py).
+CYCLES="${CYCLES:-200}"
 
 ROOT=$(pwd)
 # OMEGA_AUDIT_OUTPUT_DIR: redirect determinism-cell outputs + the per-replicate
@@ -95,7 +99,7 @@ for i in $(seq 1 "$N"); do
   echo "--- $ver starting $(date -u +%FT%TZ) ---" | tee -a "$LOG"
   PYTHONHASHSEED=42 python3 scripts/run_training.py \
     --version "$ver" \
-    --cycles 200 --sleep "$SLEEP" --seed 42 \
+    --cycles "$CYCLES" --sleep "$SLEEP" --seed 42 \
     --backtest-snapshot "$SNAP" \
     --frozen-cache \
     --features "$FEATURES" \

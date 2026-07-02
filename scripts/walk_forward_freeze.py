@@ -9,9 +9,12 @@ writes a manifest. This is the instrument the DEEP_REVIEW_2026-06_FABLE ranked
 #1: it turns every gate from an N=1 window into a regime-tagged distribution.
 
 Design notes (pre-registered in training_log/V235.md):
-- WINDOW_DAYS=60, STRIDE_DAYS=90 → 26 non-overlapping sampled windows spanning
-  the whole 2020→2026 range at walk-forward cost ~50 grid cells. Stride > window
-  means windows are independent draws (no overlap-induced autocorrelation).
+- WINDOW_DAYS=90, STRIDE_DAYS=90 → 26 contiguous non-overlapping windows
+  spanning the whole 2020→2026 range at walk-forward cost ~50 grid cells.
+  90 days (not 60) because ReplayIngestionNode provides series_len - 30 honest
+  steps and then WRAPS (replaying data across a fictitious price seam — the
+  V235 wrap forensic); 91 bars → ~60 honest cycles per window. The grid caps
+  --cycles at min_bars - 31 so the replay never wraps.
 - `_macro` block is COPIED from the committed snap_crisis_2024aug.json rather
   than fetched live: every prior snapshot's _macro is live-at-build-time scalars
   (never historically backfilled — see V231_SOURCING_MANIFEST.md), so copying a
@@ -52,13 +55,16 @@ OUT_DIR = ROOT / "data" / "snapshots" / "walk_forward"
 MANIFEST = ROOT / "data" / "walk_forward_manifest.json"
 MACRO_SOURCE = ROOT / "data" / "snapshots" / "snap_crisis_2024aug.json"
 
-WINDOW_DAYS = 60
+WINDOW_DAYS = 90
 STRIDE_DAYS = 90
 # ReplayIngestionNode truncates the WHOLE window to the shortest symbol series
-# and requires >= window+1 = 31 bars (providers/replay.py:110). A symbol that
-# lists/delists mid-window (DOT 2020-08, ARB 2023-03, MATIC->POL 2024-09) would
-# otherwise poison the entire window — drop it and record it in the manifest.
+# and requires >= window+1 = 31 bars (providers/replay.py:110); the shortest
+# series also sets the honest (pre-wrap) step count. A symbol that lists or
+# delists mid-window (DOT 2020-08, ARB 2023-03, MATIC->POL 2024-09) would
+# otherwise poison the entire window — drop any symbol below 80% of the
+# window's max bars (floor 32) and record it in the manifest.
 MIN_SYMBOL_BARS = 32
+MIN_COVERAGE_FRAC = 0.80
 SPAN_START = date(2020, 1, 1)
 SPAN_END = date(2026, 6, 30)
 
@@ -127,8 +133,10 @@ def build_window(start: date, macro: dict, force: bool = False) -> Path | None:
     if not ohlcv:
         print(f"  {wid}: NO DATA — skipped")
         return None
+    max_bars = max(len(d.get("close", [])) for d in ohlcv.values())
+    floor_bars = max(MIN_SYMBOL_BARS, int(MIN_COVERAGE_FRAC * max_bars))
     dropped = {s: len(d.get("close", [])) for s, d in ohlcv.items()
-               if len(d.get("close", [])) < MIN_SYMBOL_BARS}
+               if len(d.get("close", [])) < floor_bars}
     for s in dropped:
         del ohlcv[s]
     if not ohlcv:

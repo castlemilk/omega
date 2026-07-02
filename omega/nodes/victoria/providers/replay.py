@@ -158,8 +158,17 @@ class ReplayIngestionNode:
         # Advance cursor, wrapping at series end
         self._cursor += 1
         if self._cursor > self._series_len:
-            logger.debug(
-                "ReplayIngestionNode: series end reached, wrapping cursor to %d", self._window
+            # V235: wrap is a DATA-CORRUPTION hazard, not a convenience — a
+            # position held across the seam books PnL against a fictitious
+            # last-bar->first-bar price jump, and every extra loop replays the
+            # same bars (V235 forensic: 6 seam trades = -$114k of a -$112.9k
+            # window total; the canonical 63-bar 2024aug window loops ~6x at
+            # 200 cycles). Callers must cap cycles at series_len - window.
+            logger.warning(
+                "ReplayIngestionNode: series end reached (%d steps) — WRAPPING to %d. "
+                "PnL after this point replays data and crosses a fictitious price seam; "
+                "cap --cycles at series_len - window for honest measurement.",
+                self._total_steps, self._window,
             )
             self._cursor = self._window
 

@@ -59,16 +59,19 @@ n_for()         { case " $SENTINELS " in *" $1 "*) echo 2 ;; *) echo 1 ;; esac; 
 
 log() { echo "$@" | tee -a "$SUM"; }
 
-# Cells from the manifest: "wid|path|regime"
+# Cells from the manifest: "wid|path|regime|cycles". cycles = min_bars - 31 —
+# ReplayIngestionNode yields series_len-30 honest steps then WRAPS (replays the
+# series across a fictitious price seam — the V235 wrap forensic). Never exceed it.
 CELL_SRC="$(python3 - "$MANIFEST" <<'PY'
 import json, sys
 m = json.load(open(sys.argv[1]))
 for w in m["windows"]:
-    print(f"{w['id']}|{w['path']}|{w['regime']}")
+    cycles = max(1, min(200, w["min_bars"] - 31))
+    print(f"{w['id']}|{w['path']}|{w['regime']}|{cycles}")
 PY
 )"
 
-CELLS=()   # "wid|path|regime|cfg"
+CELLS=()   # "wid|path|regime|cycles|cfg"
 while IFS= read -r line; do
   [ -z "$line" ] && continue
   wid="${line%%|*}"
@@ -114,7 +117,7 @@ PY
 
 DONE0=0
 for c in "${CELLS[@]}"; do
-  IFS='|' read -r wid path regime cfg <<< "$c"
+  IFS='|' read -r wid path regime cycles cfg <<< "$c"
   cell_done "$wid" "$cfg" "$regime" && DONE0=$((DONE0+1))
 done
 
@@ -124,7 +127,7 @@ update_session_state "running" "$DONE0" "$TOTAL"
 
 done=$DONE0
 for c in "${CELLS[@]}"; do
-  IFS='|' read -r wid path regime cfg <<< "$c"
+  IFS='|' read -r wid path regime cycles cfg <<< "$c"
   vprefix="v235wf_${wid}_${cfg}"
 
   if [ ! -f "$path" ]; then
@@ -140,14 +143,14 @@ for c in "${CELLS[@]}"; do
   [ -z "$feats" ] && { log "--- SKIP $vprefix — unknown config: $cfg ---"; continue; }
   eic="$(expect_ic_for "$cfg")"
   n="$(n_for "$wid")"
-  log "--- CELL $vprefix regime=$regime N=$n start $(date -u +%FT%TZ) ---"
+  log "--- CELL $vprefix regime=$regime N=$n cycles=$cycles start $(date -u +%FT%TZ) ---"
   if [ "$(r3_for "$cfg")" = "1" ]; then
-    SNAP_OVERRIDE="$path" WINDOW_LABEL="$wid" OMEGA_R3_ICS=1 \
+    CYCLES="$cycles" SNAP_OVERRIDE="$path" WINDOW_LABEL="$wid" OMEGA_R3_ICS=1 \
     EXPECT_SKEW=on EXPECT_GATE=on EXPECT_IC="$eic" EXPECT_BRAKE=off EXPECT_PREDEMEAN=post_demean EXPECT_THROTTLE=off \
       bash scripts/check_determinism.sh "$regime" "$n" "$feats" "$vprefix" "$FLOOR" "$SLEEP" \
       > "$OUT/${vprefix}.log" 2>&1
   else
-    SNAP_OVERRIDE="$path" WINDOW_LABEL="$wid" \
+    CYCLES="$cycles" SNAP_OVERRIDE="$path" WINDOW_LABEL="$wid" \
     EXPECT_SKEW=on EXPECT_GATE=on EXPECT_IC="$eic" EXPECT_BRAKE=off EXPECT_PREDEMEAN=post_demean EXPECT_THROTTLE=off \
       bash scripts/check_determinism.sh "$regime" "$n" "$feats" "$vprefix" "$FLOOR" "$SLEEP" \
       > "$OUT/${vprefix}.log" 2>&1
