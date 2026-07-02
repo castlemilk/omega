@@ -114,6 +114,20 @@ Reflection is committed before any new pre-registration.
 
 ### Triggers
 
+0. **Goodhart tripwire (checked FIRST, added after V234/DEEP_REVIEW
+   2026-06):** ≥3 consecutive refutations **on the same snapshot
+   window** force a REFLECTION questioning whether that window is a
+   legitimate optimization target at all — vs a Goodhart-trapped
+   outlier draw from a wide distribution — BEFORE any new mechanism
+   may be pre-registered against it. The other triggers police the
+   *subsystem* dimension; this one polices the *objective* dimension.
+   History: V227→V234 logged 8 consecutive refutations on
+   `snap_crisis_2024aug` (one draw of a distribution with $25,435
+   measured cross-window spread) and each reflection re-aimed at the
+   same window. The reflection must compare the window against its
+   regime's walk-forward distribution (`data/walk_forward_manifest.json`)
+   and either justify the target distributionally or retire it.
+
 1. **Stagnation:** 3 consecutive versions have failed to break
    *any* gate's high-water (recent / trend / crisis).
 2. **Eval-noise flag:** a pre-registered no-op change (or a change
@@ -232,6 +246,41 @@ coupling we weren't measuring, and we were reading $100–$500
 deltas as signal. The fix is to force a noise-floor measurement
 and a subsystem audit at the moment the trajectory shape says
 "you're stuck," not after another three wasted versions.
+
+## Walk-forward requirement (added V235 — mandatory)
+
+**No V### may claim a strategy improvement from a single window, for
+ANY gate.** Every claimed win must be measured on ≥5 walk-forward
+windows per targeted regime from `data/walk_forward_manifest.json`
+(26 regime-tagged 60-day windows, 2020→2026, built by
+`scripts/walk_forward_freeze.py`; grid runner
+`scripts/walk_forward_grid.sh`; aggregator
+`scripts/walk_forward_aggregate.py`). The acceptance unit is the
+DISTRIBUTION (mean / p25 / min against a pre-registered bar — e.g.
+the V232-style mean-Δ>0 AND min-Δ floor), never a single-window
+scalar; single-window numbers are diagnostic color only. Retire
+"high-water" language for new results: the standing baseline is a
+per-regime distribution. (Why: V231 at N=3 immediately refuted
+V227's shipped +$630; recent's +$4,901 and the banked trend +$1,428
+sat on N=1 for 13 versions. See DEEP_REVIEW_2026-06_FABLE.)
+
+**Pre-grid separator proof (standing rule, from V234):** no grid
+until an env-gated probe shows the gate variable actually
+discriminates on the binding window(s). Cost ~2 short runs; saved
+V234's entire burn.
+
+## Universe re-validation trigger (added V235)
+
+Any time evidence emerges that the EFFECTIVE universe is materially
+smaller than the nominal one (blacklists, long-suppressions, missing
+bars, delistings — e.g. the V235 finding that `_TRADING_BLACKLIST`
+had silently reduced 13 names to 4 on ~99 pre-hermetic trades), run a
+universe re-validation forensic (template:
+`training_log/V235_UNIVERSE_REVIEW.md`) BEFORE the next intervention.
+Exclusion evidence bar: a ticker stays excluded only on hermetic-era
+N≥50 trades with a distributional read (≥3 windows). Universe changes
+are strategy changes: measure them as universe_full vs universe_legacy
+cells on the walk-forward distribution.
 
 ## Common traps (learned from V148→V198+)
 
