@@ -54,6 +54,11 @@ MACRO_SOURCE = ROOT / "data" / "snapshots" / "snap_crisis_2024aug.json"
 
 WINDOW_DAYS = 60
 STRIDE_DAYS = 90
+# ReplayIngestionNode truncates the WHOLE window to the shortest symbol series
+# and requires >= window+1 = 31 bars (providers/replay.py:110). A symbol that
+# lists/delists mid-window (DOT 2020-08, ARB 2023-03, MATIC->POL 2024-09) would
+# otherwise poison the entire window — drop it and record it in the manifest.
+MIN_SYMBOL_BARS = 32
 SPAN_START = date(2020, 1, 1)
 SPAN_END = date(2026, 6, 30)
 
@@ -122,7 +127,15 @@ def build_window(start: date, macro: dict, force: bool = False) -> Path | None:
     if not ohlcv:
         print(f"  {wid}: NO DATA — skipped")
         return None
+    dropped = {s: len(d.get("close", [])) for s, d in ohlcv.items()
+               if len(d.get("close", [])) < MIN_SYMBOL_BARS}
+    for s in dropped:
+        del ohlcv[s]
+    if not ohlcv:
+        print(f"  {wid}: all symbols below {MIN_SYMBOL_BARS} bars — skipped")
+        return None
     snap = {
+        "_dropped_symbols": dropped,
         "_snapshot_id": wid,
         "_created_at": int(time.time()),
         "_date_range": [start.isoformat(), end.isoformat()],
@@ -173,6 +186,7 @@ def main() -> int:
             "symbols": len(bars),
             "min_bars": min(bars.values()) if bars else 0,
             "max_bars": max(bars.values()) if bars else 0,
+            "dropped_symbols": snap.get("_dropped_symbols", {}),
         })
 
     manifest = {
