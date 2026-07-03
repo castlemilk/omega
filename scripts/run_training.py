@@ -13,7 +13,8 @@ Incorporates all fixes from V14:
 Plus four observability/resilience improvements:
   1. Training health watchdog  — escalates after 20/50 zero-trade cycles with
                                  detailed gate-blocking diagnostics
-  2. Structured cycle metrics  — one-line JSON per cycle → /tmp/{version}_metrics.jsonl
+  2. Structured cycle metrics  — one-line JSON per cycle → {TMP_SINK_DIR}/{version}_metrics.jsonl
+                                 (TMP_SINK_DIR = $OMEGA_AUDIT_OUTPUT_DIR/tmp when set, else /tmp)
   3. Startup preflight         — validates DB, exchange, deps before loop starts
   4. Sit-out circuit breaker   — lowers vol_low threshold after 30 consecutive sit-outs
 
@@ -179,6 +180,16 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 AUDIT_DIR = Path(os.environ.get("OMEGA_AUDIT_OUTPUT_DIR", "").strip() or str(DATA_DIR))
 AUDIT_DIR.mkdir(parents=True, exist_ok=True)
 
+# TMP_SINK_DIR — home for the "fast local" per-run sinks (metrics.jsonl,
+# trade_details.jsonl, decisions.jsonl, training.log). Historically hardcoded to
+# /tmp, which bypassed OMEGA_AUDIT_OUTPUT_DIR and filled the HOST disk during the
+# V235 walk-forward grid (64 cells × ~1.5MB of JSONL each, plus every prior grid's
+# residue — /tmp never gets cleaned between runs). When OMEGA_AUDIT_OUTPUT_DIR is
+# set these now land in $OMEGA_AUDIT_OUTPUT_DIR/tmp/; unset keeps the /tmp default.
+_AUDIT_ENV = os.environ.get("OMEGA_AUDIT_OUTPUT_DIR", "").strip()
+TMP_SINK_DIR = (Path(_AUDIT_ENV) / "tmp") if _AUDIT_ENV else Path("/tmp")
+TMP_SINK_DIR.mkdir(parents=True, exist_ok=True)
+
 _VERSION_FILE = DATA_DIR / "training_version.txt"
 
 
@@ -222,7 +233,7 @@ def _find_baseline_version(current: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 def _setup_logging(version: str) -> logging.Logger:
-    log_file = f"/tmp/{version}_training.log"
+    log_file = str(TMP_SINK_DIR / f"{version}_training.log")
     logging.basicConfig(
         level=logging.WARNING,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -692,12 +703,12 @@ def run(
     log = logging.getLogger(f"training.{version}")
 
     # ── File paths ────────────────────────────────────────────────────────
-    metrics_jsonl = Path(f"/tmp/{version}_metrics.jsonl")
+    metrics_jsonl = TMP_SINK_DIR / f"{version}_metrics.jsonl"
     trades_csv = AUDIT_DIR / f"{version}_trades.csv"
     progress_file = AUDIT_DIR / f"{version}_progress.json"
     results_file = AUDIT_DIR / f"{version}_results.json"
     signal_contribs_jsonl = AUDIT_DIR / f"{version}_signal_contribs.jsonl"
-    trade_details_jsonl = Path(f"/tmp/{version}_trade_details.jsonl")
+    trade_details_jsonl = TMP_SINK_DIR / f"{version}_trade_details.jsonl"
     # ── V214 observability deltas #3 + #4 (always-on determinism bisect tools) ──
     # #3 mode-switch trace: one line per regime/selector-mode transition.
     # #4 signal-values fingerprint: one line per cycle (sha1 of sorted full-precision
@@ -756,7 +767,18 @@ def run(
     log.info("Metrics JSONL  : %s", metrics_jsonl)
     log.info("Audit/trace dir: %s%s", AUDIT_DIR,
              " (OMEGA_AUDIT_OUTPUT_DIR)" if AUDIT_DIR != DATA_DIR else " (default)")
-    log.info("Log file       : /tmp/%s_training.log", version)
+    log.info("Tmp sinks      : %s%s", TMP_SINK_DIR,
+             " (redirected off host /tmp via OMEGA_AUDIT_OUTPUT_DIR)"
+             if str(TMP_SINK_DIR) != "/tmp" else " (host /tmp default)")
+    # Runtime assertion: when the audit dir is redirected, the tmp sinks MUST be
+    # too — a hardcoded /tmp here is exactly the gap that filled the host disk
+    # during the V235 grid. Fail loudly rather than silently regress.
+    if AUDIT_DIR != DATA_DIR:
+        assert str(metrics_jsonl).startswith(str(TMP_SINK_DIR)), metrics_jsonl
+        assert TMP_SINK_DIR != Path("/tmp"), (
+            "OMEGA_AUDIT_OUTPUT_DIR is set but tmp sinks still target host /tmp"
+        )
+    log.info("Log file       : %s", TMP_SINK_DIR / f"{version}_training.log")
     _active_flags = _active_features.active_flags()
     if _active_flags:
         log.info("Features ON    : %s", ", ".join(_active_flags))
@@ -1117,7 +1139,9 @@ def run(
 
     # ── Decision snapshot writer ──────────────────────────────────────────
     from omega.core.decision_snapshot import DecisionSnapshot, DecisionWriter
-    decision_writer = DecisionWriter(version=version, db_url=db_url or None)
+    decision_writer = DecisionWriter(
+        version=version, db_url=db_url or None, output_dir=str(TMP_SINK_DIR)
+    )
     log.info("Decision snapshots → %s (+ Postgres if configured)", decision_writer.path)
 
     # ── Heartbeat client ──────────────────────────────────────────────────
@@ -1421,7 +1445,7 @@ def run(
                                     ],
                                 }) + "\n")
 
-            # ── Per-trade signal waterfall → /tmp/{version}_trade_details.jsonl ──
+            # ── Per-trade signal waterfall → {TMP_SINK_DIR}/{version}_trade_details.jsonl ──
             # Full sub-signal values, ML weights, Kelly scale, filters per closed trade.
             if new_closed:
                 _kelly_scale_cur = 1.0

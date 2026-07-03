@@ -25,6 +25,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -109,7 +110,10 @@ def _load_trades(path: Path) -> list[TradeRecord]:
 
 def _find_decisions_jsonl(version: str, hints: list[str] | None = None) -> Path | None:
     """Search common locations for the decision JSONL file."""
+    _audit = os.environ.get("OMEGA_AUDIT_OUTPUT_DIR", "").strip()
     candidates = [
+        # run_training.py writes here when OMEGA_AUDIT_OUTPUT_DIR is set (V235)
+        *([Path(_audit) / "tmp" / f"{version}_decisions.jsonl"] if _audit else []),
         Path(f"/tmp/{version}_decisions.jsonl"),
         Path(f"data/decision_traces/{version}.jsonl"),
         Path(f"data/decision_traces/{version}_decisions.jsonl"),

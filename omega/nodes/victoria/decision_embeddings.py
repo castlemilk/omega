@@ -47,6 +47,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 import pickle
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -553,7 +554,10 @@ class DecisionEmbedder:
 
 
 def _find_decisions_auto(version: str) -> Path | None:
+    _audit = os.environ.get("OMEGA_AUDIT_OUTPUT_DIR", "").strip()
     candidates = [
+        # run_training.py writes here when OMEGA_AUDIT_OUTPUT_DIR is set (V235)
+        *([Path(_audit) / "tmp" / f"{version}_decisions.jsonl"] if _audit else []),
         Path(f"/tmp/{version}_decisions.jsonl"),
         Path(f"data/decision_traces/{version}.jsonl"),
         Path(f"data/decision_traces/{version}_decisions.jsonl"),

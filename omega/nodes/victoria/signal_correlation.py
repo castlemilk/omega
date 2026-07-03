@@ -167,7 +167,14 @@ class SignalCorrelationMonitor:
         return self._matrix
 
     def save(self, version: str, output_dir: str = "/tmp") -> None:
-        """Write the current matrix to /tmp/{version}_signal_correlation.json."""
+        """Write the current matrix to /tmp/{version}_signal_correlation.json.
+
+        NOTE: the /tmp location is load-bearing — the Go API serves this file for
+        GET /api/v1/signals/correlation and expects it at /tmp/{version}_*.json.
+        Do NOT redirect via OMEGA_AUDIT_OUTPUT_DIR without also updating the Go
+        reader. Disk risk is negligible: single small JSON, feature-gated off in
+        grid runs (V235 tmp-redirect audit).
+        """
         if not self._matrix:
             return
         path = Path(output_dir) / f"{version}_signal_correlation.json"
