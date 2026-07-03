@@ -10,12 +10,43 @@ dirs, memory files, and chat history.
   planned change), update it **after** the run (gate results +
   conclusion + next steps).
 - Use `_template.md` as the starting point.
-- Update the high-water-mark table below whenever a new run beats an
-  existing per-gate best.
+- Update the walk-forward baseline table below whenever a new full-grid
+  run moves a regime's distribution (never from a single window).
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## High-water marks (as of 2026-06-03, post-V211)
+## Standing baseline — walk-forward distributions (as of 2026-07-03, V235)
+
+**High-water language is RETIRED.** The acceptance unit is the per-regime
+walk-forward DISTRIBUTION (`data/walk_forward_manifest.json`: 32 × 90-day
+windows 2020→2026, crisis 12 / trend 10 / recent 10; grid
+`scripts/walk_forward_grid.sh`, 64/64 cells DETERMINISM PASS $0.00). Standing
+main = V227-skew config (`crisis_skew` ON, gate ON, X=0.12; IC OFF; brake OFF).
+Full tables + per-window detail: `V235_WALKFORWARD_RESULTS.md`.
+
+| Regime | n | mean | median | p25 | min | max |
+|---|---:|---:|---:|---:|---:|---:|
+| crisis | 12 | **+$819** | +$249 | −$2,135 | −$5,819 | +$8,679 |
+| trend  | 10 | **+$1,941** | +$1,886 | −$855 | −$3,105 | +$10,038 |
+| recent | 10 | **−$516** | −$1,571 | −$2,551 | −$5,356 | +$6,551 |
+
+Verdicts measured on this grid: recent's +$4,901 **DOES NOT REPRODUCE**; the
+banked V229 trend-IC overlay **DOES NOT SHIP** (trend mean-Δ −$831 / min-Δ
+−$6,136; crisis mean-Δ −$79 / min-Δ −$7,497); crisis is sign-POSITIVE — the
+V227→V234 "crisis is broken" arc was window-selection artifact. See
+`REFLECTION_V235.md`.
+
+> **Replay wrap-seam footnote (why pre-V235 numbers are contaminated):**
+> `ReplayIngestionNode` wraps at series end, so 200-cycle runs on 60–90-bar
+> snapshot windows replayed the data ~2–6× and booked PnL across a fictitious
+> last-bar→first-bar price jump (forensic: 6 seam trades = −$114k on one
+> wrapped window). Every single-window standing number quoted below this line
+> — including recent +$4,901, trend-IC +$1,428, crisis −$2,991 — carries the
+> artifact; V225–V234 verdicts are directionally unknown. Fixed in c244568
+> (per-window cycle caps = min_bars−31). The historical entries below are
+> preserved as narrative, NOT as baselines.
+
+## [RETIRED 2026-07-03] High-water marks (as of 2026-06-03, post-V211)
 
 Noise-floor status (V211 2-pair × 3-gate audit, 12 runs): **eval-noise
 floor finally trustworthy at $1–166 across all three gates**. V211
@@ -34,6 +65,8 @@ re-anchored at V211 single-seed=42 headlines below.
 | recent  | **V211 (re-baselined)**               |        +$2,177.06 |     69 | 0.3333| 1.112 | **$1**  | Within-pair max $0.95, cross-pair max $0.95, Δtrades=0 across 4 runs. ~2,400× collapse vs V210's ≥$1,386 floor. V199 +$2,478 stays DEMOTED — was unreproducible at HEAD and rode the unsorted basket channel. |
 | trend   | **V211 (re-baselined)**               |        +$8,328.87 |    106 | 0.3774| 1.281 | **$166**| 3 of 4 runs identical at 106 trades / ≈$8,330; trend_p1_r2 outlier at 105 trades / $8,165 (residual 4th channel — parking lot for V212/V213). V204 +$22,105 stays RESCINDED. |
 | crisis  | **V211 (re-baselined)**               |       −$24,827.90 |     62 | 0.3226| 0.512 | **$12** | Within-pair max $11.82, cross-pair max $11.82, Δtrades=0 across 4 runs. V209 −$17,763 ceiling **RESCINDED** — V210 predicted asymmetric crisis cycle-1 drift = 1e-2; the basket sort canonicalized the deterministic answer to −$24,828. Same WR/PF as V209's 65-trade version, 3 fewer trades. Whether −$24,828 vs alternative canonicalizations is "the" structural answer is a V212+ parking-lot question; for now this is the working floor. |
+
+**V235 (2026-07-03) — instrument-only; walk-forward distribution (32 windows, 64 cells, 0 det FAILs) inverts the campaign's priors.** Built the walk-forward instrument (`walk_forward_freeze.py` → 32 regime-tagged 90d windows 2020→2026; `walk_forward_grid.sh` + `walk_forward_aggregate.py`), plus two forensics: (a) **universe re-validation** (`V235_UNIVERSE_REVIEW.md` — all 9 blacklist entries noise-founded on ~99 pre-hermetic trades; flip deferred to V238); (b) **the replay wrap-seam** (c244568): `ReplayIngestionNode` wraps at series end, so every pre-V235 single-window number was booked partly against a fictitious price seam — V225–V234 verdicts downgraded to directionally unknown. Grid results: **recent +$4,901 DOES NOT REPRODUCE** (honest mean −$516/p25 −$2,551, n=10 — recent is the WORST regime); **trend-IC DOES NOT SHIP** (trend mean-Δ −$831/min −$6,136; the 48-cell interim "helps crisis +$896" INVERTED to −$79/min −$7,497 at 64 cells — partial grids are not verdicts); **crisis is sign-POSITIVE** (mean +$819/median +$249, n=12) — the 8-refutation "crisis is broken" arc was window selection. Baselines re-anchored to the distribution table above; V236 executes the trend-IC refutation branch and retargets recent; V237's crisis program closes OBE, mechanism retargets tail width. See `V235.md` + `V235_WALKFORWARD_RESULTS.md` + `REFLECTION_V235.md`.
 
 **V234 (2026-07-01) — REFUTED (falsifier branch 3, pre-grid); the 2024aug loss is a candidate-SELECTION failure, not sizing — the V227 drawdown gate never selects the traded losers.** V234 moved downstream of the composite (per V233 branch 4) to throttle crisis position SIZE on the V227 drawdown-AND-gate. A **pre-grid forensic** (env-gated stderr probes at the `raw_weights` throttle site, run against the exact grid config on `snap_crisis_2024aug`) refuted it before any burn: (1) **no wiring bug** — the throttle site is on the live training path (weighted proposals originate in `StrategyNode._construct_portfolio`), the throttle IS reached on trade cycles, and `_skew_dd_mag` is present on **100%** of candidates → the session-entry "not propagated to the sizing site" hypothesis is **disproved**; (2) **the throttle fires on 0 candidates** because traded 2024aug candidates max `_skew_dd_mag` = **0.0644 at entry** (200-cycle; 0% exceed 0.08, let alone the 0.12 gate) → at thresh 0.12 every cell is guaranteed **Δ == $0.00**, so the grid was **NOT launched** (burn saved). **Structural finding + correction to V233:** `_skew_dd_mag` is *realized PAST* drawdown; the 2024aug losers are **shorts entered before reversals** (~0 pre-entry drawdown), so a lagging selector is structurally blind. V233's "the V227 gate fires correctly on 2024aug (0.292)" cites a **non-traded** ticker — the gate and the traded losers are **disjoint sets**. Eight interventions (V227–V234) all failed on 2024aug for the *same* reason: each keys off a signal that does not discriminate the losing set at entry. **No high-water break.** Reflection-trigger fired → `REFLECTION_V234.md`; **V235 pivots to the candidate-SELECTION layer** with an entry-time (forward/cross-sectional) discriminator, mandatory pre-work to prove a separator exists before any grid (`V235.md`). The default-inert throttle *actuator* is retained for V235 reuse with a better gate. See `V234.md` + `REFLECTION_V234.md`.
 
