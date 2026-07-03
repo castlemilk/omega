@@ -1,15 +1,36 @@
 {
-  "version": "deep-review-2026-06-fable",
-  "step": "DEEP_REVIEW_2026-06_FABLE.md complete (post-V234). Campaign verdict: durable value is ~all instrumentation (determinism arc + V231 distributional harness); shipped strategy alpha surviving its own best measurement = 0; 8 consecutive refutations on snap_crisis_2024aug = Goodhart alarm on the TARGET, not the mechanism. New finding: effective tradeable universe is 4/13 symbols (blacklist from V55-V93 era, never re-validated); trend/recent gates have NEVER been distributionally tested (recent +$4,901 rests on N=1 window).",
-  "next_action": "V235 as pre-registered (2024aug candidate-selection) = DO NOT PROCEED; its own falsifier branch 3 fires on evidence already collected. PIVOT: V235' = walk-forward distributional eval for ALL regimes (~25-30 rolling 60-90d windows 2020-2026, V215 freeze recipe, regime-tagged, mean/p25/min as the gate unit) - instrument-only. Then V236 = portfolio-level crisis exposure cap (corr-spike/basket-dd gated, at the retained V234 raw_weights actuator, V232 bar + delta-trades!=0); V237 = ship banked trend-IC overlay measured on the trend distribution; V238+ = universe re-expansion + composite simplification (Fork A). See DEEP_REVIEW_2026-06_FABLE.md ranked table.",
-  "notes": [
-    "V235.md pre-registration stands as written but is superseded by the review recommendation; its pre-work (entry-time separator probe, ~2 short runs) may run only as an appendix, and any found separator is a hypothesis for the walk-forward eval, never a license for another single-window grid.",
-    "Loop process changes recommended (review Lens 4): (1) distributional acceptance mandatory for ALL gates, not crisis-only; (2) keep the V234-style pre-grid separator proof as a standing rule; (3) NEW Goodhart tripwire - >=3 consecutive refutations on the same window forces questioning the TARGET next version; (4) strategic audits on ~10-version cadence with pre-registered follow-ups; (5) retire single-window 'high-water' language once the distribution baseline exists.",
-    "Crisis program status: distribution mean already positive (+$1,001 ON / +$933 OFF, N=3, spread $25,435). If the V236 portfolio-level cap also fails the V232 bar, crisis formally closes (9 refutations) and becomes a monitored risk report, not an optimization target.",
-    "V234 RESULT (parent, REFUTED pre-grid): throttle inert at 0.12 - traded 2024aug candidates max _skew_dd_mag 0.0644 at entry; V227 gate and traded losers are disjoint sets; lagging selectors structurally blind to pre-reversal shorts.",
-    "infra unchanged: OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data; MAXP=1 sequential in-checkout; python3 pinned /opt/homebrew/bin/python3; macro_cache.db committed-clean discipline per victoria_snapshot_build_trap."
+  "version": "v235-walkforward",
+  "step": "V235 COMPLETE + FINALIZED (2026-07-03). Grid 64/64 cells, 0 missing, 0 determinism FAILs ($0.00, N=2 sentinels PASS). Docs committed+pushed: V235_WALKFORWARD_RESULTS.md (narrative + auto tables), REFLECTION_V235.md (Goodhart tripwire + walk-forward reflection), README re-anchored to walk-forward distribution baselines (high-water RETIRED, wrap-seam footnote), V236 REFUTED-BY-DISTRIBUTION + retargeted, V237 RETARGETED (crisis program closed OBE, mechanism -> tail-width risk control). Infra: run_training.py tmp sinks (metrics/trade_details/decisions/training.log) now follow OMEGA_AUDIT_OUTPUT_DIR/tmp with startup banner+assertion; host /tmp cleaned.",
+  "next_action": "V236 (retargeted): pick the recent-regime intervention. Recent is the WORST honest regime (mean -$516 / median -$1,571 / p25 -$2,551, n=10) and was NEVER directly targeted (assumed won on the contaminated +$4,901). Hypothesis must come from REFLECTION_V235 'untouched dimensions' (recent interventions, tail-width objectives, exit layer, cross-window-robust sizing); bar pre-registered on the n=10 recent walk-forward distribution (mean-D AND tail floor); V234 pre-grid separator rule applies. V237 (retargeted) = portfolio corr-spike cap as regime-agnostic TAIL-WIDTH risk control on the full 32-window distribution (pooled p25 +$500 / min +$1,000 / no regime mean regression >$200). V238 = blacklist flip, baseline = walk-forward distribution.",
+  "honest_baselines_v235": {
+    "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
+    "crisis": {"n": 12, "mean": 819.34, "median": 248.90, "p25": -2135.44, "min": -5819.23, "max": 8679.33},
+    "trend": {"n": 10, "mean": 1940.57, "median": 1885.71, "p25": -855.04, "min": -3104.78, "max": 10038.01},
+    "recent": {"n": 10, "mean": -516.27, "median": -1571.14, "p25": -2551.49, "min": -5355.69, "max": 6551.05}
+  },
+  "inverted_findings": [
+    "recent +$4,901 DOES NOT REPRODUCE (honest mean -$516) - the campaign's single positive number was wrap-seam + window-selection contamination; recent is the WORST regime and the next target.",
+    "trend-IC banked +$1,428 was contamination: DO NOT SHIP anywhere (trend mean-D -$831/min -$6,136; crisis mean-D -$79/min -$7,497; recent D +$62 noise).",
+    "PARTIAL-GRID TRAP: at 48/64 cells crisis D read +$896 pro-trendic ('ship for crisis instead'); the last 4 crisis windows inverted it to -$79/min -$7,497. Partial distributions are not verdicts.",
+    "crisis is sign-POSITIVE (mean +$819, median +$249, n=12) - the V227-V234 'crisis is broken' 8-refutation arc was window selection on wrapped snapshots; crisis program closed OBE; the real problem is tail width (p25 -$2,135).",
+    "trend is the BEST regime (mean +$1,941) - it never needed the IC rescue.",
+    "wrap-seam (c244568): ReplayIngestionNode wraps at series end; ALL pre-V235 single-window numbers (V225-V234 verdicts) are directionally unknown."
   ],
-  "last_commit": "pending (review docs commit)",
-  "updated_at": "2026-07-02T00:00:00+00:00",
-  "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data"
+  "notes": [
+    "infra: OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data; run_training.py now derives TMP_SINK_DIR=$OMEGA_AUDIT_OUTPUT_DIR/tmp for metrics/trade_details/decisions/training.log (asserted at startup); walk_forward_grid.sh already pinned TMPDIR. Host /tmp v### cruft deleted 2026-07-03; grid logs archived to gamma root.",
+    "grid artifacts: $AUDIT/v235_wf/{distribution.json,grid_state.json,grid_progress.log}; per-cell dirs $AUDIT/v235wf_*_determinism/.",
+    "aggregator caveat: walk_forward_aggregate.py OVERWRITES V235_WALKFORWARD_RESULTS.md - the narrative header is in git, re-apply if re-aggregated.",
+    "Uncommitted pre-existing diffs NOT mine: omega/core/* (6 files), docs/ideas+research, run_diag*.py, harness/, .serena/, scripts/v219-v225 grid scripts - left untouched.",
+    "data/signal_ic_history.json + training_version.txt: grid restored committed state before running."
+  ],
+  "last_commit": "see git log - V235 finalization series pushed 2026-07-03",
+  "updated_at": "2026-07-03T10:45:00+00:00",
+  "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
+  "v235_walkforward": {
+    "phase": "complete",
+    "cells_done": 64,
+    "cells_total": 64,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v235_wf/grid_state.json"
+  }
 }
