@@ -34,7 +34,9 @@ Verdicts measured on this grid: recent's +$4,901 **DOES NOT REPRODUCE**; the
 banked V229 trend-IC overlay **DOES NOT SHIP** (trend mean-Δ −$831 / min-Δ
 −$6,136; crisis mean-Δ −$79 / min-Δ −$7,497); crisis is sign-POSITIVE — the
 V227→V234 "crisis is broken" arc was window-selection artifact. See
-`REFLECTION_V235.md`.
+`REFLECTION_V235.md`. V236's chop-throttle mechanism was refuted at $0 by its
+pre-grid separator proof (ER/VR do not separate recent winners from losers —
+`V236_SEPARATOR_ANALYSIS.md`); baselines above remain the standing numbers.
 
 > **Replay wrap-seam footnote (why pre-V235 numbers are contaminated):**
 > `ReplayIngestionNode` wraps at series end, so 200-cycle runs on 60–90-bar
