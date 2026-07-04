@@ -1,12 +1,33 @@
 {
-  "version": "v235-walkforward+alpha-review",
-  "step": "DEEP_REVIEW_2026-07_FABLE_ALPHA committed (2026-07-04): alpha-sources + advanced-math + new-data review. Key findings: (1) the six macro/sentiment info signals (fear_greed/vix/dxy/yield_curve/whale_flow/geopolitical) are live-fetch-only -> INERT under the V215 hermetic guard in every eval ever run; (2) data.binance.vision bulk dumps = deepest free orthogonal series (funding 2019->, OI, taker imbalance, long/short, liquidationSnapshot); (3) recent = chop regime, momentum composite has no edge there -> conditional exposure, not new weights. Previous step: V235 COMPLETE + FINALIZED (2026-07-03). Grid 64/64 cells, 0 missing, 0 determinism FAILs ($0.00, N=2 sentinels PASS). Docs committed+pushed: V235_WALKFORWARD_RESULTS.md (narrative + auto tables), REFLECTION_V235.md (Goodhart tripwire + walk-forward reflection), README re-anchored to walk-forward distribution baselines (high-water RETIRED, wrap-seam footnote), V236 REFUTED-BY-DISTRIBUTION + retargeted, V237 RETARGETED (crisis program closed OBE, mechanism -> tail-width risk control). Infra: run_training.py tmp sinks (metrics/trade_details/decisions/training.log) now follow OMEGA_AUDIT_OUTPUT_DIR/tmp with startup banner+assertion; host /tmp cleaned.",
-  "next_action": "V236 (PICKED, per DEEP_REVIEW_2026-07_FABLE_ALPHA S5): chop-conditional exposure throttle. Hypothesis: momentum composite has negative conditional expectancy at low trend-efficiency (Kaufman ER / variance ratio on the basket, 20d); throttle size at the raw_weights layer when ER low. STEP 1 = pre-grid separator proof, ~0 runs: from the 10 recent main-arm trades.csv in $AUDIT/v235_wf + frozen OHLCV, compute entry-ER for winners vs losers (rank test on ~140 pooled recent trades; low-ER tercile pooled PnL must be materially negative). If ER fails, try Lo-MacKinlay VR; if both fail -> mechanism refuted for $0, promote fallback = BTC-factor residualization (proper rolling-beta demean vs the crude _basket_mean). Bar (pre-registered, all 32 windows): recent mean-D > +$400 AND recent p25-D > +$500 AND trend mean-D > -$300 AND crisis mean-D > -$300. Threshold set from separator analysis, NOT gridded. QUEUE: V237 = corr-spike tail cap, trigger upgraded to PCA absorption ratio + offline copula calibration (bars unchanged); V238 = frozen-series feed build (snapshot series/ section + SeriesProvider: FRED, alternative.me F&G history, data.binance.vision funding/OI/taker, DVOL) + re-baseline with info-signal flags ON; V239 = blacklist flip (moved from V238, so it lands on the post-feed-build baseline).",
+  "version": "v236-separator-refuted",
+  "step": "V236 COMPLETE at $0 (2026-07-04): chop-regime exposure throttle REFUTED by pre-grid separator proof (V236_SEPARATOR_ANALYSIS.md). From the 140 pooled recent main-arm trades (10 V235 walk-forward recent cells on gamma) + frozen snapshots: entry bar = cycle - hold_cycles + 28 (validated by bit-exact price match, 126/140 exits exact). ER(20d, basket ETH/ADA/NEAR/ARB): winners median 0.158 < losers 0.161, one-sided p=0.40 (wrong direction); terciles low -$1,182 / mid -$1,660 / high -$2,320 (high-ER loses MOST). VR(5;20d): p=0.70, terciles non-monotone (mid -$10,380, high +$7,316 \u2014 post-hoc color only, feeds Section-4 surface). Sensitivity ER10/30d + own-ticker: non-separating everywhere (ER30 low tercile +$5,121, sign flips). NO grid run, NO code shipped, baselines unchanged (trend +$1,941 / crisis +$819 / recent -$516).",
+  "next_action": "V237 (pre-registered 2026-07-04, re-slotted): BTC-factor residualization (DEEP_REVIEW S2.1). STEP 1 = its own separator proof (~$0): rolling 60d OLS beta vs BTC from frozen OHLCV; mis-demean contamination |(beta-1)*r_BTC| at entry; gate = losers median contamination > winners at p<0.05 AND high-contamination tercile pooled PnL < -$500. Both fail -> refuted at $0, advance to V238. Bar if grid runs (all 32 windows, flag ON vs OFF): recent mean-D > +$400 AND recent p25-D > +$500 AND trend mean-D > -$300 AND crisis mean-D > -$300. QUEUE: V238 = frozen-series feed build (binance.vision funding/OI/taker/liquidations + FRED + F&G history + DVOL, activates 4 inert info signals, re-baseline); V239 = blacklist/universe flip on new baseline; V240 candidate = corr-spike tail cap (re-queued from old V237 slot; offline PCA/copula calibration may run anytime at $0).",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
-    "crisis": {"n": 12, "mean": 819.34, "median": 248.90, "p25": -2135.44, "min": -5819.23, "max": 8679.33},
-    "trend": {"n": 10, "mean": 1940.57, "median": 1885.71, "p25": -855.04, "min": -3104.78, "max": 10038.01},
-    "recent": {"n": 10, "mean": -516.27, "median": -1571.14, "p25": -2551.49, "min": -5355.69, "max": 6551.05}
+    "crisis": {
+      "n": 12,
+      "mean": 819.34,
+      "median": 248.9,
+      "p25": -2135.44,
+      "min": -5819.23,
+      "max": 8679.33
+    },
+    "trend": {
+      "n": 10,
+      "mean": 1940.57,
+      "median": 1885.71,
+      "p25": -855.04,
+      "min": -3104.78,
+      "max": 10038.01
+    },
+    "recent": {
+      "n": 10,
+      "mean": -516.27,
+      "median": -1571.14,
+      "p25": -2551.49,
+      "min": -5355.69,
+      "max": 6551.05
+    }
   },
   "inverted_findings": [
     "recent +$4,901 DOES NOT REPRODUCE (honest mean -$516) - the campaign's single positive number was wrap-seam + window-selection contamination; recent is the WORST regime and the next target.",
@@ -23,8 +44,8 @@
     "Uncommitted pre-existing diffs NOT mine: omega/core/* (6 files), docs/ideas+research, run_diag*.py, harness/, .serena/, scripts/v219-v225 grid scripts - left untouched.",
     "data/signal_ic_history.json + training_version.txt: grid restored committed state before running."
   ],
-  "last_commit": "see git log - V235 finalization series pushed 2026-07-03",
-  "updated_at": "2026-07-04T00:00:00+00:00",
+  "last_commit": "V236 separator refutation + V237 re-slot pre-registration (2026-07-04)",
+  "updated_at": "2026-07-04T12:00:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
