@@ -875,6 +875,16 @@ class VictoriaFeatures:
     position. Only consulted when crisis_size_throttle_enabled is True. Reuses
     crisis_skew_drawdown_threshold (0.12) as the gate threshold — no new threshold."""
 
+    frozen_series_enabled: bool = False
+    """V238: serve the six info-class signals (fear_greed, vix, dxy, yield_curve,
+    whale_flow, gdelt) from the frozen historical series in data/frozen_series/
+    (built once by scripts/v238_freeze_series.py) via a bar-aligned
+    SeriesProvider, instead of their live-fetch paths — which under the V215
+    hermetic guards return 0.0/stale in every backtest, leaving the signals
+    inert since inception. Out-of-range/missing series produce NaN (skipped at
+    the injection site), never a silent 0.0; the provider raises rather than
+    wrapping (V235 seam lesson). Default OFF ⇒ byte-identical V235 baseline."""
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------

@@ -164,6 +164,53 @@ class YieldCurveSignal:
             "days_inverted": self._days_inverted,
         }
 
+    def compute_from_series(
+        self,
+        pairs_10y: list[tuple[str, float]],
+        pairs_2y: list[tuple[str, float]],
+    ) -> float:
+        """V238 frozen-series path: same three modes on provided FRED windows.
+
+        `pairs_*` are (iso_date, rate) observations oldest-first (SeriesProvider
+        `get_window_pairs`, ~90 calendar days). Unlike the live path this is
+        STATELESS: the inversion streak is derived from the window itself (the
+        live `_days_inverted` counter is per-process call-count state — a
+        determinism hazard in replay). Steepening fires when the latest spread
+        is positive after >= _STEEPEN_MIN_DAYS consecutive inverted
+        observations immediately before it. Returns NaN when the aligned
+        window is too short — callers skip non-finite values.
+        """
+        by_date_2y = dict(pairs_2y)
+        spreads_bp = [
+            (r10 - by_date_2y[d]) * 100.0 for d, r10 in pairs_10y if d in by_date_2y
+        ]
+        rates_10y = [r10 for d, r10 in pairs_10y if d in by_date_2y]
+        if len(spreads_bp) < 5:
+            return float("nan")
+
+        shock_bp = (rates_10y[-1] - rates_10y[-2]) * 100.0 if len(rates_10y) >= 2 else 0.0
+        shock_sig = self._shock_signal(shock_bp)
+
+        # Trailing inversion streak ending at the second-to-last observation
+        # (mirrors the live counter's state *before* today's reading).
+        streak = 0
+        for s in reversed(spreads_bp[:-1]):
+            if s < 0.0:
+                streak += 1
+            else:
+                break
+        steepen_sig = 0.4 if (spreads_bp[-1] >= 0.0 and streak >= _STEEPEN_MIN_DAYS) else 0.0
+
+        inversion_sig = self._inversion_signal(spreads_bp[-1])
+
+        if abs(shock_sig) > 0.0:
+            raw = shock_sig
+        elif steepen_sig != 0.0:
+            raw = steepen_sig
+        else:
+            raw = inversion_sig
+        return max(-0.6, min(0.4, raw))
+
     # ------------------------------------------------------------------ internals
 
     def _load_rates(self, series_id: str) -> list[float]:

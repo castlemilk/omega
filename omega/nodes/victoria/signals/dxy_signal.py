@@ -55,11 +55,13 @@ def _pearson(xs: list[float], ys: list[float]) -> float | None:
     if n < 5:
         return None
     xs, ys = xs[-n:], ys[-n:]
-    mx = sum(xs) / n
-    my = sum(ys) / n
-    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
-    denom_x = math.sqrt(sum((x - mx) ** 2 for x in xs))
-    denom_y = math.sqrt(sum((y - my) ** 2 for y in ys))
+    # fsum: exact-rounded, permutation-invariant (V220/V221 discipline) —
+    # this helper is now also on the frozen replay path.
+    mx = math.fsum(xs) / n
+    my = math.fsum(ys) / n
+    num = math.fsum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=False))
+    denom_x = math.sqrt(math.fsum((x - mx) ** 2 for x in xs))
+    denom_y = math.sqrt(math.fsum((y - my) ** 2 for y in ys))
     if denom_x == 0 or denom_y == 0:
         return None
     return num / (denom_x * denom_y)
@@ -95,7 +97,19 @@ class DXYSignal:
         dollar_prices = self._get_dollar_prices()
         if len(dollar_prices) < self._window:
             return 0.0
+        return self._signal_from_prices(dollar_prices, market_data)
 
+    def compute_from_series(self, dollar_prices: list[float], market_data: dict[str, Any]) -> float:
+        """V238 frozen-series path: same correlation logic on a provided
+        DTWEXBGS window (oldest-first, from SeriesProvider) — no macro_cache.db.
+        Returns NaN when the window is too short — callers skip non-finite
+        values rather than reading 0.0 as "correlation checked, neutral".
+        """
+        if len(dollar_prices) < self._window:
+            return float("nan")
+        return self._signal_from_prices(dollar_prices, market_data)
+
+    def _signal_from_prices(self, dollar_prices: list[float], market_data: dict[str, Any]) -> float:
         btc_data = market_data.get("BTCUSDT") or {}
         btc_prices_raw = btc_data.get("adjclose") or btc_data.get("close") or []
         btc_prices = [float(p) for p in btc_prices_raw if p is not None and float(p) > 0]

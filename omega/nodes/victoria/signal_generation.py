@@ -150,6 +150,14 @@ def _regime_gated_skew(
     return raw_value
 
 try:
+    from omega.nodes.victoria.series_provider import SeriesOutOfRange as _SeriesOutOfRange
+    from omega.nodes.victoria.series_provider import get_series_provider as _get_series_provider
+
+    _HAS_SERIES_PROVIDER = True
+except ImportError:
+    _HAS_SERIES_PROVIDER = False
+
+try:
     from omega.nodes.victoria.signals.fear_greed import FearGreedSignal as _FearGreedSignal
 
     _HAS_FEAR_GREED = True
@@ -494,6 +502,20 @@ class SignalGenerationNode(Node):
                     ),
                 )
 
+        # V238 frozen_series: bar-aligned reader over data/frozen_series/ so the
+        # six info-class signals see REAL history in frozen replay instead of the
+        # 0.0/stale their live-fetch paths degrade to under the V215 guards.
+        # NOT wrapped in suppress(Exception) — a broken provider must fail loud
+        # (V213 silently-inert lesson); the run_training banner probes this field.
+        self._series_provider: Any = None
+        if (
+            _HAS_SERIES_PROVIDER
+            and self._features
+            and getattr(self._features, "frozen_series_enabled", False)
+        ):
+            self._series_provider = _get_series_provider()
+            logger.info("SeriesProvider initialized (frozen_series_enabled=1)")
+
         # V103 ws_microstructure: background WS feeds for microstructure signals
         self._ws_feeds: Any = None
         if (
@@ -824,6 +846,40 @@ class SignalGenerationNode(Node):
                     logger.debug("geometry_warm_start orc bar failed: %s", exc)
         logger.info("Geometry warm-started with %d bars", warmed)
 
+    @staticmethod
+    def _frozen_series_bar_ts(market_data: dict[str, Any]) -> float | None:
+        """Latest bar unix timestamp across symbols (V216 bar-time fence).
+
+        This is the replay clock the SeriesProvider is aligned to — NEVER
+        wall-clock. Returns None when no symbol carries timestamps.
+        """
+        ts_max: float | None = None
+        for data in market_data.values():
+            if not isinstance(data, dict):
+                continue
+            stamps = data.get("timestamps") or []
+            if stamps:
+                t = float(stamps[-1])
+                if ts_max is None or t > ts_max:
+                    ts_max = t
+        return ts_max
+
+    @staticmethod
+    def _frozen_signal(fn: Any) -> float:
+        """Run a frozen-series signal computation; missing/out-of-range → NaN.
+
+        NaN (not 0.0) so the injection sites SKIP the signal for the cycle —
+        0.0 would hide the missingness inside the composite (V238 contract).
+        """
+        try:
+            return float(fn())
+        except _SeriesOutOfRange as _oor:
+            logger.debug("frozen series out of range: %s", _oor)
+            return float("nan")
+        except Exception as _exc:
+            logger.warning("frozen series compute error: %s", _exc)
+            return float("nan")
+
     def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
 
@@ -831,34 +887,72 @@ class SignalGenerationNode(Node):
         if self._decay_detector is None:
             self.load_decay_detector()
 
+        # V238: when frozen_series_enabled, the six info-class signals read the
+        # frozen historical series bar-aligned to the replay clock instead of
+        # their live-fetch paths (inert under the V215 hermetic guards).
+        _sp = self._series_provider
+        _sp_bar_ts: float | None = (
+            self._frozen_series_bar_ts(market_data) if _sp is not None else None
+        )
+        _sp_on = _sp is not None and _sp_bar_ts is not None
+
         # Market-level cross-asset signals — computed once and applied to all tickers.
         _fear_greed_val: float = 0.0
         if self._fear_greed_signal is not None:
-            try:
-                _fear_greed_val = self._fear_greed_signal.compute()
-            except Exception as _exc:
-                logger.warning("FearGreedSignal compute error: %s", _exc)
+            if _sp_on:
+                _fear_greed_val = self._frozen_signal(
+                    lambda: self._fear_greed_signal.compute_from_series(
+                        _sp.get_window("fng", _sp_bar_ts, 31)
+                    )
+                )
+            else:
+                try:
+                    _fear_greed_val = self._fear_greed_signal.compute()
+                except Exception as _exc:
+                    logger.warning("FearGreedSignal compute error: %s", _exc)
 
         _dxy_val: float = 0.0
         if self._dxy_signal is not None:
-            try:
-                _dxy_val = self._dxy_signal.compute(market_data)
-            except Exception as _exc:
-                logger.warning("DXYSignal compute error: %s", _exc)
+            if _sp_on:
+                _dxy_val = self._frozen_signal(
+                    lambda: self._dxy_signal.compute_from_series(
+                        _sp.get_window("fred_dtwexbgs", _sp_bar_ts, 30), market_data
+                    )
+                )
+            else:
+                try:
+                    _dxy_val = self._dxy_signal.compute(market_data)
+                except Exception as _exc:
+                    logger.warning("DXYSignal compute error: %s", _exc)
 
         _vix_val: float = 0.0
         if self._vix_signal is not None:
-            try:
-                _vix_val = self._vix_signal.compute()
-            except Exception as _exc:
-                logger.warning("VIXSignal compute error: %s", _exc)
+            if _sp_on:
+                _vix_val = self._frozen_signal(
+                    lambda: self._vix_signal.compute_from_series(
+                        _sp.get_window("fred_vixcls", _sp_bar_ts, 45)
+                    )
+                )
+            else:
+                try:
+                    _vix_val = self._vix_signal.compute()
+                except Exception as _exc:
+                    logger.warning("VIXSignal compute error: %s", _exc)
 
         _yield_curve_val: float = 0.0
         if self._yield_curve_signal is not None:
-            try:
-                _yield_curve_val = self._yield_curve_signal.compute()
-            except Exception as _exc:
-                logger.warning("YieldCurveSignal compute error: %s", _exc)
+            if _sp_on:
+                _yield_curve_val = self._frozen_signal(
+                    lambda: self._yield_curve_signal.compute_from_series(
+                        _sp.get_window_pairs("fred_dgs10", _sp_bar_ts, 90),
+                        _sp.get_window_pairs("fred_dgs2", _sp_bar_ts, 90),
+                    )
+                )
+            else:
+                try:
+                    _yield_curve_val = self._yield_curve_signal.compute()
+                except Exception as _exc:
+                    logger.warning("YieldCurveSignal compute error: %s", _exc)
 
         _spy_val: float = 0.0
         if self._spy_signal is not None:
@@ -872,7 +966,16 @@ class SignalGenerationNode(Node):
         # timestamp; when no timestamp is configured for backtest, skip to avoid
         # contaminating historical replay with current-day geopolitics.
         _geo_signals: dict[str, float] = {}
-        if self._geo_signal is not None and not self._geo_backtest_disabled:
+        if self._geo_signal is not None and _sp_on:
+            # V238: no frozen GDELT series has been built yet (queued V240+) —
+            # under frozen replay the signal is honestly ABSENT (skipped for the
+            # cycle), never served from live/cached current-day geopolitics.
+            if _sp.available("gdelt_tone"):
+                logger.warning(
+                    "frozen gdelt series present but V238 wiring does not consume "
+                    "it yet — signal stays absent"
+                )
+        elif self._geo_signal is not None and not self._geo_backtest_disabled:
             try:
                 import datetime as _dt_mod
 
@@ -1060,19 +1163,22 @@ class SignalGenerationNode(Node):
                 except Exception:
                     pass
 
-            # Cross-asset market-level signals (pre-computed above, applied to every ticker)
-            if _fear_greed_val != 0.0:
+            # Cross-asset market-level signals (pre-computed above, applied to every
+            # ticker). isfinite: the V238 frozen-series paths return NaN for
+            # missing/out-of-range series — NaN must be SKIPPED, never injected
+            # (it would poison every downstream composite mean).
+            if _fear_greed_val != 0.0 and math.isfinite(_fear_greed_val):
                 ts["fear_greed_signal"] = _fear_greed_val
-            if _dxy_val != 0.0:
+            if _dxy_val != 0.0 and math.isfinite(_dxy_val):
                 ts["dxy_signal"] = _dxy_val
-            if _vix_val != 0.0:
+            if _vix_val != 0.0 and math.isfinite(_vix_val):
                 ts["vix_signal"] = _vix_val
-            if _yield_curve_val != 0.0:
+            if _yield_curve_val != 0.0 and math.isfinite(_yield_curve_val):
                 ts["yield_curve_signal"] = _yield_curve_val
             if _spy_val != 0.0:
                 ts["spy_signal"] = _spy_val
             for _geo_k, _geo_v in _geo_signals.items():
-                if _geo_v != 0.0:
+                if _geo_v != 0.0 and math.isfinite(_geo_v):
                     ts[_geo_k] = _geo_v
             if _ricci_val != 0.0:
                 ts["ricci_curvature_signal"] = _ricci_val
@@ -1119,12 +1225,26 @@ class SignalGenerationNode(Node):
                 except Exception as _wp_exc:
                     logger.debug("whale_prints %s: %s", ticker, _wp_exc)
 
-            # V115 Phase 2: whale_flow — DefiLlama + OKX smart-money signals
+            # V115 Phase 2: whale_flow — DefiLlama + OKX smart-money signals.
+            # V238: under frozen_series the OI derivative reads real
+            # binance.vision history and stablecoin velocity reads the frozen
+            # DefiLlama supply series; exchange_net_flow has no frozen source
+            # yet → NaN → skipped (honestly absent, not 0.0).
             if self._whale_flow is not None:
                 try:
-                    _wf = self._whale_flow.compute_all(ticker)
+                    if _sp_on:
+                        _oi_win = _st_win = None
+                        with contextlib.suppress(_SeriesOutOfRange):
+                            _oi_win = _sp.get_window(
+                                f"binance_oi_{ticker.lower()}", _sp_bar_ts, 5
+                            )
+                        with contextlib.suppress(_SeriesOutOfRange):
+                            _st_win = _sp.get_window("stablecoin_total_usd", _sp_bar_ts, 5)
+                        _wf = self._whale_flow.compute_all_from_series(_oi_win, _st_win)
+                    else:
+                        _wf = self._whale_flow.compute_all(ticker)
                     for _wf_key, _wf_val in _wf.items():
-                        if _wf_val != 0.0:
+                        if _wf_val != 0.0 and math.isfinite(_wf_val):
                             ts[_wf_key] = _wf_val
                 except Exception as _wf_exc:
                     logger.debug("whale_flow %s: %s", ticker, _wf_exc)

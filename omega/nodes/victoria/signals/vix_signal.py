@@ -212,6 +212,19 @@ class VIXSignal:
             "zscore_signal": zscore_signal,
         }
 
+    def compute_from_series(self, vix_prices: list[float]) -> float:
+        """V238 frozen-series path: threshold + z-score modes on a provided
+        VIX window (oldest-first, from SeriesProvider), bypassing yfinance and
+        the OMEGA_FROZEN_CACHE fence entirely. Returns NaN when the window is
+        too short — callers skip non-finite values.
+        """
+        if len(vix_prices) < 5:
+            return float("nan")
+        threshold_signal = self._threshold_signal(vix_prices)
+        zscore_signal, _z = self._zscore_signal(vix_prices)
+        raw = threshold_signal if abs(threshold_signal) > 0.0 else zscore_signal
+        return max(-0.7, min(0.5, raw))
+
     # ------------------------------------------------------------------
 
     def _get_vix(self) -> list[float]:
@@ -319,8 +332,10 @@ class VIXSignal:
         if not history:
             return 0.0, 0.0
 
-        mean = sum(history) / len(history)
-        variance = sum((v - mean) ** 2 for v in history) / len(history)
+        # fsum: exact-rounded, permutation-invariant (V220/V221 discipline) —
+        # this helper is now also on the frozen replay path.
+        mean = math.fsum(history) / len(history)
+        variance = math.fsum((v - mean) ** 2 for v in history) / len(history)
         std = math.sqrt(variance) if variance > 0 else 1.0
         z = (current - mean) / std
 

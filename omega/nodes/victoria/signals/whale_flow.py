@@ -183,6 +183,48 @@ class WhaleFlowSignals:
             "oi_rate_of_change": self.get_oi_rate_of_change(symbol),
         }
 
+    def compute_all_from_series(
+        self,
+        oi_window: list[float] | None,
+        stable_window: list[float] | None,
+    ) -> dict[str, float]:
+        """V238 frozen-series path (no network, no cross-cycle deques).
+
+        oi_window:     daily binance.vision open-interest USD values ending at
+                       the replay bar (oldest-first); the OI derivative uses
+                       the last 3 observations, mirroring the live 3-reading
+                       deque but sourced from real history.
+        stable_window: daily total stablecoin supply (USD); velocity = last
+                       day-over-day change, same ±0.5% scaling as live.
+
+        A member with no frozen source (exchange_net_flow — DefiLlama bridge
+        history is not frozen in V238) or too-short window is NaN: the caller
+        skips non-finite values instead of reading 0.0 as "flows checked,
+        neutral".
+        """
+        from math import fsum
+
+        nan = float("nan")
+        out = {"exchange_net_flow": nan, "stablecoin_velocity": nan, "oi_rate_of_change": nan}
+
+        if oi_window and len(oi_window) >= 2:
+            vals = oi_window[-3:]
+            pct_changes = [
+                (vals[i] - vals[i - 1]) / vals[i - 1]
+                for i in range(1, len(vals))
+                if vals[i - 1] != 0
+            ]
+            if pct_changes:
+                # fsum: exact-rounded (V220/V221 discipline) on the replay path
+                avg_pct = fsum(pct_changes) / len(pct_changes)
+                out["oi_rate_of_change"] = max(-1.0, min(1.0, avg_pct / 0.02))
+
+        if stable_window and len(stable_window) >= 2 and stable_window[-2] != 0.0:
+            pct = (stable_window[-1] - stable_window[-2]) / stable_window[-2]
+            out["stablecoin_velocity"] = max(-1.0, min(1.0, pct / 0.005))
+
+        return out
+
     # ------------------------------------------------------------------
     # Private fetch helpers
     # ------------------------------------------------------------------

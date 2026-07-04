@@ -90,6 +90,18 @@ class FearGreedSignal:
         )
         return self._last_signal
 
+    def compute_from_series(self, values: list[float]) -> float:
+        """V238 frozen-series path: same contrarian z-score, no fetch, no cache.
+
+        `values` = daily FGI observations oldest-first (SeriesProvider window
+        ending at the replay bar). Returns NaN when the window is too short to
+        say anything — the caller skips non-finite values, never treats them
+        as neutral 0.0.
+        """
+        if len(values) < 5:
+            return float("nan")
+        return self._z_to_signal(values)
+
     # ------------------------------------------------------------------
 
     def _fetch(self) -> list[float]:
@@ -127,8 +139,10 @@ class FearGreedSignal:
         if len(values) < 5:
             return 0.0
         current = values[-1]
-        mean = sum(values[:-1]) / len(values[:-1])
-        variance = sum((v - mean) ** 2 for v in values[:-1]) / len(values[:-1])
+        # fsum: exact-rounded, permutation-invariant (V220/V221 discipline) —
+        # this helper is now also on the frozen replay path.
+        mean = math.fsum(values[:-1]) / len(values[:-1])
+        variance = math.fsum((v - mean) ** 2 for v in values[:-1]) / len(values[:-1])
         std = math.sqrt(variance) if variance > 0 else 1.0
         z = (current - mean) / std
 
