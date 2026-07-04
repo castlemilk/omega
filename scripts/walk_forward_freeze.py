@@ -201,6 +201,19 @@ def main() -> int:
         "_built_by": "scripts/walk_forward_freeze.py (V235)",
         "_recipe": "V215 freeze (ccxt/Binance 1d) + mechanical ex-post regime labels; "
                    "_macro copied from snap_crisis_2024aug.json (see script docstring)",
+        # V238: frozen historical series live OUTSIDE the per-window snapshots
+        # (deliberate: the 32 committed window files stay byte-identical; a
+        # global daily series sliced per-bar by SeriesProvider is hermetically
+        # equivalent to per-window embedding). This block declares where replay
+        # looks them up; scripts/check_frozen_series_coverage.py reports
+        # per-window coverage/gaps against it.
+        "series": {
+            "dir": "data/frozen_series",
+            "manifest": "data/frozen_series/MANIFEST.json",
+            "provider": "omega/nodes/victoria/series_provider.py",
+            "coverage_check": "scripts/check_frozen_series_coverage.py",
+            "flag": "frozen_series_enabled (VictoriaFeatures, default OFF)",
+        },
         "window_days": WINDOW_DAYS,
         "stride_days": STRIDE_DAYS,
         "span": [SPAN_START.isoformat(), SPAN_END.isoformat()],

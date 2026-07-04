@@ -1,6 +1,13 @@
 {
   "_built_by": "scripts/walk_forward_freeze.py (V235)",
   "_recipe": "V215 freeze (ccxt/Binance 1d) + mechanical ex-post regime labels; _macro copied from snap_crisis_2024aug.json (see script docstring)",
+  "series": {
+    "dir": "data/frozen_series",
+    "manifest": "data/frozen_series/MANIFEST.json",
+    "provider": "omega/nodes/victoria/series_provider.py",
+    "coverage_check": "scripts/check_frozen_series_coverage.py",
+    "flag": "frozen_series_enabled (VictoriaFeatures, default OFF)"
+  },
   "window_days": 90,
   "stride_days": 90,
   "span": [
