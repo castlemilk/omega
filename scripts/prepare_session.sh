@@ -48,3 +48,10 @@ echo "[prepare_session] OK ($(git rev-parse --short HEAD), branch $(git rev-pars
 #    task entering after a laptop restart sees "V### is at step N, next is X, last
 #    commit is Y, grid alive/dead" without re-deriving it. Read-only; never fails.
 python3 scripts/session_state.py show 2>/dev/null || true
+
+# 6. V238: freeze-gap validator — opt-in (OMEGA_CHECK_FROZEN_SERIES=1) because it
+#    only matters for frozen-series runs. Read-only; strict so a corrupted freeze
+#    (md5 mismatch) stops the session before a grid consumes it.
+if [ "${OMEGA_CHECK_FROZEN_SERIES:-0}" = "1" ]; then
+  python3 scripts/check_frozen_series_coverage.py --strict || exit 1
+fi

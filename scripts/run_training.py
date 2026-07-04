@@ -910,6 +910,41 @@ def run(
         getattr(_active_features, "rv_long_window", 14),
         _frozen,
     )
+    # V238: frozen-series status — per-series presence + coverage so "which of
+    # the six info signals actually have data this run?" is a one-grep answer.
+    # ABSENT is an honest state (the signal returns NaN → skipped), not an error.
+    _fs_on = bool(getattr(_active_features, "frozen_series_enabled", False))
+    if "frozen_series_enabled" not in _declared_fields:
+        log.info("[startup]   frozen_series: UNDECLARED — silent no-op")
+    elif not _fs_on:
+        log.info("[startup]   frozen_series: off (six info signals inert under frozen cache)")
+    else:
+        try:
+            from omega.nodes.victoria.series_provider import get_series_provider as _gsp
+
+            _sp = _gsp()
+            _fs_series = [
+                ("fear_greed", ["fng"]),
+                ("vix", ["fred_vixcls"]),
+                ("dxy", ["fred_dtwexbgs"]),
+                ("yield_curve", ["fred_dgs10", "fred_dgs2"]),
+                ("whale_flow.oi", ["binance_oi_ethusdt"]),  # per-symbol; probe one
+                ("whale_flow.stables", ["stablecoin_total_usd"]),
+                ("gdelt", ["gdelt_tone"]),
+                ("dvol(unwired V238)", ["dvol_btc"]),
+            ]
+            for _fs_label, _fs_names in _fs_series:
+                _covs = []
+                for _n in _fs_names:
+                    _c = _sp.coverage(_n) if _sp.available(_n) else None
+                    _covs.append(f"{_n}[{_c[0]}..{_c[1]}]" if _c else f"{_n}=ABSENT")
+                log.info("[startup]   frozen_series %-22s %s", _fs_label + ":", " ".join(_covs))
+            log.info("[startup]   frozen_series: ON → ACTIVE (provider wired, bar-aligned)")
+        except Exception as _fs_exc:
+            log.info(
+                "[startup]   frozen_series: ON · PROVIDER FAILED (%s) → SILENTLY INERT",
+                type(_fs_exc).__name__,
+            )
     log.info("=" * 70)
 
     # ── V219 substrate preflight (frozen cache: manifest md5 + macro/funding
