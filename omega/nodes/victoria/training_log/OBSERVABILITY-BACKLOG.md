@@ -213,11 +213,38 @@ the pooled walk-forward trades + snapshots with `mann_whitney`/`terciles`/
 ER20, VR, β60, C60) so future separators and the Section-4 surface reuse
 identical rows.
 
-- **#20 frozen-series freshness/gap validator (M) — ships as V238's freeze
-  acceptance gate** (listed for the pattern, not as a free-floating queue
-  item): per-series per-window bar-count + gap report in the freeze manifest;
-  a silent gap in a frozen non-price series is the feed build's new
-  runtime-inert-subsystem class.
+- **#20 frozen-series freshness/gap validator (M) — SHIPPED V238** as the
+  freeze acceptance gate (`scripts/check_frozen_series_coverage.py`): per-series
+  per-window FULL/PARTIAL/ABSENT report + md5 freeze-integrity check; strict
+  mode wired into `prepare_session.sh` (opt-in `OMEGA_CHECK_FROZEN_SERIES=1`)
+  and as the v238_wf_grid.sh preflight. A silent gap in a frozen non-price
+  series was the feed build's new runtime-inert-subsystem class; the validator
+  makes it a one-grep answer.
+
+### Surfaced by V238 (frozen-series feed build, 2026-07-04)
+
+- **#22 composite-membership probe (S) — SHIP-NEXT.** V238 discovered a
+  V213-class silent-inertness variant one layer deeper than the wiring banner:
+  a signal can be **instantiated, flag-ON, and injected into the per-ticker
+  signal dict** yet still be **invisible to the composite**, because
+  `_ic_weighted_composite`/`_balanced_composite` only consume keys ending
+  `_signal` (+ `sma_crossover`). The V115 `whale_flow` member names
+  (`oi_rate_of_change`, `stablecoin_velocity`, `exchange_net_flow`) and 3/4
+  GDELT `geo_*` keys have been fed to `ts` since inception but **never reached
+  a composite** — live or frozen. The startup banner says "ACTIVE" (it IS
+  wired into `ts`); the composite silently drops it. **Instrument:** a cycle-0
+  probe that intersects the set of injected `ts` keys against the composite's
+  `endswith("_signal")` filter and logs any key that is injected-but-dropped
+  (`COMPOSITE-INVISIBLE: <key>`). Grep-catchable, ~15 lines. V238 fixed
+  whale_flow by aliasing to `*_signal`; the GDELT `geo_event_intensity` /
+  `geo_regime_shift` / `sanctions_signal` keys remain composite-invisible and
+  are queued for the V240+ GDELT feed build.
+- **#23 per-signal frozen-coverage-at-decision log (S) — queue.** The
+  freeze-gap validator reports coverage per *window*; it does not report which
+  signals were actually NaN-skipped *at each entry bar*. A per-trade column
+  (which of the six frozen signals were present vs out-of-range at entry) would
+  let the Section-4 surface condition on "info-set completeness" and catch a
+  PARTIAL-coverage window silently degrading a signal for its first N cycles.
 - **#21 entry/exit PnL attribution split (M) — queue.** MAE/MFE-based
   decomposition of per-trade PnL into entry-timing vs exit-timing loss, from
   columns already in every trades CSV. Every recent-targeted bet so far has

@@ -1,7 +1,7 @@
 {
-  "version": "v237-separator-refuted",
-  "step": "V237 COMPLETE at $0 (2026-07-04): BTC-factor residualization REFUTED by pre-grid separator proof (V237_SEPARATOR_ANALYSIS.md). Same V236 dataset (140 pooled recent trades, entry bar = cycle - hold_cycles + 28). Betas DO deviate from 1 (beta60 median 1.15, IQR 0.92-1.53) but contamination C=|beta-1|*|r_BTC_entry| does NOT separate: primary 60d MW one-sided p=0.567; at 20/30/40/90d winners carry MORE contamination (wrong direction). Terciles U-shaped: low -$6,261 (only CI excluding 0) / mid +$4,390 / high -$3,292 - no monotone gradient. Aggregated-lookback variant p=0.520, same shape. NO code, NO grid, baselines unchanged (trend +$1,941 / crisis +$819 / recent -$516). REFLECTION_V237.md committed: composite-side OHLCV-native interventions on recent EXHAUSTED (3 separator refutations, 2 mechanism families); noise threshold recent 2*SE ~= $2,400 for any future paired mean-delta claim.",
-  "next_action": "V238 (pre-registered 2026-07-04, V238.md): frozen-series feed build. Extend walk_forward_freeze.py with series/{source}/{key}.json per window + bar-aligned SeriesProvider (raises on out-of-range, never wraps); flag frozen_series_enabled default OFF (byte-identical V235 baseline, unit-tested). Priority: FRED+F&G (S, activates 4 signals) -> binance.vision funding + daily metrics OI/taker (M, new-alpha payload) -> DVOL (S) -> Polymarket/GDELT (optional). REACHABILITY VERIFIED FROM US 2026-07-04: bucket 200, monthly fundingRate 200, daily metrics 200; liquidationSnapshot 404/empty (discontinued) -> liquidations OUT of scope, Hawkes queued behind paid Coinglass. Acceptance: re-baseline not PnL bet - ship infra if determinism PASS + OFF-path identity + manifest coverage clean; adopt ON as standing baseline only if pooled mean-D > -$300 and no regime regresses > $500. Ship-with: separator_lab.py + per-trade conditioning CSV (REFLECTION_V237 #6). check_determinism.sh on smoke cell BEFORE grid (first info-set change since V214-V221 arc). QUEUE: V239 = universe/blacklist flip on V238 baseline (V239.md brief); V240 candidate = corr-spike tail cap (spec in V237.md historical section; offline PCA/copula $0 anytime); Section-4 surface = parking lot for all conditioning hypotheses.",
+  "version": "v238-grid-running",
+  "step": "V238 infra SHIPPED + full 64-cell walk-forward grid RUNNING on gamma (frozen_series OFF vs ON, 32 windows). Sentinel snap_wf_20250305 PASSED all 3 gates: determinism PASS ($0.00 spread N=2 both cells), OFF byte-identical to V235 ($3859.90), ON moves number ($3859.90->-$1490.94, 10->15 trades). 6 commits pushed pending. Grid PID 3107 nohup; waiter b2wweiq7w harness-tracked.",
+  "next_action": "When grid completes: v238_wf_aggregate.py writes V238_WALKFORWARD_RESULTS.md + distribution.json on gamma. Fill V238.md results (per-regime OFF vs ON dist + pooled mean-delta), apply adopt-ON verdict (pooled mean-D>-$300 AND no regime regress>$500), update README baseline, finalize V239 brief, final commits + push. Grid resumable: re-run scripts/v238_wf_grid.sh (skips PASS cells).",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -42,10 +42,11 @@
     "grid artifacts: $AUDIT/v235_wf/{distribution.json,grid_state.json,grid_progress.log}; per-cell dirs $AUDIT/v235wf_*_determinism/.",
     "aggregator caveat: walk_forward_aggregate.py OVERWRITES V235_WALKFORWARD_RESULTS.md - the narrative header is in git, re-apply if re-aggregated.",
     "Uncommitted pre-existing diffs NOT mine: omega/core/* (6 files), docs/ideas+research, run_diag*.py, harness/, .serena/, scripts/v219-v225 grid scripts - left untouched.",
-    "data/signal_ic_history.json + training_version.txt: grid restored committed state before running."
+    "data/signal_ic_history.json + training_version.txt: grid restored committed state before running.",
+    "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
-  "last_commit": "V237 separator refutation + reflection + V238/V239 pre-registrations (2026-07-04)",
-  "updated_at": "2026-07-04T13:30:00+00:00",
+  "last_commit": "84d98c8",
+  "updated_at": "2026-07-04T13:50:28.934760+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -53,5 +54,12 @@
     "cells_total": 64,
     "max_parallel": 1,
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v235_wf/grid_state.json"
+  },
+  "v238_walkforward": {
+    "phase": "running",
+    "cells_done": 2,
+    "cells_total": 64,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v238_wf/grid_state.json"
   }
 }
