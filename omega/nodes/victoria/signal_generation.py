@@ -1230,6 +1230,13 @@ class SignalGenerationNode(Node):
             # binance.vision history and stablecoin velocity reads the frozen
             # DefiLlama supply series; exchange_net_flow has no frozen source
             # yet → NaN → skipped (honestly absent, not 0.0).
+            #
+            # V238 finding (V213-class): the composite consumes only keys ending
+            # "_signal" (+ sma_crossover) — the V115 member names
+            # (oi_rate_of_change etc.) were NEVER composite-visible, live or
+            # frozen; the flag-ON live path fed informational dead keys. The
+            # frozen path injects composite-visible "*_signal" aliases; the live
+            # path keeps the legacy names byte-identically.
             if self._whale_flow is not None:
                 try:
                     if _sp_on:
@@ -1240,7 +1247,8 @@ class SignalGenerationNode(Node):
                             )
                         with contextlib.suppress(_SeriesOutOfRange):
                             _st_win = _sp.get_window("stablecoin_total_usd", _sp_bar_ts, 5)
-                        _wf = self._whale_flow.compute_all_from_series(_oi_win, _st_win)
+                        _wf_raw = self._whale_flow.compute_all_from_series(_oi_win, _st_win)
+                        _wf = {f"{k}_signal": v for k, v in _wf_raw.items()}
                     else:
                         _wf = self._whale_flow.compute_all(ticker)
                     for _wf_key, _wf_val in _wf.items():
