@@ -1,0 +1,288 @@
+{
+  "_built_by": "scripts/v238_freeze_series.py",
+  "_note": "freeze-once V238; replay reads these files only (never the network)",
+  "files": {
+    "binance_funding_adausdt.json": {
+      "bytes": 69793,
+      "frozen_at_utc": "2026-07-04T11:25:35+00:00",
+      "md5": "9ad0675082e28fcaf099072bd890b693",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/ADAUSDT (daily mean of settlements)"
+    },
+    "binance_funding_arbusdt.json": {
+      "bytes": 36687,
+      "frozen_at_utc": "2026-07-04T11:26:52+00:00",
+      "md5": "9db190e1c750645c212b32bd90f8cd37",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/ARBUSDT (daily mean of settlements)"
+    },
+    "binance_funding_avaxusdt.json": {
+      "bytes": 63938,
+      "frozen_at_utc": "2026-07-04T11:25:57+00:00",
+      "md5": "787076a25466dffa7aa389753f19fa9e",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/AVAXUSDT (daily mean of settlements)"
+    },
+    "binance_funding_bnbusdt.json": {
+      "bytes": 65856,
+      "frozen_at_utc": "2026-07-04T11:25:18+00:00",
+      "md5": "71f98e1b1e7aa66d1ecabb9b03acb1a2",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/BNBUSDT (daily mean of settlements)"
+    },
+    "binance_funding_btcusdt.json": {
+      "bytes": 71387,
+      "frozen_at_utc": "2026-07-04T11:24:48+00:00",
+      "md5": "cc837307ab8823409a24698b24ed8f37",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/BTCUSDT (daily mean of settlements)"
+    },
+    "binance_funding_dotusdt.json": {
+      "bytes": 64859,
+      "frozen_at_utc": "2026-07-04T11:25:45+00:00",
+      "md5": "bfa31145b2a3a258f661364c981bb9ca",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/DOTUSDT (daily mean of settlements)"
+    },
+    "binance_funding_ethusdt.json": {
+      "bytes": 71343,
+      "frozen_at_utc": "2026-07-04T11:24:59+00:00",
+      "md5": "eff1e9c5df4bbd3d850593c7813cbfe2",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/ETHUSDT (daily mean of settlements)"
+    },
+    "binance_funding_linkusdt.json": {
+      "bytes": 67311,
+      "frozen_at_utc": "2026-07-04T11:26:07+00:00",
+      "md5": "6bd266a231ffd042be1baede9476cab6",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/LINKUSDT (daily mean of settlements)"
+    },
+    "binance_funding_maticusdt.json": {
+      "bytes": 55712,
+      "frozen_at_utc": "2026-07-04T11:26:18+00:00",
+      "md5": "e690662ef78ae8cd30d6b2aaf388a97f",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/MATICUSDT (daily mean of settlements)"
+    },
+    "binance_funding_nearusdt.json": {
+      "bytes": 61762,
+      "frozen_at_utc": "2026-07-04T11:26:28+00:00",
+      "md5": "932d28c9d61192f7f3b72e7d24647a46",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/NEARUSDT (daily mean of settlements)"
+    },
+    "binance_funding_solusdt.json": {
+      "bytes": 64471,
+      "frozen_at_utc": "2026-07-04T11:25:08+00:00",
+      "md5": "ebfed9c65ab470f8d884d9ab7d7966bf",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/SOLUSDT (daily mean of settlements)"
+    },
+    "binance_funding_suiusdt.json": {
+      "bytes": 36051,
+      "frozen_at_utc": "2026-07-04T11:26:43+00:00",
+      "md5": "3308d81793d35d9c8ae897449cca147c",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/SUIUSDT (daily mean of settlements)"
+    },
+    "binance_funding_xrpusdt.json": {
+      "bytes": 71326,
+      "frozen_at_utc": "2026-07-04T11:25:27+00:00",
+      "md5": "29dcb56713b474bf3c1121f9fa3acd62",
+      "source": "data.binance.vision futures/um/monthly/fundingRate/XRPUSDT (daily mean of settlements)"
+    },
+    "binance_oi_adausdt.json": {
+      "bytes": 49267,
+      "frozen_at_utc": "2026-07-04T11:25:44+00:00",
+      "md5": "6e4da7395c2ca4beb999c56b76227c32",
+      "source": "data.binance.vision futures/um/daily/metrics/ADAUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_arbusdt.json": {
+      "bytes": 35789,
+      "frozen_at_utc": "2026-07-04T11:26:59+00:00",
+      "md5": "b03d5730a35c4c8cc3097edd38079478",
+      "source": "data.binance.vision futures/um/daily/metrics/ARBUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_avaxusdt.json": {
+      "bytes": 48216,
+      "frozen_at_utc": "2026-07-04T11:26:06+00:00",
+      "md5": "43ada7abe412224f91c798776418c2c4",
+      "source": "data.binance.vision futures/um/daily/metrics/AVAXUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_bnbusdt.json": {
+      "bytes": 50230,
+      "frozen_at_utc": "2026-07-04T11:25:26+00:00",
+      "md5": "dddf8b8d213b3db34b31fd7d89979f8b",
+      "source": "data.binance.vision futures/um/daily/metrics/BNBUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_btcusdt.json": {
+      "bytes": 64249,
+      "frozen_at_utc": "2026-07-04T11:24:58+00:00",
+      "md5": "757f23a1b7febfed0645e66e07bf6c69",
+      "source": "data.binance.vision futures/um/daily/metrics/BTCUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_dotusdt.json": {
+      "bytes": 49152,
+      "frozen_at_utc": "2026-07-04T11:25:56+00:00",
+      "md5": "351a90b30aa52743b3241564c1e80735",
+      "source": "data.binance.vision futures/um/daily/metrics/DOTUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_ethusdt.json": {
+      "bytes": 51423,
+      "frozen_at_utc": "2026-07-04T11:25:07+00:00",
+      "md5": "ce3a9d58ee50f395e85562be8f92a1a1",
+      "source": "data.binance.vision futures/um/daily/metrics/ETHUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_linkusdt.json": {
+      "bytes": 50070,
+      "frozen_at_utc": "2026-07-04T11:26:16+00:00",
+      "md5": "098fab7f38f00c11ec1b73dd06ef13b6",
+      "source": "data.binance.vision futures/um/daily/metrics/LINKUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_maticusdt.json": {
+      "bytes": 30048,
+      "frozen_at_utc": "2026-07-04T11:26:27+00:00",
+      "md5": "5ab87c0933e8b98686fa63da8740b68e",
+      "source": "data.binance.vision futures/um/daily/metrics/MATICUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_nearusdt.json": {
+      "bytes": 48442,
+      "frozen_at_utc": "2026-07-04T11:26:42+00:00",
+      "md5": "e16d1d5bcc7251f08f80708ec4a71562",
+      "source": "data.binance.vision futures/um/daily/metrics/NEARUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_solusdt.json": {
+      "bytes": 49182,
+      "frozen_at_utc": "2026-07-04T11:25:17+00:00",
+      "md5": "39f0b5a8d828ab37e8a9a1e116a4e0ad",
+      "source": "data.binance.vision futures/um/daily/metrics/SOLUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_suiusdt.json": {
+      "bytes": 34699,
+      "frozen_at_utc": "2026-07-04T11:26:51+00:00",
+      "md5": "422cb92be9e274bc14aedcb663091412",
+      "source": "data.binance.vision futures/um/daily/metrics/SUIUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_oi_xrpusdt.json": {
+      "bytes": 50704,
+      "frozen_at_utc": "2026-07-04T11:25:34+00:00",
+      "md5": "9a98c42af38cdf8a250956eff043c952",
+      "source": "data.binance.vision futures/um/daily/metrics/XRPUSDT (daily last sum_open_interest_value)"
+    },
+    "binance_taker_ratio_adausdt.json": {
+      "bytes": 48963,
+      "frozen_at_utc": "2026-07-04T11:25:44+00:00",
+      "md5": "f02d870cee91471ac35ca0107572c35f",
+      "source": "data.binance.vision futures/um/daily/metrics/ADAUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_arbusdt.json": {
+      "bytes": 37899,
+      "frozen_at_utc": "2026-07-04T11:26:59+00:00",
+      "md5": "98f6672345ad4815ae60fdf426cc1454",
+      "source": "data.binance.vision futures/um/daily/metrics/ARBUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_avaxusdt.json": {
+      "bytes": 48999,
+      "frozen_at_utc": "2026-07-04T11:26:06+00:00",
+      "md5": "c1708b7a275577ef416c5814c6dbb0ad",
+      "source": "data.binance.vision futures/um/daily/metrics/AVAXUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_bnbusdt.json": {
+      "bytes": 48963,
+      "frozen_at_utc": "2026-07-04T11:25:26+00:00",
+      "md5": "1e268cf5265120c24cd2d945bc1a4aed",
+      "source": "data.binance.vision futures/um/daily/metrics/BNBUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_btcusdt.json": {
+      "bytes": 63305,
+      "frozen_at_utc": "2026-07-04T11:24:58+00:00",
+      "md5": "c51bdb27ae997b3675381efbccaa3145",
+      "source": "data.binance.vision futures/um/daily/metrics/BTCUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_dotusdt.json": {
+      "bytes": 49010,
+      "frozen_at_utc": "2026-07-04T11:25:56+00:00",
+      "md5": "1b135c21efd24a369ef449edde2be79f",
+      "source": "data.binance.vision futures/um/daily/metrics/DOTUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_ethusdt.json": {
+      "bytes": 48993,
+      "frozen_at_utc": "2026-07-04T11:25:07+00:00",
+      "md5": "93b3a2f8409f00c0b058cba9ef1f9998",
+      "source": "data.binance.vision futures/um/daily/metrics/ETHUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_linkusdt.json": {
+      "bytes": 48934,
+      "frozen_at_utc": "2026-07-04T11:26:16+00:00",
+      "md5": "bf65bec089b0f03fe58ddc3904b1c05f",
+      "source": "data.binance.vision futures/um/daily/metrics/LINKUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_maticusdt.json": {
+      "bytes": 28136,
+      "frozen_at_utc": "2026-07-04T11:26:27+00:00",
+      "md5": "ac342c5da44e922e2f5d98a2118db09a",
+      "source": "data.binance.vision futures/um/daily/metrics/MATICUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_nearusdt.json": {
+      "bytes": 48966,
+      "frozen_at_utc": "2026-07-04T11:26:42+00:00",
+      "md5": "3b5b5ccf041d1843adc47a633d83b697",
+      "source": "data.binance.vision futures/um/daily/metrics/NEARUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_solusdt.json": {
+      "bytes": 48999,
+      "frozen_at_utc": "2026-07-04T11:25:17+00:00",
+      "md5": "631bcc3e4765791359ef85a8eae9fc1c",
+      "source": "data.binance.vision futures/um/daily/metrics/SOLUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_suiusdt.json": {
+      "bytes": 36611,
+      "frozen_at_utc": "2026-07-04T11:26:51+00:00",
+      "md5": "5914754b6e1507a0c95cc27c2c1e5e26",
+      "source": "data.binance.vision futures/um/daily/metrics/SUIUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "binance_taker_ratio_xrpusdt.json": {
+      "bytes": 49104,
+      "frozen_at_utc": "2026-07-04T11:25:34+00:00",
+      "md5": "f3b978b6a138256a5fc99e0db3a7cbd2",
+      "source": "data.binance.vision futures/um/daily/metrics/XRPUSDT (daily mean sum_taker_long_short_vol_ratio)"
+    },
+    "dvol_btc.json": {
+      "bytes": 36817,
+      "frozen_at_utc": "2026-07-04T11:11:01+00:00",
+      "md5": "e2c5b8e32dd8b09dc875abf7f17f05d5",
+      "source": "https://www.deribit.com/api/v2/public/get_volatility_index_data (1D close)"
+    },
+    "dvol_eth.json": {
+      "bytes": 37103,
+      "frozen_at_utc": "2026-07-04T11:11:04+00:00",
+      "md5": "7815afe758bbb784b6e70b62e516bdc5",
+      "source": "https://www.deribit.com/api/v2/public/get_volatility_index_data (1D close)"
+    },
+    "fng.json": {
+      "bytes": 55460,
+      "frozen_at_utc": "2026-07-04T11:04:02+00:00",
+      "md5": "7db9835616f278e9e4f2ab179fb5271c",
+      "source": "https://api.alternative.me/fng/?limit=0"
+    },
+    "fred_dgs10.json": {
+      "bytes": 289992,
+      "frozen_at_utc": "2026-07-04T11:10:55+00:00",
+      "md5": "8a994cdd1ca4082dd90a47685189d11c",
+      "source": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS10"
+    },
+    "fred_dgs2.json": {
+      "bytes": 225440,
+      "frozen_at_utc": "2026-07-04T11:10:57+00:00",
+      "md5": "444eab22ef56b4ef87cfbfc7aa4e8c54",
+      "source": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DGS2"
+    },
+    "fred_dtwexbgs.json": {
+      "bytes": 110530,
+      "frozen_at_utc": "2026-07-04T11:10:54+00:00",
+      "md5": "9170d6fa204e9fdb447c7cf3b77cafc6",
+      "source": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS"
+    },
+    "fred_vixcls.json": {
+      "bytes": 174443,
+      "frozen_at_utc": "2026-07-04T11:10:53+00:00",
+      "md5": "446bfc5cf162e4a09c040dcac43b28e6",
+      "source": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS"
+    },
+    "stablecoin_total_usd.json": {
+      "bytes": 85106,
+      "frozen_at_utc": "2026-07-04T11:11:04+00:00",
+      "md5": "e797835de32882c43e0c82d780bf1eb0",
+      "source": "https://stablecoins.llama.fi/stablecoincharts/all"
+    }
+  }
+}
