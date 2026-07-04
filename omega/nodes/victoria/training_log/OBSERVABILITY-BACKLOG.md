@@ -203,6 +203,26 @@ channel) self-naming.
   constant input + tiny-epsilon guard = sub-ulp residue amplified to O(1) output). Known
   sibling: `geometry/market_manifold.py:424`.
 
+### Surfaced by REFLECTION_V237 (2026-07-04 — the $0-separator era's own gaps)
+
+Ship-with-V238 (the reflection's 2 cheap/high-impact picks, listed here for
+tracking): (a) `omega/tools/forensics/separator_lab.py` — shared loader for
+the pooled walk-forward trades + snapshots with `mann_whitney`/`terciles`/
+`bootstrap_ci`, so each separator is a conditioning function, not a rewrite;
+(b) committed per-trade conditioning CSV (window, symbol, entry bar, PnL,
+ER20, VR, β60, C60) so future separators and the Section-4 surface reuse
+identical rows.
+
+- **#20 frozen-series freshness/gap validator (M) — ships as V238's freeze
+  acceptance gate** (listed for the pattern, not as a free-floating queue
+  item): per-series per-window bar-count + gap report in the freeze manifest;
+  a silent gap in a frozen non-price series is the feed build's new
+  runtime-inert-subsystem class.
+- **#21 entry/exit PnL attribution split (M) — queue.** MAE/MFE-based
+  decomposition of per-trade PnL into entry-timing vs exit-timing loss, from
+  columns already in every trades CSV. Every recent-targeted bet so far has
+  been entry-side; this names whether the next one should be.
+
 ### Surfaced by the 2026-06 strategic audit (`STRATEGIC_AUDIT_2026-06.md`)
 
 - **#10 "every flag does something" preflight (MED) — the meta-fix for the inert-subsystem
