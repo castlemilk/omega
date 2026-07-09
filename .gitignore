@@ -61,3 +61,7 @@ data/v[0-9]*_DONE.txt
 data/v[0-9]*_interim_finding.md
 data/v[0-9]*_grid_pid.txt
 SESSION_NOTES.md
+
+# V240 reasoning layer: nested harness repo holds LLM API tokens (Kimi/GLM);
+# never commit it into omega.
+harness/
