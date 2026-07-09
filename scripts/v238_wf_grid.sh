@@ -134,6 +134,16 @@ for c in "${CELLS[@]}"; do
     continue
   fi
 
+  # macro_cache.db is a WAL-mode SQLite file: the app's init (CREATE TABLE IF
+  # NOT EXISTS + commit) writes the -wal sidecar, and an autocheckpoint can fold
+  # it back into the main file → the tracked bytes drift from committed even
+  # though frozen mode blocks all data INSERTs and _read_macro anchors to
+  # MAX(date) (so the values READ never change). The V219 preflight then aborts
+  # every subsequent cell on manifest mismatch. Restore the committed bytes
+  # before each cell so the preflight always sees the certified substrate.
+  git checkout -q data/macro_cache.db 2>/dev/null || true
+  rm -f data/macro_cache.db-wal data/macro_cache.db-shm 2>/dev/null || true
+
   feats="$(feats_for "$cfg")"
   [ -z "$feats" ] && { log "--- SKIP $vprefix — unknown config: $cfg ---"; continue; }
   n="$(n_for "$wid")"
