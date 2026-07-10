@@ -902,7 +902,9 @@ class VictoriaFeatures:
     """V240 Track B (per-signal forensics): comma-separated allowlist of which
     series-fed signals actually consume the frozen series when
     frozen_series_enabled is ON. Names: fear_greed, vix, dxy, yield_curve,
-    whale_flow. Empty string (default) = ALL signals active — byte-identical
+    whale_flow, gdelt (V240 Track C; also needs geopolitical_signals to
+    construct the signal object). Empty string (default) = ALL signals active
+    — byte-identical
     to the V238 series-ON behavior. A signal not in a non-empty allowlist
     takes its live-fetch path instead, which under the V215 hermetic guards is
     exactly the main-baseline (series-OFF) code path for that signal. Used by
@@ -924,6 +926,19 @@ class VictoriaFeatures:
     because reconstruction ignores budget/N and demean interactions. Ignored
     when universe_full_enabled is set. Default OFF => byte-identical 4-name
     baseline."""
+
+    reasoning_layer_enabled: bool = False
+    """V240 Track D: per-cycle basket review by a frontier reasoning model
+    (Gemini via the `agy` CLI — see training_log/V240.md "Model choice";
+    omega/nodes/victoria/reasoning_layer.py). The layer sees the cycle context
+    + the candidate basket after selection and may only DROP candidates or
+    SCALE their pre-normalisation weights within [0, 1.5] — the quant book
+    retains full veto (V139 subordinate posture). Hermetic: responses live in
+    data/frozen_llm_cache/{model_id}/{prompt_hash}.json; under
+    OMEGA_FROZEN_CACHE=1 a cache miss raises LLMCacheMiss (never a live call,
+    never a neutral stub). Default OFF => the layer is not even constructed;
+    byte-identical V239 baseline. Falsifier eval is V241 (V240 is scaffolding
+    + smoke only)."""
 
     # ------------------------------------------------------------------
     # Class methods

@@ -193,6 +193,87 @@ class GeopoliticalSignal:
             "sanctions_signal": self._compute_sanctions(sanctions_24h, articles_7d),
         }
 
+    def compute_from_series(
+        self,
+        vol_windows: dict[str, list[float]],
+        tone_windows: dict[str, list[float]],
+    ) -> dict[str, float]:
+        """V240: frozen-replay analog of compute() over daily GDELT aggregates.
+
+        Args:
+            vol_windows: per-query daily volume-intensity windows (oldest-first,
+                last element = the bar's day, preceding elements = trailing
+                days; from SeriesProvider gdelt_vol_<query>). Volume is the
+                timelinevol coverage fraction, not an article count.
+            tone_windows: per-query daily mean-tone windows, same alignment
+                (gdelt_tone_<query>). The API emits 0.0 on no-coverage days,
+                so tone is weighted by same-day volume below.
+
+        Returns the same four keys as compute(). Mapping of the live
+        count-based semantics onto coverage fractions:
+          - intensity: today's total volume / trailing mean, clamped [0, 3]
+          - sentiment: today's volume-weighted mean tone, clamped [-10, 10]
+          - regime_shift: 1.0 iff today's total > mean + 2*std of trailing
+            days; degenerate-variance fenced (V221: max==min => 0.0, never an
+            epsilon guard)
+          - sanctions: today's sanctions volume / per-query trailing baseline,
+            EMA-smoothed (stateful within a run, deterministic in replay)
+        """
+        import math as _math
+
+        def _today(w: list[float]) -> float:
+            return w[-1] if w else 0.0
+
+        trailing_len = min(
+            (len(w) - 1 for w in vol_windows.values() if len(w) > 1), default=0
+        )
+        total_today = _math.fsum(_today(w) for w in vol_windows.values())
+        trailing_totals = [
+            _math.fsum(w[i] for w in vol_windows.values() if len(w) > i)
+            for i in range(trailing_len)
+        ]
+        daily_mean = (
+            _math.fsum(trailing_totals) / len(trailing_totals) if trailing_totals else 0.0
+        )
+
+        if daily_mean > 0.0:
+            intensity = min(3.0, total_today / daily_mean)
+        else:
+            intensity = 0.0 if total_today == 0.0 else 3.0
+
+        w_tone = 0.0
+        w_sum = 0.0
+        for q, tw in tone_windows.items():
+            v = _today(vol_windows.get(q, []))
+            if v > 0.0:
+                w_tone += _today(tw) * v
+                w_sum += v
+        sentiment = max(-10.0, min(10.0, w_tone / w_sum)) if w_sum > 0.0 else 0.0
+
+        regime_shift = 0.0
+        if trailing_totals and max(trailing_totals) != min(trailing_totals):
+            mu = daily_mean
+            var = _math.fsum((x - mu) ** 2 for x in trailing_totals) / len(trailing_totals)
+            if total_today > mu + 2.0 * _math.sqrt(var):
+                regime_shift = 1.0
+
+        sanctions_today = _today(vol_windows.get("sanctions", []))
+        baseline = daily_mean / max(len(vol_windows), 1)
+        if baseline > 0.0:
+            raw = min(1.0, sanctions_today / baseline)
+        else:
+            raw = 0.0 if sanctions_today == 0.0 else 1.0
+        self._ema_sanctions = (
+            self._alpha_sanctions * raw + (1.0 - self._alpha_sanctions) * self._ema_sanctions
+        )
+
+        return {
+            "geo_event_intensity": intensity,
+            "geo_sentiment": sentiment,
+            "geo_regime_shift": regime_shift,
+            "sanctions_signal": self._ema_sanctions,
+        }
+
     def _compute_intensity(self, a24: list[dict], a7d: list[dict]) -> float:
         """Rolling 24h count / (7-day mean daily count), clamped to [0, 3]."""
         count_24h = len(a24)

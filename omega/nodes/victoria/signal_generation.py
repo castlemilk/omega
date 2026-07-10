@@ -979,14 +979,49 @@ class SignalGenerationNode(Node):
         # contaminating historical replay with current-day geopolitics.
         _geo_signals: dict[str, float] = {}
         if self._geo_signal is not None and _sp_on:
-            # V238: no frozen GDELT series has been built yet (queued V240+) —
-            # under frozen replay the signal is honestly ABSENT (skipped for the
-            # cycle), never served from live/cached current-day geopolitics.
-            if _sp.available("gdelt_tone"):
-                logger.warning(
-                    "frozen gdelt series present but V238 wiring does not consume "
-                    "it yet — signal stays absent"
-                )
+            # V240: consume the frozen GDELT daily aggregates (built by
+            # scripts/v240_freeze_gdelt.py; gdelt_vol_<q> + gdelt_tone_<q> per
+            # V138 query). Missing/out-of-range series => honestly ABSENT for
+            # the cycle (never served from live/cached current-day geopolitics,
+            # never a silent 0.0). V213-class alias fix applied at the source:
+            # the composite consumes only "*_signal" keys, so the three bare
+            # geo_* keys are injected with a _signal suffix.
+            if _sp_active("gdelt"):
+                try:
+                    from omega.nodes.victoria.signals.geopolitical import (
+                        _QUERIES as _GEO_QUERIES,
+                    )
+
+                    _geo_missing = [
+                        _gq
+                        for _gq in _GEO_QUERIES
+                        if not (
+                            _sp.available(f"gdelt_vol_{_gq}")
+                            and _sp.available(f"gdelt_tone_{_gq}")
+                        )
+                    ]
+                    if _geo_missing:
+                        raise _SeriesOutOfRange(
+                            f"gdelt series not frozen for queries: {_geo_missing}"
+                        )
+                    _geo_vol_wins: dict[str, list[float]] = {}
+                    _geo_tone_wins: dict[str, list[float]] = {}
+                    for _gq in _GEO_QUERIES:
+                        _geo_vol_wins[_gq] = _sp.get_window(
+                            f"gdelt_vol_{_gq}", _sp_bar_ts, 8
+                        )
+                        _geo_tone_wins[_gq] = _sp.get_window(
+                            f"gdelt_tone_{_gq}", _sp_bar_ts, 8
+                        )
+                    _geo_raw = self._geo_signal.compute_from_series(
+                        _geo_vol_wins, _geo_tone_wins
+                    )
+                    _geo_signals = {
+                        (_k if _k.endswith("_signal") else f"{_k}_signal"): _v
+                        for _k, _v in _geo_raw.items()
+                    }
+                except _SeriesOutOfRange as _geo_oor:
+                    logger.debug("frozen gdelt out of range — absent: %s", _geo_oor)
         elif self._geo_signal is not None and not self._geo_backtest_disabled:
             try:
                 import datetime as _dt_mod
