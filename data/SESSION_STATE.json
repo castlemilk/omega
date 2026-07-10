@@ -1,7 +1,7 @@
 {
-  "version": "v239-grid-running-opus",
-  "step": "V238 grid COMPLETE + verdict applied + V239 LAUNCHED (Opus 4.8). V238: 64/64 cells 0 det FAILs; OFF-path byte-identical to V235 (nonzero_diffs:{}). Verdict = infra SHIP (SeriesProvider + freeze-gap validator; 5 feeds serve real frozen history, gdelt honestly ABSENT), series-ON KEEP FLAG-GATED (pooled mean-D -$24 passes -$300 but trend -$2,693/recent -$1,161 breach -$500 floor; crisis +$3,148 clears 2*SE noise). Standing baseline UNCHANGED (=V235 OFF path). V239 = universe/blacklist flip: new flag universe_full_enabled (default OFF, byte-identical) opens 4->13 names at strategy.py:2335/3652. Smoke snap_wf_20230430: legacy -$1,966.07/15t == V238 main; full +$219.59/7t (real, non-null grid). Full 64-cell grid LAUNCHED PID 72296 nohup (2 smoke cells resume-skipped); waiter bavxrx6hx harness-tracked. ETA ~2.8h from 12:03Z (~14:50Z).",
-  "next_action": "When V239 grid completes: v239_wf_aggregate.py writes V239_WALKFORWARD_RESULTS.md + v239_wf/distribution.json. Read the verdict (adopt_universe_full: pooled mean-D>-$300 AND no regime<-$500; legacy-identity must be IDENTICAL vs V238 main). If ADOPT: flip _TRADING_BLACKLIST default + update README standing baseline to the 13-name universe. If KEEP LEGACY: record per-ticker forensics. Then V240: (a) per-signal forensics on the 5 V238-wired feeds (which helps crisis without the trend/recent tax), (b) build gdelt frozen source, (c) corr-spike tail cap. Grid resumable: re-run scripts/v239_wf_grid.sh.",
+  "version": "v239-complete-v240-queued",
+  "step": "V238 + V239 both COMPLETE + verdicts applied (Opus 4.8). V238 (frozen-series): infra SHIP, series-ON KEEP FLAG-GATED (crisis +$3,148 mean-D bought with trend -$2,693/recent -$1,161 tax; pooled -$24). V239 (universe flip): 64/64 0 det FAILs; universe_legacy byte-identical to V238 main (IDENTICAL). Verdict = KEEP LEGACY 4-name (MARGINAL miss): flip PASSES pooled (+$210 net-positive) + helps trend (+$1,051)/recent (+$248) but crisis regresses -$522, tripping the -$500 floor by $22. KEY: crisis loss is UPSIDE not tails (full universe tightens crisis p25 -$1,004 vs -$2,135). universe_full_enabled stays default-OFF. Standing baseline UNCHANGED (crisis +$819/trend +$1,941/recent -$516).",
+  "next_action": "V240 (queued, not launched). Three candidate branches per V239.md queue: (a) PER-TICKER FORENSICS on the V239 universe flip \u2014 which of the 9 re-included names (BTC/DOT/MATIC/XRP/SOL/AVAX/LINK/BNB/SUI) carries the crisis mean loss (-$522) vs the crisis tail-tightening benefit (p25 -$1,004 vs -$2,135); a SELECTIVE re-include (keep the tail-benefit names, drop the crisis-mean-loss names) could clear the -$500 floor. Use the v239_wf per-cell trades.csv on gamma. (b) PER-SIGNAL FORENSICS on the 5 V238-wired feeds (which helps crisis without the trend/recent tax). (c) BUILD gdelt frozen source (6th signal, still ABSENT). V240.md pre-reg (Kimi v2.7 reasoning layer) was drafted earlier but the universe/signal forensics are the higher-value branches. Both grids resumable: re-run scripts/v238_wf_grid.sh / v239_wf_grid.sh.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -45,8 +45,8 @@
     "data/signal_ic_history.json + training_version.txt: grid restored committed state before running.",
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
-  "last_commit": "90d7945",
-  "updated_at": "2026-07-10T12:10:00+00:00",
+  "last_commit": "fa44c17",
+  "updated_at": "2026-07-10T15:10:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -63,10 +63,11 @@
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v238_wf/grid_state.json"
   },
   "v239_walkforward": {
-    "phase": "running",
-    "cells_done": 3,
+    "phase": "complete",
+    "cells_done": 64,
     "cells_total": 64,
     "max_parallel": 1,
+    "verdict": "KEEP LEGACY 4-name (crisis -$522 trips -$500 floor; pooled +$210 net-positive)",
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v239_wf/grid_state.json"
   }
 }
