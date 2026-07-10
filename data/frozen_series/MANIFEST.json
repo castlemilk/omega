@@ -278,6 +278,66 @@
       "md5": "446bfc5cf162e4a09c040dcac43b28e6",
       "source": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS"
     },
+    "gdelt_tone_central_bank.json": {
+      "bytes": 49311,
+      "frozen_at_utc": "2026-07-10T22:58:23+00:00",
+      "md5": "1d909adb21d84fbecb5fee0f235c2d19",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinetone query='federal reserve interest rate quantitative easing'"
+    },
+    "gdelt_tone_crypto_regulation.json": {
+      "bytes": 41565,
+      "frozen_at_utc": "2026-07-10T22:47:43+00:00",
+      "md5": "a3ac81583e85fd59ddc51d622fce5e42",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinetone query='cryptocurrency regulation SEC CFTC ban'"
+    },
+    "gdelt_tone_financial_crisis.json": {
+      "bytes": 44082,
+      "frozen_at_utc": "2026-07-10T22:53:41+00:00",
+      "md5": "f93be5a7675e5aa2895ba26f03e51bee",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinetone query='bank failure systemic risk contagion'"
+    },
+    "gdelt_tone_geopolitical.json": {
+      "bytes": 47821,
+      "frozen_at_utc": "2026-07-10T23:00:18+00:00",
+      "md5": "b873d6aa27db04746829be8a59415392",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinetone query='military conflict trade war sanctions embargo'"
+    },
+    "gdelt_tone_sanctions.json": {
+      "bytes": 42720,
+      "frozen_at_utc": "2026-07-10T22:49:23+00:00",
+      "md5": "8c42e440dcbb7ba43f5e86dc8325fa55",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinetone query='financial sanctions SWIFT blockchain'"
+    },
+    "gdelt_vol_central_bank.json": {
+      "bytes": 47288,
+      "frozen_at_utc": "2026-07-10T22:57:25+00:00",
+      "md5": "348b55d3de6b2a09741fe073beb26fea",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinevol query='federal reserve interest rate quantitative easing'"
+    },
+    "gdelt_vol_crypto_regulation.json": {
+      "bytes": 41442,
+      "frozen_at_utc": "2026-07-10T22:46:27+00:00",
+      "md5": "41efb1bf20339ae92a513a36cbf9d1c6",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinevol query='cryptocurrency regulation SEC CFTC ban'"
+    },
+    "gdelt_vol_financial_crisis.json": {
+      "bytes": 43369,
+      "frozen_at_utc": "2026-07-10T22:49:53+00:00",
+      "md5": "f3e5fd461aa3011ea244420b8d22b685",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinevol query='bank failure systemic risk contagion'"
+    },
+    "gdelt_vol_geopolitical.json": {
+      "bytes": 46164,
+      "frozen_at_utc": "2026-07-10T22:58:41+00:00",
+      "md5": "179515f29037530020975b9d62177b55",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinevol query='military conflict trade war sanctions embargo'"
+    },
+    "gdelt_vol_sanctions.json": {
+      "bytes": 42372,
+      "frozen_at_utc": "2026-07-10T22:48:37+00:00",
+      "md5": "437201449915f4c969514f7787147130",
+      "source": "api.gdeltproject.org/api/v2/doc/doc mode=timelinevol query='financial sanctions SWIFT blockchain'"
+    },
     "stablecoin_total_usd.json": {
       "bytes": 85106,
       "frozen_at_utc": "2026-07-04T11:11:04+00:00",
