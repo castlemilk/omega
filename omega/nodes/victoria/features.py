@@ -885,6 +885,19 @@ class VictoriaFeatures:
     the injection site), never a silent 0.0; the provider raises rather than
     wrapping (V235 seam lesson). Default OFF ⇒ byte-identical V235 baseline."""
 
+    universe_full_enabled: bool = False
+    """V239: open the trading universe from 4 names (ETH/ADA/NEAR/ARB) to the
+    full 13-name snapshot universe by treating _TRADING_BLACKLIST as empty at
+    the two _construct_portfolio consult sites (strategy.py:2335/3652). The 9
+    blacklisted names (BTC/DOT/MATIC/XRP/SOL/AVAX/LINK/BNB/SUI) were all
+    noise-founded on ~99 pre-hermetic trades (V235_UNIVERSE_REVIEW.md,
+    recommended new blacklist = None); this flag measures whether that breadth
+    adds cross-sectional spread on the V238 baseline (universe_full vs
+    universe_legacy cells). Names with missing bars in a given window are
+    skipped automatically (MATIC->POL thin-bar caveat handled as data
+    coverage, not a strategy exclusion). Default OFF => byte-identical 4-name
+    baseline."""
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------

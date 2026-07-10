@@ -2331,8 +2331,9 @@ class StrategyNode(Node):
             if ticker.startswith("adv_"):
                 logger.debug("Skipping %s (synthetic signal aggregate, not tradeable)", ticker)
                 continue
-            # Skip blacklisted symbols — BTC is a regime indicator, not a trading vehicle
-            if ticker in _TRADING_BLACKLIST:
+            # Skip blacklisted symbols — BTC is a regime indicator, not a trading vehicle.
+            # V239: universe_full_enabled treats the blacklist as empty (open to 13 names).
+            if ticker in _TRADING_BLACKLIST and not self.features.universe_full_enabled:
                 logger.debug("Skipping %s (trading blacklist)", ticker)
                 continue
             # Regime transition cooldown: skip new entries for 3 cycles after regime shift
@@ -3649,7 +3650,7 @@ class StrategyNode(Node):
             _td_final = "HOLD"
             _td_reason = ""
 
-            if _td_ticker in _TRADING_BLACKLIST:
+            if _td_ticker in _TRADING_BLACKLIST and not self.features.universe_full_enabled:
                 _td_filters.append("blacklist:skip")
                 _td_final = "HOLD"
                 _td_reason = "blacklist"
