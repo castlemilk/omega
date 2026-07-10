@@ -622,6 +622,19 @@ class StrategyNode(Node):
             except Exception as _e:
                 logger.warning("LLMAnalystSignal init failed: %s — LLM disabled", _e)
 
+        # --- V240: reasoning-layer per-cycle basket review (default OFF) ---
+        # NOT constructed when the flag is off (pre-reg: OFF path byte-identical
+        # to the V239 baseline; the layer must not even exist).
+        self._reasoning_layer: Any = None
+        if getattr(self.features, "reasoning_layer_enabled", False):
+            from omega.nodes.victoria.reasoning_layer import ReasoningLayer
+
+            self._reasoning_layer = ReasoningLayer()
+            logger.info(
+                "ReasoningLayer: model=%s (hermetic frozen_llm_cache)",
+                self._reasoning_layer.model_id,
+            )
+
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
         self._last_ticker_decisions: dict[str, TickerDecision] = {}
 
@@ -3202,6 +3215,48 @@ class StrategyNode(Node):
                 )[:_max_per_side]
             )
 
+        # V240: reasoning-layer basket review — after candidate selection,
+        # before sizing. The layer may only DROP candidates or SCALE their
+        # sizes within [0, 1.5] (subordinate posture); it cannot add positions.
+        # Under OMEGA_FROZEN_CACHE=1 a cache miss raises LLMCacheMiss (hard
+        # stop — never a silent live call or neutral fallback).
+        _reasoning_scale: dict[str, float] = {}
+        if self._reasoning_layer is not None and (long_candidates or short_candidates):
+            _rl_candidates = [
+                {
+                    "symbol": t,
+                    "side": side,
+                    "composite": round(float(sig.get("composite", 0.0)), 6),
+                    "conviction": round(float(sig.get("_raw_composite", 0.0)), 6),
+                }
+                for side, pool in (("long", long_candidates), ("short", short_candidates))
+                for t, sig in sorted(pool.items())
+            ]
+            _rl_ctx = {
+                "cycle": current_cycle,
+                "regime": str(signals.get("_regime", "unknown")).lower(),
+                "bear_prob": round(float(signals.get("_regime_w_bear_prob", -1.0)), 4),
+                "bull_prob": round(float(signals.get("_regime_w_bull_prob", -1.0)), 4),
+            }
+            _approved, _rl_review, _rl_reason = self._reasoning_layer.review_basket(
+                _rl_ctx, _rl_candidates
+            )
+            _approved_set = set(_approved)
+            long_candidates = {
+                t: s for t, s in long_candidates.items() if t in _approved_set
+            }
+            short_candidates = {
+                t: s for t, s in short_candidates.items() if t in _approved_set
+            }
+            _reasoning_scale = _rl_review.size_scale
+            if _rl_review.drop:
+                logger.info(
+                    "V240 reasoning layer dropped %s (conf=%.2f): %s",
+                    _rl_review.drop,
+                    _rl_review.confidence,
+                    _rl_reason[:200],
+                )
+
         long_base: dict[str, float] = {}
         short_base: dict[str, float] = {}
 
@@ -3287,6 +3342,17 @@ class StrategyNode(Node):
             )
 
         # V162: resilience size multiplier (vol_shock × regime_conf × drawdown taper)
+        # V240: reasoning-layer per-symbol size scale (pre-normalisation raw
+        # weight, same layer as the V234 throttle). No-op when the flag is off
+        # (_reasoning_scale stays empty).
+        if _reasoning_scale:
+            long_base = {
+                t: v * _reasoning_scale.get(t, 1.0) for t, v in long_base.items()
+            }
+            short_base = {
+                t: v * _reasoning_scale.get(t, 1.0) for t, v in short_base.items()
+            }
+
         # Additionally: block all new entries when drawdown halt active.
         _resil_mult = 1.0
         _resil_block_entries = False
