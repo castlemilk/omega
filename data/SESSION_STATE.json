@@ -1,7 +1,7 @@
 {
-  "version": "v238-grid-running",
-  "step": "V238 infra SHIPPED + full 64-cell walk-forward grid RUNNING on gamma (frozen_series OFF vs ON, 32 windows). Sentinel snap_wf_20250305 PASSED all 3 gates: determinism PASS ($0.00 spread N=2 both cells), OFF byte-identical to V235 ($3859.90), ON moves number ($3859.90->-$1490.94, 10->15 trades). 6 commits pushed pending. Grid PID 3107 nohup; waiter b2wweiq7w harness-tracked.",
-  "next_action": "When grid completes: v238_wf_aggregate.py writes V238_WALKFORWARD_RESULTS.md + distribution.json on gamma. Fill V238.md results (per-regime OFF vs ON dist + pooled mean-delta), apply adopt-ON verdict (pooled mean-D>-$300 AND no regime regress>$500), update README baseline, finalize V239 brief, final commits + push. Grid resumable: re-run scripts/v238_wf_grid.sh (skips PASS cells).",
+  "version": "v239-grid-running-opus",
+  "step": "V238 grid COMPLETE + verdict applied + V239 LAUNCHED (Opus 4.8). V238: 64/64 cells 0 det FAILs; OFF-path byte-identical to V235 (nonzero_diffs:{}). Verdict = infra SHIP (SeriesProvider + freeze-gap validator; 5 feeds serve real frozen history, gdelt honestly ABSENT), series-ON KEEP FLAG-GATED (pooled mean-D -$24 passes -$300 but trend -$2,693/recent -$1,161 breach -$500 floor; crisis +$3,148 clears 2*SE noise). Standing baseline UNCHANGED (=V235 OFF path). V239 = universe/blacklist flip: new flag universe_full_enabled (default OFF, byte-identical) opens 4->13 names at strategy.py:2335/3652. Smoke snap_wf_20230430: legacy -$1,966.07/15t == V238 main; full +$219.59/7t (real, non-null grid). Full 64-cell grid LAUNCHED PID 72296 nohup (2 smoke cells resume-skipped); waiter bavxrx6hx harness-tracked. ETA ~2.8h from 12:03Z (~14:50Z).",
+  "next_action": "When V239 grid completes: v239_wf_aggregate.py writes V239_WALKFORWARD_RESULTS.md + v239_wf/distribution.json. Read the verdict (adopt_universe_full: pooled mean-D>-$300 AND no regime<-$500; legacy-identity must be IDENTICAL vs V238 main). If ADOPT: flip _TRADING_BLACKLIST default + update README standing baseline to the 13-name universe. If KEEP LEGACY: record per-ticker forensics. Then V240: (a) per-signal forensics on the 5 V238-wired feeds (which helps crisis without the trend/recent tax), (b) build gdelt frozen source, (c) corr-spike tail cap. Grid resumable: re-run scripts/v239_wf_grid.sh.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -39,14 +39,14 @@
   ],
   "notes": [
     "infra: OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data; run_training.py now derives TMP_SINK_DIR=$OMEGA_AUDIT_OUTPUT_DIR/tmp for metrics/trade_details/decisions/training.log (asserted at startup); walk_forward_grid.sh already pinned TMPDIR. Host /tmp v### cruft deleted 2026-07-03; grid logs archived to gamma root.",
-    "grid artifacts: $AUDIT/v235_wf/{distribution.json,grid_state.json,grid_progress.log}; per-cell dirs $AUDIT/v235wf_*_determinism/.",
+    "grid artifacts: $AUDIT/v{235,238,239}_wf/{distribution.json,grid_state.json,grid_progress.log}; per-cell dirs $AUDIT/v2*wf_*_determinism/. v239 aggregator caveat: v239_wf_aggregate.py OVERWRITES V239_WALKFORWARD_RESULTS.md - narrative header (if added) lives in git, re-apply if re-aggregated (same pattern as V235/V238).",
     "aggregator caveat: walk_forward_aggregate.py OVERWRITES V235_WALKFORWARD_RESULTS.md - the narrative header is in git, re-apply if re-aggregated.",
     "Uncommitted pre-existing diffs NOT mine: omega/core/* (6 files), docs/ideas+research, run_diag*.py, harness/, .serena/, scripts/v219-v225 grid scripts - left untouched.",
     "data/signal_ic_history.json + training_version.txt: grid restored committed state before running.",
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
-  "last_commit": "84d98c8",
-  "updated_at": "2026-07-04T13:50:28.934760+00:00",
+  "last_commit": "90d7945",
+  "updated_at": "2026-07-10T12:10:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -56,10 +56,17 @@
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v235_wf/grid_state.json"
   },
   "v238_walkforward": {
-    "phase": "running",
-    "cells_done": 2,
+    "phase": "complete",
+    "cells_done": 64,
     "cells_total": 64,
     "max_parallel": 1,
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v238_wf/grid_state.json"
+  },
+  "v239_walkforward": {
+    "phase": "running",
+    "cells_done": 3,
+    "cells_total": 64,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v239_wf/grid_state.json"
   }
 }
