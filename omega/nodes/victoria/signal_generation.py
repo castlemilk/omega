@@ -895,11 +895,23 @@ class SignalGenerationNode(Node):
             self._frozen_series_bar_ts(market_data) if _sp is not None else None
         )
         _sp_on = _sp is not None and _sp_bar_ts is not None
+        # V240 Track B: optional per-signal allowlist (frozen_series_signals).
+        # Empty = all signals consume the series (V238 behavior). A gated-off
+        # signal falls back to its live path — the main-baseline code path.
+        _sp_allow_raw = getattr(self._features, "frozen_series_signals", "") or ""
+        _sp_allow: set[str] | None = (
+            {s.strip() for s in _sp_allow_raw.split(",") if s.strip()}
+            if _sp_allow_raw.strip()
+            else None
+        )
+
+        def _sp_active(name: str) -> bool:
+            return _sp_on and (_sp_allow is None or name in _sp_allow)
 
         # Market-level cross-asset signals — computed once and applied to all tickers.
         _fear_greed_val: float = 0.0
         if self._fear_greed_signal is not None:
-            if _sp_on:
+            if _sp_active("fear_greed"):
                 _fear_greed_val = self._frozen_signal(
                     lambda: self._fear_greed_signal.compute_from_series(
                         _sp.get_window("fng", _sp_bar_ts, 31)
@@ -913,7 +925,7 @@ class SignalGenerationNode(Node):
 
         _dxy_val: float = 0.0
         if self._dxy_signal is not None:
-            if _sp_on:
+            if _sp_active("dxy"):
                 _dxy_val = self._frozen_signal(
                     lambda: self._dxy_signal.compute_from_series(
                         _sp.get_window("fred_dtwexbgs", _sp_bar_ts, 30), market_data
@@ -927,7 +939,7 @@ class SignalGenerationNode(Node):
 
         _vix_val: float = 0.0
         if self._vix_signal is not None:
-            if _sp_on:
+            if _sp_active("vix"):
                 _vix_val = self._frozen_signal(
                     lambda: self._vix_signal.compute_from_series(
                         _sp.get_window("fred_vixcls", _sp_bar_ts, 45)
@@ -941,7 +953,7 @@ class SignalGenerationNode(Node):
 
         _yield_curve_val: float = 0.0
         if self._yield_curve_signal is not None:
-            if _sp_on:
+            if _sp_active("yield_curve"):
                 _yield_curve_val = self._frozen_signal(
                     lambda: self._yield_curve_signal.compute_from_series(
                         _sp.get_window_pairs("fred_dgs10", _sp_bar_ts, 90),
@@ -1239,7 +1251,7 @@ class SignalGenerationNode(Node):
             # path keeps the legacy names byte-identically.
             if self._whale_flow is not None:
                 try:
-                    if _sp_on:
+                    if _sp_active("whale_flow"):
                         _oi_win = _st_win = None
                         with contextlib.suppress(_SeriesOutOfRange):
                             _oi_win = _sp.get_window(

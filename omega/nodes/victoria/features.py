@@ -898,6 +898,18 @@ class VictoriaFeatures:
     coverage, not a strategy exclusion). Default OFF => byte-identical 4-name
     baseline."""
 
+    frozen_series_signals: str = ""
+    """V240 Track B (per-signal forensics): comma-separated allowlist of which
+    series-fed signals actually consume the frozen series when
+    frozen_series_enabled is ON. Names: fear_greed, vix, dxy, yield_curve,
+    whale_flow. Empty string (default) = ALL signals active — byte-identical
+    to the V238 series-ON behavior. A signal not in a non-empty allowlist
+    takes its live-fetch path instead, which under the V215 hermetic guards is
+    exactly the main-baseline (series-OFF) code path for that signal. Used by
+    scripts/v240_signal_grid.sh to run each signal solo (5 x 32 cells) and
+    attribute V238 series-ON's trend -$2,693 / recent -$1,161 floor breach to
+    specific feeds. No effect when frozen_series_enabled is OFF."""
+
     universe_selective_enabled: bool = False
     """V240: selective re-include from the V239 universe flip. Per-ticker
     forensics on the V239 grid (scripts/v240_universe_forensics.py) showed the
