@@ -15,20 +15,31 @@ dirs, memory files, and chat history.
 - Linked from `.claude/skills/victoria-training-loop/SKILL.md` — the
   skill enforces the loop.
 
-## Standing baseline — walk-forward distributions (as of 2026-07-03, V235)
+## Standing baseline — walk-forward distributions (as of 2026-07-10, V238-re-confirmed)
 
 **High-water language is RETIRED.** The acceptance unit is the per-regime
 walk-forward DISTRIBUTION (`data/walk_forward_manifest.json`: 32 × 90-day
 windows 2020→2026, crisis 12 / trend 10 / recent 10; grid
 `scripts/walk_forward_grid.sh`, 64/64 cells DETERMINISM PASS $0.00). Standing
-main = V227-skew config (`crisis_skew` ON, gate ON, X=0.12; IC OFF; brake OFF).
-Full tables + per-window detail: `V235_WALKFORWARD_RESULTS.md`.
+main = V227-skew config (`crisis_skew` ON, gate ON, X=0.12; IC OFF; brake OFF;
+**frozen_series OFF**). Full tables + per-window detail:
+`V235_WALKFORWARD_RESULTS.md`.
 
 | Regime | n | mean | median | p25 | min | max |
 |---|---:|---:|---:|---:|---:|---:|
 | crisis | 12 | **+$819** | +$249 | −$2,135 | −$5,819 | +$8,679 |
 | trend  | 10 | **+$1,941** | +$1,886 | −$855 | −$3,105 | +$10,038 |
 | recent | 10 | **−$516** | −$1,571 | −$2,551 | −$5,356 | +$6,551 |
+
+**V238 (2026-07-10) re-confirmed these numbers to the cent** — its `main` cells
+are byte-identical to the V235 grid (`nonzero_diffs: {}`, 32/32), so the
+frozen-series feed build did NOT move the standing baseline. The **"signals
+degrade to 0.0" era is retired**: five info feeds (fear_greed, vix, dxy,
+yield_curve, funding/OI) now serve real frozen history and the `SeriesProvider`
++ freeze-gap validator ship as infra. But series-ON is **flag-gated, NOT
+adopted** — it improves crisis (+$3,148 mean-Δ) at a real trend (−$2,693) /
+recent (−$1,161) cost (pooled ≈flat −$24), failing the −$500 regime floor.
+`V238_WALKFORWARD_RESULTS.md` has the full OFF-vs-ON distribution.
 
 Verdicts measured on this grid: recent's +$4,901 **DOES NOT REPRODUCE**; the
 banked V229 trend-IC overlay **DOES NOT SHIP** (trend mean-Δ −$831 / min-Δ
@@ -67,6 +78,8 @@ re-anchored at V211 single-seed=42 headlines below.
 | recent  | **V211 (re-baselined)**               |        +$2,177.06 |     69 | 0.3333| 1.112 | **$1**  | Within-pair max $0.95, cross-pair max $0.95, Δtrades=0 across 4 runs. ~2,400× collapse vs V210's ≥$1,386 floor. V199 +$2,478 stays DEMOTED — was unreproducible at HEAD and rode the unsorted basket channel. |
 | trend   | **V211 (re-baselined)**               |        +$8,328.87 |    106 | 0.3774| 1.281 | **$166**| 3 of 4 runs identical at 106 trades / ≈$8,330; trend_p1_r2 outlier at 105 trades / $8,165 (residual 4th channel — parking lot for V212/V213). V204 +$22,105 stays RESCINDED. |
 | crisis  | **V211 (re-baselined)**               |       −$24,827.90 |     62 | 0.3226| 0.512 | **$12** | Within-pair max $11.82, cross-pair max $11.82, Δtrades=0 across 4 runs. V209 −$17,763 ceiling **RESCINDED** — V210 predicted asymmetric crisis cycle-1 drift = 1e-2; the basket sort canonicalized the deterministic answer to −$24,828. Same WR/PF as V209's 65-trade version, 3 fewer trades. Whether −$24,828 vs alternative canonicalizations is "the" structural answer is a V212+ parking-lot question; for now this is the working floor. |
+
+**V238 (2026-07-10) — frozen-series feed build; infra SHIPS, series-ON stays FLAG-GATED (no baseline move).** Built the `series/` freeze section + a bar-aligned `SeriesProvider` (raises on out-of-range, never wraps — the c244568 seam lesson as a hard contract) + a freeze-gap coverage validator, wiring six info-class signals that had degraded to 0.0/stale under the V215 hermetic guards. Grid = 32 windows × {main=OFF, series=ON} × N=1 (3 sentinels N=2) = 64 cells, **0 determinism FAILs, all $0.00 spread**. **OFF-path byte-identical to the V235 grid** (`nonzero_diffs: {}`, 32/32) → default flag-OFF is a true no-op, standing baseline unchanged. Five feeds now serve REAL frozen history (fear_greed fng[2018→2026], vix fred_vixcls[1990→2026], dxy fred_dtwexbgs, yield_curve fred_dgs10+dgs2, funding/OI frozen_funding_cache manifest-OK); **gdelt honestly ABSENT** (no frozen source yet — neutral by the no-silent-zeros contract, queued V240). **Adopt-ON verdict: NO.** Bar = pooled mean-Δ(series−main) > −$300 AND every regime mean-Δ > −$500; measured pooled **−$24** (n=32, passes clause 1) but **trend −$2,693 / recent −$1,161** breach the −$500 regime floor. The information set nets ≈flat pooled while re-shuffling exposure: **crisis +$3,148 mean-Δ** (p25 +$581, 9/12 windows positive — clears the recent 2·SE ≈ $2,400 noise bar) bought with a real trend/recent tax. `frozen_series_enabled` stays default-OFF; V240 does per-signal forensics (which of the five helps crisis without the tax) + builds the gdelt frozen source. See `V238.md` + `V238_WALKFORWARD_RESULTS.md`.
 
 **V235 (2026-07-03) — instrument-only; walk-forward distribution (32 windows, 64 cells, 0 det FAILs) inverts the campaign's priors.** Built the walk-forward instrument (`walk_forward_freeze.py` → 32 regime-tagged 90d windows 2020→2026; `walk_forward_grid.sh` + `walk_forward_aggregate.py`), plus two forensics: (a) **universe re-validation** (`V235_UNIVERSE_REVIEW.md` — all 9 blacklist entries noise-founded on ~99 pre-hermetic trades; flip deferred to V238); (b) **the replay wrap-seam** (c244568): `ReplayIngestionNode` wraps at series end, so every pre-V235 single-window number was booked partly against a fictitious price seam — V225–V234 verdicts downgraded to directionally unknown. Grid results: **recent +$4,901 DOES NOT REPRODUCE** (honest mean −$516/p25 −$2,551, n=10 — recent is the WORST regime); **trend-IC DOES NOT SHIP** (trend mean-Δ −$831/min −$6,136; the 48-cell interim "helps crisis +$896" INVERTED to −$79/min −$7,497 at 64 cells — partial grids are not verdicts); **crisis is sign-POSITIVE** (mean +$819/median +$249, n=12) — the 8-refutation "crisis is broken" arc was window selection. Baselines re-anchored to the distribution table above; V236 executes the trend-IC refutation branch and retargets recent; V237's crisis program closes OBE, mechanism retargets tail width. See `V235.md` + `V235_WALKFORWARD_RESULTS.md` + `REFLECTION_V235.md`.
 
