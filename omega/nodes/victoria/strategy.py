@@ -214,6 +214,32 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
     }
 )
 
+# V240: the selective-universe effective blacklist. Per-ticker forensics on the
+# V239 flip grid (scripts/v240_universe_forensics.py) attributed the crisis mean
+# regression to DOT/LINK/BTC; universe_selective_enabled re-includes the other 6
+# names (SOL/BNB/AVAX/XRP/SUI/MATIC) and keeps only these three excluded.
+_SELECTIVE_UNIVERSE_BLACKLIST: frozenset[str] = frozenset(
+    {"BTCUSDT", "DOTUSDT", "LINKUSDT"}
+)
+
+
+def _universe_blocked(ticker: str, features) -> bool:
+    """Whether `ticker` is excluded from trading by the universe blacklist.
+
+    Precedence: universe_full_enabled (V239, blacklist = empty) >
+    universe_selective_enabled (V240, blacklist = {BTC, DOT, LINK}) >
+    legacy _TRADING_BLACKLIST (4-name universe). Both flags OFF reproduces the
+    legacy membership test byte-for-byte.
+    """
+    if ticker not in _TRADING_BLACKLIST:
+        return False
+    if features.universe_full_enabled:
+        return False
+    if features.universe_selective_enabled:
+        return ticker in _SELECTIVE_UNIVERSE_BLACKLIST
+    return True
+
+
 # Symbols excluded from LONG positions only (shorts still permitted).
 # BTC: regime indicator only, <28% win rate.
 # V86: ADAUSDT removed from _LONG_BLACKLIST — restoring longs to break ETH-only concentration.
@@ -2333,7 +2359,8 @@ class StrategyNode(Node):
                 continue
             # Skip blacklisted symbols — BTC is a regime indicator, not a trading vehicle.
             # V239: universe_full_enabled treats the blacklist as empty (open to 13 names).
-            if ticker in _TRADING_BLACKLIST and not self.features.universe_full_enabled:
+            # V240: universe_selective_enabled shrinks it to {BTC, DOT, LINK}.
+            if _universe_blocked(ticker, self.features):
                 logger.debug("Skipping %s (trading blacklist)", ticker)
                 continue
             # Regime transition cooldown: skip new entries for 3 cycles after regime shift
@@ -3650,7 +3677,7 @@ class StrategyNode(Node):
             _td_final = "HOLD"
             _td_reason = ""
 
-            if _td_ticker in _TRADING_BLACKLIST and not self.features.universe_full_enabled:
+            if _universe_blocked(_td_ticker, self.features):
                 _td_filters.append("blacklist:skip")
                 _td_final = "HOLD"
                 _td_reason = "blacklist"

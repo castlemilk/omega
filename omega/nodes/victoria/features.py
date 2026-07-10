@@ -898,6 +898,21 @@ class VictoriaFeatures:
     coverage, not a strategy exclusion). Default OFF => byte-identical 4-name
     baseline."""
 
+    universe_selective_enabled: bool = False
+    """V240: selective re-include from the V239 universe flip. Per-ticker
+    forensics on the V239 grid (scripts/v240_universe_forensics.py) showed the
+    crisis mean regression (-$522, the gate-tripping $22 miss) is carried by
+    DOT (-$1,686 crisis, negative in every regime), LINK (-$1,340 crisis,
+    negative everywhere) and BTC (-$703 crisis, short-only under the flip).
+    This flag re-includes only the 6 helpful names (SOL/BNB/AVAX/XRP/SUI/
+    MATIC): the effective blacklist shrinks to {BTC, DOT, LINK}
+    (_SELECTIVE_UNIVERSE_BLACKLIST in strategy.py). Trade-log reconstruction:
+    pooled +$512, crisis -$211, trend +$1,250, recent +$643 (all four V239
+    bars pass) — requires confirmation on a real grid (scripts/v240_wf_grid.sh)
+    because reconstruction ignores budget/N and demean interactions. Ignored
+    when universe_full_enabled is set. Default OFF => byte-identical 4-name
+    baseline."""
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
