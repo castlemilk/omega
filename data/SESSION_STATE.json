@@ -1,7 +1,7 @@
 {
-  "version": "v239-complete-v240-queued",
-  "step": "V238 + V239 both COMPLETE + verdicts applied (Opus 4.8). V238 (frozen-series): infra SHIP, series-ON KEEP FLAG-GATED (crisis +$3,148 mean-D bought with trend -$2,693/recent -$1,161 tax; pooled -$24). V239 (universe flip): 64/64 0 det FAILs; universe_legacy byte-identical to V238 main (IDENTICAL). Verdict = KEEP LEGACY 4-name (MARGINAL miss): flip PASSES pooled (+$210 net-positive) + helps trend (+$1,051)/recent (+$248) but crisis regresses -$522, tripping the -$500 floor by $22. KEY: crisis loss is UPSIDE not tails (full universe tightens crisis p25 -$1,004 vs -$2,135). universe_full_enabled stays default-OFF. Standing baseline UNCHANGED (crisis +$819/trend +$1,941/recent -$516).",
-  "next_action": "V240 (queued, not launched). Three candidate branches per V239.md queue: (a) PER-TICKER FORENSICS on the V239 universe flip \u2014 which of the 9 re-included names (BTC/DOT/MATIC/XRP/SOL/AVAX/LINK/BNB/SUI) carries the crisis mean loss (-$522) vs the crisis tail-tightening benefit (p25 -$1,004 vs -$2,135); a SELECTIVE re-include (keep the tail-benefit names, drop the crisis-mean-loss names) could clear the -$500 floor. Use the v239_wf per-cell trades.csv on gamma. (b) PER-SIGNAL FORENSICS on the 5 V238-wired feeds (which helps crisis without the trend/recent tax). (c) BUILD gdelt frozen source (6th signal, still ABSENT). V240.md pre-reg (Kimi v2.7 reasoning layer) was drafted earlier but the universe/signal forensics are the higher-value branches. Both grids resumable: re-run scripts/v238_wf_grid.sh / v239_wf_grid.sh.",
+  "version": "v240-in-progress",
+  "step": "V240 four tracks (Fable 5). A: DONE+ADOPTED \u2014 universe_selective_enabled (blacklist {BTC,DOT,LINK}) confirmed pooled +$418 / crisis -$221 / trend +$1,056 / recent +$546, 0 det FAILs; README baseline moved to crisis +$599 / trend +$2,997 / recent +$30 (STANDING MAIN NOW INCLUDES universe_selective_enabled: true \u2014 future grid configs must set it). C: DONE \u2014 gdelt frozen source shipped (10 series 2019-12..2026-07, geo_*_signal alias fix), V240_GDELT_ADD.md. D: DONE \u2014 reasoning_layer.py Gemini-via-agy + frozen_llm_cache, smoke PASS, flag default OFF; V241 = falsifier eval. B: 160-cell solo-feed grid RUNNING on gamma (v240sig_*, scripts/v240_signal_grid.sh, resumable), aggregate -> V240_SIGNAL_FORENSICS.md.",
+  "next_action": "When v240_signal grid completes (~07:00 UTC): read $AUDIT/v240_signal/distribution.json, commit V240_SIGNAL_FORENSICS.md + verdict (which feed carries series-ON trend/recent floor breach). Then V241 pre-reg: reasoning-layer walk-forward (cache-fill then frozen grid) on the NEW selective-universe baseline; optional gdelt solo cell in the signal-forensics frame.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -46,7 +46,7 @@
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
   "last_commit": "fa44c17",
-  "updated_at": "2026-07-10T15:10:00+00:00",
+  "updated_at": "2026-07-11T00:10:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -69,5 +69,19 @@
     "max_parallel": 1,
     "verdict": "KEEP LEGACY 4-name (crisis -$522 trips -$500 floor; pooled +$210 net-positive)",
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v239_wf/grid_state.json"
+  },
+  "v240_walkforward": {
+    "phase": "complete",
+    "cells_done": 32,
+    "cells_total": 32,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_wf/grid_state.json"
+  },
+  "v240_signal_grid": {
+    "phase": "running",
+    "cells_done": 1,
+    "cells_total": 160,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_signal/grid_state.json"
   }
 }
