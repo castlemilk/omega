@@ -1,7 +1,7 @@
 {
-  "version": "v241-in-flight",
-  "step": "V241 IN FLIGHT (Fable 5). M1 PASS: baseline spot-check 4/4 windows identical (ex-timestamp) to v240wf selective cells. M2 SHIPPED (661704a): inertness tracer (OMEGA_REASONING_TRACE), scale cap [0,1] (V241 contract tightening from V240 draft [0,1.5]), OMEGA_LLM_CACHE_FILL override (fill under frozen grid conditions, LLM-only live). M3 PASS: phase-0 tracer ACTIVE on snap_wf_20250305 (20 calls, 95% intervention, 44 drops/39 scale-downs on 108 slots, p50 15.4s); frozen replay sentinel N=2 PASS $0.00, 40/40 cache hits. M4 RUNNING: full cache-fill, pid in data/v241_pids.txt, resumable via scripts/v241_cache_fill.sh (.done markers).",
-  "next_action": "When fill completes: (1) intervention report over all 32 windows; (2) nohup scripts/v241_wf_grid.sh (frozen replay, sentinels N=2) -> v241_wf_aggregate.py applies pre-reg falsifier (recent mean>+400 AND recent p25>+500 AND trend/crisis mean>-300); (3) commit data/frozen_llm_cache entries; (4) V241.md results + verdict, README high-water only if ADOPT; push. If Fable 5 spend cap hits: hand off to Opus 4.8 from this checkpoint.",
+  "version": "v241-complete",
+  "step": "V241 COMPLETE (Fable 5) \u2014 REFUTED, reasoning_layer_enabled stays OFF, baseline unchanged (V240 selective: crisis +$599 / trend +$2,997 / recent +$30). Falsifier: recent mean-D +$227 (<+$400) AND recent p25-D -$705 (<+$500) both FAIL; trend -$69 / crisis -$48 pass. Pooled D +$31, spread $27,345. Phase-0 tracer ACTIVE (691 calls, 99.6% intervention, 42.6% drops). 0 det FAILs, sentinels N=2 $0.00, 100% cache hits. Cache committed (691 entries, a1ed754). Docs: V241.md results + REFLECTION_V241.md + V241_WALKFORWARD_RESULTS.md + README paragraph + obs-backlog V244 deltas.",
+  "next_action": "V244 pre-reg (V242 whale_flow gate + V243 portfolio-sep consumed by parallel Opus tracks, both refuted/parked). Candidates from REFLECTION_V241 \u00a75: corr-spike tail cap (spec V237.md, $0 calibration, strongest); gdelt solo cell; {dxy,yield_curve} subset; exit-side adaptivity (untouched 40+ versions). Reasoning-layer veto-only variant ONLY after counterfactual drop scorer (obs backlog V244 #1, $0 on existing ledgers) shows negative-PnL skew in drop set.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -46,7 +46,7 @@
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
   "last_commit": "a88b95e",
-  "updated_at": "2026-07-12T08:52:00+00:00",
+  "updated_at": "2026-07-12T15:10:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -83,12 +83,5 @@
     "cells_total": 160,
     "max_parallel": 1,
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_signal/grid_state.json"
-  },
-  "v241_walkforward": {
-    "phase": "complete",
-    "cells_done": 1,
-    "cells_total": 1,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v241/grid_state.json"
   }
 }

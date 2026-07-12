@@ -336,6 +336,39 @@ identical rows.
   invocation time (cell E's 2020q1 crisis run) with zero code diff; reusable for any future
   snapshot-generalisation cell.
 
+## Queued from REFLECTION_V241 (2026-07-12 — reasoning-layer refutation)
+
+The V241 tracer measured *activity* (99.6% intervention) but not *quality* —
+phase 0 could not distinguish "active and useful" from "active and random."
+
+### V244 #1 — counterfactual drop scorer  (effort: S) — **PREREQUISITE for any reasoning revisit**
+Join a fill pass's `*_reasoning_trace.jsonl` drops against the ALREADY-EXISTING
+baseline (OFF-arm) trades.csv per window and score the realized PnL of the
+trades the layer would have vetoed. The OFF cells predate the fill, so V241's
+verdict was computable ~4h before the grid ran — this turns any future
+reasoning variant into a $0 pre-grid separator proof (V234 rule). A veto-only
+variant may only be pre-registered if the drop set shows negative-PnL skew here.
+
+### V244 #2 — intervention→PnL attribution ledger  (effort: M)
+Per-window Δ attribution to drops vs scale-downs (extend the
+`trade_field_diff.py` join over ON-vs-OFF ledgers keyed by (cycle, symbol,
+side)). Without it, V241's −$18.7k trend window (`snap_wf_20201226`) cannot be
+attributed to a vetoed winner vs a scaled loser without manual diffing.
+
+### V244 #3 — fill cost predictor  (effort: S)
+Calls/window = candidate-density driven (observed 17–26). A manifest-time
+estimate (candidates per cycle × cycles × call cadence) prices a fill pass
+before committing wall-clock; V241's 4h16m was estimated only from the phase-0
+window's pace.
+
+### Shipped with V241 ✅ — inertness tracer + intervention report  (effort: S)
+`OMEGA_REASONING_TRACE` JSONL in `reasoning_layer.py` (per-call candidates
+in/out, drops, scale-downs, cache-hit, latency) +
+`scripts/v241_intervention_report.py` (per-window intervention rate, INERT /
+VETO-EVERYTHING / ACTIVE verdict). Standing instrument for any LLM-in-loop
+subsystem; the phase-0 gate it implements is now the template for "prove the
+mechanism moves before burning the grid" on model-mediated features.
+
 ## How to use this file
 
 1. During a reflection's observability-gap audit, add new gaps as `V###+1 #N`
