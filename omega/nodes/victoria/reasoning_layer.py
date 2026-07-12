@@ -7,14 +7,16 @@ Model (V240.md "Model choice"): **Gemini via the `agy` CLI** (subprocess;
 DeepSeek/Kimi/OpenRouter keys unavailable). The CLI exposes no temperature
 control, so live-call determinism is NOT assumed: determinism is guaranteed
 entirely by the frozen cache below. The quant book retains full veto — the
-layer can only trim (drop) or scale positions within [0, 1.5], never invent
-one (V139 subordinate posture).
+layer can only trim (drop) or scale positions within [0, 1], never invent
+or up-size one (V139 subordinate posture; V241 contract).
 
 Hermetic cache (V215/V238 pattern):
   data/frozen_llm_cache/{model_id}/{prompt_hash}.json
   prompt_hash = sha256(canonical_prompt_json)[:16]
 Under OMEGA_FROZEN_CACHE=1 a cache miss **raises LLMCacheMiss** — never a live
-call, never a neutral stub. Cache-fill runs happen only with the flag OFF.
+call, never a neutral stub. Cache-fill runs set OMEGA_LLM_CACHE_FILL=1 on top
+of the frozen grid conditions (see _frozen_mode) so fill-time prompts hash-match
+replay-time prompts.
 data/frozen_llm_cache/{model_id}/MANIFEST.json records the model string, CLI
 version and md5 per entry; a model-string mismatch on replay is a hard error.
 
@@ -30,6 +32,7 @@ import json
 import logging
 import os
 import subprocess
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -46,7 +49,9 @@ _AGY_MODEL_STRINGS = {
 }
 
 _MAX_MALFORMED_RETRIES = 2
-_SIZE_SCALE_MIN, _SIZE_SCALE_MAX = 0.0, 1.5
+# V241 contract tightening: the layer may never up-size past the strategy's
+# proposed weight — scale is [0, 1], not the V240 draft's [0, 1.5].
+_SIZE_SCALE_MIN, _SIZE_SCALE_MAX = 0.0, 1.0
 
 
 class LLMCacheMiss(Exception):  # noqa: N818 — name is the pre-registered V240 contract
@@ -72,6 +77,17 @@ class BasketReview:
 
 
 def _frozen_mode() -> bool:
+    """Frozen replay for the LLM path.
+
+    OMEGA_LLM_CACHE_FILL=1 overrides OMEGA_FROZEN_CACHE=1 for the LLM path
+    ONLY: a cache-fill run must execute under the *identical* frozen
+    market/macro conditions the grid will replay (the prompt embeds in-run
+    computed values, so fill-time and replay-time prompts must hash-match),
+    while cache misses go live via the agy subprocess (which the urllib/HTTP
+    fences do not and should not intercept).
+    """
+    if os.environ.get("OMEGA_LLM_CACHE_FILL") == "1":
+        return False
     return os.environ.get("OMEGA_FROZEN_CACHE") == "1"
 
 
@@ -114,6 +130,7 @@ class ReasoningLayer:
             preserves the input candidate order (keep-set applied), so a
             well-behaved model output cannot reorder the basket.
         """
+        t0 = time.perf_counter()
         symbols = [str(c.get("symbol")) for c in candidates]
         prompt = self._build_prompt(cycle_ctx, candidates)
         phash = self._prompt_hash(prompt)
@@ -136,7 +153,48 @@ class ReasoningLayer:
         review.cached = cached
         review.prompt_hash = phash
         approved = [s for s in symbols if s in set(review.keep)]
+        self._trace(cycle_ctx, symbols, approved, review, t0)
         return approved, review, review.reasoning
+
+    @staticmethod
+    def _trace(
+        cycle_ctx: dict,
+        symbols: list[str],
+        approved: list[str],
+        review: BasketReview,
+        t0: float,
+    ) -> None:
+        """V241 phase-0 inertness tracer — one JSONL line per review call.
+
+        Active only when OMEGA_REASONING_TRACE names a path; pure observability
+        (appends to a sidecar file, feeds nothing back into the run). Latency is
+        wall-clock for ops visibility only — it never touches trading state.
+        """
+        path = os.environ.get("OMEGA_REASONING_TRACE")
+        if not path:
+            return
+        scaled_down = {
+            s: v for s, v in review.size_scale.items() if v < 1.0 and s in set(approved)
+        }
+        rec = {
+            "cycle": cycle_ctx.get("cycle"),
+            "regime": cycle_ctx.get("regime"),
+            "window": os.environ.get("WINDOW_LABEL", ""),
+            "candidates_in": len(symbols),
+            "candidates_out": len(approved),
+            "drops": review.drop,
+            "scaled_down": scaled_down,
+            "intervened": bool(review.drop or scaled_down),
+            "confidence": review.confidence,
+            "cache_hit": review.cached,
+            "prompt_hash": review.prompt_hash,
+            "latency_ms": round((time.perf_counter() - t0) * 1000.0, 1),
+        }
+        try:
+            with open(path, "a") as fh:
+                fh.write(json.dumps(rec, sort_keys=True) + "\n")
+        except OSError as exc:  # tracing must never kill a run
+            logger.warning("reasoning trace write failed: %s", exc)
 
     # ------------------------------------------------------------ prompt
 
@@ -146,7 +204,8 @@ class ReasoningLayer:
             "task": (
                 "You are a risk-review layer over a quantitative crypto trading "
                 "book. Review this cycle's candidate basket. You may only KEEP, "
-                "DROP, or SCALE candidates (scale in [0, 1.5]); you cannot add "
+                "DROP, or SCALE candidates (scale in [0, 1] — you may only "
+                "reduce size, never increase it); you cannot add "
                 "positions. Favour vetoing candidates whose signal breakdown "
                 "conflicts with the macro/sentiment state or with similar past "
                 "decisions that lost money. Respond with ONLY a JSON object: "
@@ -179,8 +238,7 @@ class ReasoningLayer:
             # V240 pre-reg: a served-model mismatch on replay is a hard error,
             # not a silent accept.
             raise LLMCacheMiss(
-                f"cache entry {phash} was served by {served!r}, layer expects "
-                f"{self.model_id!r}"
+                f"cache entry {phash} was served by {served!r}, layer expects {self.model_id!r}"
             )
         return entry
 
@@ -235,9 +293,7 @@ class ReasoningLayer:
                 timeout=self._timeout_s,
             )
             if proc.returncode != 0:
-                raise RuntimeError(
-                    f"agy exited {proc.returncode}: {proc.stderr.strip()[:500]}"
-                )
+                raise RuntimeError(f"agy exited {proc.returncode}: {proc.stderr.strip()[:500]}")
             try:
                 response = self._extract_json(proc.stdout)
                 self._cache_store(phash, prompt, response)
@@ -258,7 +314,7 @@ class ReasoningLayer:
         s = text.strip()
         if s.startswith("```"):
             s = s.split("```", 2)[1]
-            s = s[s.find("{"):]
+            s = s[s.find("{") :]
         start = s.find("{")
         if start < 0:
             raise ValueError("no JSON object in output")
