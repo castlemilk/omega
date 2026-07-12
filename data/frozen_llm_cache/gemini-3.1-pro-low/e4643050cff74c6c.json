@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.137382,\"conviction\":-0.188097,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.15322,\"conviction\":-0.172259,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.391997,\"conviction\":0.066518,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.199881,\"conviction\":-0.52536,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.199137,\"conviction\":-0.524616,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.335166,\"conviction\":-0.660645,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "AVAXUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "Long candidates ADAUSDT and AVAXUSDT exhibit negative conviction scores despite positive composite scores, indicating weak signal strength or potential conflict that does not justify risk in a normal regime. SOLUSDT shows strong composite and positive conviction. The short candidates (ARB, NEAR, SUI) demonstrate solid negative conviction scores that align well with their short side positioning.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.115202,\"conviction\":0.087393,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.246589,\"conviction\":0.21878,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.10336,\"conviction\":-0.13117,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.14692,\"conviction\":-0.17473,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.091076,\"conviction\":-0.118885,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3039,\"bull_prob\":0.3159,\"cycle\":34,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The current macro state indicates a 'crisis' regime, a highly volatile environment where altcoins typically face severe drawdowns and correlations approach 1. Despite relatively balanced bear/bull probabilities, long altcoin exposure is highly risky. The ETHUSDT long has very weak conviction and is dropped to reduce risk. The SUIUSDT long has the strongest signal but contradicts the crisis regime; it is kept but scaled down by 50% to manage downside risk. The short positions (ARBUSDT, AVAXUSDT, NEARUSDT) align well with the expected altcoin underperformance in a crisis and are kept, with a slight scale reduction on NEARUSDT due to its weaker conviction relative to the other shorts.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "AVAXUSDT": 1.0,
+   "NEARUSDT": 0.8,
+   "SUIUSDT": 0.5
+  }
+ }
+}

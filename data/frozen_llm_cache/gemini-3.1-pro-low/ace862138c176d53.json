@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.140279,\"conviction\":-0.464318,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.170589,\"conviction\":-0.434008,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.060312,\"conviction\":-0.664909,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.10729,\"conviction\":-0.711887,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.160212,\"conviction\":-0.764808,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3143,\"bull_prob\":0.303,\"cycle\":57,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "ADAUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The current macro context indicates a 'crisis' regime with balanced bull/bear probabilities, suggesting high volatility and lack of clear directional trend. In this environment, the negative conviction scores across all candidates warrant a highly defensive posture. Taking long positions with negative conviction (BNBUSDT, ETHUSDT) presents asymmetric downside risk, so they are dropped. The weakest short (ADAUSDT) is also dropped to reduce noise. The stronger short signals (AVAXUSDT, NEARUSDT) are kept but scaled down by 50% to preserve capital while maintaining some exposure to downside risk characteristic of crisis regimes.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "NEARUSDT": 0.5
+  }
+ }
+}

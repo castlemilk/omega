@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.118412,\"conviction\":0.161641,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.118412,\"conviction\":0.161641,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.118412,\"conviction\":0.161641,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.053879,\"conviction\":-0.010651,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.065961,\"conviction\":-0.022733,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.188638,\"conviction\":-0.14541,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3155,\"bull_prob\":0.306,\"cycle\":28,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "NEARUSDT",
+   "ADAUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with roughly equal bull and bear probabilities, risk management is paramount. High-beta altcoin longs (AVAXUSDT, NEARUSDT) and weak conviction shorts (ADAUSDT, MATICUSDT) are dropped to reduce exposure to unpredictable volatility. We retain the highest conviction short (XRPUSDT) but scale it slightly down to 0.8 for a volatility buffer, and keep the major cap long (ETHUSDT) scaled down significantly to 0.5 to provide a modest, lower-beta balanced exposure.",
+  "size_scale": {
+   "ETHUSDT": 0.5,
+   "XRPUSDT": 0.8
+  }
+ }
+}

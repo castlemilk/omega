@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.136246,\"conviction\":0.204534,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.11468,\"conviction\":0.182967,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.075601,\"conviction\":-0.007313,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.063913,\"conviction\":0.004375,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.07249,\"conviction\":-0.004202,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3117,\"bull_prob\":0.3091,\"cycle\":35,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with nearly equal bull/bear probabilities (indicating high uncertainty and volatility), high-beta altcoin longs like ARB carry excessive downside risk and should be vetoed. SOL is retained as a relatively stronger L1 but scaled down by 50% for risk mitigation. Among the shorts, MATIC exhibits conflicting signals (negative composite but positive conviction) and is dropped. NEAR is dropped due to extremely weak conviction magnitude. The BNB short is kept as a broad market hedge but scaled to 0.8 to account for chop-induced squeeze risks in a crisis environment.",
+  "size_scale": {
+   "BNBUSDT": 0.8,
+   "SOLUSDT": 0.5
+  }
+ }
+}

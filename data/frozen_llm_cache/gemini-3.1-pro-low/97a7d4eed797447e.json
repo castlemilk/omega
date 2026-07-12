@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":1.039545,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.568372,\"conviction\":-0.607917,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.859849,\"conviction\":-0.899394,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.960455,\"conviction\":-1.0,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT"
+  ],
+  "keep": [
+   "NEARUSDT",
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current regime is 'normal' with evenly balanced bull and bear probabilities (0.3333 each). The candidate basket, however, is significantly skewed short (3 shorts vs 1 long). To mitigate directional risk in a neutral regime, the weakest short candidate (ADAUSDT, composite: -0.568) is dropped. The high-conviction long (NEARUSDT, composite: 1.039) and strongest short (SOLUSDT, composite: -0.960) are kept at full size as core relative value legs. MATICUSDT is kept but scaled down to 0.8 to further balance the net exposure while retaining the strong short signal.",
+  "size_scale": {
+   "MATICUSDT": 0.8,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 1.0
+  }
+ }
+}

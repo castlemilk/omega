@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.079465,\"conviction\":-0.563017,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.276789,\"conviction\":-0.365693,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.130204,\"conviction\":-0.772685,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.080849,\"conviction\":-0.72333,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.225921,\"conviction\":-0.868402,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":9,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "SUIUSDT",
+   "ARBUSDT"
+  ],
+  "reasoning": "Regime is normal with neutral bull/bear probabilities. BNBUSDT has a very weak composite score (0.079) paired with negative conviction, not justifying a long position. NEARUSDT also exhibits a weak composite score (-0.08) for a short, so it is dropped. SOLUSDT is kept as the strongest long but scaled down to 0.8 due to negative conviction. SUIUSDT is the strongest short (-0.22) and is kept at full size. ARBUSDT is kept but scaled down to 0.5 to balance the overall short exposure against the neutral macro state.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "SOLUSDT": 0.8,
+   "SUIUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.073845,\"conviction\":-0.245792,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.057573,\"conviction\":-0.262064,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.126635,\"conviction\":-0.193002,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.066829,\"conviction\":-0.386466,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.062711,\"conviction\":-0.382348,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.181556,\"conviction\":-0.501193,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3037,\"bull_prob\":0.3146,\"cycle\":33,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "SOLUSDT",
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, overall market exposure should be heavily scrutinized and reduced to protect capital. The long candidates (AVAXUSDT, SOLUSDT) and short candidates (BNBUSDT, NEARUSDT) exhibit weak composite signals coupled with negative conviction, making them overly risky given the macro state. We drop these to avoid unnecessary variance. SUIUSDT (strongest long composite) and XRPUSDT (strongest short composite) are kept to maintain a market-neutral tilt, but their sizes are scaled down by 50% to account for crisis volatility and negative conviction scores.",
+  "size_scale": {
+   "SUIUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

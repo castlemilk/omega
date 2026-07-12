@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.059566,\"conviction\":0.27885,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.059566,\"conviction\":0.27885,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.059566,\"conviction\":0.27885,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.151245,\"conviction\":0.068039,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.108547,\"conviction\":0.110737,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2969,\"bull_prob\":0.3206,\"cycle\":34,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [],
+  "keep": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "MATICUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly balanced bull and bear probabilities. The long candidates (ADA, AVAX, MATIC) display identical, moderate conviction scores, suggesting a basket-based altcoin momentum signal that is acceptable to keep. The short candidates (BNB, XRP) possess stronger composite signal magnitudes but very weak conviction scores (< 0.12). Given the balanced market regime and low conviction on the shorts, their position sizes should be scaled down to minimize idiosyncratic risk while maintaining the structural market-neutral posture.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

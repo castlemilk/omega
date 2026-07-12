@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.229245,\"conviction\":-0.501231,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.166818,\"conviction\":-0.508804,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.26487,\"conviction\":-0.606855,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2981,\"bull_prob\":0.3173,\"cycle\":21,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro state indicates a 'high_vol' regime with slightly higher bull probability (0.3173) than bear probability (0.2981). In this context, shorting is exceptionally risky due to the potential for violent upside squeezes. All candidates are shorts. SOLUSDT has the weakest composite score (-0.166818) and is dropped to reduce exposure. XRPUSDT and BNBUSDT show stronger negative conviction, but sizes are scaled down (0.7 and 0.5 respectively) to defensively manage risk and limit downside from sudden volatility spikes in a marginally bullish environment.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "XRPUSDT": 0.7
+  }
+ }
+}

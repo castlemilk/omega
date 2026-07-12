@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.079735,\"conviction\":-0.137645,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.173628,\"conviction\":-0.043752,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.049373,\"conviction\":-0.168007,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.08031,\"conviction\":-0.29769,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.082262,\"conviction\":-0.299641,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.219913,\"conviction\":-0.437293,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3035,\"bull_prob\":0.3114,\"cycle\":26,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT",
+   "AVAXUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "In a 'normal' regime with roughly equal bull and bear probabilities, the market lacks strong directional bias. Furthermore, all candidates exhibit negative conviction scores, indicating fragile underlying signal structures or conflicting factors. ETHUSDT is kept as it has the strongest long composite score and the least negative conviction, though its size is scaled down to 0.8 to account for the neutral regime. BNBUSDT is kept at half size for long exposure diversification. NEARUSDT presents a relatively strong short composite, but its deeply negative conviction necessitates a significant scale down (0.5) to manage risk. SOLUSDT, AVAXUSDT, and MATICUSDT are dropped entirely due to marginal composites and highly negative conviction scores, which historically lead to poor risk-adjusted returns in non-trending market environments.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.8,
+   "NEARUSDT": 0.5
+  }
+ }
+}

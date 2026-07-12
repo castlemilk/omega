@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.080161,\"conviction\":-0.561746,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.133098,\"conviction\":-0.508809,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.086297,\"conviction\":-0.55561,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.138578,\"conviction\":-0.780485,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.055462,\"conviction\":-0.697368,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.164446,\"conviction\":-0.806353,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3087,\"bull_prob\":0.311,\"cycle\":25,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "XRPUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "NEARUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The market regime is 'normal' with almost perfectly balanced bull and bear probabilities (0.311 vs 0.3087), indicating a lack of clear directional macro bias. Additionally, all candidates exhibit negative conviction scores across both long and short sides, suggesting internal signal conflict or low confidence from the underlying models. Given this environment, risk should be strictly managed. The weakest candidates (BNBUSDT, XRPUSDT, SOLUSDT) are dropped. The strongest absolute signals (NEARUSDT for long, ARBUSDT and SUIUSDT for short) are kept to maintain a balanced, market-neutral book, but scaled down significantly to reflect the overall low conviction and neutral macro backdrop.",
+  "size_scale": {
+   "ARBUSDT": 0.7,
+   "NEARUSDT": 0.5,
+   "SUIUSDT": 0.7
+  }
+ }
+}

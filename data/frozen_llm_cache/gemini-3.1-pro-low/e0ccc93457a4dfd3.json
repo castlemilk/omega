@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.333725,\"conviction\":0.237345,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.0632,\"conviction\":-0.03318,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.27892,\"conviction\":-0.3753,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.082204,\"conviction\":-0.178584,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.27892,\"conviction\":-0.3753,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2987,\"bull_prob\":0.3229,\"cycle\":45,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slight bullish edge (bull_prob 0.32 > bear_prob 0.29). BNBUSDT is dropped because it holds negative conviction despite being proposed as a long. NEARUSDT is dropped due to weak composite and conviction relative to other short candidates. ADAUSDT is kept at full size given its strong long conviction which aligns with the slight bullish macro tilt. AVAXUSDT and SOLUSDT are kept for their strong short signals, but their sizes are scaled down to 0.8x to account for the marginal bullish bias in the broader cycle probabilities.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "SOLUSDT": 0.8
+  }
+ }
+}

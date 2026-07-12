@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.029565,\"conviction\":-0.434721,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.075757,\"conviction\":-0.388528,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.052913,\"conviction\":-0.411373,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.078285,\"conviction\":-0.54257,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.079611,\"conviction\":-0.543897,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.11912,\"conviction\":-0.583406,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3054,\"bull_prob\":0.3158,\"cycle\":45,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "ADAUSDT",
+   "AVAXUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The market regime is normal with balanced bull/bear probabilities. However, all candidate signals exhibit strongly negative conviction scores across the board, indicating elevated uncertainty or contradictory secondary indicators. MATICUSDT shows the strongest absolute composite score and is kept with a slight scale down. ETHUSDT, SOLUSDT, ADAUSDT, and AVAXUSDT are kept but scaled down by 50% to reflect the poor conviction metrics. BNBUSDT is dropped entirely due to its exceptionally weak composite score (0.029) combined with a highly negative conviction.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "AVAXUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "MATICUSDT": 0.7,
+   "SOLUSDT": 0.5
+  }
+ }
+}

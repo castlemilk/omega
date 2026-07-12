@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.049603,\"conviction\":-0.310272,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.095475,\"conviction\":-0.2644,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.069523,\"conviction\":-0.290352,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.066325,\"conviction\":-0.426201,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.066325,\"conviction\":-0.426201,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.066325,\"conviction\":-0.426201,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2988,\"bull_prob\":0.3221,\"cycle\":23,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "ARBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "Macro state is balanced/normal, but conviction scores across all candidates are negative, indicating weak signals. The short candidates (ARB, AVAX, NEAR) share identical weak scores, suggesting a generic or noisy signal, so they are dropped. Longs are kept but scaled down due to poor conviction, with ETH retaining the most size given its relatively stronger metrics.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.8,
+   "XRPUSDT": 0.5
+  }
+ }
+}

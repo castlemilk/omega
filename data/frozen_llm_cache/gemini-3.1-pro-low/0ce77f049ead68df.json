@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.162915,\"conviction\":0.257857,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.141276,\"conviction\":0.236219,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.225205,\"conviction\":-0.130262,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.16758,\"conviction\":-0.072637,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.197526,\"conviction\":-0.102584,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2981,\"bull_prob\":0.3236,\"cycle\":43,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "BNBUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "The cycle context indicates a normal regime with a slightly bullish bias (bull_prob 0.3236 > bear_prob 0.2981). The long candidates (ADAUSDT, BNBUSDT) have strong conviction scores (> 0.2) and align well with this macro state, so they are kept at full size. Shorting major altcoins in a slightly bullish normal regime carries elevated risk, especially for candidates with weaker conviction. NEARUSDT and SOLUSDT have the weakest conviction scores among the shorts (-0.073 and -0.103 respectively) and are dropped to reduce counter-trend exposure. AVAXUSDT has a relatively stronger negative composite (-0.225) and is kept, but scaled down by 50% to manage risk.",
+  "size_scale": {
+   "AVAXUSDT": 0.5
+  }
+ }
+}

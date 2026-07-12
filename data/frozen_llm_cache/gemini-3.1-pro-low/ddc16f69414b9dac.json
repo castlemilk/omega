@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.194866,\"conviction\":-0.003288,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.110751,\"conviction\":-0.157403,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.052339,\"conviction\":-0.320493,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.288087,\"conviction\":-0.556241,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.082813,\"conviction\":-0.350968,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3027,\"bull_prob\":0.3175,\"cycle\":43,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The current macro regime is classified as 'crisis'. Long candidates (ADAUSDT, ETHUSDT) exhibit conflicting signals: their composite scores are positive (long), but their conviction scores are negative (bearish). In a crisis regime, these misaligned longs are too risky and are dropped. The short candidates (BNBUSDT, MATICUSDT, XRPUSDT) have aligned negative composite and negative conviction scores, fitting a crisis profile. Due to balanced bull/bear probabilities, short sizes are slightly scaled down to manage volatility risk, except for MATICUSDT which has the strongest aligned negative conviction.",
+  "size_scale": {
+   "BNBUSDT": 0.8,
+   "MATICUSDT": 1.0,
+   "XRPUSDT": 0.8
+  }
+ }
+}

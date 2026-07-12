@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.041845,\"conviction\":-0.27692,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.054252,\"conviction\":-0.264512,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.054252,\"conviction\":-0.264512,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.03705,\"conviction\":-0.355815,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.020681,\"conviction\":-0.339446,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.126195,\"conviction\":-0.444959,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.308,\"bull_prob\":0.312,\"cycle\":39,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ETHUSDT",
+   "SUIUSDT",
+   "ARBUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'crisis' which indicates high volatility. All candidate signals show negative conviction, making directional trades highly risky. The long candidates (ADA, ETH, SUI) conflict with the crisis state and their poor conviction warrants a drop. The weaker short candidates (ARB, MATIC) are also dropped to minimize exposure. Only XRPUSDT is kept as it has the strongest composite short signal, but its size is scaled down to 50% due to the overall low conviction environment.",
+  "size_scale": {
+   "XRPUSDT": 0.5
+  }
+ }
+}

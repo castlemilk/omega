@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.110518,\"conviction\":-0.328558,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.057552,\"conviction\":-0.381524,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.188097,\"conviction\":-0.25098,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.136864,\"conviction\":-0.575941,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.059009,\"conviction\":-0.498086,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.107132,\"conviction\":-0.546209,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2981,\"bull_prob\":0.3233,\"cycle\":37,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "XRPUSDT",
+   "BNBUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with fairly balanced bull/bear probabilities. However, all candidate signals exhibit severely negative conviction scores across both long and short sides. To strictly manage risk in a low-conviction environment, the candidates with the weakest absolute composite signals (ETHUSDT for longs, NEARUSDT for shorts) are dropped entirely. The remaining candidates are kept to maintain a balanced book but scaled down aggressively (0.3 to 0.5) to reflect the poor conviction underlying the signals.",
+  "size_scale": {
+   "ADAUSDT": 0.3,
+   "BNBUSDT": 0.3,
+   "SOLUSDT": 0.3,
+   "XRPUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.06385,\"conviction\":-0.070354,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.334704,\"conviction\":0.200501,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.216672,\"conviction\":0.082469,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.092059,\"conviction\":-0.226262,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.104788,\"conviction\":-0.238991,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.137942,\"conviction\":-0.272145,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2984,\"bull_prob\":0.3207,\"cycle\":22,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ADAUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "XRPUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "Regime is normal with balanced bull/bear probabilities, favoring a mixed directional book. Dropping BNBUSDT due to negative conviction on a long signal indicating a contradictory or very weak edge. Dropping ADAUSDT as the weakest short to concentrate short exposure in higher conviction trades. Scaling XRP and ARB slightly down to balance risk, while retaining full size on the highest conviction candidates (SOL and SUI).",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 1.0,
+   "XRPUSDT": 0.8
+  }
+ }
+}

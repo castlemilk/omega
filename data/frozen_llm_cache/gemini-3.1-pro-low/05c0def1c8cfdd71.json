@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.154316,\"conviction\":0.141716,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.082627,\"conviction\":0.070028,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.128048,\"conviction\":0.115448,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.086414,\"conviction\":-0.099013,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.168066,\"conviction\":-0.180666,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.200081,\"conviction\":-0.21268,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":10,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ARBUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "SOLUSDT",
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The cycle context indicates a 'normal' regime with balanced bear and bull probabilities (0.3333 each), suggesting a lack of a strong directional macro trend. In this neutral environment, it's prudent to prune marginal trades to reduce noise. BNBUSDT (long) and ARBUSDT (short) have the weakest conviction scores in their respective directions and are therefore dropped. For the retained shorts, ETHUSDT is a major asset, and carrying a significant short position in a non-bearish regime presents higher risk; thus, its size is scaled down to 0.75. NEARUSDT also sees a minor scale-down to 0.9 to manage overall short exposure. The high-conviction longs (AVAXUSDT, SOLUSDT) are maintained at full size.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "ETHUSDT": 0.75,
+   "NEARUSDT": 0.9,
+   "SOLUSDT": 1.0
+  }
+ }
+}

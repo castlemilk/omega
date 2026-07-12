@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.130067,\"conviction\":-0.497247,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.037629,\"conviction\":-0.589685,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.186303,\"conviction\":-0.441011,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.07773,\"conviction\":-0.705044,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.080126,\"conviction\":-0.70744,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.129542,\"conviction\":-0.756856,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3135,\"bull_prob\":0.3051,\"cycle\":45,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "MATICUSDT",
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "Regime is balanced (normal) with roughly equal bull and bear probabilities. Given all candidates exhibit negative conviction scores, a defensive posture is warranted. SOLUSDT and AVAXUSDT show the strongest composite signals on the long side and are kept, with AVAX scaled down slightly due to lower conviction. MATICUSDT is dropped due to an exceptionally weak composite score. On the short side, SUIUSDT provides the strongest composite signal and is retained but scaled down by 50% to mitigate risk in a balanced market, while the weaker shorts ARBUSDT and NEARUSDT are dropped.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 0.5
+  }
+ }
+}

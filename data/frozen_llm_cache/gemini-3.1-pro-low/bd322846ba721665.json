@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.612723,\"conviction\":0.167708,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.525731,\"conviction\":0.080716,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.316823,\"conviction\":-0.128191,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.342461,\"conviction\":-0.787476,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.402101,\"conviction\":-0.847115,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.554985,\"conviction\":-1.0,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a 'normal' regime with neutral bull/bear probabilities, conviction scores are critical for filtering. XRPUSDT exhibits a negative conviction score (-0.128) despite being a long candidate, indicating signal divergence; thus it is dropped. BNBUSDT and ETHUSDT have weak positive conviction, warranting a scale reduction to manage risk. The short candidates (ARB, AVAX, SUI) have strong negative conviction that aligns perfectly with their short direction, justifying keeping them at full size.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 0.8,
+   "ETHUSDT": 0.7,
+   "SUIUSDT": 1.0
+  }
+ }
+}

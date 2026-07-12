@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.037923,\"conviction\":-0.312476,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.237206,\"conviction\":-0.113193,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.145773,\"conviction\":-0.496172,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.062222,\"conviction\":-0.412621,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.159434,\"conviction\":-0.509833,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3025,\"bull_prob\":0.3191,\"cycle\":31,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "MATICUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bear (0.3025) and bull (0.3191) probabilities, providing no strong directional tailwind. However, conviction scores are universally negative across all candidates, indicating weak structural support for these signals. BNBUSDT, NEARUSDT, AVAXUSDT, and SOLUSDT are dropped due to poor combinations of weak composite scores and highly negative conviction. MATICUSDT is kept as it has the strongest composite score (0.237), but its position size is scaled down by 50% to account for its negative conviction.",
+  "size_scale": {
+   "MATICUSDT": 0.5
+  }
+ }
+}

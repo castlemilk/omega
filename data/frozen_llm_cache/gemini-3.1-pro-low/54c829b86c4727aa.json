@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.100527,\"conviction\":0.243446,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.136282,\"conviction\":0.279201,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.137987,\"conviction\":0.280906,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.0625,\"conviction\":0.080419,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.107497,\"conviction\":0.035422,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.187902,\"conviction\":-0.044983,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3015,\"bull_prob\":0.3184,\"cycle\":47,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "NEARUSDT",
+   "SOLUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The current 'crisis' regime warrants a defensive posture and reduced overall exposure. Long positions are inherently riskier in this macro state, so we drop the lowest conviction long (ADAUSDT) and scale down the higher conviction longs (NEARUSDT, SOLUSDT) by 50% to manage downside risk. For the short candidates, XRPUSDT and MATICUSDT exhibit negative or extremely low conviction and are thus dropped to avoid noisy signals. BNBUSDT is retained as a short hedge against the remaining long exposure, though slightly scaled down.",
+  "size_scale": {
+   "BNBUSDT": 0.8,
+   "NEARUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

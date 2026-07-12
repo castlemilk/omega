@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.168846,\"conviction\":0.005369,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.142978,\"conviction\":-0.020498,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.100902,\"conviction\":-0.062575,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.18411,\"conviction\":-0.347587,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.380729,\"conviction\":-0.505255,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3078,\"bull_prob\":0.307,\"cycle\":34,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current macro state is classified as a 'crisis' regime with high uncertainty (balanced bull/bear probabilities). In such environments, risk-off behavior is preferred. Long positions with negative conviction (BNBUSDT, ETHUSDT) present asymmetric downside risk and are dropped. The ADAUSDT long is kept but scaled down by 50% due to its very weak positive conviction (0.005). The short positions (MATICUSDT, SOLUSDT) show strong negative conviction which aligns well with capital preservation in a crisis regime, so they are kept at full scale.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "MATICUSDT": 1.0,
+   "SOLUSDT": 1.0
+  }
+ }
+}

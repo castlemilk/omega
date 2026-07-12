@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.072939,\"conviction\":-0.14197,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.055545,\"conviction\":-0.159364,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.038166,\"conviction\":-0.176743,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.103568,\"conviction\":-0.318477,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.061122,\"conviction\":-0.276031,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.150126,\"conviction\":-0.365035,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3024,\"bull_prob\":0.3194,\"cycle\":54,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "Normal market regime with balanced bull/bear probabilities (bull ~32%, bear ~30%). Negative conviction scores across the entire basket suggest weak overall signal strength and call for a cautious approach. Keeping higher composite signals (BNB, ETH longs; ARB, SUI shorts) but scaling down sizes to 50% to manage risk in a low-conviction environment. Dropping the weakest signals (MATIC long, SOL short) to minimize unnecessary exposure.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

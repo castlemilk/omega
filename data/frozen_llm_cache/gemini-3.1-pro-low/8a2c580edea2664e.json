@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.042332,\"conviction\":-0.57341,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.038759,\"conviction\":-0.576983,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.030076,\"conviction\":-0.585666,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.05593,\"conviction\":-0.671672,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.056261,\"conviction\":-0.672003,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.197973,\"conviction\":-0.813715,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":14,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "Macro regime is normal with neutral bull/bear probabilities. Long candidates exhibit negative conviction scores, conflicting with their directional bias, thus they are dropped to mitigate risk. Short candidates exhibit aligned negative composites and negative convictions, supporting their directional bias, and are kept.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

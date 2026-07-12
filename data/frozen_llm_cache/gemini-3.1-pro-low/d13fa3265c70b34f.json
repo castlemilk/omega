@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.136598,\"conviction\":-0.085841,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.284945,\"conviction\":0.062507,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.279358,\"conviction\":0.056919,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.29909,\"conviction\":-0.521529,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.196315,\"conviction\":-0.418754,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.135042,\"conviction\":-0.357481,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3003,\"bull_prob\":0.3199,\"cycle\":43,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "SOLUSDT",
+   "AVAXUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull (0.3199) and bear (0.3003) probabilities, supporting a market-neutral approach. I am dropping ADAUSDT because its conviction score (-0.085841) contradicts its long direction and positive composite score, indicating a fragile or conflicting signal. The remaining candidates have aligned composite and conviction scores. I am scaling down NEARUSDT and MATICUSDT slightly as they possess the weakest composite scores among the valid short candidates.",
+  "size_scale": {
+   "MATICUSDT": 0.9,
+   "NEARUSDT": 0.8
+  }
+ }
+}

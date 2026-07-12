@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.646214,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.646214,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.192792,\"conviction\":0.546579,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.458733,\"conviction\":-0.104946,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.461474,\"conviction\":-0.107687,\"side\":\"short\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.572913,\"conviction\":-0.219126,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SUIUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "Macro state is neutral (normal regime, equal bull/bear probability). Long candidates ADAUSDT and ARBUSDT show maximum conviction and strong composite signals. ETHUSDT has moderate conviction, so its size is scaled down to 50% to manage risk. The short candidates (NEARUSDT, SUIUSDT, XRPUSDT) exhibit very weak negative conviction (magnitude < 0.25) which does not justify taking short exposure in a neutral market, so they are dropped.",
+  "size_scale": {
+   "ETHUSDT": 0.5
+  }
+ }
+}

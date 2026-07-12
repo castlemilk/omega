@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.172104,\"conviction\":-0.207624,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.154545,\"conviction\":-0.225184,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.076436,\"conviction\":-0.303293,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.168497,\"conviction\":-0.548225,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.290293,\"conviction\":-0.670022,\"side\":\"short\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.213146,\"conviction\":-0.592875,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2979,\"bull_prob\":0.3227,\"cycle\":32,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT",
+   "XRPUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "Regime is normal with closely balanced bull/bear probabilities, suggesting a range-bound or indecisive market. Conviction scores across the board are notably negative, indicating overall low confidence in the signal strength. Dropping SOLUSDT due to its exceptionally weak composite score (0.076) and poor conviction. Keeping other candidates but scaling down exposure, particularly on weaker signals like BNBUSDT and NEARUSDT, to mitigate risk in a low-conviction environment. Retaining full size only on the strongest directional signal (SUIUSDT short) given its highest absolute composite score.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "BNBUSDT": 0.5,
+   "NEARUSDT": 0.7,
+   "SUIUSDT": 1.0,
+   "XRPUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.020998,\"conviction\":0.316614,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.020998,\"conviction\":0.316614,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.020998,\"conviction\":0.316614,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.098482,\"conviction\":0.197133,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.090503,\"conviction\":0.205113,\"side\":\"short\",\"symbol\":\"BNBUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":10,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "ADAUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ETHUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro regime is neutral (equal bull/bear probabilities). The long candidates (AVAX, ETH, MATIC) all share identical moderate conviction scores, suggesting highly correlated signal generation. To avoid concentrated risk in correlated altcoins, ETH is kept at full size as a benchmark, AVAX is scaled down, and MATIC is dropped. On the short side, convictions are relatively low; BNB is kept at half size to maintain some market-neutral exposure, while ADA is dropped due to having the lowest conviction overall.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 1.0
+  }
+ }
+}

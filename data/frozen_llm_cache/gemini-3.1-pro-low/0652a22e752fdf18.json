@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.341476,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.341476,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.341476,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.8069,\"conviction\":-0.148376,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.240223,\"conviction\":0.418301,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.816159,\"conviction\":-0.157635,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.9,
+  "drop": [
+   "ADAUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The market regime is 'normal' with evenly split bull/bear probabilities, allowing for balanced exposure. The long candidates (MATICUSDT, NEARUSDT, SOLUSDT) all exhibit maximum conviction (1.0) with solid positive composite scores, justifying keeping them at full scale. The short candidates show significant conflicts: ADAUSDT and XRPUSDT have strongly negative composite scores but negative conviction, indicating a lack of model confidence in the signal direction. BNBUSDT has a positive conviction score despite being a short candidate, representing a dangerous divergence. All short candidates are dropped to minimize risk from conflicting signals.",
+  "size_scale": {
+   "MATICUSDT": 1.0,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 1.0
+  }
+ }
+}

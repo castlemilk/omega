@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.151455,\"conviction\":-0.281185,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.099428,\"conviction\":-0.333212,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.178493,\"conviction\":-0.254148,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.102073,\"conviction\":-0.534714,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.140662,\"conviction\":-0.573302,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.228422,\"conviction\":-0.661063,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3041,\"bull_prob\":0.3116,\"cycle\":49,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "BNBUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with roughly equal bull and bear probabilities, uncertainty is high. Long positions with negative conviction scores carry excessive risk and conflict with the macro crisis state, so they are dropped. Short positions align better with the crisis regime, but due to deeply negative conviction scores, their sizing is scaled down by 50% to mitigate risk.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "MATICUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.193973,\"conviction\":-0.763072,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.185903,\"conviction\":-0.763072,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.204851,\"conviction\":-0.763072,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2986,\"bull_prob\":0.3184,\"cycle\":34,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The cycle context indicates a high_vol regime with a slightly higher bull_prob (0.3184) than bear_prob (0.2986). This macro state conflicts with the uniformly short basket. Furthermore, the conviction scores across all candidates are extremely poor (-0.763). In a high-volatility, non-bearish environment, holding full-sized shorts is disproportionately risky. BNB is dropped entirely as it tends to exhibit relative strength and lower beta on the downside. AVAX and NEAR are kept as beta shorts but their sizes are reduced by 50% to strictly manage risk against potential volatility spikes.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "NEARUSDT": 0.5
+  }
+ }
+}

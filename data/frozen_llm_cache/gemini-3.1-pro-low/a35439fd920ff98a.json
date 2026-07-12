@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.143963,\"conviction\":0.033761,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.157098,\"conviction\":0.046895,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.110344,\"conviction\":-0.220546,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.048699,\"conviction\":-0.158901,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.110827,\"conviction\":-0.221029,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3041,\"bull_prob\":0.3153,\"cycle\":40,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "AVAXUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with perfectly balanced bull/bear probabilities (~31%), indicating a lack of clear directional market momentum. Long candidate convictions are exceptionally weak (<0.05); ARBUSDT is dropped due to minimal conviction, and XRPUSDT is scaled down aggressively to limit exposure in a directionless market. Short candidate convictions are stronger; AVAXUSDT and SOLUSDT are kept but scaled down slightly to respect the neutral macro state. NEARUSDT is dropped as its conviction is significantly weaker than the other short candidates.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "SOLUSDT": 0.8,
+   "XRPUSDT": 0.5
+  }
+ }
+}

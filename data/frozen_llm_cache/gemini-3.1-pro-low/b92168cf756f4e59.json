@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.166886,\"conviction\":0.08685,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.261882,\"conviction\":0.181846,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.167177,\"conviction\":-0.247213,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.101992,\"conviction\":-0.182029,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.104728,\"conviction\":-0.184764,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2975,\"bull_prob\":0.3239,\"cycle\":35,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "BNBUSDT",
+   "ADAUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slightly bullish tilt (bull_prob 0.3239 > bear_prob 0.2975). XRPUSDT has strong long conviction that aligns well with this macro tilt, so it is kept at full size. BNBUSDT has strong short conviction and is kept as a robust hedge. ADAUSDT has relatively weak long conviction and is therefore scaled down by 50%. NEARUSDT and SOLUSDT shorts have weaker conviction than BNB and conflict with the slight bullish macro edge; they are dropped to avoid overexposure on the short side.",
+  "size_scale": {
+   "ADAUSDT": 0.5
+  }
+ }
+}

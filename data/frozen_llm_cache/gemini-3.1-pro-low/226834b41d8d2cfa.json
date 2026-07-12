@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.162044,\"conviction\":0.212861,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.06514,\"conviction\":0.115957,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.215092,\"conviction\":0.265909,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.074168,\"conviction\":-0.023351,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.127839,\"conviction\":-0.077022,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.128019,\"conviction\":-0.077202,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2982,\"bull_prob\":0.3227,\"cycle\":23,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "MATICUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro state indicates a normal regime with balanced bull (0.32) and bear (0.29) probabilities, supporting a market-neutral or mixed long/short approach. NEARUSDT is dropped due to its exceptionally low absolute conviction (-0.023). BNBUSDT is kept but scaled down by 50% as its conviction (0.11) is notably lower than the other long candidates. The remaining positions demonstrate sufficient signal strength and are kept at full size.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 0.5,
+   "MATICUSDT": 1.0,
+   "SOLUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

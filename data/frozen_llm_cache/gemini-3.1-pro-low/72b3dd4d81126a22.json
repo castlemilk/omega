@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.133657,\"conviction\":-0.046142,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.180671,\"conviction\":0.000872,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.366909,\"conviction\":0.18711,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.134698,\"conviction\":-0.314497,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.175912,\"conviction\":-0.355711,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.229913,\"conviction\":-0.409712,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":10,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "SUIUSDT",
+   "AVAXUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "Dropped ARBUSDT due to conflicting signals (negative conviction on a long candidate). ETHUSDT scaled down due to negligible positive conviction. Kept SUIUSDT at full size as the strongest long. Shorts (AVAX, MATIC, NEAR) show consistent negative conviction scaling with their negative composites, so they are kept with minor scaling on the weaker signals to balance risk. The regime is 'normal' with equal bear/bull probabilities, supporting a balanced long/short book.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "ETHUSDT": 0.5,
+   "MATICUSDT": 0.8,
+   "NEARUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

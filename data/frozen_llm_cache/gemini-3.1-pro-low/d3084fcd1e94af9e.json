@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.09146,\"conviction\":-0.524395,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.089046,\"conviction\":-0.526809,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.142226,\"conviction\":-0.6007,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.180375,\"conviction\":-0.640121,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.455416,\"conviction\":-0.910259,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3053,\"bull_prob\":0.3103,\"cycle\":52,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "AVAXUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The market is in a 'crisis' regime with roughly equal bull/bear probabilities (high uncertainty). Long positions with conflicting negative conviction scores (BNBUSDT, NEARUSDT) present unacceptable risk in a crisis environment and must be dropped. Short candidates align better with the 'crisis' regime; however, size should be modulated based on conviction. SOLUSDT exhibits strong directional composite and conviction scores and is kept at full size. ARBUSDT and AVAXUSDT have weaker composite signals and are scaled down to 50% to reduce overall portfolio exposure.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.5,
+   "SOLUSDT": 1.0
+  }
+ }
+}

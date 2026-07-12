@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.166806,\"conviction\":-0.63511,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.17191,\"conviction\":-0.63511,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.14914,\"conviction\":-0.63511,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3025,\"bull_prob\":0.3179,\"cycle\":23,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current regime is 'high_vol' with roughly balanced bull and bear probabilities (31.7% vs 30.2%). Taking full-sized short positions across multiple altcoins in a high-volatility environment with no clear directional macro bias carries significant squeeze risk. Dropping XRPUSDT as it has the weakest composite signal magnitude. Keeping MATICUSDT and SOLUSDT but scaling them down by 50% to mitigate volatility exposure while honoring the strong negative conviction score.",
+  "size_scale": {
+   "MATICUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

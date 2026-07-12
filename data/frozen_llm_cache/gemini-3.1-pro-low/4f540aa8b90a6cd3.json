@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.062618,\"conviction\":-0.576083,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.159275,\"conviction\":-0.479426,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.352043,\"conviction\":-0.286658,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.137315,\"conviction\":-0.776016,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.137315,\"conviction\":-0.776016,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.137315,\"conviction\":-0.776016,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":12,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "ARBUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "XRPUSDT",
+   "ADAUSDT",
+   "BNBUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The macro state is neutral (balanced bull/bear probabilities). Long convictions are broadly negative, indicating weak trend confidence; ARBUSDT is dropped due to extremely weak composite and negative conviction. Shorts all show uniform negative composite and conviction profiles; they are kept but scaled down to 0.5 to manage downside exposure in a non-trending regime. XRPUSDT is kept at a slightly higher scale (0.8) as it possesses the strongest relative composite score (0.352) among the long candidates.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "MATICUSDT": 0.5,
+   "XRPUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.621274,\"conviction\":0.900982,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.720292,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.690674,\"conviction\":0.970382,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.250426,\"conviction\":0.029282,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.535805,\"conviction\":-0.256097,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.571407,\"conviction\":-0.291699,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is neutral with equal bull/bear probabilities (0.3333). In a trendless market, candidates with weak or contradictory signals should be avoided. The short candidates (ETHUSDT, NEARUSDT, SUIUSDT) exhibit extremely weak or negative conviction scores, making them poor risk-adjusted plays; they are dropped. The long candidates (SOLUSDT, XRPUSDT) show exceptionally high conviction (>= 0.97) and are kept at full scale, while MATICUSDT is slightly scaled down due to its marginally lower conviction in this uncertain macro environment.",
+  "size_scale": {
+   "MATICUSDT": 0.8,
+   "SOLUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

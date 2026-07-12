@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.390201,\"conviction\":0.312153,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.112887,\"conviction\":0.034839,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.558908,\"conviction\":0.480861,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.233191,\"conviction\":-0.311238,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.240377,\"conviction\":-0.318425,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.388625,\"conviction\":-0.466673,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly balanced bull and bear probabilities (0.33 each). In this neutral environment, it is prudent to focus only on the highest conviction signals. MATICUSDT has an extremely low conviction score (0.03) and is an obvious drop. ARBUSDT and NEARUSDT have relatively weak short conviction scores compared to SUIUSDT, so they are dropped to reduce unnecessary exposure. AVAXUSDT, SOLUSDT, and SUIUSDT are kept at full size due to their strong composite and conviction scores.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

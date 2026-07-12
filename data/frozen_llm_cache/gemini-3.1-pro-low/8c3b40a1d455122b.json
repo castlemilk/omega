@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.067834,\"conviction\":-0.439934,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.16713,\"conviction\":-0.340638,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.172549,\"conviction\":-0.317254,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.041386,\"conviction\":-0.549155,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.127015,\"conviction\":-0.634784,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.153113,\"conviction\":-0.660882,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.315,\"bull_prob\":0.3049,\"cycle\":49,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ADAUSDT"
+  ],
+  "keep": [
+   "NEARUSDT",
+   "SUIUSDT",
+   "ARBUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with roughly equal bull and bear probabilities, overall market exposure should be conservatively managed. I dropped BNBUSDT and ADAUSDT due to their weak composite scores close to zero. The remaining long positions (NEARUSDT, SUIUSDT) are scaled down by 50% to limit downside risk given the high uncertainty of a crisis regime. The short positions (ETHUSDT, ARBUSDT) are kept with a minor reduction (80% scale) to act as a necessary hedge against potential cascading drawdowns characteristic of crisis conditions.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "ETHUSDT": 0.8,
+   "NEARUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.661996,\"conviction\":0.152802,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.10785,\"conviction\":-0.401344,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.132816,\"conviction\":-0.376378,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.490806,\"conviction\":-1.0,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.258433,\"conviction\":-0.767627,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.2164,\"conviction\":-0.725594,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ARBUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "BNB shows positive alignment between composite score and conviction for a long position, though conviction is relatively low, warranting a scale-down. NEAR and XRP have negative conviction scores contradicting their long signals, thus dropped. ARB, SOL, and SUI show strong negative conviction scores aligning with their short direction and negative composite scores, making them strong keep candidates with scaling applied proportional to their conviction strength.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "BNBUSDT": 0.5,
+   "SOLUSDT": 0.75,
+   "SUIUSDT": 0.75
+  }
+ }
+}

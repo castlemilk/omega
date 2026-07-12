@@ -1,0 +1,19 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.397238,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.206688,\"conviction\":0.396074,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.317822,\"conviction\":0.28494,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT"
+  ],
+  "reasoning": "In a normal regime with neutral bull/bear probabilities (0.33 each), we should prioritize high-conviction setups and avoid marginal trades. ADAUSDT presents a maximum conviction (1.0) long signal, making it a strong candidate to keep at full size. Conversely, BNBUSDT and XRPUSDT exhibit weak conviction scores (<0.4) for their short signals. Taking low-conviction shorts in a non-bearish regime introduces unnecessary risk, so they are dropped from the basket.",
+  "size_scale": {
+   "ADAUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.051212,\"conviction\":-0.097804,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.156176,\"conviction\":0.00716,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.12825,\"conviction\":-0.277266,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.068451,\"conviction\":-0.217467,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.051701,\"conviction\":-0.200717,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2996,\"bull_prob\":0.3221,\"cycle\":29,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "AVAXUSDT",
+   "BNBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull/bear probabilities, leaning slightly bullish. SOLUSDT presents a conflicting signal: it is a long candidate but has negative conviction, warranting a drop. XRPUSDT has aligned positive composite and conviction scores. The short candidates (AVAXUSDT, BNBUSDT, SUIUSDT) all exhibit strong negative convictions that support their short side, but SUIUSDT is scaled down to 0.5 due to its relatively weak composite score compared to the others.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 1.0,
+   "SUIUSDT": 0.5,
+   "XRPUSDT": 1.0
+  }
+ }
+}

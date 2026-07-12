@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.153605,\"conviction\":-0.189914,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.116414,\"conviction\":-0.227106,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.201079,\"conviction\":-0.142441,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.358723,\"conviction\":-0.702243,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.166744,\"conviction\":-0.510263,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.063085,\"conviction\":-0.406605,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "Regime is normal with neutral bull/bear probabilities. Long candidates exhibit conflicting signals with positive composites but negative conviction scores; BNB and MATIC are dropped due to weakness, while NEAR is kept but scaled down due to being the strongest long. Short candidates show strong alignment between negative composites and highly negative conviction. ADA and AVAX are kept as strong shorts, while SOL is dropped due to an exceptionally weak composite score.",
+  "size_scale": {
+   "NEARUSDT": 0.5
+  }
+ }
+}

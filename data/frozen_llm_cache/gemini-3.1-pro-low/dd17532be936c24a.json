@@ -1,0 +1,18 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.234013,\"conviction\":-0.472195,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.092969,\"conviction\":-0.33115,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2998,\"bull_prob\":0.319,\"cycle\":46,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "BNBUSDT"
+  ],
+  "reasoning": "In a high_vol regime where bull_prob (0.319) slightly exceeds bear_prob (0.299), shorting is risky. ETHUSDT has a very weak composite signal (-0.09) which does not justify a short in this environment, thus it is dropped. BNBUSDT has stronger conviction (-0.47) but still faces the same macro headwind, so its size is scaled down by 50% to manage risk.",
+  "size_scale": {
+   "BNBUSDT": 0.5
+  }
+ }
+}

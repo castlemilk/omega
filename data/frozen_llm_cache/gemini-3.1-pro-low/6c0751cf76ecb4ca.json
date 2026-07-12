@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.220192,\"conviction\":-0.319749,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.05703,\"conviction\":-0.482911,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.217804,\"conviction\":-0.322136,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.06951,\"conviction\":-0.60945,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.115415,\"conviction\":-0.655355,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.140368,\"conviction\":-0.680309,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3145,\"bull_prob\":0.3046,\"cycle\":43,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "ARBUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "SOLUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bear (31.4%) and bull (30.4%) probabilities, yet all candidates exhibit significantly negative conviction scores (ranging from -0.31 to -0.68). This indicates weak internal confidence despite the signal direction. I am dropping MATICUSDT and ARBUSDT as they possess the weakest absolute composite scores combined with very low conviction. The remaining higher-magnitude signals (AVAX, SOL, NEAR, SUI) are kept but scaled down to 0.8 to mitigate risk given the broadly negative conviction backdrop in an uncommitted market regime.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "NEARUSDT": 0.8,
+   "SOLUSDT": 0.8,
+   "SUIUSDT": 0.8
+  }
+ }
+}

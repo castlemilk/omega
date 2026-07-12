@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.467271,\"conviction\":0.120745,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.247351,\"conviction\":-0.099175,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.487148,\"conviction\":0.140622,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.296136,\"conviction\":-0.642662,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.448786,\"conviction\":-0.795312,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.370454,\"conviction\":-0.71698,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "NEARUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "Macro regime is completely neutral (bull/bear prob balanced). ETHUSDT long shows negative conviction, a dangerous divergence for a long position, so it is dropped. Remaining candidates show signal alignment (positive conviction for longs, negative for shorts). Scaled down BNBUSDT and ARBUSDT slightly to control risk on mid-tier conviction scores, retaining full size on highest absolute conviction setups (NEAR, AVAX, SUI).",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 0.8,
+   "NEARUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

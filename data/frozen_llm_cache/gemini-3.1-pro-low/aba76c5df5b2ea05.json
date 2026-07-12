@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.049091,\"conviction\":-0.071226,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.261661,\"conviction\":0.141344,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.11364,\"conviction\":-0.233957,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.218266,\"conviction\":-0.338583,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.109425,\"conviction\":-0.229742,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3047,\"bull_prob\":0.3128,\"cycle\":26,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "AVAXUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly balanced bull/bear probabilities. BNBUSDT is dropped due to its negative conviction for a long position, suggesting weak or conflicting signals. SOLUSDT exhibits strong positive composite and conviction scores, justifying a full allocation. The short positions (AVAXUSDT, NEARUSDT, SUIUSDT) all show strong negative conviction aligning with their direction, but to maintain a somewhat balanced book in a neutral regime, AVAXUSDT and SUIUSDT are slightly scaled down, while the strongest short (NEARUSDT) is kept at full size.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.183761,\"conviction\":-0.461444,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.043809,\"conviction\":-0.601396,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.041892,\"conviction\":-0.603313,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.098973,\"conviction\":-0.744178,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.079184,\"conviction\":-0.724388,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.074673,\"conviction\":-0.719877,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.308,\"bull_prob\":0.3095,\"cycle\":55,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "NEARUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The current market regime is classified as 'crisis' with relatively balanced, low probabilities for both bull and bear scenarios, suggesting a highly uncertain and volatile environment. Crucially, all candidate signals carry significantly negative conviction scores (ranging from -0.46 to -0.74), indicating extremely weak model confidence in the composite signals. In such a high-risk, low-confidence environment, capital preservation is paramount. The weakest composite signals (ETH, SOL, NEAR, XRP) are dropped entirely. The strongest relative signals (BNB long, MATIC short) are kept but scaled down aggressively to 0.3 to strictly limit exposure.",
+  "size_scale": {
+   "BNBUSDT": 0.3,
+   "MATICUSDT": 0.3
+  }
+ }
+}

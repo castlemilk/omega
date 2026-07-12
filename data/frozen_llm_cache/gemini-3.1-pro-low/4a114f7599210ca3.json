@@ -1,0 +1,14 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.077584,\"conviction\":-0.674497,\"side\":\"long\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3055,\"bull_prob\":0.3157,\"cycle\":36,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.95,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [],
+  "reasoning": "The candidate XRPUSDT suggests a long position, yet it exhibits a strongly negative conviction score (-0.674) alongside a low composite score (0.078). In a 'normal' regime with roughly equal bull and bear probabilities (31.6% vs 30.6%), taking a long position with such conflicting internal conviction presents undue risk and is therefore vetoed.",
+  "size_scale": {}
+ }
+}

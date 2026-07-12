@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.136086,\"conviction\":-0.124934,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.136086,\"conviction\":-0.124934,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.136086,\"conviction\":-0.124934,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.07647,\"conviction\":-0.33749,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.32357,\"conviction\":-0.58459,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.1351,\"conviction\":-0.396121,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3106,\"bull_prob\":0.3072,\"cycle\":42,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The current macro regime is classified as 'crisis', which strongly favors risk-off behavior and makes long directional exposure dangerous. The long candidates (ETHUSDT, NEARUSDT, SOLUSDT) have negative conviction scores despite positive composite signals, indicating low model confidence, and thus should be dropped. The short candidates align better with the crisis regime; however, given that bear and bull probabilities are roughly equal (~0.31), position sizes for the kept shorts are scaled down to 0.5 to reflect the lack of strong directional dominance.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "MATICUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

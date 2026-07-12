@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.045347,\"conviction\":-0.249066,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.169901,\"conviction\":-0.124512,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.215467,\"conviction\":-0.078946,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.065251,\"conviction\":-0.359665,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.132078,\"conviction\":-0.426492,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.142216,\"conviction\":-0.43663,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":9,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "AVAXUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "XRPUSDT",
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, overall risk should be reduced. The model exhibits negative conviction across all candidates, suggesting weak directional confidence despite the composite scores. I am dropping the lowest absolute composite scorers (ARBUSDT, AVAXUSDT) as they offer the worst risk-reward in this high-uncertainty environment. The remaining positions are kept but scaled down by 50% to reflect the crisis regime and uniformly negative conviction scores, mitigating potential downside while maintaining exposure to the strongest signals.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "SOLUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

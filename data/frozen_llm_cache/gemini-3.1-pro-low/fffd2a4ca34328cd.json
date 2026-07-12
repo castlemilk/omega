@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.081483,\"conviction\":0.054948,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.271701,\"conviction\":0.245165,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.173768,\"conviction\":-0.200303,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.157415,\"conviction\":-0.18395,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.075677,\"conviction\":-0.102212,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2968,\"bull_prob\":0.3248,\"cycle\":29,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The macro cycle context indicates a slightly bullish-leaning 'normal' regime (bull_prob 0.3248 > bear_prob 0.2968). I am dropping ADAUSDT due to its exceptionally low conviction (0.05). I am keeping the strong long signal for XRPUSDT at full scale. For the short candidates, I am dropping the weakest signal (SOLUSDT) which conflicts with the slight bullish tilt, and keeping the stronger shorts (MATICUSDT, NEARUSDT) but scaling them down to 0.8 to reflect the macro regime friction.",
+  "size_scale": {
+   "MATICUSDT": 0.8,
+   "NEARUSDT": 0.8,
+   "XRPUSDT": 1.0
+  }
+ }
+}

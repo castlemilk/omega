@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.078858,\"conviction\":-0.276245,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.064734,\"conviction\":-0.29037,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.1159,\"conviction\":-0.239204,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.081663,\"conviction\":-0.436767,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.114599,\"conviction\":-0.469703,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.141388,\"conviction\":-0.496492,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3033,\"bull_prob\":0.3122,\"cycle\":28,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly balanced bull and bear probabilities. The long candidates (ARBUSDT, BNBUSDT, ETHUSDT) exhibit a severe divergence: positive composite scores but highly negative conviction scores. This conflicting signal breakdown warrants a full veto. Conversely, the short candidates (AVAXUSDT, MATICUSDT, NEARUSDT) show strong directional alignment between negative composites and negative convictions. They are kept, with AVAX and MATIC scaled down slightly due to the neutral macro environment.",
+  "size_scale": {
+   "AVAXUSDT": 0.75,
+   "MATICUSDT": 0.75,
+   "NEARUSDT": 1.0
+  }
+ }
+}

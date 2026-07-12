@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.160303,\"conviction\":-0.179142,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.292914,\"conviction\":-0.046532,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.133797,\"conviction\":-0.473243,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.110103,\"conviction\":-0.449549,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.09968,\"conviction\":-0.439126,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":14,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "ADAUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "Regime is neutral (normal) with perfectly balanced bull/bear probabilities, but all candidate signals are showing negative conviction. This indicates weak model confidence overall. XRPUSDT has the strongest relative composite score and the least negative conviction, so it is retained with a minor scale down. ADAUSDT and ETHUSDT are retained but scaled down by 50% to restrict exposure to low-conviction signals in a directionless market. ARBUSDT and NEARUSDT are dropped entirely due to highly negative conviction coupled with very weak composite scores, presenting asymmetric risk in the current neutral macro state.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "XRPUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.994264,\"conviction\":0.983434,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.606987,\"conviction\":0.596158,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":1.01083,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.410845,\"conviction\":-0.421675,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.42979,\"conviction\":-0.440619,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.586054,\"conviction\":-0.596884,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":8,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "ETHUSDT",
+   "SUIUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "In a 'normal' regime with indeterminate macro bias (equal bull/bear probability), risk should be concentrated in the highest conviction signals to avoid chop. ARB and SUI show very high conviction longs and are kept at full size. ETH is scaled down due to its moderate conviction. On the short side, ADA and MATIC exhibit weak conviction signals in a non-directional market and are dropped to avoid unnecessary exposure, while NEAR is kept as a hedge but scaled down to reflect its moderate conviction.",
+  "size_scale": {
+   "ETHUSDT": 0.7,
+   "NEARUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.065189,\"conviction\":-0.348133,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.155254,\"conviction\":-0.258068,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.17666,\"conviction\":-0.236662,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.190661,\"conviction\":-0.603983,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.155399,\"conviction\":-0.568721,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.190661,\"conviction\":-0.603983,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2988,\"bull_prob\":0.3165,\"cycle\":28,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro state is neutral ('normal' regime with balanced bull/bear probabilities of ~30-31%). All candidates exhibit negative conviction scores, indicating low model certainty. BNBUSDT has a very weak positive composite score (0.065) and is dropped. The short candidates (ARB, NEAR, SUI) have severely negative conviction scores (< -0.5), which introduces outsized directional risk in a neutral regime; they are dropped. SOLUSDT and XRPUSDT have the strongest relative composite scores and less severe negative conviction, so they are kept but scaled down to 0.5 to mitigate risk.",
+  "size_scale": {
+   "SOLUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.061586,\"conviction\":-0.005851,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.106031,\"conviction\":0.038594,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.068105,\"conviction\":0.000668,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.12072,\"conviction\":-0.188157,\"side\":\"short\",\"symbol\":\"BNBUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3067,\"bull_prob\":0.3135,\"cycle\":59,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The current 'crisis' regime coupled with effectively neutral directional probabilities (bull: ~31%, bear: ~31%) dictates a defensive posture. Longs with negative or marginal conviction (AVAXUSDT, MATICUSDT) are highly susceptible to correlated drawdowns and are therefore dropped. ETHUSDT demonstrates sufficient positive conviction to justify keeping the long, but is scaled down to 0.5 to limit overall directional exposure. The BNBUSDT short exhibits strong signal strength (high negative composite/conviction) and serves as an effective structural hedge in this environment, kept at a 0.8 scale to account for expected volatility spikes.",
+  "size_scale": {
+   "BNBUSDT": 0.8,
+   "ETHUSDT": 0.5
+  }
+ }
+}

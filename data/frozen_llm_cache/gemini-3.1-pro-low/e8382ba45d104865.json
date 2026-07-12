@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.077133,\"conviction\":-0.595399,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.066019,\"conviction\":-0.606514,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.07801,\"conviction\":-0.594522,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.089929,\"conviction\":-0.762462,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.12933,\"conviction\":-0.801862,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.094358,\"conviction\":-0.76689,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3019,\"bull_prob\":0.3142,\"cycle\":30,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "BNBUSDT",
+   "ETHUSDT",
+   "AVAXUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with mixed sentiment (bull 31%, bear 30%), suggesting a range-bound environment. All candidates exhibit weak negative conviction scores across the board. In a neutral regime, holding high-beta alts (NEAR) as outright shorts with low conviction carries outsized squeeze risk, so it is dropped. Major caps (ETH, BNB) are kept at a higher scale, while higher beta longs (ARB) and shorts (AVAX, MATIC) are scaled down significantly to reduce overall directional exposure while preserving the relative value spread.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.4,
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.8,
+   "MATICUSDT": 0.3
+  }
+ }
+}

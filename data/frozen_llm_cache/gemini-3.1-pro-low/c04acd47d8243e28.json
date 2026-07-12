@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.06463,\"conviction\":-0.255896,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.062498,\"conviction\":-0.258028,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.055804,\"conviction\":-0.264721,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.096497,\"conviction\":-0.417023,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.124058,\"conviction\":-0.444583,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.058437,\"conviction\":-0.378963,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3024,\"bull_prob\":0.3148,\"cycle\":32,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "AVAXUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull/bear probabilities, but all candidate signals exhibit negative conviction scores indicating weak directional edge. Dropping the weaker conviction altcoin shorts and marginal longs to preserve capital, while retaining major pairs (ETH, BNB) at heavily reduced size (0.5 scale) to maintain baseline market exposure while managing risk.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5
+  }
+ }
+}

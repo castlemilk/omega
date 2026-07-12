@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.077826,\"conviction\":-0.249789,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.149041,\"conviction\":-0.178574,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.040933,\"conviction\":-0.286682,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.045647,\"conviction\":-0.373263,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.080771,\"conviction\":-0.408387,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":16,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "XRPUSDT",
+   "BNBUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is normal with neutral bull/bear probabilities, but all candidates exhibit significantly negative conviction scores, indicating poor model confidence or conflicting sub-signals. In this environment, risk should be heavily curtailed. SOLUSDT is the only candidate with a sufficiently high composite score to warrant keeping, though it is scaled down by 50% due to its negative conviction. All other candidates (ADA, XRP, BNB, MATIC) are dropped due to weak composite signals coupled with highly negative conviction.",
+  "size_scale": {
+   "SOLUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.077954,\"conviction\":-0.478093,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.220652,\"conviction\":-0.335395,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.079032,\"conviction\":-0.477016,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.080987,\"conviction\":-0.637034,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.123171,\"conviction\":-0.679218,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.322039,\"conviction\":-0.878086,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3085,\"bull_prob\":0.3106,\"cycle\":29,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "NEARUSDT",
+   "AVAXUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro cycle context indicates a 'normal' regime with balanced bull (0.3106) and bear (0.3085) probabilities, suggesting a ranging or neutral market. However, all candidate signals exhibit notably negative conviction scores. The short candidates (ADA, ARB, SUI) have extremely poor conviction (-0.63 to -0.87) which makes them highly risky in a non-bearish regime; they are dropped to prevent unnecessary downside. The long candidates are kept but heavily scaled down, as their conviction is also negative, with NEARUSDT retaining the highest scale due to its slightly better composite and conviction profile.",
+  "size_scale": {
+   "AVAXUSDT": 0.4,
+   "NEARUSDT": 0.7,
+   "SOLUSDT": 0.4
+  }
+ }
+}

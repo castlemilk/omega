@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.057878,\"conviction\":-0.135828,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.078861,\"conviction\":-0.114845,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.145059,\"conviction\":-0.048648,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.186965,\"conviction\":-0.380672,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.036738,\"conviction\":-0.230445,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.093945,\"conviction\":-0.287651,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2986,\"bull_prob\":0.323,\"cycle\":27,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "The macro state indicates a 'normal' regime with relatively balanced bull/bear probabilities. However, candidate conviction scores are uniformly negative across the board, suggesting high model uncertainty and poor signal quality for this cycle. To protect capital, candidates with weak composite magnitudes and highly negative conviction (ETHUSDT, SOLUSDT, NEARUSDT, SUIUSDT) are dropped. We retain XRPUSDT (least negative conviction and strongest long composite) and AVAXUSDT (strongest short composite) but scale both sizes down significantly to mitigate the risk associated with the poor conviction signals.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "XRPUSDT": 0.8
+  }
+ }
+}

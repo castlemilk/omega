@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.035391,\"conviction\":-0.567468,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.032731,\"conviction\":-0.570128,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.109077,\"conviction\":-0.493782,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.040707,\"conviction\":-0.643566,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.041085,\"conviction\":-0.643944,\"side\":\"short\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.146972,\"conviction\":-0.749831,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3139,\"bull_prob\":0.3051,\"cycle\":30,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "BNBUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "AVAXUSDT",
+   "SUIUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with roughly equal bull/bear probabilities, risk-off positioning is preferred. Dropping weak longs (ARBUSDT, BNBUSDT) due to their low composite scores and negative convictions which conflict with taking long risk during a crisis. The strongest long (SOLUSDT) is kept but scaled down significantly to limit exposure. The short candidates (AVAXUSDT, SUIUSDT, XRPUSDT) are retained as they align better with a crisis environment and show stronger composite signals, with some scaling applied to manage volatility.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "SOLUSDT": 0.5,
+   "SUIUSDT": 0.8,
+   "XRPUSDT": 1.0
+  }
+ }
+}

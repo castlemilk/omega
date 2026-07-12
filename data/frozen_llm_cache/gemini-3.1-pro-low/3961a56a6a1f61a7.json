@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.094267,\"conviction\":-0.007591,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.25605,\"conviction\":0.154192,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.114165,\"conviction\":-0.216023,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.0885,\"conviction\":-0.190358,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.059104,\"conviction\":-0.160962,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3024,\"bull_prob\":0.3171,\"cycle\":32,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "AVAXUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The current macro regime is identified as 'crisis', implying high volatility and downside risk, despite ambiguous bull/bear probabilities. In this environment, taking long positions with negative conviction is extremely dangerous; therefore, ETHUSDT is dropped. The long signal for SUIUSDT has positive conviction but is scaled down by 50% to minimize long exposure during a crisis. Short candidates (AVAXUSDT, BNBUSDT, XRPUSDT) align better with the crisis regime and possess strong negative conviction; they are kept to provide portfolio hedging, with XRPUSDT slightly scaled down due to a relatively weaker composite score.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 1.0,
+   "SUIUSDT": 0.5,
+   "XRPUSDT": 0.8
+  }
+ }
+}

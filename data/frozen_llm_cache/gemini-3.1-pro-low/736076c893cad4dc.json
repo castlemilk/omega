@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.105076,\"conviction\":-0.17434,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.139728,\"conviction\":-0.139687,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.041162,\"conviction\":-0.238254,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.09057,\"conviction\":-0.369986,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.079131,\"conviction\":-0.358547,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.046397,\"conviction\":-0.325812,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3137,\"bull_prob\":0.3023,\"cycle\":36,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "ARBUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split bull/bear probabilities. Short candidates demonstrate strong directional alignment between their negative composites and negative conviction scores. Long candidates, however, exhibit conflicting signals with positive composites but negative conviction. The weakest long candidate, XRPUSDT, is dropped to reduce exposure to conflicting signals, while the remaining longs are scaled down. The well-aligned short positions are largely maintained.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 0.8
+  }
+ }
+}

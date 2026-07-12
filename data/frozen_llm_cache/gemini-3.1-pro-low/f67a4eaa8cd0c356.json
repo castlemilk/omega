@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.182808,\"conviction\":-0.400882,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.224989,\"conviction\":-0.358701,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.853415,\"conviction\":0.269725,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.24547,\"conviction\":-0.82916,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.380723,\"conviction\":-0.964413,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.392463,\"conviction\":-0.976153,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "NEARUSDT",
+   "ARBUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "AVAXUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "SUIUSDT exhibits a strong positive composite score and aligned positive conviction for a long position. AVAXUSDT and MATICUSDT show strong negative conviction scores that align with their short signals. BNBUSDT and NEARUSDT are dropped due to contradictory negative conviction scores for long positions. ARBUSDT is dropped due to its weaker composite score relative to the other short candidates, concentrating risk in higher conviction setups during a normal regime.",
+  "size_scale": {
+   "AVAXUSDT": 0.9,
+   "MATICUSDT": 0.9,
+   "SUIUSDT": 1.0
+  }
+ }
+}

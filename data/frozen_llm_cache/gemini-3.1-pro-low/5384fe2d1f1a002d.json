@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.204564,\"conviction\":0.197841,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.204564,\"conviction\":0.197841,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.204564,\"conviction\":0.197841,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.114612,\"conviction\":-0.121335,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.291661,\"conviction\":-0.228385,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.215006,\"conviction\":-0.221729,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3077,\"bull_prob\":0.3104,\"cycle\":38,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "NEARUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "Regime is 'crisis' with high uncertainty (bull and bear probabilities roughly equal around 31%). In crisis regimes, higher-beta altcoin longs like ADA and NEAR face severe drawdown risk, so they are dropped. SOL is kept as a stronger momentum long but scaled down by 50% to reduce beta exposure. For shorts, ETH is retained as a core hedge but scaled down to 0.8 to manage gross exposure. Secondary shorts MATIC and XRP are dropped to aggressively trim the overall book size and minimize uncorrelated idiosyncratic risks during a crisis regime.",
+  "size_scale": {
+   "ETHUSDT": 0.8,
+   "SOLUSDT": 0.5
+  }
+ }
+}

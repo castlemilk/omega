@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.082744,\"conviction\":-0.38835,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.070697,\"conviction\":-0.400397,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.21726,\"conviction\":-0.253835,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.106782,\"conviction\":-0.577877,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.117275,\"conviction\":-0.58837,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.10991,\"conviction\":-0.533457,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3169,\"bull_prob\":0.3035,\"cycle\":39,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "AVAXUSDT",
+   "BNBUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The 'crisis' regime and roughly equal bull/bear probabilities suggest an unpredictable, high-volatility environment. Furthermore, conviction scores across all candidates are deeply negative. In this context, risk must be tightly managed. I am vetoing the weaker longs (ARBUSDT, AVAXUSDT) and lower-conviction shorts (BNBUSDT, SUIUSDT). I am keeping only the strongest relative signals for both sides (SOLUSDT for long, NEARUSDT for short) but scaling their sizes down to 0.4 to reflect the poor overall conviction and dangerous macro state.",
+  "size_scale": {
+   "NEARUSDT": 0.4,
+   "SOLUSDT": 0.4
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.20059,\"conviction\":0.308497,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.239247,\"conviction\":0.347154,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.652082,\"conviction\":0.759988,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.211999,\"conviction\":-0.104092,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.180837,\"conviction\":-0.07293,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.968022,\"conviction\":-0.860116,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "SUIUSDT",
+   "MATICUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "In a balanced 'normal' regime with equal bull/bear probabilities, low-conviction signals are highly susceptible to chop and noise. I have dropped the lowest conviction long (ARBUSDT) and short (NEARUSDT) entirely. Mid-tier conviction signals (MATICUSDT, AVAXUSDT) are kept but scaled down by 50% to reduce risk exposure. The high conviction signals (XRPUSDT, SUIUSDT) are maintained at full size, as their strong composite scores justify the trade despite the neutral macro backdrop.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "MATICUSDT": 0.5,
+   "SUIUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

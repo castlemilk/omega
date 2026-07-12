@@ -1,0 +1,16 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.030194,\"conviction\":-0.614256,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.030194,\"conviction\":-0.614256,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.030194,\"conviction\":-0.614256,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3024,\"bull_prob\":0.3189,\"cycle\":33,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "AVAXUSDT"
+  ],
+  "keep": [],
+  "reasoning": "The cycle context indicates a 'high_vol' regime with relatively balanced, but slightly bullish probabilities (bull: 0.3189 > bear: 0.3024). All candidates are short positions with very weak composite signals (-0.030194). In a high volatility environment that leans slightly bullish, holding weak short positions on high-beta altcoins exposes the book to significant short squeeze risks and poor risk-adjusted returns. Dropping all candidates to preserve capital.",
+  "size_scale": {}
+ }
+}

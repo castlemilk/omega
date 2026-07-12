@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.129588,\"conviction\":0.135118,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.225149,\"conviction\":0.230679,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.225149,\"conviction\":0.230679,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.179414,\"conviction\":-0.173884,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.136938,\"conviction\":-0.131408,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.11367,\"conviction\":-0.10814,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":16,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "XRPUSDT",
+   "ARBUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "The macro state indicates a normal regime with neutral (equal) bull and bear probabilities. In this environment, it is prudent to retain high-conviction signals (SOLUSDT, XRPUSDT, ARBUSDT) while shedding the weakest composite/conviction candidates (ADAUSDT, SUIUSDT) to reduce noise. ETHUSDT is kept but scaled down slightly to manage short exposure risk in a balanced market.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "ETHUSDT": 0.8,
+   "SOLUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

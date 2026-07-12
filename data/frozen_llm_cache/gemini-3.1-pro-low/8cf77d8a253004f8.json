@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.081696,\"conviction\":0.276229,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.121656,\"conviction\":0.316189,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.121656,\"conviction\":0.316189,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.037899,\"conviction\":0.156635,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.102319,\"conviction\":0.092214,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.15683,\"conviction\":0.037703,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3119,\"bull_prob\":0.3072,\"cycle\":20,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "MATICUSDT",
+   "ADAUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with roughly equal bear and bull probabilities, overall risk exposure should be reduced to account for elevated volatility and uncertainty. The long candidate AVAXUSDT and the short candidate XRPUSDT have the weakest conviction scores in their respective directions and are thus dropped to prune marginal trades. The remaining positions are kept but scaled down by 50% to conservatively manage risk while maintaining a balanced, dual-sided book.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "MATICUSDT": 0.5,
+   "NEARUSDT": 0.5
+  }
+ }
+}

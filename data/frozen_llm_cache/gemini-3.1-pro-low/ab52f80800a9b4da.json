@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.112605,\"conviction\":-0.22377,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.062097,\"conviction\":-0.274278,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.134982,\"conviction\":-0.201393,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.190968,\"conviction\":-0.527344,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.096603,\"conviction\":-0.432978,\"side\":\"short\",\"symbol\":\"BNBUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3147,\"bull_prob\":0.3061,\"cycle\":53,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "NEARUSDT",
+   "AVAXUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The market regime is 'normal' with balanced bear/bull probabilities (~0.31 each), indicating no strong directional bias. All candidates have negative conviction scores, suggesting weak underlying confidence in the signals despite adequate composite scores. ETHUSDT is dropped due to its very low composite score (0.062) for a long position combined with negative conviction. The remaining candidates are kept but scaled down to mitigate risk given the neutral macro state and uniformly negative conviction levels, with AVAXUSDT receiving a higher scale due to its stronger composite score for a short position.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "AVAXUSDT": 0.8,
+   "BNBUSDT": 0.5,
+   "NEARUSDT": 0.6
+  }
+ }
+}

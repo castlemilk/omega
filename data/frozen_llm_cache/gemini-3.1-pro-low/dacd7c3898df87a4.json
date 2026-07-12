@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.050601,\"conviction\":-0.117152,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.099444,\"conviction\":-0.06831,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.420902,\"conviction\":0.253148,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.144654,\"conviction\":-0.312408,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.126043,\"conviction\":-0.293796,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.126676,\"conviction\":-0.294429,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2969,\"bull_prob\":0.3183,\"cycle\":20,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "ARBUSDT",
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "Regime is normal with slightly higher bull probability (0.318 vs 0.296). SUIUSDT is the only long with positive conviction, so we keep it at full size. BNBUSDT and SOLUSDT are dropped due to negative conviction scores conflicting with their long direction. Shorts (ARBUSDT, ETHUSDT, NEARUSDT) have strong negative conviction but weak composites in a slightly bullish environment; we keep them but scale sizes by 50% to mitigate directional risk.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "NEARUSDT": 0.5,
+   "SUIUSDT": 1.0
+  }
+ }
+}

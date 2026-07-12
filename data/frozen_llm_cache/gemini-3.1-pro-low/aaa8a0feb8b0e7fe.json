@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.088955,\"conviction\":-0.472778,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.042546,\"conviction\":-0.519187,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.03247,\"conviction\":-0.529263,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.258409,\"conviction\":-0.820142,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.03171,\"conviction\":-0.593443,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3045,\"bull_prob\":0.3179,\"cycle\":56,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "NEARUSDT",
+   "XRPUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split bull (31.8%) and bear (30.5%) probabilities. Across the board, conviction scores are highly negative. In a neutral regime with poor conviction, risk should be tightly managed. Dropping NEAR, XRP, and SUI due to low composite scores combined with negative conviction. Keeping ARB short as it possesses the strongest composite signal (-0.258) but scaling to 0.8 due to conviction. Keeping ADA long (highest long composite) but halving size to 0.5 to limit exposure on weak conviction.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ARBUSDT": 0.8
+  }
+ }
+}

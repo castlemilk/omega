@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.235364,\"conviction\":0.313905,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.066118,\"conviction\":0.144658,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.128727,\"conviction\":0.207268,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.110247,\"conviction\":-0.031707,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.102438,\"conviction\":-0.023897,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.083535,\"conviction\":-0.004994,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":12,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The market regime is 'normal' with perfectly balanced bull and bear probabilities (0.3333 each), indicating no strong directional macro bias. The long candidates (ARBUSDT, ETHUSDT, NEARUSDT) have significantly higher conviction scores (0.14 to 0.31) compared to the short candidates whose conviction scores are extremely weak and borderline zero (-0.004 to -0.03). Given the neutral macro environment, it is prudent to drop the low-conviction shorts to minimize noise and unnecessary risk, and keep the stronger long signals at full size.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "ETHUSDT": 1.0,
+   "NEARUSDT": 1.0
+  }
+ }
+}

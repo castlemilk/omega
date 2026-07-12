@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.134104,\"conviction\":-0.30272,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.108188,\"conviction\":-0.276803,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.118256,\"conviction\":-0.286871,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":14,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.8,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "Regime is high_vol with equal bull/bear probabilities, indicating an uncertain environment prone to whipsaws. Shorting heavily into high volatility without a dominant bear probability is risky. Scaling down major shorts to reduce exposure, and dropping XRPUSDT entirely due to its propensity for idiosyncratic high-volatility spikes.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5
+  }
+ }
+}

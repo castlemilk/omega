@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.155649,\"conviction\":-0.202964,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.155649,\"conviction\":-0.202964,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.034548,\"conviction\":-0.324064,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.08998,\"conviction\":-0.448592,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.133652,\"conviction\":-0.492264,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.118659,\"conviction\":-0.477271,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":17,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "BNBUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "MATICUSDT",
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split bull/bear probabilities, indicating an uncertain or sideways market environment. In this context, all candidates exhibit negative conviction. NEARUSDT is dropped due to its very weak composite score (0.034) for a long. BNBUSDT is dropped as its short composite (-0.089) is relatively weak compared to ETH and XRP. The remaining candidates (AVAX, MATIC, ETH, XRP) are kept but their sizes are scaled down to mitigate risk given the negative conviction across the board and the neutral macro probabilities.",
+  "size_scale": {
+   "AVAXUSDT": 0.7,
+   "ETHUSDT": 0.6,
+   "MATICUSDT": 0.7,
+   "XRPUSDT": 0.6
+  }
+ }
+}

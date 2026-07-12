@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.090106,\"conviction\":-0.336757,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.245636,\"conviction\":-0.181227,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.139436,\"conviction\":-0.566299,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.078411,\"conviction\":-0.505273,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.053986,\"conviction\":-0.480849,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3101,\"bull_prob\":0.3096,\"cycle\":24,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with elevated uncertainty (balanced bull/bear probabilities), holding long exposure to high-beta altcoins (AVAX, SUI) carries excessive downside risk, particularly given their negative conviction scores. We drop the longs. The short positions align better with a crisis environment, but given the balanced macro probabilities, we scale them down slightly to manage volatility risk, retaining highest size on ETHUSDT due to its relatively stronger signal.",
+  "size_scale": {
+   "ETHUSDT": 0.8,
+   "SOLUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

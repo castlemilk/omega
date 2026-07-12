@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.175509,\"conviction\":0.110618,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.066286,\"conviction\":0.001395,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.163843,\"conviction\":0.098952,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.310735,\"conviction\":-0.375626,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.072099,\"conviction\":-0.13699,\"side\":\"short\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.109155,\"conviction\":-0.174046,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "NEARUSDT",
+   "ADAUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro context is entirely balanced (bull and bear probabilities at 33.3% each) and in a 'normal' regime, meaning there is no strong directional macro tailwind. In this environment, it's prudent to only keep candidates with meaningful conviction scores. BNBUSDT has a conviction score of just 0.001, offering practically no edge, so it is dropped. SUIUSDT is the weakest of the shorts and is dropped to tighten the book and reduce marginal exposure. AVAXUSDT, NEARUSDT, ADAUSDT, and XRPUSDT are kept at full scale as their conviction scores are robust enough to justify holding through a neutral regime.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "AVAXUSDT": 1.0,
+   "NEARUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

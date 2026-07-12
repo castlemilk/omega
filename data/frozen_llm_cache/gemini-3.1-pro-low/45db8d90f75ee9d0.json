@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.221044,\"conviction\":0.226014,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.1337,\"conviction\":0.13867,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.311006,\"conviction\":-0.306035,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.078324,\"conviction\":-0.073354,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.301,\"bull_prob\":0.3193,\"cycle\":41,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is flagged as 'crisis'. In crisis regimes, risk assets typically experience severe drawdowns, high volatility, and correlations moving toward 1. Long exposure to altcoins (ADAUSDT, ETHUSDT) is fundamentally misaligned with this macro state and carries excessive downside risk, justifying dropping both longs. Conversely, short exposure (MATICUSDT, XRPUSDT) aligns well with the crisis regime. MATICUSDT is kept at full size due to relatively strong conviction, while XRPUSDT has weak conviction and is scaled down to limit exposure.",
+  "size_scale": {
+   "MATICUSDT": 1.0,
+   "XRPUSDT": 0.5
+  }
+ }
+}

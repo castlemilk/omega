@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":1.009364,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.713053,\"conviction\":0.703689,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":1.009364,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.336658,\"conviction\":-0.346022,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.465712,\"conviction\":-0.475076,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.455534,\"conviction\":-0.464897,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":6,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "ETHUSDT",
+   "SUIUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "Macro regime is normal with neutral bull/bear probabilities, suggesting a balanced approach. High conviction longs (ARB, SUI) are kept at full size. ETH is kept but scaled down due to lower conviction relative to the other longs. On the short side, ADA has the weakest signal conviction (-0.34) and is dropped to reduce low-quality exposure. NEAR and SOL are kept to maintain short exposure for neutrality, but scaled down slightly to align risk with their moderate conviction scores.",
+  "size_scale": {
+   "ETHUSDT": 0.75,
+   "NEARUSDT": 0.8,
+   "SOLUSDT": 0.8
+  }
+ }
+}

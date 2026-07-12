@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.060692,\"conviction\":0.069643,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.234739,\"conviction\":0.243689,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":0.060526,\"conviction\":0.069476,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.078877,\"conviction\":-0.069927,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.14717,\"conviction\":-0.13822,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.087166,\"conviction\":-0.078216,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3132,\"bull_prob\":0.3071,\"cycle\":28,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "XRPUSDT",
+   "ADAUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current macro regime is defined as 'crisis', implying high systemic risk and elevated volatility, while bull and bear probabilities remain largely balanced. In this environment, long positions with low conviction (AVAXUSDT, XRPUSDT) pose uncompensated risk and are dropped. SUIUSDT presents strong conviction but its long sizing is scaled down by 50% to account for the crisis regime. On the short side, ETHUSDT and SOLUSDT show solid signal conviction and provide necessary macro hedges; they are kept with minimal reduction. ADAUSDT short is dropped due to relatively weak conviction in an unpredictable tape.",
+  "size_scale": {
+   "ETHUSDT": 1.0,
+   "SOLUSDT": 0.8,
+   "SUIUSDT": 0.5
+  }
+ }
+}

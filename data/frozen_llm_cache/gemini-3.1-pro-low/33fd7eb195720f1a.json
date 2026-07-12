@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.245866,\"conviction\":-0.234769,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.073176,\"conviction\":-0.407459,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.195225,\"conviction\":-0.28541,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.098278,\"conviction\":-0.578913,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.126731,\"conviction\":-0.607366,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.088186,\"conviction\":-0.568821,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":14,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "ADAUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull/bear probabilities. We drop ETHUSDT as its composite score (0.07) is too weak for a long position, and we drop ADAUSDT and XRPUSDT as their composite scores (-0.09 and -0.08) are weak for short positions. ARBUSDT and NEARUSDT show moderate long strength, and BNBUSDT shows moderate short strength, but all have negative conviction scores, warranting a scaling down of their sizes to manage risk appropriately.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "BNBUSDT": 0.9,
+   "NEARUSDT": 0.8
+  }
+ }
+}

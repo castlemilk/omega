@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.19605,\"conviction\":-0.326267,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.15473,\"conviction\":-0.367587,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.102164,\"conviction\":-0.420154,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.274,\"conviction\":-0.796318,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.235361,\"conviction\":-0.757678,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.068727,\"conviction\":-0.591045,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2999,\"bull_prob\":0.3196,\"cycle\":41,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "AVAXUSDT",
+   "NEARUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro state is highly uncertain with nearly equal bull (0.3196) and bear (0.2999) probabilities, indicating no clear directional bias. Most critically, all candidates exhibit significantly negative conviction scores. Candidates with severe negative conviction (< -0.4) have been dropped entirely to strictly manage risk in an ambiguous regime. The remaining longs (ADA, BNB) have marginally better composite scores but are scaled down by 50% due to their negative conviction and the overall lack of macro clarity.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "BNBUSDT": 0.5
+  }
+ }
+}

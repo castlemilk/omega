@@ -1,0 +1,19 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.052079,\"conviction\":0.283275,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.052079,\"conviction\":0.283275,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.162922,\"conviction\":0.113436,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":17,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "MATICUSDT"
+  ],
+  "reasoning": "The 'crisis' regime implies high volatility and general downside risk, making long exposure to high-beta assets like ETH and BNB unfavorable despite moderate conviction. Dropping longs mitigates directional risk. The MATIC short aligns directionally with a crisis regime, but given the low conviction score (0.113), the position size is scaled down by 50% to restrict risk in a volatile environment.",
+  "size_scale": {
+   "MATICUSDT": 0.5
+  }
+ }
+}

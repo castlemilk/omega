@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.048884,\"conviction\":-0.504037,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.117747,\"conviction\":-0.435173,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.053416,\"conviction\":-0.499505,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.175962,\"conviction\":-0.728883,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.117401,\"conviction\":-0.670321,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3027,\"bull_prob\":0.3112,\"cycle\":24,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with relatively balanced bull/bear probabilities, indicating a neutral market environment. However, all candidate signals exhibit heavily negative conviction scores (ranging from -0.43 to -0.72), suggesting weak internal confidence in the current directional signals despite their composite scores. Given the lack of clear directional macro tailwinds and poor conviction, I am scaling down position sizes across the board to limit exposure. BNBUSDT is dropped entirely as it has the lowest absolute composite score among the longs coupled with poor conviction. ETHUSDT and ARBUSDT are kept at slightly higher relative sizes due to having the strongest composite magnitudes in their respective directions, but are still scaled down to manage risk.",
+  "size_scale": {
+   "ARBUSDT": 0.7,
+   "ETHUSDT": 0.8,
+   "NEARUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

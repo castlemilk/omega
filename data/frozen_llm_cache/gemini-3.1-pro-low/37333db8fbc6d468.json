@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.09742,\"conviction\":-0.350212,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.175661,\"conviction\":-0.271971,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.063059,\"conviction\":-0.384573,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.102277,\"conviction\":-0.549909,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.117116,\"conviction\":-0.564748,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.060624,\"conviction\":-0.508256,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":18,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.8,
+  "drop": [
+   "SOLUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "AVAXUSDT",
+   "ADAUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The macro state is completely neutral (bear_prob and bull_prob perfectly balanced at 0.3333). Notably, all candidates exhibit negative conviction scores, suggesting weak internal alignment or conflicting sub-signals despite their composite scores. In this directionless regime, we drop the weakest composite signals (SOLUSDT and NEARUSDT) to avoid low-edge exposure. The remaining candidates are kept but uniformly scaled down by 50% to conservatively manage risk in light of the universally negative conviction metrics.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "AVAXUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "MATICUSDT": 0.5
+  }
+ }
+}

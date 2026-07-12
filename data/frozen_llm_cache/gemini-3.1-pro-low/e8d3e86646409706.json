@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.225821,\"conviction\":-0.529247,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.219048,\"conviction\":-0.522473,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.219808,\"conviction\":-0.523233,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2986,\"bull_prob\":0.3167,\"cycle\":19,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro state indicates a high volatility regime with no clear directional bias (bull and bear probabilities are both ~0.3). Taking three correlated short positions in major altcoins presents excessive directional risk in an untrending high-vol environment. Dropping XRPUSDT as it often carries idiosyncratic regulatory/headline risks that can trigger sudden short squeezes in high-volatility regimes. Scaling down the remaining NEARUSDT and SOLUSDT short exposures by 50% to prudently manage overall portfolio risk.",
+  "size_scale": {
+   "NEARUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

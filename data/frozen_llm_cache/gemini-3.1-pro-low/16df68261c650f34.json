@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.042837,\"conviction\":-0.272271,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.044936,\"conviction\":-0.270172,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.056359,\"conviction\":-0.258749,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.097264,\"conviction\":-0.412372,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.091963,\"conviction\":-0.407071,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.039774,\"conviction\":-0.354882,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.303,\"bull_prob\":0.315,\"cycle\":34,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly balanced bull and bear probabilities, offering no strong directional tailwind. All candidates exhibit deeply negative conviction scores, indicating weak signal reliability. The short candidates (AVAXUSDT, MATICUSDT, NEARUSDT) have extremely poor conviction (< -0.35) and are dropped entirely to minimize risk. The long candidates (ADAUSDT, BNBUSDT, XRPUSDT) show marginally better conviction but are still negative; they are kept but heavily scaled down by 50% to mitigate exposure in a low-confidence setup.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

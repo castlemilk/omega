@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.088695,\"conviction\":-0.126233,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.227272,\"conviction\":0.012344,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.158738,\"conviction\":-0.05619,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.234854,\"conviction\":-0.449781,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.238833,\"conviction\":-0.45376,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.35736,\"conviction\":-0.572288,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "ADAUSDT",
+   "AVAXUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split bull/bear probabilities. Among the long candidates, ETHUSDT is the only one with a positive conviction score, though weak, so it is kept at a slightly reduced scale. BNBUSDT and SOLUSDT exhibit conflicting signals (positive composite but negative conviction) and are dropped to mitigate risk in a neutral market. The short candidates (ADAUSDT, AVAXUSDT, MATICUSDT) demonstrate strong alignment between their negative composites and deep negative convictions, making them solid candidates to keep at full size.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "AVAXUSDT": 1.0,
+   "ETHUSDT": 0.8,
+   "MATICUSDT": 1.0
+  }
+ }
+}

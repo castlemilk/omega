@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":1.030793,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.796718,\"conviction\":0.765925,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":1.030793,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.446035,\"conviction\":-0.476828,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.394318,\"conviction\":-0.425111,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.579696,\"conviction\":-0.610489,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "ETHUSDT",
+   "SUIUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "Regime is neutral (equal bull/bear probability). Long convictions are very strong (ARB, SUI at 1.0, ETH at 0.76), supporting keeping full size. Short convictions are weaker (-0.42 to -0.61). MATIC has the weakest short conviction and is dropped. AVAX and NEAR are kept but scaled down to reflect their lower relative conviction and balance the book's overall risk profile in a neutral environment.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "AVAXUSDT": 0.5,
+   "ETHUSDT": 1.0,
+   "NEARUSDT": 0.8,
+   "SUIUSDT": 1.0
+  }
+ }
+}

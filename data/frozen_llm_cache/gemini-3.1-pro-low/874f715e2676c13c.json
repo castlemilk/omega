@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.320972,\"conviction\":-0.159897,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.320972,\"conviction\":-0.159897,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.320972,\"conviction\":-0.159897,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.345694,\"conviction\":-0.826564,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.345694,\"conviction\":-0.826564,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.345694,\"conviction\":-0.826564,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3068,\"bull_prob\":0.3066,\"cycle\":39,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ETHUSDT",
+   "XRPUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is completely neutral (bull and bear probabilities are nearly identical at ~30.6%). In a neutral regime, trade conviction becomes paramount. The short candidates (AVAX, ETH, XRP) exhibit strong negative conviction (-0.82) alongside their negative composite scores, warranting full-size retention. Conversely, the long candidates (ADA, MATIC, SOL) show conflicting signals: a positive composite but negative conviction (-0.15). This divergence is historically unfavorable in trendless environments. ADA and MATIC are dropped to reduce exposure, while SOL is kept at a heavily reduced scale (0.5) to maintain a minimal long hedge against the short basket.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "ETHUSDT": 1.0,
+   "SOLUSDT": 0.5,
+   "XRPUSDT": 1.0
+  }
+ }
+}

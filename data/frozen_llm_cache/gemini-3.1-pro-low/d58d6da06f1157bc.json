@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.129271,\"conviction\":-0.355464,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.05497,\"conviction\":-0.429765,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.092808,\"conviction\":-0.391927,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.265873,\"conviction\":-0.750608,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.067593,\"conviction\":-0.552327,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.04824,\"conviction\":-0.532975,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3037,\"bull_prob\":0.3188,\"cycle\":54,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "XRPUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro regime is normal with evenly split bull/bear probabilities, suggesting a neutral environment. All long candidates have negative conviction scores despite positive composites, indicating weak internal confidence. I am dropping AVAXUSDT and XRPUSDT due to their weak composite scores and negative conviction. ADAUSDT is kept but scaled down by 50% as a cautious long. For shorts, ARBUSDT shows strong negative conviction (-0.75) aligning well with its composite score, so it is kept at full size. BNBUSDT is kept but scaled down to 0.8, while SUIUSDT is dropped due to its weak composite signal.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "BNBUSDT": 0.8
+  }
+ }
+}

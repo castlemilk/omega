@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.170622,\"conviction\":-0.32767,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.063836,\"conviction\":-0.562128,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.130015,\"conviction\":-0.628307,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.091943,\"conviction\":-0.590235,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.307,\"bull_prob\":0.31,\"cycle\":27,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is normal with perfectly balanced bull/bear probabilities (0.31 vs 0.307). In this neutral environment, conflicting signals should be aggressively filtered. The ETHUSDT long candidate exhibits a conflicting signal structure (positive composite 0.17 but negative conviction -0.32), making it a high-risk long; thus it is dropped. The short candidates (ADA, BNB, XRP) all show proper alignment between negative composites and negative convictions. BNBUSDT has the strongest signal and conviction (-0.13, -0.62), so it is kept at full size. ADAUSDT and XRPUSDT have relatively weaker composite scores (-0.06, -0.09) despite their convictions, so their sizes are scaled down to 0.8 to manage risk in a balanced macro state.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "BNBUSDT": 1.0,
+   "XRPUSDT": 0.8
+  }
+ }
+}

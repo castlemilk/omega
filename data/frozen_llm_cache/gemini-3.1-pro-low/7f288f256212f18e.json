@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.18573,\"conviction\":-0.260847,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.045777,\"conviction\":-0.4008,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.04386,\"conviction\":-0.402716,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.097005,\"conviction\":-0.543582,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.077215,\"conviction\":-0.523792,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.072704,\"conviction\":-0.519281,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":10,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "SOLUSDT",
+   "NEARUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "MATICUSDT"
+  ],
+  "reasoning": "The macro regime is flagged as 'crisis', dictating extreme risk aversion. All long candidates (BNB, ETH, SOL) exhibit heavily negative conviction scores, creating a severe conflict between the long signal and the macro risk-off environment; they are dropped to prevent downside exposure. Among the shorts, MATICUSDT presents the strongest negative composite signal to align with a crisis state, but is scaled down to 0.5 due to its negative conviction score. The remaining short candidates (NEAR, XRP) exhibit weaker composites and are dropped to minimize overall book risk during market distress.",
+  "size_scale": {
+   "MATICUSDT": 0.5
+  }
+ }
+}

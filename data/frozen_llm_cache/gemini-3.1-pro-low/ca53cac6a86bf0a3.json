@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.070312,\"conviction\":-0.306772,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.141711,\"conviction\":-0.235373,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.141711,\"conviction\":-0.235373,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.050596,\"conviction\":-0.427679,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.190614,\"conviction\":-0.567697,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.109079,\"conviction\":-0.486163,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.314,\"bull_prob\":0.3064,\"cycle\":45,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The current macro regime is 'crisis' with highly balanced bear/bull probabilities (both ~0.31), indicating extreme market uncertainty. Most alarmingly, every single candidate has a deeply negative conviction score. In a crisis regime, taking long positions with negative conviction is excessively risky, thus ARBUSDT, NEARUSDT, and SUIUSDT are dropped. The short candidates (BNBUSDT, ETHUSDT, XRPUSDT) directionally align better with a crisis scenario, but their extremely poor conviction scores (-0.42 to -0.56) mandate aggressive position scaling to limit exposure to potential squeezes or whipsaws.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.3,
+   "XRPUSDT": 0.4
+  }
+ }
+}

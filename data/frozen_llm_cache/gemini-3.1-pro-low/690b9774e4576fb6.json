@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.091497,\"conviction\":-0.403797,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.094627,\"conviction\":-0.400668,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.05478,\"conviction\":-0.550075,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.05478,\"conviction\":-0.550075,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.05478,\"conviction\":-0.550075,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3061,\"bull_prob\":0.3085,\"cycle\":57,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split, low-confidence directional probabilities (bull: 30.8%, bear: 30.6%). Given this neutral macro environment, candidates with heavily negative conviction scores carry outsized risk. The short candidates (ADA, ETH, SOL) have very weak composite scores (-0.054) paired with severely negative conviction (-0.55), warranting a drop. The long candidates (BNB, NEAR) show slightly better composite scores (~0.09) but still suffer from poor conviction (-0.40); keeping them but scaling down size by 50% limits exposure while respecting the model's stronger directional signals.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "NEARUSDT": 0.5
+  }
+ }
+}

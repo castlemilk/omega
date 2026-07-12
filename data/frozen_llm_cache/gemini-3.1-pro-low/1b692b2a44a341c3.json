@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.135026,\"conviction\":-0.170961,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.124911,\"conviction\":-0.181076,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.071063,\"conviction\":-0.234924,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.202976,\"conviction\":-0.508962,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.357281,\"conviction\":-0.663268,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.071952,\"conviction\":-0.377939,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3106,\"bull_prob\":0.3051,\"cycle\":38,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The current macro regime is identified as 'crisis' with roughly equal bull and bear probabilities, indicating high uncertainty. In a crisis regime, long positions are inherently risky, and this is compounded by the negative conviction scores for all long candidates (ADA, BNB, ETH); therefore, all longs are dropped. The short candidates (MATIC, SOL, XRP) align better with a potential downturn in a crisis regime. However, their highly negative conviction scores suggest conflicting signals or weak momentum. Thus, they are kept to maintain some directional exposure but scaled down significantly to manage risk.",
+  "size_scale": {
+   "MATICUSDT": 0.5,
+   "SOLUSDT": 0.3,
+   "XRPUSDT": 0.7
+  }
+ }
+}

@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.121373,\"conviction\":-0.681314,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.070154,\"conviction\":-0.630095,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.044524,\"conviction\":-0.604465,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3063,\"bull_prob\":0.3152,\"cycle\":50,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SUIUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "High volatility regime with balanced bull/bear probabilities (neutral macro state) suggests reducing overall directional exposure. ARBUSDT exhibits the strongest short conviction and composite score, so it is kept but scaled down to manage volatility risk. SOLUSDT is kept with a further reduced size due to moderate conviction. SUIUSDT is dropped as its composite and conviction scores are the weakest, offering an unfavourable risk-to-reward in a high-volatility environment.",
+  "size_scale": {
+   "ARBUSDT": 0.7,
+   "SOLUSDT": 0.5
+  }
+ }
+}

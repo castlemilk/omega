@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.066148,\"conviction\":0.247348,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.066148,\"conviction\":0.247348,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.066148,\"conviction\":0.247348,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.066287,\"conviction\":0.114913,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.101008,\"conviction\":0.080192,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.127544,\"conviction\":0.053656,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3059,\"bull_prob\":0.3141,\"cycle\":38,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "BNBUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "AVAXUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with balanced bull/bear probabilities, high-beta altcoin longs (ARB, NEAR) carry outsized idiosyncratic and beta risks; dropping them reduces downside exposure. ETH is kept as a higher-quality long but scaled down by 50% due to crisis conditions. For shorts, AVAX and XRP are kept and scaled to 0.8 to capture downside beta, while BNB is dropped as it often behaves idiosyncratically or as a relative safe-haven exchange token during liquidity events.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "ETHUSDT": 0.5,
+   "XRPUSDT": 0.8
+  }
+ }
+}

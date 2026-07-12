@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.056087,\"conviction\":-0.592148,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.423356,\"conviction\":-0.224879,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.049659,\"conviction\":-0.697894,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.129792,\"conviction\":-0.778027,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.140118,\"conviction\":-0.788353,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3119,\"bull_prob\":0.3083,\"cycle\":49,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "ADAUSDT",
+   "ARBUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with mixed bull/bear probabilities, defensive posturing is required. BNBUSDT has a marginal composite score (0.056) and highly negative conviction (-0.592) for a long, making it a high-risk drop. XRPUSDT exhibits the weakest conviction (-0.788) among shorts, warranting a drop to reduce overall exposure. SUIUSDT shows the strongest relative metrics but requires size reduction due to the crisis environment. The remaining shorts (ADA, ARB) are kept but scaled down as conviction remains generally weak across the board.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ARBUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

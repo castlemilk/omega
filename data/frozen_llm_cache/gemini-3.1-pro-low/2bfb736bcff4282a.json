@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.277739,\"conviction\":0.22192,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.089903,\"conviction\":0.034084,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.071549,\"conviction\":-0.127368,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.123959,\"conviction\":-0.179778,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.128437,\"conviction\":-0.184256,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3146,\"bull_prob\":0.3028,\"cycle\":59,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with elevated bear probability, long positions carry significant directional risk. ETHUSDT exhibits very low conviction and composite scores for a long in this environment, warranting a complete drop. BNBUSDT shows much stronger conviction, so it is kept but scaled down by 50% to manage the unfavourable macro regime exposure. Short positions (AVAXUSDT, NEARUSDT) align well with the crisis regime and are kept at full size. ARBUSDT is a weaker short, so it is kept but slightly scaled down.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 0.5,
+   "NEARUSDT": 1.0
+  }
+ }
+}

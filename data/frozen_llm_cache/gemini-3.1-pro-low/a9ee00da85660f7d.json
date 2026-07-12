@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.333931,\"conviction\":-0.13613,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.188078,\"conviction\":-0.281983,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.062944,\"conviction\":-0.407118,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.332735,\"conviction\":-0.802797,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.094608,\"conviction\":-0.564669,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.079166,\"conviction\":-0.549228,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3045,\"bull_prob\":0.3077,\"cycle\":43,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "NEARUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "Macro regime is 'normal' with evenly balanced bull/bear probabilities. However, all candidates exhibit negative conviction scores. In a neutral regime, it is prudent to drop low-composite signals (SOLUSDT, BNBUSDT, XRPUSDT) as they lack sufficient strength to overcome the negative conviction. We keep the strongest directional signals (MATICUSDT, NEARUSDT for longs; AVAXUSDT for shorts) but scale down the longs due to the conviction divergence.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "MATICUSDT": 0.7,
+   "NEARUSDT": 0.5
+  }
+ }
+}

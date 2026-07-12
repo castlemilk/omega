@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.109692,\"conviction\":0.174205,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.109692,\"conviction\":0.174205,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.109692,\"conviction\":0.174205,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.321667,\"conviction\":-0.257154,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.226289,\"conviction\":-0.161776,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.304,\"bull_prob\":0.3079,\"cycle\":48,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "BNBUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "ADAUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'crisis', which strongly favors risk-off behavior and elevated correlations. The short signals for ADA and XRP have moderate conviction and align well with a crisis regime, where altcoins tend to underperform. Conversely, the long signals for AVAX, BNB, and ETH have identical, weak positive scores, suggesting a broad (and potentially unreliable) market beta signal rather than idiosyncratic strength. Taking unhedged long altcoin positions in a crisis regime carries excessive downside risk. Thus, AVAX and BNB are dropped. ETH is retained as a more liquid major but scaled down by 50% to limit exposure, while the aligning shorts are kept at full size.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "ETHUSDT": 0.5,
+   "XRPUSDT": 1.0
+  }
+ }
+}

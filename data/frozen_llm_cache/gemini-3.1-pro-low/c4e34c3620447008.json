@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.1935,\"conviction\":-0.289287,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.195164,\"conviction\":-0.287623,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.195164,\"conviction\":-0.287623,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.21474,\"conviction\":-0.697526,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.129064,\"conviction\":-0.611851,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.307547,\"conviction\":-0.790334,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3096,\"bull_prob\":0.3107,\"cycle\":51,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "NEARUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "Macro state is neutral (bear_prob ~ bull_prob, regime normal). All candidates exhibit negative conviction scores, indicating weak signal strength across the board. The short candidates (ARB, SUI) have extremely low conviction (-0.69, -0.79) and are dropped to avoid unnecessary risk on low-confidence trades. AVAX short is retained for hedging but scaled to 0.5. Longs are kept as they have slightly better conviction profiles compared to shorts, but are marginally scaled back due to the absence of a strong macro tailwind.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "BNBUSDT": 0.8,
+   "ETHUSDT": 1.0,
+   "NEARUSDT": 0.7
+  }
+ }
+}

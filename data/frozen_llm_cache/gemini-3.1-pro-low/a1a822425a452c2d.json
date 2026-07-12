@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.053365,\"conviction\":-0.192093,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.056563,\"conviction\":-0.188895,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.039684,\"conviction\":-0.205775,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.078634,\"conviction\":-0.324092,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.064959,\"conviction\":-0.310417,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.133929,\"conviction\":-0.379387,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":12,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "All candidates display highly negative conviction scores, indicating poor signal alignment or low predictive confidence across the board. In a neutral macro regime with equal bull/bear probabilities, carrying unaligned longs adds unnecessary risk, so ADAUSDT, AVAXUSDT, and XRPUSDT are dropped. The short candidates (ARBUSDT, SOLUSDT, SUIUSDT) have stronger directional composites but still suffer from negative conviction; they are kept for directional exposure but their size is scaled down by 50% to mitigate risk.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "SOLUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

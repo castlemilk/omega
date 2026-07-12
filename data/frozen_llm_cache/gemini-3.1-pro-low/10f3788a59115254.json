@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.056653,\"conviction\":-0.446008,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.080453,\"conviction\":-0.422208,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.272251,\"conviction\":-0.23041,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.267112,\"conviction\":-0.657942,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.069526,\"conviction\":-0.572187,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.087216,\"conviction\":-0.589877,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3087,\"bull_prob\":0.3116,\"cycle\":50,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, long positions with weak composite scores and negative conviction (ETHUSDT, SOLUSDT) carry excessive risk and should be vetoed. XRPUSDT shows a relatively stronger composite but still has negative conviction; it is kept but scaled down to limit exposure. The short candidates align better with the crisis regime macro context, but are scaled down slightly due to broadly weak conviction scores across the basket.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "AVAXUSDT": 0.8,
+   "NEARUSDT": 0.8,
+   "XRPUSDT": 0.5
+  }
+ }
+}

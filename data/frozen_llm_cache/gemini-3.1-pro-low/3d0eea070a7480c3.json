@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.266616,\"conviction\":0.200077,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.087608,\"conviction\":0.021069,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.071319,\"conviction\":0.00478,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.187302,\"conviction\":-0.253841,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.173974,\"conviction\":-0.240513,\"side\":\"short\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.215645,\"conviction\":-0.282184,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3089,\"bull_prob\":0.3057,\"cycle\":52,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bear (0.3089) and bull (0.3057) probabilities, indicating a lack of clear directional market trend. In this neutral environment, longs on BNBUSDT and ETHUSDT exhibit extremely weak conviction scores (0.021 and 0.004 respectively) and are dropped to avoid marginal trades with poor risk/reward. The ARBUSDT long shows robust conviction (0.200) and is kept. The short candidates (NEARUSDT, SUIUSDT, XRPUSDT) all demonstrate strong negative conviction (<-0.24) and are kept at full size, which also helps balance the book against the strong ARB long in a non-trending market.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "NEARUSDT": 1.0,
+   "SUIUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.256856,\"conviction\":-0.043398,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.182986,\"conviction\":-0.117268,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.138393,\"conviction\":-0.161861,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.373707,\"conviction\":-0.673961,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.208188,\"conviction\":-0.508443,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.252344,\"conviction\":-0.552598,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":6,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a neutral macro regime ('normal', with evenly split bull/bear probabilities), the long candidates exhibit negative conviction scores despite positive composite signals, indicating weak internal alignment for upside risk. Conversely, the short candidates show strong directional alignment (highly negative conviction scores confirming the negative composite signals). We drop the low-conviction longs to reduce unwarranted upside exposure, and keep the shorts, but apply a scaling factor to reduce their size given the absence of a confirmed bearish macro trend.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "SOLUSDT": 0.5,
+   "SUIUSDT": 0.6
+  }
+ }
+}

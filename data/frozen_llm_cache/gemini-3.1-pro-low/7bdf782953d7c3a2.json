@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.11595,\"conviction\":0.218961,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.09051,\"conviction\":0.19352,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.11595,\"conviction\":0.218961,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.113175,\"conviction\":-0.010165,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.044617,\"conviction\":0.058393,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.068441,\"conviction\":0.034569,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3133,\"bull_prob\":0.3078,\"cycle\":32,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "NEARUSDT",
+   "SUIUSDT",
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with balanced bull/bear probabilities (~31%), high-beta long exposure is exceedingly risky; thus, all long altcoin candidates (AVAX, NEAR, SUI) are dropped to minimize downside risk. For the short candidates, ETH and XRP are dropped because their positive conviction scores conflict with their negative composite scores, indicating mixed signals that are unsafe in a volatile environment. We keep only the ADA short, as its negative conviction properly aligns with its negative composite, providing a higher confidence macro-aligned hedge. Its size is scaled to 0.8 to account for elevated crisis volatility.",
+  "size_scale": {
+   "ADAUSDT": 0.8
+  }
+ }
+}

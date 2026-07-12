@@ -1,0 +1,21 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.083159,\"conviction\":0.237,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.083159,\"conviction\":0.237,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.083159,\"conviction\":0.237,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.091939,\"conviction\":0.061902,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.115424,\"conviction\":0.038418,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3131,\"bull_prob\":0.308,\"cycle\":34,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT"
+  ],
+  "reasoning": "The current macro regime is defined as 'crisis' with a slightly higher bear probability (0.313) than bull probability (0.308). In a crisis environment, taking long positions in high-beta altcoins conflicts with the broader macro state, so ARBUSDT, AVAXUSDT, and NEARUSDT are dropped to manage downside risk. While short positions align better with the current bear-leaning crisis regime, the conviction scores for both ADAUSDT (0.061) and XRPUSDT (0.038) are extremely low. XRPUSDT is dropped due to its negligible conviction, and ADAUSDT is kept but scaled down to 0.8 to account for the low signal strength despite favorable macro alignment.",
+  "size_scale": {
+   "ADAUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,18 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.385695,\"conviction\":0.212704,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.155309,\"conviction\":-0.328301,\"side\":\"short\",\"symbol\":\"ADAUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3024,\"bull_prob\":0.3156,\"cycle\":52,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.95,
+  "drop": [],
+  "keep": [
+   "BNBUSDT",
+   "ADAUSDT"
+  ],
+  "reasoning": "The macro state is currently in a 'normal' regime with relatively balanced bull and bear probabilities. The BNBUSDT long shows a solid composite score (0.385) and positive conviction, while the ADAUSDT short provides complementary exposure with its negative composite (-0.155) and strong negative conviction (-0.328). This combination offers reasonable market-neutral characteristics suitable for an indeterminate macro regime, so both candidates are kept at full size.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "BNBUSDT": 1.0
+  }
+ }
+}

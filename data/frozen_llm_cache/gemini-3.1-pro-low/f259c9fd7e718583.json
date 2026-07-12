@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.180566,\"conviction\":-0.582869,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.162215,\"conviction\":-0.582869,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.171539,\"conviction\":-0.582869,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.302,\"bull_prob\":0.317,\"cycle\":19,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.8,
+  "drop": [],
+  "keep": [
+   "AVAXUSDT",
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "In a high_vol regime with ambiguous directional probability (bull 0.317 vs bear 0.302), stacking multiple correlated altcoin shorts carries high systemic risk. Retaining the positions but scaling down size to 0.5 across the board to limit downside exposure to sudden volatility spikes while preserving the negative conviction signal.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "MATICUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

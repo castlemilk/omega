@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.184902,\"conviction\":0.330225,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.079602,\"conviction\":0.224925,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.062539,\"conviction\":0.207863,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.123561,\"conviction\":0.021762,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.043892,\"conviction\":0.101432,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.042559,\"conviction\":0.102765,\"side\":\"short\",\"symbol\":\"BNBUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3047,\"bull_prob\":0.3125,\"cycle\":20,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "BNBUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slightly positive skew (bull_prob 0.3125 > bear_prob 0.3047). The long candidates demonstrate strong conviction (>0.20), whereas the short candidates exhibit weak conviction (<=0.10), particularly ADAUSDT (0.02). Given the balanced macro state, it is prudent to drop low-conviction counter-trend shorts. ARBUSDT is slightly scaled down to manage outsized exposure relative to the rest of the basket.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "ETHUSDT": 1.0,
+   "NEARUSDT": 1.0
+  }
+ }
+}

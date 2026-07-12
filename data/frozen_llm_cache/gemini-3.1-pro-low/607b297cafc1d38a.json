@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.047595,\"conviction\":-0.478693,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.04705,\"conviction\":-0.479239,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.093051,\"conviction\":-0.433237,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.025973,\"conviction\":-0.552261,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.025973,\"conviction\":-0.552261,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.025973,\"conviction\":-0.552261,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3113,\"bull_prob\":0.3086,\"cycle\":56,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "SOLUSDT",
+   "ADAUSDT",
+   "ARBUSDT",
+   "AVAXUSDT"
+  ],
+  "keep": [
+   "XRPUSDT"
+  ],
+  "reasoning": "Macro regime is normal with balanced bull/bear probabilities, but all candidate signals exhibit strongly negative conviction (<-0.4). The identical weak scores for the short candidates (ADA, ARB, AVAX) suggest a lack of distinct edge, warranting their removal. BNB and SOL also have weak composite scores and poor conviction. XRP has the highest composite score (0.093), so it is kept but scaled down by 50% due to the overall poor conviction environment.",
+  "size_scale": {
+   "XRPUSDT": 0.5
+  }
+ }
+}

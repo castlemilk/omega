@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.271487,\"conviction\":-0.148558,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.207245,\"conviction\":-0.212801,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.213184,\"conviction\":-0.633229,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.154683,\"conviction\":-0.574728,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.223088,\"conviction\":-0.643134,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2992,\"bull_prob\":0.3159,\"cycle\":26,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT",
+   "XRPUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a very slight bullish skew (bull_prob 0.3159 > bear_prob 0.2992). The long candidates (SOLUSDT, XRPUSDT) present conflicting signals (positive composite scores but negative conviction scores), indicating unreliability, so they are dropped. The short candidates (ARBUSDT, NEARUSDT, SUIUSDT) show strong alignment with negative composite and heavily negative conviction scores. However, given the slight macro headwind against shorts, the weakest short signal (NEARUSDT) is dropped, and the remaining strong shorts (ARBUSDT, SUIUSDT) are kept but scaled down to 0.8 to manage risk.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "SUIUSDT": 0.8
+  }
+ }
+}

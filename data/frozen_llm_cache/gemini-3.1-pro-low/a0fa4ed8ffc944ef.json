@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.201128,\"conviction\":-0.002086,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":1.203214,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.569739,\"conviction\":-0.772953,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.796786,\"conviction\":-1.0,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.796786,\"conviction\":-1.0,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":6,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.9,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "NEARUSDT",
+   "ADAUSDT",
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with neutral bull/bear probabilities. NEAR, MATIC, and SOL exhibit strong signal composites backed by absolute conviction scores (-1.0/1.0), making them robust candidates for the current regime. ADA is kept but slightly scaled down due to its marginally weaker conviction compared to the top shorts. ETH is dropped entirely because its conviction score is negative (-0.002) while suggesting a long position, presenting a conflicting and weak signal.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "MATICUSDT": 1.0,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 1.0
+  }
+ }
+}

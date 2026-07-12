@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.145999,\"conviction\":-0.17818,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.145999,\"conviction\":-0.17818,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.145999,\"conviction\":-0.17818,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.192109,\"conviction\":-0.516289,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":9,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "NEARUSDT"
+  ],
+  "reasoning": "In a 'normal' regime with evenly distributed bull/bear probabilities, the long candidates (MATICUSDT, SOLUSDT, XRPUSDT) exhibit negative conviction scores despite weakly positive composite signals. This divergence suggests low underlying trend strength and a high risk of false breakouts, so they are dropped. NEARUSDT presents a more consistent short setup with strongly negative composite and conviction scores aligning with the short direction. It is kept but scaled to 0.8 to manage idiosyncratic risk given the lack of clear directional macro bias.",
+  "size_scale": {
+   "NEARUSDT": 0.8
+  }
+ }
+}

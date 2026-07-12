@@ -1,0 +1,16 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.041459,\"conviction\":0.088226,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.307,\"bull_prob\":0.3081,\"cycle\":25,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [],
+  "keep": [
+   "ETHUSDT"
+  ],
+  "reasoning": "The current macro regime is 'crisis' with balanced bull/bear probabilities (~0.31), indicating high uncertainty and potential for violent two-way volatility. The short signal for ETHUSDT has very low conviction (0.088). While a short position is generally aligned with a risk-off crisis environment, the weak signal strength dictates a reduction in size to manage risk.",
+  "size_scale": {
+   "ETHUSDT": 0.5
+  }
+ }
+}

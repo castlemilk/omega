@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.033046,\"conviction\":-0.125509,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.060102,\"conviction\":-0.098453,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.15387,\"conviction\":-0.004686,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.045917,\"conviction\":-0.204472,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.130108,\"conviction\":-0.288663,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.074066,\"conviction\":-0.232621,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2988,\"bull_prob\":0.3227,\"cycle\":31,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "ADAUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split, slightly elevated bull/bear probabilities (0.32 vs 0.29), indicating a directionless or ranging market state. All candidate signals exhibit negative conviction scores, signaling significant uncertainty or conflicting sub-models. In this environment, taking full-size positions on low-conviction signals is risky. We drop the weakest composite signals (ETH, SOL, ADA, SUI) entirely. We keep the strongest relative long (XRPUSDT, composite 0.15) and strongest relative short (AVAXUSDT, composite -0.13) to maintain balanced book exposure, but scale them down (0.8 and 0.5 respectively) to penalize the negative conviction.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "XRPUSDT": 0.8
+  }
+ }
+}

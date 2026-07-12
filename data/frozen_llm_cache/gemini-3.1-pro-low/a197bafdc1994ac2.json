@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.365137,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.365137,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.365137,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.178445,\"conviction\":0.456417,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.297565,\"conviction\":0.337298,\"side\":\"short\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.442719,\"conviction\":0.192143,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SUIUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "ETHUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "The macro regime is neutral with equal bull/bear probabilities. Long candidates show uniformly high conviction, but scaling down alternative layer-1s (ADA, ARB) is prudent to manage idiosyncratic risk while keeping core exposure (ETH) fully sized. Short candidates display weak conviction; SUI and XRP are dropped due to very low conviction scores (<0.4), while AVAX is kept at half-size to serve as a partial portfolio hedge without overcommitting capital to weak signals.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "ARBUSDT": 0.7,
+   "AVAXUSDT": 0.5,
+   "ETHUSDT": 1.0
+  }
+ }
+}

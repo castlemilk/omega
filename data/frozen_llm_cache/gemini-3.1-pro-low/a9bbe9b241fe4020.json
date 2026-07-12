@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.028498,\"conviction\":0.225122,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.028498,\"conviction\":0.225122,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.028498,\"conviction\":0.225122,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.106103,\"conviction\":0.160522,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.08294,\"conviction\":0.113684,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.108937,\"conviction\":0.087687,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.31,\"bull_prob\":0.3052,\"cycle\":29,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.8,
+  "drop": [
+   "ADAUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The 'crisis' regime with balanced bull/bear probabilities (0.30/0.31) suggests heightened volatility and market uncertainty. The long candidates (ADA, MATIC, SOL) exhibit identical, weak composite scores (0.028), indicative of a generic basket signal; dropping ADA and MATIC while retaining SOL at 50% scale reduces altcoin exposure while keeping the highest-beta asset. On the short side, AVAX and ETH are maintained due to stronger negative composite scores offering downside protection, while XRP is dropped due to having the lowest overall conviction (0.087), which is unfavorable in a crisis regime.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "ETHUSDT": 1.0,
+   "SOLUSDT": 0.5
+  }
+ }
+}

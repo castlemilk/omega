@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.131578,\"conviction\":0.176755,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.146945,\"conviction\":0.192122,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.146945,\"conviction\":0.192122,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.350498,\"conviction\":-0.305321,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.107377,\"conviction\":-0.0622,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":13,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The current macro regime is 'crisis', implying high volatility and potential systemic downside risk. In such environments, exposure to high-beta altcoin longs should be minimized. Therefore, MATICUSDT and SOLUSDT are dropped despite their weak positive signals. BNBUSDT is kept but scaled down drastically (0.3) due to its historical relative stability as an exchange token during certain downturns. For the shorts, ADAUSDT exhibits a strong negative composite score (-0.35) which aligns well with the crisis regime, so it is kept with a slight risk reduction (0.8). XRPUSDT has a very weak short conviction (-0.10) and is dropped to avoid unnecessary volatility chop.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "BNBUSDT": 0.3
+  }
+ }
+}

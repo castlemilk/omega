@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.33368,\"conviction\":-0.223244,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.282074,\"conviction\":-0.27485,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.290041,\"conviction\":-0.266883,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.10219,\"conviction\":-0.659114,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.354474,\"conviction\":-0.843533,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.099258,\"conviction\":-0.656182,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3085,\"bull_prob\":0.3105,\"cycle\":39,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "The macro regime is 'crisis', which strongly conflicts with taking long positions in high-beta altcoins. Therefore, all long candidates (AVAXUSDT, BNBUSDT, NEARUSDT) have been dropped to avoid counter-trend exposure. The short candidates (ADAUSDT, ARBUSDT, ETHUSDT) align better with the crisis regime, but given the highly negative conviction scores across all signals, their sizes have been scaled down by 50% to strictly manage overall portfolio risk during this volatile period.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ARBUSDT": 0.5,
+   "ETHUSDT": 0.5
+  }
+ }
+}

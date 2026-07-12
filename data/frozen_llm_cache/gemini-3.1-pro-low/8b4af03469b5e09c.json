@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.043616,\"conviction\":-0.672985,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.055432,\"conviction\":-0.661169,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.09995,\"conviction\":-0.616651,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.076138,\"conviction\":-0.792739,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.054707,\"conviction\":-0.771309,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.084041,\"conviction\":-0.800642,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3134,\"bull_prob\":0.3051,\"cycle\":49,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "BNBUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with elevated uncertainty and highly negative conviction scores across all candidates, long positions carry significant asymmetric downside risk. All longs (ADA, BNB, SOL) are dropped to protect capital. The short candidates (ARB, NEAR, SUI) better align with the crisis macro state, but their sizing is scaled down by 50% to mitigate the risk of violent counter-trend short squeezes typical in high-volatility environments.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "NEARUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

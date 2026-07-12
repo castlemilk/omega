@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.099696,\"conviction\":0.242674,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.099696,\"conviction\":0.242674,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.099696,\"conviction\":0.242674,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.076137,\"conviction\":0.06684,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.252848,\"conviction\":-0.109871,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.25616,\"conviction\":-0.113182,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2978,\"bull_prob\":0.3199,\"cycle\":59,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "Macro regime is 'normal' with balanced bull/bear probabilities, supporting a market-neutral or mixed directional book. BNBUSDT has very low conviction (0.06684) compared to other candidates and is dropped to reduce low-signal noise. The long candidates (ADA, ARB, AVAX) share identical composite scores; their sizes are slightly scaled down to balance overall portfolio risk against the shorts (SOL, SUI) which have slightly lower magnitude convictions.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "ARBUSDT": 0.8,
+   "AVAXUSDT": 0.8,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

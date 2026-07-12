@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.241883,\"conviction\":-0.15591,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.370858,\"conviction\":-0.026936,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.642093,\"conviction\":0.244299,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.501384,\"conviction\":-0.899177,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.483111,\"conviction\":-0.880904,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.390863,\"conviction\":-0.788656,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":7,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "ADAUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current market regime is classified as 'crisis', which typically features high volatility, widespread correlated drawdowns, and systemic risk. In such environments, longing altcoins is highly dangerous, particularly those lacking strong model conviction. BNBUSDT and ETHUSDT both display negative conviction scores despite positive composite signals, warranting their complete removal from the basket to reduce risk. MATICUSDT shows positive conviction and a strong composite score; however, its long exposure should be heavily scaled down (0.3) due to macro risk. On the short side, ADAUSDT, NEARUSDT, and SOLUSDT show extremely strong negative conviction scores, aligning perfectly with a crisis regime where shorting weak assets provides alpha and downside protection. I am keeping the shorts but scaling them to 0.8 to manage overall portfolio volatility in a choppy market.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "MATICUSDT": 0.3,
+   "NEARUSDT": 0.8,
+   "SOLUSDT": 0.8
+  }
+ }
+}

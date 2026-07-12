@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.342106,\"conviction\":-0.12472,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.215398,\"conviction\":-0.251428,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.270201,\"conviction\":-0.196625,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.165148,\"conviction\":-0.631974,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.165148,\"conviction\":-0.631974,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.152588,\"conviction\":-0.619414,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3083,\"bull_prob\":0.3064,\"cycle\":39,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "NEARUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "With bear and bull probabilities roughly equal (0.3083 and 0.3064) and a 'normal' regime, directional conviction is weak across the board as evidenced by all candidates having negative conviction scores. The short candidates (ADAUSDT, NEARUSDT, XRPUSDT) are dropped due to extremely poor conviction (-0.61 to -0.63). The long candidates (AVAXUSDT, BNBUSDT, MATICUSDT) show relatively stronger composite scores, but still carry negative conviction, so they are kept but scaled down to limit exposure in this uncertain environment.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "BNBUSDT": 0.3,
+   "MATICUSDT": 0.4
+  }
+ }
+}

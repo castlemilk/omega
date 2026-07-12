@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.206076,\"conviction\":0.239191,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.03947,\"conviction\":0.072584,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.209661,\"conviction\":0.242775,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.066595,\"conviction\":-0.033481,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.152154,\"conviction\":-0.119039,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.078501,\"conviction\":-0.045386,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3044,\"bull_prob\":0.3155,\"cycle\":36,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT",
+   "ARBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "SUIUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "Regime is 'crisis' with roughly equal bull/bear probabilities, indicating high macro uncertainty. In this environment, it is prudent to drop low conviction trades (SOLUSDT, ARBUSDT, XRPUSDT) to reduce gross exposure and avoid chop. Long positions, particularly on high-beta assets like SUIUSDT, are scaled down to mitigate downside risk in the event of a market shock. ETHUSDT is kept as a more robust large-cap long but slightly reduced in size. The AVAXUSDT short is kept at full size to act as a hedge against the long book in this crisis regime.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "ETHUSDT": 0.8,
+   "SUIUSDT": 0.5
+  }
+ }
+}

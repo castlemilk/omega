@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.145767,\"conviction\":-0.198629,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.26545,\"conviction\":-0.078946,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.262467,\"conviction\":-0.606863,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.050316,\"conviction\":-0.394712,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.158801,\"conviction\":-0.503197,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3198,\"bull_prob\":0.3022,\"cycle\":49,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current macro regime is 'crisis' with a slightly elevated bear probability, making long exposure highly risky. Both ADAUSDT and MATICUSDT have negative conviction scores which strongly conflict with opening long positions in this environment; they are dropped. The short candidates (AVAXUSDT, BNBUSDT, SOLUSDT) align with the crisis regime and have negative conviction scores supporting the shorts. However, BNBUSDT is scaled down by 50% due to its weak composite signal (-0.05), and SOLUSDT is scaled to 80% to prudently manage total short exposure.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 0.5,
+   "SOLUSDT": 0.8
+  }
+ }
+}

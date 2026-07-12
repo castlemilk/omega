@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.083272,\"conviction\":-0.145208,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.050009,\"conviction\":-0.178471,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.109295,\"conviction\":-0.119185,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.086095,\"conviction\":-0.314575,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.0525,\"conviction\":-0.28098,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2998,\"bull_prob\":0.3198,\"cycle\":23,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slightly bullish tilt (bull_prob 0.3198 vs bear_prob 0.2998), which structurally favors long exposure. The short candidates (ARBUSDT, ETHUSDT) exhibit highly negative conviction scores (-0.314, -0.280), presenting an unfavorable risk profile in this regime, so they are dropped. The long candidates have positive composites but still show negative conviction, warranting retention but with reduced sizing to limit downside exposure.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "BNBUSDT": 0.5,
+   "SOLUSDT": 0.8
+  }
+ }
+}

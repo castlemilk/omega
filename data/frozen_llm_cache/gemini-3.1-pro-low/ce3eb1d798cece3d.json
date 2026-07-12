@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.149825,\"conviction\":-0.268569,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.337133,\"conviction\":-0.081261,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":0.087198,\"conviction\":-0.331196,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.073529,\"conviction\":-0.491923,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.079912,\"conviction\":-0.498306,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.056131,\"conviction\":-0.474525,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3019,\"bull_prob\":0.3201,\"cycle\":43,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "In a 'normal' regime with balanced bull/bear probabilities, SUI shows the only relatively strong composite signal with the least negative conviction. BNB is kept but scaled down due to mediocre strength. XRP's long signal is too weak. The short candidates (ARB, AVAX, SOL) are dropped entirely due to extremely weak composites and very poor conviction scores, which do not justify the risk in an unconfirmed macro direction.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "SUIUSDT": 1.0
+  }
+ }
+}

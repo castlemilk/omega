@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.297237,\"conviction\":-0.154616,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.297237,\"conviction\":-0.154616,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.29104,\"conviction\":-0.160814,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.297501,\"conviction\":-0.749355,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.279101,\"conviction\":-0.730954,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.220432,\"conviction\":-0.672286,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3083,\"bull_prob\":0.3081,\"cycle\":55,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is currently neutral, with bull and bear probabilities evenly balanced around 0.308. All long candidates (AVAX, NEAR, SOL) show positive composite scores but negative conviction, indicating conflicting internal signals that lack robust support in a neutral regime; they are dropped to manage risk. Conversely, the short candidates (ADA, BNB, XRP) exhibit strong negative conviction scores (-0.67 to -0.74) that align well with their negative composites, justifying their retention.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "BNBUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

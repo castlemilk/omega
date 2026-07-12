@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.156822,\"conviction\":-0.09908,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.049508,\"conviction\":-0.206394,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.076721,\"conviction\":-0.179181,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.08772,\"conviction\":-0.343622,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.188398,\"conviction\":-0.4443,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.157155,\"conviction\":-0.413056,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3043,\"bull_prob\":0.3171,\"cycle\":39,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SOLUSDT",
+   "ADAUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "Macro probabilities are evenly split (bull 31.7%, bear 30.4%) in a 'normal' regime, lacking a strong directional tailwind. All candidates exhibit significantly negative conviction scores, suggesting weak internal model confidence. Therefore, risk must be curtailed. I am dropping candidates with the weakest absolute composite scores (NEARUSDT, SOLUSDT, ADAUSDT). I am keeping the highest absolute composite scores (MATICUSDT, BNBUSDT, XRPUSDT) but scaling them down significantly (0.5 - 0.6x) to reflect the low conviction and neutral macro backdrop.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "MATICUSDT": 0.6,
+   "XRPUSDT": 0.5
+  }
+ }
+}

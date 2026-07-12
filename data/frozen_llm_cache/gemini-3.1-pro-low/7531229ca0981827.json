@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.066914,\"conviction\":-0.070278,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.306531,\"conviction\":0.169339,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.117159,\"conviction\":-0.254351,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.213848,\"conviction\":-0.35104,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.045838,\"conviction\":-0.183029,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3017,\"bull_prob\":0.3202,\"cycle\":29,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "AVAXUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "In a 'normal' regime with closely balanced bull (32%) and bear (30%) probabilities, low-conviction or weak composite signals carry a higher risk of whipsaw. BNBUSDT long has negative conviction, warranting a drop. XRPUSDT short has a very weak composite score (-0.046) and is dropped to reduce low-quality noise. MATICUSDT shows strong positive conviction and composite for a long, while SOLUSDT shows strong negative conviction and composite for a short; both are kept at full size. AVAXUSDT short is kept but scaled down to 0.8 due to moderate composite strength compared to SOLUSDT.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "MATICUSDT": 1.0,
+   "SOLUSDT": 1.0
+  }
+ }
+}

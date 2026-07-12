@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.159849,\"conviction\":-0.157458,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.057987,\"conviction\":-0.25932,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.053929,\"conviction\":-0.263378,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.09039,\"conviction\":-0.407697,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.078113,\"conviction\":-0.39542,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.09039,\"conviction\":-0.407697,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3109,\"bull_prob\":0.308,\"cycle\":32,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro state indicates a 'normal' regime with nearly identical bull (0.308) and bear (0.3109) probabilities, suggesting no clear directional trend. All candidates exhibit negative conviction scores. The short candidates (ARB, NEAR, SUI) display severely negative conviction (<-0.39) and conflict with the neutral macro state, so they are dropped. The long candidates (BNB, ETH, XRP) have stronger composite scores but still negative conviction, so they are kept but significantly scaled down to mitigate risk.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.3,
+   "XRPUSDT": 0.3
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.301613,\"conviction\":-0.206011,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.211077,\"conviction\":-0.296547,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.436598,\"conviction\":-0.071026,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.334362,\"conviction\":-0.841986,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.258544,\"conviction\":-0.766168,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.375498,\"conviction\":-0.883121,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "ADAUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a normal regime with neutral bull/bear probabilities, prioritizing the strongest signals while dropping the weakest reduces noise and unnecessary exposure. SOLUSDT and SUIUSDT show the strongest directional composites for long and short sides respectively. ARBUSDT is a strong short. ADAUSDT is retained but scaled down due to weaker conviction. AVAXUSDT and NEARUSDT are dropped as they exhibit the weakest signal strength on their respective sides.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ARBUSDT": 1.0,
+   "SOLUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

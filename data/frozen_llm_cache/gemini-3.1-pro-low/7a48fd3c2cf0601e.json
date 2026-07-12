@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.055943,\"conviction\":-0.255943,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.185824,\"conviction\":-0.126062,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.099429,\"conviction\":-0.411315,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.38675,\"conviction\":-0.698636,\"side\":\"short\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.167163,\"conviction\":-0.479049,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.296,\"bull_prob\":0.3252,\"cycle\":36,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "BNBUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "SUIUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slight bullish edge (bull_prob 0.325 > bear_prob 0.296). However, the long candidates have weak signals and negative conviction scores. MATICUSDT is dropped due to its marginal composite score. SOLUSDT is kept as a long exposure but scaled down by 50% given the negative conviction. On the short side, SUIUSDT shows the strongest composite signal magnitude (-0.386) and is kept at full size. XRPUSDT is kept but scaled down to 0.8, while BNBUSDT is dropped as its weak composite does not justify a short in a slightly bullish-leaning regime.",
+  "size_scale": {
+   "SOLUSDT": 0.5,
+   "SUIUSDT": 1.0,
+   "XRPUSDT": 0.8
+  }
+ }
+}

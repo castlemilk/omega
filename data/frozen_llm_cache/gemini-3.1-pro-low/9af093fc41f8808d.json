@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.141857,\"conviction\":-0.015971,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.112415,\"conviction\":-0.045414,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":0.369915,\"conviction\":0.212087,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.133093,\"conviction\":-0.290922,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.076538,\"conviction\":-0.234367,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.116423,\"conviction\":-0.274251,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":12,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "XRPUSDT",
+   "ARBUSDT",
+   "ETHUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "The macro state is neutral ('normal' regime with equal bull/bear probabilities). Dropped ADAUSDT and SUIUSDT because their positive long composite scores conflict with their negative conviction scores, indicating poor signal alignment. Kept XRPUSDT due to strong positive signal and conviction alignment. Maintained short positions (ARB, ETH, NEAR) where composite and conviction are directionally aligned (both negative), but scaled down ETH exposure to reduce beta risk on a major asset in a neutral regime.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "ETHUSDT": 0.5,
+   "NEARUSDT": 0.8,
+   "XRPUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.082547,\"conviction\":-0.387773,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.130783,\"conviction\":-0.339538,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.17624,\"conviction\":-0.29408,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.107226,\"conviction\":-0.577547,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.107226,\"conviction\":-0.577547,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.107226,\"conviction\":-0.577547,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3108,\"bull_prob\":0.309,\"cycle\":58,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "XRPUSDT",
+   "ADAUSDT",
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "Macro regime is normal with balanced bull/bear probabilities, indicating a neutral environment. Long candidates SOL and XRP are kept based on their higher composite scores, but BNB is dropped due to its very weak composite score (0.082) and negative conviction. Short candidates ADA, ARB, and NEAR exhibit identical weak composite scores and extremely low conviction (-0.577). They are retained but scaled down by 50% to mitigate exposure risk in a non-trending market.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ARBUSDT": 0.5,
+   "NEARUSDT": 0.5,
+   "SOLUSDT": 0.8,
+   "XRPUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.113075,\"conviction\":-0.280264,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.047559,\"conviction\":-0.34578,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.075319,\"conviction\":-0.318019,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.193047,\"conviction\":-0.586386,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.041242,\"conviction\":-0.43458,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.087278,\"conviction\":-0.480616,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3015,\"bull_prob\":0.3113,\"cycle\":20,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ARBUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull/bear probabilities, but all candidate convictions are heavily negative, indicating weak signal reliability or potential mean-reversion. To manage risk in this low-conviction environment, the weakest composite signals (ETH, SOL, AVAX, NEAR) are dropped. The strongest composite signals (BNB long, ARB short) are kept but scaled down by 50% to mitigate exposure while still capturing the strongest relative opportunities.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "BNBUSDT": 0.5
+  }
+ }
+}

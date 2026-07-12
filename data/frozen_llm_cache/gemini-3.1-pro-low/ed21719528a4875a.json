@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.308781,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.290394,\"conviction\":0.981613,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.275335,\"conviction\":0.966554,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.381765,\"conviction\":0.309454,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.484182,\"conviction\":0.207037,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.550307,\"conviction\":0.140912,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":6,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "MATICUSDT",
+   "NEARUSDT",
+   "ADAUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro state is currently neutral (normal regime, equal bull/bear probabilities). High-conviction longs (ETH, MATIC, NEAR) are retained at full size to capture idiosyncratic strength. The short candidates have significantly lower conviction scores; ADA and BNB are kept but scaled down by 50% to reduce directional risk in an unclear macro environment, while SOL is dropped entirely due to extremely weak conviction (0.14).",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 1.0,
+   "MATICUSDT": 1.0,
+   "NEARUSDT": 1.0
+  }
+ }
+}

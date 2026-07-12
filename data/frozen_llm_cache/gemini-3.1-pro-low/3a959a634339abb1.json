@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.075484,\"conviction\":-0.559475,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.202152,\"conviction\":-0.432807,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.168869,\"conviction\":-0.466091,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.091901,\"conviction\":-0.72686,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.054045,\"conviction\":-0.689004,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.254988,\"conviction\":-0.889948,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3068,\"bull_prob\":0.3102,\"cycle\":37,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "AVAXUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with elevated volatility, long exposures carry excessive directional risk, especially given the uniformly negative conviction scores across all long candidates. Thus, all long candidates (BNBUSDT, NEARUSDT, SOLUSDT) are dropped. Short candidates (ARBUSDT, AVAXUSDT, SUIUSDT) are structurally better aligned with a crisis environment, but their sizes are scaled down to 50% to conservatively manage risk during potential sharp mean-reversion spikes.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

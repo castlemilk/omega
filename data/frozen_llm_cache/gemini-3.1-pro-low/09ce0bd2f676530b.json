@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.122795,\"conviction\":-0.098903,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.122795,\"conviction\":-0.098903,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.122795,\"conviction\":-0.098903,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.132248,\"conviction\":-0.353946,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.126141,\"conviction\":-0.347839,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.146972,\"conviction\":-0.36867,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3132,\"bull_prob\":0.3071,\"cycle\":24,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'crisis', which strongly conflicts with long exposure. All long candidates (AVAXUSDT, BNBUSDT, NEARUSDT) exhibit negative conviction and are dropped to manage risk. The short candidates (MATICUSDT, SOLUSDT, XRPUSDT) align with the crisis regime and have strong negative composite/conviction signals, so they are kept but scaled to 50% to mitigate extreme volatility characteristic of crisis environments.",
+  "size_scale": {
+   "MATICUSDT": 0.5,
+   "SOLUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

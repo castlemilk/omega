@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.115193,\"conviction\":-0.237958,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.10946,\"conviction\":-0.24369,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.280743,\"conviction\":-0.072407,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.079447,\"conviction\":-0.432598,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.232338,\"conviction\":-0.585489,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.101845,\"conviction\":-0.454996,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":7,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "AVAXUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "BNBUSDT",
+   "SOLUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, risk-off sentiment prevails, making long positions generally unfavourable unless supported by strong conviction. ARBUSDT and AVAXUSDT have weak composites and negative convictions, making them poor long candidates in this macro state. ETHUSDT is retained but scaled down due to its relatively higher composite score. Short positions (BNB, SOL, SUI) align better with the crisis regime, but their highly negative convictions warrant scaling down their sizes, particularly for SOLUSDT which exhibits the most extreme negative conviction.",
+  "size_scale": {
+   "BNBUSDT": 0.8,
+   "ETHUSDT": 0.5,
+   "SOLUSDT": 0.5,
+   "SUIUSDT": 0.8
+  }
+ }
+}

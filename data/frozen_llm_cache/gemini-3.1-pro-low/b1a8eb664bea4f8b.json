@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.189424,\"conviction\":-0.070707,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.087067,\"conviction\":-0.173064,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.135066,\"conviction\":-0.125064,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.31935,\"conviction\":-0.579481,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.111523,\"conviction\":-0.371654,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":0,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ADAUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "With a neutral macro state, we look closely at signal alignment. Long candidates (AVAX, BNB, NEAR) show positive composites but negative conviction scores, indicating mixed internal signals. BNB and NEAR are dropped due to their weaker composite strength against this negative conviction. AVAX is kept but scaled down by 50% due to its stronger composite score offering a better risk profile. Short candidates (ADA, SUI) display strong alignment with both negative composite and negative conviction, making them higher confidence plays.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "AVAXUSDT": 0.5,
+   "SUIUSDT": 1.0
+  }
+ }
+}

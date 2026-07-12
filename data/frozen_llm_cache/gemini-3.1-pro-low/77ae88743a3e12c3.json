@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.254046,\"conviction\":-0.192016,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.089712,\"conviction\":-0.35635,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.299109,\"conviction\":-0.146952,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.085328,\"conviction\":-0.53139,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.2309,\"conviction\":-0.676962,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.19437,\"conviction\":-0.640431,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2963,\"bull_prob\":0.3252,\"cycle\":26,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "ADAUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "XRPUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The regime is 'normal' with a slightly higher bull probability (0.325 vs 0.296). However, all candidates exhibit negative conviction scores, indicating elevated uncertainty. ETHUSDT and ADAUSDT are dropped due to very weak composite scores relative to their peers, paired with poor conviction. The remaining longs (XRP, AVAX) and shorts (NEAR, SOL) are kept to maintain a balanced book but are scaled down (0.6 - 0.8) to account for the broadly negative conviction and mitigate risk in a relatively balanced macro environment.",
+  "size_scale": {
+   "AVAXUSDT": 0.7,
+   "NEARUSDT": 0.6,
+   "SOLUSDT": 0.6,
+   "XRPUSDT": 0.8
+  }
+ }
+}

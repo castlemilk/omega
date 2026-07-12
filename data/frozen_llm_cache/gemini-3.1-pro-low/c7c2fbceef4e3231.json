@@ -1,0 +1,19 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.152067,\"conviction\":-0.143387,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.156529,\"conviction\":-0.143387,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.152579,\"conviction\":-0.143387,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3029,\"bull_prob\":0.3184,\"cycle\":44,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ETHUSDT"
+  ],
+  "reasoning": "High volatility regime with ambiguous directional probabilities (bull 31.8%, bear 30.3%). Correlated short exposure across multiple assets is risky in this environment. Dropping the higher-beta altcoin shorts (MATIC, XRP) and scaling down the remaining liquid ETH short by 50% to minimize exposure while maintaining the strongest composite signal.",
+  "size_scale": {
+   "ETHUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.143805,\"conviction\":-0.569955,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.055783,\"conviction\":-0.657977,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.051304,\"conviction\":-0.662456,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.111463,\"conviction\":-0.825223,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.063184,\"conviction\":-0.776944,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.111463,\"conviction\":-0.825223,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3122,\"bull_prob\":0.3071,\"cycle\":30,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "XRPUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is normal with perfectly balanced bull/bear probabilities, suggesting range-bound or mixed conditions. Conviction scores across all candidates are strongly negative, indicating potential weakness in the primary trend or mean-reversion setups. BNB shows the strongest long composite and is kept but scaled down. ARB and SUI show decent short composites and are kept with reduced size. XRP and NEAR have weak composite scores combined with negative conviction, so they are dropped to reduce unnecessary exposure in a directionless market.",
+  "size_scale": {
+   "ARBUSDT": 0.7,
+   "BNBUSDT": 0.8,
+   "ETHUSDT": 0.5,
+   "SUIUSDT": 0.7
+  }
+ }
+}

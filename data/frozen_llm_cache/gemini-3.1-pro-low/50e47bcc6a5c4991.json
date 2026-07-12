@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.23602,\"conviction\":-0.249856,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.231547,\"conviction\":-0.249856,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.202924,\"conviction\":-0.233867,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":12,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SUIUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "Regime is high_vol with neutral directional probabilities (bear_prob and bull_prob both 0.3333). Shorting altcoins in an undirected, high-volatility environment carries significant tail risk of explosive short squeezes. ARBUSDT and AVAXUSDT have slightly stronger negative conviction and composite scores, so they are kept but scaled down by 50% to manage volatility risk. SUIUSDT is dropped due to its weaker conviction score in a risky regime.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.5
+  }
+ }
+}

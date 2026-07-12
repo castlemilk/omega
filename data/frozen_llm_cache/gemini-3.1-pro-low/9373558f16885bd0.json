@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.329194,\"conviction\":0.170186,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.224659,\"conviction\":0.065651,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.102899,\"conviction\":-0.056109,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.193987,\"conviction\":-0.352995,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.161894,\"conviction\":-0.320902,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.231457,\"conviction\":-0.390465,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3005,\"bull_prob\":0.3157,\"cycle\":45,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ARBUSDT",
+   "BNBUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, correlations approach 1 and risk of sudden drawdowns is high, making directional longs particularly dangerous. SOLUSDT exhibits negative conviction and NEARUSDT shows very weak conviction; both are dropped to eliminate low-quality long exposure. AVAXUSDT remains the only long with positive conviction, but its size is halved due to the unfavorable macro state. The shorts (ARB, BNB, MATIC) align better with the crisis regime and have stronger conviction scores, but are scaled down to reduce overall gross exposure in a volatile environment.",
+  "size_scale": {
+   "ARBUSDT": 0.8,
+   "AVAXUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "MATICUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.092541,\"conviction\":-0.200015,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.509311,\"conviction\":0.216755,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.134872,\"conviction\":-0.427428,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.073731,\"conviction\":-0.366288,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.157355,\"conviction\":-0.449911,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":18,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.9,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "BNBUSDT is dropped due to conflicting signals: it suggests a long position despite a negative conviction score (-0.20), indicating poor risk/reward. SUIUSDT shows a solid positive conviction for its long position. The short candidates (ARB, AVAX, NEAR) exhibit consistent negative composite scores and convictions, aligning appropriately with short trades. AVAX is scaled down slightly to 0.75 as its composite score (-0.07) is relatively weak compared to its conviction.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "AVAXUSDT": 0.75,
+   "NEARUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.087483,\"conviction\":-0.565035,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.125873,\"conviction\":-0.526645,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.138977,\"conviction\":-0.513541,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.101542,\"conviction\":-0.754059,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.101542,\"conviction\":-0.754059,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.101542,\"conviction\":-0.754059,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.306,\"bull_prob\":0.3144,\"cycle\":51,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "AVAXUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The regime is normal with evenly split bull/bear probabilities (0.314 vs 0.306), indicating a lack of clear macro direction. All candidates exhibit heavily negative conviction scores. The long candidates have weak positive composites, and the short candidates have identically weak negative composites with extremely poor conviction (-0.754). Given the negative conviction across the board and lack of trend, taking large bets is unwarranted. ETH and XRP have slightly better composites among the longs, so they are kept but scaled down by 50% to mitigate risk. BNB and all shorts are dropped due to exceptionally poor conviction and weak signals.",
+  "size_scale": {
+   "ETHUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

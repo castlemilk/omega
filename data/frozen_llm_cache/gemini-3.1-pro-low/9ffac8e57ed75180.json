@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.328583,\"conviction\":0.445187,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.181338,\"conviction\":-0.064733,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.084757,\"conviction\":0.031848,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.271376,\"conviction\":-0.154771,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2974,\"bull_prob\":0.3241,\"cycle\":49,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "AVAXUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current macro regime is 'normal' with a slightly bullish tilt (bull_prob 0.3241 > bear_prob 0.2974). The ADAUSDT long has strong conviction (0.445) and aligns well with this bullish tilt. The NEARUSDT short has contradictory signals (positive conviction of 0.031848 for a short position) and is highly unsafe, so it is dropped. AVAXUSDT has very weak short conviction (-0.064) which is risky in a slightly bullish environment, leading to its removal. The SOLUSDT short has moderate conviction (-0.154) and provides some structural hedge, but is scaled down by 50% to align overall portfolio exposure with the macro probabilities.",
+  "size_scale": {
+   "SOLUSDT": 0.5
+  }
+ }
+}

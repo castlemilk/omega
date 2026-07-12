@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.032232,\"conviction\":0.185813,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.184607,\"conviction\":0.338188,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":0.04163,\"conviction\":0.195211,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.043886,\"conviction\":0.109695,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.049731,\"conviction\":0.10385,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.079306,\"conviction\":0.074276,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":13,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "SOLUSDT",
+   "XRPUSDT",
+   "ARBUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, overall exposure should be strictly reduced to account for elevated volatility and unpredictable correlations. SUIUSDT shows the strongest conviction (0.338) for a long. The short signals possess very weak conviction, particularly ETHUSDT (0.074), which falls below the threshold for holding a position during high uncertainty and is dropped. All other positions are kept but scaled down by 50% to minimize risk and preserve capital while maintaining balanced, lower-exposure directional bets.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "SOLUSDT": 0.5,
+   "SUIUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

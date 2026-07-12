@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.271934,\"conviction\":-0.294201,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.210993,\"conviction\":-0.355142,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.143781,\"conviction\":-0.709915,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.072464,\"conviction\":-0.638599,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.235127,\"conviction\":-0.801262,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3058,\"bull_prob\":0.311,\"cycle\":39,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "MATICUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with roughly equal bull/bear probabilities (~0.31), maintaining long positions on high-beta assets (NEAR, SOL) with negative conviction is excessively risky; these should be dropped. The short candidates (ARB, MATIC, SUI) exhibit strong negative composite signals and align better with defensive positioning during a crisis. However, given the ambiguous macro directional bias, their sizes should be scaled down by 50% to manage volatility risk.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "MATICUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

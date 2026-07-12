@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.086554,\"conviction\":-0.285751,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.262332,\"conviction\":-0.109973,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":0.279107,\"conviction\":-0.093198,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.114034,\"conviction\":-0.486338,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.101802,\"conviction\":-0.474106,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.081604,\"conviction\":-0.453909,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":10,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split bull/bear probabilities, indicating market indecision. Furthermore, all candidates exhibit negative conviction scores, suggesting weak directional confidence from the underlying models. In this environment, a defensive posture is required. Dropping the weakest long (ADA) and all shorts due to severely negative conviction. Retaining only the highest composite longs (SUI, XRP) but scaling them down to manage risk.",
+  "size_scale": {
+   "SUIUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.104103,\"conviction\":-0.273457,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.24893,\"conviction\":-0.128629,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.179434,\"conviction\":-0.198126,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.301071,\"conviction\":-0.67863,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.241302,\"conviction\":-0.618861,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.394717,\"conviction\":-0.772276,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":8,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a neutral 'normal' regime (bull_prob = bear_prob = 0.3333), market direction is uncertain. Long candidates exhibit positive composite scores but conflicting negative conviction scores; thus, the weakest long (ADAUSDT) is dropped and the others are scaled down to manage risk. Short candidates exhibit strong negative composites and deeply negative conviction scores, indicating stronger directional alignment. The weakest short (SOLUSDT) is dropped to concentrate the book in the highest conviction shorts (SUIUSDT and ARBUSDT).",
+  "size_scale": {
+   "ARBUSDT": 0.9,
+   "BNBUSDT": 0.8,
+   "ETHUSDT": 0.7,
+   "SUIUSDT": 1.0
+  }
+ }
+}

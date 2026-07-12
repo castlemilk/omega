@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.212356,\"conviction\":0.053853,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.047546,\"conviction\":-0.110957,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.15705,\"conviction\":-0.001454,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.123596,\"conviction\":-0.2821,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.105388,\"conviction\":-0.263891,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.119864,\"conviction\":-0.278368,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2991,\"bull_prob\":0.3226,\"cycle\":53,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ARBUSDT",
+   "ETHUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro context indicates a 'normal' regime with a marginally higher bull probability (0.3226 vs 0.2991). I am dropping MATICUSDT and NEARUSDT because their negative conviction scores directly conflict with their 'long' signals. AVAXUSDT is kept at full size as its positive conviction aligns with the long direction. The short candidates (ARBUSDT, ETHUSDT, SUIUSDT) demonstrate strong signal alignment (highly negative conviction scores matching their short side), so they are kept. However, ETHUSDT is scaled down to 0.5 to mitigate risk, given it is a major asset and the macro environment has a slight bullish lean.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "AVAXUSDT": 1.0,
+   "ETHUSDT": 0.5,
+   "SUIUSDT": 1.0
+  }
+ }
+}

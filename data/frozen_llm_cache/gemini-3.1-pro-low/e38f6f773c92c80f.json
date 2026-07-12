@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.03312,\"conviction\":0.316156,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.03312,\"conviction\":0.316156,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.03312,\"conviction\":0.316156,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.173781,\"conviction\":0.109255,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.084983,\"conviction\":0.198053,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.037044,\"conviction\":0.245992,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2969,\"bull_prob\":0.3209,\"cycle\":22,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "ETHUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slight bullish tilt (bull_prob 0.3209 > bear_prob 0.2969). The long candidates (ADA, ARB, AVAX) exhibit decent conviction scores and align with the slight bullish edge, so they are kept at full size. The short candidates face a macro headwind. BNBUSDT has the lowest conviction (0.109) and is dropped entirely to reduce directional risk against the macro tilt. ETHUSDT and SUIUSDT shorts are kept but scaled down by 50% to maintain some hedge exposure without overcommitting against the slight bullish probability.",
+  "size_scale": {
+   "ETHUSDT": 0.5,
+   "SUIUSDT": 0.5
+  }
+ }
+}

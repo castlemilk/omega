@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.26397,\"conviction\":0.089339,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.156236,\"conviction\":-0.018396,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.176027,\"conviction\":0.001396,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.140796,\"conviction\":-0.315427,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.163762,\"conviction\":-0.338393,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.255659,\"conviction\":-0.43029,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3022,\"bull_prob\":0.3136,\"cycle\":47,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ARBUSDT",
+   "BNBUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The 'crisis' regime dictates a defensive posture with strict risk reduction. NEARUSDT and SUIUSDT are dropped due to weak or conflicting signed conviction scores relative to their long composite signals. AVAXUSDT (long), ARBUSDT (short), BNBUSDT (short), and MATICUSDT (short) demonstrate proper directional alignment between their composite and conviction metrics; they are retained but scaled down by 50% to mitigate exposure to crisis volatility.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.5,
+   "BNBUSDT": 0.5,
+   "MATICUSDT": 0.5
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.03018,\"conviction\":-0.271146,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.03018,\"conviction\":-0.271146,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.03018,\"conviction\":-0.271146,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.065589,\"conviction\":-0.366914,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.06696,\"conviction\":-0.368285,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2961,\"bull_prob\":0.3219,\"cycle\":30,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "AVAXUSDT"
+  ],
+  "reasoning": "The macro context indicates a 'normal' regime with a slight bullish skew (bull_prob: 0.32 > bear_prob: 0.29). Short candidates (BNBUSDT, ETHUSDT) conflict with this slightly bullish macro state and exhibit negative conviction, so they are dropped to avoid counter-trend exposure. The long candidates (ADAUSDT, ARBUSDT, AVAXUSDT) align with the macro tilt but have identically weak composite scores and negative conviction, indicating a generic, low-confidence sector signal rather than strong idiosyncratic edge. They are kept for directional exposure but scaled down by 50% to mitigate risk.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.5
+  }
+ }
+}

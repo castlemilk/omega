@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.026383,\"conviction\":0.202504,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.043607,\"conviction\":0.219728,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.127196,\"conviction\":0.303317,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.0656,\"conviction\":0.11052,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.115217,\"conviction\":0.060903,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.086231,\"conviction\":0.08989,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2989,\"bull_prob\":0.3223,\"cycle\":33,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "SOLUSDT",
+   "XRPUSDT",
+   "ADAUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with relatively balanced bull (0.3223) and bear (0.2989) probabilities, indicating a directionally ambiguous environment. In this neutral chop, it is prudent to drop low-conviction shorts (AVAXUSDT and SUIUSDT both have conviction < 0.10). XRPUSDT and SOLUSDT show strong conviction and composite scores, justifying full allocation. ETHUSDT (long) and ADAUSDT (short) are retained but scaled down due to their weaker conviction signals in a mixed macro context.",
+  "size_scale": {
+   "ADAUSDT": 0.5,
+   "ETHUSDT": 0.75,
+   "SOLUSDT": 1.0,
+   "XRPUSDT": 1.0
+  }
+ }
+}

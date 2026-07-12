@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.100844,\"conviction\":-0.515333,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.110736,\"conviction\":-0.505441,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.149411,\"conviction\":-0.653361,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.129196,\"conviction\":-0.653361,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.136848,\"conviction\":-0.653361,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3204,\"bull_prob\":0.3015,\"cycle\":41,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is classified as 'crisis' with a slightly higher bear probability (0.32) versus bull (0.30). Taking long positions (BNBUSDT, XRPUSDT) in a crisis regime with highly negative conviction (-0.51, -0.50) presents excessive risk; these are dropped to eliminate long exposure. Short candidates (AVAXUSDT, ETHUSDT, SOLUSDT) align with the overarching bearish tilt, but given the extreme negative conviction scores (-0.65) and the likelihood of high volatility during a crisis, their sizes are aggressively scaled down by 50% to maintain prudent risk management.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

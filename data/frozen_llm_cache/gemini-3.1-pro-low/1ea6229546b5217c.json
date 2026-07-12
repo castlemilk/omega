@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.092324,\"conviction\":-0.084828,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.067243,\"conviction\":-0.109909,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.41735,\"conviction\":0.240199,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.158579,\"conviction\":-0.335731,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.115468,\"conviction\":-0.292619,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.076006,\"conviction\":-0.253158,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3132,\"bull_prob\":0.3065,\"cycle\":53,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "SUIUSDT",
+   "ARBUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, risk must be tightly managed. Long candidates AVAXUSDT and BNBUSDT exhibit negative conviction despite slightly positive composite scores, making them unacceptably risky to retain. XRPUSDT is dropped as the weakest short candidate to concentrate the portfolio. SUIUSDT is the only long with positive conviction but is scaled down to 0.6 due to the macro crisis regime. ARBUSDT and NEARUSDT show strong negative conviction aligning well with short positions and the crisis environment, with ARBUSDT kept at full size and NEARUSDT slightly scaled down.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "NEARUSDT": 0.8,
+   "SUIUSDT": 0.6
+  }
+ }
+}

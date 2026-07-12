@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.214091,\"conviction\":0.057092,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.321718,\"conviction\":0.164719,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.222715,\"conviction\":0.065716,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.344949,\"conviction\":-0.501947,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.230741,\"conviction\":-0.38774,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.211187,\"conviction\":-0.368186,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3057,\"bull_prob\":0.3071,\"cycle\":41,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "AVAXUSDT",
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull/bear probabilities, offering no strong directional tailwind. Consequently, low-conviction long candidates (ADAUSDT, SOLUSDT) are dropped to reduce noise and unnecessary exposure. MATICUSDT is kept but scaled down to reflect the neutral environment. The short candidates (AVAXUSDT, ETHUSDT, XRPUSDT) exhibit significantly stronger conviction scores in magnitude; AVAXUSDT is kept at full size due to its high conviction (-0.50), while ETH and XRP are slightly scaled back to manage overall short exposure in a neutral regime.",
+  "size_scale": {
+   "AVAXUSDT": 1.0,
+   "ETHUSDT": 0.8,
+   "MATICUSDT": 0.8,
+   "XRPUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":1.183085,\"conviction\":0.54745,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.156115,\"conviction\":-0.479521,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.315618,\"conviction\":-0.320017,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.364365,\"conviction\":-1.0,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.260954,\"conviction\":-0.896589,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.346052,\"conviction\":-0.981687,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "MATICUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The regime is normal and neutral. ADAUSDT is the only long with positive conviction and a strong composite score, validating its inclusion. The other longs (BNBUSDT, NEARUSDT) exhibit negative conviction, indicating internal signal conflict, and are dropped to manage risk. The shorts (AVAXUSDT, MATICUSDT, SOLUSDT) show strong negative conviction aligning with their directional bias, but MATICUSDT is scaled down slightly due to a weaker composite score compared to the others.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "AVAXUSDT": 1.0,
+   "MATICUSDT": 0.8,
+   "SOLUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.280892,\"conviction\":-0.078147,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.517246,\"conviction\":0.158206,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.203832,\"conviction\":-0.155207,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.57517,\"conviction\":-0.934209,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.640961,\"conviction\":-1.0,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.196994,\"conviction\":-0.556033,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "MATICUSDT",
+   "ADAUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split probabilities (bull/bear/neutral), suggesting a lack of strong directional bias. In this environment, low or negative conviction longs (ETHUSDT, XRPUSDT) are vulnerable to chop and should be dropped. The sole long with positive conviction (MATICUSDT) is kept. On the short side, ADAUSDT and NEARUSDT display very strong negative composite and conviction scores, warranting full size. SOLUSDT has a weaker composite score and is thus scaled down by 50% to mitigate risk.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "MATICUSDT": 1.0,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 0.5
+  }
+ }
+}

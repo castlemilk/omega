@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.551641,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.551641,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.325152,\"conviction\":0.773511,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.118524,\"conviction\":0.329835,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.391695,\"conviction\":0.056664,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.283595,\"conviction\":0.164763,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":8,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "BNBUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "MATICUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "Regime is 'normal' with equal bull/bear probabilities (0.3333), indicating a lack of clear macro direction. In a neutral market, we should rely heavily on high-conviction idiosyncratic signals and avoid marginal trades. High-conviction longs (ETHUSDT, MATICUSDT) are retained at full size, while moderate-conviction NEARUSDT is kept but scaled down to limit exposure. All short candidates (BNBUSDT, SOLUSDT, XRPUSDT) exhibit exceptionally low conviction (<0.35) and weak composite scores, making them poor risk-adjusted bets that are likely to result in chop. They are dropped.",
+  "size_scale": {
+   "ETHUSDT": 1.0,
+   "MATICUSDT": 1.0,
+   "NEARUSDT": 0.5
+  }
+ }
+}

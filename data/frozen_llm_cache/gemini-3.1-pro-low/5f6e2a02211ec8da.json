@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.056486,\"conviction\":0.156612,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.181998,\"conviction\":0.282124,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.181998,\"conviction\":0.282124,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.077955,\"conviction\":0.022171,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.085518,\"conviction\":0.014608,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.106908,\"conviction\":-0.006782,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2972,\"bull_prob\":0.323,\"cycle\":21,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "MATICUSDT",
+   "ADAUSDT",
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slight bullish bias (bull_prob: 32.3%, bear_prob: 29.7%). Long candidates AVAXUSDT and MATICUSDT exhibit strong composite and conviction scores and are kept at full size. ADAUSDT is kept but slightly scaled down due to its lower composite score. On the short side, convictions are extremely weak. XRPUSDT shows a negative conviction score (-0.006) which conflicts with the short signal, so it is dropped. The shorts for ETHUSDT and SOLUSDT are kept but scaled down by 50% due to their low conviction scores and the mildly bullish macro context.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "ETHUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

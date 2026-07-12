@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.231352,\"conviction\":-0.436517,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.20482,\"conviction\":-0.463049,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.128196,\"conviction\":-0.539673,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.093506,\"conviction\":-0.761375,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.265382,\"conviction\":-0.933251,\"side\":\"short\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.215992,\"conviction\":-0.883861,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT",
+   "ARBUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a neutral macro regime with equal bull/bear probabilities, candidates with weak composite scores and highly negative conviction scores present elevated risk. XRPUSDT (weakest long composite) and ARBUSDT (weakest short composite) are dropped to prune low-quality signals. The remaining longs (BNBUSDT, ETHUSDT) are kept but scaled down by 50% due to negative conviction scores that conflict with their long direction. The remaining shorts (NEARUSDT, SUIUSDT) exhibit stronger composite signals in the short direction and are kept, but scaled slightly to 0.8 to account for the neutral regime.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "NEARUSDT": 0.8,
+   "SUIUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.163325,\"conviction\":0.132722,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.118815,\"conviction\":0.088212,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.199291,\"conviction\":0.168688,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.105421,\"conviction\":-0.136024,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.067455,\"conviction\":-0.098058,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.099751,\"conviction\":-0.130354,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.302,\"bull_prob\":0.32,\"cycle\":45,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "SUIUSDT",
+   "ARBUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull (0.32) and bear (0.302) probabilities, suggesting a mixed, trendless market environment. In this context, low-conviction signals are more likely to be noise. MATICUSDT (Long, conviction 0.088) and ETHUSDT (Short, conviction -0.098) exhibit the weakest absolute convictions and are dropped to tighten the book. SUIUSDT and ARBUSDT show the strongest absolute convictions on the long and short sides, respectively, and are kept at full size. BNBUSDT and SOLUSDT present moderate signals; they are kept but scaled down to 0.8 to prudently manage overall gross exposure in a neutral macro state.",
+  "size_scale": {
+   "BNBUSDT": 0.8,
+   "SOLUSDT": 0.8
+  }
+ }
+}

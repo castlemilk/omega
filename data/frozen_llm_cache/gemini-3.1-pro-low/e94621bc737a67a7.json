@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.126326,\"conviction\":0.225572,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.097449,\"conviction\":0.196694,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.032909,\"conviction\":0.132155,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.078045,\"conviction\":0.021201,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.13034,\"conviction\":-0.031094,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.073202,\"conviction\":0.026044,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3017,\"bull_prob\":0.3185,\"cycle\":21,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "NEARUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "SOLUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "Macro context is a 'normal' regime with a slight bullish tilt (bull_prob 0.3185 vs bear_prob 0.3017). BNBUSDT and ETHUSDT show strong alignment between composite and conviction scores, warranting full size. SOLUSDT has a notably weaker composite score relative to other longs and is scaled down. For shorts, MATICUSDT shows strong conviction in the short direction (negative conviction aligned with negative composite). ADAUSDT and NEARUSDT exhibit contradictory signals with negative composite scores but positive conviction, presenting elevated risk, so they are dropped.",
+  "size_scale": {
+   "BNBUSDT": 1.0,
+   "ETHUSDT": 1.0,
+   "MATICUSDT": 1.0,
+   "SOLUSDT": 0.5
+  }
+ }
+}

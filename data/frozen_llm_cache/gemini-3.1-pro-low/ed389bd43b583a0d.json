@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.493104,\"conviction\":0.984039,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.427797,\"conviction\":0.918732,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.369924,\"conviction\":0.860858,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.302703,\"conviction\":0.188232,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.329379,\"conviction\":0.161556,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.481971,\"conviction\":0.008963,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "BNBUSDT",
+   "SUIUSDT",
+   "ARBUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with equal bull/bear probabilities, implying a non-directional market where strict signal conviction is necessary. High conviction longs (AVAX, BNB, SUI) are kept at full size. Shorts display very low conviction despite negative composites. SOLUSDT conviction is exceptionally low (0.0089), posing extreme signal noise risk, and is thus dropped. ARB and ETH shorts are retained for some delta neutrality but scaled down by 50% due to poor conviction scores (<0.2) in a neutral regime.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "ETHUSDT": 0.5
+  }
+ }
+}

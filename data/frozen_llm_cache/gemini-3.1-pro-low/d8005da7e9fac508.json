@@ -1,0 +1,22 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.12004,\"conviction\":-0.359093,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.233879,\"conviction\":-0.245255,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.101356,\"conviction\":-0.377778,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.142829,\"conviction\":-0.621963,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.290491,\"conviction\":-0.769625,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3028,\"bull_prob\":0.3117,\"cycle\":26,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "XRPUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The current macro regime is 'crisis', demanding strict risk management. All candidates display highly negative conviction scores. The long candidates are particularly vulnerable in a crisis; ADA and XRP are dropped due to weak composite signal and poor conviction. BNB has the best relative composite among longs and is kept, but scaled down significantly to 0.3. For the shorts, SOL has a strong negative composite (-0.29) which aligns well with crisis conditions, but its extremely low conviction (-0.76) requires reducing its size scale to 0.5. MATIC is dropped due to its weaker composite and poor conviction.",
+  "size_scale": {
+   "BNBUSDT": 0.3,
+   "SOLUSDT": 0.5
+  }
+ }
+}

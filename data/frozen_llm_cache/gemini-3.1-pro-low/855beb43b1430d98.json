@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.047802,\"conviction\":0.113124,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.057802,\"conviction\":0.123124,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.083264,\"conviction\":0.148585,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.083067,\"conviction\":-0.017746,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.082583,\"conviction\":-0.017261,\"side\":\"short\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.068697,\"conviction\":-0.003376,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3011,\"bull_prob\":0.3202,\"cycle\":50,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ETHUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "In a 'normal' regime with slightly higher bull_prob (0.3202) than bear_prob (0.3011), the long candidates show much stronger conviction (0.11 to 0.15) relative to their composite scores compared to the short candidates, which have very weak conviction scores (near zero, -0.003 to -0.017) despite their composite signals. Dropping shorts due to poor conviction alignment in a balanced/slightly bullish macro state. Keeping longs, but slightly scaling down AVAXUSDT due to its comparatively lowest composite score among the longs.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "ETHUSDT": 1.0,
+   "MATICUSDT": 1.0
+  }
+ }
+}

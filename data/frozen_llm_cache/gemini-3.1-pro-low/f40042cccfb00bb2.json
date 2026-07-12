@@ -1,0 +1,20 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.079022,\"conviction\":-0.412001,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.079022,\"conviction\":-0.412001,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.079022,\"conviction\":-0.412001,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3102,\"bull_prob\":0.31,\"cycle\":41,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "The macro state is highly uncertain with bear and bull probabilities nearly identical (~0.31), and the market is in a 'high_vol' regime. Shorting altcoins in a high volatility environment with ambiguous macro direction carries significant risk of short squeezes. Furthermore, all three candidates exhibit identical, relatively weak short signals, indicating generic beta exposure rather than distinct alpha. XRPUSDT is dropped due to its propensity for idiosyncratic headline risk. The remaining two candidates are scaled down by 50% to strictly manage risk and reduce overall beta exposure to a sudden volatility spike.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "MATICUSDT": 0.5
+  }
+ }
+}

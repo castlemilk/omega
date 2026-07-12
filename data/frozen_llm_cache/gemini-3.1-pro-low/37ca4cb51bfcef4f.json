@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.319161,\"conviction\":0.887621,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.426426,\"conviction\":0.994887,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.431539,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.193378,\"conviction\":0.375083,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.30491,\"conviction\":0.26355,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.546126,\"conviction\":0.022335,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":2,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.9,
+  "drop": [
+   "ARBUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "NEARUSDT",
+   "ADAUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly split bull/bear probabilities (0.3333 each). In a neutral regime, it is prudent to retain high-conviction trades and drop low-conviction signals to minimize noise and unnecessary risk. The long candidates (SOL, NEAR, ADA) have very strong conviction scores (>0.85). Conversely, the short candidates (ARB, MATIC, XRP) all exhibit exceptionally low conviction scores (<0.40), making them sub-optimal risks without a strong bear macro tailwind. Therefore, the low-conviction shorts are dropped, and ADA is scaled down slightly as the weakest of the longs.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 1.0
+  }
+ }
+}

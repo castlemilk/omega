@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.085366,\"conviction\":-0.292413,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.126747,\"conviction\":-0.251031,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.126747,\"conviction\":-0.251031,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.13597,\"conviction\":-0.513748,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.0843,\"conviction\":-0.462078,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.153546,\"conviction\":-0.531324,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3088,\"bull_prob\":0.308,\"cycle\":45,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "AVAXUSDT",
+   "ETHUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro regime is 'crisis', which strongly implies a risk-off environment with high volatility. All long candidates (AVAXUSDT, ETHUSDT, SOLUSDT) show weak composite scores and negative conviction, which conflicts with taking long risk during a crisis; they are dropped. The short candidates (BNBUSDT, MATICUSDT, XRPUSDT) align well with a risk-off crisis regime and are kept, but scaled down to 0.8 to mitigate exposure to potential high-volatility spikes typical of crisis periods.",
+  "size_scale": {
+   "BNBUSDT": 0.8,
+   "MATICUSDT": 0.8,
+   "XRPUSDT": 0.8
+  }
+ }
+}

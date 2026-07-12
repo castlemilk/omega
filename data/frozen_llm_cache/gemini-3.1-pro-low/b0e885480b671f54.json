@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.091087,\"conviction\":-0.026993,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.205492,\"conviction\":0.087412,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.205492,\"conviction\":0.087412,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.137511,\"conviction\":-0.255591,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.142716,\"conviction\":-0.260796,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.129836,\"conviction\":-0.247917,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3035,\"bull_prob\":0.3096,\"cycle\":53,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT"
+  ],
+  "keep": [
+   "SOLUSDT",
+   "XRPUSDT",
+   "BNBUSDT",
+   "ETHUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime, taking long exposure carries elevated systematic risk. ARBUSDT is dropped outright due to a negative conviction score on a long signal, which contradicts taking risk. SOLUSDT and XRPUSDT are kept due to positive composite and conviction scores, but their sizes are scaled down to 50% to mitigate long exposure in a crisis environment. The short candidates (BNBUSDT, ETHUSDT, SUIUSDT) are well-aligned with the macro crisis regime and demonstrate strong conviction scores (deeply negative), so they are kept at full size.",
+  "size_scale": {
+   "BNBUSDT": 1.0,
+   "ETHUSDT": 1.0,
+   "SOLUSDT": 0.5,
+   "SUIUSDT": 1.0,
+   "XRPUSDT": 0.5
+  }
+ }
+}

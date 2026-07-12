@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.087823,\"conviction\":-0.265927,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.13874,\"conviction\":-0.215009,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.13874,\"conviction\":-0.215009,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.089789,\"conviction\":-0.443538,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.187321,\"conviction\":-0.54107,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.140441,\"conviction\":-0.49419,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.313,\"bull_prob\":0.3076,\"cycle\":43,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "NEARUSDT",
+   "SUIUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "ETHUSDT",
+   "XRPUSDT"
+  ],
+  "reasoning": "The macro state is identified as 'crisis' with roughly equal bear/bull probabilities, implying extreme uncertainty and high volatility. Taking long positions in high-beta altcoins (ARB, NEAR, SUI) is highly dangerous in this regime, especially considering their negative conviction scores, so they are dropped. The short positions in higher market-cap assets (BNB, ETH, XRP) align better with a crisis environment. However, due to negative conviction values and the risk of volatile liquidity events/short squeezes, their sizes are scaled down by 50%.",
+  "size_scale": {
+   "BNBUSDT": 0.5,
+   "ETHUSDT": 0.5,
+   "XRPUSDT": 0.5
+  }
+ }
+}

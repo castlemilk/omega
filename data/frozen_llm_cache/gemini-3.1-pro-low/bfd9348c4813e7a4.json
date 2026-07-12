@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.064207,\"conviction\":-0.143472,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.126724,\"conviction\":-0.080955,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.052625,\"conviction\":-0.155054,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.121473,\"conviction\":-0.329152,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.053955,\"conviction\":-0.261634,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.170953,\"conviction\":-0.378632,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":10,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.8,
+  "drop": [
+   "ADAUSDT",
+   "NEARUSDT",
+   "ETHUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "ARBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with evenly balanced bull/bear probabilities, but all candidates exhibit significantly negative conviction scores, suggesting internal signal conflict or low reliability. Risk is reduced by dropping candidates with the weakest absolute composite signals (ADA, NEAR, ETH). The remaining candidates (AVAX, ARB, SUI) have stronger composite scores but are scaled down significantly to account for their deeply negative convictions.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.8,
+   "SUIUSDT": 0.4
+  }
+ }
+}

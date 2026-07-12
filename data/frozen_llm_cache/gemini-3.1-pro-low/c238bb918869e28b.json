@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.588204,\"conviction\":0.410535,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.180882,\"conviction\":0.003213,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":0.251913,\"conviction\":0.074244,\"side\":\"long\",\"symbol\":\"XRPUSDT\"},{\"composite\":-0.328284,\"conviction\":-0.505953,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.171263,\"conviction\":-0.348932,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.170839,\"conviction\":-0.348508,\"side\":\"short\",\"symbol\":\"MATICUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":6,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "SOLUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "ARBUSDT",
+   "ETHUSDT",
+   "MATICUSDT"
+  ],
+  "reasoning": "Given the 'normal' regime with perfectly balanced bull/bear probabilities, overall directional exposure should be kept relatively neutral and low-conviction trades should be avoided. SOLUSDT and XRPUSDT have extremely low conviction scores (0.003 and 0.074 respectively) and represent weak signals that are best dropped in a directionless macro environment. ADAUSDT (long) and ARBUSDT (short) show strong conviction and are kept at full size. ETHUSDT and MATICUSDT (shorts) have moderate conviction and are kept but slightly scaled down to mitigate risk and balance the net exposure of the book.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "ARBUSDT": 1.0,
+   "ETHUSDT": 0.8,
+   "MATICUSDT": 0.8
+  }
+ }
+}

@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.129049,\"conviction\":-0.271603,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.129049,\"conviction\":-0.271603,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.129049,\"conviction\":-0.271603,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.115688,\"conviction\":-0.51634,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.128803,\"conviction\":-0.529455,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.111273,\"conviction\":-0.511925,\"side\":\"short\",\"symbol\":\"SOLUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3106,\"bull_prob\":0.31,\"cycle\":43,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ADAUSDT",
+   "ETHUSDT",
+   "MATICUSDT"
+  ],
+  "keep": [
+   "ARBUSDT",
+   "AVAXUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "In a 'crisis' macro regime, taking long positions introduces excessive directional risk, especially when the signal conviction scores are heavily negative. Therefore, we drop all long candidates to preserve capital. Short positions conceptually align with the crisis regime; however, due to the poor signal conviction scores (<-0.5), we scale down all short candidates by 50% to mitigate risk while maintaining regime-aligned directional exposure.",
+  "size_scale": {
+   "ARBUSDT": 0.5,
+   "AVAXUSDT": 0.5,
+   "SOLUSDT": 0.5
+  }
+ }
+}

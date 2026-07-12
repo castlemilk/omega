@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.133933,\"conviction\":-0.052619,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.133933,\"conviction\":-0.052619,\"side\":\"long\",\"symbol\":\"MATICUSDT\"},{\"composite\":0.133933,\"conviction\":-0.052619,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":-0.072931,\"conviction\":-0.259483,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.145203,\"conviction\":-0.331755,\"side\":\"short\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.130588,\"conviction\":-0.31714,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.2995,\"bull_prob\":0.3224,\"cycle\":51,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.75,
+  "drop": [
+   "NEARUSDT",
+   "ARBUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "MATICUSDT",
+   "ETHUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with a slight bullish bias (bull_prob 0.3224 > bear_prob 0.2995). However, conviction scores are negative across the entire candidate basket, indicating weak underlying model confidence. Dropped NEAR and ARB to reduce overall exposure and risk. Dropped XRP short due to the slight bullish regime bias conflicting with a weak short signal. Kept AVAX and MATIC longs to align with the slight bullish macro state, but scaled down to 50% size due to poor conviction. Kept ETH short as a beta hedge against the altcoin longs, scaled to 70%.",
+  "size_scale": {
+   "AVAXUSDT": 0.5,
+   "ETHUSDT": 0.7,
+   "MATICUSDT": 0.5
+  }
+ }
+}

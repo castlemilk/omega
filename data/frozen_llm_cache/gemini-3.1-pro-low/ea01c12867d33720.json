@@ -1,0 +1,26 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.174201,\"conviction\":-0.414899,\"side\":\"long\",\"symbol\":\"BNBUSDT\"},{\"composite\":0.109107,\"conviction\":-0.479993,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":0.305428,\"conviction\":-0.283673,\"side\":\"long\",\"symbol\":\"SUIUSDT\"},{\"composite\":-0.153924,\"conviction\":-0.743024,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.161329,\"conviction\":-0.750429,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.181953,\"conviction\":-0.771054,\"side\":\"short\",\"symbol\":\"NEARUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":14,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "BNBUSDT",
+   "SUIUSDT",
+   "ARBUSDT",
+   "AVAXUSDT",
+   "NEARUSDT"
+  ],
+  "reasoning": "In a neutral market regime (equal bull/bear probability), long candidates exhibit broadly negative conviction scores, indicating weak upside momentum. ETHUSDT is dropped as the weakest long candidate. BNBUSDT is kept but scaled down by 50% due to poor conviction. SUIUSDT exhibits the strongest composite among longs and is retained at full size. All short candidates (ARB, AVAX, NEAR) demonstrate strong directional conviction and composites, and are retained at full size.",
+  "size_scale": {
+   "ARBUSDT": 1.0,
+   "AVAXUSDT": 1.0,
+   "BNBUSDT": 0.5,
+   "NEARUSDT": 1.0,
+   "SUIUSDT": 1.0
+  }
+ }
+}

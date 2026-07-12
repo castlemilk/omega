@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.122116,\"conviction\":0.111067,\"side\":\"long\",\"symbol\":\"ARBUSDT\"},{\"composite\":0.186303,\"conviction\":0.175253,\"side\":\"long\",\"symbol\":\"ETHUSDT\"},{\"composite\":-0.079111,\"conviction\":-0.09016,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.065545,\"conviction\":-0.076594,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.072689,\"conviction\":-0.083738,\"side\":\"short\",\"symbol\":\"SUIUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3151,\"bull_prob\":0.3009,\"cycle\":41,\"regime\":\"crisis\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT"
+  ],
+  "keep": [
+   "ETHUSDT",
+   "AVAXUSDT",
+   "BNBUSDT",
+   "SUIUSDT"
+  ],
+  "reasoning": "In a 'crisis' regime with mixed bear/bull probabilities, going long high-beta altcoins like ARB is extremely risky and often leads to outsized losses during sudden liquidations. Dropping ARB long. ETH long is kept but scaled down by 50% as a safer directional bet but still exposed to macro volatility. Short positions on AVAX, BNB, and SUI align better with a risk-off crisis environment, but are scaled down to 0.8 to account for elevated volatility and potential short squeezes.",
+  "size_scale": {
+   "AVAXUSDT": 0.8,
+   "BNBUSDT": 0.8,
+   "ETHUSDT": 0.5,
+   "SUIUSDT": 0.8
+  }
+ }
+}

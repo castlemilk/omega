@@ -1,0 +1,23 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.349811,\"conviction\":-0.059771,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.349811,\"conviction\":-0.059771,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.233917,\"conviction\":-0.643499,\"side\":\"short\",\"symbol\":\"ADAUSDT\"},{\"composite\":-0.192429,\"conviction\":-0.60201,\"side\":\"short\",\"symbol\":\"AVAXUSDT\"},{\"composite\":-0.264265,\"conviction\":-0.673847,\"side\":\"short\",\"symbol\":\"BNBUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3119,\"bull_prob\":0.3053,\"cycle\":49,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "AVAXUSDT",
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with bear probability (0.3119) slightly edging out bull probability (0.3053). The long candidates (NEAR, SOL) show negative conviction (-0.059) despite positive composite scores, indicating weak internal signal alignment for upside in a neutral/bearish-leaning market; thus, they are dropped to mitigate risk. The short candidates (ADA, AVAX, BNB) exhibit strong negative composite scores and highly negative conviction (<-0.6), indicating strong short signals that align well with the slight bearish tilt. Their sizing is scaled down to 0.8 to reflect the lack of a strong directional macro regime.",
+  "size_scale": {
+   "ADAUSDT": 0.8,
+   "AVAXUSDT": 0.8,
+   "BNBUSDT": 0.8
+  }
+ }
+}

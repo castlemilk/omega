@@ -1,0 +1,24 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.321161,\"conviction\":0.951036,\"side\":\"long\",\"symbol\":\"ADAUSDT\"},{\"composite\":0.362952,\"conviction\":0.992826,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.370125,\"conviction\":1.0,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.647747,\"conviction\":-0.017872,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.263806,\"conviction\":0.366069,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.493549,\"conviction\":0.136326,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":4,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "ARBUSDT",
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "ADAUSDT",
+   "NEARUSDT",
+   "SOLUSDT"
+  ],
+  "reasoning": "The macro regime is 'normal' with balanced bull/bear probabilities. Long candidates (SOLUSDT, NEARUSDT, ADAUSDT) exhibit high composite scores and exceptionally strong conviction (>0.95), making them solid keeps at full size. Short candidates (ARBUSDT, MATICUSDT, XRPUSDT) have low or even negative conviction scores despite some strong composite signals (like ARBUSDT), indicating unreliability in the signal breakdown. Given the neutral regime, holding low-conviction shorts introduces unnecessary risk, so they are dropped.",
+  "size_scale": {
+   "ADAUSDT": 1.0,
+   "NEARUSDT": 1.0,
+   "SOLUSDT": 1.0
+  }
+ }
+}

@@ -1,0 +1,25 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":0.403112,\"conviction\":0.749051,\"side\":\"long\",\"symbol\":\"AVAXUSDT\"},{\"composite\":0.250037,\"conviction\":0.595976,\"side\":\"long\",\"symbol\":\"NEARUSDT\"},{\"composite\":0.385812,\"conviction\":0.731751,\"side\":\"long\",\"symbol\":\"SOLUSDT\"},{\"composite\":-0.6854,\"conviction\":-0.339461,\"side\":\"short\",\"symbol\":\"ARBUSDT\"},{\"composite\":-0.299114,\"conviction\":0.046825,\"side\":\"short\",\"symbol\":\"MATICUSDT\"},{\"composite\":-0.404086,\"conviction\":-0.058146,\"side\":\"short\",\"symbol\":\"XRPUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3333,\"bull_prob\":0.3333,\"cycle\":6,\"regime\":\"normal\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.85,
+  "drop": [
+   "MATICUSDT",
+   "XRPUSDT"
+  ],
+  "keep": [
+   "AVAXUSDT",
+   "NEARUSDT",
+   "SOLUSDT",
+   "ARBUSDT"
+  ],
+  "reasoning": "Macro regime is neutral. The long candidates (AVAX, SOL, NEAR) have strong positive conviction scores aligning with their composite signals. However, among the short candidates, MATIC and XRP have very weak or even slightly positive conviction scores which contradict the short side direction; therefore they are dropped. ARB is kept but scaled down slightly as it's the sole remaining short hedge in a neutral regime, while NEAR is slightly scaled down due to lower relative conviction compared to AVAX and SOL.",
+  "size_scale": {
+   "ARBUSDT": 0.75,
+   "AVAXUSDT": 1.0,
+   "NEARUSDT": 0.8,
+   "SOLUSDT": 1.0
+  }
+ }
+}

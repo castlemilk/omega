@@ -1,0 +1,18 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"candidates\":[{\"composite\":-0.203307,\"conviction\":-0.475832,\"side\":\"short\",\"symbol\":\"BNBUSDT\"},{\"composite\":-0.044315,\"conviction\":-0.31684,\"side\":\"short\",\"symbol\":\"ETHUSDT\"}],\"cycle_ctx\":{\"bear_prob\":0.3008,\"bull_prob\":0.3178,\"cycle\":44,\"regime\":\"high_vol\"},\"task\":\"You are a risk-review layer over a quantitative crypto trading book. Review this cycle's candidate basket. You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] \\u2014 you may only reduce size, never increase it); you cannot add positions. Favour vetoing candidates whose signal breakdown conflicts with the macro/sentiment state or with similar past decisions that lost money. Respond with ONLY a JSON object: {\\\"keep\\\": [symbols], \\\"drop\\\": [symbols], \\\"size_scale\\\": {symbol: float}, \\\"reasoning\\\": str, \\\"confidence\\\": float in [0,1]}. Every candidate symbol must appear in exactly one of keep/drop.\"}",
+ "response": {
+  "confidence": 0.8,
+  "drop": [
+   "ETHUSDT"
+  ],
+  "keep": [
+   "BNBUSDT"
+  ],
+  "reasoning": "The macro regime is 'high_vol' with a slightly higher bull probability (0.3178) than bear probability (0.3008). Taking short positions in a high-volatility, slightly bullish environment carries elevated risk. ETHUSDT is dropped because its composite score (-0.044) and conviction (-0.316) are too weak to justify a short position against the macro lean. BNBUSDT is kept as it has a stronger short conviction (-0.475), but its size is scaled down by 50% to mitigate risk given the conflicting macro state.",
+  "size_scale": {
+   "BNBUSDT": 0.5
+  }
+ }
+}
