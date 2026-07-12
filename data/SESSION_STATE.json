@@ -1,7 +1,7 @@
 {
-  "version": "v240-complete",
-  "step": "V240 COMPLETE (Fable 5) \u2014 all four tracks landed. A: ADOPTED universe_selective_enabled (blacklist {BTC,DOT,LINK}, 10 names): confirm grid pooled +$418 / crisis -$221 / trend +$1,056 / recent +$546, 0 det FAILs; STANDING BASELINE MOVED to crisis +$599 / trend +$2,997 / recent +$30 (future grid configs MUST include universe_selective_enabled: true). B: 160/160 solo-feed cells \u2014 whale_flow carries ~90% of series-ON trend breach (-$2,433) AND ~65% of crisis benefit (+$2,063); fear_greed/vix secondary trend draggers; dxy/yield_curve benign near-inert. C: gdelt frozen source SHIPPED (10 series 2019-12..2026-07 + geo_*_signal alias fix). D: reasoning layer SHIPPED (Gemini via agy pinned gemini-3.1-pro-low, frozen_llm_cache, LLMCacheMiss, flag default OFF, smoke PASS incl. repeat-sampling IDENTICAL).",
-  "next_action": "V241 (pre-reg updated 2026-07-12 in V241.md): reasoning-layer walk-forward. Phase 0 inertness tracer -> Phase 1 cache-fill (~8h wall-clock, $0 API) -> 32-cell frozen grid vs V240 selective baseline (OFF byte-identical to V240 confirm cells). Falsifier: recent mean-D > +$400 AND recent p25-D > +$500 AND trend/crisis mean-D > -$300. Queue: regime-gated whale_flow; {dxy,yield_curve} subset; gdelt solo cell; corr-spike tail cap (V242+).",
+  "version": "v241-in-flight",
+  "step": "V241 IN FLIGHT (Fable 5). M1 PASS: baseline spot-check 4/4 windows identical (ex-timestamp) to v240wf selective cells. M2 SHIPPED (661704a): inertness tracer (OMEGA_REASONING_TRACE), scale cap [0,1] (V241 contract tightening from V240 draft [0,1.5]), OMEGA_LLM_CACHE_FILL override (fill under frozen grid conditions, LLM-only live). M3 PASS: phase-0 tracer ACTIVE on snap_wf_20250305 (20 calls, 95% intervention, 44 drops/39 scale-downs on 108 slots, p50 15.4s); frozen replay sentinel N=2 PASS $0.00, 40/40 cache hits. M4 RUNNING: full cache-fill, pid in data/v241_pids.txt, resumable via scripts/v241_cache_fill.sh (.done markers).",
+  "next_action": "When fill completes: (1) intervention report over all 32 windows; (2) nohup scripts/v241_wf_grid.sh (frozen replay, sentinels N=2) -> v241_wf_aggregate.py applies pre-reg falsifier (recent mean>+400 AND recent p25>+500 AND trend/crisis mean>-300); (3) commit data/frozen_llm_cache entries; (4) V241.md results + verdict, README high-water only if ADOPT; push. If Fable 5 spend cap hits: hand off to Opus 4.8 from this checkpoint.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -45,8 +45,8 @@
     "data/signal_ic_history.json + training_version.txt: grid restored committed state before running.",
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
-  "last_commit": "75e6cd9",
-  "updated_at": "2026-07-12T04:15:00+00:00",
+  "last_commit": "a88b95e",
+  "updated_at": "2026-07-12T08:52:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -83,5 +83,12 @@
     "cells_total": 160,
     "max_parallel": 1,
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_signal/grid_state.json"
+  },
+  "v241_walkforward": {
+    "phase": "complete",
+    "cells_done": 1,
+    "cells_total": 1,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v241/grid_state.json"
   }
 }
