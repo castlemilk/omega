@@ -1,0 +1,174 @@
+{
+  "_source": "V240_SIGNAL_FORENSICS.md whale_flow solo-feed \u0394 (ON\u2212OFF)",
+  "_baseline_caveat": "\u0394 measured vs V238 legacy 4-name 'main' baseline, PRE-V240.A selective-universe adoption. The V240 standing baseline is a DIFFERENT universe (blacklist BTC/DOT/LINK); these \u0394 are an ESTIMATE of the crisis-gate lift, not a confirm-grid measurement.",
+  "distributions": {
+    "crisis": {
+      "n": 12,
+      "sum": 24756.81,
+      "mean": 2063.07,
+      "p25": -1447.16,
+      "p50": 1387.32,
+      "p75": 5210.53,
+      "min": -7346.36,
+      "max": 11546.8,
+      "n_positive": 8,
+      "n_negative": 4
+    },
+    "trend": {
+      "n": 10,
+      "sum": -24326.62,
+      "mean": -2432.66,
+      "p25": -1693.4,
+      "p50": 22.38,
+      "p75": 334.73,
+      "min": -22270.58,
+      "max": 4666.25,
+      "n_positive": 5,
+      "n_negative": 5
+    },
+    "recent": {
+      "n": 10,
+      "sum": -4352.51,
+      "mean": -435.25,
+      "p25": -2700.61,
+      "p50": -1142.75,
+      "p75": 55.5,
+      "min": -3032.3,
+      "max": 6929.66,
+      "n_positive": 3,
+      "n_negative": 7
+    }
+  },
+  "scatter": {
+    "crisis": {
+      "snap_wf_20200101": 1535.5,
+      "snap_wf_20200629": 350.59,
+      "snap_wf_20210326": 10750.21,
+      "snap_wf_20211221": 5767.93,
+      "snap_wf_20220321": -4005.44,
+      "snap_wf_20220917": 5024.73,
+      "snap_wf_20230614": 1239.14,
+      "snap_wf_20240310": 11546.8,
+      "snap_wf_20240608": 4265.81,
+      "snap_wf_20241205": -7346.36,
+      "snap_wf_20250901": -3663.82,
+      "snap_wf_20251130": -708.28
+    },
+    "trend": {
+      "snap_wf_20200331": 213.8,
+      "snap_wf_20200927": 164.18,
+      "snap_wf_20201226": -22270.58,
+      "snap_wf_20210624": -119.42,
+      "snap_wf_20220619": -1756.95,
+      "snap_wf_20221216": -6110.55,
+      "snap_wf_20230912": 2014.35,
+      "snap_wf_20231211": 4666.25,
+      "snap_wf_20240906": -1502.74,
+      "snap_wf_20250603": 375.04
+    },
+    "recent": {
+      "snap_wf_20200813": -184.73,
+      "snap_wf_20210922": 135.58,
+      "snap_wf_20230130": 2185.38,
+      "snap_wf_20230316": -2397.93,
+      "snap_wf_20230430": -209.09,
+      "snap_wf_20230729": -3032.3,
+      "snap_wf_20240723": 6929.66,
+      "snap_wf_20250305": -2901.17,
+      "snap_wf_20250718": -2076.41,
+      "snap_wf_20260228": -2801.5
+    }
+  },
+  "crisis_subset_analysis": {
+    "n_windows": 12,
+    "n_positive": 8,
+    "n_negative": 4,
+    "sum_all": 24756.81,
+    "sum_positive_only": 40480.71,
+    "largest_single_window": {
+      "id": "snap_wf_20240310",
+      "delta": 11546.8
+    },
+    "top1_share_of_positive_mass": 0.285,
+    "top2_share_of_positive_mass": 0.551,
+    "windows_sorted_ascending": [
+      [
+        "snap_wf_20241205",
+        -7346.36
+      ],
+      [
+        "snap_wf_20220321",
+        -4005.44
+      ],
+      [
+        "snap_wf_20250901",
+        -3663.82
+      ],
+      [
+        "snap_wf_20251130",
+        -708.28
+      ],
+      [
+        "snap_wf_20200629",
+        350.59
+      ],
+      [
+        "snap_wf_20230614",
+        1239.14
+      ],
+      [
+        "snap_wf_20200101",
+        1535.5
+      ],
+      [
+        "snap_wf_20240608",
+        4265.81
+      ],
+      [
+        "snap_wf_20220917",
+        5024.73
+      ],
+      [
+        "snap_wf_20211221",
+        5767.93
+      ],
+      [
+        "snap_wf_20210326",
+        10750.21
+      ],
+      [
+        "snap_wf_20240310",
+        11546.8
+      ]
+    ],
+    "read": "If top1/top2 share of positive mass is near 1.0, the crisis lift is carried by 1-2 windows (fragile); if spread across many, it is robust."
+  },
+  "mann_whitney": {
+    "group_a": "crisis (n=12)",
+    "group_b": "non-crisis trend+recent (n=20)",
+    "crisis_median": 1387.32,
+    "noncrisis_median": -196.91,
+    "U": 157.0,
+    "p_two_sided": 0.1554,
+    "p_greater_crisis_gt_noncrisis": 0.0777,
+    "separates_at_0.05": false,
+    "read": "H1: crisis-window whale_flow \u0394 stochastically exceeds non-crisis. p_greater < 0.05 \u21d2 the regime tag meaningfully separates the benefit."
+  },
+  "gate_sanity_check": {
+    "interpretation": "Crisis-gated whale_flow: ON in the 12 crisis windows, OFF (=baseline) in trend+recent. Only crisis windows move; trend/recent \u0394 = 0 by construction.",
+    "crisis_only_lift_sum": 24756.81,
+    "crisis_only_lift_mean_per_window": 2063.07,
+    "pooled_gate_delta_sum": 24756.81,
+    "pooled_gate_delta_mean_over_32": 773.65,
+    "bars": {
+      "crisis_lift_bar": 1500.0,
+      "pooled_bar": 800.0
+    },
+    "verdict_per_window_mean": {
+      "crisis_lift_clears": true,
+      "pooled_clears": false,
+      "both_clear": false
+    },
+    "note": "Bars read as per-window mean-$. crisis_only_lift_mean_per_window vs $1,500 bar; pooled_gate_delta_mean_over_32 vs $800 bar. Sum figures reported for reference."
+  }
+}
