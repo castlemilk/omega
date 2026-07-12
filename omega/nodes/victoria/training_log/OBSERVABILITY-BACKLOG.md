@@ -369,6 +369,18 @@ VETO-EVERYTHING / ACTIVE verdict). Standing instrument for any LLM-in-loop
 subsystem; the phase-0 gate it implements is now the template for "prove the
 mechanism moves before burning the grid" on model-mediated features.
 
+## Queued from V244 (2026-07-13 — corr-cap refuted at scoring)
+
+### V245 #1 — reusable ledger↔bar join helper  (effort: S)
+V236, V242, and V244 each re-derived the trades.csv → snapshot-bar mapping
+(`entry_bar = cycle − hold_cycles + 28`) inline in a one-off analysis script.
+Extract it into `scripts/ledger_join.py` (load window ledgers + frozen
+snapshot, yield per-trade rows joined to any per-bar series) so every future
+$0 separator scorer starts from a tested join instead of a fourth
+re-derivation. What it would have caught: nothing — but it cuts the cost and
+mapping-bug risk of the separator-first rule that has now killed three bets
+(V236/V237/V244) at $0.
+
 ## How to use this file
 
 1. During a reflection's observability-gap audit, add new gaps as `V###+1 #N`
