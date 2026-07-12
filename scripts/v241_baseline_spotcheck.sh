@@ -32,7 +32,11 @@ while IFS='|' read -r wid regime path cycles; do
   [ -z "$wid" ] && continue
   vprefix="v241base_${wid}"
   echo "--- SPOTCHECK $wid ($regime, $cycles cycles) $(date -u +%FT%TZ) ---"
-  git checkout -q data/macro_cache.db 2>/dev/null || true
+  # Restore committed run-state before each cell — the V240 grid ran from
+  # committed state (SESSION_STATE: "grid restored committed state before
+  # running"); training runs mutate these files, so a dirty tree here breaks
+  # cross-session reproducibility.
+  git checkout -q data/macro_cache.db data/signal_ic_history.json data/training_version.txt data/.cache_manifest.json 2>/dev/null || true
   rm -f data/macro_cache.db-wal data/macro_cache.db-shm 2>/dev/null || true
   CYCLES="$cycles" SNAP_OVERRIDE="$path" WINDOW_LABEL="$wid" \
   EXPECT_SKEW=on EXPECT_GATE=on EXPECT_IC=off EXPECT_BRAKE=off EXPECT_PREDEMEAN=post_demean EXPECT_THROTTLE=off \

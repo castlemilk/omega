@@ -58,7 +58,9 @@ while IFS='|' read -r wid path regime cycles; do
   vprefix="v241fill_${wid}"
   ncache_before=$(ls data/frozen_llm_cache/gemini-3.1-pro-low/*.json 2>/dev/null | grep -cv MANIFEST)
   log "--- FILL $wid regime=$regime cycles=$cycles cache_before=$ncache_before start $(date -u +%FT%TZ) ---"
-  git checkout -q data/macro_cache.db 2>/dev/null || true
+  # Committed run-state restore (V240 protocol; prompt-hash identity depends
+  # on it — see SESSION_STATE "grid restored committed state before running").
+  git checkout -q data/macro_cache.db data/signal_ic_history.json data/training_version.txt data/.cache_manifest.json 2>/dev/null || true
   rm -f data/macro_cache.db-wal data/macro_cache.db-shm 2>/dev/null || true
   t0=$(date +%s)
   OMEGA_LLM_CACHE_FILL=1 \
