@@ -927,6 +927,20 @@ class VictoriaFeatures:
     when universe_full_enabled is set. Default OFF => byte-identical 4-name
     baseline."""
 
+    universe_blacklist_extended: bool = False
+    """V243 Candidate A: extend the active universe blacklist with the
+    persistent negative-edge names {ADA, NEAR, ARB} (_V243_EXTRA_BLACKLIST in
+    strategy.py). The Kelly-sign matrix over the V240 selective confirm ledgers
+    (V243_PORTFOLIO_CANDIDATES.md) shows ADA negative-edge in all three regimes
+    (persistence 0.83 in recent), ARB negative in crisis+trend, NEAR negative in
+    crisis+recent; in-sample drop-only paper Δ = crisis +$838 / trend +$163 /
+    recent +$374 / pooled +$482. Unlike the other universe flags, these three
+    names sit OUTSIDE _TRADING_BLACKLIST (they are part of the legacy 4-name
+    universe {ETH, ADA, NEAR, ARB}), so _universe_blocked consults this set
+    BEFORE the _TRADING_BLACKLIST guard — the flag therefore composes with the
+    selective/full universe rather than being masked by them. Default OFF =>
+    byte-identical to the active base universe."""
+
     reasoning_layer_enabled: bool = False
     """V240 Track D: per-cycle basket review by a frontier reasoning model
     (Gemini via the `agy` CLI — see training_log/V240.md "Model choice";

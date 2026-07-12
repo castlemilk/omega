@@ -222,15 +222,34 @@ _SELECTIVE_UNIVERSE_BLACKLIST: frozenset[str] = frozenset(
     {"BTCUSDT", "DOTUSDT", "LINKUSDT"}
 )
 
+# V243 Candidate A: an extension blacklist of persistent negative-edge names.
+# V243_PORTFOLIO_CANDIDATES.md Kelly-sign matrix over the V240 selective confirm
+# ledgers shows ADA negative-edge in ALL three regimes (persistence 0.83 in
+# recent), ARB negative in crisis+trend, NEAR negative in crisis+recent. Gated by
+# universe_blacklist_extended (default OFF). NOTE: these three names are NOT in
+# _TRADING_BLACKLIST — they are part of the legacy 4-name universe {ETH, ADA,
+# NEAR, ARB} and are traded under both the legacy and selective universes — so
+# this set MUST be consulted BEFORE the `ticker not in _TRADING_BLACKLIST` guard
+# in _universe_blocked, or it would never fire.
+_V243_EXTRA_BLACKLIST: frozenset[str] = frozenset(
+    {"ADAUSDT", "NEARUSDT", "ARBUSDT"}
+)
+
 
 def _universe_blocked(ticker: str, features) -> bool:
     """Whether `ticker` is excluded from trading by the universe blacklist.
 
-    Precedence: universe_full_enabled (V239, blacklist = empty) >
-    universe_selective_enabled (V240, blacklist = {BTC, DOT, LINK}) >
-    legacy _TRADING_BLACKLIST (4-name universe). Both flags OFF reproduces the
-    legacy membership test byte-for-byte.
+    Precedence: universe_blacklist_extended (V243, drops {ADA, NEAR, ARB} on top
+    of whatever base universe is active) > universe_full_enabled (V239, base
+    blacklist = empty) > universe_selective_enabled (V240, base blacklist =
+    {BTC, DOT, LINK}) > legacy _TRADING_BLACKLIST (4-name universe). All flags
+    OFF reproduces the legacy membership test byte-for-byte.
     """
+    # V243: the extension set is consulted first because its members are outside
+    # _TRADING_BLACKLIST; the guard below would otherwise short-circuit them to
+    # tradable regardless of the flag.
+    if features.universe_blacklist_extended and ticker in _V243_EXTRA_BLACKLIST:
+        return True
     if ticker not in _TRADING_BLACKLIST:
         return False
     if features.universe_full_enabled:
