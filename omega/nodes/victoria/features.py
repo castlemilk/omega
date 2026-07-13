@@ -940,6 +940,28 @@ class VictoriaFeatures:
     byte-identical V239 baseline. Falsifier eval is V241 (V240 is scaffolding
     + smoke only)."""
 
+    exit_adaptivity_enabled: bool = False
+    """V246: parametrized legacy exits in PaperTradingEngine. When ON,
+    run_training.py passes exit_trail_keep_frac / exit_max_hold_win /
+    exit_max_hold_lose to the engine instead of the pre-V246 literals
+    (0.5 / 10 / 6 — the 50%-giveback trailing stop and the 6/10 asymmetric
+    time exits in mark_to_market). Winning offline cell (exact bar-mark
+    replay, scripts/v246_exit_scorer_v2.py): trail_keep 0.25 + hold_win 8 —
+    let winners give back more before the trail fires, but cap their total
+    hold two cycles earlier. Default OFF => byte-identical baseline."""
+
+    exit_trail_keep_frac: float = 0.5
+    """V246: trailing stop fires when unrealized < this fraction of peak MFE
+    (legacy literal 0.5). Only read when exit_adaptivity_enabled."""
+
+    exit_max_hold_win: int = 10
+    """V246: max hold (cycles) for winning positions (legacy literal 10).
+    Only read when exit_adaptivity_enabled."""
+
+    exit_max_hold_lose: int = 6
+    """V246: max hold (cycles) for losing positions (legacy literal 6).
+    Only read when exit_adaptivity_enabled."""
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------

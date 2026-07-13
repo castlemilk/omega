@@ -98,6 +98,9 @@ class PaperTradingEngine:
         max_portfolio_exposure: float = 0.80,
         max_position_per_symbol: float = 0.15,
         exit_controller: ExitController | None = None,
+        trail_keep_frac: float = 0.5,
+        max_hold_win: int = 10,
+        max_hold_lose: int = 6,
     ) -> None:
         self.initial_capital = initial_capital
         self._db_url: str | None = db_url or os.environ.get("DATABASE_URL")
@@ -105,6 +108,11 @@ class PaperTradingEngine:
         self._max_position_per_symbol = max_position_per_symbol
         # ATR-based exit discipline (V128+). None = use legacy time/pct logic only.
         self._exit_controller = exit_controller
+        # V246 exit adaptivity: legacy-exit parameters (defaults = pre-V246
+        # literals; overridden only when exit_adaptivity_enabled).
+        self._trail_keep_frac = trail_keep_frac
+        self._max_hold_win = max_hold_win
+        self._max_hold_lose = max_hold_lose
 
         # In-memory state
         # {symbol: {"side": "long"|"short", "size": float, "entry": float, ...}}
@@ -604,7 +612,7 @@ class PaperTradingEngine:
             cycle_opened = int(pos.get("cycle_opened", current_cycle))
             age = current_cycle - cycle_opened
             roi = unrealized / size if size > 0 else 0.0
-            _max_hold = 6 if unrealized < 0 else 10
+            _max_hold = self._max_hold_lose if unrealized < 0 else self._max_hold_win
 
             should_close = False
             close_reason = ""
@@ -650,7 +658,11 @@ class PaperTradingEngine:
                     # (age >= 3) can act.  0 = original behaviour.
                     should_close = True
                     close_reason = f"stop_loss(roi={roi:.3f})"
-                elif age >= _min_trail_age and mfe > size * 0.005 and unrealized < 0.5 * mfe:
+                elif (
+                    age >= _min_trail_age
+                    and mfe > size * 0.005
+                    and unrealized < self._trail_keep_frac * mfe
+                ):
                     # Trailing stop: close if we give back more than 50% of peak MFE.
                     # Only fires when MFE is meaningful (>0.5% of position size) to
                     # avoid triggering on noise from tiny early gains.

@@ -1044,12 +1044,24 @@ def run(
             _exit_cfg.zero_mfe_early_exit_cycles,
         )
 
+    # V246: exit adaptivity — parametrized legacy exits (flag-gated; defaults
+    # reproduce the pre-V246 literals byte-identically when OFF).
+    _exit_kw = {}
+    if bool(getattr(_active_features, "exit_adaptivity_enabled", False)):
+        _exit_kw = {
+            "trail_keep_frac": float(getattr(_active_features, "exit_trail_keep_frac", 0.5)),
+            "max_hold_win": int(getattr(_active_features, "exit_max_hold_win", 10)),
+            "max_hold_lose": int(getattr(_active_features, "exit_max_hold_lose", 6)),
+        }
+        log.info("V246 exit_adaptivity ACTIVE: %s", _exit_kw)
+
     engine = PaperTradingEngine(
         initial_capital=100_000.0,
         db_url=db_url or None,
         max_position_per_symbol=1.0,
         max_portfolio_exposure=1.0,
         exit_controller=_exit_ctrl,
+        **_exit_kw,
     )
     orch.set_paper_trading(engine)
 
