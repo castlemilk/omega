@@ -22,10 +22,21 @@ Closed 2026-07-13 by `V249.md`.
   via `--no-ff`.** MATIC contamination controlled (matched variable, both arms;
   MATIC→POL forward-universe remap queued as P0 for V253, not a merge blocker).
   See `V251.md` + `V251_MATIC_IMPACT.md`.
-- **V252 (NEXT):** MVP integration — scheduler + crash-safe checkpoint; restart
-  test. Entry criterion (V251 gate PASSED) now met.
-- **V253:** 90-day headless soak + first quarterly freeze-and-label. Apply the
-  MATIC→POL remap + provision the run host (FRED key + GDELT egress) before this.
+- **V252 (DONE, 2026-07-13) — scheduler + crash-safe checkpoint ADOPTED (default
+  OFF).** `omega/live_paper/{scheduler,checkpoint,runner}.py` +
+  `scripts/live_paper_daemon.{py,sh}`. All 3 smoke tests PASS: Test A (3-day sim,
+  2.0 s constant drift, no accumulation, 0 alerts, 3 MD5 checkpoints, 3 monotonic
+  PnL lines); Test B (crash mid-cycle → restart **byte-identical** to clean run,
+  equity exact, no dupes, no orphan tmp files, both crash-windows reconciled);
+  **Test C reconciliation preservation** — all 3 sentinels reproduce V251
+  **exactly** (crisis $1,149.76 / trend $4,679.67 / recent $771.98, $0.0000 Δ)
+  through the full daemon path. Zero strategy code touched. `SCHEDULER_ENABLED=0`
+  default; V253 flips ON. See `V252.md`.
+- **V253 (NEXT):** 90-day headless soak + first quarterly freeze-and-label. Entry
+  criterion (V252 tests pass) **met**. Before flipping `SCHEDULER_ENABLED=1`: apply
+  the MATIC→POL forward-universe remap (P0) + provision the run host
+  (`FRED_API_KEY`, GDELT + Binance egress) — full checklist in `V252.md` → Next
+  steps.
 
 ### What Phase 1 delivered
 
@@ -98,4 +109,4 @@ that re-runs the training loop once resume criterion 1 or 2 is met.
 | Loop v2 | V222–V234 | crisis mechanism hunt | closed OBE — crisis was sign-positive; window-selection artifact |
 | Walk-forward | V235–V240 | distributional re-baseline | priors inverted; selective universe ADOPTED (baseline moved) |
 | **Phase 1** | **V241–V249** | **V247-ruler adjudication** | **COMPLETE — standing baseline shipped; recent found calendar-bound** |
-| Phase 2 (proposed) | V250+ | live-paper accumulation | pending — see resume criteria |
+| **Phase 2** | **V250–V252** | **live-paper harness build** | **feed layer + reconciliation gate + scheduler/checkpoint DONE; V253 = 90-day soak** |
