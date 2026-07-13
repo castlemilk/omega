@@ -42,6 +42,22 @@ is "passes the does-not-regress bar with more breadth", not a significance
 claim. Previous (V235/V238/V239-era, 4-name legacy) baseline for reference:
 crisis +$819 / trend +$1,941 / recent −$516.
 
+**V243.A (2026-07-13) — universe-blacklist extension `{ADA, NEAR, ARB}`: KEEP
+FLAG-GATED, baseline UNCHANGED.** `universe_blacklist_extended` (default OFF)
+drops the three persistent negative-edge names on top of selective (7-name
+universe). 64-cell fresh both-arm confirm grid (32/32 ext DETERMINISM PASS
+$0.00; baseline arm reproduces V240 canonical to the cent): mean-Δ(ext−selective)
+crisis **+$1,326** / trend **+$2,007** / recent **+$232**, pooled **+$1,197**
+(median only +$94 — skew-inflated; p25-Δ negative in every regime). Directionally
+positive everywhere with perfect determinism, but **recent (the binding gate) at
++$232 misses the +$300 ADOPT bar and sits inside the recent 2·SE ≈ $2,400 noise
+band**, so the flag ships OFF and the standing baseline does not move. Real grid
+beats the drop-only paper (crisis +$838 / trend +$163) in crisis/trend via
+`budget/N` reallocation into survivors, but under-shoots recent (paper +$374). In-
+sample name selection uncaptured (static all-window set, not the causal prior→test
+split); next = causal selection or `{ADA}`/`{ADA,ARB}` ablation. Full tables:
+`V243_A_CONFIRM_RESULTS.md`; verdict: `V243_A_VERDICT.md`.
+
 **V238 (2026-07-10) re-confirmed these numbers to the cent** — its `main` cells
 are byte-identical to the V235 grid (`nonzero_diffs: {}`, 32/32), so the
 frozen-series feed build did NOT move the standing baseline. The **"signals
