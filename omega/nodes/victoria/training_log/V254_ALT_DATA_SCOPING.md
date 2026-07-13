@@ -253,18 +253,31 @@ separator ([`V255.md`](V255.md) / [`V255_PHASE0.md`](V255_PHASE0.md)). Outcome:
   swamps 16/26 slots and effective carry-regime N ≈ 10 — comparable to spot, not
   a windfall.
 
-**Reprioritization:** B is no longer a clean #1. It splits into **B.marginal**
-(v1 level/regime carry — a real but thin p<0.0001 signal worth one more tight
-separator = **V255.B**) and **B.dead** (v2 directional — closed). **On-chain flow
-(C) rises to co-#1** with B.marginal: C is a genuinely independent universe that
-dodges the thin-carry magnitude ceiling. Run V255.B (cheap, reuses V255 infra)
-to settle whether the carry lane clears a friction-realistic bar; if not, C is
-the lead Phase-3 bet.
+**Reprioritization (updated after V255.C — 2026-07-14):** the carry lane ran to
+completion. **V255.B** REFUTED the v1 basis-hedged carry on friction geometry
+(3-day hold, median net −$5.95) but CONFIRMED the alpha is real (36.4% annualized
+gross, |entry funding| separator p≈0 in every regime). **V255.C** — its own
+pre-registered recommendation — then re-parameterized (7-day hold + level-scaled
+sizing + maker fees) and **PASSED every falsifier**: pooled median net **+$1.56**
+(bootstrap CI95 [+$0.85, +$2.39], excludes zero), WR 63.9%, annualized gross 29.0%
+/ net 18.6%, separator p≈0 in all 3 regimes, total net **+$41.1k**. Verdict:
+**KEEP-FLAG-GATED** — the funding-carry edge is **validated but blocked** on a hard
+data caveat: frozen data has one `close` series per symbol, so the basis hedge is
+verified algebraically not empirically, capping any verdict below ADOPT.
 
-| Rank (updated) | Option | Status | Next |
+**Consequence for the ranking:** B (funding-carry) is **NOT closed** — it is
+**PROVISIONAL: needs basis data**. It is a proven edge whose only remaining unlock
+is a real perp-mark + spot-index basis series (V255.D: live-host provisioning, out
+of scope offline). Because that unlock is a data-acquisition task rather than an
+offline modeling bet, **on-chain flow (C) becomes the clear #1 for the next
+*offline* alpha search** — a genuinely independent universe that can be pursued
+without waiting on live-host basis provisioning. B stays queued at #1-provisional,
+ready to advance to ADOPT the moment basis data lands.
+
+| Rank (updated V255.C) | Option | Status | Next |
 |---|---|---|---|
-| **1a** | B.marginal — level/regime basis carry (v1) | real but thin signal | **V255.B** offline separator (~1 day) |
-| **1b** | C. On-chain flow primary universe | untested | lead bet if V255.B thin |
+| **1 (offline)** | C. On-chain flow primary universe | untested | lead offline Phase-3 bet |
+| **1-provisional** | B.marginal — level/regime basis carry (v1) | **VALIDATED, FLAG-GATED (V255.C)** — needs basis data | **V255.D**: acquire real perp/spot basis series + live re-verify (live-host provisioning) |
 | **—** | B.dead — v2 directional carry | **REFUTED (V255)** | closed |
 | 3 | A. Shorter (30d) windows | untested | `regime_label`-at-30d spike |
 | 4 | D. Polymarket / E. Specialist LLMs | untested | park (gated on N) |
