@@ -1,7 +1,7 @@
 {
-  "version": "v248-refuted-at-scoring",
-  "step": "V248 REFUTED_AT_SCORING (Opus 4.8, first adjudication fully under the V247 ruler): regime-conditional exit params. $0 scorer best cell = composition +$494 pooled mean-\u0394 < +$625 low-coupling 2\u00b7SE bar (recent \u0394 +$61\u2265\u2212$360 ok, pooled level-p25 \u0394 +$285\u22650 ok, but pooled-mean bar binding+unmet). Lands in pre-named [$400,$625) inside-noise-no-adopt band. Grid NOT run, $0 spent \u2014 ruler caught the near-miss before compute. Engine parametrization committed DORMANT (flag OFF byte-identical). 4th straight exit/portfolio refutation.",
-  "next_action": "Exit mechanism space saturated under current manifest (V246 global +$627 & V248 regime-cond +$494 both in near-miss band). Do NOT grind more exit OFAT (that is the queue V247 killed). Lever = the RULER: V247 Phase 1 \u03b1 sub-path 1 \u2014 widen walk_forward window manifest via walk_forward_freeze to add independent recent windows, lowering 2\u00b7SE bar; re-derive bar pre-reg on wider manifest, then re-test the +$494 combo. V241/V244/V245/V246/V248 flags stay OFF.",
+  "version": "v258-refuted-at-phase0",
+  "step": "V258 Track E REFUTED at Phase 0 ($0 grid, Opus 4.8). Specialist LLM ensemble (5 per-signal-class scorers + meta-combiner, extends reasoning_layer.py::SpecialistEnsemble). Phase-0 probe (26 cycles/135 slots, 38min agy): per-name decision divergence 37.8%, ens intervention 49.6% \u2014 both NUMERIC clauses pass (proceed), BUT structural clause (3) input-starvation FIRES: all 692 V241 cache payloads carry only {composite,conviction,side,symbol}; signals collapsed pre-LLM, so 5 specialists condition on IDENTICAL inputs \u2192 37.8% divergence is prompt-wording variance not signal = V241's variance-for-nothing at 6x fill cost. ~26h grid NOT run (do-not-grid-on-hope). Also shipped 2 operator docs: V257_EXECUTION_RUNBOOK (on-chain acquisition) + V255_D_SCOPING (basis data).",
+  "next_action": "V254 offline-buildable list EXHAUSTED (Track E refuted; funding-carry KEEP-FLAG-GATED capped on basis data; on-chain flow data-blocked). LLM-review lane closed on collapsed payload \u2014 only rehab = expose per-signal-class breakdown into candidate payload (signal/features change, out of scope, fresh pre-reg + full re-fill). Offline alpha search now DATA-BLOCKED: unblock via V255.D basis freeze (Binance mark/index) or V257 on-chain freeze (Coin Metrics community) \u2014 both operator runbooks shipped this session. V241/V244/V245/V246/V248/V258 flags stay OFF.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -46,8 +46,18 @@
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build.",
     "V248 scorer instrument caveat: incumbent replay 99.1% exit-cycle / 91.5% exact-pnl (INVALID_REPLAY flag) is intrinsic to the replay class (v246_exit_scorer_v2 byte-identical on same ledgers), NOT a regression; \u0394 metric robust because best cell moves only 20.1% of trades (unmoved trades contribute exactly $0 to \u0394). Artifact: $AUDIT/v248/scorer.json."
   ],
-  "last_commit": "7e1a78f",
-  "updated_at": "2026-07-13T08:22:32.748352+00:00",
+  "last_commit": "88878cb",
+  "updated_at": "2026-07-14T00:00:00+00:00",
+  "v258_phase0": {
+    "phase": "complete",
+    "verdict": "REFUTED at Phase 0 (input-starvation clause 3) — no grid, $0 grid spend",
+    "divergence": 0.3778,
+    "ens_intervention": 0.4963,
+    "n_cycles": 26,
+    "n_slots": 135,
+    "artifacts": "/Volumes/gamma-systems-2/omega-victoria-data/v258/{phase0_divergence.json,phase0_per_cycle.json,phase0.log}",
+    "specialist_cache": "/Volumes/gamma-systems-2/omega-victoria-data/v258/frozen_llm_cache (V241 committed cache untouched)"
+  },
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
