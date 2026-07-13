@@ -269,6 +269,91 @@ until an env-gated probe shows the gate variable actually
 discriminates on the binding window(s). Cost ~2 short runs; saved
 V234's entire burn.
 
+### Calendar-independent-N preflight (added V249 — mandatory for recent-targeted V###)
+
+**Before pre-registering any version whose falsifier gates on the
+`recent` regime (or any regime you suspect is window-scarce), first
+count how many *independent* windows that regime actually has.** This
+is the check V249 wishes V246/V248 had run first.
+
+The nominal per-regime N in `data/walk_forward_manifest.json` is NOT
+the independent N. The primary 90d/90d grid tiles the span with
+non-overlapping windows, but supplements added via ±45d (or denser)
+offsets **overlap their primary neighbours** and are literal data
+reuse — nominal N ≠ effective N. Compute it mechanically:
+
+- Independent 90d slots in the span 2020-01-01 → today =
+  `floor(span_days / 90)` (V249: **26** for 2020→2026-06).
+- Cross-reference against the manifest's primary (non-offset) windows;
+  the regime classifier (`walk_forward_freeze.py:regime_label`) assigns
+  each to crisis/trend/recent. V249's count: **crisis 12 / trend 10 /
+  recent 4 independent** (recent's nominal 10 = 4 independent + 6
+  overlapping offsets).
+- The recent MDE at n=4-effective / n=10-nominal is ~$1,043 (2·SE
+  ~$727–$1,043). **If your target effect size is below that floor, the
+  bet is structurally unfalsifiable — do NOT run it.** Widening recent N
+  from frozen data is calendar-infeasible (the span is fully tiled;
+  denser offsets only add overlap; shorter windows break the warmup/cap
+  contract). See `V249_MANIFEST_AUDIT.md` for the full derivation.
+
+If the preflight shows the targeted regime is calendar-bound below your
+effect size, the correct move is NOT another mechanism — it is the
+phase transition below.
+
+## Phase transition — when to STOP training and switch to live-paper (added V249)
+
+The loop consumes **independent windows**. When the targeted regime
+runs out of them, no mechanism and no offline compute can adjudicate a
+sub-resolution effect — continuing is variance mining, not science.
+V249 hit exactly this: recent-regime alpha is **calendar-bound** (4
+independent recent windows in the whole 2020→2026 span; doubling N is
+calendar-infeasible from frozen data). The V241→V248 "8 refutations"
+were the objective going below the noise floor, which the V247 ruler
+correctly exposed.
+
+**Declare a phase transition (STOP the sequential V### loop) when ALL
+of these hold:**
+
+1. **Reflection stagnation trigger has fired** (≥3 consecutive
+   refutations) AND the reflection's conclusion is that the binding
+   constraint is the **measurement instrument / data volume**, not a
+   subsystem (REFLECTION_V246's finding).
+2. **The V247 ruler's bars are honest** (derived from the variance
+   table) and the near-misses sit in the "inside noise, no adopt" band
+   — i.e. the candidates might be real but are unadjudicable, "no
+   adjudication" NOT "no alpha."
+3. **The calendar-independent-N preflight shows the targeted regime is
+   structurally scarce** and cannot be widened from frozen data (V249's
+   Phase 0 audit).
+
+When declared, write a **campaign-level** doc (`V249.md` is the
+template — NOT a mechanism V###: no code, no flag, no grid) covering:
+the calendar constraint (numbers), what it means (unadjudicable ≠ no
+alpha), the standing baseline as the phase's shippable deliverable, the
+exhausted-axes map, the recommended next phase, and the retained
+infrastructure + resume criteria. Also add/update
+`training_log/CAMPAIGN_STATUS.md` (the top-level phase tracker) with
+explicit resume criteria.
+
+**The recommended next phase is live PAPER trading** — real, forward,
+streaming market data → the frozen strategy's decisions → **simulated**
+PnL, **no broker, no orders, no funds** (the standing "never execute a
+trade / move money" guardrail is absolute here). Rationale: the
+passage of time is the ONLY source of the independent windows the
+frozen manifest cannot supply — each elapsed 90d = 1 new independent,
+zero-overlap, correctly-labelled window, accruing at ~1/quarter. It is
+also the first genuinely out-of-sample (un-Goodhartable) measurement
+the campaign will have.
+
+**Resume the training loop (V250+) when EITHER:** (1) N independent
+recent windows ≥ 20 (via live-paper accumulation) — the V247 α
+manifest-widening becomes real and the parked flags get re-run under
+the tightened bar; or (2) a new data source changes regime structure
+(intraday OHLCV freeze, on-chain/options feed) — reopening the
+entry-side composite the V236→V245 streak closed *at daily bars only*.
+Until then the standing baseline is the answer and every parked flag
+stays OFF.
+
 ## Universe re-validation trigger (added V235)
 
 Any time evidence emerges that the EFFECTIVE universe is materially
