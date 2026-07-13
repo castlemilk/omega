@@ -131,10 +131,24 @@ bolted onto the momentum composite.
 
 | | |
 |---|---|
-| **Cost** | 6–12 dev-days (freeze on-chain series — Glassnode/CryptoQuant/Dune or free RPC-derived — wire as feeds, build a flow-primary entry rule, walk-forward). Ongoing: on-chain data API ($50–500/mo depending on provider) OR self-hosted node/indexer (dev-heavy, $0 data). |
+| **Cost** | 6–12 dev-days (freeze on-chain series — Glassnode/CryptoQuant/Dune or free RPC-derived — wire as feeds, build a flow-primary entry rule, walk-forward). Ongoing: on-chain data API ($50–500/mo depending on provider) OR self-hosted node/indexer (dev-heavy, $0 data). **[V256: the data-freeze step is the actual blocker — see status below.]** |
 | **N accumulation** | Its own independent recent-N=4 from frozen on-chain history (data goes back to ~2017 for most metrics). Accrues in parallel during a soak. |
 | **Dead-end risk** | **MEDIUM-HIGH.** V240-B already showed flow is a *tradeoff*, not free alpha, inside the composite — as a primary it inherits R2 risk (flow may be priced at daily granularity) and R4 (on-chain metrics are heavily revised/re-defined by providers → look-ahead/label drift). Lower risk than A, higher than B. |
 | **Priority** | **2** — structurally similar to B (new independent universe) but with more data-integrity landmines. Pursue **after** carry (B), or fold in as one of B's strategies rather than a separate track. |
+
+> **STATUS UPDATE (V256, 2026-07-14): PAUSED — needs data acquisition.** V256
+> attempted Track C and **stopped at the Phase-0 data audit** ([`V256.md`](V256.md)).
+> Blocker: **no historical per-asset on-chain data is frozen** — only 1 of the 4
+> pre-declared signals exists on disk (`stablecoin_total_usd`), and it's a
+> **market-wide aggregate**, not the cross-sectional per-asset shape the flow-primary
+> design needs. Net exchange inflow + whale-cluster movement are live-only (no
+> historical endpoint sourced); active-address velocity was never sourced. The thesis
+> is **untested, not refuted** — the offline data to test it does not exist in frozen
+> form. **Reclassified from "#1-offline" to "PAUSED — needs data acquisition
+> (V257)".** [`V257.md`](V257.md) pre-registers the data-freeze pipeline that unblocks
+> it (Coin Metrics community as free MVP source for BTC+ETH). Track C reopens the
+> moment V257 delivers 3+ frozen signals; until then it is **not** the lead offline
+> bet.
 
 ---
 
@@ -269,18 +283,43 @@ verified algebraically not empirically, capping any verdict below ADOPT.
 **PROVISIONAL: needs basis data**. It is a proven edge whose only remaining unlock
 is a real perp-mark + spot-index basis series (V255.D: live-host provisioning, out
 of scope offline). Because that unlock is a data-acquisition task rather than an
-offline modeling bet, **on-chain flow (C) becomes the clear #1 for the next
-*offline* alpha search** — a genuinely independent universe that can be pursued
-without waiting on live-host basis provisioning. B stays queued at #1-provisional,
-ready to advance to ADOPT the moment basis data lands.
+offline modeling bet, on-chain flow (C) was promoted to lead offline bet.
 
-| Rank (updated V255.C) | Option | Status | Next |
+## UPDATE 2026-07-14 (b) — Track C paused at Phase 0; C AND B both data-blocked
+
+V256 attempted Track C and **stopped at the Phase-0 data audit** before writing any
+code ([`V256.md`](V256.md)). The flow-primary universe is **unbuildable offline
+today**: only 1 of 4 pre-declared on-chain signals is frozen (`stablecoin_total_usd`,
+a market-wide aggregate — not the cross-sectional per-asset shape the design needs).
+Net exchange inflow and whale-cluster movement are live-only; active-address velocity
+was never sourced. Salvaging into a 1-signal market-timing test would be a post-hoc
+Goodhart redesign (R4) — explicitly declined.
+
+**Both of the top-2 offline candidates are now data-acquisition-blocked, not
+modeling-blocked:**
+- **B** (funding-carry) — needs a real perp/spot **basis** series (V255.D, live-host).
+- **C** (on-chain flow) — needs frozen historical **per-asset on-chain** series (V257).
+
+**Consequence: the next *buildable-offline* bet is a signal-only path.** With C and B
+both parked on data, the highest-ranked option that can be *built and tested today with
+data already on disk* is **Track E (specialist LLMs)** — it reuses the V241
+`reasoning_layer.py` + `frozen_llm_cache` infra, is a **prompt-only change** (no new
+data freeze), and is therefore the **cheapest to test**. **Track D (Polymarket)** is
+the next-cheapest (CLOB plumbing exists) but needs series-construction from thin ~2023+
+history. **Caveat (unchanged from original scoping):** both D and E are **signal-only**
+— they add signal to the existing universe and are judged at the **N=4 recent noise
+floor** (R1), and against a possibly-saturated composite (R2). Neither attacks the
+recent-N wall. They are "buildable now" bets, **not** structural escapes; the
+structural escapes (B, C) remain gated on their respective data unlocks.
+
+| Rank (updated V256) | Option | Status | Next |
 |---|---|---|---|
-| **1 (offline)** | C. On-chain flow primary universe | untested | lead offline Phase-3 bet |
-| **1-provisional** | B.marginal — level/regime basis carry (v1) | **VALIDATED, FLAG-GATED (V255.C)** — needs basis data | **V255.D**: acquire real perp/spot basis series + live re-verify (live-host provisioning) |
+| **1-provisional (structural)** | B. level/regime basis carry (v1) | **VALIDATED, FLAG-GATED (V255.C)** — needs basis data | **V255.D**: acquire real perp/spot basis series + live re-verify (live-host) |
+| **1-blocked (structural)** | C. On-chain flow primary universe | **PAUSED (V256)** — needs frozen per-asset on-chain data | **V257**: data-freeze pipeline (Coin Metrics community MVP) → then rerun V256 as pre-registered |
+| **1 (buildable-offline now)** | E. Specialist-LLM ensemble | untested | **next offline bet** — reuses V241 infra, prompt-only, cheapest; but N=4-pinned |
+| 2 (buildable-offline now) | D. Polymarket sentiment/regime | untested | after E — plumbing exists, but thin ~2023+ history; N=4-pinned |
 | **—** | B.dead — v2 directional carry | **REFUTED (V255)** | closed |
-| 3 | A. Shorter (30d) windows | untested | `regime_label`-at-30d spike |
-| 4 | D. Polymarket / E. Specialist LLMs | untested | park (gated on N) |
+| 4 | A. Shorter (30d) windows | untested | `regime_label`-at-30d spike |
 | 5 | F. News-driven regime | untested | last |
 
 ---
