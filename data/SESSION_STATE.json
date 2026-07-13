@@ -1,7 +1,7 @@
 {
-  "version": "v245-complete",
-  "step": "V245 REFUTED (Fable 5): gdelt_solo 32-window grid clean (0 det FAILs, sentinels $0.00) but falsifier fired 2x \u2014 recent mean-D -$129/p25-D -$641; pooled p25-D -$716; crisis +$220/trend -$236 pass floors; pooled mean -$31. Flag stays OFF, baseline unchanged (V240 selective). Fifth pooled-flat-with-variance info-feed bet since V236. V244 earlier same session: REFUTED AT SCORING ($0).",
-  "next_action": "V246 = exit-side adaptivity (last untouched dimension). Protocol: $0 counterfactual exit scorer on V240 confirm ledgers (mae/mfe/win_capture/loss_capture columns) BEFORE any implementation \u2014 V244 protocol. NOTE: 3rd consecutive post-reflection refutation fires the stagnation trigger -> REFLECTION first if V246 scoring also fails. Queue after: {dxy,yield_curve} subset (lowered prior), V243-A re-score.",
+  "version": "v246-complete",
+  "step": "V246 REFUTED (Fable 5): exit_adapt (trail_keep 0.25, hold_win 8) grid clean (0 det FAILs) \u2014 pooled mean-D +$627 (exactly 2SE $625, level-p25 tightens every regime) but recent conjunction fired (+$72 mean / -$407 p25-D) and pooled D-p25 -$378 < 0. Flag stays OFF; engine parametrization retained dormant. 3rd consecutive refutation -> REFLECTION_V246 committed: the objective 'recent mean-D>=+$100' is 7x below the n=10 noise floor (2SE $727).",
+  "next_action": "V247: FIRST re-derive acceptance bars from REFLECTION_V246 \u00a72 variance table (pooled-gated with recent no-regression floor, OR more recent windows via walk_forward_freeze) \u2014 fixed in pre-reg before results. Then mechanism from \u00a75: regime-conditional exit params, or V243-A blacklist re-score. Ship obs deltas: aggregator dual-tail report + re-entry coupling counter (backlog V247 #1/#2).",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -46,7 +46,7 @@
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
   "last_commit": "a88b95e",
-  "updated_at": "2026-07-13T01:15:00+00:00",
+  "updated_at": "2026-07-13T07:55:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -90,5 +90,12 @@
     "cells_total": 32,
     "max_parallel": 1,
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v245/grid_state.json"
+  },
+  "v246_walkforward": {
+    "phase": "complete",
+    "cells_done": 32,
+    "cells_total": 32,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v246/grid_state.json"
   }
 }

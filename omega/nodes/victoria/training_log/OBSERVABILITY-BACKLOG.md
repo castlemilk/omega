@@ -381,6 +381,19 @@ re-derivation. What it would have caught: nothing — but it cuts the cost and
 mapping-bug risk of the separator-first rule that has now killed three bets
 (V236/V237/V244) at $0.
 
+## Queued from REFLECTION_V246 (2026-07-13 — exit-adaptivity near-miss)
+
+### V247 #1 — aggregator dual-tail report  (effort: S — SHIP WITH V247)
+Report Δ-distribution p25 AND level-p25 side by side in every aggregator.
+V245 and V246 both tightened the LEVEL tail in every regime while the Δ-p25
+falsifier clause fired — the metric and the stated intent ("tail must not
+worsen") diverge. Future pre-regs must name which they gate on.
+
+### V247 #2 — re-entry coupling counter  (effort: S — SHIP WITH V247)
+Per-window ON-vs-OFF counts of trades that exist in one arm only (keyed by
+open cycle). V246's 343→327 trade-count shift — the exact channel that
+inverted the scorer's recent prediction — went unnoticed until the verdict.
+
 ## How to use this file
 
 1. During a reflection's observability-gap audit, add new gaps as `V###+1 #N`
