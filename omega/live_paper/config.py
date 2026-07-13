@@ -41,9 +41,13 @@ FROZEN_ROOTS: tuple[Path, ...] = (
 )
 
 # V240-selective standing universe: 13 tracked names minus blacklist {BTC,DOT,LINK}.
+# V253: MATIC→POL rebrand 2024-09-10; POL is 1:1 successor, live-continuous. This is
+# the FORWARD live-paper fetch universe — POL is what the daemon fetches. It does not
+# touch the frozen backtest (which reads snapshot keys, not this tuple), so it is
+# orthogonal to reconciliation byte-identity.
 _UNIVERSE_ALL = (
     "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
-    "ADAUSDT", "DOTUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT",
+    "ADAUSDT", "DOTUSDT", "AVAXUSDT", "LINKUSDT", "POLUSDT",
     "NEARUSDT", "SUIUSDT", "ARBUSDT",
 )
 _BLACKLIST = frozenset({"BTCUSDT", "DOTUSDT", "LINKUSDT"})
