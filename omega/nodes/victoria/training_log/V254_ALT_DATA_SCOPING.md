@@ -234,7 +234,45 @@ used to gate ent/exit of the *standing* strategy (not to add entries).
 
 ---
 
-## Summary ranking (for the Phase 3 kickoff decision)
+## UPDATE 2026-07-14 — Option B Phase 0 result: v2 directional carry REFUTED
+
+V255 built option B's cheapest sub-bet (funding-rate carry) and ran a $0 Phase-0
+separator ([`V255.md`](V255.md) / [`V255_PHASE0.md`](V255_PHASE0.md)). Outcome:
+
+- **v2 directional (funding mean-reversion) is REFUTED** — entry z-score does not
+  discriminate winners from losers (MWU p=0.61, scipy-confirmed), −$260k / 2300
+  trades. The directional form is a momentum-contrarian bet whose price risk
+  (−$292k) swamps the carry.
+- **The carry component is real** (+$55k gross, +$24/trade) but the hedged v1
+  basis form is thin: ~7–10% annualized **gross, median ≈ $0, tail-driven**,
+  *before* real basis-execution frictions. Separators point at the *correct* form
+  (funding **level** entry p<0.0001; exclude `near_zero` regime which is 58% of
+  trades and >100% of the loss).
+- **The "much more independent N" premise is partially undercut:** funding regimes
+  DO form a different partition than spot (independence holds), but `near_zero`
+  swamps 16/26 slots and effective carry-regime N ≈ 10 — comparable to spot, not
+  a windfall.
+
+**Reprioritization:** B is no longer a clean #1. It splits into **B.marginal**
+(v1 level/regime carry — a real but thin p<0.0001 signal worth one more tight
+separator = **V255.B**) and **B.dead** (v2 directional — closed). **On-chain flow
+(C) rises to co-#1** with B.marginal: C is a genuinely independent universe that
+dodges the thin-carry magnitude ceiling. Run V255.B (cheap, reuses V255 infra)
+to settle whether the carry lane clears a friction-realistic bar; if not, C is
+the lead Phase-3 bet.
+
+| Rank (updated) | Option | Status | Next |
+|---|---|---|---|
+| **1a** | B.marginal — level/regime basis carry (v1) | real but thin signal | **V255.B** offline separator (~1 day) |
+| **1b** | C. On-chain flow primary universe | untested | lead bet if V255.B thin |
+| **—** | B.dead — v2 directional carry | **REFUTED (V255)** | closed |
+| 3 | A. Shorter (30d) windows | untested | `regime_label`-at-30d spike |
+| 4 | D. Polymarket / E. Specialist LLMs | untested | park (gated on N) |
+| 5 | F. News-driven regime | untested | last |
+
+---
+
+## Summary ranking (ORIGINAL, pre-V255 — superseded above for option B)
 
 | Rank | Option | Attacks the N wall? | Cost (dev-days) | Dead-end risk | One-line |
 |---|---|---|---|---|---|
