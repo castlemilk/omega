@@ -78,6 +78,12 @@ class CheckpointState:
     closed_trades: list[dict[str, Any]] = field(default_factory=list)
     signals_state: dict[str, Any] = field(default_factory=dict)
     seed_state: dict[str, Any] = field(default_factory=dict)
+    # The exact PnL-log line this checkpoint is paired with. The checkpoint is the
+    # AUTHORITATIVE record; the runner writes the checkpoint first, then appends
+    # this line to the PnL log. On boot it reconciles the log against this field,
+    # so a crash between the checkpoint write and the log append never yields a
+    # missing OR duplicated PnL line (V252 crash-atomicity — see runner._boot).
+    pnl_record: dict[str, Any] = field(default_factory=dict)
     schema_version: int = SCHEMA_VERSION
 
     def to_dict(self) -> dict[str, Any]:
@@ -95,6 +101,7 @@ class CheckpointState:
             closed_trades=list(d.get("closed_trades", [])),
             signals_state=dict(d.get("signals_state", {})),
             seed_state=dict(d.get("seed_state", {})),
+            pnl_record=dict(d.get("pnl_record", {})),
             schema_version=int(d.get("schema_version", SCHEMA_VERSION)),
         )
 

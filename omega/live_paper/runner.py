@@ -120,6 +120,16 @@ class LivePaperRunner:
             )
         # Seed monotonic PnL-log guard from the last logged line, if any.
         self._last_logged_ts = self._tail_pnl_ts()
+        # Crash-atomicity reconciliation: the checkpoint is authoritative and is
+        # written BEFORE the PnL line is appended. If we crashed in that window,
+        # the latest checkpoint carries a `pnl_record` newer than the log's tail —
+        # replay it now so the log has no gap AND no duplicate (the monotonic
+        # guard blocks a re-append if it already landed).
+        if state is not None and state.pnl_record:
+            rec_ts = state.pnl_record.get("cycle_ts")
+            if rec_ts and (self._last_logged_ts is None or rec_ts > self._last_logged_ts):
+                self._write_pnl_line(state.pnl_record)
+                logger.info(json.dumps({"event": "pnl_log_reconciled", "cycle_ts": rec_ts}))
         return state
 
     def _tail_pnl_ts(self) -> str | None:
@@ -147,6 +157,16 @@ class LivePaperRunner:
             initial_capital=self.initial_capital,
         )
         result = self.cycle_fn(ctx)
+        pnl_record = {
+            "cycle_ts": ctx.cycle_ts,
+            "cycle_date": tick.cycle_date.isoformat(),
+            "equity": result.equity,
+            "realised_pnl": result.realised_pnl,
+            "unrealised_pnl": result.unrealised_pnl,
+            "open_n": len(result.open_positions),
+            "drift_seconds": round(tick.drift_seconds, 3),
+            **result.extra_log,
+        }
         state = CheckpointState(
             cycle_ts=ctx.cycle_ts,
             cycle_date=tick.cycle_date.isoformat(),
@@ -157,30 +177,22 @@ class LivePaperRunner:
             closed_trades=result.closed_trades,
             signals_state=result.signals_state,
             seed_state=result.seed_state,
+            pnl_record=pnl_record,
         )
-        # Persist checkpoint BEFORE appending the PnL line, so a crash between the
-        # two never yields a PnL line without a matching recoverable checkpoint.
+        # Persist the checkpoint (AUTHORITATIVE) BEFORE appending the PnL line. A
+        # crash in between is recovered on boot from the checkpoint's `pnl_record`
+        # (see _boot) — no missing and no duplicate line either way.
         self.checkpoint.save(state)
-        self._append_pnl(tick, result)
+        self._write_pnl_line(pnl_record)
         return state
 
-    def _append_pnl(self, tick: TickInfo, result: CycleResult) -> None:
-        cycle_ts = tick.fired_utc.isoformat()
+    def _write_pnl_line(self, record: dict[str, Any]) -> None:
+        cycle_ts = record["cycle_ts"]
         # Strict monotonicity guard (falsifier: PnL log must be monotonic on cycle_ts).
         if self._last_logged_ts is not None and cycle_ts <= self._last_logged_ts:
             raise RuntimeError(
                 f"non-monotonic PnL log: cycle_ts {cycle_ts} <= last {self._last_logged_ts}"
             )
-        record = {
-            "cycle_ts": cycle_ts,
-            "cycle_date": tick.cycle_date.isoformat(),
-            "equity": result.equity,
-            "realised_pnl": result.realised_pnl,
-            "unrealised_pnl": result.unrealised_pnl,
-            "open_n": len(result.open_positions),
-            "drift_seconds": round(tick.drift_seconds, 3),
-            **result.extra_log,
-        }
         self.pnl_log_path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.pnl_log_path, "a") as fh:
             fh.write(json.dumps(record, sort_keys=True) + "\n")
