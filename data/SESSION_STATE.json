@@ -1,7 +1,7 @@
 {
-  "version": "v241-complete",
-  "step": "V241 COMPLETE (Fable 5) \u2014 REFUTED, reasoning_layer_enabled stays OFF, baseline unchanged (V240 selective: crisis +$599 / trend +$2,997 / recent +$30). Falsifier: recent mean-D +$227 (<+$400) AND recent p25-D -$705 (<+$500) both FAIL; trend -$69 / crisis -$48 pass. Pooled D +$31, spread $27,345. Phase-0 tracer ACTIVE (691 calls, 99.6% intervention, 42.6% drops). 0 det FAILs, sentinels N=2 $0.00, 100% cache hits. Cache committed (691 entries, a1ed754). Docs: V241.md results + REFLECTION_V241.md + V241_WALKFORWARD_RESULTS.md + README paragraph + obs-backlog V244 deltas.",
-  "next_action": "V244 pre-reg (V242 whale_flow gate + V243 portfolio-sep consumed by parallel Opus tracks, both refuted/parked). Candidates from REFLECTION_V241 \u00a75: corr-spike tail cap (spec V237.md, $0 calibration, strongest); gdelt solo cell; {dxy,yield_curve} subset; exit-side adaptivity (untouched 40+ versions). Reasoning-layer veto-only variant ONLY after counterfactual drop scorer (obs backlog V244 #1, $0 on existing ledgers) shows negative-PnL skew in drop set.",
+  "version": "v245-complete",
+  "step": "V245 REFUTED (Fable 5): gdelt_solo 32-window grid clean (0 det FAILs, sentinels $0.00) but falsifier fired 2x \u2014 recent mean-D -$129/p25-D -$641; pooled p25-D -$716; crisis +$220/trend -$236 pass floors; pooled mean -$31. Flag stays OFF, baseline unchanged (V240 selective). Fifth pooled-flat-with-variance info-feed bet since V236. V244 earlier same session: REFUTED AT SCORING ($0).",
+  "next_action": "V246 = exit-side adaptivity (last untouched dimension). Protocol: $0 counterfactual exit scorer on V240 confirm ledgers (mae/mfe/win_capture/loss_capture columns) BEFORE any implementation \u2014 V244 protocol. NOTE: 3rd consecutive post-reflection refutation fires the stagnation trigger -> REFLECTION first if V246 scoring also fails. Queue after: {dxy,yield_curve} subset (lowered prior), V243-A re-score.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -46,7 +46,7 @@
     "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
   ],
   "last_commit": "a88b95e",
-  "updated_at": "2026-07-12T15:10:00+00:00",
+  "updated_at": "2026-07-13T01:15:00+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",
@@ -83,5 +83,12 @@
     "cells_total": 160,
     "max_parallel": 1,
     "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_signal/grid_state.json"
+  },
+  "v245_walkforward": {
+    "phase": "complete",
+    "cells_done": 32,
+    "cells_total": 32,
+    "max_parallel": 1,
+    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v245/grid_state.json"
   }
 }
