@@ -76,16 +76,23 @@ No post-delisting window ever traded MATIC.
   (V253 quarterly accumulation) will naturally bake POL into each new snapshot at
   freeze time — self-consistent going forward, since live now fetches POL.
 
-## Files changed (5 sites, 3 files — live-fetch paths only)
+## Files changed (7 sites, 4 files — live-fetch paths only)
 
 | File | Site | Edit |
 |------|------|------|
+| `omega/live_paper/config.py` | `_UNIVERSE_ALL` (~L46) | `"MATICUSDT"` → `"POLUSDT"` + V253 note — **the live-paper daemon fetch universe** (`LivePaperConfig.universe = SELECTIVE_UNIVERSE`); this is the one that actually makes the forward daemon fetch POL |
 | `data_ingestion.py` | header `Pairs:` comment (~L14) | MATICUSDT → POLUSDT |
 | `data_ingestion.py` | `_BASE_PAIRS` (~L64) | `"MATICUSDT"` → `"POLUSDT"` + V253 note |
 | `data_providers.py` | CoinGecko id map (~L67) | `"matic-network"` → `"POLUSDT": "polygon-ecosystem-token"` |
 | `data_providers.py` | Yahoo id map (~L948) | `"MATIC-USD"` → `"POLUSDT": "POL-USD"` |
 | `data_providers.py` | CryptoCompare id map (~L997) | `"MATIC"` → `"POLUSDT": "POL"` |
 | `strategy.py` | `_TRADING_BLACKLIST` roster (~L207) | `"MATICUSDT"` → `"POLUSDT"` + V253 note |
+
+> **`live_paper/config._UNIVERSE_ALL` is the load-bearing site.** `data_ingestion._BASE_PAIRS`
+> feeds the legacy `DataIngestionNode` fetch path; the V250+ live-paper daemon fetches
+> its universe from `LivePaperConfig.universe` (derived from `SELECTIVE_UNIVERSE` →
+> `_UNIVERSE_ALL`). It is orthogonal to the reconcile/backtest path (which never
+> instantiates `LivePaperConfig`), so it too is byte-identical for the frozen windows.
 
 The `strategy.py` swap is functionally inert for both paths (a name absent from
 `_TRADING_BLACKLIST` is tradeable via `_universe_blocked`'s first check, so MATIC's
@@ -113,4 +120,6 @@ the three per-regime sentinels, **before and after** the remap edit:
 
 **Verdict: PASS** — identical PnL and identical trade counts pre- and post-edit on
 all three windows. The remap does not move a single frozen trade. Guardrail
-satisfied; the standing baseline is preserved.
+satisfied; the standing baseline is preserved. Re-run a **third** time after the
+`live_paper/config._UNIVERSE_ALL` site was added — still $0.0000 Δ x3, confirming
+the live-paper fetch-universe edit is also orthogonal to the frozen path.
