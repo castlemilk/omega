@@ -383,16 +383,25 @@ mapping-bug risk of the separator-first rule that has now killed three bets
 
 ## Queued from REFLECTION_V246 (2026-07-13 — exit-adaptivity near-miss)
 
-### V247 #1 — aggregator dual-tail report  (effort: S — SHIP WITH V247)
+### V247 #1 — aggregator dual-tail report  ✅ SHIPPED V247 (`scripts/wf_obs.py dual-tail`, tests `tests/test_wf_obs.py`)
 Report Δ-distribution p25 AND level-p25 side by side in every aggregator.
 V245 and V246 both tightened the LEVEL tail in every regime while the Δ-p25
 falsifier clause fired — the metric and the stated intent ("tail must not
 worsen") diverge. Future pre-regs must name which they gate on.
+Validated on V246 committed ledgers: divergence flagged in recent/trend/pooled
+(Δ-p25 −$407/−$444/−$378 vs level-p25 change +$97/+$188/+$146).
 
-### V247 #2 — re-entry coupling counter  (effort: S — SHIP WITH V247)
+### V247 #2 — re-entry coupling counter  ✅ SHIPPED V247 (`scripts/wf_obs.py reentry`, tests `tests/test_wf_obs.py`)
 Per-window ON-vs-OFF counts of trades that exist in one arm only (keyed by
 open cycle). V246's 343→327 trade-count shift — the exact channel that
 inverted the scorer's recent prediction — went unnoticed until the verdict.
+Validated on V246 committed ledgers: open-key join matches 320/343; the
+mechanism deleted 23 trades and created 7, and 7/7 ON-only trades are
+re-entries within 8 bars of a mechanism-created exit. (The exit-key join used
+by earlier diffs overstates churn ~30% — open-key is the correct identity.)
+Bonus finding while validating (V247_RULER_CANDIDATES.md §γ): within-window
+trade Δs are ANTI-correlated 4–11× vs iid — the window is the exchangeable
+unit; trade-level bootstraps overstate variance, they don't add n.
 
 ## How to use this file
 

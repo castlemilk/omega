@@ -56,7 +56,7 @@ def pctl(sorted_xs: list[float], q: float) -> float:
     if n == 1:
         return sorted_xs[0]
     pos = q / 100.0 * (n - 1)
-    lo = int(math.floor(pos))
+    lo = math.floor(pos)
     hi = min(lo + 1, n - 1)
     frac = pos - lo
     return sorted_xs[lo] * (1 - frac) + sorted_xs[hi] * frac
