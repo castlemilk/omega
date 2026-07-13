@@ -134,27 +134,34 @@ class ReasoningLayer:
         symbols = [str(c.get("symbol")) for c in candidates]
         prompt = self._build_prompt(cycle_ctx, candidates)
         phash = self._prompt_hash(prompt)
-
-        entry = self._cache_load(phash)
-        if entry is not None:
-            raw = entry["response"]
-            cached = True
-        elif _frozen_mode():
-            raise LLMCacheMiss(
-                f"frozen replay: no cache entry {self.model_id}/{phash} "
-                f"(cycle={cycle_ctx.get('cycle')}) — fill the cache with "
-                f"OMEGA_FROZEN_CACHE unset before replaying"
-            )
-        else:
-            raw = self._call_live(prompt, phash)
-            cached = False
-
+        raw, cached = self._dispatch(prompt, phash, cycle_ctx.get("cycle"))
         review = self._validate(raw, symbols)
         review.cached = cached
         review.prompt_hash = phash
         approved = [s for s in symbols if s in set(review.keep)]
         self._trace(cycle_ctx, symbols, approved, review, t0)
         return approved, review, review.reasoning
+
+    def _dispatch(
+        self, prompt: str, phash: str, cycle: object = None
+    ) -> tuple[dict, bool]:
+        """Resolve a single prompt to a raw response dict + cached flag.
+
+        The V240/V241 cache/frozen/live contract, factored out of
+        ``review_basket`` so the specialist ensemble (V258) shares exactly one
+        code path: cache hit → served; frozen miss → ``LLMCacheMiss``; else
+        one live ``agy`` call. No neutral stub, ever.
+        """
+        entry = self._cache_load(phash)
+        if entry is not None:
+            return entry["response"], True
+        if _frozen_mode():
+            raise LLMCacheMiss(
+                f"frozen replay: no cache entry {self.model_id}/{phash} "
+                f"(cycle={cycle}) — fill the cache with "
+                f"OMEGA_FROZEN_CACHE unset before replaying"
+            )
+        return self._call_live(prompt, phash), False
 
     @staticmethod
     def _trace(
@@ -363,3 +370,171 @@ class ReasoningLayer:
             confidence=confidence,
             raw=raw,
         )
+
+
+# --------------------------------------------------------------------------
+# V258 Track E — specialist ensemble
+# --------------------------------------------------------------------------
+# V241 died because ONE agent reviewed the whole composite. Track E's premise:
+# decompose the review into per-signal-class specialists (each scoring per-name
+# conviction on a 1-5 scale) then a meta-prompt that aggregates. The ensemble
+# reuses ReasoningLayer's cache/frozen/live plumbing verbatim (composition, not
+# rewrite — V258 pre-registration). Model, cache namespace, and drop/scale-only
+# posture are identical to V241; only the prompt decomposition differs.
+
+# (lens_key, human description) — one specialist per pre-registered signal class.
+SPECIALIST_LENSES: list[tuple[str, str]] = [
+    ("fear_greed", "crypto market fear/greed and sentiment extremes"),
+    ("macro", "equity-volatility (VIX) regime and US-dollar strength (DXY)"),
+    ("yield_curve", "the US Treasury yield curve (2s/10s) and rates backdrop"),
+    ("funding_oi", "perpetual-futures funding rates and open-interest positioning"),
+    ("gdelt_news", "geopolitical, regulatory and macro news-flow tone (GDELT)"),
+]
+
+
+@dataclass
+class SpecialistScores:
+    """One specialist's per-name conviction scores (1-5) for a cycle."""
+
+    lens: str
+    scores: dict[str, int]
+    reasoning: str
+    cached: bool = False
+    prompt_hash: str = ""
+
+
+class SpecialistEnsemble:
+    """V258 specialist-ensemble review: N per-signal-class scorers + a meta-combiner.
+
+    Drop-in comparable with ``ReasoningLayer.review_basket`` — same return shape
+    ``(approved_symbols, BasketReview, reasoning)`` and the same subordinate posture
+    (keep/drop/scale-in-[0,1] only). Uses a composed ``ReasoningLayer`` for the
+    cache/frozen/live dispatch so there is exactly one plumbing code path.
+    """
+
+    def __init__(
+        self,
+        model_id: str = DEFAULT_MODEL_ID,
+        cache_root: Path | None = None,
+        agy_bin: str = "agy",
+        timeout_s: float = 300.0,
+        lenses: list[tuple[str, str]] | None = None,
+    ) -> None:
+        self._layer = ReasoningLayer(model_id, cache_root, agy_bin, timeout_s)
+        self.model_id = self._layer.model_id
+        self._lenses = lenses if lenses is not None else list(SPECIALIST_LENSES)
+
+    # ------------------------------------------------------------- public
+
+    def review_basket(
+        self, cycle_ctx: dict, candidates: list[dict]
+    ) -> tuple[list[str], BasketReview, str]:
+        """Score the basket through each specialist, then meta-combine to a review."""
+        t0 = time.perf_counter()
+        symbols = [str(c.get("symbol")) for c in candidates]
+        spec_scores = self.specialist_scores(cycle_ctx, candidates)
+        meta_prompt = self._build_meta_prompt(cycle_ctx, candidates, spec_scores)
+        phash = ReasoningLayer._prompt_hash(meta_prompt)
+        raw, cached = self._layer._dispatch(meta_prompt, phash, cycle_ctx.get("cycle"))
+        review = self._layer._validate(raw, symbols)
+        review.cached = cached and all(s.cached for s in spec_scores)
+        review.prompt_hash = phash
+        approved = [s for s in symbols if s in set(review.keep)]
+        ReasoningLayer._trace(cycle_ctx, symbols, approved, review, t0)
+        return approved, review, review.reasoning
+
+    def specialist_scores(
+        self, cycle_ctx: dict, candidates: list[dict]
+    ) -> list[SpecialistScores]:
+        """Run every specialist prompt; return per-lens 1-5 per-name scores."""
+        symbols = [str(c.get("symbol")) for c in candidates]
+        out: list[SpecialistScores] = []
+        for lens_key, lens_desc in self._lenses:
+            prompt = self._build_specialist_prompt(lens_key, lens_desc, cycle_ctx, candidates)
+            phash = ReasoningLayer._prompt_hash(prompt)
+            raw, cached = self._layer._dispatch(prompt, phash, cycle_ctx.get("cycle"))
+            out.append(
+                SpecialistScores(
+                    lens=lens_key,
+                    scores=self._validate_scores(raw, symbols),
+                    reasoning=str(raw.get("reasoning", "")),
+                    cached=cached,
+                    prompt_hash=phash,
+                )
+            )
+        return out
+
+    # ------------------------------------------------------------ prompts
+
+    @staticmethod
+    def _build_specialist_prompt(
+        lens_key: str, lens_desc: str, cycle_ctx: dict, candidates: list[dict]
+    ) -> str:
+        payload = {
+            "task": (
+                f"You are the {lens_desc} specialist on a quantitative crypto "
+                "trading desk. Judge each candidate position ONLY through your "
+                "lens; ignore signal classes outside your remit. Score each "
+                "candidate's conviction on an integer 1-5 scale (1 = your lens "
+                "strongly argues against this position, 3 = neutral, 5 = your "
+                "lens strongly supports it). You are a reviewer, not a trader: "
+                "you may not change sides or add positions. Respond with ONLY a "
+                'JSON object: {"scores": {symbol: int in [1,5]}, "reasoning": str}. '
+                "Every candidate symbol must appear exactly once in scores."
+            ),
+            "lens": lens_key,
+            "cycle_ctx": cycle_ctx,
+            "candidates": candidates,
+        }
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+    @staticmethod
+    def _build_meta_prompt(
+        cycle_ctx: dict, candidates: list[dict], spec_scores: list[SpecialistScores]
+    ) -> str:
+        # Canonical per-name score matrix: {symbol: {lens: score}} — sorted so the
+        # prompt (and thus the cache key) is order-invariant.
+        matrix: dict[str, dict[str, int]] = {}
+        for ss in spec_scores:
+            for sym, sc in ss.scores.items():
+                matrix.setdefault(sym, {})[ss.lens] = sc
+        payload = {
+            "task": (
+                "You are the meta risk-review layer over a quantitative crypto "
+                "trading book. Five signal-class specialists have each scored the "
+                "cycle's candidates 1-5 through their own lens (see "
+                "specialist_scores). Aggregate those scores into a final review. "
+                "You may only KEEP, DROP, or SCALE candidates (scale in [0, 1] — "
+                "you may only reduce size, never increase it); you cannot add "
+                "positions or change sides. Favour dropping/scaling candidates the "
+                "specialists broadly score low (<=2) or on which they strongly "
+                "disagree against the macro/sentiment state. Respond with ONLY a "
+                'JSON object: {"keep": [symbols], "drop": [symbols], '
+                '"size_scale": {symbol: float}, "reasoning": str, '
+                '"confidence": float in [0,1]}. Every candidate symbol must appear '
+                "in exactly one of keep/drop."
+            ),
+            "cycle_ctx": cycle_ctx,
+            "candidates": candidates,
+            "specialist_scores": matrix,
+        }
+        return json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+    # --------------------------------------------------------- validation
+
+    @staticmethod
+    def _validate_scores(raw: dict, symbols: list[str]) -> dict[str, int]:
+        """Clamp specialist scores to integer [1,5]; unknown symbols dropped,
+        unmentioned candidates default to a neutral 3."""
+        sym_set = set(symbols)
+        scores_raw = raw.get("scores", {}) or {}
+        out: dict[str, int] = {}
+        for s, v in scores_raw.items():
+            if s in sym_set:
+                try:
+                    out[s] = int(min(5, max(1, round(float(v)))))
+                except (TypeError, ValueError):
+                    continue
+        for s in symbols:
+            out.setdefault(s, 3)  # neutral default — never invent conviction
+        return out
