@@ -101,6 +101,7 @@ class PaperTradingEngine:
         trail_keep_frac: float = 0.5,
         max_hold_win: int = 10,
         max_hold_lose: int = 6,
+        regime_exit_params: dict[str, dict[str, float]] | None = None,
     ) -> None:
         self.initial_capital = initial_capital
         self._db_url: str | None = db_url or os.environ.get("DATABASE_URL")
@@ -113,6 +114,14 @@ class PaperTradingEngine:
         self._trail_keep_frac = trail_keep_frac
         self._max_hold_win = max_hold_win
         self._max_hold_lose = max_hold_lose
+        # V248 regime-conditional exits: {regime: {"trail_keep_frac": float,
+        # "max_hold_win": int, "max_hold_lose": int}}. None = global params
+        # above (byte-identical pre-V248 behavior). The current regime is
+        # pushed by the caller via set_current_regime() with a 1-cycle lag
+        # (marks at cycle t use regime computed at t-1 — strictly causal).
+        # An unknown/missing regime falls back to the global params.
+        self._regime_exit_params = regime_exit_params
+        self._current_regime: str = "normal"
 
         # In-memory state
         # {symbol: {"side": "long"|"short", "size": float, "entry": float, ...}}
@@ -560,6 +569,18 @@ class PaperTradingEngine:
         return executed
 
     # ------------------------------------------------------------------
+    # V248: regime-conditional exits — regime push
+    # ------------------------------------------------------------------
+
+    def set_current_regime(self, regime: str | None) -> None:
+        """Push the runtime regime (normal/high_vol/crisis) for the NEXT
+        cycle's marks. Called once per cycle by the training loop after the
+        cycle completes (1-cycle lag — strictly causal). Unknown/empty values
+        keep the previous regime. No-op unless regime_exit_params was set."""
+        if regime:
+            self._current_regime = str(regime)
+
+    # ------------------------------------------------------------------
     # Mark-to-market: time-based and stop-loss exits
     # ------------------------------------------------------------------
 
@@ -612,7 +633,13 @@ class PaperTradingEngine:
             cycle_opened = int(pos.get("cycle_opened", current_cycle))
             age = current_cycle - cycle_opened
             roi = unrealized / size if size > 0 else 0.0
-            _max_hold = self._max_hold_lose if unrealized < 0 else self._max_hold_win
+            # V248: regime-conditional exit params (flag-gated via the
+            # regime_exit_params ctor arg; None => pre-V248 global params).
+            _rp = (self._regime_exit_params or {}).get(self._current_regime)
+            _trail_keep = float(_rp["trail_keep_frac"]) if _rp else self._trail_keep_frac
+            _hold_win = int(_rp["max_hold_win"]) if _rp else self._max_hold_win
+            _hold_lose = int(_rp["max_hold_lose"]) if _rp else self._max_hold_lose
+            _max_hold = _hold_lose if unrealized < 0 else _hold_win
 
             should_close = False
             close_reason = ""
@@ -661,7 +688,7 @@ class PaperTradingEngine:
                 elif (
                     age >= _min_trail_age
                     and mfe > size * 0.005
-                    and unrealized < self._trail_keep_frac * mfe
+                    and unrealized < _trail_keep * mfe
                 ):
                     # Trailing stop: close if we give back more than 50% of peak MFE.
                     # Only fires when MFE is meaningful (>0.5% of position size) to

@@ -1055,6 +1055,30 @@ def run(
         }
         log.info("V246 exit_adaptivity ACTIVE: %s", _exit_kw)
 
+    # V248: regime-conditional exit params (flag-gated; when OFF the engine
+    # receives regime_exit_params=None and behavior is byte-identical).
+    _regime_exit_adaptive = bool(
+        getattr(_active_features, "exit_regime_adaptivity_enabled", False)
+    )
+    if _regime_exit_adaptive:
+        _exit_kw["regime_exit_params"] = {
+            _reg: {
+                "trail_keep_frac": float(
+                    getattr(_active_features, f"exit_trail_keep_frac_{_reg}", 0.5)
+                ),
+                "max_hold_win": int(
+                    getattr(_active_features, f"exit_max_hold_win_{_reg}", 10)
+                ),
+                "max_hold_lose": int(
+                    getattr(_active_features, f"exit_max_hold_lose_{_reg}", 6)
+                ),
+            }
+            for _reg in ("normal", "high_vol", "crisis")
+        }
+        log.info(
+            "V248 exit_regime_adaptivity ACTIVE: %s", _exit_kw["regime_exit_params"]
+        )
+
     engine = PaperTradingEngine(
         initial_capital=100_000.0,
         db_url=db_url or None,
@@ -1284,6 +1308,12 @@ def run(
 
             regime = _get_regime(victoria)
             freshness_min = _get_data_freshness(victoria)
+
+            # V248: push runtime regime into the engine for the NEXT cycle's
+            # marks (1-cycle lag, causal). No-op unless the flag wired
+            # regime_exit_params at engine construction.
+            if _regime_exit_adaptive:
+                engine.set_current_regime(regime)
 
             # ── Determine sit_out_reason via strategy counter deltas ───────
             sit_out_reason = "normal"

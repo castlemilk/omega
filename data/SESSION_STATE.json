@@ -1,7 +1,7 @@
 {
-  "version": "v246-complete",
-  "step": "V246 REFUTED (Fable 5): exit_adapt (trail_keep 0.25, hold_win 8) grid clean (0 det FAILs) \u2014 pooled mean-D +$627 (exactly 2SE $625, level-p25 tightens every regime) but recent conjunction fired (+$72 mean / -$407 p25-D) and pooled D-p25 -$378 < 0. Flag stays OFF; engine parametrization retained dormant. 3rd consecutive refutation -> REFLECTION_V246 committed: the objective 'recent mean-D>=+$100' is 7x below the n=10 noise floor (2SE $727).",
-  "next_action": "V247: FIRST re-derive acceptance bars from REFLECTION_V246 \u00a72 variance table (pooled-gated with recent no-regression floor, OR more recent windows via walk_forward_freeze) \u2014 fixed in pre-reg before results. Then mechanism from \u00a75: regime-conditional exit params, or V243-A blacklist re-score. Ship obs deltas: aggregator dual-tail report + re-entry coupling counter (backlog V247 #1/#2).",
+  "version": "v248-refuted-at-scoring",
+  "step": "V248 REFUTED_AT_SCORING (Opus 4.8, first adjudication fully under the V247 ruler): regime-conditional exit params. $0 scorer best cell = composition +$494 pooled mean-\u0394 < +$625 low-coupling 2\u00b7SE bar (recent \u0394 +$61\u2265\u2212$360 ok, pooled level-p25 \u0394 +$285\u22650 ok, but pooled-mean bar binding+unmet). Lands in pre-named [$400,$625) inside-noise-no-adopt band. Grid NOT run, $0 spent \u2014 ruler caught the near-miss before compute. Engine parametrization committed DORMANT (flag OFF byte-identical). 4th straight exit/portfolio refutation.",
+  "next_action": "Exit mechanism space saturated under current manifest (V246 global +$627 & V248 regime-cond +$494 both in near-miss band). Do NOT grind more exit OFAT (that is the queue V247 killed). Lever = the RULER: V247 Phase 1 \u03b1 sub-path 1 \u2014 widen walk_forward window manifest via walk_forward_freeze to add independent recent windows, lowering 2\u00b7SE bar; re-derive bar pre-reg on wider manifest, then re-test the +$494 combo. V241/V244/V245/V246/V248 flags stay OFF.",
   "honest_baselines_v235": {
     "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
     "crisis": {
@@ -43,10 +43,11 @@
     "aggregator caveat: walk_forward_aggregate.py OVERWRITES V235_WALKFORWARD_RESULTS.md - the narrative header is in git, re-apply if re-aggregated.",
     "Uncommitted pre-existing diffs NOT mine: omega/core/* (6 files), docs/ideas+research, run_diag*.py, harness/, .serena/, scripts/v219-v225 grid scripts - left untouched.",
     "data/signal_ic_history.json + training_version.txt: grid restored committed state before running.",
-    "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build."
+    "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build.",
+    "V248 scorer instrument caveat: incumbent replay 99.1% exit-cycle / 91.5% exact-pnl (INVALID_REPLAY flag) is intrinsic to the replay class (v246_exit_scorer_v2 byte-identical on same ledgers), NOT a regression; \u0394 metric robust because best cell moves only 20.1% of trades (unmoved trades contribute exactly $0 to \u0394). Artifact: $AUDIT/v248/scorer.json."
   ],
-  "last_commit": "a88b95e",
-  "updated_at": "2026-07-13T07:55:00+00:00",
+  "last_commit": "7e1a78f",
+  "updated_at": "2026-07-13T08:22:32.748352+00:00",
   "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
   "v235_walkforward": {
     "phase": "complete",

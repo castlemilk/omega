@@ -962,6 +962,37 @@ class VictoriaFeatures:
     """V246: max hold (cycles) for losing positions (legacy literal 6).
     Only read when exit_adaptivity_enabled."""
 
+    exit_regime_adaptivity_enabled: bool = False
+    """V248: regime-CONDITIONAL exit params. When ON, run_training.py builds a
+    {regime: {trail_keep_frac, max_hold_win, max_hold_lose}} map from the nine
+    per-regime fields below and pushes the runtime regime into
+    PaperTradingEngine once per cycle (1-cycle lag, causal). Regimes are the
+    RUNTIME labels (normal/high_vol/crisis), never the ex-post walk-forward
+    window labels (lookahead). Default OFF => byte-identical baseline. If both
+    this and exit_adaptivity_enabled are ON, the per-regime map wins for known
+    regimes (unknown regimes fall back to the engine's global params)."""
+
+    exit_trail_keep_frac_normal: float = 0.5
+    """V248: trail-keep fraction while runtime regime == normal."""
+    exit_max_hold_win_normal: int = 10
+    """V248: winner max hold while runtime regime == normal."""
+    exit_max_hold_lose_normal: int = 6
+    """V248: loser max hold while runtime regime == normal."""
+
+    exit_trail_keep_frac_high_vol: float = 0.5
+    """V248: trail-keep fraction while runtime regime == high_vol."""
+    exit_max_hold_win_high_vol: int = 10
+    """V248: winner max hold while runtime regime == high_vol."""
+    exit_max_hold_lose_high_vol: int = 6
+    """V248: loser max hold while runtime regime == high_vol."""
+
+    exit_trail_keep_frac_crisis: float = 0.5
+    """V248: trail-keep fraction while runtime regime == crisis."""
+    exit_max_hold_win_crisis: int = 10
+    """V248: winner max hold while runtime regime == crisis."""
+    exit_max_hold_lose_crisis: int = 6
+    """V248: loser max hold while runtime regime == crisis."""
+
     # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
