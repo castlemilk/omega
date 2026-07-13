@@ -11,7 +11,7 @@ Data sources (via ProviderRegistry):
   5. DefiLlamaProvider — DeFi protocol TVL rankings (supplementary)
 
 Pairs: BTCUSDT, ETHUSDT, SOLUSDT, BNBUSDT, XRPUSDT,
-       ADAUSDT, DOTUSDT, AVAXUSDT, LINKUSDT, MATICUSDT
+       ADAUSDT, DOTUSDT, AVAXUSDT, LINKUSDT, POLUSDT
 
 Improvement arc:
   v1.0 — Basic Binance klines fetch, no retry, no cache
@@ -61,7 +61,11 @@ _BASE_PAIRS = [
     "DOTUSDT",
     "AVAXUSDT",
     "LINKUSDT",
-    "MATICUSDT",
+    # V253: MATIC→POL rebrand 2024-09-10; POL is 1:1 successor, live-continuous.
+    # LIVE fetch list only — the frozen backtest reads its universe from each
+    # snapshot's own keys (ReplayIngestionNode), so this swap never perturbs a
+    # frozen window (crisis/trend keep baked-in MATIC; recent already dropped it).
+    "POLUSDT",
     # V92: added for basket diversity — all US-accessible via Coinbase/Kraken
     "NEARUSDT",  # Near Protocol — good volume
     "SUIUSDT",  # Sui — high volume, trending L1

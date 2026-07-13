@@ -64,7 +64,8 @@ _COINGECKO_IDS = {
     "DOTUSDT": "polkadot",
     "AVAXUSDT": "avalanche-2",
     "LINKUSDT": "chainlink",
-    "MATICUSDT": "matic-network",
+    # V253: MATIC→POL rebrand 2024-09-10; POL is 1:1 successor, live-continuous.
+    "POLUSDT": "polygon-ecosystem-token",
     "NEARUSDT": "near",
     "SUIUSDT": "sui",
     "ARBUSDT": "arbitrum",
@@ -944,7 +945,8 @@ _COINBASE_PAIRS = {
     "DOTUSDT": "DOT-USD",
     "AVAXUSDT": "AVAX-USD",
     "LINKUSDT": "LINK-USD",
-    "MATICUSDT": "MATIC-USD",
+    # V253: MATIC→POL rebrand 2024-09-10; POL is 1:1 successor, live-continuous.
+    "POLUSDT": "POL-USD",
     "ATOMUSDT": "ATOM-USD",
     "NEARUSDT": "NEAR-USD",
     "SUIUSDT": "SUI-USD",
@@ -992,7 +994,8 @@ _CRYPTOCOMPARE_SYMBOLS = {
     "DOTUSDT": "DOT",
     "AVAXUSDT": "AVAX",
     "LINKUSDT": "LINK",
-    "MATICUSDT": "MATIC",
+    # V253: MATIC→POL rebrand 2024-09-10; POL is 1:1 successor, live-continuous.
+    "POLUSDT": "POL",
     "ATOMUSDT": "ATOM",
     "NEARUSDT": "NEAR",
     "SUIUSDT": "SUI",

@@ -201,10 +201,16 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
     #   wrong-direction. BNB long signals are untested; removing entirely until trend clears.
     # V93: SUIUSDT fully blacklisted — V92: 2T 0% WR -$9.14. Only 2 trades, both losses.
     #   SUI signal is noise-level; insufficient data to trust either direction.
+    # V253: MATIC→POL rebrand 2024-09-10; POL is 1:1 successor, live-continuous.
+    #   POLUSDT takes MATICUSDT's roster slot. This is byte-identical for the
+    #   frozen backtest: replay iterates each snapshot's own keys (MATIC baked
+    #   into crisis/trend, already dropped from recent), and _universe_blocked
+    #   returns "tradeable" for a name absent from this set via the first check —
+    #   so removing MATIC here does not change any frozen window's traded set.
     {
         "BTCUSDT",
         "DOTUSDT",
-        "MATICUSDT",
+        "POLUSDT",
         "XRPUSDT",
         "SOLUSDT",
         "AVAXUSDT",
@@ -217,7 +223,8 @@ _TRADING_BLACKLIST: frozenset[str] = frozenset(
 # V240: the selective-universe effective blacklist. Per-ticker forensics on the
 # V239 flip grid (scripts/v240_universe_forensics.py) attributed the crisis mean
 # regression to DOT/LINK/BTC; universe_selective_enabled re-includes the other 6
-# names (SOL/BNB/AVAX/XRP/SUI/MATIC) and keeps only these three excluded.
+# names (SOL/BNB/AVAX/XRP/SUI/POL — V253 MATIC→POL rebrand) and keeps only these
+# three excluded.
 _SELECTIVE_UNIVERSE_BLACKLIST: frozenset[str] = frozenset(
     {"BTCUSDT", "DOTUSDT", "LINKUSDT"}
 )
