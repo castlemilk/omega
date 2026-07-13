@@ -42,6 +42,7 @@ data/v[0-9]*_*.jsonl
 data/v[0-9]*_*.csv
 data/v[0-9]*_*.log
 data/v[0-9]*_audit/
+data/live_paper/
 data/v[0-9]*_pids.txt
 data/v[0-9]*_grid_summary.txt
 data/.v[0-9]*

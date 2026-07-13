@@ -6,10 +6,26 @@ which **phase** the campaign is in and the explicit criteria to advance.
 
 ---
 
-## Current phase: **Phase 1 COMPLETE — paused pending resume criteria**
+## Current phase: **Phase 2 IN PROGRESS — live-paper harness build (acquisition)**
 
 **Phase 1 = V241–V249 (the seam-free walk-forward + V247-ruler era).**
 Closed 2026-07-13 by `V249.md`.
+
+**Phase 2 = V250+ (live-paper accumulation).** In progress:
+- **V250 (DONE, 2026-07-13):** live data-feed layer (`omega/live_paper/`) built +
+  retrospective smoke (7/8 falsifiers PASS; F1 caught the MATIC→POL delisting).
+  ADOPT, default OFF.
+- **V251 (DONE, 2026-07-13) — the reconciliation gate PASSED.** Live feed
+  reproduces the frozen backtest **bit-identically**: 32/32 windows OHLCV
+  byte-identical, $0.00 PnL arm-Δ on all three sentinels (crisis/trend/recent),
+  N=2 determinism $0, frozen-path guard clean. **V250 feed layer merged to main
+  via `--no-ff`.** MATIC contamination controlled (matched variable, both arms;
+  MATIC→POL forward-universe remap queued as P0 for V253, not a merge blocker).
+  See `V251.md` + `V251_MATIC_IMPACT.md`.
+- **V252 (NEXT):** MVP integration — scheduler + crash-safe checkpoint; restart
+  test. Entry criterion (V251 gate PASSED) now met.
+- **V253:** 90-day headless soak + first quarterly freeze-and-label. Apply the
+  MATIC→POL remap + provision the run host (FRED key + GDELT egress) before this.
 
 ### What Phase 1 delivered
 
