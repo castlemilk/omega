@@ -100,7 +100,7 @@ class SchedulerConfig:
     max_sleep_chunk_seconds: float = 30.0
 
     @classmethod
-    def from_env(cls) -> "SchedulerConfig":
+    def from_env(cls) -> SchedulerConfig:
         tick = os.environ.get("SCHEDULER_TICK_UTC", "04:05:00").strip() or "04:05:00"
         _parse_hms(tick)  # validate early — fail loud on malformed config
         drift = os.environ.get("SCHEDULER_DRIFT_ALERT_SECONDS", "").strip()
@@ -121,7 +121,7 @@ class SchedulerConfig:
         return _parse_hms(self.tick_utc)
 
 
-def checkpoint_dir(cfg: "LivePaperConfig | None" = None) -> Path:
+def checkpoint_dir(cfg: LivePaperConfig | None = None) -> Path:
     """Directory holding daily crash-safe checkpoints (SCOPE §3.2)."""
     base = (cfg or LivePaperConfig()).output_dir
     return base / "checkpoint"

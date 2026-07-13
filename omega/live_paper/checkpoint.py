@@ -84,8 +84,7 @@ class CheckpointState:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "CheckpointState":
-        known = {f for f in cls.__dataclass_fields__}  # noqa: F841 - readability
+    def from_dict(cls, d: dict[str, Any]) -> CheckpointState:
         return cls(
             cycle_ts=d["cycle_ts"],
             cycle_date=d["cycle_date"],
