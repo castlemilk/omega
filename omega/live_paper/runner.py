@@ -284,14 +284,16 @@ def make_retrospective_cycle(
             py, repo_root, version, window_snapshot, cycles, features_json
         )
         results = json.loads(results_path.read_text())
-        pnl = float(results.get("total_pnl_usd", results.get("total_pnl", 0.0)))
+        trades = results.get("trades", {})  # PnL lives under results["trades"] (V251 parity)
+        pnl = float(trades.get("total_pnl_usd", 0.0))
+        n_closed = int(trades.get("total_closed", 0))
         prior_equity = ctx.prior.equity if ctx.prior is not None else ctx.initial_capital
         return CycleResult(
             equity=round(prior_equity + pnl, 2),
             realised_pnl=round(pnl, 2),
-            closed_trades=[{"n_closed": int(results.get("total_closed", 0))}],
+            closed_trades=[{"n_closed": n_closed}],
             seed_state={"window": window_snapshot.name},
-            extra_log={"window_pnl": round(pnl, 2), "snapshot": window_snapshot.name},
+            extra_log={"window_pnl": round(pnl, 2), "n_closed": n_closed, "snapshot": window_snapshot.name},
         )
 
     return _cycle
@@ -354,6 +356,23 @@ def make_forward_cycle(cfg: Any) -> CycleFn:
     return _cycle
 
 
+def _restore_committed_frozen_state(repo_root: Path) -> None:
+    """Restore the committed frozen inputs before a replay (V251 grid discipline).
+
+    Matches ``check_determinism.sh``'s ``restore_state``: re-checkout the committed
+    ``macro_cache.db`` + ``signal_ic_history.json`` + ``training_version.txt`` and
+    drop the sqlite WAL/SHM sidecars, so a prior run's mutation can't perturb this
+    replay's byte-exact output.
+    """
+    subprocess.run(
+        ["git", "checkout", "-q", "--",
+         "data/macro_cache.db", "data/signal_ic_history.json", "data/training_version.txt"],
+        cwd=str(repo_root), check=False, capture_output=True, text=True,
+    )
+    for sidecar in ("data/macro_cache.db-wal", "data/macro_cache.db-shm"):
+        (repo_root / sidecar).unlink(missing_ok=True)
+
+
 def _run_backtest_eval(
     python: str,
     repo_root: Path,
@@ -364,22 +383,30 @@ def _run_backtest_eval(
 ) -> Path:
     """Invoke ``run_training.py --backtest-snapshot`` and return the results path.
 
-    This is the SAME command V251's reconciliation used (SELECTIVE config, sleep 0),
-    so its output is byte-identical to the frozen arm.
+    Byte-for-byte the SAME command V251's reconciliation used (via
+    ``check_determinism.sh``): ``PYTHONHASHSEED=42``, ``--seed 42``,
+    ``--frozen-cache``, sleep 0, committed frozen state restored first. So its
+    output is identical to the frozen arm — the runner adds nothing to the eval.
     """
     import os
 
+    _restore_committed_frozen_state(repo_root)
     audit_dir = Path(os.environ.get("OMEGA_AUDIT_OUTPUT_DIR", str(repo_root / "data")))
     results_path = audit_dir / f"{version}_results.json"
+    env = dict(os.environ)
+    env.setdefault("PYTHONHASHSEED", "42")
+    env.setdefault("DATABASE_URL", "postgres://omega:omega@localhost:5432/omega?sslmode=disable")
     cmd = [
         python,
         str(repo_root / "scripts" / "run_training.py"),
         "--version", version,
         "--cycles", str(cycles),
         "--sleep", "0",
+        "--seed", "42",
         "--backtest-snapshot", str(snapshot),
+        "--frozen-cache",
         "--features", features_json,
     ]
     logger.info(json.dumps({"event": "retrospective_eval", "cmd": " ".join(cmd[3:])}))
-    subprocess.run(cmd, cwd=str(repo_root), check=True, capture_output=True, text=True)
+    subprocess.run(cmd, cwd=str(repo_root), check=True, capture_output=True, text=True, env=env)
     return results_path
