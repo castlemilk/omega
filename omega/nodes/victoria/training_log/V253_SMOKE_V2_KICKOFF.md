@@ -168,3 +168,46 @@ a breach may not occur within 1–2 live cycles. **Follow-up to raise fill rate
 - ✅ Sentinel reconciliation re-verified bit-exact ($0.00 × 3) **before** relaunch.
 - ✅ Forward wire proven idempotent + able to fill before relaunch.
 - ✅ Frozen-path guard (`assert_live_source`) intact — live pollers never read frozen.
+
+---
+
+## Addendum — Poller bumped to 60-bar window (2026-07-14 03:43 UTC)
+
+**Poller bumped to 60-bar window at 03:43 UTC, daemon restarted, new PID 81481.**
+
+The "Honest caveat" follow-up above (deepen the live OHLCV window `limit` → ≥40)
+was executed. The live OHLCV poller window was deepened **10 → 60 bars** to match
+the backtest signal-window depth, so per-name signal indicators see enough history
+to produce proposals.
+
+- **Change (poller config only, no strategy code):** promoted the inline
+  `limit=10` in `feeds._binance_klines_close` to a named constant
+  `LIVE_PAPER_OHLCV_WINDOW = 60` in `omega/live_paper/config.py`, referenced from
+  the poller. Two files: `config.py` (+constant), `feeds.py` (import + default).
+  `strategy.py`/`signal_generation.py`/`features.py`/`paper_trading.py`/
+  `reasoning_layer.py` all **untouched**.
+- **Sentinel reconciliation (hard gate) — PASS, $0.00 × 3, surfaced BEFORE
+  restart:** crisis $1,149.76 / trend $4,679.67 / recent $771.98, all Δ=$0.00 vs
+  V251 (`scripts/v252_reconcile_smoke.py`). The bump is structurally unreachable
+  from the frozen backtest path (`_binance_klines_close` ← `fetch_ohlcv` ← live
+  forward cycle + smoke only; the eval reads frozen snapshots and never imports
+  `omega.live_paper.feeds`), so byte-identity is preserved — now proven empirically
+  too.
+- **60-bar depth verified end-to-end (standalone one-shot, no checkpoint write):**
+  all 10 universe symbols return exactly **60 bars** (min 60, all ≥60), and the
+  forward cycle produced **6 proposals → 2 fills** (ARBUSDT, POLUSDT) — vs **0
+  proposals** on the ~10-bar first cycle (Deliverable 4). The deeper history is
+  exactly what unblocks proposals.
+- **Daemon restart:** PID 20144 → `kill -TERM` (graceful, `runner_shutdown
+  cycles:1`, checkpoint `2026-07-14.json` preserved) → relaunched as **PID 81481**
+  (same output dir → history continues; `checkpoint_loaded last_completed_date=
+  2026-07-14`, `runner_resumed`). Same tick **02:55:00 UTC**, `enabled=True`,
+  V240-selective `VICTORIA_FEATURES`.
+- **First real daemon cycle:** the scheduler idempotency guard (no same-day
+  double-run) advances to the day after `last_completed`, so the next daemon cycle
+  fires **2026-07-15 02:55 UTC** (before the 03:15Z audit) — the first cycle to run
+  the strategy on the 60-bar window inside the daemon loop. Materially higher
+  chance of live fills than the ~10-bar first cycle.
+
+> `FRED_API_KEY` still unset (macro on `DEMO_KEY`) — the other half of the
+> fill-rate follow-up, deferred (host-provisioning, not a code change).

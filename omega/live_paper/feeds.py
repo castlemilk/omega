@@ -42,7 +42,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-from omega.live_paper.config import FROZEN_ROOTS, LivePaperConfig
+from omega.live_paper.config import FROZEN_ROOTS, LIVE_PAPER_OHLCV_WINDOW, LivePaperConfig
 
 logger = logging.getLogger("omega.live_paper.feeds")
 
@@ -216,7 +216,7 @@ class FeedResult:
 # meaningful — past dates must be byte-stable across fetches.
 
 
-def _binance_klines_close(symbol: str, timeout: float, end_ms: int, limit: int = 10) -> dict[str, float]:
+def _binance_klines_close(symbol: str, timeout: float, end_ms: int, limit: int = LIVE_PAPER_OHLCV_WINDOW) -> dict[str, float]:
     url = (
         "https://api.binance.com/api/v3/klines?"
         + urllib.parse.urlencode({"symbol": symbol, "interval": "1d", "endTime": end_ms, "limit": limit})

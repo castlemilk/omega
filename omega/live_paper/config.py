@@ -53,6 +53,13 @@ _UNIVERSE_ALL = (
 _BLACKLIST = frozenset({"BTCUSDT", "DOTUSDT", "LINKUSDT"})
 SELECTIVE_UNIVERSE: tuple[str, ...] = tuple(p for p in _UNIVERSE_ALL if p not in _BLACKLIST)
 
+# Trailing daily-close window (bars) the live-paper OHLCV poller pulls per symbol.
+# Matches the backtest signal-window depth (`make_retrospective_cycle` runs on
+# 60-bar windows) so per-name signals see enough history to produce proposals.
+# This governs the LIVE fetch only — the frozen backtest reads snapshot keys and
+# is untouched by this value, so it does not perturb reconciliation byte-identity.
+LIVE_PAPER_OHLCV_WINDOW: int = 60
+
 
 def _default_output_dir() -> Path:
     base = os.environ.get("OMEGA_AUDIT_OUTPUT_DIR", "").strip()
