@@ -46,6 +46,13 @@ from omega.live_paper.scheduler import DailyScheduler, TickInfo
 
 logger = logging.getLogger("omega.live_paper.runner")
 
+# V253 forward-cycle deterministic hold window. PaperTradingEngine randomizes exit
+# age in [_EXIT_CYCLES_MIN, _EXIT_CYCLES_MAX]; the backtest pins both to a fixed
+# hold (backtest.py `_BT_HOLD_CYCLES`) so results are reproducible. The forward
+# entry wire pins the same way so a cycle is idempotent: identical feeds + prior
+# state ⇒ identical positions / realised PnL (only cosmetic trade_id/ts differ).
+_FORWARD_HOLD_CYCLES = 5
+
 
 @dataclass
 class CycleContext:
@@ -300,25 +307,49 @@ def make_retrospective_cycle(
 
 
 def make_forward_cycle(cfg: Any) -> CycleFn:
-    """Production live-paper cycle: real V250 feeds → engine mark-to-market → equity.
+    """Production live-paper cycle: real V250 feeds → SignalGeneration → StrategyNode
+    → PaperTradingEngine → equity. This is the V253 **entry wire**.
 
-    Rehydrates a :class:`PaperTradingEngine` from the prior checkpoint's open
-    positions, fetches the day's daily-close bars through the V250 live pollers
-    (every fetch passes the ``assert_live_source`` frozen-path guard), marks the
-    portfolio to market, and returns the updated equity/positions. Non-deterministic
-    by design (real clock + network) — NOT exercised by the deterministic V252
-    smoke; it drives the V253 headless soak.
+    Each daily tick:
 
-    Position *entry* (the full SignalGeneration → StrategyNode.execute → proposal
-    path) is wired in V253 alongside the soak that validates it end-to-end; V252's
-    forward cycle is a faithful monitoring + mark-to-market loop that already
-    exercises feeds + engine + checkpoint + scheduler together. No strategy code is
-    imported or modified here — the engine is called, never changed.
+      1. Rehydrate a :class:`PaperTradingEngine` from the prior checkpoint's open
+         positions / realised PnL / closed-trade ledger.
+      2. Fetch the trailing daily-close **window** per universe symbol through the
+         V250 live pollers (every fetch passes the ``assert_live_source``
+         frozen-path guard). The signal pipeline needs history, so we pass the
+         full trailing series ``<= as_of`` — NOT a single close.
+      3. Run the SAME per-cycle sequence the backtest loop uses
+         (``backtest.py`` L217-268) VERBATIM: ``SignalGenerationNode.execute`` →
+         ``StrategyNode.execute`` → build proposals → ``execute_proposals``. The
+         nodes read their feature flags from ``VICTORIA_FEATURES`` (identical env
+         contract to ``run_training.py``), so live-paper runs whatever standing
+         baseline the launch env pins (V240-selective for V253).
+      4. Mark-to-market and return updated equity / positions.
+
+    Faithfulness contract (V251): the engine + strategy + signal modules are
+    **called, never modified** — this function is the only new code, and it drives
+    the same objects the backtest drives. Determinism: exit timing is pinned to
+    ``_FORWARD_HOLD_CYCLES`` (mirroring the backtest pin) so a cycle is idempotent
+    on ``(feeds, prior state)``. The strategy step reads no wall-clock for sizing
+    (V216 bar-time fence); only ``execute_proposals`` stamps cosmetic ``ts``/
+    ``trade_id`` from the clock — those don't affect positions or PnL.
+
+    Non-deterministic across days by design (real network) — NOT exercised by the
+    deterministic V252 smoke; it drives the V253 live-paper soak. The V251
+    reconciliation (backtest byte-identity) is preserved: that path is the
+    UNCHANGED ``make_retrospective_cycle`` shell-out, untouched by this wire.
     """
     from omega.core.paper_trading import PaperTradingEngine
     from omega.live_paper import feeds
 
     def _cycle(ctx: CycleContext) -> CycleResult:
+        # Pin exit timing for idempotency (same technique as backtest.py L195-200).
+        # Runtime module-constant set — paper_trading.py itself is untouched.
+        import omega.core.paper_trading as _pt
+
+        _pt._EXIT_CYCLES_MIN = _FORWARD_HOLD_CYCLES
+        _pt._EXIT_CYCLES_MAX = _FORWARD_HOLD_CYCLES
+
         engine = PaperTradingEngine(initial_capital=ctx.initial_capital)
         prior_positions = ctx.prior.open_positions if ctx.prior is not None else []
         engine._positions = {p["symbol"]: dict(p) for p in prior_positions if p.get("symbol")}
@@ -326,20 +357,74 @@ def make_forward_cycle(cfg: Any) -> CycleFn:
             engine._realised_pnl = ctx.prior.realised_pnl
             engine._closed_trades = list(ctx.prior.closed_trades)
         cycle_n = int(ctx.prior.seed_state.get("cycle_n", 0) if ctx.prior else 0) + 1
+        cid = f"lp_{ctx.cycle_date.isoformat()}"
 
-        # Fetch daily-close bars for the universe (guard-enforced live fetch).
+        # ── (2) Fetch the trailing daily-close WINDOW per symbol ────────────────
+        # Pass the full series up to as_of (retrospective correctness) so signal
+        # indicators see history. close[-1] is the current mark price for the
+        # engine; the earlier bars feed the signal window.
         market_data: dict[str, Any] = {}
         blocked: list[str] = []
         for symbol in cfg.universe:
             res = feeds.fetch_ohlcv(cfg, symbol, ctx.cycle_date)
-            if res.reachable and res.doc and res.doc["series"]:
-                asof = feeds.as_of_pick(res.doc["series"], ctx.cycle_date, cfg.max_stale_days)
-                if asof.value is not None:
-                    market_data[symbol] = {"close": [asof.value]}
+            series = res.doc["series"] if (res.reachable and res.doc) else None
+            if series:
+                closes = [series[d] for d in sorted(series) if date.fromisoformat(d) <= ctx.cycle_date]
+                if closes:
+                    market_data[symbol] = {"close": closes}
                     continue
             blocked.append(symbol)
 
-        closed = engine.mark_to_market(market_data, current_cycle=cycle_n)
+        # ── (3) Entry path: signals → strategy → proposals (backtest-faithful) ──
+        # Strategy modules are imported LAZILY here so the runner module itself
+        # stays strategy-free (fixture/retrospective paths never import them).
+        proposals: list[dict[str, Any]] = []
+        regime = "unknown"
+        sig_ok = strat_ok = False
+        try:
+            from omega.core.actions import NodeAction
+            from omega.core.node import NodeInput
+            from omega.nodes.victoria.signal_generation import SignalGenerationNode
+            from omega.nodes.victoria.strategy import StrategyNode
+
+            sig_out = SignalGenerationNode().execute(
+                NodeInput(
+                    action=NodeAction.COMPUTE_SIGNALS.value,
+                    parameters={"market_data": market_data},
+                )
+            )
+            sig_ok = bool(sig_out.success and sig_out.result)
+            if sig_ok:
+                signals: dict[str, Any] = sig_out.result
+                regime = str(signals.get("_regime", "unknown"))
+                strat_out = StrategyNode().execute(
+                    NodeInput(
+                        action=NodeAction.CONSTRUCT_PORTFOLIO.value,
+                        parameters={"signals": signals, "market_data": market_data},
+                    )
+                )
+                strat_ok = bool(strat_out.success and strat_out.result)
+                if strat_ok:
+                    weights: dict[str, float] = strat_out.result.get("weights", {})
+                    conviction: dict[str, float] = strat_out.result.get("conviction_scores", {})
+                    proposals = [
+                        {"symbol": s, "weight": float(w), "conviction": conviction.get(s, 0.30)}
+                        for s, w in weights.items()
+                    ]
+        except Exception as exc:  # never crash the daemon on a strategy error
+            logger.warning(json.dumps({"event": "forward_entry_error", "error": str(exc)}))
+
+        # ── (4) Execute + mark-to-market (either/or, exactly as the backtest) ───
+        before_closed = len(engine.closed_trades)
+        executed: list[dict[str, Any]] = []
+        if proposals:
+            executed = engine.execute_proposals(
+                proposals, market_data=market_data, cycle_id=cid, current_cycle=cycle_n
+            )
+        else:
+            engine.mark_to_market(market_data, current_cycle=cycle_n, cycle_id=cid)
+        closed_this_cycle = len(engine.closed_trades) - before_closed
+
         unrealised = float(sum(p.get("unrealized_pnl", 0.0) for p in engine.positions.values()))
         equity = round(ctx.initial_capital + engine.realised_pnl + unrealised, 2)
         open_positions = [{"symbol": s, **p} for s, p in engine.positions.items()]
@@ -350,7 +435,17 @@ def make_forward_cycle(cfg: Any) -> CycleFn:
             closed_trades=list(engine.closed_trades),
             seed_state={"cycle_n": cycle_n},
             unrealised_pnl=round(unrealised, 2),
-            extra_log={"closed_this_cycle": len(closed), "feeds_blocked": blocked},
+            extra_log={
+                "proposals_n": len(proposals),
+                "fills_opened": len(executed),
+                "closed_this_cycle": closed_this_cycle,
+                "open_symbols": [p["symbol"] for p in open_positions],
+                "trade_symbols": sorted({t.get("symbol", t.get("sym", "")) for t in executed}),
+                "regime": regime,
+                "signals_ok": sig_ok,
+                "strategy_ok": strat_ok,
+                "feeds_blocked": blocked,
+            },
         )
 
     return _cycle
