@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":-2.145,\"tone_max\":0.064,\"tone_mean\":-2.3,\"tone_min\":-5.817,\"tone_neg_spikes\":7,\"vol_max\":0.029,\"vol_mean\":0.004},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.341,\"tone_min\":-3.618,\"tone_neg_spikes\":7,\"vol_max\":0.001,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.929,\"tone_min\":-6.798,\"tone_neg_spikes\":6,\"vol_max\":0.003,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":-2.777,\"tone_max\":-0.279,\"tone_mean\":-3.083,\"tone_min\":-7.704,\"tone_neg_spikes\":6,\"vol_max\":0.005,\"vol_mean\":0.002},\"sanctions\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.312,\"tone_mean\":-0.319,\"tone_min\":-4.476,\"tone_neg_spikes\":6,\"vol_max\":0.001,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.8,
+  "reasoning": "Consistently negative mean tones across all categories, particularly in central bank and geopolitical news, alongside multiple negative spikes. However, coverage volumes remain relatively low, indicating persistent but not acute anxiety rather than outright panic.",
+  "regime": "uncertainty"
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":-1.168,\"tone_max\":1.396,\"tone_mean\":-1.349,\"tone_min\":-4.948,\"tone_neg_spikes\":5,\"vol_max\":0.025,\"vol_mean\":0.004},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.2,\"tone_mean\":-0.089,\"tone_min\":-3.274,\"tone_neg_spikes\":5,\"vol_max\":0.0,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":-3.97,\"tone_max\":0.707,\"tone_mean\":-0.597,\"tone_min\":-6.114,\"tone_neg_spikes\":10,\"vol_max\":0.037,\"vol_mean\":0.001},\"geopolitical\":{\"n_days\":91,\"tone_last\":-1.846,\"tone_max\":0.0,\"tone_mean\":-2.022,\"tone_min\":-10.544,\"tone_neg_spikes\":4,\"vol_max\":0.002,\"vol_mean\":0.0},\"sanctions\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.034,\"tone_mean\":-0.229,\"tone_min\":-4.453,\"tone_neg_spikes\":4,\"vol_max\":0.001,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.85,
+  "reasoning": "Consistently negative average tones across most categories, particularly geopolitical and central bank news, combined with frequent negative tone spikes (e.g., 10 in financial crisis) point to an environment of elevated and unresolved anxiety rather than outright panic or calm.",
+  "regime": "uncertainty"
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":-1.168,\"tone_max\":1.299,\"tone_mean\":-1.134,\"tone_min\":-5.168,\"tone_neg_spikes\":5,\"vol_max\":0.011,\"vol_mean\":0.002},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.514,\"tone_mean\":-0.018,\"tone_min\":-2.533,\"tone_neg_spikes\":2,\"vol_max\":0.001,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.759,\"tone_mean\":-0.284,\"tone_min\":-5.726,\"tone_neg_spikes\":5,\"vol_max\":0.003,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":-4.892,\"tone_max\":0.928,\"tone_mean\":-1.754,\"tone_min\":-11.62,\"tone_neg_spikes\":2,\"vol_max\":0.004,\"vol_mean\":0.001},\"sanctions\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.56,\"tone_mean\":-0.154,\"tone_min\":-3.615,\"tone_neg_spikes\":7,\"vol_max\":0.001,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.8,
+  "reasoning": "Consistently negative mean tones across most categories (especially geopolitical and central bank) and numerous severe negative spikes (e.g., -11.62 in geopolitical, -5.726 in financial crisis) indicate elevated stress. However, low overall volume means and the presence of positive max tones suggest a persistent, unresolved anxiety rather than a single acute panic event.",
+  "regime": "uncertainty"
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":90,\"tone_last\":-1.558,\"tone_max\":2.815,\"tone_mean\":-1.125,\"tone_min\":-6.301,\"tone_neg_spikes\":4,\"vol_max\":0.01,\"vol_mean\":0.002},\"crypto_regulation\":{\"n_days\":90,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.069,\"tone_min\":-3.239,\"tone_neg_spikes\":2,\"vol_max\":0.002,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":90,\"tone_last\":0.0,\"tone_max\":1.179,\"tone_mean\":-0.861,\"tone_min\":-3.285,\"tone_neg_spikes\":0,\"vol_max\":0.008,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":90,\"tone_last\":-2.792,\"tone_max\":0.0,\"tone_mean\":-2.359,\"tone_min\":-7.84,\"tone_neg_spikes\":4,\"vol_max\":0.007,\"vol_mean\":0.001},\"sanctions\":{\"n_days\":90,\"tone_last\":0.0,\"tone_max\":0.351,\"tone_mean\":-0.035,\"tone_min\":-1.409,\"tone_neg_spikes\":3,\"vol_max\":0.001,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.85,
+  "reasoning": "Consistent negative mean tones across geopolitical (-2.36) and central bank (-1.13) categories, with multiple negative tone spikes, indicate elevated anxiety. However, the lack of negative spikes or high coverage volume in the financial crisis category suggests the environment has not escalated to acute panic.",
+  "regime": "uncertainty"
+ }
+}

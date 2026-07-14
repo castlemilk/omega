@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.285,\"tone_mean\":-1.153,\"tone_min\":-5.043,\"tone_neg_spikes\":3,\"vol_max\":0.02,\"vol_mean\":0.003},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.872,\"tone_mean\":-0.072,\"tone_min\":-4.521,\"tone_neg_spikes\":3,\"vol_max\":0.002,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.855,\"tone_mean\":-0.51,\"tone_min\":-6.206,\"tone_neg_spikes\":7,\"vol_max\":0.003,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":3.387,\"tone_mean\":-2.148,\"tone_min\":-9.065,\"tone_neg_spikes\":4,\"vol_max\":0.006,\"vol_mean\":0.001},\"sanctions\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":2.757,\"tone_mean\":-0.368,\"tone_min\":-4.692,\"tone_neg_spikes\":10,\"vol_max\":0.002,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.85,
+  "reasoning": "Persistent negative mean tones across multiple categories, particularly geopolitics and central banks. The presence of numerous negative spikes in financial crisis and sanctions coverage indicates elevated anxiety, but the generally low coverage volume and moderate mean tones suggest unresolved stress rather than an acute panic event.",
+  "regime": "uncertainty"
+ }
+}

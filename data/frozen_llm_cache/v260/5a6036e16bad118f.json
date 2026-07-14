@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":-1.385,\"tone_max\":1.054,\"tone_mean\":-1.259,\"tone_min\":-4.071,\"tone_neg_spikes\":5,\"vol_max\":0.028,\"vol_mean\":0.003},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.125,\"tone_min\":-2.867,\"tone_neg_spikes\":5,\"vol_max\":0.0,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":-1.56,\"tone_max\":0.571,\"tone_mean\":-0.539,\"tone_min\":-5.849,\"tone_neg_spikes\":4,\"vol_max\":0.002,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":-1.935,\"tone_max\":0.185,\"tone_mean\":-2.1,\"tone_min\":-7.665,\"tone_neg_spikes\":3,\"vol_max\":0.005,\"vol_mean\":0.0},\"sanctions\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.503,\"tone_min\":-7.156,\"tone_neg_spikes\":5,\"vol_max\":0.002,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.85,
+  "reasoning": "Consistent negative mean tones across geopolitical (-2.1) and central bank (-1.26) categories, with multiple negative spikes across all topics, indicate an anxious environment. However, the relatively low coverage volumes and the absence of overwhelmingly severe financial crisis tones point to elevated anxiety rather than acute panic.",
+  "regime": "uncertainty"
+ }
+}

@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":-0.295,\"tone_max\":1.618,\"tone_mean\":-1.1,\"tone_min\":-4.507,\"tone_neg_spikes\":6,\"vol_max\":0.02,\"vol_mean\":0.003},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":2.538,\"tone_mean\":-0.002,\"tone_min\":-1.628,\"tone_neg_spikes\":5,\"vol_max\":0.001,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":1.262,\"tone_mean\":-0.595,\"tone_min\":-6.318,\"tone_neg_spikes\":7,\"vol_max\":0.004,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":-3.003,\"tone_max\":0.285,\"tone_mean\":-2.934,\"tone_min\":-12.605,\"tone_neg_spikes\":3,\"vol_max\":0.02,\"vol_mean\":0.001},\"sanctions\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":2.571,\"tone_mean\":-0.398,\"tone_min\":-6.516,\"tone_neg_spikes\":6,\"vol_max\":0.002,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.85,
+  "reasoning": "Consistently negative mean tones across all categories, particularly in geopolitical (-2.934) and central bank (-1.1) news, paired with multiple severe negative spikes (e.g., geopolitical min -12.605, financial crisis min -6.318). However, the relatively low coverage volumes across the board (max volume of 0.02) indicate an environment of elevated, unresolved anxiety rather than an acute, high-volume panic.",
+  "regime": "uncertainty"
+ }
+}

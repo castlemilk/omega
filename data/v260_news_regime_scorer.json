@@ -1,0 +1,487 @@
+{
+  "version": "v260",
+  "model_id": "gemini-3.1-pro-low",
+  "n_windows": 32,
+  "n_scored": 32,
+  "live_calls_this_run": 32,
+  "agreement": 0.25,
+  "n_agree": 8,
+  "mapping": {
+    "panic": "crisis",
+    "euphoria": "trend",
+    "calm": "recent",
+    "uncertainty": "recent"
+  },
+  "verdict": "SIGNAL EXISTS (20-95%) \u2014 cap FLAG-GATED (out of scope to test trading value)",
+  "llm_regime_distribution": {
+    "uncertainty": 30,
+    "panic": 2
+  },
+  "calendar_regime_distribution": {
+    "crisis": 12,
+    "trend": 10,
+    "recent": 10
+  },
+  "confusion_llm_x_calendar": {
+    "panic": {
+      "recent": 2
+    },
+    "euphoria": {},
+    "calm": {},
+    "uncertainty": {
+      "crisis": 12,
+      "trend": 10,
+      "recent": 8
+    }
+  },
+  "rows": [
+    {
+      "window": "snap_wf_20200101",
+      "date_range": [
+        "2020-01-01",
+        "2020-03-31"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": true,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20200331",
+      "date_range": [
+        "2020-03-31",
+        "2020-06-29"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20200629",
+      "date_range": [
+        "2020-06-29",
+        "2020-09-27"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20200813",
+      "date_range": [
+        "2020-08-13",
+        "2020-11-11"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20200927",
+      "date_range": [
+        "2020-09-27",
+        "2020-12-26"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20201226",
+      "date_range": [
+        "2020-12-26",
+        "2021-03-26"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": true,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20210326",
+      "date_range": [
+        "2021-03-26",
+        "2021-06-24"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": true,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20210624",
+      "date_range": [
+        "2021-06-24",
+        "2021-09-22"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": true,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20210922",
+      "date_range": [
+        "2021-09-22",
+        "2021-12-21"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20211221",
+      "date_range": [
+        "2021-12-21",
+        "2022-03-21"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20220321",
+      "date_range": [
+        "2022-03-21",
+        "2022-06-19"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": true,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20220619",
+      "date_range": [
+        "2022-06-19",
+        "2022-09-17"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20220917",
+      "date_range": [
+        "2022-09-17",
+        "2022-12-16"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20221216",
+      "date_range": [
+        "2022-12-16",
+        "2023-03-16"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20230130",
+      "date_range": [
+        "2023-01-30",
+        "2023-04-30"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20230316",
+      "date_range": [
+        "2023-03-16",
+        "2023-06-14"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20230430",
+      "date_range": [
+        "2023-04-30",
+        "2023-07-29"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20230614",
+      "date_range": [
+        "2023-06-14",
+        "2023-09-12"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20230729",
+      "date_range": [
+        "2023-07-29",
+        "2023-10-27"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "panic",
+      "llm_mapped": "crisis",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20230912",
+      "date_range": [
+        "2023-09-12",
+        "2023-12-11"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20231211",
+      "date_range": [
+        "2023-12-11",
+        "2024-03-10"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20240310",
+      "date_range": [
+        "2024-03-10",
+        "2024-06-08"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20240608",
+      "date_range": [
+        "2024-06-08",
+        "2024-09-06"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20240723",
+      "date_range": [
+        "2024-07-23",
+        "2024-10-21"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20240906",
+      "date_range": [
+        "2024-09-06",
+        "2024-12-05"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20241205",
+      "date_range": [
+        "2024-12-05",
+        "2025-03-05"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.75,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20250305",
+      "date_range": [
+        "2025-03-05",
+        "2025-06-03"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20250603",
+      "date_range": [
+        "2025-06-03",
+        "2025-09-01"
+      ],
+      "calendar_regime": "trend",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20250718",
+      "date_range": [
+        "2025-07-18",
+        "2025-10-16"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": true,
+      "confidence": 0.8,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20250901",
+      "date_range": [
+        "2025-09-01",
+        "2025-11-30"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20251130",
+      "date_range": [
+        "2025-11-30",
+        "2026-02-28"
+      ],
+      "calendar_regime": "crisis",
+      "high_vol": false,
+      "llm_regime": "uncertainty",
+      "llm_mapped": "recent",
+      "agree": false,
+      "confidence": 0.85,
+      "cache_hit": false
+    },
+    {
+      "window": "snap_wf_20260228",
+      "date_range": [
+        "2026-02-28",
+        "2026-05-29"
+      ],
+      "calendar_regime": "recent",
+      "high_vol": false,
+      "llm_regime": "panic",
+      "llm_mapped": "crisis",
+      "agree": false,
+      "confidence": 0.9,
+      "cache_hit": false
+    }
+  ]
+}

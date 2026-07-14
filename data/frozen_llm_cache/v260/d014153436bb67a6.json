@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":-2.112,\"tone_max\":1.938,\"tone_mean\":-2.28,\"tone_min\":-4.912,\"tone_neg_spikes\":6,\"vol_max\":0.015,\"vol_mean\":0.004},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.113,\"tone_min\":-2.934,\"tone_neg_spikes\":4,\"vol_max\":0.002,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.944,\"tone_mean\":-0.567,\"tone_min\":-5.632,\"tone_neg_spikes\":8,\"vol_max\":0.002,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":-2.852,\"tone_max\":-2.407,\"tone_mean\":-3.388,\"tone_min\":-5.524,\"tone_neg_spikes\":3,\"vol_max\":0.089,\"vol_mean\":0.016},\"sanctions\":{\"n_days\":91,\"tone_last\":1.624,\"tone_max\":3.038,\"tone_mean\":-1.004,\"tone_min\":-5.868,\"tone_neg_spikes\":5,\"vol_max\":0.002,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.8,
+  "reasoning": "Consistent negative mean tones and frequent negative spikes across multiple categories (especially geopolitical and central bank news) indicate elevated stress. However, the relatively low overall coverage volumes suggest chronic unresolved anxiety rather than an acute, high-volume panic event.",
+  "regime": "uncertainty"
+ }
+}

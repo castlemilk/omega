@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":0.818,\"tone_max\":1.169,\"tone_mean\":-1.138,\"tone_min\":-4.447,\"tone_neg_spikes\":5,\"vol_max\":0.018,\"vol_mean\":0.003},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.152,\"tone_min\":-4.595,\"tone_neg_spikes\":3,\"vol_max\":0.001,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.768,\"tone_mean\":-0.659,\"tone_min\":-5.356,\"tone_neg_spikes\":10,\"vol_max\":0.001,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-2.448,\"tone_min\":-7.136,\"tone_neg_spikes\":2,\"vol_max\":0.008,\"vol_mean\":0.001},\"sanctions\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.0,\"tone_mean\":-0.269,\"tone_min\":-5.62,\"tone_neg_spikes\":5,\"vol_max\":0.001,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.8,
+  "reasoning": "Consistent negative mean tones across all categories, especially geopolitical (-2.45) and central bank (-1.14), combined with frequent negative tone spikes (e.g., 10 in financial crisis). However, overall coverage volumes remain relatively low, indicating chronic unresolved anxiety rather than an acute, high-volume panic event.",
+  "regime": "uncertainty"
+ }
+}

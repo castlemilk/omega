@@ -1,0 +1,10 @@
+{
+ "agy_model_string": "Gemini 3.1 Pro (Low)",
+ "model_id": "gemini-3.1-pro-low",
+ "prompt": "{\"news_summary\":{\"central_bank\":{\"n_days\":91,\"tone_last\":-1.056,\"tone_max\":2.282,\"tone_mean\":-1.445,\"tone_min\":-5.457,\"tone_neg_spikes\":3,\"vol_max\":0.007,\"vol_mean\":0.002},\"crypto_regulation\":{\"n_days\":91,\"tone_last\":0.0,\"tone_max\":0.354,\"tone_mean\":-0.098,\"tone_min\":-3.906,\"tone_neg_spikes\":3,\"vol_max\":0.001,\"vol_mean\":0.0},\"financial_crisis\":{\"n_days\":91,\"tone_last\":-6.223,\"tone_max\":0.0,\"tone_mean\":-0.537,\"tone_min\":-6.223,\"tone_neg_spikes\":9,\"vol_max\":0.002,\"vol_mean\":0.0},\"geopolitical\":{\"n_days\":91,\"tone_last\":-2.012,\"tone_max\":2.129,\"tone_mean\":-2.032,\"tone_min\":-10.388,\"tone_neg_spikes\":3,\"vol_max\":0.004,\"vol_mean\":0.001},\"sanctions\":{\"n_days\":91,\"tone_last\":-4.727,\"tone_max\":1.435,\"tone_mean\":-0.272,\"tone_min\":-4.747,\"tone_neg_spikes\":6,\"vol_max\":0.011,\"vol_mean\":0.0}},\"task\":\"You are a macro-regime classifier reading ONLY news-media signals for a ~90-day period. You are given, per news category, the GDELT tone (negative = adverse coverage, positive = favourable) and coverage-volume statistics. Classify the DOMINANT news regime of the period as EXACTLY ONE of: 'panic' (acute fear/crisis coverage), 'uncertainty' (elevated but unresolved anxiety), 'calm' (benign, low-stress coverage), 'euphoria' (strongly optimistic/risk-on coverage). Judge from the news tone/volume ONLY \\u2014 you are NOT given prices. Respond with ONLY a JSON object: {\\\"regime\\\": one of the four words, \\\"confidence\\\": float in [0,1], \\\"reasoning\\\": short string}.\"}",
+ "response": {
+  "confidence": 0.85,
+  "reasoning": "Across all categories, tone is consistently negative with extreme lows. Notably, 'financial_crisis' has 9 negative spikes and its most recent tone is exactly at its period minimum (-6.223), while 'geopolitical' reached a severe low of -10.388. This convergence of extreme negative sentiment at the end of the period strongly indicates acute fear.",
+  "regime": "panic"
+ }
+}
