@@ -1,112 +1,112 @@
 {
-  "version": "v258-refuted-at-phase0",
-  "step": "V258 Track E REFUTED at Phase 0 ($0 grid, Opus 4.8). Specialist LLM ensemble (5 per-signal-class scorers + meta-combiner, extends reasoning_layer.py::SpecialistEnsemble). Phase-0 probe (26 cycles/135 slots, 38min agy): per-name decision divergence 37.8%, ens intervention 49.6% \u2014 both NUMERIC clauses pass (proceed), BUT structural clause (3) input-starvation FIRES: all 692 V241 cache payloads carry only {composite,conviction,side,symbol}; signals collapsed pre-LLM, so 5 specialists condition on IDENTICAL inputs \u2192 37.8% divergence is prompt-wording variance not signal = V241's variance-for-nothing at 6x fill cost. ~26h grid NOT run (do-not-grid-on-hope). Also shipped 2 operator docs: V257_EXECUTION_RUNBOOK (on-chain acquisition) + V255_D_SCOPING (basis data).",
-  "next_action": "V254 offline-buildable list EXHAUSTED (Track E refuted; funding-carry KEEP-FLAG-GATED capped on basis data; on-chain flow data-blocked). LLM-review lane closed on collapsed payload \u2014 only rehab = expose per-signal-class breakdown into candidate payload (signal/features change, out of scope, fresh pre-reg + full re-fill). Offline alpha search now DATA-BLOCKED: unblock via V255.D basis freeze (Binance mark/index) or V257 on-chain freeze (Coin Metrics community) \u2014 both operator runbooks shipped this session. V241/V244/V245/V246/V248/V258 flags stay OFF.",
-  "honest_baselines_v235": {
-    "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
-    "crisis": {
-      "n": 12,
-      "mean": 819.34,
-      "median": 248.9,
-      "p25": -2135.44,
-      "min": -5819.23,
-      "max": 8679.33
-    },
-    "trend": {
-      "n": 10,
-      "mean": 1940.57,
-      "median": 1885.71,
-      "p25": -855.04,
-      "min": -3104.78,
-      "max": 10038.01
-    },
-    "recent": {
-      "n": 10,
-      "mean": -516.27,
-      "median": -1571.14,
-      "p25": -2551.49,
-      "min": -5355.69,
-      "max": 6551.05
-    }
+ "version": "v259-v260-offline-closeout",
+ "step": "Offline alpha search CLOSED. V259 Track D (Polymarket) PAUSED at Phase-0 data audit (no frozen crypto-binary probability series; only point-in-time vol-arb snapshots exist). V260 Track F (news-as-regime-detector) REFUTED: LLM over daily-aggregate GDELT = degenerate classifier (94% one class \"uncertainty\", 2 of 4 labels never used, MI 0.11 bits vs 1.58-bit target = 7% normalized; the 0.25 agreement is a mapping artifact). 32 agy calls, <$1, hermetic cache in data/frozen_llm_cache/v260/. Shipped CAMPAIGN_V241_V258_RETROSPECTIVE.md: R2 (below-resolution) dominates 5/13 dead ends, R3 (calendar-bound N) is the meta-cause; 10 of 13 killed at $0 by Phase-0 gates.",
+ "next_action": "Offline alpha search fully DATA-BLOCKED. Every remaining lane gated on a data freeze or live host: V255.D basis (perp/spot) for the ONE confirmed alpha (V255.C funding-carry, KEEP-FLAG-GATED), V257 on-chain freeze (V256), Polymarket probability freeze (V259). Recommended resume order (see retrospective E): (1) V255.D basis-hedged carry FIRST \u2014 confirmed alpha, one dataset away; (2) V256 on-chain; (3) live-paper soak (V253) runs in parallel accruing recent-N toward >=20 resume gate. Do NOT reopen daily-bar entry-side composite without intraday resolution. All V241-V260 flags stay OFF.",
+ "honest_baselines_v235": {
+  "note": "standing main (V227-skew config), 32 x 90d walk-forward windows, seam-free (cycles capped min_bars-31)",
+  "crisis": {
+   "n": 12,
+   "mean": 819.34,
+   "median": 248.9,
+   "p25": -2135.44,
+   "min": -5819.23,
+   "max": 8679.33
   },
-  "inverted_findings": [
-    "recent +$4,901 DOES NOT REPRODUCE (honest mean -$516) - the campaign's single positive number was wrap-seam + window-selection contamination; recent is the WORST regime and the next target.",
-    "trend-IC banked +$1,428 was contamination: DO NOT SHIP anywhere (trend mean-D -$831/min -$6,136; crisis mean-D -$79/min -$7,497; recent D +$62 noise).",
-    "PARTIAL-GRID TRAP: at 48/64 cells crisis D read +$896 pro-trendic ('ship for crisis instead'); the last 4 crisis windows inverted it to -$79/min -$7,497. Partial distributions are not verdicts.",
-    "crisis is sign-POSITIVE (mean +$819, median +$249, n=12) - the V227-V234 'crisis is broken' 8-refutation arc was window selection on wrapped snapshots; crisis program closed OBE; the real problem is tail width (p25 -$2,135).",
-    "trend is the BEST regime (mean +$1,941) - it never needed the IC rescue.",
-    "wrap-seam (c244568): ReplayIngestionNode wraps at series end; ALL pre-V235 single-window numbers (V225-V234 verdicts) are directionally unknown."
-  ],
-  "notes": [
-    "infra: OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data; run_training.py now derives TMP_SINK_DIR=$OMEGA_AUDIT_OUTPUT_DIR/tmp for metrics/trade_details/decisions/training.log (asserted at startup); walk_forward_grid.sh already pinned TMPDIR. Host /tmp v### cruft deleted 2026-07-03; grid logs archived to gamma root.",
-    "grid artifacts: $AUDIT/v{235,238,239}_wf/{distribution.json,grid_state.json,grid_progress.log}; per-cell dirs $AUDIT/v2*wf_*_determinism/. v239 aggregator caveat: v239_wf_aggregate.py OVERWRITES V239_WALKFORWARD_RESULTS.md - narrative header (if added) lives in git, re-apply if re-aggregated (same pattern as V235/V238).",
-    "aggregator caveat: walk_forward_aggregate.py OVERWRITES V235_WALKFORWARD_RESULTS.md - the narrative header is in git, re-apply if re-aggregated.",
-    "Uncommitted pre-existing diffs NOT mine: omega/core/* (6 files), docs/ideas+research, run_diag*.py, harness/, .serena/, scripts/v219-v225 grid scripts - left untouched.",
-    "data/signal_ic_history.json + training_version.txt: grid restored committed state before running.",
-    "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build.",
-    "V248 scorer instrument caveat: incumbent replay 99.1% exit-cycle / 91.5% exact-pnl (INVALID_REPLAY flag) is intrinsic to the replay class (v246_exit_scorer_v2 byte-identical on same ledgers), NOT a regression; \u0394 metric robust because best cell moves only 20.1% of trades (unmoved trades contribute exactly $0 to \u0394). Artifact: $AUDIT/v248/scorer.json."
-  ],
-  "last_commit": "88878cb",
-  "updated_at": "2026-07-14T00:00:00+00:00",
-  "v258_phase0": {
-    "phase": "complete",
-    "verdict": "REFUTED at Phase 0 (input-starvation clause 3) — no grid, $0 grid spend",
-    "divergence": 0.3778,
-    "ens_intervention": 0.4963,
-    "n_cycles": 26,
-    "n_slots": 135,
-    "artifacts": "/Volumes/gamma-systems-2/omega-victoria-data/v258/{phase0_divergence.json,phase0_per_cycle.json,phase0.log}",
-    "specialist_cache": "/Volumes/gamma-systems-2/omega-victoria-data/v258/frozen_llm_cache (V241 committed cache untouched)"
+  "trend": {
+   "n": 10,
+   "mean": 1940.57,
+   "median": 1885.71,
+   "p25": -855.04,
+   "min": -3104.78,
+   "max": 10038.01
   },
-  "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
-  "v235_walkforward": {
-    "phase": "complete",
-    "cells_done": 64,
-    "cells_total": 64,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v235_wf/grid_state.json"
-  },
-  "v238_walkforward": {
-    "phase": "complete",
-    "cells_done": 64,
-    "cells_total": 64,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v238_wf/grid_state.json"
-  },
-  "v239_walkforward": {
-    "phase": "complete",
-    "cells_done": 64,
-    "cells_total": 64,
-    "max_parallel": 1,
-    "verdict": "KEEP LEGACY 4-name (crisis -$522 trips -$500 floor; pooled +$210 net-positive)",
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v239_wf/grid_state.json"
-  },
-  "v240_walkforward": {
-    "phase": "complete",
-    "cells_done": 32,
-    "cells_total": 32,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_wf/grid_state.json"
-  },
-  "v240_signal_grid": {
-    "phase": "complete",
-    "cells_done": 160,
-    "cells_total": 160,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_signal/grid_state.json"
-  },
-  "v245_walkforward": {
-    "phase": "complete",
-    "cells_done": 32,
-    "cells_total": 32,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v245/grid_state.json"
-  },
-  "v246_walkforward": {
-    "phase": "complete",
-    "cells_done": 32,
-    "cells_total": 32,
-    "max_parallel": 1,
-    "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v246/grid_state.json"
+  "recent": {
+   "n": 10,
+   "mean": -516.27,
+   "median": -1571.14,
+   "p25": -2551.49,
+   "min": -5355.69,
+   "max": 6551.05
   }
+ },
+ "inverted_findings": [
+  "recent +$4,901 DOES NOT REPRODUCE (honest mean -$516) - the campaign's single positive number was wrap-seam + window-selection contamination; recent is the WORST regime and the next target.",
+  "trend-IC banked +$1,428 was contamination: DO NOT SHIP anywhere (trend mean-D -$831/min -$6,136; crisis mean-D -$79/min -$7,497; recent D +$62 noise).",
+  "PARTIAL-GRID TRAP: at 48/64 cells crisis D read +$896 pro-trendic ('ship for crisis instead'); the last 4 crisis windows inverted it to -$79/min -$7,497. Partial distributions are not verdicts.",
+  "crisis is sign-POSITIVE (mean +$819, median +$249, n=12) - the V227-V234 'crisis is broken' 8-refutation arc was window selection on wrapped snapshots; crisis program closed OBE; the real problem is tail width (p25 -$2,135).",
+  "trend is the BEST regime (mean +$1,941) - it never needed the IC rescue.",
+  "wrap-seam (c244568): ReplayIngestionNode wraps at series end; ALL pre-V235 single-window numbers (V225-V234 verdicts) are directionally unknown."
+ ],
+ "notes": [
+  "infra: OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data; run_training.py now derives TMP_SINK_DIR=$OMEGA_AUDIT_OUTPUT_DIR/tmp for metrics/trade_details/decisions/training.log (asserted at startup); walk_forward_grid.sh already pinned TMPDIR. Host /tmp v### cruft deleted 2026-07-03; grid logs archived to gamma root.",
+  "grid artifacts: $AUDIT/v{235,238,239}_wf/{distribution.json,grid_state.json,grid_progress.log}; per-cell dirs $AUDIT/v2*wf_*_determinism/. v239 aggregator caveat: v239_wf_aggregate.py OVERWRITES V239_WALKFORWARD_RESULTS.md - narrative header (if added) lives in git, re-apply if re-aggregated (same pattern as V235/V238).",
+  "aggregator caveat: walk_forward_aggregate.py OVERWRITES V235_WALKFORWARD_RESULTS.md - the narrative header is in git, re-apply if re-aggregated.",
+  "Uncommitted pre-existing diffs NOT mine: omega/core/* (6 files), docs/ideas+research, run_diag*.py, harness/, .serena/, scripts/v219-v225 grid scripts - left untouched.",
+  "data/signal_ic_history.json + training_version.txt: grid restored committed state before running.",
+  "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build.",
+  "V248 scorer instrument caveat: incumbent replay 99.1% exit-cycle / 91.5% exact-pnl (INVALID_REPLAY flag) is intrinsic to the replay class (v246_exit_scorer_v2 byte-identical on same ledgers), NOT a regression; \u0394 metric robust because best cell moves only 20.1% of trades (unmoved trades contribute exactly $0 to \u0394). Artifact: $AUDIT/v248/scorer.json."
+ ],
+ "last_commit": "PENDING_PUSH",
+ "updated_at": "2026-07-14T00:00:00+00:00",
+ "v258_phase0": {
+  "phase": "complete",
+  "verdict": "REFUTED at Phase 0 (input-starvation clause 3) \u2014 no grid, $0 grid spend",
+  "divergence": 0.3778,
+  "ens_intervention": 0.4963,
+  "n_cycles": 26,
+  "n_slots": 135,
+  "artifacts": "/Volumes/gamma-systems-2/omega-victoria-data/v258/{phase0_divergence.json,phase0_per_cycle.json,phase0.log}",
+  "specialist_cache": "/Volumes/gamma-systems-2/omega-victoria-data/v258/frozen_llm_cache (V241 committed cache untouched)"
+ },
+ "audit_output_dir": "/Volumes/gamma-systems-2/omega-victoria-data",
+ "v235_walkforward": {
+  "phase": "complete",
+  "cells_done": 64,
+  "cells_total": 64,
+  "max_parallel": 1,
+  "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v235_wf/grid_state.json"
+ },
+ "v238_walkforward": {
+  "phase": "complete",
+  "cells_done": 64,
+  "cells_total": 64,
+  "max_parallel": 1,
+  "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v238_wf/grid_state.json"
+ },
+ "v239_walkforward": {
+  "phase": "complete",
+  "cells_done": 64,
+  "cells_total": 64,
+  "max_parallel": 1,
+  "verdict": "KEEP LEGACY 4-name (crisis -$522 trips -$500 floor; pooled +$210 net-positive)",
+  "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v239_wf/grid_state.json"
+ },
+ "v240_walkforward": {
+  "phase": "complete",
+  "cells_done": 32,
+  "cells_total": 32,
+  "max_parallel": 1,
+  "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_wf/grid_state.json"
+ },
+ "v240_signal_grid": {
+  "phase": "complete",
+  "cells_done": 160,
+  "cells_total": 160,
+  "max_parallel": 1,
+  "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v240_signal/grid_state.json"
+ },
+ "v245_walkforward": {
+  "phase": "complete",
+  "cells_done": 32,
+  "cells_total": 32,
+  "max_parallel": 1,
+  "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v245/grid_state.json"
+ },
+ "v246_walkforward": {
+  "phase": "complete",
+  "cells_done": 32,
+  "cells_total": 32,
+  "max_parallel": 1,
+  "manifest": "/Volumes/gamma-systems-2/omega-victoria-data/v246/grid_state.json"
+ }
 }
