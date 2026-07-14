@@ -46,7 +46,7 @@
   "V213-class finding: composite consumes only *_signal keys \u2014 V115 whale_flow member names (oi_rate_of_change etc.) were NEVER composite-visible live OR frozen; fixed frozen path with _signal aliases (commit 84d98c8). Same latent for 3/4 gdelt geo_* keys \u2014 queued V240 gdelt build.",
   "V248 scorer instrument caveat: incumbent replay 99.1% exit-cycle / 91.5% exact-pnl (INVALID_REPLAY flag) is intrinsic to the replay class (v246_exit_scorer_v2 byte-identical on same ledgers), NOT a regression; \u0394 metric robust because best cell moves only 20.1% of trades (unmoved trades contribute exactly $0 to \u0394). Artifact: $AUDIT/v248/scorer.json."
  ],
- "last_commit": "PENDING_PUSH",
+ "last_commit": "503e113",
  "updated_at": "2026-07-14T00:00:00+00:00",
  "v258_phase0": {
   "phase": "complete",
