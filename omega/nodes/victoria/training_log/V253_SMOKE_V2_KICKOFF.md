@@ -241,3 +241,68 @@ VIX / DXY) resolves live instead of degrading on `DEMO_KEY`.
 - **Next daemon tick 2026-07-15 02:55 UTC** will run the strategy with the macro
   FRED feeds live; the 03:15Z audit will now see yield_curve/VIX/DXY as working
   feeds rather than blocked/degraded.
+
+---
+
+## Addendum — `hmmlearn 0.3.3` picked up via graceful restart (2026-07-15 08:07 UTC)
+
+`hmmlearn 0.3.3` was installed into the daemon's Homebrew Python 3.14
+site-packages. `omega.nodes.victoria.hmm_regime` selects its backend at
+**module-import time** (`try: from hmmlearn import hmm`), so only a fresh process
+picks it up. The daemon was restarted to load it, preserving the open book.
+
+- **Graceful restart (checkpoint-preserved):** old **PID 68916** → `kill -TERM`
+  (`scheduler_shutdown_signal signum 15` → `runner_shutdown cycles:1` → clean exit,
+  no in-flight cycle lost, PID gone in 13 s) → relaunched via
+  `scripts/live_paper_daemon.sh --mode forward` as **PID 38468**. Same output dir,
+  same tick **02:55:00 UTC**, `enabled=True`, launch env reproduced: `harness/.env`
+  sourced (real `FRED_API_KEY` + `DATABASE_URL`), `OMEGA_AUDIT_OUTPUT_DIR` =
+  `…/live_paper_v253_smoke_v2`, V240-selective `VICTORIA_FEATURES`
+  (`crisis_skew_enabled` + `crisis_skew_regime_gate_enabled` + dd 0.12 +
+  `universe_selective_enabled`, all else the adopted defaults —
+  matches `scripts/v252_reconcile_smoke.py`).
+- **Position preservation — CONFIRMED, zero loss.** Checkpoint `2026-07-15.json`
+  MD5 **`245f5ee0961e39f9044abc3345611036`** byte-identical before → after restart
+  (backed up to `/tmp/omega_ckpt_backup_2026-07-15.json`). Runner logged
+  `runner_resumed from_date=2026-07-15 equity=100000.0 open_positions=2`. Both
+  positions intact: **ARBUSDT** (long, entry 0.0906, size 10 699.93, db_id 75088)
+  + **POLUSDT** (long, entry 0.08447, size 8985.30, db_id 75089), both
+  `cycle_opened=2` / **`exit_at_cycle=7`** (hold schedule preserved via the
+  checkpoint + the `_FORWARD_HOLD_CYCLES=5` code pin). `closed_trades: []` — nothing
+  force-closed. `cycle_n=2` unchanged.
+- **hmmlearn now ACTIVE (verified):** in the daemon's Python,
+  `hmm_regime._HMMLEARN_AVAILABLE = True`, `GaussianHMM` reachable, and the
+  import-time `"hmmlearn not available — using numpy GMM fallback"` warning **no
+  longer fires** (it was present on the 07-15 cycle under PID 68916). The daemon
+  will fit the real 3-state `GaussianHMM` instead of the numpy GMM from the next
+  cycle on.
+
+### Regime classification status: **STILL `"unknown"` — and hmmlearn does NOT change that (architectural, not a missing-dep issue)**
+
+The premise "hmmlearn → real regime instead of `unknown`" does **not** hold for the
+live-paper path. Traced + empirically confirmed:
+
+- The pnl_record / checkpoint `regime` comes from **`runner.py:399`**
+  `regime = str(signals.get("_regime", "unknown"))`, where `signals` is the result
+  of **`SignalGenerationNode.execute(COMPUTE_SIGNALS)`** (the lightweight node the
+  live-paper `make_forward_cycle` calls directly).
+- `signals["_regime"]` is set **only** in the full `victoria_node` DAG
+  (`victoria_node.py:1471` / `:2297`), where it derives from the **Wasserstein**
+  regime detector (`victoria_node.py:1267 regime = _w_result.regime`) + VRP mapping
+  — **not** the HMM. `SignalGenerationNode` never emits `_regime` (empirically:
+  its result dict has zero `_`-prefixed meta keys), so the runner's `.get` always
+  falls through to `"unknown"`.
+- The **HMM detector** (the thing hmmlearn accelerates) is a separate Wave-1
+  *signal* inside `victoria_node`'s DAG emitting **`bull`/`bear`/`sideways`** — a
+  different taxonomy from the strategy regime, and also never invoked by the
+  live-paper path.
+
+⇒ **The next cycle will still log `regime="unknown"`.** hmmlearn is now correctly
+active (fallback gone), which is the right thing to have fixed, but it is not the
+lever for this field. Making the live-paper cycle emit a real regime label would
+require routing it through the full `victoria_node` DAG (or attaching a regime in
+the runner) — a **strategy/runner code change, out of scope here** (guardrail: no
+strategy code touched). Filed as the real follow-up.
+
+**Guardrails honored:** no strategy/signal/engine code touched (restart + env only),
+live-**paper** only (no broker/orders/funds), open book preserved byte-identical.
