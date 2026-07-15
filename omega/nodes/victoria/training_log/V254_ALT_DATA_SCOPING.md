@@ -370,9 +370,38 @@ to SOL/XRP/AVAX only needs `--symbols` on the freeze script + a rerun (their mar
 archives begin ~2022). This makes B the **shipped structural escape**; C (on-chain,
 V257) remains the next data unlock.
 
+## UPDATE 2026-07-15b — Track B STRENGTHENED: ADOPT extends to the full liquid universe
+
+The V255.D freeze was extended from BTC/ETH to the whole 11-name selective universe
+([`V255_D_EXTENDED_VERDICT.md`](V255_D_EXTENDED_VERDICT.md)). All 11 names have
+mark+index archives on `data.binance.vision`; all froze with < 1% missing bars
+(byte-identical per settled bar). Real basis now prices **1,108 of 1,225 trades
+(90.4%, up from 168 / 13.7%)**:
+
+- **Pooled median net rises +$1.56 → +$1.95, CI95 [+$1.13, +$2.80]** (excludes 0, tighter
+  than the BTC/ETH-only run). Real basis was again a *net tailwind* (+$3,248.80 across
+  1,108 trades, PF 3.41), not a tax.
+- **Every one of the 12 measured names is basis-CLEAN** — median |residual| < 5 bps each,
+  all under the 10 bps §5.4 bar. **Zero dirty names.** No name's ADOPT flipped to REVERT
+  *because of basis*.
+- **Per-name eligibility is gated by carry alpha, not basis:** decisively-positive majors
+  **BNB +$10.54, SOL +$3.31, BTC +$3.60, ETH +$2.97, DOT +$3.02** = ADOPT; LINK/ADA/XRP/AVAX
+  positive but thin; **ARB / NEAR / SUI stay FLAG-GATED on carry thinness + small-N**
+  (all basis-CLEAN — their weakness is alpha, not friction). **MATIC is ADOPT-provisional**:
+  the trade universe names it `MATICUSDT` but the futures archive is `POLUSDT` (post-rename),
+  so POL froze but doesn't join the 86 MATIC trades — needs a MATIC→POL alias in
+  `basis_data.py` (follow-on).
+- **SOL tail caveat:** one FTX-week hold (2022-11) shows a genuine 21% mark/index basis
+  dislocation — real, name-specific tail risk to size for, but robust to the median test.
+
+**Consequence:** Track B is not just shipped, it is **broad** — the ADOPT covers the full
+liquid book, the zero-basis assumption held across 90% of trades, and the only cap on
+per-name adoption is carry-alpha thinness on the small alts (not basis cost). C (on-chain,
+V257) remains the next data unlock.
+
 | Rank (updated V256) | Option | Status | Next |
 |---|---|---|---|
-| **1-SHIPPED (structural)** | B. level/regime basis carry (v1) | **ADOPT — BTC/ETH (V255.D)**: real basis frozen, median +$1.56 (CI excl 0), residual 3.04 bps clean | Extend to SOL/XRP/AVAX (`--symbols` freeze + rerun); wire ADOPT'd BTC/ETH carry book |
+| **1-SHIPPED (structural)** | B. level/regime basis carry (v1) | **ADOPT — full liquid universe (V255.D-EXT)**: real basis frozen on 12 names (90.4% of trades), pooled median +$1.95 (CI [+$1.13,+$2.80] excl 0), all 12 basis-CLEAN < 5 bps; majors decisive, ARB/NEAR/SUI FLAG on alpha-thinness | MATIC→POL alias in `basis_data.py`; wire ADOPT'd majors carry book |
 | **1 (structural, buildable-offline now)** | C. On-chain flow primary universe | **UNBLOCKED (V257 executed 2026-07-15)** — 4/4 signals frozen per-asset {BTC,ETH}, 6.5yr daily, byte-identical | **rerun V256 as pre-registered**: flow-primary offline scorer + walk-forward over `data/frozen_series/on_chain/` (follow-on V###) |
 | **1 (buildable-offline now)** | E. Specialist-LLM ensemble | untested | **next offline bet** — reuses V241 infra, prompt-only, cheapest; but N=4-pinned |
 | 2 (buildable-offline now) | D. Polymarket sentiment/regime | untested | after E — plumbing exists, but thin ~2023+ history; N=4-pinned |
