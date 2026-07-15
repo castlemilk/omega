@@ -27,11 +27,17 @@ import os
 import random
 from dataclasses import asdict
 
+from .basis_data import BasisLoader
 from .basis_hedge import empirical_basis_check
 from .data import FundingDataLoader
 from .hold_scaled import HoldScaledParams, HoldScaledTrade, simulate_universe_scaled
 from .phase0_separator import _median, _stats, mann_whitney_u
 from .regime import FundingRegime, FundingRegimeClassifier, build_market_index
+
+# V255.D decision rule (pre-declared in V255_D_SCOPING.md §5.4): the measured
+# basis residual is "small" (hedge clean) iff the median |residual| stays under
+# 0.1% of one leg's notional over the 3–7d holds.
+_BASIS_SMALL_FRAC = 0.001
 
 GENUINE_REGIMES = (
     FundingRegime.NEGATIVE_CARRY.value,
@@ -94,10 +100,86 @@ def _bootstrap_median_ci(
     }
 
 
+def _apply_frozen_basis(
+    trades: list[HoldScaledTrade], data_dir: str | None
+) -> dict:
+    """Re-price each trade's two legs on real perp-mark + spot-index (V255.D).
+
+    Mutates ``trades`` in place: for every symbol that has a frozen mark+index
+    pair, the previously-cancelling price legs are replaced with measured ones and
+    ``pnl_usd`` is recomputed (funding + fee unchanged). Symbols with no frozen
+    basis keep the zero-basis assumption (residual $0). Returns a report of what
+    was re-priced + the measured basis-residual distribution — the §5.4 decision
+    variable.
+    """
+    bl = BasisLoader(data_dir=data_dir)
+    syms = sorted({t.symbol for t in trades})
+    avail = bl.available(syms)
+
+    residual_fracs: list[float] = []   # measured residual / notional, real-basis trades
+    residual_pnls: list[float] = []
+    n_real = 0
+    n_fallback_symbol = 0   # symbol not in frozen set
+    n_fallback_date = 0     # symbol frozen but a leg date missing
+
+    for t in trades:
+        if t.symbol not in avail:
+            n_fallback_symbol += 1
+            continue
+        res = bl.residual_pnl(
+            t.symbol, t.entry_date, t.exit_date, t.perp_side, t.notional_usd
+        )
+        if res is None:
+            n_fallback_date += 1
+            continue
+        spot_leg_pnl, perp_leg_pnl, residual_frac = res
+        t.spot_price_pnl = spot_leg_pnl
+        t.perp_price_pnl = perp_leg_pnl
+        t.spot_price_ret = spot_leg_pnl / t.notional_usd if t.notional_usd else 0.0
+        t.perp_price_ret = perp_leg_pnl / t.notional_usd if t.notional_usd else 0.0
+        t.pnl_usd = (
+            t.spot_price_pnl + t.perp_price_pnl + t.funding_pnl + t.fee_pnl
+        )
+        n_real += 1
+        residual_fracs.append(residual_frac)
+        residual_pnls.append(spot_leg_pnl + perp_leg_pnl)
+
+    abs_fracs = sorted(abs(x) for x in residual_fracs)
+
+    def _q(v: list[float], q: float) -> float:
+        if not v:
+            return 0.0
+        idx = min(len(v) - 1, max(0, round(q * (len(v) - 1))))
+        return v[idx]
+
+    median_abs_frac = _q(abs_fracs, 0.5)
+    basis_small = median_abs_frac < _BASIS_SMALL_FRAC
+    return {
+        "frozen_symbols_available": sorted(avail),
+        "n_trades_real_basis": n_real,
+        "n_trades_fallback_symbol": n_fallback_symbol,
+        "n_trades_fallback_date": n_fallback_date,
+        "basis_residual_frac_of_notional": {
+            "n": len(residual_fracs),
+            "mean": round(math.fsum(residual_fracs) / len(residual_fracs), 8)
+            if residual_fracs else 0.0,
+            "median_signed": round(_median(residual_fracs), 8) if residual_fracs else 0.0,
+            "median_abs": round(median_abs_frac, 8),
+            "p75_abs": round(_q(abs_fracs, 0.75), 8),
+            "p95_abs": round(_q(abs_fracs, 0.95), 8),
+            "max_abs": round(abs_fracs[-1], 8) if abs_fracs else 0.0,
+        },
+        "basis_residual_pnl_usd": _stats(residual_pnls) if residual_pnls else {},
+        "threshold_small_frac": _BASIS_SMALL_FRAC,
+        "basis_residual_small": basis_small,
+    }
+
+
 def run_v255c(
     params: HoldScaledParams | None = None,
     data_dir: str | None = None,
     out_dir: str | None = None,
+    basis_source: str = "zero",
 ) -> dict:
     p = params or HoldScaledParams()
     loader = FundingDataLoader(data_dir=data_dir)
@@ -114,10 +196,18 @@ def run_v255c(
     # trades (7-day hold, level-scaled sizing, near_zero excluded)
     trades = simulate_universe_scaled(universe, date_regimes, p)
 
+    # V255.D: re-price legs on real perp-mark + spot-index where frozen data exists.
+    # Default ("zero") leaves the single-close hedge intact → byte-identical to V255.C.
+    basis_application: dict | None = None
+    if basis_source == "frozen":
+        basis_application = _apply_frozen_basis(trades, data_dir)
+
     # hedge-cancellation verification (spot + perp price PnL must be ~0)
     max_residual = 0.0
     for t in trades:
         max_residual = max(max_residual, abs(t.spot_price_pnl + t.perp_price_pnl))
+    # In zero-basis mode the legs cancel to ~0 by construction; with real basis the
+    # residual is a MEASURED number, so the "cancels" flag no longer applies there.
     hedge_cancels = max_residual < 1e-6
 
     pooled = [t.pnl_usd for t in trades]
@@ -172,12 +262,20 @@ def run_v255c(
         "n_at_cap": sum(1 for x in notionals if abs(x - p.notional_cap_usd) < 1e-9),
     }
 
-    # ---- verdict against pre-registered falsifiers (V255_C.md) ----
+    # ---- verdict against pre-registered falsifiers (V255_C.md / V255_D §5.4) ----
     pooled_median = _median(pooled)
     f1_median_le_0 = pooled_median <= 0.0
     f2_no_regime_sig = not any_regime_significant
     f3_ann_below_15 = ann_gross["annualized"] < 0.15   # V255.C bar: 15% (was 5%)
-    f4_basis_fail = (not hedge_cancels)  # cannot fire on single-series data
+    # f4 semantics depend on the basis source:
+    #  * zero  → single-series hedge cancels by construction; f4 CANNOT fire.
+    #  * frozen → measured basis residual must be SMALL (< 0.1% notional, §5.4);
+    #             a large residual fires f4 but only caps to KEEP_FLAG_GATED (the
+    #             carry alpha itself is judged by f1–f3), it does NOT close the lane.
+    if basis_source == "frozen" and basis_application is not None:
+        f4_basis_fail = not basis_application["basis_residual_small"]
+    else:
+        f4_basis_fail = (not hedge_cancels)
 
     falsifiers_fired = {
         "f1_pooled_median_net_le_0": f1_median_le_0,
@@ -186,15 +284,28 @@ def run_v255c(
         "f4_basis_hedge_fails_empirically": f4_basis_fail,
     }
     any_fired = any(falsifiers_fired.values())
+    # ADOPT gate (only reachable with real basis): the carry alpha survives
+    # (f1–f3 pass), the measured basis residual is small (f4 pass), AND the pooled
+    # median-net bootstrap CI excludes zero on the positive side.
+    ci_lo_gt_zero = bool(boot.get("ci95_lo_gt_zero"))
+    core_alpha_broken = f1_median_le_0 or f2_no_regime_sig or f3_ann_below_15
 
-    if any_fired:
+    if core_alpha_broken:
+        # the carry alpha itself failed under (real or clean) pricing → lane closes
         verdict = "REFUTED"
+    elif basis_source == "frozen":
+        if (not f4_basis_fail) and ci_lo_gt_zero:
+            verdict = "ADOPT"          # cap lifted — real basis is clean & median>0
+        else:
+            verdict = "KEEP_FLAG_GATED"  # real basis too large / CI touches 0
     else:
-        # all pass, but basis-cleanliness untested → hard-capped (ADOPT excluded)
+        # zero-basis: all pass but basis-cleanliness untested → hard-capped
         verdict = "KEEP_FLAG_GATED"
 
     result = {
         "version": "V255_C",
+        "basis_source": basis_source,
+        "basis_application": basis_application,
         "params": asdict(p),
         "universe": sorted(universe),
         "span": {"first": dates[0], "last": dates[-1], "n_days": len(dates)},
@@ -217,6 +328,7 @@ def run_v255c(
         "verdict": verdict,
         "verdict_reason": _verdict_reason(
             verdict, falsifiers_fired, pooled_median, ann_gross, any_regime_significant,
+            basis_source, basis_application, boot,
         ),
     }
 
@@ -237,7 +349,8 @@ def run_v255c(
     return result
 
 
-def _verdict_reason(verdict, ff, pooled_median, ann_gross, any_sig) -> str:
+def _verdict_reason(verdict, ff, pooled_median, ann_gross, any_sig,
+                    basis_source="zero", basis_app=None, boot=None) -> str:
     if verdict == "REFUTED":
         parts = []
         if ff["f1_pooled_median_net_le_0"]:
@@ -248,9 +361,35 @@ def _verdict_reason(verdict, ff, pooled_median, ann_gross, any_sig) -> str:
         if ff["f3_annualized_gross_below_15pct"]:
             parts.append(f"annualized gross carry {ann_gross['annualized_pct']:.2f}% "
                          f"< 15% (7d hold destroyed the alpha)")
-        if ff["f4_basis_hedge_fails_empirically"]:
-            parts.append("basis hedge did not cancel price risk on committed data")
         return "REFUTED: " + "; ".join(parts) + ". Funding-carry lane CLOSES."
+
+    # ---- frozen (real-basis) verdicts -------------------------------------
+    if basis_source == "frozen":
+        ci = boot or {}
+        med_abs = (basis_app or {}).get(
+            "basis_residual_frac_of_notional", {}).get("median_abs", 0.0)
+        n_real = (basis_app or {}).get("n_trades_real_basis", 0)
+        base = (f"real-basis re-verify: median net ${pooled_median:.2f}, "
+                f"CI95 [${ci.get('ci95_lo', 0):.2f}, ${ci.get('ci95_hi', 0):.2f}], "
+                f"measured median |basis residual| {med_abs*1e4:.2f}bps of notional "
+                f"over {n_real} real-basis trades")
+        if verdict == "ADOPT":
+            return (base + f" (< {_BASIS_SMALL_FRAC*1e4:.0f}bps §5.4 bar) → basis "
+                    "hedge is CLEAN and median net-positive with CI excluding zero. "
+                    "V255.C ADOPT UNLOCKED: remove the KEEP-FLAG-GATED cap.")
+        # frozen but not adopted
+        if pooled_median <= 0.0:
+            why = "real basis flipped the pooled median to <= $0"
+        elif not ff["f4_basis_hedge_fails_empirically"] and not ci.get("ci95_lo_gt_zero"):
+            why = "median stays >0 but the bootstrap CI now touches zero"
+        else:
+            why = (f"measured median |basis residual| {med_abs*1e4:.2f}bps "
+                   f">= {_BASIS_SMALL_FRAC*1e4:.0f}bps (§5.4 'large')")
+        return (base + f". REVERT/HOLD at KEEP-FLAG-GATED: {why}. The zero-basis "
+                "assumption was optimistic; median must be re-earned under real "
+                "basis (longer hold / higher |funding| entry bar).")
+
+    # ---- zero-basis (unchanged V255.C cap) --------------------------------
     base = (f"all pass: median net ${pooled_median:.2f}>$0, "
             f"annualized gross {ann_gross['annualized_pct']:.2f}%>=15%, "
             f"MWU<0.05 in >=1 genuine regime={any_sig}")
@@ -261,14 +400,23 @@ def _verdict_reason(verdict, ff, pooled_median, ann_gross, any_sig) -> str:
 
 
 if __name__ == "__main__":
-    import sys
-    out = sys.argv[1] if len(sys.argv) > 1 else None
-    res = run_v255c(out_dir=out)
-    print(json.dumps({k: res[k] for k in
-                      ["version", "n_trades", "hedge_cancellation",
-                       "notional_distribution", "pooled_net_stats",
-                       "pooled_gross_carry_stats", "pooled_median_net_bootstrap_ci95",
-                       "per_regime_net_stats", "per_regime_separator_mwu",
-                       "annualized_gross_carry", "annualized_net_carry",
-                       "falsifiers_fired", "verdict", "verdict_reason"]},
-                     indent=2, default=str))
+    import argparse
+
+    ap = argparse.ArgumentParser(description="V255.C scorer (+ V255.D real basis)")
+    ap.add_argument("out_dir", nargs="?", default=None,
+                    help="optional dir for v255c_scorer.json + v255c_trades.csv")
+    ap.add_argument("--basis-source", choices=["zero", "frozen"], default="zero",
+                    help="zero = single-close hedge (default, byte-identical to V255.C); "
+                         "frozen = real perp-mark + spot-index basis (V255.D)")
+    ap.add_argument("--data-dir", default=None, help="override the data/ root")
+    args = ap.parse_args()
+
+    res = run_v255c(out_dir=args.out_dir, data_dir=args.data_dir,
+                    basis_source=args.basis_source)
+    keys = ["version", "basis_source", "basis_application", "n_trades",
+            "hedge_cancellation", "notional_distribution", "pooled_net_stats",
+            "pooled_gross_carry_stats", "pooled_median_net_bootstrap_ci95",
+            "per_regime_net_stats", "per_regime_separator_mwu",
+            "annualized_gross_carry", "annualized_net_carry",
+            "falsifiers_fired", "verdict", "verdict_reason"]
+    print(json.dumps({k: res[k] for k in keys}, indent=2, default=str))
