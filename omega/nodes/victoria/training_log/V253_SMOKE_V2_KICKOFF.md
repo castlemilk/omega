@@ -306,3 +306,62 @@ strategy code touched). Filed as the real follow-up.
 
 **Guardrails honored:** no strategy/signal/engine code touched (restart + env only),
 live-**paper** only (no broker/orders/funds), open book preserved byte-identical.
+
+---
+
+## Addendum — regime wire SHIPPED, `regime="unknown"` RESOLVED (2026-07-15 10:18 UTC)
+
+The follow-up filed above ("attach a regime in the runner") is now **done**. The
+live-paper cycle emits a real HMM regime label instead of `"unknown"`.
+
+- **Commit:** `b699dcd` — `feat(live-paper): wire real regime into make_forward_cycle (V253)`.
+  Runner-only change (guardrail honored: **no** edits to `strategy.py`,
+  `signal_generation.py`, `features.py`, `paper_trading.py`, or the Wasserstein/HMM
+  detector code — the standalone `HMMRegimeDetector` in `hmm_regime.py` is imported
+  and called, never modified).
+- **What it does.** In `make_forward_cycle`, after the OHLCV fetch: (a) fetch a
+  **BTCUSDT** close window explicitly (the V240-selective live universe blacklists
+  BTC from *trading*, so `market_data` has no BTC — this fetch is **regime-only**,
+  never enters `market_data`/proposals, BTC stays untraded); (b) fit the 3-state
+  Gaussian HMM (`hmmlearn` 0.3.3, `random_state=42`) on it and inject
+  `signals["_regime"]` + `signals["_regime_hmm"]` (`setdefault`, additive) so
+  `StrategyNode._apply_regime_adaptive_thresholds` reads a real
+  `{bull,bear,sideways}` label; (c) surface `regime_source` + `regime_probs` in the
+  pnl log. This is why the earlier "hmmlearn isn't the lever" diagnosis was correct —
+  the lever is the *runner attaching a regime*, which is what this commit adds. It
+  routes the HMM detector (`bull`/`bear`/`sideways`), **not** the full DAG's VRP+
+  Wasserstein consolidated label; a deliberate, minimal wire.
+
+- **Determinism gate — V251 sentinels $0.0000 arm-Δ ×3 (re-run twice, after each
+  runner edit):** crisis `snap_wf_20240310` $1,149.76, trend `snap_wf_20230912`
+  $4,679.67, recent `snap_wf_20250305` $771.98 — all MATCH, verdict PASS.
+  `make_forward_cycle` is not on the retrospective/backtest path (V251 replays via
+  `make_retrospective_cycle` → `run_training.py --backtest-snapshot`), so the wire
+  cannot perturb backtest fidelity — confirmed empirically.
+
+- **Graceful restart (checkpoint-preserved):** old **PID 38468** → `kill -TERM`
+  (`scheduler_shutdown_signal signum 15` → `runner_shutdown cycles:0`, idle-wait,
+  no in-flight cycle lost, exited ~1 s) → relaunched via
+  `scripts/live_paper_daemon.sh --mode forward` as **PID 53422** (restart
+  **2026-07-15T10:18:02Z**). Same output dir (`…/live_paper_v253_smoke_v2`), same
+  tick **02:55:00 UTC**, `enabled=True`, same launch env (`harness/.env` sourced +
+  V240-selective `VICTORIA_FEATURES`, matching `scripts/v252_reconcile_smoke.py`).
+- **Position preservation — CONFIRMED, zero loss.** Checkpoint `2026-07-15.json`
+  MD5 **`245f5ee0961e39f9044abc3345611036`** byte-identical before → after restart
+  (backup `/tmp/omega_ckpt_backup_2026-07-15_regimewire.json`). Runner logged
+  `runner_resumed from_date=2026-07-15 equity=100000.0 open_positions=2` — both
+  **ARBUSDT** + **POLUSDT** intact, `exit_at_cycle=7` preserved.
+- **Regime classification — CONFIRMED WORKING (daemon-path proof).** A one-shot
+  `--max-cycles 1` run through the **full daemon entrypoint** (scheduler → checkpoint
+  → runner → cycle → pnl log) in a scratch dir emitted the pnl line:
+  `regime="sideways"`, `regime_source="hmm"` (fitted `GaussianHMM`, **not** the numpy
+  fallback — verified `isinstance(model, hmmlearn.hmm.GaussianHMM)`),
+  `regime_probs={bull 0.333, bear 0.0, sideways 0.667}`, `signals_ok`+`strategy_ok`
+  true — vs. the prod daemon's prior lines that logged `regime="unknown"` with no
+  regime fields. The current market read (BTC sideways-to-mildly-bull) is consistent
+  with VIX 17 / F&G 22. The running prod daemon (PID 53422, identical code) will emit
+  the real regime on its **next scheduled cycle, 2026-07-16 02:55:00 UTC**.
+
+**Guardrails honored (regime wire):** only `runner.py` touched; live-**paper** only
+(no broker/orders/funds); V251 backtest fidelity preserved ($0.0000 ×3); open book
+preserved byte-identical (MD5 unchanged, 2 positions resumed).
