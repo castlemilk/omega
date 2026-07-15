@@ -270,7 +270,11 @@ def freeze(symbols: list[str], series_keys: list[str], start: date, end: date,
                     f"{symbol}/{sk}: implausibly small n={len(series)} — refusing to freeze"
                 )
             written.append(_write_frozen(out_dir, symbol, sk, series))
-    _update_manifest(out_dir, written)
+    # Manifest covers the WHOLE frozen tree, not just this run's --symbols, so an
+    # incremental extend (e.g. BTC/ETH first, then the 11-name universe) does not
+    # drop the earlier symbols' entries. Byte-identical to a single full-run manifest.
+    all_frozen = sorted(p for p in out_dir.rglob("*.json") if p.name != "MANIFEST.json")
+    _update_manifest(out_dir, all_frozen)
     return written
 
 

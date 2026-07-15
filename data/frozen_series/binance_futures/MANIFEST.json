@@ -2,6 +2,38 @@
   "_built_by": "scripts/v255d_freeze_basis.py",
   "_note": "V255.D freeze-once perp-mark + spot-index daily closes for real-basis re-verify. Clock-free JSON \u2192 re-freeze is byte-identical (same MD5).",
   "files": {
+    "ADAUSDT/index_price.json": {
+      "bytes": 56743,
+      "md5": "60008fe168a67ececf1d79a925dc8ba1"
+    },
+    "ADAUSDT/mark_price.json": {
+      "bytes": 53155,
+      "md5": "6f760b1e774d4e793b955b8d4932f543"
+    },
+    "ARBUSDT/index_price.json": {
+      "bytes": 29099,
+      "md5": "1c42cf56f7f71358a1b59f243bcf9068"
+    },
+    "ARBUSDT/mark_price.json": {
+      "bytes": 26969,
+      "md5": "959fc5f7d89346c49b7382a8d49a9cea"
+    },
+    "AVAXUSDT/index_price.json": {
+      "bytes": 52431,
+      "md5": "dd4ad36c3b82eb50ed9ef49e6f3d3d7f"
+    },
+    "AVAXUSDT/mark_price.json": {
+      "bytes": 47778,
+      "md5": "69ee1ee2b16cc1348fd02444b442f28d"
+    },
+    "BNBUSDT/index_price.json": {
+      "bytes": 60650,
+      "md5": "cdbd68b843a2bdfc2f7a55ef38ef63f5"
+    },
+    "BNBUSDT/mark_price.json": {
+      "bytes": 54894,
+      "md5": "f5825389ca15b7fadc3ee88607f6548b"
+    },
     "BTCUSDT/index_price.json": {
       "bytes": 61790,
       "md5": "f7f28a8cb4e199daf20f263e96326e6a"
@@ -10,6 +42,14 @@
       "bytes": 55040,
       "md5": "c8081fdc0f96450d7e65c06b31661900"
     },
+    "DOTUSDT/index_price.json": {
+      "bytes": 52034,
+      "md5": "0d5224ccbbbb4b552cb68d54df85df66"
+    },
+    "DOTUSDT/mark_price.json": {
+      "bytes": 47107,
+      "md5": "24afaf4d3bfd8e362b6f561bbb1d2c9d"
+    },
     "ETHUSDT/index_price.json": {
       "bytes": 59759,
       "md5": "622f6788e62ac13b5fd268c5b605c363"
@@ -17,6 +57,54 @@
     "ETHUSDT/mark_price.json": {
       "bytes": 53746,
       "md5": "ac46112d36d9a985c2b137b50f0ddd41"
+    },
+    "LINKUSDT/index_price.json": {
+      "bytes": 58021,
+      "md5": "47b0d0a6ce486f63e59d8a7e7899cafc"
+    },
+    "LINKUSDT/mark_price.json": {
+      "bytes": 53254,
+      "md5": "bfeefcea9c309f33f9a0abeb07031227"
+    },
+    "NEARUSDT/index_price.json": {
+      "bytes": 50475,
+      "md5": "c62791f47337c52a185bc5052608847a"
+    },
+    "NEARUSDT/mark_price.json": {
+      "bytes": 46244,
+      "md5": "0f0cbe6c41ed1779564bf8c3ae0dca8c"
+    },
+    "POLUSDT/index_price.json": {
+      "bytes": 15706,
+      "md5": "d9c4001b180c22181d12699d65b56462"
+    },
+    "POLUSDT/mark_price.json": {
+      "bytes": 15225,
+      "md5": "3237c40c30301e2f532ad934f77b16fb"
+    },
+    "SOLUSDT/index_price.json": {
+      "bytes": 54199,
+      "md5": "f5cc3a57e17a4db6964b4274dded6326"
+    },
+    "SOLUSDT/mark_price.json": {
+      "bytes": 48662,
+      "md5": "ed10b94fbd11a8bac6ef4f4b3a2c7c0b"
+    },
+    "SUIUSDT/index_price.json": {
+      "bytes": 28176,
+      "md5": "39d77aa5a560e5cbafbb71d7aee55377"
+    },
+    "SUIUSDT/mark_price.json": {
+      "bytes": 25956,
+      "md5": "e5f2654f7f528da32072546b9c78b242"
+    },
+    "XRPUSDT/index_price.json": {
+      "bytes": 57119,
+      "md5": "b7a0888831826a4814b7b032c6e49d70"
+    },
+    "XRPUSDT/mark_price.json": {
+      "bytes": 52870,
+      "md5": "0031360ddfc494aeffb65f142eecee23"
     }
   }
 }
