@@ -318,6 +318,11 @@ def make_forward_cycle(cfg: Any) -> CycleFn:
          V250 live pollers (every fetch passes the ``assert_live_source``
          frozen-path guard). The signal pipeline needs history, so we pass the
          full trailing series ``<= as_of`` — NOT a single close.
+      2.5. Detect the market regime on that trailing BTC window via the standalone
+         ``HMMRegimeDetector`` (``hmm_regime.py``) and inject ``_regime`` /
+         ``_regime_hmm`` into the signals dict. ``SignalGenerationNode`` (the live
+         path, not the full DAG) never sets ``_regime``, so without this the cycle
+         always logged ``regime="unknown"`` and the strategy ran regime-blind.
       3. Run the SAME per-cycle sequence the backtest loop uses
          (``backtest.py`` L217-268) VERBATIM: ``SignalGenerationNode.execute`` →
          ``StrategyNode.execute`` → build proposals → ``execute_proposals``. The
@@ -375,11 +380,53 @@ def make_forward_cycle(cfg: Any) -> CycleFn:
                     continue
             blocked.append(symbol)
 
+        # ── (2.5) Regime detection on the trailing price window (V253 wire) ─────
+        # SignalGenerationNode does NOT populate signals["_regime"] — only the full
+        # victoria_node DAG does (via VRP + Wasserstein), and the live cycle never
+        # invokes that DAG. So the daemon always logged regime="unknown". Derive a
+        # real regime here with the standalone HMM detector (hmm_regime.py) — it is
+        # imported/called, never modified. Instantiated fresh per cycle: the runner
+        # passes the FULL trailing series every tick, so one update() call fits +
+        # Viterbi-decodes deterministically (hmmlearn random_state=42, numpy fallback
+        # rng seed=42) from that window. Keeps the cycle idempotent on (feeds, prior).
+        #
+        # The HMM detector reads a BTC close window (market-regime reference), but the
+        # V240-selective live universe BLACKLISTS BTC from *trading*, so market_data
+        # carries no BTC — fetch it explicitly here for regime only. It is NEVER
+        # added to the trading market_data or the proposal set (BTC stays untraded).
+        regime_md = market_data
+        if not any(k in market_data for k in ("BTCUSDT", "BTC-USDT", "BTCUSD")):
+            try:
+                _btc = feeds.fetch_ohlcv(cfg, "BTCUSDT", ctx.cycle_date)
+                if _btc.reachable and _btc.doc:
+                    _bs = _btc.doc["series"]
+                    _bcloses = [_bs[d] for d in sorted(_bs) if date.fromisoformat(d) <= ctx.cycle_date]
+                    if _bcloses:
+                        regime_md = {"BTCUSDT": {"close": _bcloses}}
+            except Exception as exc:
+                logger.warning(json.dumps({"event": "forward_regime_btc_fetch_error", "error": str(exc)}))
+
+        regime = "unknown"
+        regime_source = "none"
+        regime_probs: dict[str, float] = {}
+        try:
+            from omega.nodes.victoria.hmm_regime import HMMRegimeDetector
+
+            _hmm_res = HMMRegimeDetector().update(regime_md)
+            regime = _hmm_res.current_state  # "bull" | "bear" | "sideways"
+            regime_source = _hmm_res.source  # "hmm" once fitted, else "warmup(n/m)"
+            regime_probs = {
+                "bull": round(_hmm_res.bull_prob, 4),
+                "bear": round(_hmm_res.bear_prob, 4),
+                "sideways": round(_hmm_res.sideways_prob, 4),
+            }
+        except Exception as exc:  # never crash the daemon on a regime error
+            logger.warning(json.dumps({"event": "forward_regime_error", "error": str(exc)}))
+
         # ── (3) Entry path: signals → strategy → proposals (backtest-faithful) ──
         # Strategy modules are imported LAZILY here so the runner module itself
         # stays strategy-free (fixture/retrospective paths never import them).
         proposals: list[dict[str, Any]] = []
-        regime = "unknown"
         sig_ok = strat_ok = False
         try:
             from omega.core.actions import NodeAction
@@ -396,7 +443,14 @@ def make_forward_cycle(cfg: Any) -> CycleFn:
             sig_ok = bool(sig_out.success and sig_out.result)
             if sig_ok:
                 signals: dict[str, Any] = sig_out.result
-                regime = str(signals.get("_regime", "unknown"))
+                # Inject the real regime so StrategyNode's
+                # _apply_regime_adaptive_thresholds reads the same {bull,bear,
+                # sideways} label the full DAG would supply. Additive: both keys are
+                # absent from SignalGenerationNode output; setdefault never clobbers.
+                # `_regime_hmm` is the raw HMM label the strategy reads directly;
+                # `_regime` is the consolidated label it reads for IC-gating.
+                signals.setdefault("_regime_hmm", regime)
+                signals.setdefault("_regime", regime)
                 strat_out = StrategyNode().execute(
                     NodeInput(
                         action=NodeAction.CONSTRUCT_PORTFOLIO.value,
@@ -442,6 +496,8 @@ def make_forward_cycle(cfg: Any) -> CycleFn:
                 "open_symbols": [p["symbol"] for p in open_positions],
                 "trade_symbols": sorted({t.get("symbol", t.get("sym", "")) for t in executed}),
                 "regime": regime,
+                "regime_source": regime_source,
+                "regime_probs": regime_probs,
                 "signals_ok": sig_ok,
                 "strategy_ok": strat_ok,
                 "feeds_blocked": blocked,
