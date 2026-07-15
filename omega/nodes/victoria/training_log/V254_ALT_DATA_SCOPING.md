@@ -167,6 +167,24 @@ bolted onto the momentum composite.
 > **exactly as pre-registered** (a follow-on V###, not this data task). See
 > [`V257_VERDICT.md`](V257_VERDICT.md).
 
+> **FINAL STATUS (V261 built + scored, 2026-07-15): REFUTED — Track C CLOSES.**
+> The V256 flow-primary offline scorer was built exactly as pre-registered
+> (`omega/nodes/on_chain_flow/`, [`V261.md`](V261.md)) over V257's 4/4 frozen
+> signals and scored against the locked falsifiers ([`V261_VERDICT.md`](V261_VERDICT.md)).
+> **F2 (mechanism gate) fired decisively: MWU p=0.942** — a stronger composite \|z\|
+> is a coin-flip on trade outcome (winners' median \|z\| 1.275 ≈ losers' 1.288). The
+> nominally-positive pooled median (+$11.74 over 334 BTC+ETH trades, 36% annualized
+> gross) is **inside its own noise** (bootstrap CI95 [−$45.69, +$62.69] spans zero)
+> and carries **no dose-response** — consistent with the R2/saturation deaths of the
+> V241→V258 daily-bar entry-side lane. Every single component is net-negative; the
+> SplyExNtv proxy is not load-bearing (LOO-whale also fails the mechanism gate,
+> p=0.62). Reclassified from "PRIMARY offline (buildable)" to **"attempted, REFUTED
+> at Phase-0 offline — no daily-bar dose-response; reason not data absence."** Track C
+> was the last data-blocked offline lane; the offline alpha search is now fully
+> reported (funding-carry V255.C/.D the single surviving confirmed lane). Remaining
+> escape from the daily-bar wall is unchanged: intraday resolution or live-paper
+> recent-N accumulation. NO strategy/flag code touched; $0.
+
 ---
 
 ## D. Polymarket / prediction-market sentiment
