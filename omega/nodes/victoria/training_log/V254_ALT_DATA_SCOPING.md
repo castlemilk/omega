@@ -329,9 +329,32 @@ floor** (R1), and against a possibly-saturated composite (R2). Neither attacks t
 recent-N wall. They are "buildable now" bets, **not** structural escapes; the
 structural escapes (B, C) remain gated on their respective data unlocks.
 
+## UPDATE 2026-07-15 — Track B UNBLOCKED: V255.D froze real basis → **ADOPT** (BTC/ETH)
+
+The V255.D data-acquisition + re-verify ran ([`V255_D_VERDICT.md`](V255_D_VERDICT.md)).
+`scripts/v255d_freeze_basis.py` froze the real Binance perp-**mark** + spot-**index**
+daily series for BTC + ETH (2020-06 → 2026-07, 6.1 yr, <1% missing, byte-identical
+re-freeze). Re-pricing the two carry legs independently made the basis residual a
+**measured** number instead of an algebraic zero:
+
+- **Measured basis residual = median 3.04 bps of notional** (p95 12.85 bps) — well
+  under the pre-registered 10 bps "clean" bar (§5.4), and *slightly favorable*
+  (residual PnL +$122.88 over 168 trades). Real basis was a small tailwind, not a tax.
+- **Full-universe pooled median holds at +$1.56, CI95 [+$0.86, +$2.53]** (excludes 0);
+  the **BTC+ETH measured-only subset is stronger** (+$3.09, CI [+$0.83, +$6.74], both
+  names positive independently).
+- **Verdict = ADOPT.** The zero-basis assumption V255.C rested on was sound. The
+  KEEP-FLAG-GATED cap is **removed for the BTC/ETH funding-carry book.**
+
+**Consequence for the ranking:** Track B is **NO LONGER data-blocked** — it is the
+first alt-data track to reach ADOPT. Scope is BTC/ETH (the measured names); extending
+to SOL/XRP/AVAX only needs `--symbols` on the freeze script + a rerun (their mark/index
+archives begin ~2022). This makes B the **shipped structural escape**; C (on-chain,
+V257) remains the next data unlock.
+
 | Rank (updated V256) | Option | Status | Next |
 |---|---|---|---|
-| **1-provisional (structural)** | B. level/regime basis carry (v1) | **VALIDATED, FLAG-GATED (V255.C)** — needs basis data | **V255.D**: acquire real perp/spot basis series + live re-verify (live-host) |
+| **1-SHIPPED (structural)** | B. level/regime basis carry (v1) | **ADOPT — BTC/ETH (V255.D)**: real basis frozen, median +$1.56 (CI excl 0), residual 3.04 bps clean | Extend to SOL/XRP/AVAX (`--symbols` freeze + rerun); wire ADOPT'd BTC/ETH carry book |
 | **1 (structural, buildable-offline now)** | C. On-chain flow primary universe | **UNBLOCKED (V257 executed 2026-07-15)** — 4/4 signals frozen per-asset {BTC,ETH}, 6.5yr daily, byte-identical | **rerun V256 as pre-registered**: flow-primary offline scorer + walk-forward over `data/frozen_series/on_chain/` (follow-on V###) |
 | **1 (buildable-offline now)** | E. Specialist-LLM ensemble | untested | **next offline bet** — reuses V241 infra, prompt-only, cheapest; but N=4-pinned |
 | 2 (buildable-offline now) | D. Polymarket sentiment/regime | untested | after E — plumbing exists, but thin ~2023+ history; N=4-pinned |

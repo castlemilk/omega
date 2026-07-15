@@ -542,3 +542,25 @@ dir.
 | 7 | Supervisor (launchd/systemd) | blocker | one `--mode forward` proc under supervisor |
 | 8 | 7-day burn-in clean | **gate to flip** | weekly audit: 0 gaps, restart byte-identical |
 | 9 | Flip `SCHEDULER_ENABLED=1` | — | `enabled=True` in daemon.out, first pnl entry |
+
+---
+
+## Auditing the live daemon — scheduled-task sandbox limitation
+
+**Scheduled tasks (the `scheduled-tasks` MCP / cron) run in an isolated sandbox
+WITHOUT filesystem access to `/Users/benebsworth/projects/omega` or
+`/Volumes/gamma-systems-2/`.** A scheduled task therefore **cannot** read the
+daemon's checkpoint/pnl output, the repo's training artifacts, or run the weekly
+audit against the live paths — it will fail on "no such file / permission denied",
+not produce a real audit.
+
+- **To audit the running daemon, use a host-side `start_code_task`** (a Claude Code
+  task on the host), **not a scheduled task.** The host task has the working
+  directory + gamma volume mounted, so `scripts/v253_weekly_audit.py` and
+  `ps eww <pid>` / checkpoint reads work normally.
+- **If a scheduled/cron audit is genuinely required** (e.g. unattended weekly
+  cadence), it must first be **granted folder access** to those two specific paths
+  (`/Users/benebsworth/projects/omega` and `/Volumes/gamma-systems-2/`); until that
+  grant exists, the recurring audit belongs in a host-side task instead.
+- Rule of thumb: **anything that touches the repo or the gamma volume ⇒ host-side
+  task; only network-only / self-contained work is safe to schedule.**
