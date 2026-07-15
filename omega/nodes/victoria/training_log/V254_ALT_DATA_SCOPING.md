@@ -150,6 +150,23 @@ bolted onto the momentum composite.
 > moment V257 delivers 3+ frozen signals; until then it is **not** the lead offline
 > bet.
 
+> **STATUS UPDATE (V257 executed, 2026-07-15): UNBLOCKED — Track C is PRIMARY
+> offline (buildable) again.** V257 ran the freeze pipeline
+> (`scripts/v257_freeze_on_chain.py`) against Coin Metrics **community** tier (free,
+> no key) and delivered **4 of 4** V256 signals frozen per-asset for {BTC, ETH},
+> each **6.5-year daily** coverage (2020-01-01 → 2026-07-14, 2387 obs, 0% gaps),
+> byte-identical on re-run. Signal → community-metric mapping:
+> #1 net exchange netflow ← `FlowInExNtv`−`FlowOutExNtv`; #2 active-address velocity
+> ← `AdrActCnt`; #3 whale-cluster movement ← `SplyExNtv` (exchange-held-supply
+> accumulation/distribution proxy); #4 transaction volume ← `TxTfrCnt`(+`TxCnt`).
+> The runbook's assumed `TxTfrValNtv`/`SplyAct1yr` are paid-tier (403) and
+> `FlowInBTC`/`FlowOutBTC` are invalid ids (400); the community substitutes above
+> cover all four signals. Data at `data/frozen_series/on_chain/{BTC,ETH}/`. Track C
+> **reclassified from "PAUSED — needs data acquisition" back to "PRIMARY offline
+> (buildable)"**. Next: build the V256 flow-primary offline scorer + walk-forward
+> **exactly as pre-registered** (a follow-on V###, not this data task). See
+> [`V257_VERDICT.md`](V257_VERDICT.md).
+
 ---
 
 ## D. Polymarket / prediction-market sentiment
@@ -315,7 +332,7 @@ structural escapes (B, C) remain gated on their respective data unlocks.
 | Rank (updated V256) | Option | Status | Next |
 |---|---|---|---|
 | **1-provisional (structural)** | B. level/regime basis carry (v1) | **VALIDATED, FLAG-GATED (V255.C)** — needs basis data | **V255.D**: acquire real perp/spot basis series + live re-verify (live-host) |
-| **1-blocked (structural)** | C. On-chain flow primary universe | **PAUSED (V256)** — needs frozen per-asset on-chain data | **V257**: data-freeze pipeline (Coin Metrics community MVP) → then rerun V256 as pre-registered |
+| **1 (structural, buildable-offline now)** | C. On-chain flow primary universe | **UNBLOCKED (V257 executed 2026-07-15)** — 4/4 signals frozen per-asset {BTC,ETH}, 6.5yr daily, byte-identical | **rerun V256 as pre-registered**: flow-primary offline scorer + walk-forward over `data/frozen_series/on_chain/` (follow-on V###) |
 | **1 (buildable-offline now)** | E. Specialist-LLM ensemble | untested | **next offline bet** — reuses V241 infra, prompt-only, cheapest; but N=4-pinned |
 | 2 (buildable-offline now) | D. Polymarket sentiment/regime | untested | after E — plumbing exists, but thin ~2023+ history; N=4-pinned |
 | **—** | B.dead — v2 directional carry | **REFUTED (V255)** | closed |

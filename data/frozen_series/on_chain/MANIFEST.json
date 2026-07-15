@@ -1,0 +1,128 @@
+{
+  "_built_by": "scripts/v257_freeze_on_chain.py",
+  "_note": "V257 on-chain freeze (Coin Metrics community tier). Replay reads these files only (never the network). Per-series JSON is wall-clock-free and byte-identical on re-run; frozen_at_utc below is provenance only.",
+  "files": {
+    "BTC/active_addresses.json": {
+      "asset": "BTC",
+      "bytes": 53246,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "f4c2f741c9b36d457c7f827958af37c7",
+      "metric": "AdrActCnt",
+      "n_obs": 2387,
+      "v256_signal": "active_address_velocity"
+    },
+    "BTC/exchange_inflow_native.json": {
+      "asset": "BTC",
+      "bytes": 71577,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "7292bff53c2187e0a574381ddd33cb52",
+      "metric": "FlowInExNtv",
+      "n_obs": 2387,
+      "v256_signal": "net_exchange_netflow"
+    },
+    "BTC/exchange_outflow_native.json": {
+      "asset": "BTC",
+      "bytes": 71599,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "3f2768ea8bf03f599434de8f5621a7aa",
+      "metric": "FlowOutExNtv",
+      "n_obs": 2387,
+      "v256_signal": "net_exchange_netflow"
+    },
+    "BTC/exchange_supply_native.json": {
+      "asset": "BTC",
+      "bytes": 76447,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "a7b1a4cf94402d50ebed978cfe4c74a1",
+      "metric": "SplyExNtv",
+      "n_obs": 2387,
+      "v256_signal": "whale_cluster_movement"
+    },
+    "BTC/transaction_count.json": {
+      "asset": "BTC",
+      "bytes": 52810,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "d4fe6cb5f7166cf8d150f0d8f0afcf41",
+      "metric": "TxCnt",
+      "n_obs": 2387,
+      "v256_signal": "transaction_volume"
+    },
+    "BTC/transfer_count.json": {
+      "asset": "BTC",
+      "bytes": 53284,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "766c6bec09c630fb6e17a020f0dc7a14",
+      "metric": "TxTfrCnt",
+      "n_obs": 2387,
+      "v256_signal": "transaction_volume"
+    },
+    "ETH/active_addresses.json": {
+      "asset": "ETH",
+      "bytes": 52891,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "12d0493101f3aea3fc223854958359d5",
+      "metric": "AdrActCnt",
+      "n_obs": 2387,
+      "v256_signal": "active_address_velocity"
+    },
+    "ETH/exchange_inflow_native.json": {
+      "asset": "ETH",
+      "bytes": 97787,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "f9db91c84136064994b7e7da680e8815",
+      "metric": "FlowInExNtv",
+      "n_obs": 2387,
+      "v256_signal": "net_exchange_netflow"
+    },
+    "ETH/exchange_outflow_native.json": {
+      "asset": "ETH",
+      "bytes": 97859,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "4aa0acbf7ff4b3ab07a549fb3ba79013",
+      "metric": "FlowOutExNtv",
+      "n_obs": 2387,
+      "v256_signal": "net_exchange_netflow"
+    },
+    "ETH/exchange_supply_native.json": {
+      "asset": "ETH",
+      "bytes": 102685,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "1249d1dcd61e8698e7c7e5d8c72b7f82",
+      "metric": "SplyExNtv",
+      "n_obs": 2387,
+      "v256_signal": "whale_cluster_movement"
+    },
+    "ETH/transaction_count.json": {
+      "asset": "ETH",
+      "bytes": 54880,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "16cdc2f0d2e4e2b1998eb7d2d73dedb8",
+      "metric": "TxCnt",
+      "n_obs": 2387,
+      "v256_signal": "transaction_volume"
+    },
+    "ETH/transfer_count.json": {
+      "asset": "ETH",
+      "bytes": 53719,
+      "first_date": "2020-01-01",
+      "last_date": "2026-07-14",
+      "md5": "baedf0bf4c3ac1c508e224b611a0eb0f",
+      "metric": "TxTfrCnt",
+      "n_obs": 2387,
+      "v256_signal": "transaction_volume"
+    }
+  },
+  "frozen_at_utc": "2026-07-15T07:16:05+00:00",
+  "source": "coinmetrics-community"
+}
