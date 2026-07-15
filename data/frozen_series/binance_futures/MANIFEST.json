@@ -1,0 +1,22 @@
+{
+  "_built_by": "scripts/v255d_freeze_basis.py",
+  "_note": "V255.D freeze-once perp-mark + spot-index daily closes for real-basis re-verify. Clock-free JSON \u2192 re-freeze is byte-identical (same MD5).",
+  "files": {
+    "BTCUSDT/index_price.json": {
+      "bytes": 61790,
+      "md5": "f7f28a8cb4e199daf20f263e96326e6a"
+    },
+    "BTCUSDT/mark_price.json": {
+      "bytes": 55040,
+      "md5": "c8081fdc0f96450d7e65c06b31661900"
+    },
+    "ETHUSDT/index_price.json": {
+      "bytes": 59759,
+      "md5": "622f6788e62ac13b5fd268c5b605c363"
+    },
+    "ETHUSDT/mark_price.json": {
+      "bytes": 53746,
+      "md5": "ac46112d36d9a985c2b137b50f0ddd41"
+    }
+  }
+}
