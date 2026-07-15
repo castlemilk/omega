@@ -211,3 +211,33 @@ to produce proposals.
 
 > `FRED_API_KEY` still unset (macro on `DEMO_KEY`) — the other half of the
 > fill-rate follow-up, deferred (host-provisioning, not a code change).
+
+---
+
+## Addendum — `FRED_API_KEY` provisioned, daemon restarted (2026-07-15 01:01 UTC)
+
+The second half of the fill-rate follow-up (host-provisioning, no code change) is
+now done: a real `FRED_API_KEY` was set so the macro FRED path (yield_curve /
+VIX / DXY) resolves live instead of degrading on `DEMO_KEY`.
+
+- **Key set** in `harness/.env` (gitignored — `.gitignore:68`, `git check-ignore`
+  confirmed). The key value is **not** recorded here or anywhere in-tree. No prior
+  key existed (no entry in `harness/.env`, shell rc, or the old daemon's env) — this
+  is a first-time provision, not a rotation.
+- **No dotenv autoload** in the runner (`os.environ.get` only), so the key was
+  injected by sourcing `harness/.env` into the launch shell before `nohup`.
+- **Daemon restarted** to pick up the key from its boot env (Python snapshots env
+  at start): old **PID 81481** → `kill -TERM` (graceful — `scheduler_shutdown_signal
+  signum 15` → `runner_shutdown cycles:0` → clean exit, no in-flight cycle lost) →
+  relaunched via `scripts/live_paper_daemon.sh --mode forward` as **PID 68916**.
+  Same output dir → `checkpoint_loaded last_completed_date=2026-07-14`,
+  `runner_resumed` (history continues), same tick **02:55:00 UTC**, `enabled=True`,
+  V240-selective `VICTORIA_FEATURES` reproduced
+  (`universe_selective_enabled` + adopted-baseline defaults).
+- **FRED live-fetch smoke — PASS (provider=fred, no failover, no DEMO):** in the
+  daemon's launch env, `fetch_vix`/`fetch_dxy`/`fetch_yield_curve` all resolve via
+  FRED — VIX 17.16, DXY 120.50, **10y-2y spread 0.36** (DGS10-DGS2, latest
+  2026-07-13). yield_curve previously unreachable on `DEMO_KEY` (400).
+- **Next daemon tick 2026-07-15 02:55 UTC** will run the strategy with the macro
+  FRED feeds live; the 03:15Z audit will now see yield_curve/VIX/DXY as working
+  feeds rather than blocked/degraded.
