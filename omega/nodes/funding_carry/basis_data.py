@@ -22,6 +22,16 @@ _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 _REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", "..", ".."))
 _DEFAULT_DATA_DIR = os.path.join(_REPO_ROOT, "data")
 
+# Trade-symbol -> frozen-archive-symbol aliases. The funding-carry trade universe
+# carries some names under a pre-rebrand ticker while Binance's futures basis
+# archive lives under the post-rebrand ticker. Resolving the alias when locating
+# the frozen mark/index pair lets those trades price on real basis instead of
+# falling back to the zero-basis assumption.
+_SYMBOL_ALIASES = {
+    "MATICUSDT": "POLUSDT",  # V253 MATIC->POL rebrand 2024-09-10; futures archive at POLUSDT
+    # Future aliases go here
+}
+
 
 class BasisLoader:
     """Loads frozen mark/index closes and computes measured hedge residuals."""
@@ -36,7 +46,8 @@ class BasisLoader:
     def _load_one(self, symbol: str) -> tuple[dict[str, float], dict[str, float]] | None:
         if symbol in self._cache:
             return self._cache[symbol]
-        sym_dir = os.path.join(self._base(), symbol)
+        archive_symbol = _SYMBOL_ALIASES.get(symbol, symbol)
+        sym_dir = os.path.join(self._base(), archive_symbol)
         mark_p = os.path.join(sym_dir, "mark_price.json")
         index_p = os.path.join(sym_dir, "index_price.json")
         if not (os.path.exists(mark_p) and os.path.exists(index_p)):

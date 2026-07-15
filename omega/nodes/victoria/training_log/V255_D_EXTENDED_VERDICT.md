@@ -84,7 +84,7 @@ the 10 bps §5.4 bar. No name has dirty basis.
 | SOLUSDT | 100 | **+$3.31** | +1.37 | 3.85 bps | CLEAN (FTX tail¹) | **ADOPT** |
 | DOTUSDT | 123 | **+$3.02** | −0.06 | 4.08 bps | CLEAN | **ADOPT** |
 | ETHUSDT | 103 | **+$2.97** | +0.93 | 2.70 bps | CLEAN | **ADOPT** |
-| MATICUSDT | 86 | +$2.47 | 0.00 | — | NO-BASIS² | ADOPT (zero-basis only) |
+| MATICUSDT | 86 | +$2.47 | 0.00 | — | NO-BASIS² (date-era gap) | ADOPT (zero-basis only) |
 | LINKUSDT | 117 | **+$1.47** | +0.79 | 3.59 bps | CLEAN | **ADOPT** |
 | ADAUSDT | 125 | +$0.91 | +0.28 | 2.48 bps | CLEAN | ADOPT (thin) |
 | XRPUSDT | 116 | +$0.70 | +0.02 | 2.93 bps | CLEAN | ADOPT (thin) |
@@ -101,13 +101,20 @@ peers' ~13–30 bps). The verdict is a median test and is robust to it, but SOL 
 should respect that carry into an exchange-solvency event can see basis blow out ~20% on a
 single hold.
 
-² **MATIC/POL mapping gap.** The funding-carry trade universe carries this name as
-**MATICUSDT**; Binance's futures basis archive is under the post-rebrand **POLUSDT**. POL
-froze cleanly (668 obs) but `BasisLoader.available()` keys on the trade symbol, so POL's
-basis does not join the 86 MATICUSDT trades — they retain the zero-basis assumption (Δmed
-$0.00). Closing this needs a MATIC→POL alias in `basis_data.py` (a follow-on; not done here
-to avoid touching scorer-adjacent logic mid-verdict). MATIC's carry is positive under
-zero-basis (+$2.47); its real-basis cleanliness is *untested* — treat as ADOPT-provisional.
+² **MATIC/POL gap — mapping fixed, but it's a DATA-ERA gap, not a mapping gap (2026-07-15
+follow-up).** The funding-carry trade universe carries this name as **MATICUSDT**; Binance's
+futures basis archive is under the post-rebrand **POLUSDT**. A `MATICUSDT→POLUSDT` alias was
+added to `basis_data.py` (`_SYMBOL_ALIASES`, resolved in `_load_one`), so `available()` now
+resolves MATIC to POL's archive and MATIC moves from *symbol*-fallback to *date*-fallback.
+**But the 86 trades still do not price**: they run **2020-10-22 → 2024-09-06 (exit)**, and
+POL's futures basis archive begins **2024-09-13** — *after* MATIC's last trade exits. Zero
+temporal overlap → all 86 fall to date-fallback and retain the zero-basis assumption (Δmed
+$0.00, pooled median unchanged at +$1.95). The gap was never a missing alias; it is that the
+funding-carry MATIC history ended (pre-rebrand) days before the POL perp/index archive
+began. The alias is correct, harmless, and future-proofs any post-2024-09-13 MATIC-labelled
+trade, but it **does not extend real-basis coverage** here. MATIC's carry is positive under
+zero-basis (+$2.47); its real-basis cleanliness remains *untestable from this archive* —
+treat as ADOPT-provisional (zero-basis only), not pending an alias.
 
 ### Honest read on the marginal names
 
@@ -133,7 +140,8 @@ not a friction the strategy must overcome — across 90% of the trade set it is 
 clean, slightly-favorable perturbation. The names that deserve ADOPT are the ones with
 positive carry alpha (BNB, SOL, BTC, ETH, DOT decisively; LINK/ADA/XRP/AVAX positive but
 thin); ARB/NEAR/SUI stay FLAG-GATED on **carry thinness / small-N**, not on basis. MATIC is
-ADOPT-provisional pending the POL alias.
+ADOPT-provisional under zero-basis: the POL alias was added (2026-07-15) but its real basis is
+**untestable** — the 86 MATIC trades all exit before the POLUSDT archive begins (§3 note ²).
 
 ### Bounding the ADOPT (unchanged in spirit from V255.D)
 
@@ -143,7 +151,9 @@ ADOPT-provisional pending the POL alias.
   concrete instance of the p95/max tail the median test does not see. Size for it.
 - **In-sample basis was favorable**, not just small — ADOPT rests on *small* (robust), and
   the edge is charged as clean, not as a basis alpha.
-- **POL/MATIC untested for real basis** (mapping gap) and **ARB/SUI are < 3.3 yr / N≈22**.
+- **POL/MATIC untested for real basis** (date-era gap: alias added but MATIC's 86 trades all
+  exit 2024-09-06, before the POLUSDT archive starts 2024-09-13 — §3 note ²) and **ARB/SUI are
+  < 3.3 yr / N≈22**.
 
 ## Reproduce
 
