@@ -399,8 +399,9 @@ liquid book, the zero-basis assumption held across 90% of trades, and the only c
 per-name adoption is carry-alpha thinness on the small alts (not basis cost). C (on-chain,
 V257) remains the next data unlock.
 
-| Rank (updated V256) | Option | Status | Next |
+| Rank (updated V262) | Option | Status | Next |
 |---|---|---|---|
+| **1 — TOP-PRIORITY FOLLOW-ON (new, V262)** | **G. Intraday resolution (1h / 5m)** | **DATA UNLOCKED (V262 executed 2026-07-25)** — 1h OHLCV frozen for all 13 universe names + MATIC, 2020-01→2026-07, byte-identical; 5m available and *cheap* (~0.6 GB, not the 50–70 GB assumed) but deliberately NOT frozen pending user call | **V262-2**: run falsifier **F4 (regime-independence separator proof) FIRST** — it gates the whole thesis; only then the 1h grid. See [`V262.md`](V262.md) + [`V262_AUDIT_VERDICT.md`](V262_AUDIT_VERDICT.md) |
 | **1-SHIPPED (structural)** | B. level/regime basis carry (v1) | **ADOPT — full liquid universe (V255.D-EXT)**: real basis frozen on 12 names (90.4% of trades), pooled median +$1.95 (CI [+$1.13,+$2.80] excl 0), all 12 basis-CLEAN < 5 bps; majors decisive, ARB/NEAR/SUI FLAG on alpha-thinness | MATIC→POL alias in `basis_data.py`; wire ADOPT'd majors carry book |
 | **1 (structural, buildable-offline now)** | C. On-chain flow primary universe | **UNBLOCKED (V257 executed 2026-07-15)** — 4/4 signals frozen per-asset {BTC,ETH}, 6.5yr daily, byte-identical | **rerun V256 as pre-registered**: flow-primary offline scorer + walk-forward over `data/frozen_series/on_chain/` (follow-on V###) |
 | **1 (buildable-offline now)** | E. Specialist-LLM ensemble | untested | **next offline bet** — reuses V241 infra, prompt-only, cheapest; but N=4-pinned |

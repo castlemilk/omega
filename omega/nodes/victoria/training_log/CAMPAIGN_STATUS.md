@@ -83,7 +83,20 @@ a sub-resolution objective is variance mining, not science.
    adjudicable recent structure. This reopens the entry-side composite that the
    V236→V245 streak closed at daily granularity only.
 
-Until one fires: **the standing baseline is the answer, every V241–V248 flag stays
+   **Status (V262, 2026-07-25): the intraday freeze is DONE — data-side only.**
+   1h OHLCV for all 13 universe names, 2020-01→2026-07, 665,824 bars, byte-identical
+   ([`V262.md`](V262.md), [`V262_AUDIT_VERDICT.md`](V262_AUDIT_VERDICT.md)).
+   **This does NOT by itself fire criterion 2.** The criterion requires a source that
+   *changes regime structure*, and whether intraday regime is orthogonal to macro-day
+   regime is an open empirical question — it is V262-2's pre-registered falsifier F4
+   (REFUTE if per-name-hour vs macro-day regime correlation > 0.7). Criterion 2 fires
+   **only if F4 passes.** Until then the freeze is a loaded gun, not a fired one.
+
+   ⚠️ Criterion 1 is **not currently accruing**: as of 2026-07-25 no live-paper daemon
+   is running and the configured checkpoint dir does not exist (V253 shipped with
+   `SCHEDULER_ENABLED=0` pending host provisioning). Recent-N is static.
+
+Until one fires: **the standing baseline is the answer, every V241–V261 flag stays
 OFF, and the loop waits on the calendar rather than mining variance.**
 
 ---
@@ -110,3 +123,5 @@ that re-runs the training loop once resume criterion 1 or 2 is met.
 | Walk-forward | V235–V240 | distributional re-baseline | priors inverted; selective universe ADOPTED (baseline moved) |
 | **Phase 1** | **V241–V249** | **V247-ruler adjudication** | **COMPLETE — standing baseline shipped; recent found calendar-bound** |
 | **Phase 2** | **V250–V252** | **live-paper harness build** | **feed layer + reconciliation gate + scheduler/checkpoint DONE; V253 = 90-day soak** |
+| Phase 2 (cont.) | V254–V261 | offline alt-data lanes | funding-carry ADOPTED (V255.C/D, full liquid book); Tracks C/D/E/F all REFUTED or blocked — offline alpha search closed |
+| **Phase 2 (cont.)** | **V262** | **intraday data unlock** | **1h corpus frozen (665,824 bars, 14 MB, byte-identical). Audit+freeze only — no strategy code. V262-2 gated on falsifier F4** |
