@@ -1,0 +1,5674 @@
+{
+  "columns": [
+    "open_time_ms",
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume"
+  ],
+  "freeze": "v262_intraday",
+  "interval": "1h",
+  "now_ms": 1784937600000,
+  "source": "data.binance.vision spot klines (monthly, daily fallback)",
+  "span": {
+    "end": "2026-07",
+    "start": "2020-01"
+  },
+  "symbols": {
+    "ADAUSDT": {
+      "bytes": 1029231,
+      "first_month": "2020-01",
+      "last_month": "2026-07",
+      "missing_bars": 31,
+      "months": {
+        "2020-01": {
+          "bytes": 13341,
+          "expected_bars": 744,
+          "md5": "12ef282431d91001e06447429b5436cd",
+          "n_bars": 744
+        },
+        "2020-02": {
+          "bytes": 12828,
+          "expected_bars": 696,
+          "md5": "82fe720d07ea4ed9daa5d40f4dedaa51",
+          "n_bars": 690
+        },
+        "2020-03": {
+          "bytes": 13537,
+          "expected_bars": 744,
+          "md5": "8e8dac025da255c4b0ad557c316cdf3f",
+          "n_bars": 743
+        },
+        "2020-04": {
+          "bytes": 12749,
+          "expected_bars": 720,
+          "md5": "c024dc980c317b0714d6fba1b315bb8a",
+          "n_bars": 718
+        },
+        "2020-05": {
+          "bytes": 13564,
+          "expected_bars": 744,
+          "md5": "a7783c74d76e05ab019342f40b980349",
+          "n_bars": 744
+        },
+        "2020-06": {
+          "bytes": 13205,
+          "expected_bars": 720,
+          "md5": "ccc519fa2f35d2fab92c5a2d9197e9ce",
+          "n_bars": 717
+        },
+        "2020-07": {
+          "bytes": 14445,
+          "expected_bars": 744,
+          "md5": "9004833118359a149be8e1093303f91b",
+          "n_bars": 744
+        },
+        "2020-08": {
+          "bytes": 14285,
+          "expected_bars": 744,
+          "md5": "aa441ef418576b046a35cd8494ec910b",
+          "n_bars": 744
+        },
+        "2020-09": {
+          "bytes": 13807,
+          "expected_bars": 720,
+          "md5": "58258d5ada7dcaa791fe3bdec5201d23",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 13883,
+          "expected_bars": 744,
+          "md5": "aacf6f4349ddff9a53ce42735c44714a",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 14000,
+          "expected_bars": 720,
+          "md5": "f8d27472d4ca049ba0a2bab22c29a0b7",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 14577,
+          "expected_bars": 744,
+          "md5": "03e74bd35a7ccd3d85f36db3337cc028",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 15497,
+          "expected_bars": 744,
+          "md5": "25cc517165099200dd52adbe610c7882",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 14575,
+          "expected_bars": 672,
+          "md5": "752289ac1fa3e0dc2919506c00923d27",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 15697,
+          "expected_bars": 744,
+          "md5": "d88a85f1884ad10375695638fba78c9a",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 14994,
+          "expected_bars": 720,
+          "md5": "fbc0790cf262d5adb88418e02b822786",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 15577,
+          "expected_bars": 744,
+          "md5": "b1dcd21e62db2708325f3631d147a694",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 14668,
+          "expected_bars": 720,
+          "md5": "d32e13c65a19546f6c8c49775b6f8039",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 14634,
+          "expected_bars": 744,
+          "md5": "d20e5ff1ef8072555092812800874ae7",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 14729,
+          "expected_bars": 744,
+          "md5": "bd8dc55e83ebd4c30febf1e90b48a350",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 12393,
+          "expected_bars": 720,
+          "md5": "b54ded697bcee5f593626427abb12913",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 11900,
+          "expected_bars": 744,
+          "md5": "ced299e62c1c0b403d48ae41c45307b2",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 11864,
+          "expected_bars": 720,
+          "md5": "41e5cb94dd69ea21dfb50782d1b0e5ff",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 12118,
+          "expected_bars": 744,
+          "md5": "56f8ea05f001e055d55d8a2da2f7660f",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 12081,
+          "expected_bars": 744,
+          "md5": "af6c34ca27267666b10304d2d753f3ac",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 10772,
+          "expected_bars": 672,
+          "md5": "0bb80d114d8e7cf175120172caf979a0",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 11560,
+          "expected_bars": 744,
+          "md5": "e73a6518df26358683b398fdf5e6d5a0",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 11483,
+          "expected_bars": 720,
+          "md5": "a5da0102ceb4d953d5f9d237264d3b03",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 13948,
+          "expected_bars": 744,
+          "md5": "b2b7982ca3e2e1d1362f87a86963468b",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 13367,
+          "expected_bars": 720,
+          "md5": "065fc6225911ab37f1b697867db516cd",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 13266,
+          "expected_bars": 744,
+          "md5": "7a2030e8c6f571611733b86c2c3605f0",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 13107,
+          "expected_bars": 744,
+          "md5": "2ec6191f0befcbe38ab8d5276fdc4137",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 12588,
+          "expected_bars": 720,
+          "md5": "a619364b1cdfea6b85993e87aa4406ae",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 12691,
+          "expected_bars": 744,
+          "md5": "86e781f03d321bb670dc56d4e22e8e6f",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 12438,
+          "expected_bars": 720,
+          "md5": "54cacdaa6408eeb451d541f23b63e5c3",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 12029,
+          "expected_bars": 744,
+          "md5": "42d87aba3f8cb504de3c1ea5b92e7c62",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 12848,
+          "expected_bars": 744,
+          "md5": "61c3425aff0ee52942b3acec32c9846f",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 11377,
+          "expected_bars": 672,
+          "md5": "e718f88984803d70c735800af82ffd04",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 12801,
+          "expected_bars": 744,
+          "md5": "bdf0e582dc52f9947ea91c22a751b3fb",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 12298,
+          "expected_bars": 720,
+          "md5": "0f44ba44beb6f6197ed7583be2940d80",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 12074,
+          "expected_bars": 744,
+          "md5": "5d28ce9091ac5c0748c6dd4b64829636",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 12285,
+          "expected_bars": 720,
+          "md5": "35c98318f2a5d32b505562b85a5b90fd",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 12297,
+          "expected_bars": 744,
+          "md5": "977bdb71da4aea7635d17ffc86bb56c6",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 11910,
+          "expected_bars": 744,
+          "md5": "d2344c22f40e24f7d4869971dc0a1cf1",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 10885,
+          "expected_bars": 720,
+          "md5": "b0320383b9e93e527adebcbb41b588e9",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 11954,
+          "expected_bars": 744,
+          "md5": "181a12cafa59d042926c961b52554881",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 12426,
+          "expected_bars": 720,
+          "md5": "bdd30b69a42efba2a45247d2602bc12c",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 13489,
+          "expected_bars": 744,
+          "md5": "7193ded9601c462a79f67e1276c6a206",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 13336,
+          "expected_bars": 744,
+          "md5": "cbf4d4dec653f40b675c4e50c100fdfa",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 12530,
+          "expected_bars": 696,
+          "md5": "f88b0ce83d2eeb1a0f44ae60fcc4c7e5",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 13596,
+          "expected_bars": 744,
+          "md5": "7e3bdd200f0f43b618a424c29a9415e3",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 12897,
+          "expected_bars": 720,
+          "md5": "634d089be7d288f06044a90920e0677e",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 12643,
+          "expected_bars": 744,
+          "md5": "1ca5bcb61994f3225d81fea5e72014a1",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 12179,
+          "expected_bars": 720,
+          "md5": "cd4808f00e2c9ec8e4c3e8dc7f389e9a",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 12959,
+          "expected_bars": 744,
+          "md5": "40399c753000042cbe23e86a78d236b0",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 12749,
+          "expected_bars": 744,
+          "md5": "bd7d024e297fe09358c9682211032762",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 12087,
+          "expected_bars": 720,
+          "md5": "2bec268a2589c454eb94afd5afadccd6",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 12291,
+          "expected_bars": 744,
+          "md5": "5c487bd3b3037254fddd49acfc0c71b5",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 13825,
+          "expected_bars": 720,
+          "md5": "8aae3486c0ee2447c6db858f90ae09f5",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 14158,
+          "expected_bars": 744,
+          "md5": "d32733ffb035cfabb5973df4dcee2d74",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 14203,
+          "expected_bars": 744,
+          "md5": "02548a20aa27246872336682852384e1",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 12773,
+          "expected_bars": 672,
+          "md5": "1c07c8871e8c7c18c0884f1ce5ebcd45",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 14111,
+          "expected_bars": 744,
+          "md5": "a04895a48376a1d61da1d32d2795185c",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 13189,
+          "expected_bars": 720,
+          "md5": "f0fc2698780a97c44109442ebf5343ac",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 13750,
+          "expected_bars": 744,
+          "md5": "517c7dbe234a2580388d5e1423e18269",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 13083,
+          "expected_bars": 720,
+          "md5": "30db378e948dfe10421990018e4218f0",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 14012,
+          "expected_bars": 744,
+          "md5": "7fd41aee7fcd541cdde20e340159ea12",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 14048,
+          "expected_bars": 744,
+          "md5": "87a542b48a5f309078e8227ef02e833d",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 13220,
+          "expected_bars": 720,
+          "md5": "ded99eb23adcc5bc443bec86a6930182",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 13774,
+          "expected_bars": 744,
+          "md5": "d55e0960df4c9e576757a43408f453ec",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 13203,
+          "expected_bars": 720,
+          "md5": "1f0454fe66a71c12aa39041855108dad",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 13135,
+          "expected_bars": 744,
+          "md5": "a5452a59bef3b89566f1ad7d10df1f50",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 12992,
+          "expected_bars": 744,
+          "md5": "f562b7a50b1c5d8061ede72b4f9ac6f5",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 11582,
+          "expected_bars": 672,
+          "md5": "28d0c579fa6f96ba2c033beb02b8c3e3",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 12503,
+          "expected_bars": 744,
+          "md5": "0f2ef8a01b3913374fc9ed2d476018c4",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 11618,
+          "expected_bars": 720,
+          "md5": "c7f5dc0deb0512d8f25ccb8a89a68982",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 12173,
+          "expected_bars": 744,
+          "md5": "92df1369859baeaa5314be2c8ef4f00f",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 12142,
+          "expected_bars": 720,
+          "md5": "4ca152214c37624cf4424b0823ed0657",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 9629,
+          "expected_bars": 576,
+          "md5": "58c7b3e2d5aab7416ba2fd300b2d7870",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 57497,
+      "n_months": 79
+    },
+    "ARBUSDT": {
+      "bytes": 518910,
+      "first_month": "2023-03",
+      "last_month": "2026-07",
+      "missing_bars": 544,
+      "months": {
+        "2023-03": {
+          "bytes": 4089,
+          "expected_bars": 744,
+          "md5": "4ea387d4e5b15c81b24cd57f87045332",
+          "n_bars": 200
+        },
+        "2023-04": {
+          "bytes": 13755,
+          "expected_bars": 720,
+          "md5": "76938a1a4c11c05df71bf3c82a0a724b",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 13606,
+          "expected_bars": 744,
+          "md5": "02ee8e3c9bdad1624c9dbedab3c151f6",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 13147,
+          "expected_bars": 720,
+          "md5": "b72c7454fd0d7244200cd274abd50ba0",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 13296,
+          "expected_bars": 744,
+          "md5": "3c069e8e40706e504570951ac79724a8",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 12915,
+          "expected_bars": 744,
+          "md5": "cd86263fa1be9b6ad9a3bdf97877f077",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 12540,
+          "expected_bars": 720,
+          "md5": "8e78206f4bbe49d29d735cc0bedd82a5",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 13289,
+          "expected_bars": 744,
+          "md5": "157c40c6deead94e2f6890e4b3bd4c93",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 13072,
+          "expected_bars": 720,
+          "md5": "33853e0b369c47bc43b33baf5fde898f",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 13892,
+          "expected_bars": 744,
+          "md5": "88abbb1c0d7d99f25671c80b7f36babb",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 14483,
+          "expected_bars": 744,
+          "md5": "245e5270d586f5b86d1fd738a5d5d154",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 13107,
+          "expected_bars": 696,
+          "md5": "266fd8da649e2126e4785c22b5050128",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 14184,
+          "expected_bars": 744,
+          "md5": "77b5abcfcfd5838748fd0ced7664219a",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 13512,
+          "expected_bars": 720,
+          "md5": "11728178c62ef1def438e687d7871b1c",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 13718,
+          "expected_bars": 744,
+          "md5": "bd38e2dea7fb3a776efe9b76a8454d07",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 12947,
+          "expected_bars": 720,
+          "md5": "b77ad9e4e25b5eb7ad3460509b5ba78f",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 13380,
+          "expected_bars": 744,
+          "md5": "7a52bb3192856bc3ebe4f090e9221932",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 13245,
+          "expected_bars": 744,
+          "md5": "9175aa2a63da2e5fd2462fd272fe2d68",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 12624,
+          "expected_bars": 720,
+          "md5": "874bc8f150e0fead213e43f5a7b3e138",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 12974,
+          "expected_bars": 744,
+          "md5": "6de61105dcc2546de5657897c5116c05",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 13606,
+          "expected_bars": 720,
+          "md5": "203a1e8917d3d45b18fffd61d97e9924",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 14000,
+          "expected_bars": 744,
+          "md5": "c62dbbdffda17710e362c04dbddaa449",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 13929,
+          "expected_bars": 744,
+          "md5": "e8ef5d9096c82836e5feb5f4db182abf",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 12192,
+          "expected_bars": 672,
+          "md5": "8e361e160efb6e9318f9b3c4f2ed3860",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 13079,
+          "expected_bars": 744,
+          "md5": "701b42231c8baa26f54f7543c5000eb2",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 12492,
+          "expected_bars": 720,
+          "md5": "e323d847f468c02dd411a797c7158fbf",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 13435,
+          "expected_bars": 744,
+          "md5": "ab7377dfcf2e97f66c490c6775ae47a4",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 12746,
+          "expected_bars": 720,
+          "md5": "1c5a024f34d7e0bb9aff3669cad40e04",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 13458,
+          "expected_bars": 744,
+          "md5": "d160a640f11c686780964a639b17ed76",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 13688,
+          "expected_bars": 744,
+          "md5": "6ea58518b174bac9b64fc349bdbb9562",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 12722,
+          "expected_bars": 720,
+          "md5": "be9d04d4883a85b8308de8a4e480642d",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 13211,
+          "expected_bars": 744,
+          "md5": "54f1e0d775c54665bb61d51d14046338",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 12527,
+          "expected_bars": 720,
+          "md5": "bf01b2c8225d170f9bab17e9c1e1de97",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 12259,
+          "expected_bars": 744,
+          "md5": "89d69f4adaf1303e720945db09ffd33a",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 12290,
+          "expected_bars": 744,
+          "md5": "1aae480cd54191bf61ee5e281375707b",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 10972,
+          "expected_bars": 672,
+          "md5": "f11d54033cfd5e28c61fe18958e57d45",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 11412,
+          "expected_bars": 744,
+          "md5": "cdffeb509d7152f03cd36d070447598a",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 11298,
+          "expected_bars": 720,
+          "md5": "2d6f214bfafbf4f1a0a4c40c38ac1399",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 11823,
+          "expected_bars": 744,
+          "md5": "2475624c073b80ad60160ee0235b91ec",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 11089,
+          "expected_bars": 720,
+          "md5": "0e2910f429694c58df8b38f8905863dc",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 8907,
+          "expected_bars": 576,
+          "md5": "c202c43f5bed143b473b4a447ac928aa",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 29264,
+      "n_months": 41
+    },
+    "AVAXUSDT": {
+      "bytes": 872907,
+      "first_month": "2020-09",
+      "last_month": "2026-07",
+      "missing_bars": 529,
+      "months": {
+        "2020-09": {
+          "bytes": 4417,
+          "expected_bars": 720,
+          "md5": "f3df56f27217d4c66ee8951b2e53a18f",
+          "n_bars": 210
+        },
+        "2020-10": {
+          "bytes": 14225,
+          "expected_bars": 744,
+          "md5": "d59f66183086aad23a7c2ef9f562d598",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 13661,
+          "expected_bars": 720,
+          "md5": "1af1c77ab499210bf5f558a979a9ccf3",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 14033,
+          "expected_bars": 744,
+          "md5": "163ad8e1f0c0bb5d54c31253425b3984",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 15417,
+          "expected_bars": 744,
+          "md5": "71764547916d3056833d144ab2864b3b",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 14890,
+          "expected_bars": 672,
+          "md5": "d880cdbfde1263f916fff5c04d323bde",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 16249,
+          "expected_bars": 744,
+          "md5": "220b0c103c43d87830219df3979aac41",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 15450,
+          "expected_bars": 720,
+          "md5": "acc0fad36cf7232ce0f270a8e685f644",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 15327,
+          "expected_bars": 744,
+          "md5": "81d88d04739ea40de66e1b1e13f6d818",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 14047,
+          "expected_bars": 720,
+          "md5": "770427524f83f05e02029d33fa7aa6d0",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 14091,
+          "expected_bars": 744,
+          "md5": "eb267c56f1730609c747d2059aa85852",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 14858,
+          "expected_bars": 744,
+          "md5": "0487440cf8ecb4307e153aeabba5d893",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 13468,
+          "expected_bars": 720,
+          "md5": "f59d03839faec5bbcca52f6bcd9e59dc",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 13286,
+          "expected_bars": 744,
+          "md5": "c500cf5cd4b1837b75443c0fa7325a98",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 13689,
+          "expected_bars": 720,
+          "md5": "331bc1e72120e498cfb5a8484a635f74",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 14004,
+          "expected_bars": 744,
+          "md5": "fcefc81d7199ecdf064e796c4c233e11",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 13541,
+          "expected_bars": 744,
+          "md5": "df1160043e22d9e083c45cc9ed57a3f5",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 12307,
+          "expected_bars": 672,
+          "md5": "09b277674ec9c953b0ca25bdb447b802",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 13508,
+          "expected_bars": 744,
+          "md5": "37b97eb5055e93a49c437b313857e45e",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 12796,
+          "expected_bars": 720,
+          "md5": "54bede46fa5344f797fc20a9e101ed66",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 13377,
+          "expected_bars": 744,
+          "md5": "237b3291cad2a4e99056b84d3b9a51a3",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 12374,
+          "expected_bars": 720,
+          "md5": "780e1ed5244e119ea9509d58d55d69ec",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 12510,
+          "expected_bars": 744,
+          "md5": "bbdbca095ee0991fb0c777e649c17173",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 12439,
+          "expected_bars": 744,
+          "md5": "c563b552ea03362ad45587e7bc1bc5a9",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 11343,
+          "expected_bars": 720,
+          "md5": "8745cdff3dacfe5fd9f60ffa27afb0ac",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 11278,
+          "expected_bars": 744,
+          "md5": "592ef2c1fa1c0978fa2135595b9cb234",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 11334,
+          "expected_bars": 720,
+          "md5": "e6025c9d171e7a3a944401fefa6560b2",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 10694,
+          "expected_bars": 744,
+          "md5": "c24d890deb51ce50e489b81fc5149fdc",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 11919,
+          "expected_bars": 744,
+          "md5": "91c40d6bea51232224bdee90c1e6f530",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 10812,
+          "expected_bars": 672,
+          "md5": "9316b61751d132292aae87fc83d7db33",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 11527,
+          "expected_bars": 744,
+          "md5": "b92ff8c82d7aaec8eecfa6f3b2b80f80",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 11100,
+          "expected_bars": 720,
+          "md5": "f9ad41d4627b6ac6da7d8f20e345f130",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 10868,
+          "expected_bars": 744,
+          "md5": "cb23ea4b9071595750f442d854dccc83",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 10872,
+          "expected_bars": 720,
+          "md5": "09144af44e3c83da8eead06675da8560",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 11139,
+          "expected_bars": 744,
+          "md5": "944e0d4fca5799a8c064e07f758ea613",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 10498,
+          "expected_bars": 744,
+          "md5": "30187ba0e9df7890a8e36c27f6e6b0ba",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 9776,
+          "expected_bars": 720,
+          "md5": "760674361bc8cf520f2b22ec4fd49509",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 11114,
+          "expected_bars": 744,
+          "md5": "ba3a17d761b7f4e431084cd5447a3e8e",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 11942,
+          "expected_bars": 720,
+          "md5": "dda8c04b47cd78451bb7eb669b1a143f",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 13121,
+          "expected_bars": 744,
+          "md5": "5a010c1f17a0acf90f7ec33fddbace65",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 12766,
+          "expected_bars": 744,
+          "md5": "15587129d047e8d94c2a3c1e8cae71d1",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 11768,
+          "expected_bars": 696,
+          "md5": "af637e2d4b584ef000192cc564c9fa86",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 12970,
+          "expected_bars": 744,
+          "md5": "83fcd4015b590188eb623ad21f20f4be",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 12351,
+          "expected_bars": 720,
+          "md5": "a39b6aae823ba0aacb3b6160383c0955",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 12423,
+          "expected_bars": 744,
+          "md5": "1681f17c53331b88d0fc8712603691f3",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 11859,
+          "expected_bars": 720,
+          "md5": "33c5a745df0637c669df826d67ed42f9",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 12332,
+          "expected_bars": 744,
+          "md5": "02c3cef84b6b686d5c7826ee8a4d61bb",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 12200,
+          "expected_bars": 744,
+          "md5": "65bdfee2cdb42f2fb87109b6e253fd05",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 11683,
+          "expected_bars": 720,
+          "md5": "bf697df5689f92b4a182699810058f6f",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 11982,
+          "expected_bars": 744,
+          "md5": "75c676b04d35952672140cbdd587bfc8",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 12588,
+          "expected_bars": 720,
+          "md5": "71ccd30c58525ca818a9308994e85d18",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 13094,
+          "expected_bars": 744,
+          "md5": "01cacd649be0014dbb411615a4a65fc8",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 12832,
+          "expected_bars": 744,
+          "md5": "b19f26d6a68cfdf249cb50bb81569cc1",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 11407,
+          "expected_bars": 672,
+          "md5": "224534178ec7db229f293ccf1562a2f6",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 12354,
+          "expected_bars": 744,
+          "md5": "9ba4f720dccf86a80a1f75dca9c9a2a6",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 11774,
+          "expected_bars": 720,
+          "md5": "059b51f7b875eb1fb4931788f11c9f40",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 12407,
+          "expected_bars": 744,
+          "md5": "b65581d9b8af014b43b5c619c0366804",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 11593,
+          "expected_bars": 720,
+          "md5": "5e5205f634855a2ef5509e88af8b340b",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 12256,
+          "expected_bars": 744,
+          "md5": "d1df1957aba33de7ebb7198479a46200",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 12246,
+          "expected_bars": 744,
+          "md5": "ab38a74ab5b134e90921751fd7f4918a",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 12279,
+          "expected_bars": 720,
+          "md5": "0209ab6f37084c8391f30d0536d77192",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 12379,
+          "expected_bars": 744,
+          "md5": "60d1baa06140ad7352ad265fe827058a",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 11567,
+          "expected_bars": 720,
+          "md5": "69a3c1f3fc2d8a658f000f30f19a9ee0",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 11388,
+          "expected_bars": 744,
+          "md5": "88568e96726158a2d4c010854383b0a8",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 11460,
+          "expected_bars": 744,
+          "md5": "6b99ce8c4c7985a64d7cd27a1a093ff3",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 10161,
+          "expected_bars": 672,
+          "md5": "2135d0c08f3cda9fa9d4207d7cecb7c3",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 10940,
+          "expected_bars": 744,
+          "md5": "fc8ae8b577619aba2bf509819d427560",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 10307,
+          "expected_bars": 720,
+          "md5": "051f8144aae3055d184458d73ae12a64",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 11564,
+          "expected_bars": 744,
+          "md5": "61344afbeec2f0b596381843c8a874d3",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 12823,
+          "expected_bars": 720,
+          "md5": "fa54781220d3b061292f4d605cd906de",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 9853,
+          "expected_bars": 576,
+          "md5": "33087b0efeba1e9cba92a5456911d05d",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 51143,
+      "n_months": 71
+    },
+    "BNBUSDT": {
+      "bytes": 1074042,
+      "first_month": "2020-01",
+      "last_month": "2026-07",
+      "missing_bars": 31,
+      "months": {
+        "2020-01": {
+          "bytes": 15145,
+          "expected_bars": 744,
+          "md5": "8a7f6e0f711b24bc3185371936449d01",
+          "n_bars": 744
+        },
+        "2020-02": {
+          "bytes": 14584,
+          "expected_bars": 696,
+          "md5": "324cb096c9239bbad380bbd1b2b02228",
+          "n_bars": 690
+        },
+        "2020-03": {
+          "bytes": 15673,
+          "expected_bars": 744,
+          "md5": "9a9c7a15ebe7c5b026ba0e56a2584945",
+          "n_bars": 743
+        },
+        "2020-04": {
+          "bytes": 14775,
+          "expected_bars": 720,
+          "md5": "6b9de236d9c1a13026b9aa96d9a145a3",
+          "n_bars": 718
+        },
+        "2020-05": {
+          "bytes": 15101,
+          "expected_bars": 744,
+          "md5": "3106dae4aa7432fa508801144d8b7495",
+          "n_bars": 744
+        },
+        "2020-06": {
+          "bytes": 14362,
+          "expected_bars": 720,
+          "md5": "d14f044ff041190049e68da6a2ceab6b",
+          "n_bars": 717
+        },
+        "2020-07": {
+          "bytes": 15215,
+          "expected_bars": 744,
+          "md5": "2f048ca2456f8c3d21070e16ff0b250c",
+          "n_bars": 744
+        },
+        "2020-08": {
+          "bytes": 15314,
+          "expected_bars": 744,
+          "md5": "f61152009c94bb6cc831f9f5e7dff9b8",
+          "n_bars": 744
+        },
+        "2020-09": {
+          "bytes": 15855,
+          "expected_bars": 720,
+          "md5": "fc6075371d2b5f1c3a3959cfa4aec4cf",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 16027,
+          "expected_bars": 744,
+          "md5": "04b6604ad4e3d0df86cacac57206f5f0",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 15505,
+          "expected_bars": 720,
+          "md5": "d5d12b6defcd4741f0421638c87da5a4",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 16200,
+          "expected_bars": 744,
+          "md5": "557d56ca53e2a8f475f3b74ceb2a8ef7",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 16646,
+          "expected_bars": 744,
+          "md5": "aa0c4212ff17ef0b4c8968570593191c",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 16288,
+          "expected_bars": 672,
+          "md5": "36986011cc16a1c660f03aa254626ecd",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 18079,
+          "expected_bars": 744,
+          "md5": "dbb6acb3305aa90394655fdb0c8b7520",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 17393,
+          "expected_bars": 720,
+          "md5": "2fb5dfdd86953734f401be1a4c2f4775",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 16139,
+          "expected_bars": 744,
+          "md5": "49c0c2916a474e2723284d93b8ae4591",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 15326,
+          "expected_bars": 720,
+          "md5": "37722d2233d88c9b4326e51e94595411",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 15196,
+          "expected_bars": 744,
+          "md5": "6cbd4caeabb04154179c0c31860bbddd",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 14961,
+          "expected_bars": 744,
+          "md5": "17f867540476ceb54902afb84ad45d81",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 12693,
+          "expected_bars": 720,
+          "md5": "c38882abf6da03618dc66542d16e03b8",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 13049,
+          "expected_bars": 744,
+          "md5": "132bb8905bfa0eccc5c2c60cc763b892",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 12978,
+          "expected_bars": 720,
+          "md5": "34e24496eba7851322fa4332c7b60d49",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 13106,
+          "expected_bars": 744,
+          "md5": "d7a39fa4054e126ba5f5a58f1da4da30",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 13189,
+          "expected_bars": 744,
+          "md5": "a8b4823008c6faaa560ecaab8337e13c",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 11757,
+          "expected_bars": 672,
+          "md5": "d5cfc50bd301a8e5461c5c08e13ed200",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 12706,
+          "expected_bars": 744,
+          "md5": "0f4d90abd47d3bca9d3cf275c994448a",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 12199,
+          "expected_bars": 720,
+          "md5": "4c40f854347c9acd81ac3b92b955fe3c",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 13009,
+          "expected_bars": 744,
+          "md5": "241ad7a9ff1a7ba2a13ce7bfc3d56bd0",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 12329,
+          "expected_bars": 720,
+          "md5": "de9eafa336c47448169b16cd69204bb7",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 12411,
+          "expected_bars": 744,
+          "md5": "dc897a124a7b0c7e66d41989771af22c",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 12402,
+          "expected_bars": 744,
+          "md5": "be8d08a4809abe65e63ce80ed0bbb875",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 11585,
+          "expected_bars": 720,
+          "md5": "99bd0783f2c411aac73f1718ba086fdf",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 11735,
+          "expected_bars": 744,
+          "md5": "30f5999b7a36d343e7a967355cdb48cd",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 12372,
+          "expected_bars": 720,
+          "md5": "f26e3aede5a2ae33121a23ca69f876d5",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 11630,
+          "expected_bars": 744,
+          "md5": "6bab89a5176e05054d6fc9b014f8a9e6",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 12016,
+          "expected_bars": 744,
+          "md5": "b5294e6abb646840dfad9321c25ec29a",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 10981,
+          "expected_bars": 672,
+          "md5": "61430d1287b5ac3edce507babd001e50",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 12139,
+          "expected_bars": 744,
+          "md5": "907398b836e1cc96413b5d054d2d7587",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 11501,
+          "expected_bars": 720,
+          "md5": "baf97e30846c389e17724c91d784a5dd",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 11417,
+          "expected_bars": 744,
+          "md5": "3910171b23d83f4d31d3a4797f489361",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 11689,
+          "expected_bars": 720,
+          "md5": "d721be497edc643b169e2cadf1f3057f",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 11400,
+          "expected_bars": 744,
+          "md5": "74d49658b26c8eb63b69d7110ebaf398",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 11298,
+          "expected_bars": 744,
+          "md5": "cc627225b184f9a3abb95191cdc41287",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 10462,
+          "expected_bars": 720,
+          "md5": "1bd3e375ab715ab8b0948e47d134a15a",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 11302,
+          "expected_bars": 744,
+          "md5": "99904cc67498515a8813554480c965d2",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 11649,
+          "expected_bars": 720,
+          "md5": "170c202af136e9433b2d938d4c217bca",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 12335,
+          "expected_bars": 744,
+          "md5": "35e7a022a7d92fa59a7cf6a967074d7e",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 12230,
+          "expected_bars": 744,
+          "md5": "1dbd5fc888e7bdd0a7f3ea51b6ff8ac0",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 11636,
+          "expected_bars": 696,
+          "md5": "d3a42b78cd831a91aef81ce36f17d7d0",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 13383,
+          "expected_bars": 744,
+          "md5": "81cdcebf08b3a5357443343103c7a1da",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 12584,
+          "expected_bars": 720,
+          "md5": "1d0c3c9b035300fbe39f7284b5311ff8",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 12407,
+          "expected_bars": 744,
+          "md5": "752fb5c297e28f363c212108298f21bb",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 12315,
+          "expected_bars": 720,
+          "md5": "610abbd3b8066064c5bb1e76b24c9849",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 12619,
+          "expected_bars": 744,
+          "md5": "f44ddd67b835dc2cc441f7ee08b33e49",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 12887,
+          "expected_bars": 744,
+          "md5": "af347a49584a4b4dfbbb2616e9fbebdd",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 12363,
+          "expected_bars": 720,
+          "md5": "c78a98222536d8b427ba00bafe932a07",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 12368,
+          "expected_bars": 744,
+          "md5": "a0206e05be1f2be45460eada6d449255",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 14101,
+          "expected_bars": 720,
+          "md5": "dd9152ebb94a5f2d43215cb9bb5f4bbd",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 14896,
+          "expected_bars": 744,
+          "md5": "84d6c6beae9fd97ba0180fad000fb81d",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 14411,
+          "expected_bars": 744,
+          "md5": "ad808ec0cbacf0121586d253691c2abd",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 13601,
+          "expected_bars": 672,
+          "md5": "f3f325adfc08b0f91091a21533fd36e1",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 14700,
+          "expected_bars": 744,
+          "md5": "add718f9aba4471013d0dfa3453664db",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 13814,
+          "expected_bars": 720,
+          "md5": "202166483156ea159d2e752544a23c08",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 14484,
+          "expected_bars": 744,
+          "md5": "659533410b8a567555792a3de87c9ca3",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 13605,
+          "expected_bars": 720,
+          "md5": "01e44a35c20d93acc825cafdecf80a04",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 14608,
+          "expected_bars": 744,
+          "md5": "0be1eab61185e2ef492c1d7635559dd8",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 14783,
+          "expected_bars": 744,
+          "md5": "10d8739d0d6f3fe7fcb51d12a700a795",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 14448,
+          "expected_bars": 720,
+          "md5": "40335e5f98d895c3dbfcf0f0bc0f0956",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 15748,
+          "expected_bars": 744,
+          "md5": "94f40032e1d7fb4cd92175beb7b613d2",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 14578,
+          "expected_bars": 720,
+          "md5": "9446fdebb8871a0b1ab3a7c2d51cf194",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 14571,
+          "expected_bars": 744,
+          "md5": "707df28e172310127edf515e1fcb097f",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 14697,
+          "expected_bars": 744,
+          "md5": "0b03900ef22fa323c774478a9255ff55",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 13391,
+          "expected_bars": 672,
+          "md5": "7911dd46aae78c7daa3282573f0d49b9",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 14473,
+          "expected_bars": 744,
+          "md5": "882002494b8a4b35db8d845b9713073c",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 13795,
+          "expected_bars": 720,
+          "md5": "789f706e3971d9f098da5deff477ef54",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 14265,
+          "expected_bars": 744,
+          "md5": "87e66d041857aa92784ac37cebe577f3",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 14199,
+          "expected_bars": 720,
+          "md5": "97c6b781c4df4234cdb22e4609f1951e",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 10959,
+          "expected_bars": 576,
+          "md5": "96b84653f674ee5ae6ce91f23ea51543",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 57497,
+      "n_months": 79
+    },
+    "BTCUSDT": {
+      "bytes": 1391654,
+      "first_month": "2020-01",
+      "last_month": "2026-07",
+      "missing_bars": 31,
+      "months": {
+        "2020-01": {
+          "bytes": 17542,
+          "expected_bars": 744,
+          "md5": "b27adf1724812f5eb4268bb78f9ca6db",
+          "n_bars": 744
+        },
+        "2020-02": {
+          "bytes": 16418,
+          "expected_bars": 696,
+          "md5": "5f45e3b0877208fe7361d7f878a0de9a",
+          "n_bars": 690
+        },
+        "2020-03": {
+          "bytes": 17881,
+          "expected_bars": 744,
+          "md5": "0471939618a309ac23668c368a8bca3e",
+          "n_bars": 743
+        },
+        "2020-04": {
+          "bytes": 16960,
+          "expected_bars": 720,
+          "md5": "15f54ea0ac923b2d71e5a835a7b19f40",
+          "n_bars": 718
+        },
+        "2020-05": {
+          "bytes": 17631,
+          "expected_bars": 744,
+          "md5": "38ba73fafcf068d896b8c1c7870ecf7d",
+          "n_bars": 744
+        },
+        "2020-06": {
+          "bytes": 16606,
+          "expected_bars": 720,
+          "md5": "81da885581da7dd603eebced4c78826a",
+          "n_bars": 717
+        },
+        "2020-07": {
+          "bytes": 17144,
+          "expected_bars": 744,
+          "md5": "659b7ea55d3bb4c397a64f1786a68362",
+          "n_bars": 744
+        },
+        "2020-08": {
+          "bytes": 17645,
+          "expected_bars": 744,
+          "md5": "acdb87709fbb8c89da1b209a03d69c95",
+          "n_bars": 744
+        },
+        "2020-09": {
+          "bytes": 17159,
+          "expected_bars": 720,
+          "md5": "02e1fc873e79a326c10522b6ce672229",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 17508,
+          "expected_bars": 744,
+          "md5": "66c3e9a51f42ba4021036cb702e3ad86",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 17576,
+          "expected_bars": 720,
+          "md5": "35cdec92bde844ab806cff281a32e24b",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 18169,
+          "expected_bars": 744,
+          "md5": "e5404ac8f374a3102c7be908682f235c",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 18841,
+          "expected_bars": 744,
+          "md5": "11f1b312234af8362f075c36cf626788",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 17219,
+          "expected_bars": 672,
+          "md5": "61e6b50f7a70cd389fdac5e8ee7f668c",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 18898,
+          "expected_bars": 744,
+          "md5": "fd55c5cd9ae2a80bd41315fff9e3b41d",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 18124,
+          "expected_bars": 720,
+          "md5": "9fc162b6fa5fd998a4beabdb0961ed2a",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 19046,
+          "expected_bars": 744,
+          "md5": "9234d031d10e376ae3a2cf1498f2b85a",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 18203,
+          "expected_bars": 720,
+          "md5": "271675e0b9c77373877d0b4b19ae12f7",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 18542,
+          "expected_bars": 744,
+          "md5": "c4d324db9bd7202ef3984c485ff70231",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 18456,
+          "expected_bars": 744,
+          "md5": "63cf78fce88b7ce4cf7a59e7b8e1b098",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 17658,
+          "expected_bars": 720,
+          "md5": "b0bb9f649fbcc5ab7896c7b803be15e8",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 18240,
+          "expected_bars": 744,
+          "md5": "6712c43dff6acccf282a56cf044c3f47",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 17649,
+          "expected_bars": 720,
+          "md5": "bc513c9150a68816e1102a5a5fea441f",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 18166,
+          "expected_bars": 744,
+          "md5": "d9c9de57fb5078b668f3389af1a9c6b1",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 18143,
+          "expected_bars": 744,
+          "md5": "8521afdfd87251e124639124cb5c1a73",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 16482,
+          "expected_bars": 672,
+          "md5": "40cbaaa54c9db5775ad5b5e7a59b390b",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 18105,
+          "expected_bars": 744,
+          "md5": "75856d227558fd3279019e3215d2c8e5",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 17342,
+          "expected_bars": 720,
+          "md5": "c769bf794048e30c729dc4735028914a",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 18105,
+          "expected_bars": 744,
+          "md5": "75076c4cd24eec2cf91c781005356830",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 17668,
+          "expected_bars": 720,
+          "md5": "99d8f84998b8fa1edb3eaf3a77cf53b5",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 18499,
+          "expected_bars": 744,
+          "md5": "50b59565f354308b2dce896aec54e65f",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 18296,
+          "expected_bars": 744,
+          "md5": "4687f74f52cf0ab4347412e97f953b4a",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 17857,
+          "expected_bars": 720,
+          "md5": "b0b50d4190abc7e71d8fbdd0694c194b",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 18012,
+          "expected_bars": 744,
+          "md5": "9d4967b8df8c69fb02172830f5de2545",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 17658,
+          "expected_bars": 720,
+          "md5": "bc573cea3974062549fdbd14f6f47f71",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 17572,
+          "expected_bars": 744,
+          "md5": "53d8ea313964177dd1be52204269a526",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 18150,
+          "expected_bars": 744,
+          "md5": "ca32d51f2d82bea94cd593e0b29e4eb4",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 16789,
+          "expected_bars": 672,
+          "md5": "b5fe032df65aefc9c3ed6daf10fe6f71",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 18344,
+          "expected_bars": 744,
+          "md5": "d34ebe483d5b9ea0876251de15ada083",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 17075,
+          "expected_bars": 720,
+          "md5": "68e3ab6a3b8f242ca29c84386a921568",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 17688,
+          "expected_bars": 744,
+          "md5": "516aef674984ac4a0f57a3a57e377119",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 17049,
+          "expected_bars": 720,
+          "md5": "4311e63f730a5801909c88ca2c014224",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 16868,
+          "expected_bars": 744,
+          "md5": "5ac167e7d4c39fbb553cbbeb3447e63f",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 16909,
+          "expected_bars": 744,
+          "md5": "2fa0bd7ab3a9b2f89a695e79b8b3937b",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 16614,
+          "expected_bars": 720,
+          "md5": "cd1b57e518f4a3fd28c9c523040019ef",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 17548,
+          "expected_bars": 744,
+          "md5": "840a4a96cd91b1e6528d6851da74f3b6",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 16872,
+          "expected_bars": 720,
+          "md5": "2c8cc7b8960f8dc3cd5e4a74b7bff9ca",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 17620,
+          "expected_bars": 744,
+          "md5": "b48ca75b17ad903103b47476d3546590",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 17720,
+          "expected_bars": 744,
+          "md5": "c000fd92e3bedb28f2dbd1f65ff7aaf9",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 16547,
+          "expected_bars": 696,
+          "md5": "bb8aeaddac87ee3ab2fccf9bf4d3c183",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 17868,
+          "expected_bars": 744,
+          "md5": "3549097ebb0231df60fd8c21df721278",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 17416,
+          "expected_bars": 720,
+          "md5": "b57fff0df6a770f9c969eefee811f3d9",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 17740,
+          "expected_bars": 744,
+          "md5": "ccf699a150d2ba39804f62b236d2b822",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 16851,
+          "expected_bars": 720,
+          "md5": "83e13fe5d6ddda6954b1f9c0bfb2ef39",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 17490,
+          "expected_bars": 744,
+          "md5": "16e6811497e3a22380a30e83209c2332",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 17750,
+          "expected_bars": 744,
+          "md5": "2b44cc8060c1be3bcf8c4af619a16859",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 16638,
+          "expected_bars": 720,
+          "md5": "b028c54914feba8a2d0f95dfa8ebc74b",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 17194,
+          "expected_bars": 744,
+          "md5": "913ec7ee8810a764aad9215aa4b3e114",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 17264,
+          "expected_bars": 720,
+          "md5": "34fde756950c35b8188595fe35f8836d",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 18165,
+          "expected_bars": 744,
+          "md5": "d1e176a9048dbcff24cad9dfcace290d",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 18522,
+          "expected_bars": 744,
+          "md5": "e1f0ecd42dc9b1ceed9d3516d278f3f7",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 16556,
+          "expected_bars": 672,
+          "md5": "e2377bc9f8c5406dbf6a5b9898f768c5",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 18402,
+          "expected_bars": 744,
+          "md5": "607a476cd3420e88b619f9d59252e364",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 17627,
+          "expected_bars": 720,
+          "md5": "6eb0ce752d10cb416d136edaabd896cd",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 18265,
+          "expected_bars": 744,
+          "md5": "8f0b342439627825244f1be0e45fdc8d",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 17591,
+          "expected_bars": 720,
+          "md5": "a44d9415b0edbba1330899d845692c13",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 18003,
+          "expected_bars": 744,
+          "md5": "ffffb84d3566ac9c96b80b0f1d731e0e",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 18163,
+          "expected_bars": 744,
+          "md5": "6845d2e740d62d27e3086a2ac6d1982f",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 17513,
+          "expected_bars": 720,
+          "md5": "cfaffababa818e378ce9577f0c94f74c",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 18444,
+          "expected_bars": 744,
+          "md5": "9447e943499962c7da303a4a36882992",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 17944,
+          "expected_bars": 720,
+          "md5": "0a662cf952cd23a9bed60eba72a0c6ad",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 18129,
+          "expected_bars": 744,
+          "md5": "89a3a487b3bf616bbf24e20d1886af21",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 18080,
+          "expected_bars": 744,
+          "md5": "5c1cb0035ece4587d3eea1f335ea0b56",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 16586,
+          "expected_bars": 672,
+          "md5": "741777814172cd960fb35067452ee2a1",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 18353,
+          "expected_bars": 744,
+          "md5": "fb6476baab3fc1ba76d9271fc4edcbf9",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 17495,
+          "expected_bars": 720,
+          "md5": "d36290d9c484e6789447a5929e5244c8",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 17822,
+          "expected_bars": 744,
+          "md5": "a538cfd8c4e2cde5279d96913eef6609",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 17218,
+          "expected_bars": 720,
+          "md5": "08dc6959dcafc8c85af12325cf421c91",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 13752,
+          "expected_bars": 576,
+          "md5": "5fbad257566ae5e48fa32eb77685b4fc",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 57497,
+      "n_months": 79
+    },
+    "DOTUSDT": {
+      "bytes": 911317,
+      "first_month": "2020-08",
+      "last_month": "2026-07",
+      "missing_bars": 450,
+      "months": {
+        "2020-08": {
+          "bytes": 6570,
+          "expected_bars": 744,
+          "md5": "4ace70eba628a4006eb2929ae5a9fa5e",
+          "n_bars": 313
+        },
+        "2020-09": {
+          "bytes": 14655,
+          "expected_bars": 720,
+          "md5": "a8f89cd87289fe42678adda80b1ed78b",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 14647,
+          "expected_bars": 744,
+          "md5": "788a7dbd420d65d12f729f21ad5689ce",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 14509,
+          "expected_bars": 720,
+          "md5": "01dc60900f8fcdd0e2b9b2e3b9035b1b",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 14983,
+          "expected_bars": 744,
+          "md5": "475635ac503ac2240e2cf97b9506aa57",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 16161,
+          "expected_bars": 744,
+          "md5": "a655f6df568fbf1a7d472191adbbec5f",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 15128,
+          "expected_bars": 672,
+          "md5": "2754149bcbb0fab2402b79f455d8894f",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 16312,
+          "expected_bars": 744,
+          "md5": "ad62781ac90c4ce5513f84791d6e527b",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 15764,
+          "expected_bars": 720,
+          "md5": "77c14c4843c911b1909e1b79b7b25e40",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 15694,
+          "expected_bars": 744,
+          "md5": "7482d89675116c822ad32878ee430d1d",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 14859,
+          "expected_bars": 720,
+          "md5": "0f9331cbf35853068889ad278c3b0f58",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 14868,
+          "expected_bars": 744,
+          "md5": "8d2d66475f7d704000a8ebe812d617c7",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 14708,
+          "expected_bars": 744,
+          "md5": "c0ac04b61bf78d5a7de07dff8405374c",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 12829,
+          "expected_bars": 720,
+          "md5": "828a7f0003b355ffc5bac5a1032378db",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 13022,
+          "expected_bars": 744,
+          "md5": "12a7e98eb8b8931e41f7645c49b9bda4",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 12838,
+          "expected_bars": 720,
+          "md5": "abd2a78064cca1a60810d9fb6bcb45f7",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 12903,
+          "expected_bars": 744,
+          "md5": "f39bf85251453213b385f28396f70e2e",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 12786,
+          "expected_bars": 744,
+          "md5": "9431db199771ac9fd1d56c3ed36547b9",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 11318,
+          "expected_bars": 672,
+          "md5": "17945957a6cfc0e902ba0306be645d52",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 12142,
+          "expected_bars": 744,
+          "md5": "5560c844156ad552168bf9b721f81fc7",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 11642,
+          "expected_bars": 720,
+          "md5": "6364cac43e8f64fceabe6692374d17ca",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 12171,
+          "expected_bars": 744,
+          "md5": "b5d49b84ad8186ac870a3acb3b7571e0",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 11252,
+          "expected_bars": 720,
+          "md5": "72d61aa182bd19e64595b70b1f7cfca4",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 11204,
+          "expected_bars": 744,
+          "md5": "e89ce02e18ad77dcb69d763af1b1fd7d",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 11194,
+          "expected_bars": 744,
+          "md5": "2d70ab82e0e08521a268848f4c3fbacf",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 10504,
+          "expected_bars": 720,
+          "md5": "44ad880b41a50c5a240a94613e8556d7",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 10154,
+          "expected_bars": 744,
+          "md5": "fc8d6088cb02412da605c0dd88e77079",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 10430,
+          "expected_bars": 720,
+          "md5": "53a65222bac68ff0e41d974b2211539c",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 11273,
+          "expected_bars": 744,
+          "md5": "ffd0ee4ef83995d7fbe81dab3c9c7962",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 13002,
+          "expected_bars": 744,
+          "md5": "794f9570afed951b6d067fabec33b91e",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 12004,
+          "expected_bars": 672,
+          "md5": "8e2ea29297f917519bf1baa1bfc6f5a1",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 13061,
+          "expected_bars": 744,
+          "md5": "5b1a69eb9f680be60e002a5dc464d69a",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 12278,
+          "expected_bars": 720,
+          "md5": "d36f1f2af06f8e0baeaf7765161e6c6e",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 12113,
+          "expected_bars": 744,
+          "md5": "81b3a7f6ace20f5c3af8f473e591fcd7",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 12179,
+          "expected_bars": 720,
+          "md5": "32002d1aabcd46b4eedaf9014f3d625d",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 12315,
+          "expected_bars": 744,
+          "md5": "d47178254c5cbb84b8336158a0be57b2",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 11912,
+          "expected_bars": 744,
+          "md5": "b398126848fcf6903f965312e6fd3f2e",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 11280,
+          "expected_bars": 720,
+          "md5": "8ff2a6ad3ec5474f42331361e7b1067d",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 12266,
+          "expected_bars": 744,
+          "md5": "0a55034d90ff78c0f1a2a10191a87a0e",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 12565,
+          "expected_bars": 720,
+          "md5": "10b7a71f4fdd68db1adf6d02719c2880",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 13676,
+          "expected_bars": 744,
+          "md5": "31abde057628105e717e49275ba01a7c",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 13398,
+          "expected_bars": 744,
+          "md5": "a116508b34ac6d1deb2f716da6dab462",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 12269,
+          "expected_bars": 696,
+          "md5": "9cb91dd4867f3ee2d7a6d7a3d10012d3",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 13787,
+          "expected_bars": 744,
+          "md5": "80b0378f29b8f63a1aaed79e5f9c4cc6",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 12979,
+          "expected_bars": 720,
+          "md5": "680f4fcd99759662c37ab90b6c65ae6f",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 12982,
+          "expected_bars": 744,
+          "md5": "2ed89ffa3ac17dfcc851dfeb005b74d3",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 12357,
+          "expected_bars": 720,
+          "md5": "64e50e59f9c33b29605641d5e91704f3",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 12896,
+          "expected_bars": 744,
+          "md5": "a574ac8972a8257019916211692f4edf",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 12773,
+          "expected_bars": 744,
+          "md5": "22067b9e98a32b616e9da3fe5f8bb526",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 12074,
+          "expected_bars": 720,
+          "md5": "ea777433e1e8af5004ee74a30489a459",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 12337,
+          "expected_bars": 744,
+          "md5": "308032784c54739a25e605fef8e170b3",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 13284,
+          "expected_bars": 720,
+          "md5": "010120e7df14a0198e67bf9e1e40b32d",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 14067,
+          "expected_bars": 744,
+          "md5": "812ef3c5a5b23559a61b7b19e00f9ae3",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 13553,
+          "expected_bars": 744,
+          "md5": "9211e9be5c10dddd302a37fe0c409e17",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 12161,
+          "expected_bars": 672,
+          "md5": "7870ed96d70191dcee5dc49bfd0515f0",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 13196,
+          "expected_bars": 744,
+          "md5": "a1f40d773624945127ae3e27bce017e3",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 12581,
+          "expected_bars": 720,
+          "md5": "2bcc78ab8594b02a926d2d349260f4bc",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 13171,
+          "expected_bars": 744,
+          "md5": "b38b87a4aab2f8ed966ac836d7175941",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 12394,
+          "expected_bars": 720,
+          "md5": "2811a702b36eb09165740ff228c412dd",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 13019,
+          "expected_bars": 744,
+          "md5": "1059d7d98bbcf2b4ac533da9d883eee4",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 12935,
+          "expected_bars": 744,
+          "md5": "f45d101e49674272b9ed8e977b58c096",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 12449,
+          "expected_bars": 720,
+          "md5": "f678c32f6668acc704f98726a276e19d",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 12952,
+          "expected_bars": 744,
+          "md5": "f55f6df237d9e590f684c88274c1cf3d",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 12496,
+          "expected_bars": 720,
+          "md5": "714f636f304e66738fb382673face79a",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 12232,
+          "expected_bars": 744,
+          "md5": "768aeca99d7173dc903035c3b1c6e6b7",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 12313,
+          "expected_bars": 744,
+          "md5": "8a1aa24ea08aae1d7f1ff47cc72f8c1a",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 11043,
+          "expected_bars": 672,
+          "md5": "3b7becfd44f1615d7b8195f54092a4c4",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 11928,
+          "expected_bars": 744,
+          "md5": "645ebec8b913b660f0a52a435c11b268",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 11096,
+          "expected_bars": 720,
+          "md5": "341f697cb7bcfa141ec99f6bec44ada7",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 11574,
+          "expected_bars": 744,
+          "md5": "dc682d081085ed4a2c1e25099b4d8d99",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 11292,
+          "expected_bars": 720,
+          "md5": "61b02e255a8eac00709fff952117def1",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 8558,
+          "expected_bars": 576,
+          "md5": "29aabd4188760d040ffd979633acb17c",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 51966,
+      "n_months": 72
+    },
+    "ETHUSDT": {
+      "bytes": 1260575,
+      "first_month": "2020-01",
+      "last_month": "2026-07",
+      "missing_bars": 31,
+      "months": {
+        "2020-01": {
+          "bytes": 14788,
+          "expected_bars": 744,
+          "md5": "ceddec7a472404b1d6c1bb1452f7e668",
+          "n_bars": 744
+        },
+        "2020-02": {
+          "bytes": 14405,
+          "expected_bars": 696,
+          "md5": "0aeb1e97f146acbb4560541dfb33f46a",
+          "n_bars": 690
+        },
+        "2020-03": {
+          "bytes": 15503,
+          "expected_bars": 744,
+          "md5": "1ae7ea34b3f06db8511fbeadd03c2a6c",
+          "n_bars": 743
+        },
+        "2020-04": {
+          "bytes": 14791,
+          "expected_bars": 720,
+          "md5": "07166f12867e607d9eccf67f919418ab",
+          "n_bars": 718
+        },
+        "2020-05": {
+          "bytes": 15108,
+          "expected_bars": 744,
+          "md5": "cc59c204b914c1b1c58271953679fd58",
+          "n_bars": 744
+        },
+        "2020-06": {
+          "bytes": 14307,
+          "expected_bars": 720,
+          "md5": "87c9d0ee3b3bfe928d6d81523b513bb7",
+          "n_bars": 717
+        },
+        "2020-07": {
+          "bytes": 15098,
+          "expected_bars": 744,
+          "md5": "90b87ca2ecb2ae7a9e2d5166e1751180",
+          "n_bars": 744
+        },
+        "2020-08": {
+          "bytes": 15611,
+          "expected_bars": 744,
+          "md5": "d646f9b94049b964727578179a0d0db3",
+          "n_bars": 744
+        },
+        "2020-09": {
+          "bytes": 15333,
+          "expected_bars": 720,
+          "md5": "3747466a5ed075eff69f8086f93b000b",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 15421,
+          "expected_bars": 744,
+          "md5": "5d7253e011123685360dcb0a61d9e75e",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 15522,
+          "expected_bars": 720,
+          "md5": "18e7e284cda2b78311ed20742c5f8001",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 16007,
+          "expected_bars": 744,
+          "md5": "8126431298a899694788134be948a76e",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 17247,
+          "expected_bars": 744,
+          "md5": "32d1989445bdfffa20977527dea3a98f",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 15584,
+          "expected_bars": 672,
+          "md5": "57cdc4bdf9519bac2f409c41ea472205",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 17060,
+          "expected_bars": 744,
+          "md5": "989b96a7bdd5a9c828a91e107dc2254f",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 16526,
+          "expected_bars": 720,
+          "md5": "65bee1ab1f6d2525e0922e86a000464f",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 17877,
+          "expected_bars": 744,
+          "md5": "348ac6a583f5a2cef495fbd75b758d3b",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 16807,
+          "expected_bars": 720,
+          "md5": "1a6918393eda9c174d97bf68da7980a5",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 17219,
+          "expected_bars": 744,
+          "md5": "ad3bbe7872886072394ad8187c7fa325",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 16982,
+          "expected_bars": 744,
+          "md5": "b7f8f8436e00592c117ae94390a960ec",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 16365,
+          "expected_bars": 720,
+          "md5": "a3e321cc56225f8de517b0a95f121156",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 16769,
+          "expected_bars": 744,
+          "md5": "65b40fc209f09b6e1e5d81b237e87df8",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 16332,
+          "expected_bars": 720,
+          "md5": "011462f1f9591d8686ac6ebd7d0ad805",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 16813,
+          "expected_bars": 744,
+          "md5": "d34c2d5514cd1feee95d9ddc1c7e5079",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 16728,
+          "expected_bars": 744,
+          "md5": "2198995ca6ecee4b73deb5e1cc0235a8",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 15203,
+          "expected_bars": 672,
+          "md5": "ccee249d1c11afdec3486b42bc652396",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 16625,
+          "expected_bars": 744,
+          "md5": "aee7a7841c8940b1f9a9d2a21ce60d39",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 15980,
+          "expected_bars": 720,
+          "md5": "30b1e49d4bcf17e8ede956a5e86dcf8b",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 16603,
+          "expected_bars": 744,
+          "md5": "8b34ec21744182ab7c2c46be044e433c",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 16141,
+          "expected_bars": 720,
+          "md5": "4b0ef4ab6e9bcd3045492211fbaad3a5",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 16582,
+          "expected_bars": 744,
+          "md5": "d2c61e33742d3185f010b40ca350a8fb",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 16492,
+          "expected_bars": 744,
+          "md5": "95504136b9efb343aba07b6af7e492c9",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 15826,
+          "expected_bars": 720,
+          "md5": "bc32c44370fe612c970cd6a58baacbda",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 15946,
+          "expected_bars": 744,
+          "md5": "ce38ef32aaad33494adc0a72c85e9ce6",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 15722,
+          "expected_bars": 720,
+          "md5": "79eaf18d428993ee0cfabe5f07a55b11",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 15506,
+          "expected_bars": 744,
+          "md5": "0172cef455d7176ef03fad816663dd5a",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 15787,
+          "expected_bars": 744,
+          "md5": "53e4b1fa6884064e85a6e2d9d840b0c6",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 14551,
+          "expected_bars": 672,
+          "md5": "005773b5f37144c4bb09e48fd4fb3dd6",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 16127,
+          "expected_bars": 744,
+          "md5": "221f581b43773c43d90e5c5b3c5fb17c",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 15512,
+          "expected_bars": 720,
+          "md5": "56a837beb4c849e4b057e32d4cdd0d4c",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 15759,
+          "expected_bars": 744,
+          "md5": "dd83e923d8196364e28f2f8a8e7896a6",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 15294,
+          "expected_bars": 720,
+          "md5": "31698c53c1bb6ae326ede8af94f8dbfb",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 15425,
+          "expected_bars": 744,
+          "md5": "879f1edae406b19b6e26654d772bd953",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 15191,
+          "expected_bars": 744,
+          "md5": "4807ee15aa35cb939e0a58e7bfccb1be",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 14745,
+          "expected_bars": 720,
+          "md5": "dcfb4568c7511cec49db935529a30310",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 15747,
+          "expected_bars": 744,
+          "md5": "b3ea308c1374addb8f6d30ead69579da",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 15516,
+          "expected_bars": 720,
+          "md5": "f83667277d494be85a51633a312ec550",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 16150,
+          "expected_bars": 744,
+          "md5": "f55a5ff6b024d53ef9c9e526091402f1",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 16283,
+          "expected_bars": 744,
+          "md5": "8f6c9638d2c59cbe63c7777ae228d19e",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 15233,
+          "expected_bars": 696,
+          "md5": "ad167b00f62261b8fb37aefe0ffc67ba",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 16604,
+          "expected_bars": 744,
+          "md5": "585925c2660dbe927ee492aecc9d4f52",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 16018,
+          "expected_bars": 720,
+          "md5": "15925ee60678cad92cfc4433374ced99",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 16354,
+          "expected_bars": 744,
+          "md5": "fa9c54869f73662c9f73ae900053490f",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 15487,
+          "expected_bars": 720,
+          "md5": "89a92c8071c872631d7039e2fa547c2d",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 16328,
+          "expected_bars": 744,
+          "md5": "a3f963b2c9270b346b04137f3892a692",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 16368,
+          "expected_bars": 744,
+          "md5": "e289d843369a8c33220fd854beea54bb",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 15556,
+          "expected_bars": 720,
+          "md5": "c61d9fb15490b52ab9561b402fd232e7",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 16063,
+          "expected_bars": 744,
+          "md5": "13a4ad26b5f0bff5b0333d173732a613",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 16001,
+          "expected_bars": 720,
+          "md5": "c52fe3ac8fca7ec5d6311ab03a5b4063",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 16432,
+          "expected_bars": 744,
+          "md5": "262da97bdc392bd0a0608f38e4c1619a",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 16668,
+          "expected_bars": 744,
+          "md5": "8aff32b7eb0e946230bbdc6fcc6e330c",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 15106,
+          "expected_bars": 672,
+          "md5": "2e15b10f59fab57be72fb74a2e68a69a",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 16655,
+          "expected_bars": 744,
+          "md5": "95bc10082fd8b7cbcb62aec429817305",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 15872,
+          "expected_bars": 720,
+          "md5": "0bae32399ca9ebc3161e89e13d888d3e",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 16550,
+          "expected_bars": 744,
+          "md5": "e2827aea174c8639ac056a155ef0b4b5",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 15946,
+          "expected_bars": 720,
+          "md5": "9450b3da371c05f978f313229c8cc470",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 16810,
+          "expected_bars": 744,
+          "md5": "2328217fcc05b888d27ff051a562268e",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 17057,
+          "expected_bars": 744,
+          "md5": "47b95be17c6f85a7aeecf3eeda004dfd",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 16110,
+          "expected_bars": 720,
+          "md5": "e2374ff8d41247c189c2eb8cb98ae427",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 16984,
+          "expected_bars": 744,
+          "md5": "c496067a73303839c52c53005907d14b",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 16397,
+          "expected_bars": 720,
+          "md5": "698ca79eb5692a56b606a35ef1bbc243",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 16583,
+          "expected_bars": 744,
+          "md5": "6d13cc1de373c3973f9ac91e65a03f92",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 16585,
+          "expected_bars": 744,
+          "md5": "06144726d7a2e8e4da4c68e586d403f7",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 15219,
+          "expected_bars": 672,
+          "md5": "1a7c038d3d85af218cb3a7633b292714",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 16485,
+          "expected_bars": 744,
+          "md5": "47549562bdb2728a857f26c8f59e8fb2",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 15733,
+          "expected_bars": 720,
+          "md5": "d52921dd770bf781490dc6daa1e686b2",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 16041,
+          "expected_bars": 744,
+          "md5": "8ee6f42707996a879a9511987236e6e3",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 15791,
+          "expected_bars": 720,
+          "md5": "d3b49dc92be4ebed23e28af26c61dc87",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 12623,
+          "expected_bars": 576,
+          "md5": "fb45d071504eb5df1eb54dd066ec5c34",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 57497,
+      "n_months": 79
+    },
+    "LINKUSDT": {
+      "bytes": 1028958,
+      "first_month": "2020-01",
+      "last_month": "2026-07",
+      "missing_bars": 31,
+      "months": {
+        "2020-01": {
+          "bytes": 14297,
+          "expected_bars": 744,
+          "md5": "79b04d4d1fafe7ca4ab8c103c4baf8fe",
+          "n_bars": 744
+        },
+        "2020-02": {
+          "bytes": 13851,
+          "expected_bars": 696,
+          "md5": "42b9f4622c7f68547c3960aada4b5b88",
+          "n_bars": 690
+        },
+        "2020-03": {
+          "bytes": 15068,
+          "expected_bars": 744,
+          "md5": "c6d757079b3e28011a35184bda2f3b8b",
+          "n_bars": 743
+        },
+        "2020-04": {
+          "bytes": 14209,
+          "expected_bars": 720,
+          "md5": "786519a00289df879e5a52de1f723cfe",
+          "n_bars": 718
+        },
+        "2020-05": {
+          "bytes": 14407,
+          "expected_bars": 744,
+          "md5": "cefb403ba57b2e73d9071e716c4ff119",
+          "n_bars": 744
+        },
+        "2020-06": {
+          "bytes": 14019,
+          "expected_bars": 720,
+          "md5": "82492354dc3b6ee9e62737a3612188bf",
+          "n_bars": 717
+        },
+        "2020-07": {
+          "bytes": 15280,
+          "expected_bars": 744,
+          "md5": "fa2f73f4bfb56fd99ede6e5bb14ebde2",
+          "n_bars": 744
+        },
+        "2020-08": {
+          "bytes": 16169,
+          "expected_bars": 744,
+          "md5": "81603f655e44c999ca6fd674ee15a848",
+          "n_bars": 744
+        },
+        "2020-09": {
+          "bytes": 15492,
+          "expected_bars": 720,
+          "md5": "bc1d7008b66708feab7f6a5cb991c7fe",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 15637,
+          "expected_bars": 744,
+          "md5": "1c0f1b351e3d29604f310612c39c6052",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 15375,
+          "expected_bars": 720,
+          "md5": "08fa3cf5f1d1a3eee830297efb2ff6f5",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 15658,
+          "expected_bars": 744,
+          "md5": "808df1f45149bec3245b47c1a4ca07c7",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 16496,
+          "expected_bars": 744,
+          "md5": "78fa936771ce352ade2794b20aad3e5a",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 14983,
+          "expected_bars": 672,
+          "md5": "aa90b7e6f913d50a5438b714718b871d",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 16137,
+          "expected_bars": 744,
+          "md5": "b852e3b106831584b2750ce19dc60a75",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 15776,
+          "expected_bars": 720,
+          "md5": "4976d1d61009a795ce2fae558b3c3f7b",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 15874,
+          "expected_bars": 744,
+          "md5": "abc04b86c9c6a88dcf71e7007fbd599b",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 14816,
+          "expected_bars": 720,
+          "md5": "27d5caaa693aa03f67057e14108d55e8",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 14900,
+          "expected_bars": 744,
+          "md5": "9133cdd97ab71887442750a4cca3a7b6",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 14503,
+          "expected_bars": 744,
+          "md5": "8ae37e54f57f14ef75917dd5e8f4c702",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 12469,
+          "expected_bars": 720,
+          "md5": "4393539d21b41e1532ea7cbfe5f3351b",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 12523,
+          "expected_bars": 744,
+          "md5": "568a564a7c884f1352bbbcd792755d3f",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 12252,
+          "expected_bars": 720,
+          "md5": "30ec09f8bba7f93fcf744e9a060bdaa9",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 12555,
+          "expected_bars": 744,
+          "md5": "f6abcc7026d623a5040dc3516ce29845",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 12915,
+          "expected_bars": 744,
+          "md5": "d9e8cfe4b165991e396bb67d06975494",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 11106,
+          "expected_bars": 672,
+          "md5": "70b1f3831348baa0222df0b6503c5cae",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 11842,
+          "expected_bars": 744,
+          "md5": "09e9cb8cce2508c08b5a46eec4a8a03e",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 11282,
+          "expected_bars": 720,
+          "md5": "57a372b05b7debb511a2264a1758408d",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 11676,
+          "expected_bars": 744,
+          "md5": "6c66c998154b95a56e172a3c138fe7ac",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 11362,
+          "expected_bars": 720,
+          "md5": "663409df5b7e3563bd47bbfea52f14ba",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 12479,
+          "expected_bars": 744,
+          "md5": "49a6e4102f7e7a12e24208bc9ea686a2",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 13526,
+          "expected_bars": 744,
+          "md5": "bd63bebcf4b61d9dbc8a38d29aa8653b",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 13035,
+          "expected_bars": 720,
+          "md5": "6a8594b150500520030bf4f98b76e11d",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 13076,
+          "expected_bars": 744,
+          "md5": "276ef1c1f56016d14c8acb4e1509700a",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 13297,
+          "expected_bars": 720,
+          "md5": "12fdfc65806eb28e00dab506c5e714e8",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 12739,
+          "expected_bars": 744,
+          "md5": "2fff0f10367544092b856525755c5853",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 13059,
+          "expected_bars": 744,
+          "md5": "6a04f5c0205ad086efa4fc690d1eb8d3",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 12003,
+          "expected_bars": 672,
+          "md5": "b88493aab3d0b9dace90faa5601aaa2f",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 13185,
+          "expected_bars": 744,
+          "md5": "7451782522720f2a55bedc4eda545c5a",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 12573,
+          "expected_bars": 720,
+          "md5": "7671a17fd5b3bdd9fd05d18a342fe019",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 12374,
+          "expected_bars": 744,
+          "md5": "9507fb4f7edb0ea3b5bdf55e611155a2",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 12480,
+          "expected_bars": 720,
+          "md5": "a5a7f1c63031a2faba174816539591fa",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 13065,
+          "expected_bars": 744,
+          "md5": "1f2b309f71b084d0a2b5e120e7861147",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 12743,
+          "expected_bars": 744,
+          "md5": "2f09eaae0d027247aaa3dd622638e454",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 12584,
+          "expected_bars": 720,
+          "md5": "a04a3141471a62d33e92cf32f72af0a6",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 13369,
+          "expected_bars": 744,
+          "md5": "9228eec6d8fb3dcf21db2a33adcc883a",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 13739,
+          "expected_bars": 720,
+          "md5": "02ac68d989e957934e440aad6cf2b246",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 14071,
+          "expected_bars": 744,
+          "md5": "8e4d68d058cdd15437f76a0662eaea1f",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 13982,
+          "expected_bars": 744,
+          "md5": "805460ddb2df0b16bc8ba86f114da400",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 13177,
+          "expected_bars": 696,
+          "md5": "a171b05ac8bd5765b9b714f927327885",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 14107,
+          "expected_bars": 744,
+          "md5": "e92c8e4410da6e66a7678bac5b12d635",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 13502,
+          "expected_bars": 720,
+          "md5": "21d96eb44fc859a478c316a9ef98c930",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 13803,
+          "expected_bars": 744,
+          "md5": "53bc3d98c0da14bfc799687cb5686a77",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 13245,
+          "expected_bars": 720,
+          "md5": "0c2bb4c6cc218abc0ea927fe8f93b871",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 13010,
+          "expected_bars": 744,
+          "md5": "bb816d9909994ab4a4d660d91feff56c",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 11357,
+          "expected_bars": 744,
+          "md5": "5aa62c2d3beba5b5a759c6f521b57583",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 10720,
+          "expected_bars": 720,
+          "md5": "ed4ec18ae35791125e97bdca929f88ff",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 11099,
+          "expected_bars": 744,
+          "md5": "aa35e15fcaad08f15bd34eb8bd956c33",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 11786,
+          "expected_bars": 720,
+          "md5": "88d487e31d3f1139dbec03ac1d99a5bc",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 12912,
+          "expected_bars": 744,
+          "md5": "1790bc80d6d38711227f1749f0bdd6ce",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 12637,
+          "expected_bars": 744,
+          "md5": "536009b19748e746341578aea3174f09",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 11261,
+          "expected_bars": 672,
+          "md5": "578d22601f06661395fc6e4ae827eddc",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 12142,
+          "expected_bars": 744,
+          "md5": "ab4d01801f630164e0af6cc1d0866250",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 11479,
+          "expected_bars": 720,
+          "md5": "17e7eb88ad38de6459f7852c341827a8",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 11993,
+          "expected_bars": 744,
+          "md5": "9df0b72e6a9acc1cbe60c99fb0d4620d",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 11192,
+          "expected_bars": 720,
+          "md5": "4f0efcfaae444fba0f007eeffe39539b",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 12103,
+          "expected_bars": 744,
+          "md5": "9e2a2644f67f1c32defdeee8e94688ed",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 12651,
+          "expected_bars": 744,
+          "md5": "9ca555b979157a6ee6d7162689566463",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 11693,
+          "expected_bars": 720,
+          "md5": "31a7277fe150f31ff6b5b5d995386248",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 12286,
+          "expected_bars": 744,
+          "md5": "4cafef8646f3933727783cee9ea2a20e",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 11698,
+          "expected_bars": 720,
+          "md5": "969710d94f0bffd3671ee9fa543e3de7",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 11408,
+          "expected_bars": 744,
+          "md5": "1cf591f17a0c75c90a49fc22b41c9eb5",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 11338,
+          "expected_bars": 744,
+          "md5": "ac7e32349f90a0cdcb3aff79a4d2ea8d",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 10112,
+          "expected_bars": 672,
+          "md5": "48d82618c74ccac06b10c2c32faa3261",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 10920,
+          "expected_bars": 744,
+          "md5": "1f69478b9628e2b4211732b8568239ef",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 10237,
+          "expected_bars": 720,
+          "md5": "611f8ff3655a0fa6e4b507a4c799a356",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 11906,
+          "expected_bars": 744,
+          "md5": "8c4fe71f0ae5213defa85f70655aaada",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 12789,
+          "expected_bars": 720,
+          "md5": "ee7472ec50e1b6ac493e1f455e9bce72",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 10087,
+          "expected_bars": 576,
+          "md5": "fd496640ff6e39525499422a4d305a11",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 57497,
+      "n_months": 79
+    },
+    "MATICUSDT": {
+      "bytes": 735539,
+      "first_month": "2020-01",
+      "last_month": "2024-09",
+      "missing_bars": 532,
+      "months": {
+        "2020-01": {
+          "bytes": 12344,
+          "expected_bars": 744,
+          "md5": "75201ce85a6b4226d33d38877d094675",
+          "n_bars": 744
+        },
+        "2020-02": {
+          "bytes": 12128,
+          "expected_bars": 696,
+          "md5": "a1bce3d83e2ee9a4eb1710534134d3fd",
+          "n_bars": 690
+        },
+        "2020-03": {
+          "bytes": 13258,
+          "expected_bars": 744,
+          "md5": "33b871000ef8ba0b63660cec000e5b89",
+          "n_bars": 743
+        },
+        "2020-04": {
+          "bytes": 12032,
+          "expected_bars": 720,
+          "md5": "b29d3cede3e444921c505c733a81aac0",
+          "n_bars": 718
+        },
+        "2020-05": {
+          "bytes": 13123,
+          "expected_bars": 744,
+          "md5": "900d9e966ef4c16558118415c4d87ab7",
+          "n_bars": 744
+        },
+        "2020-06": {
+          "bytes": 12008,
+          "expected_bars": 720,
+          "md5": "847e0e36008d50c7d3d3f58f03426f5f",
+          "n_bars": 717
+        },
+        "2020-07": {
+          "bytes": 12340,
+          "expected_bars": 744,
+          "md5": "9dc8a65d7f600d332fee29278eaa6962",
+          "n_bars": 744
+        },
+        "2020-08": {
+          "bytes": 13089,
+          "expected_bars": 744,
+          "md5": "bc3c6357a4d5d106ca509b29aa5b00d7",
+          "n_bars": 744
+        },
+        "2020-09": {
+          "bytes": 12345,
+          "expected_bars": 720,
+          "md5": "24eb7c8c3715ecaf65fe930505968e8e",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 12241,
+          "expected_bars": 744,
+          "md5": "004b8e87bd00f5362a3d20b77af352a9",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 12398,
+          "expected_bars": 720,
+          "md5": "e99f7186a35f3d8b61bebce790b80dd3",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 12389,
+          "expected_bars": 744,
+          "md5": "0d821451e8d9e2ff41d423bde28ea93a",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 14011,
+          "expected_bars": 744,
+          "md5": "e1b86bc2b577c9e8995d2deb81824466",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 13688,
+          "expected_bars": 672,
+          "md5": "e5344b7d0b9910632418ab3695a272c2",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 15393,
+          "expected_bars": 744,
+          "md5": "347aa52d79ddb4ee0c51fce5d0dba58e",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 14818,
+          "expected_bars": 720,
+          "md5": "242973610219c5997cc9951e0a7b2844",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 16393,
+          "expected_bars": 744,
+          "md5": "a2222097bfbe7cbd941b6dc36a24172d",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 15508,
+          "expected_bars": 720,
+          "md5": "136735ab56edab5c684202f1f428893f",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 15652,
+          "expected_bars": 744,
+          "md5": "b14facfb215474cec5328524ddaff8bf",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 15095,
+          "expected_bars": 744,
+          "md5": "e547a4b52ed63a29d4f23fcf7a5e162b",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 11863,
+          "expected_bars": 720,
+          "md5": "a3962159ed7a2adb5c31df29aa2288d1",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 12343,
+          "expected_bars": 744,
+          "md5": "285d586a0b8702f464112f914af93e97",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 11815,
+          "expected_bars": 720,
+          "md5": "c6637237ffb6029a1d83b3486f076d1e",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 12914,
+          "expected_bars": 744,
+          "md5": "17663e92177982dc1d7bec62bc7a9401",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 12617,
+          "expected_bars": 744,
+          "md5": "234097c7cdf6c071aff3ad9a6419ded1",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 11264,
+          "expected_bars": 672,
+          "md5": "dafdd37a4eff63c05234fa70b933e063",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 11755,
+          "expected_bars": 744,
+          "md5": "6b11dc6f9c1678c9e9bc98bf026678f9",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 11264,
+          "expected_bars": 720,
+          "md5": "ac88cb8c406954f691e658db7986dc99",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 11751,
+          "expected_bars": 744,
+          "md5": "25f2ecc466f9ffd23637e3ce1f163bc4",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 11416,
+          "expected_bars": 720,
+          "md5": "45bb29e8b7ae5deb723df65b966e22aa",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 14175,
+          "expected_bars": 744,
+          "md5": "3863d8a6b8a89f9598314f96bc4efc14",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 13526,
+          "expected_bars": 744,
+          "md5": "f773bd4b82e6dc164442b7628ebfa175",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 12978,
+          "expected_bars": 720,
+          "md5": "cf3657062d6554dce6562e52b55f0872",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 13334,
+          "expected_bars": 744,
+          "md5": "9fdd4c4dd72d2e0245415a5260ba0ed7",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 13539,
+          "expected_bars": 720,
+          "md5": "5cb7586a430985ba1201bdfe916e84da",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 12956,
+          "expected_bars": 744,
+          "md5": "2e38a5fcf12f3117712439f994f243d2",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 13575,
+          "expected_bars": 744,
+          "md5": "acf996e75c27325d5faac54823498117",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 12681,
+          "expected_bars": 672,
+          "md5": "1ed17ffd653048d9c8ce530281726829",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 13708,
+          "expected_bars": 744,
+          "md5": "0d105fbbbdf991d227a38877bc7dbc67",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 12771,
+          "expected_bars": 720,
+          "md5": "1d3fd2453a2ee4d293b83b7500fe2bac",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 13068,
+          "expected_bars": 744,
+          "md5": "ad3a8ccee5528323c0ebd3273c077456",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 13058,
+          "expected_bars": 720,
+          "md5": "dcd2729aef45e4d08c7bdda1e516ae2d",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 13292,
+          "expected_bars": 744,
+          "md5": "8aade514bfed35de81fa3ea5250b102e",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 12713,
+          "expected_bars": 744,
+          "md5": "3a5f4e0e5ca85a7d1cf60b33332f44fe",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 11940,
+          "expected_bars": 720,
+          "md5": "b08b47cc1de4a063170ca65a9b778d1f",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 12926,
+          "expected_bars": 744,
+          "md5": "508bdcd3d41b5d05a280fc795c89d1e7",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 13336,
+          "expected_bars": 720,
+          "md5": "8ab471be85642756b945c3a4f7d32abd",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 13760,
+          "expected_bars": 744,
+          "md5": "ae765836ea617da58493219406306db4",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 13698,
+          "expected_bars": 744,
+          "md5": "11c4d747f937324a04eb37ce68ef584c",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 12742,
+          "expected_bars": 696,
+          "md5": "d7809540b169535571a208ae809d904a",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 13871,
+          "expected_bars": 744,
+          "md5": "87cfe1afb32745ec2370df664937b27c",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 13104,
+          "expected_bars": 720,
+          "md5": "a961b3c412a9d3e344426690922ab10c",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 13022,
+          "expected_bars": 744,
+          "md5": "452cc81e853d854ca6444bf6b08912ce",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 12511,
+          "expected_bars": 720,
+          "md5": "ebf214f9f12c4eaf4e3885d44d9e5796",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 12887,
+          "expected_bars": 744,
+          "md5": "b2d434de2a71b211f8aac2b2a4e35d04",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 13223,
+          "expected_bars": 744,
+          "md5": "18b2cfc5b69829b64f1525539d236d74",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 3890,
+          "expected_bars": 720,
+          "md5": "0c23fbf2b826162223232b53850b03eb",
+          "n_bars": 219
+        }
+      },
+      "n_bars": 41108,
+      "n_months": 57
+    },
+    "NEARUSDT": {
+      "bytes": 866657,
+      "first_month": "2020-10",
+      "last_month": "2026-07",
+      "missing_bars": 336,
+      "months": {
+        "2020-10": {
+          "bytes": 8166,
+          "expected_bars": 744,
+          "md5": "151e6b11a83f816e9047f9ca2e5f4b4d",
+          "n_bars": 427
+        },
+        "2020-11": {
+          "bytes": 13898,
+          "expected_bars": 720,
+          "md5": "b2697dd10221cc900f80b08224efb5cf",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 14061,
+          "expected_bars": 744,
+          "md5": "816d94bf5df9988bde38423e211d6b4c",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 14817,
+          "expected_bars": 744,
+          "md5": "2f099442f5fc317a0712079d5d1ecaca",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 13830,
+          "expected_bars": 672,
+          "md5": "1a86f381ee9496db668d6d92573e189a",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 15210,
+          "expected_bars": 744,
+          "md5": "67de8919590cf2df14bc1369a1cd5f8e",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 14661,
+          "expected_bars": 720,
+          "md5": "9bb53c98656fcd49dd8a0ffee6c090e9",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 15407,
+          "expected_bars": 744,
+          "md5": "5c544ebedc55d319a7ca5af4c21197e2",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 14304,
+          "expected_bars": 720,
+          "md5": "7ce9d649798b7bfa8d95846ff35d3228",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 14524,
+          "expected_bars": 744,
+          "md5": "6cc2725c27edb831711322972c291ebf",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 14665,
+          "expected_bars": 744,
+          "md5": "bac58f34fc03b591af3ceefd4b1fb4bc",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 13068,
+          "expected_bars": 720,
+          "md5": "2cb8ade3686a65759afde97019620d4e",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 13353,
+          "expected_bars": 744,
+          "md5": "b3272904e5d80c660f1e5822ba675588",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 12829,
+          "expected_bars": 720,
+          "md5": "e8636fc7da8340ea9dff148cc9b3206e",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 13802,
+          "expected_bars": 744,
+          "md5": "7db38a87b13b3194dc28bd91840d0873",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 14143,
+          "expected_bars": 744,
+          "md5": "844858ac90ec0854e4374500171b190e",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 12328,
+          "expected_bars": 672,
+          "md5": "fb5276308dc9979b9daffcc3fdbbcda5",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 13639,
+          "expected_bars": 744,
+          "md5": "7dd76002d6b659c10ed5649073466189",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 13616,
+          "expected_bars": 720,
+          "md5": "f5fc8c4dff07d8bef1df2ad9b9427629",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 13655,
+          "expected_bars": 744,
+          "md5": "09d79aef8fa3fb26bad93d6b4f6622d7",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 12551,
+          "expected_bars": 720,
+          "md5": "ba6ace7b99636a404a305905ff017512",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 12502,
+          "expected_bars": 744,
+          "md5": "5a76478482c435df7f11f9bf19c75143",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 12829,
+          "expected_bars": 744,
+          "md5": "d76a06fcc0154ab6bb6753654c9f0d80",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 12044,
+          "expected_bars": 720,
+          "md5": "0f4d065ee9d00037af2b60b07afd6ef9",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 11756,
+          "expected_bars": 744,
+          "md5": "29dfa931925b747c685bb5ecb4370ad1",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 11850,
+          "expected_bars": 720,
+          "md5": "40ab596aaa5ff0505b838514bb277e59",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 11080,
+          "expected_bars": 744,
+          "md5": "dc2e4fa4b10f1ae71b59d5587415312b",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 12121,
+          "expected_bars": 744,
+          "md5": "d533cb4c5f0429c00d4c9a52046a7648",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 10851,
+          "expected_bars": 672,
+          "md5": "1cf7155d7fc678be9bf0eaa4897f5d27",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 11755,
+          "expected_bars": 744,
+          "md5": "5c2000baea3cfec674612421951d9838",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 11101,
+          "expected_bars": 720,
+          "md5": "85ed03700d2f92605784d633f7b21ad5",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 10802,
+          "expected_bars": 744,
+          "md5": "bb64644d51ec4e16f668f512fabaf1a3",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 10912,
+          "expected_bars": 720,
+          "md5": "9c5962c9235566ba14b40a596e267c9d",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 10911,
+          "expected_bars": 744,
+          "md5": "cd39cd5ae1cfd8dddb4d25117b3e8508",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 10463,
+          "expected_bars": 744,
+          "md5": "47a040a6b831db92d4d6dd7473f1ce32",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 9705,
+          "expected_bars": 720,
+          "md5": "dd273e45ce65825745e2275ec220da13",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 10650,
+          "expected_bars": 744,
+          "md5": "d376ff4b0eb595df41561c2da9033743",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 11631,
+          "expected_bars": 720,
+          "md5": "f1d92e17fc9a496b8b0b88fe8c8d47a5",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 12678,
+          "expected_bars": 744,
+          "md5": "ea59c9e6123e50cc11e6c134f5fa2f77",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 12606,
+          "expected_bars": 744,
+          "md5": "4933b5c9d815ce042c01c44c092ad02e",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 11628,
+          "expected_bars": 696,
+          "md5": "476cc083478df3f23a64d79c65ecd74f",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 13385,
+          "expected_bars": 744,
+          "md5": "c5995196bcc8d742172b67e82d61dcf1",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 12788,
+          "expected_bars": 720,
+          "md5": "6cfc2b16742afd704465f69198e3fdb1",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 12936,
+          "expected_bars": 744,
+          "md5": "afb569bb411a9a8c15e958503246a5e6",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 12290,
+          "expected_bars": 720,
+          "md5": "aee7643f6f4443929f60cb4369160eaf",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 12796,
+          "expected_bars": 744,
+          "md5": "869e61faf684adf4432a3bcbfae71906",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 12668,
+          "expected_bars": 744,
+          "md5": "631674f59caaf7cccee1af78c7c7a973",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 12142,
+          "expected_bars": 720,
+          "md5": "be6de1eab807cde8ca1e65dd21146037",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 12496,
+          "expected_bars": 744,
+          "md5": "556d393ff452fcc15cc51afa01d272d7",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 12680,
+          "expected_bars": 720,
+          "md5": "9fcc6f0a41c7ce00b4e2e91801cb6830",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 13112,
+          "expected_bars": 744,
+          "md5": "b25d5ec20672bc246b2bcb9fa08ca839",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 12831,
+          "expected_bars": 744,
+          "md5": "dc4c50911605c36299e2f3f83e46aac4",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 11479,
+          "expected_bars": 672,
+          "md5": "e59bfc68726bcc53aa57db1f8fb38dbc",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 12463,
+          "expected_bars": 744,
+          "md5": "fb8a32c2f0725005e75da6b146a2cde0",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 11896,
+          "expected_bars": 720,
+          "md5": "3379e2a0ba625c96b016b70ccf1ccd3b",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 12509,
+          "expected_bars": 744,
+          "md5": "c710167f68b163113def33d51c735a1d",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 11651,
+          "expected_bars": 720,
+          "md5": "bab208b4a878d58373e3fac45128d02e",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 12304,
+          "expected_bars": 744,
+          "md5": "4c73108bc657ddf7ce2ce8bd3eeb65dd",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 12113,
+          "expected_bars": 744,
+          "md5": "51221e9816885c661159734616571bbd",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 11802,
+          "expected_bars": 720,
+          "md5": "1f4c60e21c666579443be5009f5bb3ee",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 12290,
+          "expected_bars": 744,
+          "md5": "0ee9c5bf2d22982e2db3f838b7c18750",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 12108,
+          "expected_bars": 720,
+          "md5": "cbe4582f7867949d9e8ba6c31f0b273c",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 11685,
+          "expected_bars": 744,
+          "md5": "58e5452654d6bbc4878f1ec5af8e00eb",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 11732,
+          "expected_bars": 744,
+          "md5": "44a3492f6bd54cfc09a8521b38dd52b3",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 10343,
+          "expected_bars": 672,
+          "md5": "cbe266d9cb5d08dbc685b7c679f76840",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 11533,
+          "expected_bars": 744,
+          "md5": "41c562ba28a34f7d2e7fa5e32f8ae46c",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 10737,
+          "expected_bars": 720,
+          "md5": "5c8185954bcbcbe363f38ee4bb23ec0f",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 12139,
+          "expected_bars": 744,
+          "md5": "8a2ebf6dd6fa35b6e01963b1a4382c34",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 12254,
+          "expected_bars": 720,
+          "md5": "ef1d3acbc179f7598cb8fdbde62feff9",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 9093,
+          "expected_bars": 576,
+          "md5": "f97fa2f8771e2a84b7c5e2af5b0cd99e",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 50616,
+      "n_months": 70
+    },
+    "POLUSDT": {
+      "bytes": 271749,
+      "first_month": "2024-09",
+      "last_month": "2026-07",
+      "missing_bars": 298,
+      "months": {
+        "2024-09": {
+          "bytes": 7286,
+          "expected_bars": 720,
+          "md5": "1b8809f6212aaf76d995d652be3f39be",
+          "n_bars": 422
+        },
+        "2024-10": {
+          "bytes": 12104,
+          "expected_bars": 744,
+          "md5": "78d158cf213f8a5a61d00b09a43cd7c1",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 13137,
+          "expected_bars": 720,
+          "md5": "f3d12f5068f54fb5c9d72ccf741cd836",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 13586,
+          "expected_bars": 744,
+          "md5": "77ef72877c8f2d4476fae9312eafd9d8",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 13040,
+          "expected_bars": 744,
+          "md5": "03b12123a3afa72a52979e4baff61334",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 11627,
+          "expected_bars": 672,
+          "md5": "b8a982a3f8a9c475ea9ea0a0098d86ca",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 12454,
+          "expected_bars": 744,
+          "md5": "709b4d25ed552b45b4bd6e78f3dd0163",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 12024,
+          "expected_bars": 720,
+          "md5": "dafb15d05780863d176476a3de5b7bc8",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 12429,
+          "expected_bars": 744,
+          "md5": "74e708ae2a6689e0f53242f2c544cadb",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 11719,
+          "expected_bars": 720,
+          "md5": "dc1453bf86b75e8b2ffc1d04c2864865",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 12466,
+          "expected_bars": 744,
+          "md5": "57375b835f94007fbafcb8db92f1467d",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 12443,
+          "expected_bars": 744,
+          "md5": "8d2e05e038f03c766a958e0e87dc9e8f",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 11917,
+          "expected_bars": 720,
+          "md5": "0b72eb742027e1158f72c9d302d43d19",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 12184,
+          "expected_bars": 744,
+          "md5": "e87b0d8ca2bb03c4162187b81c28fcb3",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 11898,
+          "expected_bars": 720,
+          "md5": "e8e09b71cea1d5c1f98a67ac094d2d53",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 11456,
+          "expected_bars": 744,
+          "md5": "9abea3b8d800113a677a5ff1e33e65b7",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 12527,
+          "expected_bars": 744,
+          "md5": "f3fc5f9960a341ad96b143354064542c",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 10741,
+          "expected_bars": 672,
+          "md5": "d2dd4cb721de0aac0cf2979647fd1668",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 11077,
+          "expected_bars": 744,
+          "md5": "98dafc567ae61d322132c02aa31f2b3d",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 10537,
+          "expected_bars": 720,
+          "md5": "d0fe8301f10aba9b230c20b6cea2e869",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 11774,
+          "expected_bars": 744,
+          "md5": "2410a0485434b23ef68ec47e0c1253fd",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 13016,
+          "expected_bars": 720,
+          "md5": "dbd089d38856265d2d6132b90ef1d742",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 10307,
+          "expected_bars": 576,
+          "md5": "2161c60b7dd42bd8b9c6344c9d3f8563",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 16310,
+      "n_months": 23
+    },
+    "SOLUSDT": {
+      "bytes": 974093,
+      "first_month": "2020-08",
+      "last_month": "2026-07",
+      "missing_bars": 265,
+      "months": {
+        "2020-08": {
+          "bytes": 9660,
+          "expected_bars": 744,
+          "md5": "d13fbcc8b894eeb98935053de3941733",
+          "n_bars": 498
+        },
+        "2020-09": {
+          "bytes": 14086,
+          "expected_bars": 720,
+          "md5": "567f558df291edf60fbddd9eb5b19d1d",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 14211,
+          "expected_bars": 744,
+          "md5": "aff50ab0469d273728d5dc09b9b71ed9",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 13841,
+          "expected_bars": 720,
+          "md5": "fb9b40c0933e5b1e72c971141114b261",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 14057,
+          "expected_bars": 744,
+          "md5": "e181fbd4eded0fc473ba7574b15d5a0d",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 14962,
+          "expected_bars": 744,
+          "md5": "961ae2bf2674c637d9630fcb2b90d9bf",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 14362,
+          "expected_bars": 672,
+          "md5": "7e3071ca20d3a67f4a786b0bc62c073f",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 15630,
+          "expected_bars": 744,
+          "md5": "4eb299970e5010dd8ccd95933beeb631",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 15704,
+          "expected_bars": 720,
+          "md5": "064d30ab30335c2b387f175abc01ea5f",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 15607,
+          "expected_bars": 744,
+          "md5": "a2fa26ccfff248a97f3da0f4364f19fc",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 15094,
+          "expected_bars": 720,
+          "md5": "ccbbea3033bcf41c60c5dd534a152951",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 15124,
+          "expected_bars": 744,
+          "md5": "f1fcb45d97f1ff3379e0047010b5d3a7",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 15302,
+          "expected_bars": 744,
+          "md5": "590670c8c2aa7e039cc0ded24d0aeba9",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 14162,
+          "expected_bars": 720,
+          "md5": "5cb792971ec25be7ed7f057644e70344",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 14193,
+          "expected_bars": 744,
+          "md5": "4b60edff5444d13b1c1e3a0f549ef72b",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 13946,
+          "expected_bars": 720,
+          "md5": "8de38d2d2c46a1f26bbec57f62305bac",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 14270,
+          "expected_bars": 744,
+          "md5": "c47cc6164899b3ddd65798942e841611",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 14011,
+          "expected_bars": 744,
+          "md5": "0fb190c894efad8b24d2d9c18e315e5b",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 12457,
+          "expected_bars": 672,
+          "md5": "94c8bbd1605e017e9546f2c82daaf15c",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 13539,
+          "expected_bars": 744,
+          "md5": "e04a9fd5217fde53ff8f45a34f85948d",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 13253,
+          "expected_bars": 720,
+          "md5": "8a5bb357ec1174372884348afa0edfe1",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 13637,
+          "expected_bars": 744,
+          "md5": "280b2d6174120c84c3f351d13444b9dc",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 12857,
+          "expected_bars": 720,
+          "md5": "bc9f4a9f9ea8f8c802444523db453733",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 13027,
+          "expected_bars": 744,
+          "md5": "f51650d12f2457baffaaf9dcaaf18ce8",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 12825,
+          "expected_bars": 744,
+          "md5": "e3e3db958bdd0648fd5d6d0c02b05457",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 11912,
+          "expected_bars": 720,
+          "md5": "8518d5af5f1cbd37084365d64a570818",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 12070,
+          "expected_bars": 744,
+          "md5": "cd0a638cb2af24342110f237620bd7a3",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 12161,
+          "expected_bars": 720,
+          "md5": "74eb641cacd8c60163897b2dfbc5d035",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 11335,
+          "expected_bars": 744,
+          "md5": "6d73e1ae99d1c5306b2b59205d017d2a",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 12453,
+          "expected_bars": 744,
+          "md5": "5b3a1422ac10d5393b3573cd9309a14d",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 11178,
+          "expected_bars": 672,
+          "md5": "7c483d35ac5ac8a6b6b8d0150c4d28ce",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 12244,
+          "expected_bars": 744,
+          "md5": "3790465ec772313d84f856cc926bbab9",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 11652,
+          "expected_bars": 720,
+          "md5": "1ee497dbab4760dbe7ff97217efede56",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 11556,
+          "expected_bars": 744,
+          "md5": "5757ea925fe71c6520b6a9cb02103a90",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 11582,
+          "expected_bars": 720,
+          "md5": "7e4944c612449c19f02ba1eac3fc73fa",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 12306,
+          "expected_bars": 744,
+          "md5": "9f483dfc62c9e3057f5e97a3e83ef028",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 11733,
+          "expected_bars": 744,
+          "md5": "7b6f1e4559232d5e9850c18e1a9714a0",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 11043,
+          "expected_bars": 720,
+          "md5": "50c0ef8de50891fffa2f440873b8755d",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 12401,
+          "expected_bars": 744,
+          "md5": "ed4cd05edfe4145b68e285f914b06479",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 12954,
+          "expected_bars": 720,
+          "md5": "ba2867c90365b43d6c33d8d1ba0859fe",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 13874,
+          "expected_bars": 744,
+          "md5": "4bb36b073ca12990197aa49a9d056ecd",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 13803,
+          "expected_bars": 744,
+          "md5": "8ffca1851cd85467a749adc70e3e5ca4",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 12759,
+          "expected_bars": 696,
+          "md5": "3f14f98679270e83cec6ee7eebf36903",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 14233,
+          "expected_bars": 744,
+          "md5": "82dcc442cf12f5fb80c5a26d4eaa5e77",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 13749,
+          "expected_bars": 720,
+          "md5": "d048968fc12947ed5af504c45a964dd3",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 14406,
+          "expected_bars": 744,
+          "md5": "ddca0046d989a0b884ee78f0d9437a11",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 13776,
+          "expected_bars": 720,
+          "md5": "78349fbe4cf98487af2a707f4d795f61",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 14456,
+          "expected_bars": 744,
+          "md5": "0fc3f8239ad846e8030797c6d27b4630",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 14440,
+          "expected_bars": 744,
+          "md5": "dc6e743ef2db49ad147ed7f0d0853a07",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 13703,
+          "expected_bars": 720,
+          "md5": "2c8582f4d0fea7f1cfdd02dc5cc97cc0",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 14235,
+          "expected_bars": 744,
+          "md5": "50ed6198a5f278109c8722b351e5a8ab",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 14303,
+          "expected_bars": 720,
+          "md5": "329f0ece69a02a401581944050fe5a55",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 14669,
+          "expected_bars": 744,
+          "md5": "6b070203b3043b8aafc85a6131f1a238",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 15102,
+          "expected_bars": 744,
+          "md5": "23cd090a47436eced882e41e38ffb5f3",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 13522,
+          "expected_bars": 672,
+          "md5": "d834b31aa387f8917827ad44416c5b89",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 14591,
+          "expected_bars": 744,
+          "md5": "798a3095bcfe2429ebe48b9e5684649a",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 14096,
+          "expected_bars": 720,
+          "md5": "f623d49d08580cef40d263397861e254",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 14450,
+          "expected_bars": 744,
+          "md5": "1d24b79b8d33764b5ac701415f689d04",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 13970,
+          "expected_bars": 720,
+          "md5": "b179f6c5b7ead7db7a46762b6ed377a5",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 14517,
+          "expected_bars": 744,
+          "md5": "c8e109496465141a8c593cc3a893ad48",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 14783,
+          "expected_bars": 744,
+          "md5": "bbcb51e3faa13fb14e02738df609e2e6",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 14371,
+          "expected_bars": 720,
+          "md5": "b14736c674faa660544896b90eeb8bbf",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 14756,
+          "expected_bars": 744,
+          "md5": "5bf01e2f426749ecc644106df8b8e176",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 14131,
+          "expected_bars": 720,
+          "md5": "de9ec244706a1602722385cceb333513",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 14033,
+          "expected_bars": 744,
+          "md5": "df4bd1a4045ec1c6b4547e9de42dcf65",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 14158,
+          "expected_bars": 744,
+          "md5": "4a91ae89060859a64a79def9639d4e97",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 12778,
+          "expected_bars": 672,
+          "md5": "1c23063a7344041489b646d7572a4c3a",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 13849,
+          "expected_bars": 744,
+          "md5": "3d719992a77ac3f41b66f346e92ec218",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 13007,
+          "expected_bars": 720,
+          "md5": "368b9fd15d631fd59a5dc556ee7e2b9e",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 13427,
+          "expected_bars": 744,
+          "md5": "a7766d8884cca086e8e526ea07710e93",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 13405,
+          "expected_bars": 720,
+          "md5": "e37e92aef264750385e50e929bde13aa",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 10344,
+          "expected_bars": 576,
+          "md5": "ffe60bff29f8cad2970f76e6fd3057f6",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 52151,
+      "n_months": 72
+    },
+    "SUIUSDT": {
+      "bytes": 532653,
+      "first_month": "2023-05",
+      "last_month": "2026-07",
+      "missing_bars": 60,
+      "months": {
+        "2023-05": {
+          "bytes": 12731,
+          "expected_bars": 744,
+          "md5": "cd88ab16a62a912c8547642235c30889",
+          "n_bars": 684
+        },
+        "2023-06": {
+          "bytes": 13390,
+          "expected_bars": 720,
+          "md5": "4d1e1e17f54bd34193361f456086c16f",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 12894,
+          "expected_bars": 744,
+          "md5": "4d6b9322f10ab457b81e2e22ce1d6a18",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 12946,
+          "expected_bars": 744,
+          "md5": "f82c2353ea402959a3d40f6f27bdb64b",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 11969,
+          "expected_bars": 720,
+          "md5": "b599f9b0940bb367b8938ccdcaf82bab",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 12682,
+          "expected_bars": 744,
+          "md5": "f398b6b8e3dd1dd9dde37b6095578ff3",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 13172,
+          "expected_bars": 720,
+          "md5": "7f866bf7bfd89e9984cff316cf836db6",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 13526,
+          "expected_bars": 744,
+          "md5": "45c12eea41f2fe2e11903e5cf52624d2",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 14333,
+          "expected_bars": 744,
+          "md5": "77c7642233ae2f8045c80e6662cd9ad5",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 13230,
+          "expected_bars": 696,
+          "md5": "c613800fb30e8fb1ff5532e5d9dc169a",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 14195,
+          "expected_bars": 744,
+          "md5": "67bce8dd3da4beda58452f33e0c5cb03",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 13678,
+          "expected_bars": 720,
+          "md5": "09e341bf69d2004757845466c9dce3fd",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 13504,
+          "expected_bars": 744,
+          "md5": "4e0a7376aaf21d494942fc9011d3274e",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 13004,
+          "expected_bars": 720,
+          "md5": "509e23f8fe6690ca10cd61ac7eb38b8c",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 13488,
+          "expected_bars": 744,
+          "md5": "cd6a0b71810605514bf2aa5158590270",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 14015,
+          "expected_bars": 744,
+          "md5": "afc4a08f03cfc2746578e60ae737f781",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 13738,
+          "expected_bars": 720,
+          "md5": "77708a99ccebd9223021e557b2cdb3cd",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 14427,
+          "expected_bars": 744,
+          "md5": "ff531e587ea616d835a12626c6749105",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 14296,
+          "expected_bars": 720,
+          "md5": "6026e392b033f054b55be29ad4df737c",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 14990,
+          "expected_bars": 744,
+          "md5": "335ced4910a1133e2345f630c167425c",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 15081,
+          "expected_bars": 744,
+          "md5": "0ee5b380c48b4920114d1627853e8494",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 13670,
+          "expected_bars": 672,
+          "md5": "64e4d8ed13d244cb247ea065ae5d1180",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 14678,
+          "expected_bars": 744,
+          "md5": "a8b93cf348e7b5486e4d6d7e408470db",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 14321,
+          "expected_bars": 720,
+          "md5": "8251926adb56b490680f3ec8d1c35314",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 14827,
+          "expected_bars": 744,
+          "md5": "290986e1ca251963d455a74f21aacd77",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 14037,
+          "expected_bars": 720,
+          "md5": "f458065e43aae883e81404132cc8a24c",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 14722,
+          "expected_bars": 744,
+          "md5": "373ee8bb869e8d0e74d771f4321ceda6",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 14668,
+          "expected_bars": 744,
+          "md5": "1477dbc8e3b5be5e78c020c74275bc68",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 14039,
+          "expected_bars": 720,
+          "md5": "a21ac5a54294f9a6a822aaaeb955fb21",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 14530,
+          "expected_bars": 744,
+          "md5": "34af471562b09e2957f26c9489653cf0",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 13958,
+          "expected_bars": 720,
+          "md5": "4b2c01fce96025c7eea13b945ddb449c",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 13979,
+          "expected_bars": 744,
+          "md5": "e792d6a9e56be619978df615c6d8ed4c",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 14144,
+          "expected_bars": 744,
+          "md5": "7a3c78bf1e7d519429ae7b4dfe4c1224",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 12596,
+          "expected_bars": 672,
+          "md5": "dc24d0bb83b63e2c85797a9ecb13d7bc",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 13596,
+          "expected_bars": 744,
+          "md5": "50df2bce2b89a6e179703eb4c0fa4f2e",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 12726,
+          "expected_bars": 720,
+          "md5": "5ff738eeedb9c05b0aef59445ab29290",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 13766,
+          "expected_bars": 744,
+          "md5": "2b5c7166dbdc2ac78636fbc39eddf08b",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 13069,
+          "expected_bars": 720,
+          "md5": "ba691e832dfa492c2bf0ad4ea6270875",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 10038,
+          "expected_bars": 576,
+          "md5": "d09459dd7670a0d313c9ca200c73e85c",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 28284,
+      "n_months": 39
+    },
+    "XRPUSDT": {
+      "bytes": 1047991,
+      "first_month": "2020-01",
+      "last_month": "2026-07",
+      "missing_bars": 31,
+      "months": {
+        "2020-01": {
+          "bytes": 14225,
+          "expected_bars": 744,
+          "md5": "fbb3bff6953ccc8b08c4f26772b1d153",
+          "n_bars": 744
+        },
+        "2020-02": {
+          "bytes": 13777,
+          "expected_bars": 696,
+          "md5": "abcdaf1e31cc71a25c5ed79f2948f96e",
+          "n_bars": 690
+        },
+        "2020-03": {
+          "bytes": 14655,
+          "expected_bars": 744,
+          "md5": "9c0bfffaa94a89e4909ed14485f2149b",
+          "n_bars": 743
+        },
+        "2020-04": {
+          "bytes": 13717,
+          "expected_bars": 720,
+          "md5": "b4d2a9c8515aea5a9994f27b74102113",
+          "n_bars": 718
+        },
+        "2020-05": {
+          "bytes": 13935,
+          "expected_bars": 744,
+          "md5": "24dd8271bb69b92199cb71c2b52a5447",
+          "n_bars": 744
+        },
+        "2020-06": {
+          "bytes": 13186,
+          "expected_bars": 720,
+          "md5": "f90e83d7d445cf0bb6edac3d1ee818e7",
+          "n_bars": 717
+        },
+        "2020-07": {
+          "bytes": 14216,
+          "expected_bars": 744,
+          "md5": "de8ed9ea6a7517fda9e4b60a439cce6f",
+          "n_bars": 744
+        },
+        "2020-08": {
+          "bytes": 14745,
+          "expected_bars": 744,
+          "md5": "0d801a1bd5865926e972c0c77d20c607",
+          "n_bars": 744
+        },
+        "2020-09": {
+          "bytes": 13892,
+          "expected_bars": 720,
+          "md5": "632946c707241d2d22a3fc61a7ce33dc",
+          "n_bars": 720
+        },
+        "2020-10": {
+          "bytes": 14080,
+          "expected_bars": 744,
+          "md5": "700eeb56aaaf6518285c4fc9c9ce308b",
+          "n_bars": 744
+        },
+        "2020-11": {
+          "bytes": 14741,
+          "expected_bars": 720,
+          "md5": "00593c4c32369bb1001087ad25269518",
+          "n_bars": 719
+        },
+        "2020-12": {
+          "bytes": 15747,
+          "expected_bars": 744,
+          "md5": "0a402b389aae6a5ceff321f93af5d021",
+          "n_bars": 740
+        },
+        "2021-01": {
+          "bytes": 15408,
+          "expected_bars": 744,
+          "md5": "6f20ba4f8f0354c6d18b347fc061bd26",
+          "n_bars": 744
+        },
+        "2021-02": {
+          "bytes": 14474,
+          "expected_bars": 672,
+          "md5": "cc75b8a3ccdb877f0f3aa754393812d6",
+          "n_bars": 671
+        },
+        "2021-03": {
+          "bytes": 15307,
+          "expected_bars": 744,
+          "md5": "8088ee679094dc369fbb05b9bb43fd5c",
+          "n_bars": 743
+        },
+        "2021-04": {
+          "bytes": 15760,
+          "expected_bars": 720,
+          "md5": "247bda332a5488b41db2030998880949",
+          "n_bars": 715
+        },
+        "2021-05": {
+          "bytes": 15439,
+          "expected_bars": 744,
+          "md5": "eff7e52f2e132d533b5b149032ffd839",
+          "n_bars": 744
+        },
+        "2021-06": {
+          "bytes": 14487,
+          "expected_bars": 720,
+          "md5": "e6e67d97ddd942e9fa655ed226603919",
+          "n_bars": 720
+        },
+        "2021-07": {
+          "bytes": 14357,
+          "expected_bars": 744,
+          "md5": "ff3a9fb447c104dca0774c31a2e8decd",
+          "n_bars": 744
+        },
+        "2021-08": {
+          "bytes": 14707,
+          "expected_bars": 744,
+          "md5": "351e91bae72bfabdd68208baf2eded36",
+          "n_bars": 740
+        },
+        "2021-09": {
+          "bytes": 13016,
+          "expected_bars": 720,
+          "md5": "0d4207b8c30a77f0bf02e08fae9e643e",
+          "n_bars": 718
+        },
+        "2021-10": {
+          "bytes": 13214,
+          "expected_bars": 744,
+          "md5": "1a428179d5cdef1ff0ec2ca81d21f46a",
+          "n_bars": 744
+        },
+        "2021-11": {
+          "bytes": 12952,
+          "expected_bars": 720,
+          "md5": "679de3917215ff4058e1ba04e3a3cb5c",
+          "n_bars": 720
+        },
+        "2021-12": {
+          "bytes": 13229,
+          "expected_bars": 744,
+          "md5": "8f5e65eed66a065388611cd4742ca031",
+          "n_bars": 744
+        },
+        "2022-01": {
+          "bytes": 12945,
+          "expected_bars": 744,
+          "md5": "a9cea14db12da600315f01e2f1a502d0",
+          "n_bars": 744
+        },
+        "2022-02": {
+          "bytes": 12226,
+          "expected_bars": 672,
+          "md5": "8b8d6cc26d709437ca17bfdd90494696",
+          "n_bars": 672
+        },
+        "2022-03": {
+          "bytes": 12917,
+          "expected_bars": 744,
+          "md5": "bbf1a3c8401ef67fca1316ab6be8f80e",
+          "n_bars": 744
+        },
+        "2022-04": {
+          "bytes": 12475,
+          "expected_bars": 720,
+          "md5": "d2b7f2b7eb8e0d1a7483353908472c22",
+          "n_bars": 720
+        },
+        "2022-05": {
+          "bytes": 12986,
+          "expected_bars": 744,
+          "md5": "a70a670d100af972b6274e39bd8042e4",
+          "n_bars": 744
+        },
+        "2022-06": {
+          "bytes": 12224,
+          "expected_bars": 720,
+          "md5": "3506a788b0665eb397d326823333e088",
+          "n_bars": 720
+        },
+        "2022-07": {
+          "bytes": 12277,
+          "expected_bars": 744,
+          "md5": "d17c513ddbee1428ea85b6c9449c2eb6",
+          "n_bars": 744
+        },
+        "2022-08": {
+          "bytes": 11766,
+          "expected_bars": 744,
+          "md5": "6babc92f8bf9bf15c123507f3fb82476",
+          "n_bars": 744
+        },
+        "2022-09": {
+          "bytes": 12280,
+          "expected_bars": 720,
+          "md5": "1aedddaf2ea6a8a122776f5937a5b6bb",
+          "n_bars": 720
+        },
+        "2022-10": {
+          "bytes": 12517,
+          "expected_bars": 744,
+          "md5": "c2975b103603b81449702bf0ea1d20c2",
+          "n_bars": 744
+        },
+        "2022-11": {
+          "bytes": 12404,
+          "expected_bars": 720,
+          "md5": "3c4cf688f058015e5c117072ecec233a",
+          "n_bars": 720
+        },
+        "2022-12": {
+          "bytes": 11859,
+          "expected_bars": 744,
+          "md5": "907e708a319cea674e92cf8558c1338b",
+          "n_bars": 744
+        },
+        "2023-01": {
+          "bytes": 12193,
+          "expected_bars": 744,
+          "md5": "dd9e1fa1326dac61deed4c571b161b93",
+          "n_bars": 744
+        },
+        "2023-02": {
+          "bytes": 10775,
+          "expected_bars": 672,
+          "md5": "0ab58cac029c6c12c174fe8cacd19c75",
+          "n_bars": 672
+        },
+        "2023-03": {
+          "bytes": 12686,
+          "expected_bars": 744,
+          "md5": "611e152217fedf2532db113e0f056c54",
+          "n_bars": 743
+        },
+        "2023-04": {
+          "bytes": 11924,
+          "expected_bars": 720,
+          "md5": "7ab929f13ded84dcd7174a515020a72d",
+          "n_bars": 720
+        },
+        "2023-05": {
+          "bytes": 12177,
+          "expected_bars": 744,
+          "md5": "0841e5c481e461889b4a52dcf0f25db1",
+          "n_bars": 744
+        },
+        "2023-06": {
+          "bytes": 11908,
+          "expected_bars": 720,
+          "md5": "50e4d890c7f2afd5b230217a3ee40f6a",
+          "n_bars": 720
+        },
+        "2023-07": {
+          "bytes": 12701,
+          "expected_bars": 744,
+          "md5": "3fdeb1e0bfe823d469a45c14e4f1bdd1",
+          "n_bars": 744
+        },
+        "2023-08": {
+          "bytes": 12499,
+          "expected_bars": 744,
+          "md5": "22e978fa88b78e86d42bc69e46283fc0",
+          "n_bars": 744
+        },
+        "2023-09": {
+          "bytes": 11470,
+          "expected_bars": 720,
+          "md5": "d8c8168d2965a7326b771c3ec388d717",
+          "n_bars": 720
+        },
+        "2023-10": {
+          "bytes": 12271,
+          "expected_bars": 744,
+          "md5": "1f2e74746b9ce79320c5b4f9af04f613",
+          "n_bars": 744
+        },
+        "2023-11": {
+          "bytes": 12307,
+          "expected_bars": 720,
+          "md5": "8acda62f595540fb19db9f5163131f46",
+          "n_bars": 720
+        },
+        "2023-12": {
+          "bytes": 12326,
+          "expected_bars": 744,
+          "md5": "73ca4f82e2e036e9175c8854b09a726d",
+          "n_bars": 744
+        },
+        "2024-01": {
+          "bytes": 12443,
+          "expected_bars": 744,
+          "md5": "670c3074835a706ca0d53704d66bc194",
+          "n_bars": 744
+        },
+        "2024-02": {
+          "bytes": 11571,
+          "expected_bars": 696,
+          "md5": "951e793d683d7487f61b4803b7e67e5d",
+          "n_bars": 696
+        },
+        "2024-03": {
+          "bytes": 12855,
+          "expected_bars": 744,
+          "md5": "03ae7349b42bde0514dbe1c35a28233b",
+          "n_bars": 744
+        },
+        "2024-04": {
+          "bytes": 12395,
+          "expected_bars": 720,
+          "md5": "8f791d4e00fe9ff4741c4c6763450844",
+          "n_bars": 720
+        },
+        "2024-05": {
+          "bytes": 12129,
+          "expected_bars": 744,
+          "md5": "13459ccef08cfcc1f2f89b0915c7241d",
+          "n_bars": 744
+        },
+        "2024-06": {
+          "bytes": 11452,
+          "expected_bars": 720,
+          "md5": "aeb43750c6431ceb0e6638e0f9c5474e",
+          "n_bars": 720
+        },
+        "2024-07": {
+          "bytes": 12884,
+          "expected_bars": 744,
+          "md5": "a531af1d0629ed85b271dd2f5a2a9c4f",
+          "n_bars": 744
+        },
+        "2024-08": {
+          "bytes": 12679,
+          "expected_bars": 744,
+          "md5": "09796c57d503cefbb2bfdcb5469b03bd",
+          "n_bars": 744
+        },
+        "2024-09": {
+          "bytes": 11897,
+          "expected_bars": 720,
+          "md5": "ca9b5e179ef98ef69a8260b9dd653b99",
+          "n_bars": 720
+        },
+        "2024-10": {
+          "bytes": 12074,
+          "expected_bars": 744,
+          "md5": "b1faf4f4145eb4aab8f9e8e800a49add",
+          "n_bars": 744
+        },
+        "2024-11": {
+          "bytes": 13445,
+          "expected_bars": 720,
+          "md5": "5724cb70701ddf8c20d7272ba4cfb5f9",
+          "n_bars": 720
+        },
+        "2024-12": {
+          "bytes": 14273,
+          "expected_bars": 744,
+          "md5": "90e2507e7c22a7a6030456f32be006b2",
+          "n_bars": 744
+        },
+        "2025-01": {
+          "bytes": 14229,
+          "expected_bars": 744,
+          "md5": "0d76ae82dd2e8f5f6e69b79254be64af",
+          "n_bars": 744
+        },
+        "2025-02": {
+          "bytes": 13016,
+          "expected_bars": 672,
+          "md5": "0ef9e2fd004f2594ea6a9b2a0d878ab8",
+          "n_bars": 672
+        },
+        "2025-03": {
+          "bytes": 14217,
+          "expected_bars": 744,
+          "md5": "1875cad18da8f39bbe4d44543fd405ff",
+          "n_bars": 744
+        },
+        "2025-04": {
+          "bytes": 13748,
+          "expected_bars": 720,
+          "md5": "419e9938d4388b35fd4e7e0ade23e9ef",
+          "n_bars": 720
+        },
+        "2025-05": {
+          "bytes": 14430,
+          "expected_bars": 744,
+          "md5": "755d8efe94a8f0b72f83fd181b2f88b4",
+          "n_bars": 744
+        },
+        "2025-06": {
+          "bytes": 13657,
+          "expected_bars": 720,
+          "md5": "6a755618707f37db5d61ec46ac53e444",
+          "n_bars": 720
+        },
+        "2025-07": {
+          "bytes": 14801,
+          "expected_bars": 744,
+          "md5": "80fbd80d38dc137d318b80556e583fa3",
+          "n_bars": 744
+        },
+        "2025-08": {
+          "bytes": 14588,
+          "expected_bars": 744,
+          "md5": "e321d87e178cdfa4003105e95df9902f",
+          "n_bars": 744
+        },
+        "2025-09": {
+          "bytes": 13809,
+          "expected_bars": 720,
+          "md5": "ebea53e9d4e2341b54d291e63cb148b0",
+          "n_bars": 720
+        },
+        "2025-10": {
+          "bytes": 14538,
+          "expected_bars": 744,
+          "md5": "51acdbb060166f44e5b9d52a0ad421a3",
+          "n_bars": 744
+        },
+        "2025-11": {
+          "bytes": 14143,
+          "expected_bars": 720,
+          "md5": "ebe8c4c1e05389910884ad9c55e6c122",
+          "n_bars": 720
+        },
+        "2025-12": {
+          "bytes": 13893,
+          "expected_bars": 744,
+          "md5": "340e2ebdc9a62162ac5aefb2a529c24c",
+          "n_bars": 744
+        },
+        "2026-01": {
+          "bytes": 14218,
+          "expected_bars": 744,
+          "md5": "17696c65474c55176a08d5b28a40ac4b",
+          "n_bars": 744
+        },
+        "2026-02": {
+          "bytes": 12940,
+          "expected_bars": 672,
+          "md5": "93357e4390e4fdadf7416e2f27f46cb4",
+          "n_bars": 672
+        },
+        "2026-03": {
+          "bytes": 13864,
+          "expected_bars": 744,
+          "md5": "44a4629df4e50d41d1ac226df496f2f2",
+          "n_bars": 744
+        },
+        "2026-04": {
+          "bytes": 13126,
+          "expected_bars": 720,
+          "md5": "c24a04358bdddbb3f339edcd5dd9c061",
+          "n_bars": 720
+        },
+        "2026-05": {
+          "bytes": 13510,
+          "expected_bars": 744,
+          "md5": "ffd2606509995e40fd0ea542576318a9",
+          "n_bars": 744
+        },
+        "2026-06": {
+          "bytes": 13422,
+          "expected_bars": 720,
+          "md5": "67b4cb254ac0cdf1f81dc2a015ebb9a2",
+          "n_bars": 720
+        },
+        "2026-07": {
+          "bytes": 10366,
+          "expected_bars": 576,
+          "md5": "c0744bbcb56b393e11d89ec4d2fa8f22",
+          "n_bars": 576
+        }
+      },
+      "n_bars": 57497,
+      "n_months": 79
+    }
+  }
+}
