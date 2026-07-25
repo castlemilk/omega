@@ -292,9 +292,30 @@ second writer and `nohup`s the Python daemon.
 | docker | ✓ | ✓ | env file | overkill; the daemon needs the gamma mount + host egress, adds mount/network friction for no isolation win |
 
 **7a. launchd — `com.omega.live_paper.plist` (macOS host).**
-Provided for reference — **do NOT install it from this session.** The user installs
-it at the host: save to `~/Library/LaunchAgents/com.omega.live_paper.plist`, edit
-the paths/key, then `launchctl load -w ~/Library/LaunchAgents/com.omega.live_paper.plist`.
+
+> **SUPERSEDED 2026-07-25 — the template below does NOT work as written on the
+> gamma-mac host.** It was installed for real during the post-reboot recovery and
+> failed with `EX_CONFIG (78)`. Two defects, both now fixed in the shipped setup
+> (see the launchd addendum in `V253_SMOKE_V2_KICKOFF.md`):
+>
+> 1. **`StandardOutPath`/`StandardErrorPath` must NOT be on `/Volumes`.** A
+>    launchd-spawned process is TCC-blocked from the external volume for the
+>    purpose of opening those files, so the job dies before producing any output.
+>    Point them at `~/Library/Logs/omega/` instead. (Measured: launchd-spawned
+>    **`/bin/bash` gets EPERM on `/Volumes` for read AND write**; Homebrew
+>    **`python3` has full access**, so the daemon's own checkpoint/pnl writes are
+>    fine — TCC grants are per-binary.)
+> 2. **Do not bake `FRED_API_KEY` into the plist.** Use the committed exec wrapper
+>    **`scripts/live_paper_launchd.sh`**, which sources the gitignored
+>    `harness/.env`, waits for the gamma mount, PID-guards against a second
+>    writer, and `exec`s python. That keeps secrets out of
+>    `~/Library/LaunchAgents/`.
+>
+> Also note `OMEGA_AUDIT_OUTPUT_DIR` below omits the `live_paper_v253_smoke_v2`
+> leaf that the actual soak uses. Prefer the wrapper; keep the template only as
+> an annotated illustration.
+
+Original template (retained for reference — see the corrections above):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>

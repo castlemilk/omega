@@ -449,3 +449,131 @@ would have had if it had been running. Concretely:
 **Guardrails honored:** zero strategy code touched (operational recovery only);
 live-**paper** only, no broker/orders/funds; checkpoint state preserved, never
 wiped; single daemon process.
+
+---
+
+## Addendum — launchd auto-restart wired; reboot-fragility eliminated (2026-07-25 07:25 UTC)
+
+The outage above happened because `nohup` survives a logout but **not** a
+shutdown, and nothing was registered to bring the daemon back. That class of
+failure is now closed: the soak daemon is supervised by **launchd**, which
+restarts it on crash *and* on boot.
+
+### What was installed
+
+| Artifact | Path | Tracked? |
+|---|---|---|
+| launchd agent | `~/Library/LaunchAgents/com.omega.live_paper.plist` | no (host-local) |
+| exec wrapper | `scripts/live_paper_launchd.sh` | **yes** |
+| launchd stdout/stderr | `~/Library/Logs/omega/launchd.{out,err}` | no |
+| authoritative pid file | `~/Library/Logs/omega/daemon.pid` | no |
+| daemon log (unchanged) | `…/live_paper_v253_smoke_v2/live_paper/logs/daemon.out` | no |
+
+`KeepAlive=true` + `RunAtLoad=true` + `ThrottleInterval=30`.
+
+### Why a wrapper instead of the runbook's "python3 direct" plist
+
+The V253 runbook's template baked `FRED_API_KEY` into the plist's
+`EnvironmentVariables`. `scripts/live_paper_launchd.sh` sources the gitignored
+`harness/.env` instead, so **no API key or DB password lands in
+`~/Library/LaunchAgents/`**. The plist carries only non-secret config. The
+wrapper `exec`s python in place (not `live_paper_daemon.sh`, which nohup+disowns
+— launchd would read that as an instant exit and restart-loop), also waits up to
+10 min for the external gamma mount (it can attach *after* login), and PID-guards
+against a second writer.
+
+### The load-bearing macOS gotcha: TCC blocks launchd-spawned bash on `/Volumes`
+
+First load failed with **`EX_CONFIG` (78)** and no output at all. Cause: launchd
+could not open `StandardOutPath`/`StandardErrorPath` on the external volume.
+Probed it properly with a throwaway launchd job:
+
+- **launchd-spawned `/bin/bash` → EPERM on `/Volumes` for read AND write.**
+  (`stat`/`[ -d ]` still works, which is why the mount-wait is fine.)
+- **launchd-spawned Homebrew `python3` → full access:** checkpoint read, write,
+  atomic `replace()`, and pnl append all **OK**.
+
+TCC grants are **per-binary**, and Python.app holds the removable-volume grant
+that `/bin/bash` doesn't. Consequences, both handled:
+
+1. **launchd log paths moved off the volume** to `~/Library/Logs/omega/`. The
+   daemon's own `daemon.out` on gamma is unaffected — python writes it.
+2. **The pid guard would have been silently inert** (the wrapper can neither read
+   nor write the on-gamma `daemon.pid`). So a second, always-writable pid file at
+   `~/Library/Logs/omega/daemon.pid` is now the authoritative claim, and
+   **`scripts/live_paper_daemon.sh` checks both files** — otherwise a hand-run
+   would have cheerfully become a second writer alongside launchd and corrupted
+   the checkpoint. The on-gamma write is best-effort and logs a note when it fails.
+
+**Critically: the daemon's checkpoint and pnl writes are NOT affected** — those
+are python, which has the grant. Verified by probe, not assumed.
+
+### Double-daemon: what was chosen and why
+
+Neither "load with `Disabled=true`" nor "`RunAtLoad=false`" actually works here:
+`KeepAlive=true` makes launchd run the job unconditionally, so `RunAtLoad=false`
+does not stop it starting at load; and `Disabled=true` persists in launchd's
+override database across reboots, which would defeat the entire point.
+
+**Chosen: graceful handover.** The Part-A manual daemon (PID 31927) was
+`kill -TERM`'d — the same checkpoint-preserving path used 4× already in this soak
+(`scheduler_shutdown_signal signum 15` → `runner_shutdown cycles:0` → clean exit
+in 19 s, no cycle in flight, next tick ~19 h away) — and launchd then started the
+single supervised daemon. This yields exactly one writer *and* proves the launchd
+path now rather than leaving an untested plist dormant. Checkpoint MD5
+`0e687729471458f9aed1c9ac949e7943` **unchanged** across the whole handover.
+
+### Verification
+
+- `launchctl list com.omega.live_paper` → `"PID" = 39097`, `"OnDemand" = false`
+  (KeepAlive active).
+- **Resume under launchd — CONFIRMED:** `checkpoint_loaded
+  last_completed_date=2026-07-17 equity=99433.31` → `runner_resumed
+  open_positions=3` (ARB/ETH/POL).
+- **Crash restart — PROVEN, not assumed:** `kill -9` the daemon →
+  launchd respawned it in **2 s** (38742 → 39097) → it re-resumed all 3 positions
+  → checkpoint MD5 unchanged.
+- **One-writer guard — PROVEN:** running `scripts/live_paper_daemon.sh` by hand
+  while launchd owns the job exits **4** with
+  `FATAL: daemon already running (pid 38742, via …/Library/Logs/omega/daemon.pid)`.
+  Process count stayed at 1 throughout.
+- **Reboot survival:** *inferred, not tested* — an actual reboot is out of scope.
+  What is verified: plist passes `plutil -lint`, `launchctl load -w` succeeds,
+  the job runs with `RunAtLoad`+`KeepAlive`, and the equivalent kill-and-respawn
+  path works. The untested-by-reboot residuals are (a) the gamma volume mounting
+  before the 10-min wrapper timeout and (b) TCC surviving reboot for Python.app.
+
+### Manual controls
+
+```bash
+# status
+launchctl list | grep com.omega.live_paper      # PID + last exit status
+tail -f ~/Library/Logs/omega/launchd.err        # launch-time failures
+tail -f /Volumes/gamma-systems-2/omega-victoria-data/live_paper_v253_smoke_v2/live_paper/logs/daemon.out
+
+# stop / start (KeepAlive means `stop` alone just gets respawned — unload to stop for real)
+launchctl stop  com.omega.live_paper            # restart in place
+launchctl unload -w ~/Library/LaunchAgents/com.omega.live_paper.plist   # stop + disable
+launchctl load  -w ~/Library/LaunchAgents/com.omega.live_paper.plist    # enable + start
+
+# back to a hand-run daemon: unload FIRST, or the guard will (correctly) refuse
+launchctl unload -w ~/Library/LaunchAgents/com.omega.live_paper.plist
+set -a; . ./harness/.env; set +a
+OMEGA_AUDIT_OUTPUT_DIR=/Volumes/gamma-systems-2/omega-victoria-data/live_paper_v253_smoke_v2 \
+  bash scripts/live_paper_daemon.sh --mode forward
+```
+
+**Log path is unchanged** — `daemon.out` on gamma is still the cycle log; the new
+`~/Library/Logs/omega/launchd.err` only captures wrapper/launch-time output.
+
+### Standing state
+
+- **Live daemon: PID 39097**, launchd-supervised, resumed from the 2026-07-17
+  checkpoint with ARB/ETH/POL open and equity $99,433.31.
+- **Next cycle: 2026-07-26 02:55:00 UTC** (no backfill of the 07-18…07-25 gap).
+- Exactly **one** `live_paper_daemon.py` process.
+
+**Guardrails honored:** no strategy code touched (`live_paper_launchd.sh` is new
+ops glue; `live_paper_daemon.sh` gained only a pid-guard arm); live-**paper**
+only, no broker/orders/funds; checkpoint state preserved byte-identical
+throughout (MD5 `0e6877…7943` before, during and after).

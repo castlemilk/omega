@@ -30,10 +30,20 @@ PID_FILE="$LOG_DIR/daemon.pid"
 RUN_LOG="$LOG_DIR/daemon.out"
 
 # Refuse to start a second daemon against the same checkpoint dir (one writer).
-if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE" 2>/dev/null)" 2>/dev/null; then
-  echo "FATAL: daemon already running (pid $(cat "$PID_FILE")); one writer per checkpoint dir." >&2
-  exit 4
-fi
+# Two pid files are consulted: the on-gamma one written here, and the local one
+# written by scripts/live_paper_launchd.sh — a launchd-spawned bash cannot write
+# to /Volumes (TCC EPERM), so the launchd job's claim only lands locally. Check
+# both or a hand-run here would happily become a second writer alongside launchd.
+LOCAL_PID_FILE="${LIVE_PAPER_LOCAL_PID_FILE:-$HOME/Library/Logs/omega/daemon.pid}"
+for _pf in "$PID_FILE" "$LOCAL_PID_FILE"; do
+  _other="$(cat "$_pf" 2>/dev/null)" || continue
+  [ -n "$_other" ] || continue
+  if kill -0 "$_other" 2>/dev/null; then
+    echo "FATAL: daemon already running (pid $_other, via $_pf); one writer per checkpoint dir." >&2
+    echo "       If that is the launchd agent: launchctl unload -w ~/Library/LaunchAgents/com.omega.live_paper.plist" >&2
+    exit 4
+  fi
+done
 
 echo "=== V252 live-paper daemon start $(date -u +%FT%TZ) args=$* ===" | tee -a "$RUN_LOG"
 nohup "$PYTHON" scripts/live_paper_daemon.py "$@" >> "$RUN_LOG" 2>&1 &
