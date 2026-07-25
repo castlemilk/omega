@@ -365,3 +365,87 @@ live-paper cycle emits a real HMM regime label instead of `"unknown"`.
 **Guardrails honored (regime wire):** only `runner.py` touched; live-**paper** only
 (no broker/orders/funds); V251 backtest fidelity preserved ($0.0000 ×3); open book
 preserved byte-identical (MD5 unchanged, 2 positions resumed).
+
+---
+
+## Addendum — reboot outage + daemon recovery from the 07-17 checkpoint (2026-07-25 07:16 UTC)
+
+The soak daemon was **DEAD for 7.7 days**. A host reboot killed it and nothing
+brought it back: `nohup` survives a logout but not a shutdown, and no supervisor
+was installed at the time. Recovery below is **resume-and-note**, not backfill —
+the lost cycles stay lost, on the record.
+
+### The outage
+
+- **Last good cycle:** `2026-07-17 02:55:00 UTC` — checkpoint `2026-07-17.json`,
+  MD5 **`0e687729471458f9aed1c9ac949e7943`**, equity **$99,433.31**, realised
+  **−$616.93**, 3 open positions.
+- **Death:** `2026-07-17T22:38:32+1000` — `scheduler_shutdown_signal signum 15`
+  → `graceful shutdown after current cycle`. The **OS shutdown sent SIGTERM**, so
+  the daemon exited *cleanly*; no cycle was lost mid-flight and no state was
+  corrupted. The Mac rebooted at **22:47 AEST**.
+- **Nothing restarted it.** All prior daemon PIDs (20144 / 68916 / 38468 / 53422)
+  are dead; `logs/daemon.pid` still read **53422** (stale — `kill -0` = no such
+  process). Removed before relaunch.
+- **Missing window: 2026-07-18 → 2026-07-25 inclusive — 8 scheduled ticks,
+  ~7.7 days.**
+
+### What the gap costs (honest accounting)
+
+The strategy resumed **from the state as of 2026-07-17**, *not* from the state it
+would have had if it had been running. Concretely:
+
+- The 8 cycles that would have fired never fired. Any entries, exits, stop-loss
+  closes or mark-to-market moves in that window **do not exist and cannot be
+  reconstructed** — the live-paper path is a forward-only feed, not a replayable
+  snapshot.
+- The 3 open positions were carried across the gap at their **07-17 entry marks**
+  with their **07-17 `exit_at_cycle` hold schedules** (cycle-indexed, not
+  date-indexed), so they resume as if no time passed. They are now stale relative
+  to real price action.
+- **The soak's recent-N accrual pauses at the 07-17 count** — the gap contributes
+  0 windows toward the `recent-N >= 20` resume gate.
+- The scheduler **does not backfill**: `DailyScheduler.next_target` picks
+  `max(tomorrow, last_completed+1)` and returns a single future instant — there is
+  no catch-up loop, so no synthetic cycles were fabricated against today's feeds.
+  Verified: next target **2026-07-26 02:55:00 UTC**.
+
+### Recovery (Part A)
+
+- **Preflight:** `prepare_session.sh` clean (`2248c4e`, branch main); gamma mount
+  reachable; checkpoint `2026-07-17.json` MD5-verified against its `.md5` sidecar
+  (match); `ps` showed **no** surviving live_paper process; stale `daemon.pid`
+  removed; checkpoint backed up to
+  `/tmp/omega_ckpt_backup_2026-07-17_prereboot.json`.
+- **Relaunch:** `scripts/live_paper_daemon.sh --mode forward`, launch env
+  reproduced exactly as the last known-good start — `harness/.env` sourced (real
+  `FRED_API_KEY` (32 chars) + `DATABASE_URL`), `OMEGA_AUDIT_OUTPUT_DIR` =
+  `…/live_paper_v253_smoke_v2`, `LIVE_PAPER_ENABLED=1`, `SCHEDULER_ENABLED=1`,
+  `SCHEDULER_TICK_UTC=02:55:00`, V240-selective `VICTORIA_FEATURES`
+  (`crisis_skew_enabled` + `crisis_skew_regime_gate_enabled` + dd 0.12 +
+  `universe_selective_enabled`, all else adopted defaults — matches
+  `scripts/v252_reconcile_smoke.py`). New **PID 31927**
+  (start `2026-07-25T07:16:35Z`).
+- **Resume — CONFIRMED:** `checkpoint_loaded last_completed_date=2026-07-17
+  equity=99433.31` → `runner_resumed from_date=2026-07-17 equity=99433.31
+  open_positions=3`. All three recovered:
+
+  | symbol | side | entry | size | opened | exit_at_cycle |
+  |---|---|---|---|---|---|
+  | ARBUSDT | long | 0.0877 | 5 507.91 | 2026-07-16 | 8 |
+  | ETHUSDT | long | 1844.24 | 3 265.32 | 2026-07-17 | 9 |
+  | POLUSDT | long | 0.08189 | 7 506.71 | 2026-07-17 | 9 |
+
+- **Live-cycle proof (scratch dir, prod checkpoint untouched):** a one-shot
+  `--max-cycles 1 --mode forward` through the full daemon entrypoint returned
+  `feeds_blocked=[]`, `signals_ok=true`, `strategy_ok=true`,
+  `regime="bull" regime_source="hmm"` (hmmlearn `GaussianHMM` fitted,
+  `fit_quality=2.4221`), **4 proposals → 3 fills**, checkpoint written and its MD5
+  re-verified against the sidecar. FRED resolves live (DGS2 4.37 / DGS10 4.71 @
+  2026-07-23, DXY 120.53, VIX 18.58) — no `DEMO_KEY` degradation. Prod checkpoint
+  MD5 `0e6877…7943` **unchanged** by the probe; scratch dir deleted after.
+- **One writer:** `pgrep -fl live_paper_daemon.py` → exactly one process (31927).
+
+**Guardrails honored:** zero strategy code touched (operational recovery only);
+live-**paper** only, no broker/orders/funds; checkpoint state preserved, never
+wiped; single daemon process.
