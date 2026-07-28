@@ -1,0 +1,1062 @@
+{
+  "_diagnostic_scale": 0.204124,
+  "_falsifier": "V262-2 F4 (regime independence)",
+  "_macro_source": "data/walk_forward_manifest.json",
+  "_macro_windows": 32,
+  "_method": "Cramer's V over (hourly 90-bar regime label x macro-day 90-day regime label)",
+  "_source": "data/frozen_series/binance_intraday/{symbol}/1h/*.json.gz",
+  "_thresholds": {
+    "crisis_max_dd": 0.3,
+    "crisis_ret": -0.15,
+    "f4_cut": 0.7,
+    "hourly_stride_bars": 90,
+    "hourly_window_bars": 90,
+    "trend_ret": 0.2
+  },
+  "diagnostic_scaled": {
+    "n_degenerate": 0,
+    "n_names": 10,
+    "per_name": [
+      {
+        "agreement_rate": 0.409836,
+        "contingency": {
+          "crisis": {
+            "crisis": 141,
+            "recent": 64,
+            "trend": 132
+          },
+          "recent": {
+            "crisis": 21,
+            "recent": 17,
+            "trend": 7
+          },
+          "trend": {
+            "crisis": 13,
+            "recent": 15,
+            "trend": 17
+          }
+        },
+        "cramers_v": 0.140956,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 337,
+          "recent": 45,
+          "trend": 45
+        },
+        "hourly_top_class_frac": 0.789227,
+        "macro_label_counts": {
+          "crisis": 175,
+          "recent": 96,
+          "trend": 156
+        },
+        "n_windows": 427,
+        "normalized_mi": 0.031213,
+        "skipped_windows": 152,
+        "symbol": "SOLUSDT"
+      },
+      {
+        "agreement_rate": 0.417695,
+        "contingency": {
+          "crisis": {
+            "crisis": 113,
+            "recent": 31,
+            "trend": 85
+          },
+          "recent": {
+            "crisis": 58,
+            "recent": 47,
+            "trend": 52
+          },
+          "trend": {
+            "crisis": 39,
+            "recent": 18,
+            "trend": 43
+          }
+        },
+        "cramers_v": 0.137286,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 229,
+          "recent": 157,
+          "trend": 100
+        },
+        "hourly_top_class_frac": 0.471193,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.017454,
+        "skipped_windows": 152,
+        "symbol": "BNBUSDT"
+      },
+      {
+        "agreement_rate": 0.423077,
+        "contingency": {
+          "crisis": {
+            "crisis": 135,
+            "recent": 62,
+            "trend": 128
+          },
+          "recent": {
+            "crisis": 14,
+            "recent": 22,
+            "trend": 9
+          },
+          "trend": {
+            "crisis": 15,
+            "recent": 12,
+            "trend": 19
+          }
+        },
+        "cramers_v": 0.159949,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 325,
+          "recent": 45,
+          "trend": 46
+        },
+        "hourly_top_class_frac": 0.78125,
+        "macro_label_counts": {
+          "crisis": 164,
+          "recent": 96,
+          "trend": 156
+        },
+        "n_windows": 416,
+        "normalized_mi": 0.033858,
+        "skipped_windows": 152,
+        "symbol": "AVAXUSDT"
+      },
+      {
+        "agreement_rate": 0.403292,
+        "contingency": {
+          "crisis": {
+            "crisis": 129,
+            "recent": 44,
+            "trend": 105
+          },
+          "recent": {
+            "crisis": 53,
+            "recent": 38,
+            "trend": 46
+          },
+          "trend": {
+            "crisis": 28,
+            "recent": 14,
+            "trend": 29
+          }
+        },
+        "cramers_v": 0.095636,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 278,
+          "recent": 137,
+          "trend": 71
+        },
+        "hourly_top_class_frac": 0.572016,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.009211,
+        "skipped_windows": 152,
+        "symbol": "XRPUSDT"
+      },
+      {
+        "agreement_rate": 0.450617,
+        "contingency": {
+          "crisis": {
+            "crisis": 57,
+            "recent": 35,
+            "trend": 38
+          },
+          "recent": {
+            "crisis": 6,
+            "recent": 7,
+            "trend": 1
+          },
+          "trend": {
+            "crisis": 4,
+            "recent": 5,
+            "trend": 9
+          }
+        },
+        "cramers_v": 0.167069,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 130,
+          "recent": 14,
+          "trend": 18
+        },
+        "hourly_top_class_frac": 0.802469,
+        "macro_label_counts": {
+          "crisis": 67,
+          "recent": 47,
+          "trend": 48
+        },
+        "n_windows": 162,
+        "normalized_mi": 0.046929,
+        "skipped_windows": 152,
+        "symbol": "SUIUSDT"
+      },
+      {
+        "agreement_rate": 0.517241,
+        "contingency": {
+          "crisis": {
+            "crisis": 7,
+            "recent": 2,
+            "trend": 9
+          },
+          "recent": {
+            "recent": 6,
+            "trend": 1
+          },
+          "trend": {
+            "recent": 2,
+            "trend": 2
+          }
+        },
+        "cramers_v": 0.497813,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 18,
+          "recent": 7,
+          "trend": 4
+        },
+        "hourly_top_class_frac": 0.62069,
+        "macro_label_counts": {
+          "crisis": 7,
+          "recent": 10,
+          "trend": 12
+        },
+        "n_windows": 29,
+        "normalized_mi": 0.313628,
+        "skipped_windows": 152,
+        "symbol": "POLUSDT"
+      },
+      {
+        "agreement_rate": 0.421811,
+        "contingency": {
+          "crisis": {
+            "crisis": 143,
+            "recent": 54,
+            "trend": 128
+          },
+          "recent": {
+            "crisis": 40,
+            "recent": 28,
+            "trend": 18
+          },
+          "trend": {
+            "crisis": 27,
+            "recent": 14,
+            "trend": 34
+          }
+        },
+        "cramers_v": 0.135594,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 325,
+          "recent": 86,
+          "trend": 75
+        },
+        "hourly_top_class_frac": 0.668724,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.021275,
+        "skipped_windows": 152,
+        "symbol": "ADAUSDT"
+      },
+      {
+        "agreement_rate": 0.426829,
+        "contingency": {
+          "crisis": {
+            "crisis": 136,
+            "recent": 63,
+            "trend": 132
+          },
+          "recent": {
+            "crisis": 17,
+            "recent": 17,
+            "trend": 2
+          },
+          "trend": {
+            "crisis": 10,
+            "recent": 11,
+            "trend": 22
+          }
+        },
+        "cramers_v": 0.183775,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 331,
+          "recent": 36,
+          "trend": 43
+        },
+        "hourly_top_class_frac": 0.807317,
+        "macro_label_counts": {
+          "crisis": 163,
+          "recent": 91,
+          "trend": 156
+        },
+        "n_windows": 410,
+        "normalized_mi": 0.061192,
+        "skipped_windows": 152,
+        "symbol": "NEARUSDT"
+      },
+      {
+        "agreement_rate": 0.421965,
+        "contingency": {
+          "crisis": {
+            "crisis": 51,
+            "recent": 37,
+            "trend": 33
+          },
+          "recent": {
+            "crisis": 11,
+            "recent": 9,
+            "trend": 2
+          },
+          "trend": {
+            "crisis": 6,
+            "recent": 11,
+            "trend": 13
+          }
+        },
+        "cramers_v": 0.169026,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 121,
+          "recent": 22,
+          "trend": 30
+        },
+        "hourly_top_class_frac": 0.699422,
+        "macro_label_counts": {
+          "crisis": 68,
+          "recent": 57,
+          "trend": 48
+        },
+        "n_windows": 173,
+        "normalized_mi": 0.039051,
+        "skipped_windows": 152,
+        "symbol": "ARBUSDT"
+      },
+      {
+        "agreement_rate": 0.412281,
+        "contingency": {
+          "crisis": {
+            "crisis": 147,
+            "recent": 59,
+            "trend": 131
+          },
+          "recent": {
+            "crisis": 28,
+            "recent": 17,
+            "trend": 13
+          },
+          "trend": {
+            "crisis": 28,
+            "recent": 9,
+            "trend": 24
+          }
+        },
+        "cramers_v": 0.095387,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 337,
+          "recent": 58,
+          "trend": 61
+        },
+        "hourly_top_class_frac": 0.739035,
+        "macro_label_counts": {
+          "crisis": 203,
+          "recent": 85,
+          "trend": 168
+        },
+        "n_windows": 456,
+        "normalized_mi": 0.012107,
+        "skipped_windows": 0,
+        "symbol": "MATICUSDT"
+      }
+    ],
+    "secondary_per_name": [
+      {
+        "agreement_rate": 0.372428,
+        "contingency": {
+          "crisis": {
+            "crisis": 81,
+            "recent": 23,
+            "trend": 64
+          },
+          "recent": {
+            "crisis": 96,
+            "recent": 52,
+            "trend": 68
+          },
+          "trend": {
+            "crisis": 33,
+            "recent": 21,
+            "trend": 48
+          }
+        },
+        "cramers_v": 0.118517,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 168,
+          "recent": 216,
+          "trend": 102
+        },
+        "hourly_top_class_frac": 0.444444,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.013713,
+        "skipped_windows": 152,
+        "symbol": "BTCUSDT"
+      },
+      {
+        "agreement_rate": 0.407407,
+        "contingency": {
+          "crisis": {
+            "crisis": 108,
+            "recent": 35,
+            "trend": 89
+          },
+          "recent": {
+            "crisis": 59,
+            "recent": 41,
+            "trend": 42
+          },
+          "trend": {
+            "crisis": 43,
+            "recent": 20,
+            "trend": 49
+          }
+        },
+        "cramers_v": 0.118457,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 232,
+          "recent": 142,
+          "trend": 112
+        },
+        "hourly_top_class_frac": 0.477366,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.012939,
+        "skipped_windows": 152,
+        "symbol": "ETHUSDT"
+      },
+      {
+        "agreement_rate": 0.428235,
+        "contingency": {
+          "crisis": {
+            "crisis": 119,
+            "recent": 52,
+            "trend": 111
+          },
+          "recent": {
+            "crisis": 35,
+            "recent": 34,
+            "trend": 16
+          },
+          "trend": {
+            "crisis": 19,
+            "recent": 10,
+            "trend": 29
+          }
+        },
+        "cramers_v": 0.175196,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 282,
+          "recent": 85,
+          "trend": 58
+        },
+        "hourly_top_class_frac": 0.663529,
+        "macro_label_counts": {
+          "crisis": 173,
+          "recent": 96,
+          "trend": 156
+        },
+        "n_windows": 425,
+        "normalized_mi": 0.034701,
+        "skipped_windows": 152,
+        "symbol": "DOTUSDT"
+      },
+      {
+        "agreement_rate": 0.430041,
+        "contingency": {
+          "crisis": {
+            "crisis": 158,
+            "recent": 55,
+            "trend": 130
+          },
+          "recent": {
+            "crisis": 16,
+            "recent": 20,
+            "trend": 19
+          },
+          "trend": {
+            "crisis": 36,
+            "recent": 21,
+            "trend": 31
+          }
+        },
+        "cramers_v": 0.121575,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 343,
+          "recent": 55,
+          "trend": 88
+        },
+        "hourly_top_class_frac": 0.705761,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.017019,
+        "skipped_windows": 152,
+        "symbol": "LINKUSDT"
+      }
+    ],
+    "universe_max_cramers_v": 0.497813,
+    "universe_mean_cramers_v": 0.178249
+  },
+  "primary": {
+    "n_degenerate": 5,
+    "n_names": 10,
+    "per_name": [
+      {
+        "agreement_rate": 0.290398,
+        "contingency": {
+          "crisis": {
+            "crisis": 18,
+            "recent": 3,
+            "trend": 5
+          },
+          "recent": {
+            "crisis": 148,
+            "recent": 89,
+            "trend": 134
+          },
+          "trend": {
+            "crisis": 9,
+            "recent": 4,
+            "trend": 17
+          }
+        },
+        "cramers_v": 0.129881,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 26,
+          "recent": 371,
+          "trend": 30
+        },
+        "hourly_top_class_frac": 0.868852,
+        "macro_label_counts": {
+          "crisis": 175,
+          "recent": 96,
+          "trend": 156
+        },
+        "n_windows": 427,
+        "normalized_mi": 0.034401,
+        "skipped_windows": 152,
+        "symbol": "SOLUSDT"
+      },
+      {
+        "agreement_rate": 0.222222,
+        "contingency": {
+          "crisis": {
+            "crisis": 9,
+            "trend": 3
+          },
+          "recent": {
+            "crisis": 197,
+            "recent": 95,
+            "trend": 173
+          },
+          "trend": {
+            "crisis": 4,
+            "recent": 1,
+            "trend": 4
+          }
+        },
+        "cramers_v": 0.08058,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 12,
+          "recent": 465,
+          "trend": 9
+        },
+        "hourly_top_class_frac": 0.95679,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.041088,
+        "skipped_windows": 152,
+        "symbol": "BNBUSDT"
+      },
+      {
+        "agreement_rate": 0.319712,
+        "contingency": {
+          "crisis": {
+            "crisis": 19,
+            "recent": 2,
+            "trend": 8
+          },
+          "recent": {
+            "crisis": 141,
+            "recent": 93,
+            "trend": 127
+          },
+          "trend": {
+            "crisis": 4,
+            "recent": 1,
+            "trend": 21
+          }
+        },
+        "cramers_v": 0.195118,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 29,
+          "recent": 361,
+          "trend": 26
+        },
+        "hourly_top_class_frac": 0.867788,
+        "macro_label_counts": {
+          "crisis": 164,
+          "recent": 96,
+          "trend": 156
+        },
+        "n_windows": 416,
+        "normalized_mi": 0.080541,
+        "skipped_windows": 152,
+        "symbol": "AVAXUSDT"
+      },
+      {
+        "agreement_rate": 0.234568,
+        "contingency": {
+          "crisis": {
+            "crisis": 10,
+            "recent": 1,
+            "trend": 7
+          },
+          "recent": {
+            "crisis": 191,
+            "recent": 94,
+            "trend": 163
+          },
+          "trend": {
+            "crisis": 9,
+            "recent": 1,
+            "trend": 10
+          }
+        },
+        "cramers_v": 0.078848,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 18,
+          "recent": 448,
+          "trend": 20
+        },
+        "hourly_top_class_frac": 0.921811,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.023744,
+        "skipped_windows": 152,
+        "symbol": "XRPUSDT"
+      },
+      {
+        "agreement_rate": 0.333333,
+        "contingency": {
+          "crisis": {
+            "crisis": 3,
+            "trend": 2
+          },
+          "recent": {
+            "crisis": 62,
+            "recent": 46,
+            "trend": 41
+          },
+          "trend": {
+            "crisis": 2,
+            "recent": 1,
+            "trend": 5
+          }
+        },
+        "cramers_v": 0.143193,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 5,
+          "recent": 149,
+          "trend": 8
+        },
+        "hourly_top_class_frac": 0.919753,
+        "macro_label_counts": {
+          "crisis": 67,
+          "recent": 47,
+          "trend": 48
+        },
+        "n_windows": 162,
+        "normalized_mi": 0.070527,
+        "skipped_windows": 152,
+        "symbol": "SUIUSDT"
+      },
+      {
+        "agreement_rate": 0.482759,
+        "contingency": {
+          "crisis": {
+            "crisis": 1
+          },
+          "recent": {
+            "crisis": 6,
+            "recent": 10,
+            "trend": 9
+          },
+          "trend": {
+            "trend": 3
+          }
+        },
+        "cramers_v": 0.36645,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 1,
+          "recent": 25,
+          "trend": 3
+        },
+        "hourly_top_class_frac": 0.862069,
+        "macro_label_counts": {
+          "crisis": 7,
+          "recent": 10,
+          "trend": 12
+        },
+        "n_windows": 29,
+        "normalized_mi": 0.307192,
+        "skipped_windows": 152,
+        "symbol": "POLUSDT"
+      },
+      {
+        "agreement_rate": 0.244856,
+        "contingency": {
+          "crisis": {
+            "crisis": 11,
+            "recent": 3,
+            "trend": 2
+          },
+          "recent": {
+            "crisis": 193,
+            "recent": 93,
+            "trend": 163
+          },
+          "trend": {
+            "crisis": 6,
+            "trend": 15
+          }
+        },
+        "cramers_v": 0.133025,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 16,
+          "recent": 449,
+          "trend": 21
+        },
+        "hourly_top_class_frac": 0.923868,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.065886,
+        "skipped_windows": 152,
+        "symbol": "ADAUSDT"
+      },
+      {
+        "agreement_rate": 0.290244,
+        "contingency": {
+          "crisis": {
+            "crisis": 15,
+            "recent": 3,
+            "trend": 9
+          },
+          "recent": {
+            "crisis": 141,
+            "recent": 87,
+            "trend": 130
+          },
+          "trend": {
+            "crisis": 7,
+            "recent": 1,
+            "trend": 17
+          }
+        },
+        "cramers_v": 0.13458,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 27,
+          "recent": 358,
+          "trend": 25
+        },
+        "hourly_top_class_frac": 0.873171,
+        "macro_label_counts": {
+          "crisis": 163,
+          "recent": 91,
+          "trend": 156
+        },
+        "n_windows": 410,
+        "normalized_mi": 0.041438,
+        "skipped_windows": 152,
+        "symbol": "NEARUSDT"
+      },
+      {
+        "agreement_rate": 0.358382,
+        "contingency": {
+          "crisis": {
+            "crisis": 4,
+            "recent": 1
+          },
+          "recent": {
+            "crisis": 63,
+            "recent": 55,
+            "trend": 45
+          },
+          "trend": {
+            "crisis": 1,
+            "recent": 1,
+            "trend": 3
+          }
+        },
+        "cramers_v": 0.136022,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 5,
+          "recent": 163,
+          "trend": 5
+        },
+        "hourly_top_class_frac": 0.942197,
+        "macro_label_counts": {
+          "crisis": 68,
+          "recent": 57,
+          "trend": 48
+        },
+        "n_windows": 173,
+        "normalized_mi": 0.077692,
+        "skipped_windows": 152,
+        "symbol": "ARBUSDT"
+      },
+      {
+        "agreement_rate": 0.245614,
+        "contingency": {
+          "crisis": {
+            "crisis": 18,
+            "recent": 2,
+            "trend": 6
+          },
+          "recent": {
+            "crisis": 177,
+            "recent": 78,
+            "trend": 146
+          },
+          "trend": {
+            "crisis": 8,
+            "recent": 5,
+            "trend": 16
+          }
+        },
+        "cramers_v": 0.11128,
+        "degenerate": false,
+        "hourly_label_counts": {
+          "crisis": 26,
+          "recent": 401,
+          "trend": 29
+        },
+        "hourly_top_class_frac": 0.879386,
+        "macro_label_counts": {
+          "crisis": 203,
+          "recent": 85,
+          "trend": 168
+        },
+        "n_windows": 456,
+        "normalized_mi": 0.027681,
+        "skipped_windows": 0,
+        "symbol": "MATICUSDT"
+      }
+    ],
+    "secondary_per_name": [
+      {
+        "agreement_rate": 0.216049,
+        "contingency": {
+          "crisis": {
+            "crisis": 6
+          },
+          "recent": {
+            "crisis": 203,
+            "recent": 96,
+            "trend": 177
+          },
+          "trend": {
+            "crisis": 1,
+            "trend": 3
+          }
+        },
+        "cramers_v": 0.10452,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 6,
+          "recent": 476,
+          "trend": 4
+        },
+        "hourly_top_class_frac": 0.979424,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.119786,
+        "skipped_windows": 152,
+        "symbol": "BTCUSDT"
+      },
+      {
+        "agreement_rate": 0.23251,
+        "contingency": {
+          "crisis": {
+            "crisis": 12,
+            "trend": 1
+          },
+          "recent": {
+            "crisis": 193,
+            "recent": 96,
+            "trend": 174
+          },
+          "trend": {
+            "crisis": 5,
+            "trend": 5
+          }
+        },
+        "cramers_v": 0.12786,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 13,
+          "recent": 463,
+          "trend": 10
+        },
+        "hourly_top_class_frac": 0.952675,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.092496,
+        "skipped_windows": 152,
+        "symbol": "ETHUSDT"
+      },
+      {
+        "agreement_rate": 0.28,
+        "contingency": {
+          "crisis": {
+            "crisis": 15,
+            "recent": 2,
+            "trend": 4
+          },
+          "recent": {
+            "crisis": 154,
+            "recent": 94,
+            "trend": 142
+          },
+          "trend": {
+            "crisis": 4,
+            "trend": 10
+          }
+        },
+        "cramers_v": 0.14165,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 21,
+          "recent": 390,
+          "trend": 14
+        },
+        "hourly_top_class_frac": 0.917647,
+        "macro_label_counts": {
+          "crisis": 173,
+          "recent": 96,
+          "trend": 156
+        },
+        "n_windows": 425,
+        "normalized_mi": 0.066424,
+        "skipped_windows": 152,
+        "symbol": "DOTUSDT"
+      },
+      {
+        "agreement_rate": 0.244856,
+        "contingency": {
+          "crisis": {
+            "crisis": 19,
+            "recent": 2,
+            "trend": 2
+          },
+          "recent": {
+            "crisis": 181,
+            "recent": 91,
+            "trend": 169
+          },
+          "trend": {
+            "crisis": 10,
+            "recent": 3,
+            "trend": 9
+          }
+        },
+        "cramers_v": 0.12852,
+        "degenerate": true,
+        "hourly_label_counts": {
+          "crisis": 23,
+          "recent": 441,
+          "trend": 22
+        },
+        "hourly_top_class_frac": 0.907407,
+        "macro_label_counts": {
+          "crisis": 210,
+          "recent": 96,
+          "trend": 180
+        },
+        "n_windows": 486,
+        "normalized_mi": 0.046876,
+        "skipped_windows": 152,
+        "symbol": "LINKUSDT"
+      }
+    ],
+    "universe_max_cramers_v": 0.36645,
+    "universe_mean_cramers_v": 0.150898
+  },
+  "verdict": {
+    "arm": "primary (pre-declared thresholds, unscaled)",
+    "cut": 0.7,
+    "f4": "PASS (intraday regime is orthogonal to macro-day regime)",
+    "universe_mean_cramers_v": 0.150898
+  }
+}
