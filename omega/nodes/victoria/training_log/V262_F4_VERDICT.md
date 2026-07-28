@@ -6,6 +6,18 @@
 **Artifact:** `data/v262_f4_regime_independence.json` (byte-identical on re-run,
 sha256 `aee6b687…4d9a844a`)
 
+> **⚠ CORRECTION (2026-07-28, from F4b §3) — COVERAGE, not verdict.** The V262
+> frozen corpus stores `open_ms` in **microseconds** for every name's 2025-01 →
+> 2026-07 files (19 files × 13,680 bars/name = **177,840 of 665,824 bars, 26.7%
+> of the corpus**, clean edge at 2025-01). `macro_label_at()` returns `None` for
+> those out-of-range timestamps, so **F4 silently skipped the entire
+> 2025-01→2026-07 era**; the per-name `n` below is ~24% below true coverage
+> (XRPUSDT: 638 nominal − 486 scored = 152 = 13,680/90 exactly). The **PASS is
+> not inverted** — F4b re-measured on both coverages and both land in the same
+> band — but F4's numbers are for **2020-01→2024-12 only**. The freeze
+> (`scripts/v262_freeze_intraday.py`) should be corrected before F1–F3 read the
+> corpus.
+
 **No strategy code touched. No flag flipped. Standing baseline (V240-selective:
 crisis +$599 / trend +$2,997 / recent +$30) untouched.**
 
@@ -103,6 +115,11 @@ does not by itself certify effective-N multiplication:
    independence *between consecutive hourly windows*. If adjacent 90-bar windows
    are autocorrelated, effective N grows sub-linearly in bar count. V262-2 should
    measure the lag-1 label transition matrix before quoting any N.
+   → **CLOSED 2026-07-28 by [`V262_F4b_AUTOCORRELATION_VERDICT.md`](V262_F4b_AUTOCORRELATION_VERDICT.md):
+   CAVEATED PASS.** Universe-mean lag-1 same-state = 0.8622 (below the 0.90 FAIL
+   cut), but that is almost entirely marginal skew — excess over the memoryless
+   baseline is only +1.2 points, and λ₂ ≈ 0.13 ⇒ **N_eff/N ≈ 0.78–0.87, i.e. an
+   effective multiplier of ~19–21×, NOT 24×.** Quote N_eff, never N, in F1–F3.
 2. **F3 remains the most likely killer** (V262.md §7, and the V255.B precedent:
    real 36.4% gross alpha still died at −$5.95 median net on friction). Passing F4
    moves the burden onto transaction cost, it does not lighten it.
