@@ -17,6 +17,22 @@ sha256 `aee6b687…4d9a844a`)
 > band — but F4's numbers are for **2020-01→2024-12 only**. The freeze
 > (`scripts/v262_freeze_intraday.py`) should be corrected before F1–F3 read the
 > corpus.
+>
+> **✅ RESOLVED (2026-07-30, V262-2/P0 — see
+> [`V262_F1F2F3_VERDICT.md`](V262_F1F2F3_VERDICT.md) §1).** The corpus was
+> re-frozen: the ms/µs normaliser was added at the parse site, a structural
+> "every bar inside its own month" gate now makes the defect non-recurrable, and
+> a **second** wall-clock channel (the archives-fetched count baked into the
+> daily-splice provenance string) was closed. Byte-identity re-asserted at
+> **919 identical / 0 differing / 0 missing**, with all **672** pre-2025 cells
+> preserved byte-identical. **F4 re-run on the corrected corpus: still PASS, and
+> stronger** — universe-mean Cramér's V **0.127395** (was 0.150898) vs the 0.7
+> cut; diagnostic arm 0.1782 → **0.1452**, still 0/10 degenerate. Every live name
+> gained **+137 windows** (MATIC +0, correctly — its history ends 2024-09). The
+> corrected per-name table is in the F1F2F3 verdict §1d, and it **retires the §6.4
+> POLUSDT caveat**: at its true n=166, POL's V falls 0.3664 → **0.1869**, so the
+> elevated reading was a thin-history artifact of the truncation. The per-name `n`
+> in §3 below is superseded by that table.
 
 **No strategy code touched. No flag flipped. Standing baseline (V240-selective:
 crisis +$599 / trend +$2,997 / recent +$30) untouched.**
@@ -129,6 +145,11 @@ does not by itself certify effective-N multiplication:
    justified.
 4. **POLUSDT n=29** is thin, and is the one elevated reading. It carries little
    weight but should not be quietly dropped in V262-2.
+   → **RESOLVED by the V262-2/P0 re-freeze:** the true n is **166** and V falls to
+   **0.1869**, in line with every other name. The elevated reading was an artifact
+   of the µs truncation, not a property of POL. (Separately, POL turned out to be
+   **feed-blocked** for F1–F3 — no frozen funding/OI series — and contributed 0
+   trades there; see `V262_F1F2F3_VERDICT.md` §3.)
 
 ## 7. What this task delivered
 
