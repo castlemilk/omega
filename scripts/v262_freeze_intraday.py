@@ -136,13 +136,35 @@ def _get_checked(zip_url: str) -> bytes:
 # ---------------------------------------------------------------------------
 # archive parsing
 # ---------------------------------------------------------------------------
+# Binance switched the kline CSV timestamp unit from MILLIseconds to
+# MICROseconds with the 2025-01 archives (affects both the monthly and the daily
+# path — it is an era property of the source data, not of the endpoint). Archives
+# before that era are ms. A ms epoch for any plausible span is ~1e12-1e13; the µs
+# equivalent is ~1e15-1e16, so the two are three orders of magnitude apart and a
+# single magnitude cut separates them unambiguously.
+#
+# 1e14 ms  = year 5138; 1e14 µs = 1973 — no real bar can sit near the boundary.
+_US_CUTOFF = 10**14
+
+# Placeholder emitted by the daily-splice path and substituted with a deterministic
+# retained-day count in _write_frozen. Keeps the wall-clock "archives fetched" count
+# out of frozen file content (V262-2/P0).
+_DAILY_SPLICE_TOKEN = "(daily archives: pending)"
+
+
+def _to_ms(open_time: int) -> int:
+    """Normalise a raw kline open_time to MILLIseconds (see _US_CUTOFF)."""
+    return open_time // 1000 if open_time >= _US_CUTOFF else open_time
+
+
 def _parse_klines_zip(raw: bytes) -> dict[int, list[float]]:
     """Extract {open_time_ms → [open_time_ms, o, h, l, c, v]} from a kline zip.
 
-    Kline CSV (headerless): open_time_ms, open, high, low, close, volume,
-    close_time_ms, quote_volume, trades, ...  We keep the first six columns.
-    Keyed by open_time_ms so an overlapping monthly/daily splice de-duplicates
-    deterministically.
+    Kline CSV (headerless): open_time, open, high, low, close, volume,
+    close_time, quote_volume, trades, ...  We keep the first six columns.
+    ``open_time`` is normalised to milliseconds via ``_to_ms`` — the source unit
+    changed at the 2025-01 boundary. Keyed by open_time_ms so an overlapping
+    monthly/daily splice de-duplicates deterministically.
     """
     out: dict[int, list[float]] = {}
     with zipfile.ZipFile(io.BytesIO(raw)) as zf:
@@ -152,7 +174,7 @@ def _parse_klines_zip(raw: bytes) -> dict[int, list[float]]:
             for row in csv.reader(text):
                 if not row or not row[0].lstrip("-").isdigit():
                     continue  # skip any header row defensively
-                open_ms = int(row[0])
+                open_ms = _to_ms(int(row[0]))
                 out[open_ms] = [
                     open_ms,
                     float(row[1]),
@@ -258,13 +280,50 @@ def fetch_month(
         bars.update(_parse_klines_zip(body))
         n_days += 1
         d += timedelta(days=1)
-    src = f"spot/daily/klines/{symbol}/{interval}/{month} ({n_days} daily archives)"
+    # NOTE: n_days (archives *fetched*) is a WALL-CLOCK quantity — it grows every day
+    # data.binance.vision publishes another daily archive for the partial month, even
+    # though the bars kept are bounded at now_ms. Baking it into the provenance broke
+    # byte-identity on all 13 live-symbol 2026-07 cells (V262-2/P0: bars identical,
+    # only this string differed). The retained-day count is substituted downstream in
+    # _write_frozen, where it is computed from the now_ms-bounded bars and is therefore
+    # deterministic. n_days stays local, for the progress line only.
+    src = f"spot/daily/klines/{symbol}/{interval}/{month} {_DAILY_SPLICE_TOKEN}"
     return bars, src
 
 
 # ---------------------------------------------------------------------------
 # freeze (deterministic, clock-free)
 # ---------------------------------------------------------------------------
+def _month_bounds_ms(month: str) -> tuple[int, int]:
+    """[start, end) epoch-ms of a YYYY-MM month, UTC."""
+    y, m = (int(x) for x in month.split("-"))
+    start = int(datetime(y, m, 1, tzinfo=UTC).timestamp() * 1000)
+    ny, nm = (y + 1, 1) if m == 12 else (y, m + 1)
+    end = int(datetime(ny, nm, 1, tzinfo=UTC).timestamp() * 1000)
+    return start, end
+
+
+def _assert_in_month(symbol: str, interval: str, month: str, ordered: list[list[float]]) -> None:
+    """Every bar's open_time must land inside its own month.
+
+    This is the structural gate on the unit defect V262-2/P0 fixed: the 2025-01+
+    archives silently changed ms→µs, which multiplied every open_time by 1000 and
+    threw the bars ~47,000 years into the future. Counts stayed correct (744 bars
+    is 744 bars), so the missing-bar audit was blind to it — only a bounds check
+    catches a whole-file unit error.
+    """
+    if not ordered:
+        return
+    lo, hi = _month_bounds_ms(month)
+    first, last = int(ordered[0][0]), int(ordered[-1][0])
+    if not (lo <= first < hi and lo <= last < hi):
+        raise ValueError(
+            f"{symbol}/{interval}/{month}: open_time outside its month — "
+            f"first={first} last={last} bounds=[{lo},{hi}). "
+            "Suspect a source timestamp-unit change (see _to_ms)."
+        )
+
+
 def _write_frozen(
     out_dir: Path,
     symbol: str,
@@ -275,8 +334,23 @@ def _write_frozen(
     now_ms: int | None,
 ) -> tuple[Path, str, int]:
     """Write one month's gzipped JSON + .md5 sidecar. Returns (path, md5, n_bars)."""
-    ordered = [bars[k] for k in sorted(bars)]
+    # Bound the corpus at the pinned now_ms. Without this the final (partial)
+    # month keeps growing as data.binance.vision publishes more daily archives,
+    # so a re-freeze days later is NOT byte-identical even with no code change —
+    # the freeze would not actually be freeze-once at its tail. expected_bars was
+    # already pinned to now_ms; this pins the bars themselves to the same edge.
+    keys = sorted(bars) if now_ms is None else sorted(k for k in bars if k < now_ms)
+    ordered = [bars[k] for k in keys]
+    _assert_in_month(symbol, interval, month, ordered)
     expected = _expected_bars(month, interval, now_ms)
+    if source.endswith(_DAILY_SPLICE_TOKEN):
+        # Clock-free replacement for the archives-fetched count (see fetch_month):
+        # distinct UTC dates among the RETAINED bars is a pure function of the
+        # now_ms-bounded data, so it reproduces on any later re-freeze.
+        n_days = len({k // 86_400_000 for k in keys})
+        source = (
+            source[: -len(_DAILY_SPLICE_TOKEN)] + f"({n_days} daily archives spliced)"
+        )
     doc = {
         "symbol": symbol,
         "interval": interval,

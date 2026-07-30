@@ -17,7 +17,7 @@
   },
   "symbols": {
     "ADAUSDT": {
-      "bytes": 1029231,
+      "bytes": 1026172,
       "first_month": "2020-01",
       "last_month": "2026-07",
       "missing_bars": 31,
@@ -383,117 +383,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 14203,
+          "bytes": 14009,
           "expected_bars": 744,
-          "md5": "02548a20aa27246872336682852384e1",
+          "md5": "91ec85e8647f3557303e3365efc76603",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 12773,
+          "bytes": 12597,
           "expected_bars": 672,
-          "md5": "1c07c8871e8c7c18c0884f1ce5ebcd45",
+          "md5": "bc2eb02ee9a43750224af2af4f1e92db",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 14111,
+          "bytes": 13922,
           "expected_bars": 744,
-          "md5": "a04895a48376a1d61da1d32d2795185c",
+          "md5": "57aa65f2468231f3ab7a469b38f76ded",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 13189,
+          "bytes": 13016,
           "expected_bars": 720,
-          "md5": "f0fc2698780a97c44109442ebf5343ac",
+          "md5": "a36c7220a6d8789234497561b3b3cfcb",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 13750,
+          "bytes": 13547,
           "expected_bars": 744,
-          "md5": "517c7dbe234a2580388d5e1423e18269",
+          "md5": "bb3ae93d23058c1d63e05b098301792b",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 13083,
+          "bytes": 12889,
           "expected_bars": 720,
-          "md5": "30db378e948dfe10421990018e4218f0",
+          "md5": "25ecd9ffd153cd66a8f3a2a3d993de10",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 14012,
+          "bytes": 13826,
           "expected_bars": 744,
-          "md5": "7fd41aee7fcd541cdde20e340159ea12",
+          "md5": "8aa091888647d9d8c2dd98898b8000ff",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 14048,
+          "bytes": 13858,
           "expected_bars": 744,
-          "md5": "87a542b48a5f309078e8227ef02e833d",
+          "md5": "0cc3a2870f2fc29003c21c3faac02933",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 13220,
+          "bytes": 13016,
           "expected_bars": 720,
-          "md5": "ded99eb23adcc5bc443bec86a6930182",
+          "md5": "ba755cc912cc76ee642ca0ab4363beef",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 13774,
+          "bytes": 13579,
           "expected_bars": 744,
-          "md5": "d55e0960df4c9e576757a43408f453ec",
+          "md5": "262659dea473f2c4add9f65e0d0e3a59",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 13203,
+          "bytes": 13015,
           "expected_bars": 720,
-          "md5": "1f0454fe66a71c12aa39041855108dad",
+          "md5": "1f6321b41cc8f8278d15853b614eba7d",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 13135,
+          "bytes": 12962,
           "expected_bars": 744,
-          "md5": "a5452a59bef3b89566f1ad7d10df1f50",
+          "md5": "bb83c2729850a60c4a054d88a6ecd2ec",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 12992,
+          "bytes": 12843,
           "expected_bars": 744,
-          "md5": "f562b7a50b1c5d8061ede72b4f9ac6f5",
+          "md5": "4d4b7f6b15f4846ad7cf878ba34b4bad",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 11582,
+          "bytes": 11452,
           "expected_bars": 672,
-          "md5": "28d0c579fa6f96ba2c033beb02b8c3e3",
+          "md5": "32dbd64ea4aef04f813465574b3cf5c6",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 12503,
+          "bytes": 12393,
           "expected_bars": 744,
-          "md5": "0f2ef8a01b3913374fc9ed2d476018c4",
+          "md5": "e9b5ecee6377fae2da267d87dbfd5e1b",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 11618,
+          "bytes": 11515,
           "expected_bars": 720,
-          "md5": "c7f5dc0deb0512d8f25ccb8a89a68982",
+          "md5": "2dc4a9773921617c1a210f2da0eed3c0",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 12173,
+          "bytes": 12073,
           "expected_bars": 744,
-          "md5": "92df1369859baeaa5314be2c8ef4f00f",
+          "md5": "855ec435e5fd81b7cce7ef25647ed9da",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 12142,
+          "bytes": 12021,
           "expected_bars": 720,
-          "md5": "4ca152214c37624cf4424b0823ed0657",
+          "md5": "6e562e7e89a67270e3aebe3e1eacba64",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 9629,
+          "bytes": 9548,
           "expected_bars": 576,
-          "md5": "58c7b3e2d5aab7416ba2fd300b2d7870",
+          "md5": "9e0001011316c7514e5ebe8c34526e1b",
           "n_bars": 576
         }
       },
@@ -501,7 +501,7 @@
       "n_months": 79
     },
     "ARBUSDT": {
-      "bytes": 518910,
+      "bytes": 516334,
       "first_month": "2023-03",
       "last_month": "2026-07",
       "missing_bars": 544,
@@ -639,117 +639,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 13929,
+          "bytes": 13756,
           "expected_bars": 744,
-          "md5": "e8ef5d9096c82836e5feb5f4db182abf",
+          "md5": "7df2df49fda6aca3f1b834ad682db3c2",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 12192,
+          "bytes": 12037,
           "expected_bars": 672,
-          "md5": "8e361e160efb6e9318f9b3c4f2ed3860",
+          "md5": "a40a66ea200d71e5c7bbc4e405ba6f1c",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 13079,
+          "bytes": 12900,
           "expected_bars": 744,
-          "md5": "701b42231c8baa26f54f7543c5000eb2",
+          "md5": "cfc89d21e36884f6779e376b248512a6",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 12492,
+          "bytes": 12347,
           "expected_bars": 720,
-          "md5": "e323d847f468c02dd411a797c7158fbf",
+          "md5": "b63dccf57f37c7055649433833184d2f",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 13435,
+          "bytes": 13260,
           "expected_bars": 744,
-          "md5": "ab7377dfcf2e97f66c490c6775ae47a4",
+          "md5": "4d674f161784a151a98def1c29e77e73",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 12746,
+          "bytes": 12588,
           "expected_bars": 720,
-          "md5": "1c5a024f34d7e0bb9aff3669cad40e04",
+          "md5": "806b0444ab6908ba9e1cbd4964db6705",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 13458,
+          "bytes": 13273,
           "expected_bars": 744,
-          "md5": "d160a640f11c686780964a639b17ed76",
+          "md5": "60663e071effb279d9a04a9c16e6e428",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 13688,
+          "bytes": 13492,
           "expected_bars": 744,
-          "md5": "6ea58518b174bac9b64fc349bdbb9562",
+          "md5": "f1bbe85b0b94a17aab01cdd44fb0cdc8",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 12722,
+          "bytes": 12567,
           "expected_bars": 720,
-          "md5": "be9d04d4883a85b8308de8a4e480642d",
+          "md5": "4759400e7f81a37fa8bf6d7fe076cc13",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 13211,
+          "bytes": 13037,
           "expected_bars": 744,
-          "md5": "54f1e0d775c54665bb61d51d14046338",
+          "md5": "0e36adf5abddfbb3e133c6ef7bd995bd",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 12527,
+          "bytes": 12389,
           "expected_bars": 720,
-          "md5": "bf01b2c8225d170f9bab17e9c1e1de97",
+          "md5": "bd5a4aec90de5dc37d2115cc5e0d215a",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 12259,
+          "bytes": 12133,
           "expected_bars": 744,
-          "md5": "89d69f4adaf1303e720945db09ffd33a",
+          "md5": "60bd944ce93b5688bf91799c9f49c16f",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 12290,
+          "bytes": 12158,
           "expected_bars": 744,
-          "md5": "1aae480cd54191bf61ee5e281375707b",
+          "md5": "4b00a9995768f69d75bed35690797329",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 10972,
+          "bytes": 10863,
           "expected_bars": 672,
-          "md5": "f11d54033cfd5e28c61fe18958e57d45",
+          "md5": "d07639f3c8d104198b2e62a471f08dbe",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 11412,
+          "bytes": 11346,
           "expected_bars": 744,
-          "md5": "cdffeb509d7152f03cd36d070447598a",
+          "md5": "d8c954e59e30433a11da9aeb179753d7",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 11298,
+          "bytes": 11210,
           "expected_bars": 720,
-          "md5": "2d6f214bfafbf4f1a0a4c40c38ac1399",
+          "md5": "65e181332a9dd940abecefc43d358759",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 11823,
+          "bytes": 11728,
           "expected_bars": 744,
-          "md5": "2475624c073b80ad60160ee0235b91ec",
+          "md5": "fd377a16b5b4b10aa3485fd24d6935b2",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 11089,
+          "bytes": 11018,
           "expected_bars": 720,
-          "md5": "0e2910f429694c58df8b38f8905863dc",
+          "md5": "e3e273b9348bec05328cbbd7602a0867",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 8907,
+          "bytes": 8851,
           "expected_bars": 576,
-          "md5": "c202c43f5bed143b473b4a447ac928aa",
+          "md5": "5c23cd48257a346715114f8675f17c2d",
           "n_bars": 576
         }
       },
@@ -757,7 +757,7 @@
       "n_months": 41
     },
     "AVAXUSDT": {
-      "bytes": 872907,
+      "bytes": 869973,
       "first_month": "2020-09",
       "last_month": "2026-07",
       "missing_bars": 529,
@@ -1075,117 +1075,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 12832,
+          "bytes": 12663,
           "expected_bars": 744,
-          "md5": "b19f26d6a68cfdf249cb50bb81569cc1",
+          "md5": "d1becbc08d9e53ba91f225e39772b158",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 11407,
+          "bytes": 11246,
           "expected_bars": 672,
-          "md5": "224534178ec7db229f293ccf1562a2f6",
+          "md5": "3471ba1f7b06392feb548d84e94ab3ca",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 12354,
+          "bytes": 12179,
           "expected_bars": 744,
-          "md5": "9ba4f720dccf86a80a1f75dca9c9a2a6",
+          "md5": "e7da41d968fadcce05ff2e75b7e5bbfd",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 11774,
+          "bytes": 11616,
           "expected_bars": 720,
-          "md5": "059b51f7b875eb1fb4931788f11c9f40",
+          "md5": "728be8052987a0a940187bc339253df3",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 12407,
+          "bytes": 12254,
           "expected_bars": 744,
-          "md5": "b65581d9b8af014b43b5c619c0366804",
+          "md5": "06ca775cd54f67f4d33000fe04e96429",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 11593,
+          "bytes": 11445,
           "expected_bars": 720,
-          "md5": "5e5205f634855a2ef5509e88af8b340b",
+          "md5": "4f9ffe9381d4e19b2d0e71b0e58ef832",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 12256,
+          "bytes": 12087,
           "expected_bars": 744,
-          "md5": "d1df1957aba33de7ebb7198479a46200",
+          "md5": "18e110bdb1710e7d7753abd56b030110",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 12246,
+          "bytes": 12070,
           "expected_bars": 744,
-          "md5": "ab38a74ab5b134e90921751fd7f4918a",
+          "md5": "4b890f2caac0bb8f9010a6f961a5258a",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 12279,
+          "bytes": 12123,
           "expected_bars": 720,
-          "md5": "0209ab6f37084c8391f30d0536d77192",
+          "md5": "c6cf9304eda285384e826a7220a835a5",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 12379,
+          "bytes": 12210,
           "expected_bars": 744,
-          "md5": "60d1baa06140ad7352ad265fe827058a",
+          "md5": "66154d3c73744ce6ae42cb48c28f5375",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 11567,
+          "bytes": 11423,
           "expected_bars": 720,
-          "md5": "69a3c1f3fc2d8a658f000f30f19a9ee0",
+          "md5": "81e10f23ca759419aa91e6cabd23ecf9",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 11388,
+          "bytes": 11214,
           "expected_bars": 744,
-          "md5": "88568e96726158a2d4c010854383b0a8",
+          "md5": "f60806f79d75ec0979804ee8fa2afc2b",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 11460,
+          "bytes": 11306,
           "expected_bars": 744,
-          "md5": "6b99ce8c4c7985a64d7cd27a1a093ff3",
+          "md5": "34b1ca677cd18bcf16b7cdddc91b6900",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 10161,
+          "bytes": 10027,
           "expected_bars": 672,
-          "md5": "2135d0c08f3cda9fa9d4207d7cecb7c3",
+          "md5": "ce331bd2554642b9c6f7950fae721e66",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 10940,
+          "bytes": 10807,
           "expected_bars": 744,
-          "md5": "fc8ae8b577619aba2bf509819d427560",
+          "md5": "dd01ee2c0b6097139e28939fcbdd7e26",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 10307,
+          "bytes": 10175,
           "expected_bars": 720,
-          "md5": "051f8144aae3055d184458d73ae12a64",
+          "md5": "ce73ef398c9f8b38d4dc0fc13c14f424",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 11564,
+          "bytes": 11419,
           "expected_bars": 744,
-          "md5": "61344afbeec2f0b596381843c8a874d3",
+          "md5": "9b3b9657830cc9cea9baf1a67166709c",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 12823,
+          "bytes": 12658,
           "expected_bars": 720,
-          "md5": "fa54781220d3b061292f4d605cd906de",
+          "md5": "356d374834d59ae9a18d3e07741f0775",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 9853,
+          "bytes": 9734,
           "expected_bars": 576,
-          "md5": "33087b0efeba1e9cba92a5456911d05d",
+          "md5": "f312c031365980a74356bf027e302216",
           "n_bars": 576
         }
       },
@@ -1193,7 +1193,7 @@
       "n_months": 71
     },
     "BNBUSDT": {
-      "bytes": 1074042,
+      "bytes": 1070641,
       "first_month": "2020-01",
       "last_month": "2026-07",
       "missing_bars": 31,
@@ -1559,117 +1559,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 14411,
+          "bytes": 14246,
           "expected_bars": 744,
-          "md5": "ad808ec0cbacf0121586d253691c2abd",
+          "md5": "e471148ad8be35ffc85790025e5bbe7c",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 13601,
+          "bytes": 13437,
           "expected_bars": 672,
-          "md5": "f3f325adfc08b0f91091a21533fd36e1",
+          "md5": "0d73a966843f886b6d5975e8cb57c059",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 14700,
+          "bytes": 14510,
           "expected_bars": 744,
-          "md5": "add718f9aba4471013d0dfa3453664db",
+          "md5": "977c96bc9e6b1b4c9ba1e4a3a19c8e0d",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 13814,
+          "bytes": 13646,
           "expected_bars": 720,
-          "md5": "202166483156ea159d2e752544a23c08",
+          "md5": "49dfb6bd78f6ffc4fcbcba75c9c97d93",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 14484,
+          "bytes": 14307,
           "expected_bars": 744,
-          "md5": "659533410b8a567555792a3de87c9ca3",
+          "md5": "aa20f85f430afdbf315ad31874e16263",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 13605,
+          "bytes": 13433,
           "expected_bars": 720,
-          "md5": "01e44a35c20d93acc825cafdecf80a04",
+          "md5": "0e0af4506925aa9445262c0106231c8e",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 14608,
+          "bytes": 14402,
           "expected_bars": 744,
-          "md5": "0be1eab61185e2ef492c1d7635559dd8",
+          "md5": "5a83b200559aeb719ed53e1e43af183a",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 14783,
+          "bytes": 14579,
           "expected_bars": 744,
-          "md5": "10d8739d0d6f3fe7fcb51d12a700a795",
+          "md5": "29b3b9735597ac4f4def891c14f32a20",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 14448,
+          "bytes": 14268,
           "expected_bars": 720,
-          "md5": "40335e5f98d895c3dbfcf0f0bc0f0956",
+          "md5": "2df7c4b6634109fa49ba136b8f8590b8",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 15748,
+          "bytes": 15613,
           "expected_bars": 744,
-          "md5": "94f40032e1d7fb4cd92175beb7b613d2",
+          "md5": "3ca527c98156a6dc0c36f0e1c9ee9c5b",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 14578,
+          "bytes": 14388,
           "expected_bars": 720,
-          "md5": "9446fdebb8871a0b1ab3a7c2d51cf194",
+          "md5": "d3c3fb9ba12bf2febefd23417b51e726",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 14571,
+          "bytes": 14385,
           "expected_bars": 744,
-          "md5": "707df28e172310127edf515e1fcb097f",
+          "md5": "22ae589a139b3e2722d2901685f226dc",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 14697,
+          "bytes": 14489,
           "expected_bars": 744,
-          "md5": "0b03900ef22fa323c774478a9255ff55",
+          "md5": "044237256d21f617e98ac1d4c0ccf3d5",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 13391,
+          "bytes": 13209,
           "expected_bars": 672,
-          "md5": "7911dd46aae78c7daa3282573f0d49b9",
+          "md5": "333efd6a5b88cff3f6de9f99f028719c",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 14473,
+          "bytes": 14291,
           "expected_bars": 744,
-          "md5": "882002494b8a4b35db8d845b9713073c",
+          "md5": "693753d55d67df98cb1318721aa99ea3",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 13795,
+          "bytes": 13597,
           "expected_bars": 720,
-          "md5": "789f706e3971d9f098da5deff477ef54",
+          "md5": "f46da75d8ae486721dbafcff77061487",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 14265,
+          "bytes": 14097,
           "expected_bars": 744,
-          "md5": "87e66d041857aa92784ac37cebe577f3",
+          "md5": "93fc4fa8f7aed6aa21f37549dcca6cd1",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 14199,
+          "bytes": 14000,
           "expected_bars": 720,
-          "md5": "97c6b781c4df4234cdb22e4609f1951e",
+          "md5": "1ed046e513be8d7d8f9ff3f3a91141fe",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 10959,
+          "bytes": 10832,
           "expected_bars": 576,
-          "md5": "96b84653f674ee5ae6ce91f23ea51543",
+          "md5": "2d5cb1b009caf119c336b3efd5d6b89f",
           "n_bars": 576
         }
       },
@@ -1677,7 +1677,7 @@
       "n_months": 79
     },
     "BTCUSDT": {
-      "bytes": 1391654,
+      "bytes": 1387925,
       "first_month": "2020-01",
       "last_month": "2026-07",
       "missing_bars": 31,
@@ -2043,117 +2043,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 18522,
+          "bytes": 18326,
           "expected_bars": 744,
-          "md5": "e1f0ecd42dc9b1ceed9d3516d278f3f7",
+          "md5": "eb75a021244861625fbe78bdb4e2a181",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 16556,
+          "bytes": 16342,
           "expected_bars": 672,
-          "md5": "e2377bc9f8c5406dbf6a5b9898f768c5",
+          "md5": "9b07ac9a474cc7ecb096719395e0a28a",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 18402,
+          "bytes": 18161,
           "expected_bars": 744,
-          "md5": "607a476cd3420e88b619f9d59252e364",
+          "md5": "cc132d6934989fa712f7bcaaa46472bb",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 17627,
+          "bytes": 17376,
           "expected_bars": 720,
-          "md5": "6eb0ce752d10cb416d136edaabd896cd",
+          "md5": "c9ab002bbaa4887bcdd90aebfe26dcf7",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 18265,
+          "bytes": 18094,
           "expected_bars": 744,
-          "md5": "8f0b342439627825244f1be0e45fdc8d",
+          "md5": "ddb75ad58c91fbd80195f5ad45d5d0a5",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 17591,
+          "bytes": 17453,
           "expected_bars": 720,
-          "md5": "a44d9415b0edbba1330899d845692c13",
+          "md5": "933bae97ca5f5b5c4e25433f1cae2d6b",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 18003,
+          "bytes": 17845,
           "expected_bars": 744,
-          "md5": "ffffb84d3566ac9c96b80b0f1d731e0e",
+          "md5": "c06492cd844edfe5a86066bb3699bda7",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 18163,
+          "bytes": 18041,
           "expected_bars": 744,
-          "md5": "6845d2e740d62d27e3086a2ac6d1982f",
+          "md5": "11d92e04848066086750e0ec6a8ff1c0",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 17513,
+          "bytes": 17385,
           "expected_bars": 720,
-          "md5": "cfaffababa818e378ce9577f0c94f74c",
+          "md5": "7117fbc3488d25c8654282fe3c7431bf",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 18444,
+          "bytes": 18324,
           "expected_bars": 744,
-          "md5": "9447e943499962c7da303a4a36882992",
+          "md5": "a7d6a1e3c77eb522711c0d947c812667",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 17944,
+          "bytes": 17727,
           "expected_bars": 720,
-          "md5": "0a662cf952cd23a9bed60eba72a0c6ad",
+          "md5": "3998fa65878a0db157af1b1d4e053686",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 18129,
+          "bytes": 17894,
           "expected_bars": 744,
-          "md5": "89a3a487b3bf616bbf24e20d1886af21",
+          "md5": "f536ecc31bb2f57287ebc9804a078c30",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 18080,
+          "bytes": 17818,
           "expected_bars": 744,
-          "md5": "5c1cb0035ece4587d3eea1f335ea0b56",
+          "md5": "dacf8cc2a2a83c7c917ae676424fc8c2",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 16586,
+          "bytes": 16374,
           "expected_bars": 672,
-          "md5": "741777814172cd960fb35067452ee2a1",
+          "md5": "e243fb298ddc3d18d95ec82781671083",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 18353,
+          "bytes": 18116,
           "expected_bars": 744,
-          "md5": "fb6476baab3fc1ba76d9271fc4edcbf9",
+          "md5": "ab7a339dd2c8b92cd34a5573046aa74a",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 17495,
+          "bytes": 17254,
           "expected_bars": 720,
-          "md5": "d36290d9c484e6789447a5929e5244c8",
+          "md5": "be18c97ac7dc0d3801bd255797786ee3",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 17822,
+          "bytes": 17621,
           "expected_bars": 744,
-          "md5": "a538cfd8c4e2cde5279d96913eef6609",
+          "md5": "9fe203f9bcb6bbdca3f9e9cd67697dec",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 17218,
+          "bytes": 17004,
           "expected_bars": 720,
-          "md5": "08dc6959dcafc8c85af12325cf421c91",
+          "md5": "a757dcc3deafdc58c0528ec3e33be343",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 13752,
+          "bytes": 13581,
           "expected_bars": 576,
-          "md5": "5fbad257566ae5e48fa32eb77685b4fc",
+          "md5": "32286893e075575ad11a30f56a654cda",
           "n_bars": 576
         }
       },
@@ -2161,7 +2161,7 @@
       "n_months": 79
     },
     "DOTUSDT": {
-      "bytes": 911317,
+      "bytes": 908349,
       "first_month": "2020-08",
       "last_month": "2026-07",
       "missing_bars": 450,
@@ -2485,117 +2485,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 13553,
+          "bytes": 13400,
           "expected_bars": 744,
-          "md5": "9211e9be5c10dddd302a37fe0c409e17",
+          "md5": "ee926a8ea6523f69f9133eae54e5c289",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 12161,
+          "bytes": 12011,
           "expected_bars": 672,
-          "md5": "7870ed96d70191dcee5dc49bfd0515f0",
+          "md5": "41f88082625d198f4a73290a3d092bef",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 13196,
+          "bytes": 13034,
           "expected_bars": 744,
-          "md5": "a1f40d773624945127ae3e27bce017e3",
+          "md5": "e83eb3faeef13705c665a6bdeab54428",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 12581,
+          "bytes": 12434,
           "expected_bars": 720,
-          "md5": "2bcc78ab8594b02a926d2d349260f4bc",
+          "md5": "3c2ea9ed4677220641ec5ba1ce6c282b",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 13171,
+          "bytes": 13024,
           "expected_bars": 744,
-          "md5": "b38b87a4aab2f8ed966ac836d7175941",
+          "md5": "c98eeb9d710997f2b7dd6a06c9a6300e",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 12394,
+          "bytes": 12249,
           "expected_bars": 720,
-          "md5": "2811a702b36eb09165740ff228c412dd",
+          "md5": "23d35f5d416bf1cc70ed9b9d66049e82",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 13019,
+          "bytes": 12877,
           "expected_bars": 744,
-          "md5": "1059d7d98bbcf2b4ac533da9d883eee4",
+          "md5": "2e89bb1b400e1ee8b11e6d4e4905c1c2",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 12935,
+          "bytes": 12770,
           "expected_bars": 744,
-          "md5": "f45d101e49674272b9ed8e977b58c096",
+          "md5": "91fb182de2664f190358c115c0b38a21",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 12449,
+          "bytes": 12294,
           "expected_bars": 720,
-          "md5": "f678c32f6668acc704f98726a276e19d",
+          "md5": "66cac6ccca66a9271e4f718795bc4812",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 12952,
+          "bytes": 12773,
           "expected_bars": 744,
-          "md5": "f55f6df237d9e590f684c88274c1cf3d",
+          "md5": "8e07435b58ba485c595aa5761c735bec",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 12496,
+          "bytes": 12346,
           "expected_bars": 720,
-          "md5": "714f636f304e66738fb382673face79a",
+          "md5": "0b907386788b472751698e6b314ca525",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 12232,
+          "bytes": 12060,
           "expected_bars": 744,
-          "md5": "768aeca99d7173dc903035c3b1c6e6b7",
+          "md5": "9ae4eb702798792cd60bea7e0c3d00e9",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 12313,
+          "bytes": 12155,
           "expected_bars": 744,
-          "md5": "8a1aa24ea08aae1d7f1ff47cc72f8c1a",
+          "md5": "216072da1bd76e8e3f611ce9eb4d075f",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 11043,
+          "bytes": 10867,
           "expected_bars": 672,
-          "md5": "3b7becfd44f1615d7b8195f54092a4c4",
+          "md5": "f83ff0327300a44a79e893fa349d9cbe",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 11928,
+          "bytes": 11751,
           "expected_bars": 744,
-          "md5": "645ebec8b913b660f0a52a435c11b268",
+          "md5": "dfd3007d002a5ea8b4ac7ef46c685899",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 11096,
+          "bytes": 10922,
           "expected_bars": 720,
-          "md5": "341f697cb7bcfa141ec99f6bec44ada7",
+          "md5": "35df3a46afbd9867e267501a6475f9d9",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 11574,
+          "bytes": 11405,
           "expected_bars": 744,
-          "md5": "dc682d081085ed4a2c1e25099b4d8d99",
+          "md5": "68b54641a48c12f7825065711806adfc",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 11292,
+          "bytes": 11141,
           "expected_bars": 720,
-          "md5": "61b02e255a8eac00709fff952117def1",
+          "md5": "406367ffc9b335115f1212c7207d4048",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 8558,
+          "bytes": 8462,
           "expected_bars": 576,
-          "md5": "29aabd4188760d040ffd979633acb17c",
+          "md5": "6b057d2b9498169e48d96508d82a9de6",
           "n_bars": 576
         }
       },
@@ -2603,7 +2603,7 @@
       "n_months": 72
     },
     "ETHUSDT": {
-      "bytes": 1260575,
+      "bytes": 1257310,
       "first_month": "2020-01",
       "last_month": "2026-07",
       "missing_bars": 31,
@@ -2969,117 +2969,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 16668,
+          "bytes": 16503,
           "expected_bars": 744,
-          "md5": "8aff32b7eb0e946230bbdc6fcc6e330c",
+          "md5": "ff8c1507e9bcddf06abb854a6254a5a2",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 15106,
+          "bytes": 14943,
           "expected_bars": 672,
-          "md5": "2e15b10f59fab57be72fb74a2e68a69a",
+          "md5": "0579bed384a6da9722544fa02c3b8af4",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 16655,
+          "bytes": 16467,
           "expected_bars": 744,
-          "md5": "95bc10082fd8b7cbcb62aec429817305",
+          "md5": "139d8cbac27be3ceb60f073e7a431387",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 15872,
+          "bytes": 15723,
           "expected_bars": 720,
-          "md5": "0bae32399ca9ebc3161e89e13d888d3e",
+          "md5": "aa1d2769d4c6a021ef90f714a8ce0230",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 16550,
+          "bytes": 16367,
           "expected_bars": 744,
-          "md5": "e2827aea174c8639ac056a155ef0b4b5",
+          "md5": "3d70bb6c51f0beda1cdf4cc64a77f28a",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 15946,
+          "bytes": 15795,
           "expected_bars": 720,
-          "md5": "9450b3da371c05f978f313229c8cc470",
+          "md5": "22a05be1d0ab1aa623889d4b4252bd63",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 16810,
+          "bytes": 16580,
           "expected_bars": 744,
-          "md5": "2328217fcc05b888d27ff051a562268e",
+          "md5": "346eb125d4f104a846487bb4989896a6",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 17057,
+          "bytes": 16852,
           "expected_bars": 744,
-          "md5": "47b95be17c6f85a7aeecf3eeda004dfd",
+          "md5": "51e0e11a9f4927ed65dad44684f00cee",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 16110,
+          "bytes": 15941,
           "expected_bars": 720,
-          "md5": "e2374ff8d41247c189c2eb8cb98ae427",
+          "md5": "d174be8b828414628a794b4d595a4e14",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 16984,
+          "bytes": 16779,
           "expected_bars": 744,
-          "md5": "c496067a73303839c52c53005907d14b",
+          "md5": "2a602c12c5a801cc64976b54a16b5028",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 16397,
+          "bytes": 16195,
           "expected_bars": 720,
-          "md5": "698ca79eb5692a56b606a35ef1bbc243",
+          "md5": "d53dd5a8abe0b96b93c8e32642b38e2f",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 16583,
+          "bytes": 16407,
           "expected_bars": 744,
-          "md5": "6d13cc1de373c3973f9ac91e65a03f92",
+          "md5": "ca73ad6f881c4cea2cac6e63846e8a50",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 16585,
+          "bytes": 16407,
           "expected_bars": 744,
-          "md5": "06144726d7a2e8e4da4c68e586d403f7",
+          "md5": "226d456d890d159b9159e82ef342d5d3",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 15219,
+          "bytes": 15060,
           "expected_bars": 672,
-          "md5": "1a7c038d3d85af218cb3a7633b292714",
+          "md5": "2e1f5ab3ba50d41744bedf8e43597edc",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 16485,
+          "bytes": 16336,
           "expected_bars": 744,
-          "md5": "47549562bdb2728a857f26c8f59e8fb2",
+          "md5": "2c174313f2c4dfc5ea6e38aa8b2f824b",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 15733,
+          "bytes": 15585,
           "expected_bars": 720,
-          "md5": "d52921dd770bf781490dc6daa1e686b2",
+          "md5": "88bac98bedfec75329903d2c77a3a9cc",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 16041,
+          "bytes": 15877,
           "expected_bars": 744,
-          "md5": "8ee6f42707996a879a9511987236e6e3",
+          "md5": "ba2593e99414403e4febe72ff33d8976",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 15791,
+          "bytes": 15633,
           "expected_bars": 720,
-          "md5": "d3b49dc92be4ebed23e28af26c61dc87",
+          "md5": "c9433054213913769b87998de296b699",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 12623,
+          "bytes": 12500,
           "expected_bars": 576,
-          "md5": "fb45d071504eb5df1eb54dd066ec5c34",
+          "md5": "7f17febf5f2ca2483059d506cb38d64c",
           "n_bars": 576
         }
       },
@@ -3087,7 +3087,7 @@
       "n_months": 79
     },
     "LINKUSDT": {
-      "bytes": 1028958,
+      "bytes": 1025983,
       "first_month": "2020-01",
       "last_month": "2026-07",
       "missing_bars": 31,
@@ -3453,117 +3453,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 12637,
+          "bytes": 12464,
           "expected_bars": 744,
-          "md5": "536009b19748e746341578aea3174f09",
+          "md5": "e7e31d9edde93aaf44aa50a1f86abe02",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 11261,
+          "bytes": 11093,
           "expected_bars": 672,
-          "md5": "578d22601f06661395fc6e4ae827eddc",
+          "md5": "38ef507f25ba2fc74cf181c2d753a5fd",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 12142,
+          "bytes": 11968,
           "expected_bars": 744,
-          "md5": "ab4d01801f630164e0af6cc1d0866250",
+          "md5": "0ab4d5305ab2cda337296036cb73864b",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 11479,
+          "bytes": 11320,
           "expected_bars": 720,
-          "md5": "17e7eb88ad38de6459f7852c341827a8",
+          "md5": "e5d0b2fac1e3701bdf6b2c56814a4041",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 11993,
+          "bytes": 11798,
           "expected_bars": 744,
-          "md5": "9df0b72e6a9acc1cbe60c99fb0d4620d",
+          "md5": "a994e36efcce877c4cc06785567cab07",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 11192,
+          "bytes": 11031,
           "expected_bars": 720,
-          "md5": "4f0efcfaae444fba0f007eeffe39539b",
+          "md5": "4c776b55196d53aaf44f2e042551e7bd",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 12103,
+          "bytes": 11955,
           "expected_bars": 744,
-          "md5": "9e2a2644f67f1c32defdeee8e94688ed",
+          "md5": "14c13e15bb1a54b293c4658857120c6e",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 12651,
+          "bytes": 12481,
           "expected_bars": 744,
-          "md5": "9ca555b979157a6ee6d7162689566463",
+          "md5": "32216768e760ca47af2fd8f01afa938e",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 11693,
+          "bytes": 11515,
           "expected_bars": 720,
-          "md5": "31a7277fe150f31ff6b5b5d995386248",
+          "md5": "d80c2e869fb83cd2245e91fd71d16e7a",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 12286,
+          "bytes": 12118,
           "expected_bars": 744,
-          "md5": "4cafef8646f3933727783cee9ea2a20e",
+          "md5": "611477d02eb4143f1b79468072b818d5",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 11698,
+          "bytes": 11533,
           "expected_bars": 720,
-          "md5": "969710d94f0bffd3671ee9fa543e3de7",
+          "md5": "346b5cfa4da830fe2c2d92871980a327",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 11408,
+          "bytes": 11247,
           "expected_bars": 744,
-          "md5": "1cf591f17a0c75c90a49fc22b41c9eb5",
+          "md5": "1c461b5acabc5b049134402e048d0f1f",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 11338,
+          "bytes": 11181,
           "expected_bars": 744,
-          "md5": "ac7e32349f90a0cdcb3aff79a4d2ea8d",
+          "md5": "6d72cd1dcc1e096dd2e8ea7b91bd38bd",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 10112,
+          "bytes": 9980,
           "expected_bars": 672,
-          "md5": "48d82618c74ccac06b10c2c32faa3261",
+          "md5": "ceaf808a0c2ac41e6b7c55e3176becbc",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 10920,
+          "bytes": 10788,
           "expected_bars": 744,
-          "md5": "1f69478b9628e2b4211732b8568239ef",
+          "md5": "f8ba2f4752af4157af8e22f534c420f1",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 10237,
+          "bytes": 10107,
           "expected_bars": 720,
-          "md5": "611f8ff3655a0fa6e4b507a4c799a356",
+          "md5": "f0fbacc1b5f26ae2ddaadd4602a8c4b2",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 11906,
+          "bytes": 11759,
           "expected_bars": 744,
-          "md5": "8c4fe71f0ae5213defa85f70655aaada",
+          "md5": "7f28777adff687060270d596c60722af",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 12789,
+          "bytes": 12642,
           "expected_bars": 720,
-          "md5": "ee7472ec50e1b6ac493e1f455e9bce72",
+          "md5": "4329c57e9648f747089528328a94f25e",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 10087,
+          "bytes": 9977,
           "expected_bars": 576,
-          "md5": "fd496640ff6e39525499422a4d305a11",
+          "md5": "3ef20bbfb013c8e6afe50688e5a574e7",
           "n_bars": 576
         }
       },
@@ -3923,7 +3923,7 @@
       "n_months": 57
     },
     "NEARUSDT": {
-      "bytes": 866657,
+      "bytes": 863244,
       "first_month": "2020-10",
       "last_month": "2026-07",
       "missing_bars": 336,
@@ -4235,117 +4235,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 12831,
+          "bytes": 12659,
           "expected_bars": 744,
-          "md5": "dc4c50911605c36299e2f3f83e46aac4",
+          "md5": "ec67602444b6a1cd1220831c04338167",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 11479,
+          "bytes": 11309,
           "expected_bars": 672,
-          "md5": "e59bfc68726bcc53aa57db1f8fb38dbc",
+          "md5": "d273d7e4a59b34a022cb25ae5a5cda33",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 12463,
+          "bytes": 12273,
           "expected_bars": 744,
-          "md5": "fb8a32c2f0725005e75da6b146a2cde0",
+          "md5": "3bd17704970f46c5f0c00250bb351bfa",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 11896,
+          "bytes": 11715,
           "expected_bars": 720,
-          "md5": "3379e2a0ba625c96b016b70ccf1ccd3b",
+          "md5": "76c8549ac1dd85daed84cd4a5c22c533",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 12509,
+          "bytes": 12319,
           "expected_bars": 744,
-          "md5": "c710167f68b163113def33d51c735a1d",
+          "md5": "63f6f14bf058536a682d9b59ed87656b",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 11651,
+          "bytes": 11462,
           "expected_bars": 720,
-          "md5": "bab208b4a878d58373e3fac45128d02e",
+          "md5": "d0a15564e9baa5a639171a9ce8a61488",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 12304,
+          "bytes": 12114,
           "expected_bars": 744,
-          "md5": "4c73108bc657ddf7ce2ce8bd3eeb65dd",
+          "md5": "3d04d1bf949e6032ae9dd1f2d8fa17d8",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 12113,
+          "bytes": 11920,
           "expected_bars": 744,
-          "md5": "51221e9816885c661159734616571bbd",
+          "md5": "93d4d8a549070f4e99ddb99c0a61607e",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 11802,
+          "bytes": 11636,
           "expected_bars": 720,
-          "md5": "1f4c60e21c666579443be5009f5bb3ee",
+          "md5": "bbacab6eab36a19a5d1c552ce815a5cd",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 12290,
+          "bytes": 12084,
           "expected_bars": 744,
-          "md5": "0ee9c5bf2d22982e2db3f838b7c18750",
+          "md5": "a4de9fbd295ad9c15ffb3f086d402056",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 12108,
+          "bytes": 11928,
           "expected_bars": 720,
-          "md5": "cbe4582f7867949d9e8ba6c31f0b273c",
+          "md5": "9e0142823cf22c47ff42b2e3d2a1a0ee",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 11685,
+          "bytes": 11492,
           "expected_bars": 744,
-          "md5": "58e5452654d6bbc4878f1ec5af8e00eb",
+          "md5": "3532abf862e7a4fbc9f495156cd1d23f",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 11732,
+          "bytes": 11524,
           "expected_bars": 744,
-          "md5": "44a3492f6bd54cfc09a8521b38dd52b3",
+          "md5": "2a4cd537ec436678178fc1e6abf92699",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 10343,
+          "bytes": 10197,
           "expected_bars": 672,
-          "md5": "cbe266d9cb5d08dbc685b7c679f76840",
+          "md5": "5745c4a3af20afbe9fe24bd81b3e4aec",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 11533,
+          "bytes": 11363,
           "expected_bars": 744,
-          "md5": "41c562ba28a34f7d2e7fa5e32f8ae46c",
+          "md5": "c5da2c5de88b48933fd1ea8a7432b008",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 10737,
+          "bytes": 10549,
           "expected_bars": 720,
-          "md5": "5c8185954bcbcbe363f38ee4bb23ec0f",
+          "md5": "b0c3ea9d276afdca8a5914ae00737780",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 12139,
+          "bytes": 11968,
           "expected_bars": 744,
-          "md5": "8a2ebf6dd6fa35b6e01963b1a4382c34",
+          "md5": "4ff916b8f61f630934e255c2b35f7001",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 12254,
+          "bytes": 12087,
           "expected_bars": 720,
-          "md5": "ef1d3acbc179f7598cb8fdbde62feff9",
+          "md5": "e2718fffcd9c3befc6b7a5263712e823",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 9093,
+          "bytes": 8950,
           "expected_bars": 576,
-          "md5": "f97fa2f8771e2a84b7c5e2af5b0cd99e",
+          "md5": "36fef84e1aad4cd54bfa46cc79c96c2b",
           "n_bars": 576
         }
       },
@@ -4353,7 +4353,7 @@
       "n_months": 70
     },
     "POLUSDT": {
-      "bytes": 271749,
+      "bytes": 269711,
       "first_month": "2024-09",
       "last_month": "2026-07",
       "missing_bars": 298,
@@ -4383,117 +4383,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 13040,
+          "bytes": 12877,
           "expected_bars": 744,
-          "md5": "03b12123a3afa72a52979e4baff61334",
+          "md5": "b71e2faade845e0d3a6f5732a115d96d",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 11627,
+          "bytes": 11496,
           "expected_bars": 672,
-          "md5": "b8a982a3f8a9c475ea9ea0a0098d86ca",
+          "md5": "7d8f4c360416ac2b6ec0c020deee5b5a",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 12454,
+          "bytes": 12333,
           "expected_bars": 744,
-          "md5": "709b4d25ed552b45b4bd6e78f3dd0163",
+          "md5": "29142bd1be0c1a3b83c3b8f45873013a",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 12024,
+          "bytes": 11905,
           "expected_bars": 720,
-          "md5": "dafb15d05780863d176476a3de5b7bc8",
+          "md5": "5a307eaa8ab36f3590ee5fa430073b15",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 12429,
+          "bytes": 12315,
           "expected_bars": 744,
-          "md5": "74e708ae2a6689e0f53242f2c544cadb",
+          "md5": "de160e93ec04f3893d921cf2f546a6ff",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 11719,
+          "bytes": 11595,
           "expected_bars": 720,
-          "md5": "dc1453bf86b75e8b2ffc1d04c2864865",
+          "md5": "10a57a1dc92c5a73f4e7fc61537ed7c7",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 12466,
+          "bytes": 12322,
           "expected_bars": 744,
-          "md5": "57375b835f94007fbafcb8db92f1467d",
+          "md5": "b11d1d18318af3ee6ca54c3446c2187f",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 12443,
+          "bytes": 12329,
           "expected_bars": 744,
-          "md5": "8d2e05e038f03c766a958e0e87dc9e8f",
+          "md5": "da9c7d7c88b0fd969305490a394b9593",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 11917,
+          "bytes": 11798,
           "expected_bars": 720,
-          "md5": "0b72eb742027e1158f72c9d302d43d19",
+          "md5": "eaa77d5eed7a58eef61a74d12d01c772",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 12184,
+          "bytes": 12062,
           "expected_bars": 744,
-          "md5": "e87b0d8ca2bb03c4162187b81c28fcb3",
+          "md5": "6314b4640027f53e9c958a7733742c4e",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 11898,
+          "bytes": 11784,
           "expected_bars": 720,
-          "md5": "e8e09b71cea1d5c1f98a67ac094d2d53",
+          "md5": "826775571dbab5466c3774e1904b906f",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 11456,
+          "bytes": 11384,
           "expected_bars": 744,
-          "md5": "9abea3b8d800113a677a5ff1e33e65b7",
+          "md5": "dc3ca656a94029e8c6e0e9593caeac72",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 12527,
+          "bytes": 12406,
           "expected_bars": 744,
-          "md5": "f3fc5f9960a341ad96b143354064542c",
+          "md5": "8373652975238602b889fb09fd42ea1e",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 10741,
+          "bytes": 10657,
           "expected_bars": 672,
-          "md5": "d2dd4cb721de0aac0cf2979647fd1668",
+          "md5": "d84f8fe0b093841ea476e352c1261c62",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 11077,
+          "bytes": 11011,
           "expected_bars": 744,
-          "md5": "98dafc567ae61d322132c02aa31f2b3d",
+          "md5": "0c9287c96192575d298ba7698b24c367",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 10537,
+          "bytes": 10476,
           "expected_bars": 720,
-          "md5": "d0fe8301f10aba9b230c20b6cea2e869",
+          "md5": "8d178ef9a861a0d8945ba079822a75d7",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 11774,
+          "bytes": 11683,
           "expected_bars": 744,
-          "md5": "2410a0485434b23ef68ec47e0c1253fd",
+          "md5": "3a23e0d08d7b1753f4d166577e706da0",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 13016,
+          "bytes": 12926,
           "expected_bars": 720,
-          "md5": "dbd089d38856265d2d6132b90ef1d742",
+          "md5": "413b94d6b875c2679079999b214c967d",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 10307,
+          "bytes": 10239,
           "expected_bars": 576,
-          "md5": "2161c60b7dd42bd8b9c6344c9d3f8563",
+          "md5": "15e816c20404dc9324564417e738a0dc",
           "n_bars": 576
         }
       },
@@ -4501,7 +4501,7 @@
       "n_months": 23
     },
     "SOLUSDT": {
-      "bytes": 974093,
+      "bytes": 970840,
       "first_month": "2020-08",
       "last_month": "2026-07",
       "missing_bars": 265,
@@ -4825,117 +4825,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 15102,
+          "bytes": 14913,
           "expected_bars": 744,
-          "md5": "23cd090a47436eced882e41e38ffb5f3",
+          "md5": "90c38da0d9da8afe1972e315acdace29",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 13522,
+          "bytes": 13352,
           "expected_bars": 672,
-          "md5": "d834b31aa387f8917827ad44416c5b89",
+          "md5": "e9c4f01f992536b9e08568ab374bef9a",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 14591,
+          "bytes": 14390,
           "expected_bars": 744,
-          "md5": "798a3095bcfe2429ebe48b9e5684649a",
+          "md5": "36a663395484fa3f8097fced54361200",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 14096,
+          "bytes": 13926,
           "expected_bars": 720,
-          "md5": "f623d49d08580cef40d263397861e254",
+          "md5": "c4f4bcd77f5cd609a6feeb472c463761",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 14450,
+          "bytes": 14281,
           "expected_bars": 744,
-          "md5": "1d24b79b8d33764b5ac701415f689d04",
+          "md5": "a2b789d77be99aa83a725225784b7b5f",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 13970,
+          "bytes": 13800,
           "expected_bars": 720,
-          "md5": "b179f6c5b7ead7db7a46762b6ed377a5",
+          "md5": "6a80ba53057823e7db39bcdeeb2d5508",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 14517,
+          "bytes": 14321,
           "expected_bars": 744,
-          "md5": "c8e109496465141a8c593cc3a893ad48",
+          "md5": "8c1f0d2c52fcda043e49372f81505648",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 14783,
+          "bytes": 14593,
           "expected_bars": 744,
-          "md5": "bbcb51e3faa13fb14e02738df609e2e6",
+          "md5": "e2b96865430c4b1976fde86e82f65f52",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 14371,
+          "bytes": 14222,
           "expected_bars": 720,
-          "md5": "b14736c674faa660544896b90eeb8bbf",
+          "md5": "b02799f36f0a6db25f9b472e9fbd52c9",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 14756,
+          "bytes": 14566,
           "expected_bars": 744,
-          "md5": "5bf01e2f426749ecc644106df8b8e176",
+          "md5": "a94b720139199e13f428fb282dd6be08",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 14131,
+          "bytes": 13942,
           "expected_bars": 720,
-          "md5": "de9ec244706a1602722385cceb333513",
+          "md5": "83fdb1f4c03eb4e6be1b36b199dffe45",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 14033,
+          "bytes": 13864,
           "expected_bars": 744,
-          "md5": "df4bd1a4045ec1c6b4547e9de42dcf65",
+          "md5": "eeafef6dd8b7a7c536e334aa1d72069b",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 14158,
+          "bytes": 13976,
           "expected_bars": 744,
-          "md5": "4a91ae89060859a64a79def9639d4e97",
+          "md5": "41dd25858b0ab2a0f5d5487649672fee",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 12778,
+          "bytes": 12631,
           "expected_bars": 672,
-          "md5": "1c23063a7344041489b646d7572a4c3a",
+          "md5": "b3bacb36a2614adc8c0e2b516d0b7783",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 13849,
+          "bytes": 13694,
           "expected_bars": 744,
-          "md5": "3d719992a77ac3f41b66f346e92ec218",
+          "md5": "b588f0953a3b418d8ff3bc3004711ab7",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 13007,
+          "bytes": 12844,
           "expected_bars": 720,
-          "md5": "368b9fd15d631fd59a5dc556ee7e2b9e",
+          "md5": "f49cc8f8b320cc089e3e24492ba2e04a",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 13427,
+          "bytes": 13264,
           "expected_bars": 744,
-          "md5": "a7766d8884cca086e8e526ea07710e93",
+          "md5": "bbf398101939f9fa856e16c577e21700",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 13405,
+          "bytes": 13239,
           "expected_bars": 720,
-          "md5": "e37e92aef264750385e50e929bde13aa",
+          "md5": "b526bf3335b87a647e77216a219cb7b0",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 10344,
+          "bytes": 10219,
           "expected_bars": 576,
-          "md5": "ffe60bff29f8cad2970f76e6fd3057f6",
+          "md5": "27b882f10c11754ea4f85fb21791fda3",
           "n_bars": 576
         }
       },
@@ -4943,7 +4943,7 @@
       "n_months": 72
     },
     "SUIUSDT": {
-      "bytes": 532653,
+      "bytes": 529449,
       "first_month": "2023-05",
       "last_month": "2026-07",
       "missing_bars": 60,
@@ -5069,117 +5069,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 15081,
+          "bytes": 14928,
           "expected_bars": 744,
-          "md5": "0ee5b380c48b4920114d1627853e8494",
+          "md5": "eca777fc1eaed5e8b5eef877648ef34e",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 13670,
+          "bytes": 13501,
           "expected_bars": 672,
-          "md5": "64e4d8ed13d244cb247ea065ae5d1180",
+          "md5": "e6f0935d6432e4a68773bc61b51db81b",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 14678,
+          "bytes": 14497,
           "expected_bars": 744,
-          "md5": "a8b93cf348e7b5486e4d6d7e408470db",
+          "md5": "53373b6ab5aee3fab186bc47120a4c29",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 14321,
+          "bytes": 14146,
           "expected_bars": 720,
-          "md5": "8251926adb56b490680f3ec8d1c35314",
+          "md5": "0fe3017d92d0ad1461d9746ab057dc1d",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 14827,
+          "bytes": 14668,
           "expected_bars": 744,
-          "md5": "290986e1ca251963d455a74f21aacd77",
+          "md5": "8608706014dc999f9bb7b1dcdc964a3c",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 14037,
+          "bytes": 13877,
           "expected_bars": 720,
-          "md5": "f458065e43aae883e81404132cc8a24c",
+          "md5": "e00b47bde026257ed26501fc022cad87",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 14722,
+          "bytes": 14546,
           "expected_bars": 744,
-          "md5": "373ee8bb869e8d0e74d771f4321ceda6",
+          "md5": "82a954f2cb0c01b5cf130fc0fc3f1e4a",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 14668,
+          "bytes": 14497,
           "expected_bars": 744,
-          "md5": "1477dbc8e3b5be5e78c020c74275bc68",
+          "md5": "dbaa526d317887b18b7b4c3af4010107",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 14039,
+          "bytes": 13888,
           "expected_bars": 720,
-          "md5": "a21ac5a54294f9a6a822aaaeb955fb21",
+          "md5": "9e0103a36cdc2a18defe846788d124c1",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 14530,
+          "bytes": 14345,
           "expected_bars": 744,
-          "md5": "34af471562b09e2957f26c9489653cf0",
+          "md5": "146db94645ae6c4f56149d35898dee83",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 13958,
+          "bytes": 13795,
           "expected_bars": 720,
-          "md5": "4b2c01fce96025c7eea13b945ddb449c",
+          "md5": "a94260fb508357c8d8cb601d9f4a1832",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 13979,
+          "bytes": 13798,
           "expected_bars": 744,
-          "md5": "e792d6a9e56be619978df615c6d8ed4c",
+          "md5": "48bc34f00faad825a119529ef87475dd",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 14144,
+          "bytes": 13969,
           "expected_bars": 744,
-          "md5": "7a3c78bf1e7d519429ae7b4dfe4c1224",
+          "md5": "65637e309eb3fc9e7359dedc23999a8f",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 12596,
+          "bytes": 12413,
           "expected_bars": 672,
-          "md5": "dc24d0bb83b63e2c85797a9ecb13d7bc",
+          "md5": "57dc0fe21f4e5d9945fe2d64d67ba736",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 13596,
+          "bytes": 13412,
           "expected_bars": 744,
-          "md5": "50df2bce2b89a6e179703eb4c0fa4f2e",
+          "md5": "38fb21cd26b16d37072393ddb356ac72",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 12726,
+          "bytes": 12561,
           "expected_bars": 720,
-          "md5": "5ff738eeedb9c05b0aef59445ab29290",
+          "md5": "3ec217d6b5f657505ec495f79cb03a58",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 13766,
+          "bytes": 13589,
           "expected_bars": 744,
-          "md5": "2b5c7166dbdc2ac78636fbc39eddf08b",
+          "md5": "c9560a9b6ed93f2be2779c97ada9f126",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 13069,
+          "bytes": 12887,
           "expected_bars": 720,
-          "md5": "ba691e832dfa492c2bf0ad4ea6270875",
+          "md5": "05f7532ac146930e0c69d4e4a74427d6",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 10038,
+          "bytes": 9924,
           "expected_bars": 576,
-          "md5": "d09459dd7670a0d313c9ca200c73e85c",
+          "md5": "d9d2cc0f167fbf48dbcfe645d1ce3adf",
           "n_bars": 576
         }
       },
@@ -5187,7 +5187,7 @@
       "n_months": 39
     },
     "XRPUSDT": {
-      "bytes": 1047991,
+      "bytes": 1044378,
       "first_month": "2020-01",
       "last_month": "2026-07",
       "missing_bars": 31,
@@ -5553,117 +5553,117 @@
           "n_bars": 744
         },
         "2025-01": {
-          "bytes": 14229,
+          "bytes": 14013,
           "expected_bars": 744,
-          "md5": "0d76ae82dd2e8f5f6e69b79254be64af",
+          "md5": "f52b0af21e76a575a8bec34267346d3e",
           "n_bars": 744
         },
         "2025-02": {
-          "bytes": 13016,
+          "bytes": 12824,
           "expected_bars": 672,
-          "md5": "0ef9e2fd004f2594ea6a9b2a0d878ab8",
+          "md5": "47d275357b226921a5af2e58c3903616",
           "n_bars": 672
         },
         "2025-03": {
-          "bytes": 14217,
+          "bytes": 14002,
           "expected_bars": 744,
-          "md5": "1875cad18da8f39bbe4d44543fd405ff",
+          "md5": "acd33be08e2c55fae60c07c844b38adc",
           "n_bars": 744
         },
         "2025-04": {
-          "bytes": 13748,
+          "bytes": 13543,
           "expected_bars": 720,
-          "md5": "419e9938d4388b35fd4e7e0ade23e9ef",
+          "md5": "30059661dffcb309516e6aa2c1989bec",
           "n_bars": 720
         },
         "2025-05": {
-          "bytes": 14430,
+          "bytes": 14240,
           "expected_bars": 744,
-          "md5": "755d8efe94a8f0b72f83fd181b2f88b4",
+          "md5": "7d9cf71f146ec33c024928eba3afea95",
           "n_bars": 744
         },
         "2025-06": {
-          "bytes": 13657,
+          "bytes": 13456,
           "expected_bars": 720,
-          "md5": "6a755618707f37db5d61ec46ac53e444",
+          "md5": "c40e3c6bd6cf8114b7ed7b1b5b07ee4c",
           "n_bars": 720
         },
         "2025-07": {
-          "bytes": 14801,
+          "bytes": 14622,
           "expected_bars": 744,
-          "md5": "80fbd80d38dc137d318b80556e583fa3",
+          "md5": "d87486de7182d208df987ff095cf1c4e",
           "n_bars": 744
         },
         "2025-08": {
-          "bytes": 14588,
+          "bytes": 14399,
           "expected_bars": 744,
-          "md5": "e321d87e178cdfa4003105e95df9902f",
+          "md5": "5a67b61e040125d95d76d572d716c048",
           "n_bars": 744
         },
         "2025-09": {
-          "bytes": 13809,
+          "bytes": 13623,
           "expected_bars": 720,
-          "md5": "ebea53e9d4e2341b54d291e63cb148b0",
+          "md5": "44384568e6a666ab9226a307201e0b27",
           "n_bars": 720
         },
         "2025-10": {
-          "bytes": 14538,
+          "bytes": 14361,
           "expected_bars": 744,
-          "md5": "51acdbb060166f44e5b9d52a0ad421a3",
+          "md5": "2e2a13989fcd0bbd30b718520d653440",
           "n_bars": 744
         },
         "2025-11": {
-          "bytes": 14143,
+          "bytes": 13969,
           "expected_bars": 720,
-          "md5": "ebe8c4c1e05389910884ad9c55e6c122",
+          "md5": "40fc8755a40c988e3223f8a1029f0cda",
           "n_bars": 720
         },
         "2025-12": {
-          "bytes": 13893,
+          "bytes": 13684,
           "expected_bars": 744,
-          "md5": "340e2ebdc9a62162ac5aefb2a529c24c",
+          "md5": "6c608869b3ac54074181db14804da654",
           "n_bars": 744
         },
         "2026-01": {
-          "bytes": 14218,
+          "bytes": 14028,
           "expected_bars": 744,
-          "md5": "17696c65474c55176a08d5b28a40ac4b",
+          "md5": "1c0e3fdf2367f3e01e328b965a49ceda",
           "n_bars": 744
         },
         "2026-02": {
-          "bytes": 12940,
+          "bytes": 12750,
           "expected_bars": 672,
-          "md5": "93357e4390e4fdadf7416e2f27f46cb4",
+          "md5": "122c1836be4f00baba7e6cc30d6d0457",
           "n_bars": 672
         },
         "2026-03": {
-          "bytes": 13864,
+          "bytes": 13671,
           "expected_bars": 744,
-          "md5": "44a4629df4e50d41d1ac226df496f2f2",
+          "md5": "dd4172c97849eeaae73754d714f7695a",
           "n_bars": 744
         },
         "2026-04": {
-          "bytes": 13126,
+          "bytes": 12942,
           "expected_bars": 720,
-          "md5": "c24a04358bdddbb3f339edcd5dd9c061",
+          "md5": "bb6fbe86d87e4bc7d305a70fc0fedcc1",
           "n_bars": 720
         },
         "2026-05": {
-          "bytes": 13510,
+          "bytes": 13325,
           "expected_bars": 744,
-          "md5": "ffd2606509995e40fd0ea542576318a9",
+          "md5": "2fbf046acc6f1ebab036e0f0288406bd",
           "n_bars": 744
         },
         "2026-06": {
-          "bytes": 13422,
+          "bytes": 13231,
           "expected_bars": 720,
-          "md5": "67b4cb254ac0cdf1f81dc2a015ebb9a2",
+          "md5": "394c621ac1052e598c1b7c9076357633",
           "n_bars": 720
         },
         "2026-07": {
-          "bytes": 10366,
+          "bytes": 10219,
           "expected_bars": 576,
-          "md5": "c0744bbcb56b393e11d89ec4d2fa8f22",
+          "md5": "7f56ad9c3454a6cf359d74c3fa602a9f",
           "n_bars": 576
         }
       },

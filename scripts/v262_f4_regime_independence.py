@@ -317,7 +317,14 @@ def main() -> int:
 
     print(f"\nF4 VERDICT: {result['verdict']['f4']}")
     print(f"  universe-mean Cramer's V = {mean_v}  vs cut {F4_CORRELATION_CUT}")
-    print(f"  written: {out.relative_to(ROOT)}")
+    # relative_to raises for any --out outside the repo (and for a relative --out,
+    # whose absolute form is cwd-based); the display path must never fail the run
+    # after the artifact has already been written.
+    try:
+        shown: Path | str = out.resolve().relative_to(ROOT)
+    except ValueError:
+        shown = out
+    print(f"  written: {shown}")
     return 0
 
 
