@@ -66,3 +66,8 @@ SESSION_NOTES.md
 # V240 reasoning layer: nested harness repo holds LLM API tokens (Kimi/GLM);
 # never commit it into omega.
 harness/
+
+# V263: upstream Kronos clone (foundation-model onboarding). Not vendored —
+# reproduce with: git clone https://github.com/shiyu-coder/Kronos third_party/kronos
+# Pinned SHA recorded in training_log/V263_ONBOARDING_VERDICT.md
+third_party/
