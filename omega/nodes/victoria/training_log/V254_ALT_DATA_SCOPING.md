@@ -401,7 +401,7 @@ V257) remains the next data unlock.
 
 | Rank (updated V262-2) | Option | Status | Next |
 |---|---|---|---|
-| **— CLOSED at zero-shot (V263, 2026-08-02)** | **H. Pretrained K-line foundation model (Kronos)** | **REFUTED at F4, the pre-declared smoke gate.** First candidate in the campaign that is *not* a re-weighting of the existing composite: `NeoQuasar/Kronos-small` (24.7M, 512 ctx), decoder-only transformer pretrained on 45+ exchanges' OHLCV, run zero-shot over the V262 frozen 1h corpus. Install clean (torch 2.13 cp314 + einops only — **no pandas/hf_hub downgrade**, Kronos's pins ignored safely); MPS inference 1.0 s/window; forecasts non-degenerate and seed-reproducible **bit-identical**. But across **8 pre-declared cells (3 symbols × horizons {1,4,12,24}, n≈405 each, 3,238 windows)**: **mean Spearman ρ = −0.027 vs the +0.05 F4 bar**, **0/8 cells beat a naive random-walk on RMSE** (median ratio 1.12–1.37), **0/8 survive Bonferroni** (α=0.0063), and forecast paths carry only **~1/3 of realized bar-to-bar volatility** (vol ratio 0.31–0.39) — conditional-mean collapse, no volatility clustering. The one nominally-interesting cell (SOLUSDT h24, raw 56.2%, uncorrected p=0.015) is a 1-in-8 draw that points opposite BTCUSDT h24. Also a systematic unconditional **short bias** (forecast↑ 0.46 vs realized↑ 0.51) | **Closed on evidence at Phase 0/1 — the cheapest closure in the campaign (~2h, $0, no scorer built).** Pattern **R1 (no effect present)**, not R2/R3: unlike V262-2 there is no gross effect for friction to kill. **V263-2 NOT queued.** Reopeners if ever revisited, in cost order: (1) **fine-tuning** via Kronos's `finetune/` pipeline — zero-shot failure on crypto 1h is genuinely uninformative about the fine-tuned case; (2) Kronos-base/mini to separate capacity vs context; (3) **distributional use** — forecast *spread* as a volatility/regime input, which needs no directional edge. See [`V263_ONBOARDING_VERDICT.md`](V263_ONBOARDING_VERDICT.md) + [`V263.md`](V263.md) |
+| **— CLOSED, zero-shot AND fine-tuned (V263 2026-08-02 → V264 2026-08-08; see UPDATE below)** | **H. Pretrained K-line foundation model (Kronos)** | **REFUTED at F4, the pre-declared smoke gate.** First candidate in the campaign that is *not* a re-weighting of the existing composite: `NeoQuasar/Kronos-small` (24.7M, 512 ctx), decoder-only transformer pretrained on 45+ exchanges' OHLCV, run zero-shot over the V262 frozen 1h corpus. Install clean (torch 2.13 cp314 + einops only — **no pandas/hf_hub downgrade**, Kronos's pins ignored safely); MPS inference 1.0 s/window; forecasts non-degenerate and seed-reproducible **bit-identical**. But across **8 pre-declared cells (3 symbols × horizons {1,4,12,24}, n≈405 each, 3,238 windows)**: **mean Spearman ρ = −0.027 vs the +0.05 F4 bar**, **0/8 cells beat a naive random-walk on RMSE** (median ratio 1.12–1.37), **0/8 survive Bonferroni** (α=0.0063), and forecast paths carry only **~1/3 of realized bar-to-bar volatility** (vol ratio 0.31–0.39) — conditional-mean collapse, no volatility clustering. The one nominally-interesting cell (SOLUSDT h24, raw 56.2%, uncorrected p=0.015) is a 1-in-8 draw that points opposite BTCUSDT h24. Also a systematic unconditional **short bias** (forecast↑ 0.46 vs realized↑ 0.51) | **Closed on evidence at Phase 0/1 — the cheapest closure in the campaign (~2h, $0, no scorer built).** Pattern **R1 (no effect present)**, not R2/R3: unlike V262-2 there is no gross effect for friction to kill. **V263-2 NOT queued.** Reopeners if ever revisited, in cost order: (1) **fine-tuning** via Kronos's `finetune/` pipeline — zero-shot failure on crypto 1h is genuinely uninformative about the fine-tuned case; (2) Kronos-base/mini to separate capacity vs context; (3) **distributional use** — forecast *spread* as a volatility/regime input, which needs no directional edge. See [`V263_ONBOARDING_VERDICT.md`](V263_ONBOARDING_VERDICT.md) + [`V263.md`](V263.md) |
 | **— CLOSED at 1h (V262-2, 2026-07-30)** | **G. Intraday resolution (1h)** | **REFUTED at F1+F2+F3, both arms.** P0 first re-froze the corpus (µs/ms normaliser + a structural in-month gate + a **second** wall-clock channel closed: the archives-fetched count in the daily-splice provenance string); byte-identity **919/919**, 672 pre-2025 cells preserved; **F4 re-run on full coverage still PASS and stronger, V = 0.1274** (was 0.1509), and the POL n=29 caveat retired (true n=166, V=0.1869). Then F1–F3 on the pre-registered composite (`V262-2.md`, committed before the build): **median net −$31.98 (M) / −$9.96 (R); MWU p_deflated 0.331 / 0.488 vs α=0.025; annualized net −415% / −200%.** What fired is a real ~14 bps 1h **mean-reversion** gross effect (R: gross median +$14.04, WR 52.9%, PF 1.151) that (a) has **no dose-response** — p=0.923 at n=38,139 on the native-only arm, the bid-ask-bounce fingerprint — and (b) is **below the 24 bps friction at every hold in the ladder** (best break-even 14.04 bps, and the edge *decays* with hold: 10.6 bps at 1d, negative at 3d/7d) | **Closed on evidence, not data absence.** F4/F4b survive — effective-N is real (~19–21×); the *payoff* is not. **Do NOT freeze 5m**: the pre-declared tier order gated it on 1h clearing F4 **and F3**, and 5m would be 288× the bars against a friction wall that already won, with 288× the overfit surface. Redirects to spot Victoria + funding-carry; **live-paper (V253) is now the only lane accruing new independent evidence** (~1 recent window/quarter toward the N≥20 resume gate). See [`V262_F1F2F3_VERDICT.md`](V262_F1F2F3_VERDICT.md) + [`V262-2.md`](V262-2.md) |
 | ~~1 — TOP-PRIORITY FOLLOW-ON (V262, superseded above)~~ | **G. Intraday resolution (1h / 5m)** | **DATA UNLOCKED (V262, 2026-07-25) + BOTH CHEAP GATES PASSED (2026-07-28)** — 1h OHLCV frozen for all 13 universe names + MATIC, 2020-01→2026-07, byte-identical; 5m available and *cheap* (~0.6 GB) but deliberately NOT frozen pending user call. **F4 regime-independence: universe-mean Cramér's V = 0.1509 vs the 0.7 refute cut** (corroborated 0.1782 in the non-degenerate diagnostic arm) → hourly per-name regime is **genuinely orthogonal** to the macro-day regime. **F4b autocorrelation: CAVEATED PASS — universe-mean lag-1 same-state = 0.8622 vs the 0.90 FAIL cut**; the raw figure is almost all marginal skew (excess over memoryless baseline **+1.2 pts**), λ₂ ≈ 0.13 ⇒ **N_eff/N ≈ 0.78–0.87, effective multiplier ~19–21× (NOT 24×)**. All four arm×coverage cells agree. Adjacent hourly windows are genuinely new samples | **V262-2 proceeds to F1–F3** (pooled median, MWU p, annualized net) via the 1h walk-forward, **deflating every significance calc by N_eff, never N**. F3 (friction at intraday trade frequency) remains the most likely killer. **P0 before F1–F3: fix the µs/ms unit defect in the frozen corpus** (2025-01→2026-07 files store `open_ms` in microseconds — 26.7% of bars; it silently truncated F4's coverage). Remaining F4 residual risks: lag>1 dependence, new-labeller correctness, POL n=180. See [`V262_F4b_AUTOCORRELATION_VERDICT.md`](V262_F4b_AUTOCORRELATION_VERDICT.md) + [`V262_F4_VERDICT.md`](V262_F4_VERDICT.md) + [`V262.md`](V262.md) |
 | **1-SHIPPED (structural)** | B. level/regime basis carry (v1) | **ADOPT — full liquid universe (V255.D-EXT)**: real basis frozen on 12 names (90.4% of trades), pooled median +$1.95 (CI [+$1.13,+$2.80] excl 0), all 12 basis-CLEAN < 5 bps; majors decisive, ARB/NEAR/SUI FLAG on alpha-thinness | MATIC→POL alias in `basis_data.py`; wire ADOPT'd majors carry book |
@@ -411,6 +411,58 @@ V257) remains the next data unlock.
 | **—** | B.dead — v2 directional carry | **REFUTED (V255)** | closed |
 | 4 | A. Shorter (30d) windows | untested | `regime_label`-at-30d spike |
 | 5 | F. News-driven regime | untested | last |
+
+---
+
+## UPDATE 2026-08-08 — Track H CLOSES: fine-tuned Kronos also fails F4
+
+V263 closed Track H at zero-shot and named **fine-tuning as reopener (1)**, on the
+explicit ground that *"zero-shot failure on crypto 1h is genuinely uninformative
+about the fine-tuned case."* [`V264`](V264.md) executed that reopener. It is now
+closed too.
+
+**Result: F4-ft FAILED at pooled Spearman ρ = +0.0465 vs the locked +0.05 bar.**
+
+| Arm (identical 2025–2026 holdout windows, 8 cells × 405) | pooled ρ | CI95 (10k paired bootstrap) |
+|---|---:|---|
+| Zero-shot | +0.0277 | [−0.0088, +0.0645] — includes 0 |
+| **Fine-tuned** | **+0.0465** | [+0.0096, +0.0830] — **excludes 0**, does **not** exclude the bar |
+| **Δ (fine-tuned − zero-shot)** | **+0.0188** | **[−0.0108, +0.0469] — includes 0** |
+
+P(true ρ > bar) = **0.42**. The pre-registered claim — *fine-tuning produces edge
+zero-shot lacked* — is **unsupported**: the delta's CI includes zero. The stretch
+error gate failed harder than zero-shot did (**0/8** cells beat a naive random
+walk; RMSE ratios *rose* vs zero-shot, BTC h24 1.321 → 2.093).
+
+**What fine-tuning actually bought.** V263 diagnosed conditional-mean collapse
+(forecast paths ~⅓ of realized volatility). Fine-tuning partially corrected that —
+higher-dispersion paths, which nudge rank correlation up and make point-forecast
+error much worse. **It taught Kronos our volatility, not our direction.**
+
+**Pattern reclassification: R2 (below resolution), not V263's R1 (no effect).** A
+small positive directional correlation genuinely exists (CI excludes zero); it sits
+below the tradability bar. And a caution for the campaign record: the *same*
+zero-shot model scores −0.027 over 2020–2026 (V263) and +0.0277 over 2025–2026
+(V264) — a **between-period swing larger than the entire F4 bar**, so neither
+number is a stable estimate. V263's confident R1 label softens accordingly.
+
+**Fine-tune was mechanically sound** (so this is not a training failure): tokenizer
+val loss ↓ monotone over 3 epochs (0.003665 → 0.003470); predictor val bottomed at
+epoch 1 (2.5697) and drifted up after — best-by-val checkpoint used, and the epoch
+budget was fixed *before* the gate was checked. Longer training is contraindicated
+by the epoch-2 val turn, and capacity is not obviously the constraint (a 24.7M
+model already overfits 374k bars) — **data is**.
+
+**Track H is CLOSED for this universe.** The only untested Kronos idea left is
+V263's reopener (3), **distributional use** — forecast *spread* as a
+volatility/uncertainty input to the **regime layer**, which needs no directional
+edge and is now *better* motivated by §"what fine-tuning bought". That belongs to
+the regime-detection lane, not the alpha lane, and is **not queued**.
+
+Standing state unchanged: **spot Victoria + funding-carry** remain the two validated
+lanes; **live-paper (V253)** remains the only lane accruing independent recent-N.
+All V241–V264 flags stay OFF. See [`V264_FINETUNE_VERDICT.md`](V264_FINETUNE_VERDICT.md)
++ [`V264.md`](V264.md).
 
 ---
 
