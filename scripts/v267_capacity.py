@@ -133,11 +133,35 @@ def boot_ci(xs: list[float], stat, n: int = BOOTSTRAP_N) -> list[float]:
 
 
 def daily_book(trades: list[dict], slippage_bps: float = 0.0) -> list[float]:
-    """Aggregate net PnL by exit_date, charging `slippage_bps` per leg-side."""
+    """Net PnL by exit_date over EVERY calendar day the book is live.
+
+    The grid is [min(entry_date), max(exit_date)] zero-filled: the carry book
+    holds positions continuously, so a day with no exit is a genuine $0, not an
+    unobserved day. Restricting to exit-days-only inflates Sharpe (it drops the
+    flat days from the variance base) and would not reconcile with the V266
+    convention, which zero-fills across the walk-forward observed-day grid.
+    """
+    if not trades:
+        return []
     by_day: dict[date, list[float]] = defaultdict(list)
     for t in trades:
         cost = t["notional"] * (slippage_bps / 1e4) * SLIPPAGE_LEG_MULT
         by_day[t["exit_date"]].append(t["pnl"] - cost)
+    start = min(t["entry_date"] for t in trades)
+    end = max(t["exit_date"] for t in trades)
+    out: list[float] = []
+    d = start
+    while d <= end:
+        out.append(math.fsum(by_day[d]) if d in by_day else 0.0)
+        d += timedelta(days=1)
+    return out
+
+
+def daily_book_exit_days(trades: list[dict]) -> list[float]:
+    """Exit-days-only variant, retained as a reported diagnostic only."""
+    by_day: dict[date, list[float]] = defaultdict(list)
+    for t in trades:
+        by_day[t["exit_date"]].append(t["pnl"])
     return [math.fsum(v) for _, v in sorted(by_day.items())]
 
 
@@ -276,7 +300,12 @@ def main() -> int:
     k_max = min(k_max_adv, k_max_oi)
 
     g1_adv_ok = env[str(G1_SCALE_K)]["adv"]["median"] <= G1_ADV_PARTICIPATION_BAR
-    g1_oi_ok = env[str(G1_SCALE_K)]["oi"]["median"] <= G1_OI_PARTICIPATION_BAR
+    g1_oi_raw = env[str(G1_SCALE_K)]["oi"]["median"] <= G1_OI_PARTICIPATION_BAR
+    # V267.md section 4, G0: a join below coverage bar makes the gate LEG that
+    # depends on it R4/data-blocked and UNSCORED (never imputed). The OI leg is
+    # still reported on its covered subset as diagnostic colour.
+    oi_scored = cov_oi >= G0_OI_COVERAGE_BAR
+    g1_oi_ok = g1_oi_raw if oi_scored else None
     res["G1"] = {
         "envelope": env,
         "peak_concurrent_gross_book_usd_k1": peak_book_k1,
@@ -285,8 +314,12 @@ def main() -> int:
         "k_max_oi": k_max_oi,
         "k_max_both": k_max,
         "adv_pass": bool(g1_adv_ok),
-        "oi_pass": bool(g1_oi_ok),
-        "pass": bool(g1_adv_ok and g1_oi_ok),
+        "oi_leg_scored": bool(oi_scored),
+        "oi_leg_status": ("PASS" if g1_oi_raw else "FAIL") if oi_scored
+                         else "R4_UNSCORED_diagnostic_only",
+        "oi_leg_raw_on_covered_subset": bool(g1_oi_raw),
+        "oi_covered_subset_n": len(with_oi),
+        "pass": bool(g1_adv_ok and (g1_oi_ok is not False)),
     }
 
     # ---- G2: slippage budget ---------------------------------------------
@@ -325,6 +358,8 @@ def main() -> int:
             a.mean() / a.std(ddof=1) * math.sqrt(TRADING_DAYS_PER_YEAR))
             if a.std(ddof=1) > 0 else float("nan")),
         "n_book_days": len(base_daily),
+        "sharpe_exit_days_only_diagnostic": sharpe(daily_book_exit_days(trades)),
+        "n_exit_days": len(daily_book_exit_days(trades)),
         "median_edge_bps": med_edge_bps,
         "median_edge_bps_ci95": boot_ci(edges, lambda a: float(np.median(a))),
         "slippage_to_sharpe_1_bps": s_sharpe1,
@@ -384,7 +419,22 @@ def main() -> int:
         and ci_excl_zero
         and (recent_sharpe == recent_sharpe and recent_sharpe > G3_RECENT_SHARPE_BAR)
     )
+    # Supplementary diagnostic (does NOT re-score G3): is the high-tercile
+    # recent Sharpe distinguishable from the 1.0 bar, or is it R2 below-res?
+    _ranked_adv = sorted(with_adv, key=lambda t: t["adv"])
+    _hi_cell = _ranked_adv[2 * (len(_ranked_adv) // 3):]
+    recent_hi = [t for t in _hi_cell if t["regime_wf"] == "recent"]
+    recent_hi_daily = daily_book(recent_hi, 0.0)
+    res_recent_ci = boot_ci(
+        recent_hi_daily,
+        lambda a: float(a.mean() / a.std(ddof=1) * math.sqrt(TRADING_DAYS_PER_YEAR))
+        if a.std(ddof=1) > 0 else float("nan"),
+    )
+
     res["G3"] = {
+        "high_tercile_recent_sharpe_ci95_diagnostic": res_recent_ci,
+        "high_tercile_recent_n_trades": len(recent_hi),
+        "high_tercile_recent_n_book_days": len(recent_hi_daily),
         "pooled_median_edge_bps": pooled_med,
         "adv_terciles": adv_terciles,
         "oi_terciles": oi_terciles,
@@ -400,7 +450,10 @@ def main() -> int:
     }
 
     # ---- verdict ----------------------------------------------------------
-    g0_ok = res["G0"]["adv_pass"] and res["G0"]["oi_pass"]
+    # ADV is the load-bearing join (G1 ADV leg, G2, G3 all depend on it). If it
+    # fell below bar nothing is scoreable. OI under-coverage only unscores the
+    # G1 OI leg (handled above), per V267.md section 4.
+    g0_ok = res["G0"]["adv_pass"]
     passes = [res["G1"]["pass"], res["G2"]["pass"], res["G3"]["pass"]]
     if not g0_ok:
         verdict = "R4_DATA_BLOCKED"
