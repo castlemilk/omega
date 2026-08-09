@@ -125,3 +125,5 @@ that re-runs the training loop once resume criterion 1 or 2 is met.
 | **Phase 2** | **V250–V252** | **live-paper harness build** | **feed layer + reconciliation gate + scheduler/checkpoint DONE; V253 = 90-day soak** |
 | Phase 2 (cont.) | V254–V261 | offline alt-data lanes | funding-carry ADOPTED (V255.C/D, full liquid book); Tracks C/D/E/F all REFUTED or blocked — offline alpha search closed |
 | **Phase 2 (cont.)** | **V262** | **intraday data unlock** | **1h corpus frozen (665,824 bars, 14 MB, byte-identical). Audit+freeze only — no strategy code. V262-2 gated on falsifier F4** |
+| Phase 2 (cont.) | V263–V265 | Kronos foundation-model (Track H) | CLOSED — zero-shot (no effect), fine-tuned (below bar), distributional (real but redundant with a free 24-bar rolling σ) |
+| **Phase 2 (cont.)** | **V266** | **portfolio composition** | **CAVEATED 1/3 — the two validated lanes are genuinely INDEPENDENT (ρ = −0.015, ≈0 in every regime) but do NOT compose: naive 50/50 and risk-parity both refuted; only an 8/92 tangency mix clears 1.05× and only by a hairline. Independence premise behind the two-lane story CONFIRMED; naive combination CLOSED** |

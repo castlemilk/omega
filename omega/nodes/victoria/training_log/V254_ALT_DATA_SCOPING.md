@@ -531,6 +531,70 @@ full 405-window cell. See
 
 ---
 
+## UPDATE 2026-08-09 — V266: the two lanes ARE independent, but they do NOT compose
+
+**The B-track premise is now measured rather than assumed.** Option B was ranked #1
+in the summary table below on the argument that a carry strategy "manufactures new
+independent N per strategy" — i.e. that funding-carry PnL is genuinely a *different*
+exposure from spot Victoria, not the same trade re-sliced. **That premise was never
+tested until now. It holds, decisively.**
+
+V266 aligned both validated lanes to a common daily net-PnL series (2020-02-07 →
+2026-05-14, 1,590 observed days; Victoria's 26 *independent* primary walk-forward
+windows + the V255.D-EXT frozen real-basis funding ledger, 853 in-range trades) and
+scored three pre-registered gates:
+
+| Gate | Statistic | Bar | Result | |
+|---|---|---:|---:|:--:|
+| **G1** | Pearson ρ(daily net PnL) | < 0.50 | **−0.0151** CI95 [−0.047, +0.002] | **PASS** |
+| **G2** | Sharpe(50/50) vs 1.05× best single | > 2.3141 | **1.2577** | **FAIL** |
+| **G3** | max DD(combined) vs 0.9× min single | < $88.73 | **$4,203.25** | **FAIL** |
+
+**Verdict: CAVEATED (1/3). V266-2 allocation is NOT queued.**
+
+**What this settles for the scoping menu:**
+
+1. **B's independence claim is CONFIRMED.** ρ ≈ 0 pooled *and in every regime*
+   (crisis +0.006, trend −0.025, recent −0.057); ≤0 on the 53 joint-active days;
+   the lone contrary signal (window-level ρ +0.712) is a **single-window artifact**
+   that collapses to +0.221 without `snap_wf_20201226` and whose Spearman CI spans
+   zero. The campaign has **not** been double-counting exposure — the "two validated
+   lanes" framing used throughout V254→V265 is sound.
+2. **But independence ≠ composability.** G2/G3 fail not from interference but from
+   **unequal lane quality**: Sharpe 2.204 (funding) vs 0.718 (Victoria); max
+   drawdown $98.59 vs $11,172.91. At ρ ≈ 0 there is no covariance benefit to pay for
+   the weaker lane's variance, so 50/50 equal-dollar weight (which loads 79% of
+   portfolio variance onto the Sharpe-0.72 lane) *dilutes*. Risk parity also fails
+   (2.082 < 2.204). Only the mean-variance tangency mix clears 1.05×, at
+   **1.0565× best single, CI95 [1.0006, 1.1787]** — a hairline, in-sample, at an
+   **8.2% / 91.8%** split.
+3. **Naive combination is CLOSED.** Equal-weight and risk-parity are refuted for
+   this pair with numbers. The surviving heuristic is *funding-carry primary,
+   Victoria ≲10% of risk as a trend-regime satellite* (trend PnL: Victoria +$29,969
+   vs funding +$16,301 — Victoria's value is trend capture, not Sharpe).
+4. **A finding that re-frames the recent-N wall.** Victoria is Sharpe **−0.94** in
+   `recent` while funding-carry earns **+2.06** there with a bounded drawdown.
+   The calendar-bound recent-N constraint that has gated the campaign since V249 is
+   a **Victoria-specific** constraint, not a portfolio-level one. Whether
+   funding-carry's recent-regime edge can be widened to more independent windows is
+   a **data** question (basis coverage, name count) — it would need its own Phase-0
+   audit and is *not* queued here.
+
+**Caveat that bounds all of the above:** funding-carry's binding constraint is
+**capacity, not Sharpe**. V255.C runs $2,000 notional/trade at a median +$1.95/trade;
+a Sharpe of 2.2 on a hedged carry book with single-dollar per-trade PnL is exactly
+what theory predicts and says nothing about deployable capital. Do not read
+"Sharpe 2.2 lane" as "put the book there."
+
+Standing state unchanged: both lanes remain validated and **independent**;
+funding-carry remains **KEEP-FLAG-GATED**; live-paper (V253) remains the only lane
+accruing independent recent-N; all V241–V265 flags stay OFF. Analysis was $0 —
+no grids, no backtests, no strategy code — and re-runs byte-identical. See
+[`V266_PORTFOLIO_COMPOSITION_VERDICT.md`](V266_PORTFOLIO_COMPOSITION_VERDICT.md) +
+[`V266.md`](V266.md).
+
+---
+
 ## Summary ranking (ORIGINAL, pre-V255 — superseded above for option B)
 
 | Rank | Option | Attacks the N wall? | Cost (dev-days) | Dead-end risk | One-line |
