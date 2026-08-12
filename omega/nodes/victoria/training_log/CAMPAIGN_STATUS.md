@@ -92,9 +92,22 @@ a sub-resolution objective is variance mining, not science.
    (REFUTE if per-name-hour vs macro-day regime correlation > 0.7). Criterion 2 fires
    **only if F4 passes.** Until then the freeze is a loaded gun, not a fired one.
 
-   ⚠️ Criterion 1 is **not currently accruing**: as of 2026-07-25 no live-paper daemon
-   is running and the configured checkpoint dir does not exist (V253 shipped with
-   `SCHEDULER_ENABLED=0` pending host provisioning). Recent-N is static.
+   ✅ **Criterion 1 IS accruing (as of 2026-08-12).** The V253 live-paper daemon is
+   running under launchd (`com.omega.live_paper`, PID 10329, up 8d, tick 02:55 UTC),
+   `SCHEDULER_ENABLED=1`, writing MD5-chained daily checkpoints to
+   `…/live_paper_v253_smoke_v2/live_paper/checkpoint/` — 21 cycles through
+   2026-08-11, regime source `hmm`, equity $98,666.60. This supersedes the
+   2026-07-25 "not accruing" note. **Victoria-lane only** — there is no
+   funding-carry lane (the harness carries one book, `schema_version: 1`).
+
+   ⚠️ **V268 (2026-08-12) bounds what criterion 1 can buy.** Criterion 1 accrues
+   ~1 *calendar window* per quarter, which is true — but the quantity that gates
+   **funding-carry** promotion is the capacity-conditioned trade count
+   (high-ADV-tercile, `recent`), and that accrues **~30× slower**: 7–22 trades/yr,
+   against the 138 more needed to close V267's G3 CI ⇒ **6.4–19.4 years**
+   ([`V268_SOAK_FEASIBILITY_VERDICT.md`](V268_SOAK_FEASIBILITY_VERDICT.md), **R3**).
+   Criterion 1 remains valid for the **Victoria** lane's recent-N; it does **not**
+   put funding-carry's G3 leg within reach on any decision-relevant timescale.
 
 Until one fires: **the standing baseline is the answer, every V241–V261 flag stays
 OFF, and the loop waits on the calendar rather than mining variance.**
@@ -128,3 +141,4 @@ that re-runs the training loop once resume criterion 1 or 2 is met.
 | Phase 2 (cont.) | V263–V265 | Kronos foundation-model (Track H) | CLOSED — zero-shot (no effect), fine-tuned (below bar), distributional (real but redundant with a free 24-bar rolling σ) |
 | **Phase 2 (cont.)** | **V266** | **portfolio composition** | **CAVEATED 1/3 — the two validated lanes are genuinely INDEPENDENT (ρ = −0.015, ≈0 in every regime) but do NOT compose: naive 50/50 and risk-parity both refuted; only an 8/92 tangency mix clears 1.05× and only by a hairline. Independence premise behind the two-lane story CONFIRMED; naive combination CLOSED** |
 | **Phase 2 (cont.)** | **V267** | **funding-carry capacity** | **CAVEATED 2/3 — capacity is NOT the binding constraint: book scales to ~316x per-trade notional (~$154M peak gross) under a 1%-of-ADV threshold, edge absorbs 11.8 bps of extra per-leg slippage before Sharpe 1.0, and the edge is CONCENTRATED in the most-liquid tercile (16.35 vs 1.05 bps) — the illiquidity-premium fear is refuted. G3 fails on one R2 leg: top-liquidity `recent` Sharpe 0.762, CI95 [-0.601, +1.193], n=62 — which CORRECTS V266's "recent-N wall is Victoria-specific": conditioned on tradeable liquidity, funding-carry's recent edge is unadjudicable too. Fitted-impact Sharpe curve declared R4 up front (no depth data, no fills above the $10k cap). V267-2 NOT queued** |
+| **Phase 2 (cont.)** | **V268** | **scaled live-paper soak feasibility** | **STOP 0/2 — the soak cannot buy what V267 needs, and its "scaled" half measures nothing. F1 ACCRUAL FAIL (R3): the blocking quantity (high-ADV-tercile `recent` trades) accrues at 7–22/yr against 138 more needed ⇒ 6.4 yr best case, 19.4 yr on last-12m evidence; the rate has fallen 3× in three years as funding compressed in exactly the liquid names that carry the edge (BTC 1 / ETH 4 trades in 24m). F2 PAYLOAD FAIL (R5): annualised Sharpe is **bit-identical** across k = 1…1000 ($3.3k…$3.3M per trade) — with the impact lane R4 (no depth data), cost is proportional and every ratio statistic cancels k; the only nonlinearity is an 820×-paper-equity margin artifact. **No lane activated, daemon PID 10329 untouched, no strategy code.** Closes the "wait for the calendar" path *for this objective*; what remains is a data-acquisition decision, not a mechanism** |
