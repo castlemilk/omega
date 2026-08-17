@@ -71,3 +71,10 @@ harness/
 # reproduce with: git clone https://github.com/shiyu-coder/Kronos third_party/kronos
 # Pinned SHA recorded in training_log/V263_ONBOARDING_VERDICT.md
 third_party/
+
+# V269 — depth acquisition. Logs and the regenerable V255.C ledger stay local.
+# The forward depth collector accrues ~7 MB/day; it is NOT committed (repo growth),
+# unlike the fixed-extent binance_bookticker aggregate which IS.
+data/v269_logs/
+data/v269_ledger/
+data/frozen_series/binance_depth_forward/
