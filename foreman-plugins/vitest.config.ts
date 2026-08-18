@@ -19,6 +19,8 @@ export default defineConfig({
     jsx: 'automatic',
   },
   test: {
-    include: ['victoria/**/*.test.{ts,tsx}', 'polymarket/**/*.test.{ts,tsx}'],
+    // `*.test.ts` at the root is the import guard (`imports.test.ts`), which
+    // belongs to no single shell because it asserts about all of them.
+    include: ['*.test.{ts,tsx}', 'victoria/**/*.test.{ts,tsx}', 'polymarket/**/*.test.{ts,tsx}'],
   },
 });

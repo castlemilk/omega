@@ -25,8 +25,14 @@ They are **built by the harness**, not by anything in this repo. The harness
 …resolves those paths at Vite config load, and generates a static import per
 plugin. So:
 
-- **Adding a tab is a change here plus nothing there.** A new view, a new
-  endpoint, a new colour — the harness never learns about it.
+- **Adding a tab is a change here plus one row in the harness's roster test.**
+  A new endpoint, a new colour, a rewritten view body — those really are a
+  change here and nothing there. But adding or renaming a *view* is not: the
+  harness's `roster.test.ts` asserts each shell's exact view ids, so a new tab
+  fails it until that list is updated too. The lockstep is deliberate — the
+  host is asserting what it actually renders, and a tab appearing or vanishing
+  in the operator's UI is precisely the change nobody should be able to make
+  silently from another repository.
 - **Adding a whole new shell is a change here plus one line in that JSON.**
 - **A path in that config that is not on disk fails the harness build**, with
   the absolute path and "clone the repository that provides it" in the message.

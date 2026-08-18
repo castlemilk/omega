@@ -16,5 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true
   },
-  "include": ["victoria/**/*", "polymarket/**/*"]
+  // `*.test.ts` picks up the root-level import guard; `vitest.config.ts` is not
+  // matched by it and stays out, as it should — it is tooling, not a shell.
+  "include": ["victoria/**/*", "polymarket/**/*", "*.test.ts"]
 }

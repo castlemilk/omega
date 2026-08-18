@@ -122,18 +122,37 @@ fe-format:
 # shipped by the harness repo (~/projects/omega/harness reads
 # foreman-plugins.json and compiles them into its bundle); what runs here is the
 # check that they still typecheck against the plugin contract and that their own
-# tests pass. Both need the harness checked out beside this repo, because the
-# kit arrives as a `file:` dependency pointing into it — so this stays opt-in
-# rather than breaking the main pipeline for anyone without it.
+# tests pass. Both need the harness checked out INSIDE this repo (`harness/`,
+# a separate git checkout), because the kit arrives as a `file:` dependency
+# pointing into it — so this stays opt-in rather than breaking the main pipeline
+# for anyone without it.
+#
+# Both targets build the kit first. Its `dist/` is gitignored over there and is
+# what `tsc` here resolves `@omega-harness/usecase-kit` to, so on a fresh clone
+# it does not exist and on any other day it may be stale — a check against a
+# stale contract is worse than no check, because it passes.
 # ---------------------------------------------------------------------------
 
-## foreman-plugins-install: install the shells' dev deps and link the kit (needs ../harness)
-foreman-plugins-install:
+# The kit build, and the one message worth printing when the harness is absent:
+# without it there is no contract to typecheck against, and npm/tsc would fail
+# several layers down with a module-resolution error instead.
+define foreman_plugins_kit
+	@test -d harness || { \
+	  echo "make: the Foreman shells need the harness checked out at ./harness"; \
+	  echo "      git clone <harness repo> harness   # a separate checkout, gitignored here"; \
+	  exit 1; \
+	}
 	cd harness && pnpm --filter @omega-harness/usecase-kit build
+endef
+
+## foreman-plugins-install: install the shells' dev deps and link the kit (needs ./harness)
+foreman-plugins-install:
+	$(foreman_plugins_kit)
 	cd foreman-plugins && npm install
 
 ## foreman-plugins-check: typecheck + test the Victoria and Polymarket Foreman shells
 foreman-plugins-check:
+	$(foreman_plugins_kit)
 	cd foreman-plugins && npm run check
 
 # ---------------------------------------------------------------------------
