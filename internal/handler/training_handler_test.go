@@ -310,6 +310,87 @@ func TestGates_HappyPath(t *testing.T) {
 	}
 }
 
+// TestGates_StandingShape covers the shape omega/eval/standing_gates.py writes
+// from 2026-08-18: "gates" is an object per gate rather than a bool, and the
+// file carries a top-level verdict. The pre-existing map[string]bool decode
+// would have failed outright on this, returning a 500 for every new run.
+func TestGates_StandingShape(t *testing.T) {
+	dir := t.TempDir()
+	const standing = `{
+  "version": "v272_crisis_r1",
+  "family": "crisis",
+  "verdict": "FAIL",
+  "passed": false,
+  "gates": {
+    "family_pnl_floor": {"status": "fail", "family": "crisis", "candidate_pnl_usd": 412.55, "floor_usd": 599.0, "margin_usd": -186.45},
+    "trade_count_floor": {"status": "pass", "trades": 24, "floor": 20},
+    "drawdown_ceiling": {"status": "not_evaluated", "reason": "observability.max_drawdown_usd absent"}
+  },
+  "failures": ["family_pnl_floor[crisis]: candidate +412.55 < standing floor +599.00 (margin -186.45)"],
+  "notes": ["candidate trade fingerprint (timestamp column dropped): e6289844ea6023a5"],
+  "standing_baseline_used": {"family": "crisis", "family_source": "snapshot_pattern", "pnl_floor_usd": 599.0},
+  "candidate_summary": {"version": "v272_crisis_r1", "pnl": 412.55, "trades": 24, "win_rate": 0.4167, "max_drawdown": null},
+  "sibling_comparison": {"status": "informational", "sibling_label": "v271_crisis_r1", "delta_pnl_usd": 0.0}
+}`
+	if err := os.WriteFile(filepath.Join(dir, "v272_crisis_r1_gate_result.json"), []byte(standing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body struct {
+		Version     string                     `json:"version"`
+		Passed      bool                       `json:"passed"`
+		Verdict     string                     `json:"verdict"`
+		Family      string                     `json:"family"`
+		Gates       map[string]bool            `json:"gates"`
+		GateDetails map[string]json.RawMessage `json:"gate_details"`
+		Failures    []string                   `json:"failures"`
+		Notes       []string                   `json:"notes"`
+		Standing    json.RawMessage            `json:"standing_baseline_used"`
+		Sibling     json.RawMessage            `json:"sibling_comparison"`
+		Baseline    json.RawMessage            `json:"baseline_summary"`
+		Candidate   struct {
+			Version string  `json:"version"`
+			PnL     float64 `json:"pnl"`
+		} `json:"candidate_summary"`
+	}
+	resp := getJSON(t, srv.URL+"/api/v1/training/gates?version=v272_crisis_r1", &body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if body.Verdict != "FAIL" || body.Family != "crisis" || body.Passed {
+		t.Errorf("verdict/family/passed = %q/%q/%v", body.Verdict, body.Family, body.Passed)
+	}
+	// The lossy bool projection: pass -> true, fail -> false, not_evaluated
+	// OMITTED (guessing a bool for it would be the exact lie this replaces).
+	if v, ok := body.Gates["family_pnl_floor"]; !ok || v {
+		t.Errorf("gates[family_pnl_floor] = %v, %v; want false, true", v, ok)
+	}
+	if v, ok := body.Gates["trade_count_floor"]; !ok || !v {
+		t.Errorf("gates[trade_count_floor] = %v, %v; want true, true", v, ok)
+	}
+	if _, ok := body.Gates["drawdown_ceiling"]; ok {
+		t.Error("a not_evaluated gate must not appear in the bool map")
+	}
+	// The unlossy projection keeps all three, with their numbers.
+	for _, g := range []string{"family_pnl_floor", "trade_count_floor", "drawdown_ceiling"} {
+		if _, ok := body.GateDetails[g]; !ok {
+			t.Errorf("gate_details missing %q", g)
+		}
+	}
+	if len(body.Baseline) != 0 {
+		t.Error("a standing-gate file has no baseline run; baseline_summary should be omitted")
+	}
+	if body.Candidate.Version != "v272_crisis_r1" || body.Candidate.PnL != 412.55 {
+		t.Errorf("candidate_summary = %+v", body.Candidate)
+	}
+	if len(body.Notes) != 1 || len(body.Standing) == 0 || len(body.Sibling) == 0 {
+		t.Errorf("notes/standing_baseline_used/sibling_comparison not passed through: %+v", body)
+	}
+}
+
 // TestGates_BacktestCellVersion covers cell names like bt_v132a_crisis.
 func TestGates_BacktestCellVersion(t *testing.T) {
 	dir := t.TempDir()

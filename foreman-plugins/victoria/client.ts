@@ -397,12 +397,135 @@ export const GATE_NAMES = [
 
 export type GateName = (typeof GATE_NAMES)[number];
 
+/**
+ * The standing-baseline gates (`omega/eval/standing_gates.py`, 2026-08-18), which
+ * replaced the v49 sibling comparison as the live path.
+ *
+ * The names are DIFFERENT from `GATE_NAMES` on purpose — `family_pnl_floor` is
+ * not `pnl_floor`. The old gate asked "did this run beat the previous one"; the
+ * new one asks "is this run still at the campaign's standing level for its
+ * regime family" (the journal's crisis +$599 / trend +$2,997 / recent +$30). A
+ * file carries one vocabulary or the other, never both.
+ */
+export const STANDING_GATE_NAMES = [
+  'family_pnl_floor',
+  'trade_count_floor',
+  'drawdown_ceiling',
+] as const;
+
+/**
+ * The verdict a standing-gate file carries. Present only on the new shape;
+ * legacy files have no `verdict` at all and are rendered exactly as before.
+ *
+ * `NO_OP`, `NO_BASELINE` and `ERROR` are the three states the old boolean could
+ * not express, and each of them was previously rendered — or not rendered at
+ * all — as something misleading:
+ *
+ * - `NO_OP`: the run reproduced a prior run under a new label. 18 of the gate
+ *   files in `data/` are this, and they read as an all-green board.
+ * - `NO_BASELINE`: the cell's regime family did not resolve, so no floor could
+ *   be applied. The old code wrote no file at all here — a silent skip.
+ * - `ERROR`: gate evaluation itself raised. The old code swallowed it.
+ */
+export type GateVerdict = 'PASS' | 'FAIL' | 'NO_OP' | 'NO_BASELINE' | 'ERROR';
+
+export const GATE_VERDICTS: readonly GateVerdict[] = [
+  'PASS',
+  'FAIL',
+  'NO_OP',
+  'NO_BASELINE',
+  'ERROR',
+];
+
+/** Per-gate status in the standing shape. */
+export type GateStatus = 'pass' | 'fail' | 'not_evaluated';
+
+/**
+ * One standing gate: its status plus whatever numbers it was computed from.
+ * Typed open because the numbers differ per gate and the file, not this client,
+ * decides what evidence a gate carries.
+ */
+export interface GateDetail {
+  status: GateStatus | string;
+  reason?: string;
+  family?: string;
+  candidate_pnl_usd?: number;
+  floor_usd?: number;
+  margin_usd?: number;
+  journal_cite?: string;
+  trades?: number;
+  floor?: number;
+  candidate_max_drawdown_usd?: number;
+  ceiling_usd?: number;
+  [key: string]: unknown;
+}
+
+/** `standing_baseline_used` — which floor was applied, and where it came from. */
+export interface StandingBaselineUsed {
+  source?: string;
+  updated?: string;
+  family?: string | null;
+  /** How the family was resolved: manifest / snapshot_pattern / label_pattern / unresolved. */
+  family_source?: string;
+  pnl_floor_usd?: number;
+  trade_count_floor?: number;
+  journal_cite?: string;
+}
+
+/**
+ * The N-1 sibling block — deliberately INFORMATIONAL.
+ *
+ * Under the v49 gates the sibling *was* the gate, which is how 18 files came to
+ * carry a run compared with itself. Here it only answers "did this run
+ * reproduce a prior one", and the board says so in those words.
+ */
+export interface SiblingComparison {
+  status?: string;
+  note?: string;
+  sibling_label?: string | null;
+  sibling_pnl_usd?: number | null;
+  sibling_trades?: number | null;
+  candidate_pnl_usd?: number | null;
+  candidate_trades?: number | null;
+  delta_pnl_usd?: number | null;
+  identical_numbers?: boolean;
+  identical_trade_fingerprint?: boolean;
+  candidate_frozen_cache?: boolean;
+}
+
 /** `gateResponse` from `/api/v1/training/gates`. */
 export interface GateResult {
   version: string;
   passed: boolean;
-  /** Typed open: the file decides which gates exist, not this client. */
+  /**
+   * Present only on standing-gate files. Its absence is what tells the board to
+   * render the legacy six-tile layout unchanged.
+   */
+  verdict?: GateVerdict | string;
+  /** The regime family the standing floor was taken from; null when unresolved. */
+  family?: string | null;
+  /**
+   * Typed open: the file decides which gates exist, not this client.
+   *
+   * The handler projects the standing shape into this map lossily — a gate whose
+   * status is `not_evaluated` is OMITTED rather than guessed at, so it still
+   * renders as "not reported" for a reader that only knows the booleans. Use
+   * `gate_details` when it is present; it is the unlossy one.
+   */
   gates: Record<string, boolean>;
+  /** Verbatim per-gate objects from a standing-gate file. */
+  gate_details?: Record<string, GateDetail>;
+  /** Which standing floor was applied, and where in the journal it came from. */
+  standing_baseline_used?: StandingBaselineUsed;
+  /**
+   * The N-1 sibling block. `status` is literally `"informational"`: it exists to
+   * detect a run that reproduced a prior run, and never decides a pass or a fail.
+   */
+  sibling_comparison?: SiblingComparison;
+  /** Free-text provenance lines the gate module chose to record. */
+  notes?: string[];
+  /** Only on an ERROR file: what gate evaluation raised. */
+  error?: string;
   failures: string[];
   /** `omitempty` on the wire — a malformed gate file can carry neither. */
   baseline_summary?: GateSummary;

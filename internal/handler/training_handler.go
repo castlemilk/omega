@@ -1122,33 +1122,99 @@ func isSafeVersion(v string) bool {
 
 // ── Gate results ──────────────────────────────────────────────────────────────
 
-// gateResultFileSuffix is the filename written by omega/eval/v49_gates.py
-// (`{version}_gate_result.json` in the audit/data dir).
+// gateResultFileSuffix is the filename written by omega/eval/standing_gates.py
+// (and, before 2026-08-18, omega/eval/v49_gates.py):
+// `{version}_gate_result.json` in the audit/data dir.
 const gateResultFileSuffix = "_gate_result.json"
 
-// rawGateResult mirrors the JSON emitted by omega/eval/v49_gates.py.
-// NOTE the "v48_summary"/"v49_summary" keys are LITERAL in the file regardless
-// of which versions were actually compared (the gate module hard-codes the
-// dataclass field names); the real version names live inside each summary's
-// "version" field. We surface them as baseline/candidate and keep the raw
-// document for passthrough.
+// rawGateResult mirrors the JSON emitted by the gate modules. TWO shapes exist
+// and both must round-trip:
+//
+//   - LEGACY (omega/eval/v49_gates.py): "gates" is map[string]bool, and the
+//     summary keys are LITERAL "v48_summary"/"v49_summary" regardless of which
+//     versions were actually compared (the module hard-codes its dataclass field
+//     names); the real version names live inside each summary's "version".
+//   - STANDING (omega/eval/standing_gates.py, 2026-08-18): "gates" is
+//     map[string]object where each object carries a "status" of
+//     pass|fail|not_evaluated plus the numbers, and the file carries a top-level
+//     "verdict" (PASS|FAIL|NO_OP|NO_BASELINE|ERROR) and "family". It writes its
+//     own summary under "candidate_summary" and has no baseline summary at all —
+//     the standing floor, not a sibling run, is what it compares against.
+//
+// "gates" is therefore held as RawMessage per key and projected two ways: a
+// lossy bool map for readers that predate the verdict vocabulary (not_evaluated
+// is OMITTED from it rather than guessed at — a gate reported as absent renders
+// as "not reported", which is true, whereas a guessed bool would be a lie), and
+// an untouched passthrough in gate_details.
 type rawGateResult struct {
-	Passed    bool            `json:"passed"`
-	Gates     map[string]bool `json:"gates"`
-	Failures  []string        `json:"failures"`
-	Baseline  json.RawMessage `json:"v48_summary"`
-	Candidate json.RawMessage `json:"v49_summary"`
+	Passed    bool                       `json:"passed"`
+	Verdict   string                     `json:"verdict"`
+	Family    string                     `json:"family"`
+	Gates     map[string]json.RawMessage `json:"gates"`
+	Failures  []string                   `json:"failures"`
+	Baseline  json.RawMessage            `json:"v48_summary"`
+	Candidate json.RawMessage            `json:"v49_summary"`
+	// Standing-shape only; absent (and omitted) for legacy files.
+	Notes            []string        `json:"notes"`
+	Sibling          json.RawMessage `json:"sibling_comparison"`
+	StandingBaseline json.RawMessage `json:"standing_baseline_used"`
+	StandingSummary  json.RawMessage `json:"candidate_summary"`
+	Error            string          `json:"error"`
 }
 
 type gateResponse struct {
-	Version          string          `json:"version"`
-	Passed           bool            `json:"passed"`
-	Gates            map[string]bool `json:"gates"`
-	Failures         []string        `json:"failures"`
-	BaselineSummary  json.RawMessage `json:"baseline_summary,omitempty"`
-	CandidateSummary json.RawMessage `json:"candidate_summary,omitempty"`
-	Raw              json.RawMessage `json:"raw"`
-	ResolvedLatest   bool            `json:"resolved_latest"`
+	Version          string                     `json:"version"`
+	Passed           bool                       `json:"passed"`
+	Verdict          string                     `json:"verdict,omitempty"`
+	Family           string                     `json:"family,omitempty"`
+	Gates            map[string]bool            `json:"gates"`
+	GateDetails      map[string]json.RawMessage `json:"gate_details,omitempty"`
+	Failures         []string                   `json:"failures"`
+	BaselineSummary  json.RawMessage            `json:"baseline_summary,omitempty"`
+	CandidateSummary json.RawMessage            `json:"candidate_summary,omitempty"`
+	Notes            []string                   `json:"notes,omitempty"`
+	SiblingComparson json.RawMessage            `json:"sibling_comparison,omitempty"`
+	StandingBaseline json.RawMessage            `json:"standing_baseline_used,omitempty"`
+	Error            string                     `json:"error,omitempty"`
+	Raw              json.RawMessage            `json:"raw"`
+	ResolvedLatest   bool                       `json:"resolved_latest"`
+}
+
+// gateStatus is the "status" field of a standing-gate entry.
+type gateStatusEnvelope struct {
+	Status string `json:"status"`
+}
+
+// projectGates splits the per-gate values into the legacy bool map and the
+// verbatim detail map. A gate whose status is not_evaluated (or unrecognised) is
+// left OUT of the bool map on purpose.
+func projectGates(raw map[string]json.RawMessage) (map[string]bool, map[string]json.RawMessage) {
+	bools := map[string]bool{}
+	details := map[string]json.RawMessage{}
+	for name, value := range raw {
+		var b bool
+		if err := json.Unmarshal(value, &b); err == nil {
+			bools[name] = b
+			continue
+		}
+		var env gateStatusEnvelope
+		if err := json.Unmarshal(value, &env); err == nil && env.Status != "" {
+			details[name] = value
+			switch env.Status {
+			case "pass":
+				bools[name] = true
+			case "fail":
+				bools[name] = false
+			}
+			continue
+		}
+		// Unknown shape: pass it through untouched rather than dropping it.
+		details[name] = value
+	}
+	if len(details) == 0 {
+		details = nil
+	}
+	return bools, details
 }
 
 // latestGateVersion returns the version of the most recently written
@@ -1179,7 +1245,8 @@ func latestGateVersion(dir string) string {
 }
 
 // handleGates serves data/{version}_gate_result.json (produced by
-// omega/eval/v49_gates.py via scripts/run_training.py).
+// omega/eval/standing_gates.py via scripts/run_training.py; archived files come
+// from the retired omega/eval/v49_gates.py). Both shapes round-trip.
 // Query param: version (optional — defaults to the most recent gate file).
 func (h *TrainingHandler) handleGates(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -1219,20 +1286,33 @@ func (h *TrainingHandler) handleGates(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to parse gate result", http.StatusInternalServerError)
 		return
 	}
-	if raw.Gates == nil {
-		raw.Gates = map[string]bool{}
-	}
 	if raw.Failures == nil {
 		raw.Failures = []string{}
+	}
+	gates, details := projectGates(raw.Gates)
+
+	// The standing-gate file has no baseline summary (it gates against a config
+	// floor, not a sibling run) and writes its own summary under
+	// "candidate_summary"; the legacy key stays authoritative when present.
+	candidate := raw.Candidate
+	if candidate == nil {
+		candidate = raw.StandingSummary
 	}
 
 	writeJSON(w, gateResponse{
 		Version:          version,
 		Passed:           raw.Passed,
-		Gates:            raw.Gates,
+		Verdict:          raw.Verdict,
+		Family:           raw.Family,
+		Gates:            gates,
+		GateDetails:      details,
 		Failures:         raw.Failures,
 		BaselineSummary:  raw.Baseline,
-		CandidateSummary: raw.Candidate,
+		CandidateSummary: candidate,
+		Notes:            raw.Notes,
+		SiblingComparson: raw.Sibling,
+		StandingBaseline: raw.StandingBaseline,
+		Error:            raw.Error,
 		Raw:              json.RawMessage(data),
 		ResolvedLatest:   resolvedLatest,
 	})

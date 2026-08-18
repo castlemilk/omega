@@ -21,7 +21,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DataSourceError } from '@omega-harness/usecase-kit';
 import type { ObjectiveState, UseCaseViewProps } from '@omega-harness/usecase-kit';
 import type { DecisionTrace, ForensicsReport, GateResult, TrainingLogDetail } from './client.js';
-import { GateBoard, GateLoadFailure, VictoriaGates } from './views/Gates.js';
+import { GATE_VERDICTS } from './client.js';
+import {
+  GateBoard,
+  GateLoadFailure,
+  VERDICT_TONE,
+  VictoriaGates,
+  standingGateEvidence,
+} from './views/Gates.js';
 import { ConvictionFunnel, NoDecisionTraces, VictoriaConviction } from './views/Conviction.js';
 import { ForensicsList, ForensicsReportView } from './views/Forensics.js';
 import { JournalEntry } from './views/Journal.js';
@@ -188,6 +195,229 @@ describe('the Gates board', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(html).toContain('loading gate result');
     expect(html).toContain('Gates');
+  });
+
+  it('renders a legacy file with no verdict exactly as the six-tile board', () => {
+    // The regression this pins: 280 archived gate files predate the verdict
+    // vocabulary and must not be reinterpreted in it.
+    const html = renderToStaticMarkup(<GateBoard result={GATE_RESULT} />);
+    expect(html).toContain('Baseline vs candidate');
+    expect(html).toContain('Regime parity');
+    expect(html).not.toContain('Standing baseline applied');
+    expect(html).not.toContain('NO_OP');
+  });
+});
+
+// ── Gates, standing-baseline shape ───────────────────────────────────────────
+
+/**
+ * A real standing-gate file, as `omega/eval/standing_gates.py` writes it and the
+ * handler projects it. This one FAILS its family floor: crisis's standing floor
+ * is +$599 (training_log/V271.md:6) and the run made +$412.55.
+ */
+const STANDING_RESULT: GateResult = {
+  version: 'v272_crisis_r1',
+  passed: false,
+  verdict: 'FAIL',
+  family: 'crisis',
+  gates: { family_pnl_floor: false, trade_count_floor: true },
+  gate_details: {
+    family_pnl_floor: {
+      status: 'fail',
+      family: 'crisis',
+      candidate_pnl_usd: 412.55,
+      floor_usd: 599,
+      margin_usd: -186.45,
+      journal_cite: 'training_log/V271.md:6',
+    },
+    trade_count_floor: { status: 'pass', trades: 24, floor: 20 },
+    drawdown_ceiling: {
+      status: 'not_evaluated',
+      reason: 'observability.max_drawdown_usd absent from candidate results',
+    },
+  },
+  standing_baseline_used: {
+    source: 'omega/nodes/victoria/training_log/V271.md:6 (pre-registration, 2026-08-18)',
+    updated: '2026-08-18',
+    family: 'crisis',
+    family_source: 'snapshot_pattern',
+    pnl_floor_usd: 599,
+    trade_count_floor: 20,
+    journal_cite: 'training_log/V271.md:6',
+  },
+  candidate_summary: { version: 'v272_crisis_r1', pnl: 412.55, trades: 24, win_rate: 0.4167 },
+  failures: [
+    'family_pnl_floor[crisis]: candidate +412.55 < standing floor +599.00 (margin -186.45)',
+  ],
+  notes: ['candidate trade fingerprint (timestamp column dropped): e6289844ea6023a5…'],
+  resolved_latest: false,
+};
+
+describe('the Gates board, standing-baseline shape', () => {
+  it('renders the verdict, the family, the floor and the failing gate’s numbers', () => {
+    const html = renderToStaticMarkup(<GateBoard result={STANDING_RESULT} />);
+    expect(html).toContain('v272_crisis_r1');
+    expect(html).toContain('FAIL');
+    expect(html).toContain('family: crisis');
+    expect(html).toContain('Family PnL floor');
+    expect(html).toContain('$599.00');
+    expect(html).toContain('-$186.45');
+    expect(html).toContain('Standing baseline applied');
+    expect(html).toContain('training_log/V271.md:6');
+  });
+
+  it('says NOT EVALUATED for a gate whose input was absent, never PASS', () => {
+    const html = renderToStaticMarkup(<GateBoard result={STANDING_RESULT} />);
+    expect(html).toContain('NOT EVALUATED');
+    expect(html).toContain('max_drawdown_usd absent');
+  });
+
+  it('names a NO_OP instead of painting a green board', () => {
+    // The 18-file failure mode: a deterministic replay gated against itself.
+    const html = renderToStaticMarkup(
+      <GateBoard
+        result={{
+          ...STANDING_RESULT,
+          verdict: 'NO_OP',
+          passed: false,
+          failures: [],
+          gate_details: {
+            ...STANDING_RESULT.gate_details,
+            family_pnl_floor: {
+              status: 'pass',
+              family: 'crisis',
+              candidate_pnl_usd: 1149.76,
+              floor_usd: 599,
+              margin_usd: 550.76,
+            },
+          },
+          sibling_comparison: {
+            status: 'informational',
+            sibling_label: 'v271_crisis_r1',
+            sibling_pnl_usd: 1149.76,
+            sibling_trades: 24,
+            candidate_pnl_usd: 1149.76,
+            candidate_trades: 24,
+            delta_pnl_usd: 0,
+            identical_numbers: true,
+            identical_trade_fingerprint: true,
+            candidate_frozen_cache: true,
+          },
+        }}
+      />,
+    );
+    expect(html).toContain('NO_OP');
+    expect(html).toContain('measured nothing new');
+    expect(html).toContain('N-1 sibling — informational only');
+    expect(html).toContain('not the gate');
+    expect(html).toContain('Identical trade fingerprint');
+    // The PnL gate passed on its own terms — the board must still not read as a pass.
+    expect(html).not.toContain('gates passed');
+  });
+
+  it('renders NO_BASELINE loudly, and does not let it look like a pass', () => {
+    const html = renderToStaticMarkup(
+      <GateBoard
+        result={{
+          ...STANDING_RESULT,
+          verdict: 'NO_BASELINE',
+          family: null,
+          failures: [],
+          gate_details: {
+            family_pnl_floor: {
+              status: 'not_evaluated',
+              reason: 'cell family unresolved — no standing floor applies',
+            },
+            trade_count_floor: { status: 'pass', trades: 24, floor: 20 },
+          },
+          standing_baseline_used: {
+            ...STANDING_RESULT.standing_baseline_used,
+            family: null,
+            family_source: 'unresolved',
+            pnl_floor_usd: undefined,
+          },
+        }}
+      />,
+    );
+    expect(html).toContain('NO_BASELINE');
+    expect(html).toContain('family: unresolved');
+    expect(html).toContain('This is NOT a pass');
+    expect(html).toContain('silent skip');
+  });
+
+  it('renders ERROR with the exception the gate raised', () => {
+    const html = renderToStaticMarkup(
+      <GateBoard
+        result={{
+          version: 'v272_crisis_r1',
+          passed: false,
+          verdict: 'ERROR',
+          gates: {},
+          failures: ['gate evaluation raised: Expecting property name: line 1 column 2'],
+          error: 'Expecting property name: line 1 column 2',
+          resolved_latest: false,
+        }}
+      />,
+    );
+    expect(html).toContain('ERROR');
+    expect(html).toContain('Gate evaluation itself raised');
+    expect(html).toContain('Expecting property name');
+    // Gates the file does not carry are reported as absent, not as passes.
+    expect(html).toContain('not reported by this gate file');
+  });
+
+  it('renders a PASS as a pass, with the floor it cleared', () => {
+    const html = renderToStaticMarkup(
+      <GateBoard
+        result={{
+          ...STANDING_RESULT,
+          verdict: 'PASS',
+          passed: true,
+          failures: [],
+          gate_details: {
+            ...STANDING_RESULT.gate_details,
+            family_pnl_floor: {
+              status: 'pass',
+              family: 'crisis',
+              candidate_pnl_usd: 700,
+              floor_usd: 599,
+              margin_usd: 101,
+            },
+          },
+        }}
+      />,
+    );
+    expect(html).toContain('PASS');
+    expect(html).toContain('+$101.00');
+    expect(html).toContain('Every evaluated gate passed');
+  });
+
+  it('builds the evidence line for each standing gate', () => {
+    expect(
+      standingGateEvidence('family_pnl_floor', {
+        status: 'fail',
+        family: 'crisis',
+        candidate_pnl_usd: 412.55,
+        floor_usd: 599,
+        margin_usd: -186.45,
+      }),
+    ).toEqual(['+$412.55 vs floor +$599.00 (margin -$186.45)', 'family: crisis']);
+    expect(standingGateEvidence('trade_count_floor', { status: 'pass', trades: 24, floor: 20 })).toEqual([
+      '24 trades vs floor 20',
+    ]);
+    expect(
+      standingGateEvidence('drawdown_ceiling', {
+        status: 'not_evaluated',
+        reason: 'absent from candidate results',
+      }),
+    ).toEqual(['absent from candidate results']);
+  });
+
+  it('has a tone and a sentence for every verdict in the vocabulary', () => {
+    for (const verdict of GATE_VERDICTS) {
+      expect(VERDICT_TONE[verdict]).toBeDefined();
+      expect(VERDICT_TONE[verdict]?.sentence.length).toBeGreaterThan(20);
+    }
   });
 });
 

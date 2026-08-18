@@ -1,11 +1,22 @@
 /**
  * Gates — the ship/no-ship board.
  *
- * `omega/eval/v49_gates.py` runs six hard gates over every training run and
- * writes `data/{version}_gate_result.json`. That file, and only that file,
- * decides whether a run is allowed to become the new baseline. This view is that
- * decision, rendered: six tiles, the failure strings underneath the ones that
- * failed, and the baseline-vs-candidate numbers the gates were computed from.
+ * `data/{version}_gate_result.json`, and only that file, decides whether a run
+ * is allowed to become the new baseline. This view is that decision, rendered.
+ *
+ * TWO shapes reach it and both are rendered honestly:
+ *
+ *   - **Standing** (`omega/eval/standing_gates.py`, from 2026-08-18) — carries a
+ *     `verdict` of PASS / FAIL / NO_OP / NO_BASELINE / ERROR, per-gate
+ *     `pass|fail|not_evaluated`, and the journal floor it was judged against.
+ *     There is no baseline RUN in this shape: the campaign's standing level for
+ *     the cell's regime family is the thing compared, and the N-1 sibling is
+ *     demoted to an informational no-op detector.
+ *   - **Legacy** (`omega/eval/v49_gates.py`) — the six-gate sibling comparison,
+ *     280 archived files of it. A file with no `verdict` renders exactly as it
+ *     did before the standing board existed. That is a hard requirement: the
+ *     archive is evidence, and re-interpreting it in a new vocabulary would be
+ *     rewriting history.
  *
  * Three things it must not do, all learned from the real corpus of 280 gate
  * files in the omega data directory:
@@ -26,7 +37,13 @@
  */
 import { Pill } from '@omega-harness/usecase-kit/ui';
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
-import { GATE_NAMES, type GateResult, type GateSummary } from '../client.js';
+import {
+  GATE_NAMES,
+  STANDING_GATE_NAMES,
+  type GateDetail,
+  type GateResult,
+  type GateSummary,
+} from '../client.js';
 import { pct, pnlClass, signedUsd, usd } from '../format.js';
 import { useVictoriaGates } from '../hooks.js';
 import { setFocusVersion, useFocusVersion } from '../store.js';
@@ -197,11 +214,342 @@ function GateTile({
   );
 }
 
+// ── Standing-baseline shape (omega/eval/standing_gates.py, 2026-08-18) ───────
+//
+// A file carries a `verdict` or it does not. When it does not, everything below
+// is inert and the legacy six-tile board renders byte-for-byte as before — the
+// 280 archived gate files must keep reading exactly as they read yesterday.
+
+/** Human labels for the standing gates. Keys are the file's, verbatim. */
+const STANDING_GATE_LABELS: Record<string, string> = {
+  family_pnl_floor: 'Family PnL floor',
+  trade_count_floor: 'Trade-count floor',
+  drawdown_ceiling: 'Drawdown ceiling',
+};
+
+const STANDING_GATE_BLURBS: Record<string, string> = {
+  family_pnl_floor: 'candidate PnL ≥ the journal’s standing floor for this regime family',
+  trade_count_floor: 'at least 20 closed trades',
+  drawdown_ceiling: 'only evaluated when the run emitted a drawdown number',
+};
+
+/**
+ * The colour and the *sentence* for each verdict.
+ *
+ * The sentence matters more than the colour. `NO_OP` and `NO_BASELINE` are the
+ * two states an operator has never seen before, and both of them used to be
+ * rendered as something false — a green board, or no board at all — so each one
+ * says in plain words what actually happened.
+ */
+export const VERDICT_TONE: Record<
+  string,
+  { color: string; label: string; sentence: string }
+> = {
+  PASS: {
+    color: '#4ec97a',
+    label: 'gates passed',
+    sentence:
+      'Every evaluated gate passed against the standing baseline for this cell’s regime family.',
+  },
+  FAIL: {
+    color: '#e5675b',
+    label: 'gates failed',
+    sentence: 'At least one gate failed. The failing gate’s own numbers are under its tile.',
+  },
+  NO_OP: {
+    color: '#e0a33a',
+    label: 'no-op',
+    sentence:
+      'This run used a frozen cache and reproduced a prior run exactly — same trades, same PnL, new label. It measured nothing new, so a green board here would be vacuous. 18 of the archived gate files are this shape and every one of them reads as an all-green pass.',
+  },
+  NO_BASELINE: {
+    color: '#a78bfa',
+    label: 'no baseline',
+    sentence:
+      'This cell’s regime family could not be resolved, so no standing floor could be applied and the PnL gate was not evaluated. This is NOT a pass. Under the old gates this case wrote no file at all — a silent skip. Fix it by adding a family_patterns entry to data/standing_baseline.json or by naming the cell after its regime.',
+  },
+  ERROR: {
+    color: '#e5675b',
+    label: 'gate error',
+    sentence:
+      'Gate evaluation itself raised. The training run survived; this file is the record of the failure, which the old code swallowed.',
+  },
+};
+
+const STATUS_TONE: Record<string, { border: string; bg: string; text: string; mark: string }> = {
+  pass: { border: '#4ec97a4d', bg: '#4ec97a1a', text: '#4ec97a', mark: 'PASS' },
+  fail: { border: '#e5675b4d', bg: '#e5675b1a', text: '#e5675b', mark: 'FAIL' },
+  not_evaluated: {
+    border: 'transparent',
+    bg: 'transparent',
+    text: '#7c8590',
+    mark: 'NOT EVALUATED',
+  },
+};
+
+/** The evidence line under a standing gate tile, as text. Pure, so it is assertable. */
+export function standingGateEvidence(gate: string, detail: GateDetail): string[] {
+  const lines: string[] = [];
+  if (gate === 'family_pnl_floor' && typeof detail.floor_usd === 'number') {
+    lines.push(
+      `${signedUsd(detail.candidate_pnl_usd ?? 0)} vs floor ${signedUsd(detail.floor_usd)}` +
+        (typeof detail.margin_usd === 'number' ? ` (margin ${signedUsd(detail.margin_usd)})` : ''),
+    );
+    if (typeof detail.family === 'string') lines.push(`family: ${detail.family}`);
+  }
+  if (gate === 'trade_count_floor' && typeof detail.trades === 'number') {
+    lines.push(`${String(detail.trades)} trades vs floor ${String(detail.floor ?? 20)}`);
+  }
+  if (gate === 'drawdown_ceiling' && typeof detail.candidate_max_drawdown_usd === 'number') {
+    lines.push(
+      `${usd(detail.candidate_max_drawdown_usd)}` +
+        (typeof detail.ceiling_usd === 'number' ? ` vs ceiling ${usd(detail.ceiling_usd)}` : ''),
+    );
+  }
+  if (typeof detail.reason === 'string' && detail.reason !== '') lines.push(detail.reason);
+  return lines;
+}
+
+function StandingGateTile({ gate, detail }: { gate: string; detail?: GateDetail }) {
+  // A gate the file does not carry is "not reported" — never a pass. Same rule
+  // as the legacy board, for the same reason.
+  const status = detail?.status ?? 'absent';
+  const tone = STATUS_TONE[status] ?? {
+    border: 'transparent',
+    bg: 'transparent',
+    text: '#7c8590',
+    mark: status === 'absent' ? '—' : status.toUpperCase(),
+  };
+  const evidence = detail ? standingGateEvidence(gate, detail) : [];
+
+  return (
+    <div
+      className="flex flex-col gap-1.5 rounded-md border border-line bg-card px-3.5 py-3"
+      style={
+        tone.border === 'transparent' ? undefined : { borderColor: tone.border, background: tone.bg }
+      }
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-medium text-ink">{STANDING_GATE_LABELS[gate] ?? gate}</span>
+        <span
+          className="font-mono text-[10px] font-semibold tracking-[.08em]"
+          style={{ color: tone.text }}
+        >
+          {tone.mark}
+        </span>
+      </div>
+      <div className="font-mono text-[9.5px] text-faint">
+        {detail ? (STANDING_GATE_BLURBS[gate] ?? gate) : 'not reported by this gate file'}
+      </div>
+      {evidence.map((line) => (
+        <div key={line} className="break-words font-mono text-[10px] leading-relaxed text-ink3">
+          {line}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The standing-baseline board.
+ *
+ * Its subject is different from the legacy board's: there is no baseline RUN to
+ * compare against, only the campaign's standing floor for this cell's regime
+ * family, transcribed from the training journal. So the comparison table becomes
+ * a single candidate column plus a floor, and the N-1 sibling — which used to be
+ * the whole gate — is demoted to an explicitly informational panel.
+ */
+export function StandingGateBoard({ result }: { result: GateResult }) {
+  const verdict = String(result.verdict ?? '');
+  const tone = VERDICT_TONE[verdict] ?? {
+    color: '#7c8590',
+    label: verdict.toLowerCase(),
+    sentence: 'This gate file carries a verdict this board has not been taught to explain.',
+  };
+  const details = result.gate_details ?? {};
+  const gateKeys = [
+    ...STANDING_GATE_NAMES,
+    ...Object.keys(details).filter((g) => !STANDING_GATE_NAMES.includes(g as never)),
+  ];
+  const standing = result.standing_baseline_used;
+  const sibling = result.sibling_comparison;
+  const candidate = result.candidate_summary;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Card>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-mono text-[13px] font-semibold text-ink">{result.version}</span>
+            <Pill color={tone.color}>{verdict}</Pill>
+            <span className="font-mono text-[9.5px] text-faint">
+              family: {result.family ?? 'unresolved'}
+              {standing?.family_source != null && standing.family_source !== ''
+                ? ` (${standing.family_source})`
+                : ''}
+            </span>
+            {result.resolved_latest && (
+              <span className="font-mono text-[9.5px] text-warn">
+                resolved as latest — no version was asked for; the API picked the most recently
+                written data/*_gate_result.json
+              </span>
+            )}
+          </div>
+          <p
+            className="rounded-md border px-3 py-2 text-[10.5px] leading-relaxed"
+            style={{ borderColor: `${tone.color}4d`, background: `${tone.color}14`, color: tone.color }}
+          >
+            {tone.sentence}
+          </p>
+          {typeof result.error === 'string' && result.error !== '' && (
+            <div className="break-words font-mono text-[10.5px] text-danger-tint">{result.error}</div>
+          )}
+        </div>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3">
+        {gateKeys.map((gate) => (
+          <StandingGateTile key={gate} gate={gate} detail={details[gate]} />
+        ))}
+      </div>
+
+      {result.failures.length > 0 && (
+        <Card label="Failures">
+          <div className="flex flex-col gap-1">
+            {result.failures.map((f) => (
+              <div key={f} className="break-words font-mono text-[10.5px] text-danger-tint">
+                {f}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card
+        label="Standing baseline applied"
+        right={<span className="font-mono text-[9.5px] text-faint">data/standing_baseline.json</span>}
+      >
+        {standing === undefined ? (
+          <EmptyNote
+            title="This gate file names no standing baseline"
+            detail="The verdict is present but standing_baseline_used is not — the floor it was judged against cannot be shown."
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Table head={['', 'Value']}>
+              <tr className="border-b border-hair">
+                <Txt className="font-mono text-ink3">PnL floor</Txt>
+                <Num className="text-ink2">
+                  {typeof standing.pnl_floor_usd === 'number' ? signedUsd(standing.pnl_floor_usd) : '—'}
+                </Num>
+              </tr>
+              <tr className="border-b border-hair">
+                <Txt className="font-mono text-ink3">Candidate PnL</Txt>
+                <Num className={pnlClass(candidate?.pnl)}>
+                  {typeof candidate?.pnl === 'number' ? signedUsd(candidate.pnl) : '—'}
+                </Num>
+              </tr>
+              <tr className="border-b border-hair">
+                <Txt className="font-mono text-ink3">Trades</Txt>
+                <Num className="text-ink2">
+                  {typeof candidate?.trades === 'number' ? String(candidate.trades) : '—'}
+                </Num>
+              </tr>
+              <tr className="last:border-0">
+                <Txt className="font-mono text-ink3">Win rate</Txt>
+                <Num className="text-ink2">
+                  {typeof candidate?.win_rate === 'number' ? pct(candidate.win_rate) : '—'}
+                </Num>
+              </tr>
+            </Table>
+            {standing.journal_cite != null && standing.journal_cite !== '' && (
+              <p className="text-[10px] leading-relaxed text-muted">
+                Floor cited from <span className="font-mono">{standing.journal_cite}</span>. The
+                floors are a journal act: they move only with a pre-registration, never to make a
+                run pass.
+              </p>
+            )}
+            {standing.source != null && standing.source !== '' && (
+              <p className="break-words font-mono text-[9.5px] text-faint">{standing.source}</p>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {sibling !== undefined && (
+        <Card label="N-1 sibling — informational only">
+          <div className="flex flex-col gap-2">
+            <p className="text-[10.5px] leading-relaxed text-muted">
+              The sibling is <span className="font-semibold">not the gate</span>. It is here only to
+              detect a run that reproduced a prior run instead of measuring something new — the
+              failure mode that made 18 archived gate files read as a green board.
+            </p>
+            <Table head={['Metric', sibling.sibling_label ?? 'sibling', result.version, 'Δ']}>
+              <tr className="border-b border-hair">
+                <Txt className="font-mono text-ink3">PnL</Txt>
+                <Num className="text-ink2">
+                  {typeof sibling.sibling_pnl_usd === 'number' ? usd(sibling.sibling_pnl_usd) : '—'}
+                </Num>
+                <Num className={pnlClass(sibling.candidate_pnl_usd ?? undefined)}>
+                  {typeof sibling.candidate_pnl_usd === 'number' ? usd(sibling.candidate_pnl_usd) : '—'}
+                </Num>
+                <Num className="text-ink3">
+                  {typeof sibling.delta_pnl_usd === 'number' ? signedUsd(sibling.delta_pnl_usd) : '—'}
+                </Num>
+              </tr>
+              <tr className="last:border-0">
+                <Txt className="font-mono text-ink3">Trades</Txt>
+                <Num className="text-ink2">
+                  {typeof sibling.sibling_trades === 'number' ? String(sibling.sibling_trades) : '—'}
+                </Num>
+                <Num className="text-ink2">
+                  {typeof sibling.candidate_trades === 'number' ? String(sibling.candidate_trades) : '—'}
+                </Num>
+                <Num className="text-ink3">—</Num>
+              </tr>
+            </Table>
+            {sibling.identical_trade_fingerprint === true && (
+              <p className="rounded-md border border-warn/30 bg-warn/10 px-3 py-2 text-[10.5px] leading-relaxed text-warn">
+                Identical trade fingerprint (the timestamp column is dropped before hashing, so a
+                bit-identical replay still matches): this run reproduced{' '}
+                {sibling.sibling_label ?? 'its sibling'} exactly.
+              </p>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {result.notes !== undefined && result.notes.length > 0 && (
+        <Card label="Notes">
+          <div className="flex flex-col gap-1">
+            {result.notes.map((n) => (
+              <div key={n} className="break-words font-mono text-[10px] leading-relaxed text-ink3">
+                {n}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 /**
  * The board itself, separated from the fetch so it can be rendered against a
  * fixture. Everything an operator reads is decided here.
+ *
+ * Dispatches on `verdict`: a file that carries one is a standing-gate file and
+ * gets the standing board; a file that does not is one of the 280 archived
+ * v49-shape files and renders exactly as it did before this dispatch existed.
  */
 export function GateBoard({ result }: { result: GateResult }) {
+  if (typeof result.verdict === 'string' && result.verdict !== '') {
+    return <StandingGateBoard result={result} />;
+  }
+  return <LegacyGateBoard result={result} />;
+}
+
+function LegacyGateBoard({ result }: { result: GateResult }) {
   const baseline = result.baseline_summary;
   const candidate = result.candidate_summary;
   const rows = summaryRows(baseline, candidate);
@@ -322,8 +670,10 @@ export function GateLoadFailure({
         A missing gate result is not a failed gate: it means the gates never ran for that label.{' '}
         <span className="font-mono">scripts/run_training.py</span> writes{' '}
         <span className="font-mono">data/&#123;version&#125;_gate_result.json</span> at the end of a
-        run via <span className="font-mono">omega/eval/v49_gates.py</span>. Version labels are
-        case-sensitive on the wire.
+        run via <span className="font-mono">omega/eval/standing_gates.py</span> (before 2026-08-18,{' '}
+        <span className="font-mono">omega/eval/v49_gates.py</span>). Since that repoint a file is
+        written for <em>every</em> verdict, so a 404 on a recent label means the run itself never
+        reached the end. Version labels are case-sensitive on the wire.
       </p>
       {version !== '' && onShowLatest && (
         <button
@@ -348,7 +698,7 @@ export function VictoriaGates(_props: UseCaseViewProps) {
   return (
     <ViewFrame
       title="Gates"
-      subtitle="The six hard gates omega/eval/v49_gates.py runs over a training run. All six must pass for the run to become the new baseline — this is the ship/no-ship decision, not a summary of it."
+      subtitle="The gates a finished training run is judged by. Since 2026-08-18 that is omega/eval/standing_gates.py, which measures a run against the campaign's standing baseline for its regime family (the journal's crisis +$599 / trend +$2,997 / recent +$30) and carries an explicit verdict — PASS, FAIL, NO_OP, NO_BASELINE or ERROR. Archived files predating that repoint carry the older six-gate sibling comparison and are rendered as they were written."
       actions={
         <VersionPicker
           value={asked}
