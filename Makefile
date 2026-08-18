@@ -1,6 +1,7 @@
 .PHONY: build test lint typecheck format coverage quality clean proto proto-python \
         up down logs run api dashboard \
         fe-install fe-build fe-lint fe-typecheck fe-format \
+        foreman-plugins-install foreman-plugins-check \
         py-test py-lint \
         test-db test-handler test-integration all \
         db-up db-down \
@@ -113,6 +114,27 @@ fe-typecheck:
 
 fe-format:
 	cd dashboard && npx prettier --write 'src/**/*.{ts,tsx,css}'
+
+# ---------------------------------------------------------------------------
+# Foreman use-case shells (foreman-plugins/)
+#
+# Deliberately NOT part of `make quality` or `make build`. These are built and
+# shipped by the harness repo (~/projects/omega/harness reads
+# foreman-plugins.json and compiles them into its bundle); what runs here is the
+# check that they still typecheck against the plugin contract and that their own
+# tests pass. Both need the harness checked out beside this repo, because the
+# kit arrives as a `file:` dependency pointing into it — so this stays opt-in
+# rather than breaking the main pipeline for anyone without it.
+# ---------------------------------------------------------------------------
+
+## foreman-plugins-install: install the shells' dev deps and link the kit (needs ../harness)
+foreman-plugins-install:
+	cd harness && pnpm --filter @omega-harness/usecase-kit build
+	cd foreman-plugins && npm install
+
+## foreman-plugins-check: typecheck + test the Victoria and Polymarket Foreman shells
+foreman-plugins-check:
+	cd foreman-plugins && npm run check
 
 # ---------------------------------------------------------------------------
 # Python

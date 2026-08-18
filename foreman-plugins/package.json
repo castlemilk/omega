@@ -1,0 +1,24 @@
+{
+  "name": "@omega-foreman/plugins",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Omega's Foreman use-case shells. Built and served by the harness; developed and tested here.",
+  "workspaces": [
+    "victoria",
+    "polymarket"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

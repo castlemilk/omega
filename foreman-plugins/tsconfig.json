@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    // Deliberately a copy of the harness web app's settings rather than an
+    // `extends` of them: this repository must typecheck the shells without a
+    // harness checkout on the include path. The only thing it needs from over
+    // there is the kit's `.d.ts`, which arrives through the `file:` dependency
+    // like any other package.
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true
+  },
+  "include": ["victoria/**/*", "polymarket/**/*"]
+}

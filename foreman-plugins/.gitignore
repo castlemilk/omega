@@ -1,0 +1,4 @@
+# Installed by `npm install` here (or `make foreman-plugins-install` from the
+# repo root). The tree contains a symlink into the harness checkout — the kit's
+# `file:` dependency — which is machine-local by definition.
+node_modules/

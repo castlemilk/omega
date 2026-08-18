@@ -1,0 +1,14 @@
+{
+  "name": "@omega-foreman/victoria",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Victoria — the market-trading Foreman shell. Six tabs over the omega Go API.",
+  "main": "index.ts",
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "dependencies": {
+    "@omega-harness/usecase-kit": "file:../../harness/packages/usecase-kit"
+  }
+}
