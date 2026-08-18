@@ -18,7 +18,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DataSourceError } from '@omega-harness/usecase-kit';
 import {
   compareVersions,
+  getDecisionTraces,
   getEquityCurve,
+  getForensics,
+  getGates,
+  getTrainingLog,
+  listForensics,
+  listTrainingLog,
   getPnL,
   getPortfolio,
   getPositions,
@@ -362,6 +368,320 @@ describe('REST projections', () => {
     expect(c.signals).toEqual([]);
     expect(c.n_observations).toBe(0);
     expect(c.version).toBe('v252_replay_2025-03-05');
+  });
+});
+
+// ── Phase-2 endpoints ────────────────────────────────────────────────────────
+// Every fixture below is a real file from the omega repo, trimmed. The gate
+// result is `internal/handler/testdata/training/data/v94_gate_result.json`
+// verbatim (which is itself a copy of `data/v94_gate_result.json`); the
+// forensics report is `data/v93-v94-forensics.json` with its 49 skipped trades
+// and 3 hypotheses cut to one each; the decision trace is the first line of
+// `data/decision_traces/bt_v132a_crisis.jsonl`, verbatim.
+
+const GATE_FIXTURE = {
+  version: 'v94',
+  passed: false,
+  gates: {
+    pnl_floor: false,
+    regime_parity: false,
+    drawdown_ceiling: true,
+    trade_count_floor: true,
+    signal_integrity: true,
+    auto_apply_audit: true,
+  },
+  failures: [
+    'pnl_floor: v49 -37.86 < v48 130.91',
+    'regime_parity[crisis]: v49 -56.29 < v48 +112.98 (delta -169.27)',
+    'regime_parity[normal]: v49 -23.71 < v48 -22.79 (delta -0.91)',
+  ],
+  baseline_summary: {
+    version: 'v93',
+    pnl: 130.91,
+    trades: 60,
+    win_rate: 0.4833,
+    max_drawdown: 0,
+    regime_pnl: { normal: -22.79340000000001, high_vol: 40.723699999999994, crisis: 112.98179999999999 },
+  },
+  candidate_summary: {
+    version: 'v94',
+    pnl: -37.86,
+    trades: 69,
+    win_rate: 0.3043,
+    max_drawdown: 0,
+    regime_pnl: { normal: -23.707699999999996, high_vol: 42.1353, crisis: -56.291399999999996 },
+  },
+  raw: { passed: false },
+  resolved_latest: false,
+};
+
+const FORENSICS_FIXTURE = {
+  schema_version: '1.0',
+  generated_at: '2026-04-09T12:14:47.267480+00:00',
+  status: 'ok',
+  baselines: {
+    v35: { version: 'v93', pnl: 130.91, trades: 60, win_rate: 0.4833, source: 'data/v35_extended_results.json' },
+    v48: { version: 'v94', pnl: -37.86, trades: 69, win_rate: 0.3043, source: 'data/v48_results.json' },
+  },
+  conviction_histogram: {
+    v35: { hold_threshold: 0.2, trade_band_count: 1, hold_band_count: 59, mean_conviction: 0.0836116300853914 },
+    v48: { hold_threshold: 0.2, trade_band_count: 1, hold_band_count: 68, mean_conviction: 0.08550816069748725 },
+  },
+  signal_contribution_delta_proxy: {
+    per_symbol: { ADAUSDT: -55.1537, ARBUSDT: -60.93499999999999 },
+    per_side: { short: 11.298000000000002, long: -180.07389999999998 },
+    note: 'Phase 1 proxy — per-symbol PnL delta, not per-signal weight delta.',
+  },
+  skipped_trades: [
+    {
+      cycle: 7,
+      symbol: 'ETHUSDT',
+      side: 'long',
+      baseline_pnl: -3.1552,
+      baseline_conviction: 0.05790630250793523,
+      baseline_regime: 'normal',
+      reason: 'present_in_v35_absent_in_v48',
+    },
+  ],
+  hypotheses: [
+    {
+      rank: 1,
+      claim: '49 baseline trades were skipped by V48, representing $156.45 of the $168.77 PnL gap.',
+      confidence: 0.848920779759436,
+      evidence_refs: ['skipped_trades', 'baselines'],
+    },
+  ],
+  regime_breakdown: {
+    crisis: { v35_pnl: 112.98179999999999, v48_pnl: -56.291399999999996, delta: -169.27319999999997 },
+  },
+};
+
+const DECISION_TRACE_FIXTURE = {
+  ticker: 'BTCUSDT',
+  cycle: 1,
+  version: 'bt_v132a_crisis',
+  timestamp: '2026-04-16T05:39:49.464622+00:00',
+  signals: { sma_crossover: 0.4256354716811253, fear_greed_signal: 1.005201 },
+  raw_composite: 0.7154182358405626,
+  demeaned_composite: -0.27048950015860296,
+  basket_mean: 0.9859077359991656,
+  basket_std: 0.08622348148622201,
+  weighted_conviction: -0.27048950015860296,
+  regime: 'normal',
+  bear_prob: 0.3333,
+  bull_prob: 0.3333,
+  thresh_scale: 0.43111740743111004,
+  long_thresh: 0.024142574816142168,
+  short_thresh: 0.024142574816142168,
+  abs_min_conviction: 0.02,
+  ricci_scalar: 0,
+  orc_mean: 0,
+  geo_dist_crash: null,
+  fiedler_raw: 1,
+  proposal: 'NONE',
+  filters_fired: ['blacklist:skip'],
+  blocking_filter: 'blacklist',
+  final_decision: 'HOLD',
+  threshold_gap: 0.24634692534246078,
+  explanation: 'BTCUSDT: HOLD — composite -0.270 below conviction threshold',
+};
+
+describe('phase-2 request shapes', () => {
+  it('asks for the latest gate result by omitting the param entirely', async () => {
+    const calls = stubFetch(() => json(GATE_FIXTURE));
+    await getGates();
+    await getGates('bt_v132a_crisis');
+
+    expect(calls.map((c) => c.url)).toEqual([
+      `${BASE}/api/v1/training/gates`,
+      `${BASE}/api/v1/training/gates?version=bt_v132a_crisis`,
+    ]);
+  });
+
+  it('lists forensics with no params, and opens one with both', async () => {
+    const calls = stubFetch((req) =>
+      req.url.includes('baseline')
+        ? json({ baseline: 'v93', target: 'v94', file: 'v93-v94-forensics.json', forensics: FORENSICS_FIXTURE })
+        : json({ forensics: [], unpaired: [] }),
+    );
+
+    await listForensics();
+    await getForensics('v93', 'v94');
+
+    expect(calls.map((c) => c.url)).toEqual([
+      `${BASE}/api/v1/training/forensics`,
+      `${BASE}/api/v1/training/forensics?baseline=v93&target=v94`,
+    ]);
+  });
+
+  it('lists the training log with no params, and reads one cell with a version', async () => {
+    const calls = stubFetch((req) =>
+      req.url.includes('version') ? json({ version: 'V270', files: [] }) : json({ entries: [] }),
+    );
+
+    await listTrainingLog();
+    await getTrainingLog('V270');
+
+    expect(calls.map((c) => c.url)).toEqual([
+      `${BASE}/api/v1/training/log`,
+      `${BASE}/api/v1/training/log?version=V270`,
+    ]);
+  });
+
+  it('sends an explicit decision-trace limit, because the handler defaults to 200', async () => {
+    // 200 rows is under two cycles of a seven-ticker run; a funnel drawn from
+    // the default would be a confident lie about the run.
+    const calls = stubFetch(() => json({ traces: [], total: 0 }));
+    await getDecisionTraces('bt_v132a_crisis');
+    await getDecisionTraces('v252_replay_2025-03-05', 50);
+
+    expect(calls[0].url).toBe(
+      `${BASE}/api/v1/training/decision-traces?version=bt_v132a_crisis&limit=4000`,
+    );
+    expect(calls[1].url).toBe(
+      `${BASE}/api/v1/training/decision-traces?version=v252_replay_2025-03-05&limit=50`,
+    );
+  });
+});
+
+describe('phase-2 projections', () => {
+  it('reads a gate result, keeping the verdict map separate from the failure prose', async () => {
+    stubFetch(() => json(GATE_FIXTURE));
+    const g = await getGates('v94');
+
+    expect(g.passed).toBe(false);
+    expect(g.gates.pnl_floor).toBe(false);
+    expect(g.gates.drawdown_ceiling).toBe(true);
+    expect(g.failures).toHaveLength(3);
+    // The real version labels live in the summaries; the file's own keys are the
+    // literal v48_summary/v49_summary regardless of what was compared.
+    expect(g.baseline_summary?.version).toBe('v93');
+    expect(g.candidate_summary?.version).toBe('v94');
+    expect(g.candidate_summary?.regime_pnl?.crisis).toBeCloseTo(-56.2914, 6);
+    expect(g.resolved_latest).toBe(false);
+  });
+
+  it('reads a gate response that resolved the latest for us', async () => {
+    stubFetch(() => json({ ...GATE_FIXTURE, resolved_latest: true }));
+    await expect(getGates()).resolves.toMatchObject({ resolved_latest: true });
+  });
+
+  it('surfaces a 404 for an ungated version with the handler’s own sentence', async () => {
+    // Verified live: the handler answers 404 with exactly this body. A version
+    // with no gate file is not a version that failed its gates.
+    stubFetch(() => new Response('no gate result for version "V270"\n', { status: 404 }));
+
+    await expect(getGates('V270')).rejects.toBeInstanceOf(DataSourceError);
+    await expect(getGates('V270')).rejects.toMatchObject({
+      status: 404,
+      bodyExcerpt: 'no gate result for version "V270"',
+    });
+  });
+
+  it('reads the forensics list, keeping the unpairable files separate', async () => {
+    // Captured shape from listForensics: v240_universe_forensics.json is real —
+    // it carries the suffix but not the {baseline}-{target} naming, and it is a
+    // different document entirely.
+    stubFetch(() =>
+      json({
+        forensics: [
+          {
+            baseline: 'v93',
+            target: 'v94',
+            file: 'v93-v94-forensics.json',
+            size_bytes: 15242,
+            modified_at: '2026-04-09T12:14:47Z',
+          },
+        ],
+        unpaired: ['v240_universe_forensics.json'],
+      }),
+    );
+
+    const list = await listForensics();
+    expect(list.forensics).toHaveLength(1);
+    expect(list.forensics[0].baseline).toBe('v93');
+    expect(list.unpaired).toEqual(['v240_universe_forensics.json']);
+  });
+
+  it('unwraps a forensics report out of the handler’s envelope, quirks intact', async () => {
+    stubFetch(() =>
+      json({
+        baseline: 'v93',
+        target: 'v94',
+        file: 'v93-v94-forensics.json',
+        forensics: FORENSICS_FIXTURE,
+      }),
+    );
+
+    const res = await getForensics('v93', 'v94');
+    expect(res.file).toBe('v93-v94-forensics.json');
+    // The load-bearing quirk: the report's own keys are run_diff.py's hard-coded
+    // labels, NOT the pair in the filename. v93's numbers live under "v35".
+    expect(Object.keys(res.forensics.baselines ?? {})).toEqual(['v35', 'v48']);
+    expect(res.forensics.baselines?.v35.version).toBe('v93');
+    expect(res.forensics.regime_breakdown?.crisis.v35_pnl).toBeCloseTo(112.9818, 4);
+    expect(res.forensics.hypotheses?.[0].rank).toBe(1);
+    expect(res.forensics.skipped_trades?.[0].symbol).toBe('ETHUSDT');
+  });
+
+  it('unwraps the training-log index, where a cell may have no verdict at all', async () => {
+    // Captured shape: verdictFiles is `omitempty`, so a cell with no verdict is
+    // missing the key rather than carrying an empty array.
+    stubFetch(() =>
+      json({
+        entries: [
+          { version: 'V269', hasPreRegistration: true, verdictFiles: ['V269_DEPTH_ACQUISITION_VERDICT.md'] },
+          { version: 'V270', hasPreRegistration: true },
+        ],
+      }),
+    );
+
+    const entries = await listTrainingLog();
+    expect(entries.map((e) => e.version)).toEqual(['V269', 'V270']);
+    expect(entries[0].verdictFiles).toEqual(['V269_DEPTH_ACQUISITION_VERDICT.md']);
+    expect(entries[1].verdictFiles).toBeUndefined();
+  });
+
+  it('reads a log cell as raw markdown, under the handler’s camelCase keys', async () => {
+    // These two keys are camelCase while every other REST field in this API is
+    // snake_case — the handler's struct tags say so.
+    stubFetch(() =>
+      json({
+        version: 'V270',
+        preRegistration: '# V270 — spread-budget confirmation scoring (PRE-REGISTRATION)\n',
+        verdict: '# V270 VERDICT\n',
+        files: ['V270.md', 'V270_SPREAD_BUDGET_VERDICT.md'],
+        verdictFiles: ['V270_SPREAD_BUDGET_VERDICT.md'],
+      }),
+    );
+
+    const detail = await getTrainingLog('V270');
+    expect(detail.preRegistration).toContain('PRE-REGISTRATION');
+    expect(detail.files).toHaveLength(2);
+  });
+
+  it('reads a decision trace as its writer emits it, nulls and all', async () => {
+    stubFetch(() => json({ traces: [DECISION_TRACE_FIXTURE], total: 1 }));
+
+    const res = await getDecisionTraces('bt_v132a_crisis');
+    expect(res.total).toBe(1);
+    const t = res.traces[0];
+    expect(t.ticker).toBe('BTCUSDT');
+    expect(t.proposal).toBe('NONE');
+    expect(t.final_decision).toBe('HOLD');
+    expect(t.blocking_filter).toBe('blacklist');
+    expect(t.filters_fired).toEqual(['blacklist:skip']);
+    // The writer emits null for geometry it could not compute; that is data.
+    expect(t.geo_dist_crash).toBeNull();
+    expect(t.signals?.sma_crossover).toBeCloseTo(0.4256, 4);
+  });
+
+  it('treats a missing trace file as an empty 200, not an error', async () => {
+    // Verified against the handler: a missing data/decision_traces/{v}.jsonl
+    // answers 200 with an empty list rather than 404, so the view's empty state
+    // has to say which side is missing.
+    stubFetch(() => json({ traces: [], total: 0 }));
+    await expect(getDecisionTraces('v100')).resolves.toEqual({ traces: [], total: 0 });
   });
 });
 

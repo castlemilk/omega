@@ -126,6 +126,119 @@ export function ticks(ext: Extent, count: number): number[] {
   return Array.from({ length: count + 1 }, (_, i) => ext.min + step * i);
 }
 
+// ── Funnel ───────────────────────────────────────────────────────────────────
+
+export interface FunnelStep {
+  label: string;
+  count: number;
+  /** Why the drop from the previous step happened. First step has none. */
+  note?: string;
+}
+
+export interface FunnelBar extends FunnelStep {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Share of the first step, 0..1. The first bar is always 1. */
+  share: number;
+  /** How many were lost between the previous step and this one. */
+  dropped: number;
+}
+
+/**
+ * A stepped funnel: bars whose widths are shares of the FIRST step.
+ *
+ * Widths are relative to the top of the funnel, not to the previous bar,
+ * because the question a funnel answers is "what fraction of everything
+ * survived to here" — normalising each bar against its predecessor makes a
+ * 90% → 90% → 90% funnel look like three identical bars and hides that only
+ * 73% got through.
+ *
+ * A first step of zero yields zero-width bars rather than NaN: nothing was
+ * evaluated, so nothing survived, and an empty funnel is the truthful drawing.
+ * Later steps are NOT clamped to the first — if a downstream count somehow
+ * exceeds the top, the bar overflows and the operator sees the contradiction
+ * instead of a silently truncated one.
+ */
+export function funnelBars(steps: readonly FunnelStep[], box: Box, barHeight = 26, gap = 10): FunnelBar[] {
+  const span = box.width - box.padLeft - box.padRight;
+  const top = steps.length > 0 ? steps[0].count : 0;
+  return steps.map((step, i) => {
+    const share = top > 0 ? step.count / top : 0;
+    return {
+      ...step,
+      x: box.padLeft,
+      y: box.padTop + i * (barHeight + gap),
+      width: span * share,
+      height: barHeight,
+      share,
+      dropped: i === 0 ? 0 : steps[i - 1].count - step.count,
+    };
+  });
+}
+
+/** The height a funnel of `n` steps needs, so the SVG viewBox fits its content. */
+export function funnelHeight(n: number, box: Box, barHeight = 26, gap = 10): number {
+  if (n <= 0) return box.padTop + box.padBottom;
+  return box.padTop + n * barHeight + (n - 1) * gap + box.padBottom;
+}
+
+// ── Grouped bars ─────────────────────────────────────────────────────────────
+
+export interface BarRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Side-by-side bars: `groups[g][s]` is series `s`'s value in group `g`.
+ *
+ * Every series shares one scale, for the same reason `LineChart` puts every
+ * line on one extent — two conviction histograms drawn to independent maxima
+ * can be made to look identical while one traded twice as often. The scale
+ * starts at zero rather than at the minimum: these are counts and shares, and a
+ * bar chart with a non-zero floor exaggerates every difference on it.
+ *
+ * Negative values are clamped to zero height rather than drawn below the axis;
+ * nothing this draws (counts, percentages) can legitimately be negative, so a
+ * negative is bad data and must not silently invert a bar.
+ */
+export function groupedBars(
+  groups: readonly (readonly number[])[],
+  box: Box,
+  groupGap = 14,
+  barGap = 3,
+): BarRect[][] {
+  const span = box.width - box.padLeft - box.padRight;
+  const baseline = box.height - box.padBottom;
+  const plotHeight = baseline - box.padTop;
+  const seriesCount = groups.reduce((n, g) => Math.max(n, g.length), 0);
+  if (groups.length === 0 || seriesCount === 0 || span <= 0) return groups.map(() => []);
+
+  let max = 0;
+  for (const g of groups) for (const v of g) if (Number.isFinite(v) && v > max) max = v;
+
+  const groupWidth = (span - groupGap * (groups.length - 1)) / groups.length;
+  const barWidth = (groupWidth - barGap * (seriesCount - 1)) / seriesCount;
+
+  return groups.map((group, gi) => {
+    const groupX = box.padLeft + gi * (groupWidth + groupGap);
+    return group.map((value, si) => {
+      const v = Number.isFinite(value) && value > 0 ? value : 0;
+      const height = max > 0 ? (v / max) * plotHeight : 0;
+      return {
+        x: groupX + si * (barWidth + barGap),
+        y: baseline - height,
+        width: barWidth,
+        height,
+      };
+    });
+  });
+}
+
 /**
  * Which of nine correlation buckets a value falls in, -4..4.
  *

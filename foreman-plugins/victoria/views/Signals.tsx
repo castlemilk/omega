@@ -177,8 +177,8 @@ export function VictoriaSignals(_props: UseCaseViewProps) {
                 <p className="text-[10.5px] leading-relaxed text-muted">
                   Weighted conviction is the composite these feed; the filter pipeline that
                   turns it into a trade (time filter → agreement ratio → weighted conviction →
-                  regime/vol gate) is not exposed by any endpoint yet. The conviction funnel is
-                  phase-2 work.
+                  regime/vol gate) is on the Conviction tab, drawn from the per-cycle decision
+                  traces a run writes.
                 </p>
               )}
             </div>

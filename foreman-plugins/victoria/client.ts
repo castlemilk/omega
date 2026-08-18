@@ -350,6 +350,257 @@ export interface SignalCorrelation {
   version?: string;
 }
 
+// ── Phase-2 REST types ───────────────────────────────────────────────────────
+// Source: omega `internal/handler/training_handler.go` (the gates / forensics /
+// log / decision-trace handlers) and, where the handler passes a file through
+// untouched, the *writer* of that file. Each type says which.
+
+/**
+ * One side of a gate comparison — `v48_summary` / `v49_summary` in the file,
+ * surfaced by the handler as `baseline_summary` / `candidate_summary`.
+ *
+ * The key names in the file are LITERAL `v48`/`v49` regardless of which versions
+ * were actually compared (omega/eval/v49_gates.py hard-codes its dataclass field
+ * names); the real labels live in each summary's own `version`. The handler
+ * already renames them, so nothing here has to know that — but it is why the
+ * board reads the version off the summary rather than off the key.
+ *
+ * `regime_pnl` is keyed by the regime labels Victoria's data actually uses
+ * (`normal`, `high_vol`, `crisis`) and is typed open, because a run that never
+ * entered a regime simply omits it.
+ */
+export interface GateSummary {
+  version?: string;
+  pnl?: number;
+  trades?: number;
+  win_rate?: number;
+  max_drawdown?: number;
+  regime_pnl?: Record<string, number>;
+}
+
+/**
+ * The six hard gates, in the order `omega/eval/v49_gates.py` evaluates them.
+ *
+ * Held as data rather than as six tiles in JSX so the board renders a gate the
+ * file omits as "not reported" instead of silently drawing five tiles — the
+ * handler passes `gates` straight through and older gate files predate later
+ * gates.
+ */
+export const GATE_NAMES = [
+  'pnl_floor',
+  'regime_parity',
+  'drawdown_ceiling',
+  'trade_count_floor',
+  'signal_integrity',
+  'auto_apply_audit',
+] as const;
+
+export type GateName = (typeof GATE_NAMES)[number];
+
+/** `gateResponse` from `/api/v1/training/gates`. */
+export interface GateResult {
+  version: string;
+  passed: boolean;
+  /** Typed open: the file decides which gates exist, not this client. */
+  gates: Record<string, boolean>;
+  failures: string[];
+  /** `omitempty` on the wire — a malformed gate file can carry neither. */
+  baseline_summary?: GateSummary;
+  candidate_summary?: GateSummary;
+  /** The whole file, passed through. Rendered only as a disclosure. */
+  raw?: unknown;
+  /** True when no `version` was asked for and the handler picked the newest file. */
+  resolved_latest: boolean;
+}
+
+/** `forensicsEntry` from `/api/v1/training/forensics` (list form). */
+export interface ForensicsEntry {
+  baseline: string;
+  target: string;
+  file: string;
+  size_bytes: number;
+  modified_at: string;
+}
+
+/**
+ * The forensics list.
+ *
+ * `unpaired` is files that end in `forensics.json` but do not carry the
+ * `{baseline}-{target}-forensics.json` naming — `v240_universe_forensics.json`
+ * is a real one, and its contents are a completely different document. They are
+ * listed, not opened.
+ */
+export interface ForensicsList {
+  forensics: ForensicsEntry[];
+  unpaired: string[];
+}
+
+/** A run summary inside a forensics report. Writer: `omega/tools/forensics/run_diff.py`. */
+export interface ForensicsBaseline {
+  version?: string;
+  pnl?: number;
+  trades?: number;
+  win_rate?: number;
+  long_trades?: number;
+  short_trades?: number;
+  profit_factor?: number;
+  zero_trade_cycles?: number;
+  conviction_filter_rate?: number;
+  source?: string;
+}
+
+/** One side's conviction histogram — two bands, not a full distribution. */
+export interface ForensicsHistogram {
+  hold_threshold?: number;
+  trade_band_count?: number;
+  hold_band_count?: number;
+  trade_band_pct?: number;
+  hold_band_pct?: number;
+  min_conviction?: number;
+  max_conviction?: number;
+  mean_conviction?: number;
+}
+
+export interface ForensicsSkippedTrade {
+  cycle?: number;
+  symbol?: string;
+  side?: string;
+  baseline_pnl?: number;
+  baseline_conviction?: number;
+  baseline_regime?: string;
+  reason?: string;
+}
+
+export interface ForensicsHypothesis {
+  rank?: number;
+  claim?: string;
+  confidence?: number;
+  evidence_refs?: string[];
+}
+
+/**
+ * A forensics report, as `run_diff.py` writes it.
+ *
+ * ⚠ The load-bearing quirk, verified across every paired report in the omega
+ * data directory (`v93-v94`, `v48-v50`, `v35-v48`): the keys inside `baselines`,
+ * `conviction_histogram` and `regime_breakdown` are the tool's own hard-coded
+ * labels — literally `v35` and `v48` — and have **nothing to do** with the
+ * versions being compared. `v93-v94-forensics.json` carries
+ * `baselines.v35.version === "v93"`. So nothing may index these by the pair from
+ * the filename; the view derives the two keys from the object's insertion order
+ * (baseline first) and reads the real labels out of `.version`. `regime_breakdown`
+ * is keyed by regime and its inner fields are `{key}_pnl` built from those same
+ * two keys, which is why it is typed as an open record.
+ */
+export interface ForensicsReport {
+  schema_version?: string;
+  generated_at?: string;
+  status?: string;
+  baselines?: Record<string, ForensicsBaseline>;
+  conviction_histogram?: Record<string, ForensicsHistogram>;
+  signal_contribution_delta_proxy?: {
+    per_symbol?: Record<string, number>;
+    per_side?: Record<string, number>;
+    note?: string;
+  };
+  skipped_trades?: ForensicsSkippedTrade[];
+  hypotheses?: ForensicsHypothesis[];
+  regime_breakdown?: Record<string, Record<string, number>>;
+}
+
+/** The detail envelope — the handler wraps the file rather than serving it bare. */
+export interface ForensicsResponse {
+  baseline: string;
+  target: string;
+  file: string;
+  forensics: ForensicsReport;
+}
+
+/** `trainingLogEntry` from `/api/v1/training/log` (list form). */
+export interface TrainingLogEntry {
+  version: string;
+  hasPreRegistration: boolean;
+  /** `omitempty`: absent, not empty, when a cell has no verdict yet. */
+  verdictFiles?: string[];
+}
+
+export interface TrainingLogList {
+  entries: TrainingLogEntry[];
+}
+
+/**
+ * `trainingLogResponse` — raw markdown, both halves.
+ *
+ * These two keys are **camelCase** while every other REST field in this API is
+ * snake_case: the handler's struct tags say `preRegistration` / `verdictFiles`.
+ * Following the handler rather than the convention.
+ */
+export interface TrainingLogDetail {
+  version: string;
+  preRegistration?: string;
+  verdict?: string;
+  files: string[];
+  verdictFiles?: string[];
+}
+
+/**
+ * One line of `data/decision_traces/{version}.jsonl`.
+ *
+ * Source of truth is the *writer* — the handler passes each line through as
+ * opaque `json.RawMessage` and imposes no shape. Shape below is read from the
+ * real files (e.g. `bt_v132a_crisis.jsonl`, 770 rows), where every row is one
+ * **ticker in one cycle**, not a per-cycle snapshot: 770 rows = 7 tickers ×
+ * 110 cycles. Everything is optional because the writer emits `null` for
+ * unavailable geometry (`geo_dist_crash`) and omits nothing else consistently.
+ *
+ * The funnel is built from three of these fields:
+ *   - `proposal` — "LONG" | "SHORT" | "NONE": what the strategy wanted;
+ *   - `final_decision` — "TRADE" | "FILTERED" | "HOLD": what it got;
+ *   - `blocking_filter` — the named filter that stopped it, "" when none did.
+ */
+export interface DecisionTrace {
+  ticker?: string;
+  cycle?: number;
+  version?: string;
+  timestamp?: string;
+  signals?: Record<string, number | null>;
+  raw_composite?: number;
+  demeaned_composite?: number;
+  basket_mean?: number;
+  basket_std?: number;
+  weighted_conviction?: number;
+  regime?: string;
+  bear_prob?: number;
+  bull_prob?: number;
+  thresh_scale?: number;
+  long_thresh?: number;
+  short_thresh?: number;
+  abs_min_conviction?: number;
+  ricci_scalar?: number;
+  orc_mean?: number;
+  geo_dist_crash?: number | null;
+  fiedler_raw?: number;
+  proposal?: string;
+  filters_fired?: string[];
+  blocking_filter?: string;
+  final_decision?: string;
+  threshold_gap?: number;
+  explanation?: string;
+}
+
+/**
+ * `/api/v1/training/decision-traces`.
+ *
+ * `total` is the number of rows **returned**, not the number in the file — the
+ * handler counts what it emitted after applying `limit`. So `total === limit`
+ * means "truncated", and the funnel says so rather than reporting a partial
+ * count as the run's whole story.
+ */
+export interface DecisionTracesResponse {
+  traces: DecisionTrace[];
+  total: number;
+}
+
 // ── Calls ────────────────────────────────────────────────────────────────────
 
 const rpc = <T>(method: string, body: unknown = {}): Promise<T> =>
@@ -398,6 +649,54 @@ export const getTradeDetails = (version?: string): Promise<TradeDetail[]> =>
 export const getSignalCorrelation = (version?: string): Promise<SignalCorrelation> =>
   omega.getJson<SignalCorrelation>(
     version ? `/api/v1/signals/correlation?version=${encodeURIComponent(version)}` : '/api/v1/signals/correlation',
+  );
+
+/**
+ * The gate board for a version, or for the newest gate file when omitted.
+ *
+ * 404 is a real answer here (`no gate result for version "x"`), and it is left
+ * to reject: a version with no gate file is not a version that passed, and the
+ * board renders the handler's own sentence rather than an empty board.
+ */
+export const getGates = (version?: string): Promise<GateResult> =>
+  omega.getJson<GateResult>(
+    version ? `/api/v1/training/gates?version=${encodeURIComponent(version)}` : '/api/v1/training/gates',
+  );
+
+/** Every `{baseline}-{target}-forensics.json` in the data directory. */
+export const listForensics = (): Promise<ForensicsList> =>
+  omega.getJson<ForensicsList>('/api/v1/training/forensics');
+
+export const getForensics = (baseline: string, target: string): Promise<ForensicsResponse> =>
+  omega.getJson<ForensicsResponse>(
+    `/api/v1/training/forensics?baseline=${encodeURIComponent(baseline)}&target=${encodeURIComponent(target)}`,
+  );
+
+/** The training-log index: one row per version cell that has markdown. */
+export const listTrainingLog = (): Promise<TrainingLogEntry[]> =>
+  omega.getJson<TrainingLogList>('/api/v1/training/log').then((r) => r.entries);
+
+export const getTrainingLog = (version: string): Promise<TrainingLogDetail> =>
+  omega.getJson<TrainingLogDetail>(
+    `/api/v1/training/log?version=${encodeURIComponent(version)}`,
+  );
+
+/**
+ * Per-cycle decision traces for a version.
+ *
+ * `limit` is sent explicitly because the handler's default is 200 rows, which is
+ * under two cycles of a seven-ticker run — a funnel drawn from that would be a
+ * confident lie about the run. A missing trace file is a **200** with
+ * `{"traces":[],"total":0}`, not a 404, so an empty answer is an empty state.
+ */
+export const DECISION_TRACE_LIMIT = 4000;
+
+export const getDecisionTraces = (
+  version: string,
+  limit = DECISION_TRACE_LIMIT,
+): Promise<DecisionTracesResponse> =>
+  omega.getJson<DecisionTracesResponse>(
+    `/api/v1/training/decision-traces?version=${encodeURIComponent(version)}&limit=${String(limit)}`,
   );
 
 /**

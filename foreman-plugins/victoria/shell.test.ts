@@ -10,15 +10,38 @@
  * other's half, and duplicating either would mean a test that passes against a
  * copy rather than against the thing that ships.
  */
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { victoriaUseCase } from './index.js';
 import { predecessorOf, sortVersions } from './views/Runs.js';
 import { summariseByRegime } from './views/Trades.js';
 import { maxDrawdown } from './views/Equity.js';
+import { failuresForGate, summariesIdentical, summaryRows, unclaimedFailures } from './views/Gates.js';
+import {
+  blockingBreakdown,
+  cyclesOf,
+  decisionCounts,
+  funnelCounts,
+  isProposal,
+} from './views/Conviction.js';
+import {
+  histogramGroups,
+  histogramRows,
+  regimeRows,
+  reportKeys,
+  sideLabel,
+  symbolDeltas,
+} from './views/Forensics.js';
+import { entryStatus, sortJournal } from './views/Journal.js';
+import {
+  getFocusVersion,
+  resetFocusVersion,
+  setFocusVersion,
+  subscribeFocusVersion,
+} from './store.js';
 import { settleTrades, TRADE_DETAILS_SOURCE, TRADE_RPC_SOURCE } from './hooks.js';
 import { DataSourceError } from '@omega-harness/usecase-kit';
 import { pct, pnlClass, ratio, regimeColor, signedPct, signedUsd, usd } from './format.js';
-import type { VersionInfo } from './client.js';
+import { GATE_NAMES, type VersionInfo } from './client.js';
 
 describe('the manifest', () => {
   it('declares exactly one data source, the omega API', () => {
@@ -48,6 +71,10 @@ describe('the manifest', () => {
       'victoria-trades',
       'victoria-equity',
       'victoria-signals',
+      'victoria-gates',
+      'victoria-conviction',
+      'victoria-forensics',
+      'victoria-journal',
     ]);
     for (const view of victoriaUseCase.views) {
       expect(view.id.startsWith('victoria-')).toBe(true);
@@ -241,5 +268,315 @@ describe('formatters', () => {
     // 'unknown' is what early cycles emit; it must not be guessed into a colour.
     expect(regimeColor('unknown')).toBe('#6b6b74');
     expect(regimeColor('bull')).toBe('#6b6b74');
+  });
+});
+
+// ── Phase-2 view logic ───────────────────────────────────────────────────────
+
+describe('failuresForGate', () => {
+  // Verbatim from data/v94_gate_result.json.
+  const failures = [
+    'pnl_floor: v49 -37.86 < v48 130.91',
+    'regime_parity[crisis]: v49 -56.29 < v48 +112.98 (delta -169.27)',
+    'regime_parity[normal]: v49 -23.71 < v48 -22.79 (delta -0.91)',
+  ];
+
+  it('files a failure under its own gate, including the per-regime form', () => {
+    expect(failuresForGate(failures, 'pnl_floor')).toEqual([failures[0]]);
+    expect(failuresForGate(failures, 'regime_parity')).toEqual([failures[1], failures[2]]);
+    expect(failuresForGate(failures, 'drawdown_ceiling')).toEqual([]);
+  });
+
+  it('does not let a prefix match a longer gate name', () => {
+    expect(failuresForGate(['pnl_floor_extra: nope'], 'pnl_floor')).toEqual([]);
+  });
+
+  it('surfaces a failure no gate claims rather than dropping it', () => {
+    const orphan = 'something else went wrong';
+    expect(unclaimedFailures([...failures, orphan], [...GATE_NAMES])).toEqual([orphan]);
+    expect(unclaimedFailures(failures, [...GATE_NAMES])).toEqual([]);
+  });
+});
+
+describe('summariesIdentical', () => {
+  const summary = {
+    version: 'v231_crisis_snap_crisis_2024aug_off_crisis_r2',
+    pnl: -9507.88,
+    trades: 47,
+    win_rate: 0.1702,
+    max_drawdown: 0,
+    regime_pnl: { normal: -5827.6511, high_vol: -2424.5997, crisis: -1255.6327 },
+  };
+
+  it('catches the real quirk: different version name, identical numbers', () => {
+    // 19 of the 280 gate files in omega's data directory are like this, and the
+    // most recently written one is among them. Every delta is zero because the
+    // run was gated against itself, which the board has to say out loud.
+    expect(summariesIdentical(summary, { ...summary, version: 'v232_crisis_snap_crisis_2024aug_off_crisis_r2' })).toBe(true);
+  });
+
+  it('is false when any measurement differs, including one regime', () => {
+    expect(summariesIdentical(summary, { ...summary, pnl: -9507.87 })).toBe(false);
+    expect(
+      summariesIdentical(summary, {
+        ...summary,
+        regime_pnl: { ...summary.regime_pnl, crisis: -1255.63 },
+      }),
+    ).toBe(false);
+  });
+
+  it('is false when a regime is present on one side only', () => {
+    expect(summariesIdentical(summary, { ...summary, regime_pnl: { normal: -5827.6511 } })).toBe(false);
+  });
+
+  it('is false when either side is missing — nothing to compare is not sameness', () => {
+    expect(summariesIdentical(undefined, summary)).toBe(false);
+    expect(summariesIdentical(summary, undefined)).toBe(false);
+  });
+});
+
+describe('summaryRows', () => {
+  const baseline = {
+    version: 'v93',
+    pnl: 130.91,
+    trades: 60,
+    win_rate: 0.4833,
+    max_drawdown: 0,
+    regime_pnl: { normal: -22.7934, high_vol: 40.7237, crisis: 112.9818 },
+  };
+  const candidate = {
+    version: 'v94',
+    pnl: -37.86,
+    trades: 69,
+    win_rate: 0.3043,
+    max_drawdown: 0,
+    regime_pnl: { normal: -23.7077, high_vol: 42.1353, crisis: -56.2914 },
+  };
+
+  it('computes candidate − baseline, in the desk’s regime order', () => {
+    const rows = summaryRows(baseline, candidate);
+    expect(rows.map((r) => r.label)).toEqual([
+      'PnL',
+      'Trades',
+      'Win rate',
+      'Max drawdown',
+      'PnL · normal',
+      'PnL · high_vol',
+      'PnL · crisis',
+    ]);
+    expect(rows[0].delta).toBeCloseTo(-168.77, 10);
+    expect(rows[1].delta).toBe(9);
+    expect(rows[6].delta).toBeCloseTo(-169.2732, 10);
+  });
+
+  it('marks drawdown as lower-is-better, so a smaller number is not painted red', () => {
+    expect(summaryRows(baseline, candidate).find((r) => r.label === 'Max drawdown')?.lowerIsBetter).toBe(true);
+  });
+
+  it('leaves a delta null when one side is missing, rather than calling it zero', () => {
+    const rows = summaryRows(baseline, undefined);
+    expect(rows[0].baseline).toBe(130.91);
+    expect(rows[0].candidate).toBeUndefined();
+    expect(rows[0].delta).toBeNull();
+  });
+
+  it('carries a regime only one side saw, and an unknown regime after the known ones', () => {
+    const rows = summaryRows(
+      { regime_pnl: { normal: 1, chop: 5 } },
+      { regime_pnl: { normal: 2 } },
+    );
+    expect(rows.map((r) => r.label).slice(4)).toEqual(['PnL · normal', 'PnL · chop']);
+    expect(rows[5].candidate).toBeUndefined();
+    expect(rows[5].delta).toBeNull();
+  });
+});
+
+describe('the conviction funnel', () => {
+  // A reduction of data/decision_traces/bt_v132a_crisis.jsonl: in the real file
+  // 770 ticker-cycles produce 170 proposals and 146 trades, and `blacklist`
+  // blocks 560 rows before a proposal ever exists.
+  const traces = [
+    { ticker: 'BTCUSDT', cycle: 1, proposal: 'NONE', blocking_filter: 'blacklist', final_decision: 'HOLD' },
+    { ticker: 'ETHUSDT', cycle: 1, proposal: 'LONG', blocking_filter: '', final_decision: 'TRADE' },
+    { ticker: 'ADAUSDT', cycle: 1, proposal: 'SHORT', blocking_filter: 'position_limit', final_decision: 'FILTERED' },
+    { ticker: 'BTCUSDT', cycle: 2, proposal: 'NONE', blocking_filter: 'blacklist', final_decision: 'HOLD' },
+    { ticker: 'ETHUSDT', cycle: 2, proposal: 'LONG', blocking_filter: '', final_decision: 'TRADE' },
+  ];
+
+  it('counts the two drop-offs separately, because they point at different code', () => {
+    // A HOLD is the strategy declining to propose; a FILTERED is a proposal the
+    // pipeline killed. Collapsing them into "didn't trade" loses the finding.
+    expect(funnelCounts(traces)).toEqual({
+      evaluated: 5,
+      proposed: 3,
+      traded: 2,
+      held: 2,
+      filtered: 1,
+      long: 2,
+      short: 1,
+    });
+  });
+
+  it('treats an absent proposal as no proposal, not as an unknown side', () => {
+    expect(funnelCounts([{ cycle: 1 }]).proposed).toBe(0);
+    expect(isProposal({ proposal: 'none' })).toBe(false);
+    expect(isProposal({ proposal: 'LONG' })).toBe(true);
+  });
+
+  it('is a zero funnel for no traces, not a division by zero', () => {
+    expect(funnelCounts([])).toEqual({ evaluated: 0, proposed: 0, traded: 0, held: 0, filtered: 0, long: 0, short: 0 });
+  });
+
+  it('counts every blocking filter, including the ones that fire before a proposal', () => {
+    // `blacklist` blocks a ticker before a proposal exists — 560 of 770 rows in
+    // the real file. Counting only killed proposals would make the single
+    // biggest reason a run sat out invisible.
+    expect(blockingBreakdown(traces)).toEqual([
+      { filter: 'blacklist', count: 2, blockedProposals: 0 },
+      { filter: 'position_limit', count: 1, blockedProposals: 1 },
+    ]);
+  });
+
+  it('tallies the writer’s own decisions, so a disagreement with the funnel is visible', () => {
+    expect(decisionCounts(traces)).toEqual([
+      { decision: 'HOLD', count: 2 },
+      { decision: 'TRADE', count: 2 },
+      { decision: 'FILTERED', count: 1 },
+    ]);
+  });
+
+  it('lists the cycles present, ascending and deduplicated', () => {
+    expect(cyclesOf(traces)).toEqual([1, 2]);
+    expect(cyclesOf([{ ticker: 'X' }])).toEqual([]);
+  });
+});
+
+describe('the forensics report readers', () => {
+  // Trimmed from data/v93-v94-forensics.json. The keys really are v35/v48.
+  const report = {
+    baselines: {
+      v35: { version: 'v93', pnl: 130.91 },
+      v48: { version: 'v94', pnl: -37.86 },
+    },
+    conviction_histogram: {
+      v35: { hold_threshold: 0.2, trade_band_count: 1, hold_band_count: 59, trade_band_pct: 0.0167 },
+      v48: { hold_threshold: 0.2, trade_band_count: 1, hold_band_count: 68, trade_band_pct: 0.0145 },
+    },
+    signal_contribution_delta_proxy: {
+      per_symbol: { ADAUSDT: -55.1537, ARBUSDT: -60.935, ETHUSDT: -6.6902, NEARUSDT: -45.997 },
+    },
+    regime_breakdown: {
+      crisis: { v35_pnl: 112.9818, v48_pnl: -56.2914, delta: -169.2732 },
+    },
+  };
+
+  it('takes the two sides from insertion order, not from the filename pair', () => {
+    // The quirk this exists for: v93-v94-forensics.json keys its sides "v35"
+    // and "v48" — run_diff.py's hard-coded labels. Indexing by the pair in the
+    // filename would find nothing at all.
+    expect(reportKeys(report)).toEqual(['v35', 'v48']);
+    expect(sideLabel(report, 'v35')).toBe('v93');
+    expect(sideLabel(report, 'v48')).toBe('v94');
+  });
+
+  it('falls back to the histogram keys, and gives up honestly', () => {
+    expect(reportKeys({ conviction_histogram: { a: {}, b: {} } })).toEqual(['a', 'b']);
+    expect(reportKeys({})).toBeNull();
+    expect(reportKeys({ baselines: { only: {} } })).toBeNull();
+    // With no keys, the label is the key itself rather than an invented name.
+    expect(sideLabel({}, 'v35')).toBe('v35');
+  });
+
+  it('sorts symbols by the size of the move, not by its sign', () => {
+    expect(symbolDeltas(report).map((s) => s.symbol)).toEqual([
+      'ARBUSDT',
+      'ADAUSDT',
+      'NEARUSDT',
+      'ETHUSDT',
+    ]);
+    expect(symbolDeltas({}).length).toBe(0);
+  });
+
+  it('derives the per-regime field names from the report’s own keys', () => {
+    // `v35_pnl` / `v48_pnl` are built from the keys; hard-coding them would work
+    // on every report in the repo today and break on the next one.
+    expect(regimeRows(report, ['v35', 'v48'])).toEqual([
+      { regime: 'crisis', baseline: 112.9818, candidate: -56.2914, delta: -169.2732 },
+    ]);
+    // Without keys the delta still survives — it is not key-derived.
+    expect(regimeRows(report, null)).toEqual([
+      { regime: 'crisis', baseline: undefined, candidate: undefined, delta: -169.2732 },
+    ]);
+  });
+
+  it('pairs the histogram bands and measures for the two sides', () => {
+    expect(histogramGroups(report, ['v35', 'v48'])).toEqual([
+      { label: 'trade band', values: [1, 1] },
+      { label: 'hold band', values: [59, 68] },
+    ]);
+    expect(histogramGroups(report, null)).toEqual([]);
+    expect(histogramRows(report, ['v35', 'v48'])[0]).toEqual({
+      label: 'hold threshold',
+      kind: 'ratio',
+      baseline: 0.2,
+      candidate: 0.2,
+    });
+    expect(histogramRows({}, ['v35', 'v48'])).toEqual([]);
+  });
+});
+
+describe('the journal index', () => {
+  it('sorts newest first, naturally — V270 above V99', () => {
+    expect(
+      sortJournal([
+        { version: 'V99', hasPreRegistration: true },
+        { version: 'V270', hasPreRegistration: true },
+        { version: 'V262', hasPreRegistration: true },
+      ]).map((e) => e.version),
+    ).toEqual(['V270', 'V262', 'V99']);
+  });
+
+  it('names a cell that has a verdict but was never pre-registered', () => {
+    // The failure mode the whole practice exists to prevent: a result with no
+    // promise to measure it against. It gets the danger colour, not a shrug.
+    expect(entryStatus({ version: 'V262', hasPreRegistration: false, verdictFiles: ['V262_AUDIT_VERDICT.md'] })).toEqual({
+      label: 'verdict only — not pre-registered',
+      color: '#e5675b',
+      verdicts: 1,
+    });
+  });
+
+  it('distinguishes a closed cell from one still in flight', () => {
+    expect(entryStatus({ version: 'V261', hasPreRegistration: true, verdictFiles: ['V261_VERDICT.md'] }).label).toBe('closed');
+    expect(entryStatus({ version: 'V270', hasPreRegistration: true }).label).toBe('open — no verdict');
+    expect(entryStatus({ version: 'V270', hasPreRegistration: true }).verdicts).toBe(0);
+  });
+});
+
+describe('the shell-local focus store', () => {
+  afterEach(() => { resetFocusVersion(); });
+
+  it('carries a version between views, which onOpenView cannot', () => {
+    // `onOpenView(viewId)` has no second argument, so "open Gates for V270" has
+    // no channel in the guest contract. This is the plugin-internal substitute.
+    const seen: (string | null)[] = [];
+    const unsubscribe = subscribeFocusVersion(() => { seen.push(getFocusVersion()); });
+
+    setFocusVersion('V270');
+    expect(getFocusVersion()).toBe('V270');
+    setFocusVersion(null);
+    expect(seen).toEqual(['V270', null]);
+
+    unsubscribe();
+    setFocusVersion('v94');
+    expect(seen).toEqual(['V270', null]); // no longer listening
+  });
+
+  it('does not notify on a write of the same value, so a re-announcing view cannot loop', () => {
+    let notifications = 0;
+    subscribeFocusVersion(() => { notifications++; });
+    setFocusVersion('v94');
+    setFocusVersion('v94');
+    expect(notifications).toBe(1);
   });
 });

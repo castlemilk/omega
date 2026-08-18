@@ -12,6 +12,9 @@ import {
   correlationBucket,
   correlationColor,
   extent,
+  funnelBars,
+  funnelHeight,
+  groupedBars,
   linePath,
   scaleX,
   scaleY,
@@ -185,5 +188,112 @@ describe('correlationColor', () => {
   it('renders an uncorrelated pair as barely-there accent rather than nothing', () => {
     // bucket 0 has no sign, so it takes the positive rgb at the lowest alpha.
     expect(correlationColor(0)).toBe('rgba(232,150,60,0.06)');
+  });
+});
+
+// ── Phase-2 geometry ─────────────────────────────────────────────────────────
+
+/** A funnel box with round numbers: 100 units of usable width. */
+const funnelBox: Box = { width: 100, height: 0, padLeft: 0, padRight: 0, padTop: 0, padBottom: 0 };
+
+describe('funnelBars', () => {
+  // The real shape of one run: bt_v132a_crisis evaluates 770 ticker-cycles,
+  // proposes on 170 of them, and trades 146.
+  const steps = [
+    { label: 'Evaluated', count: 770 },
+    { label: 'Proposed', count: 170 },
+    { label: 'Traded', count: 146 },
+  ];
+
+  it('scales every bar against the FIRST step, not against its predecessor', () => {
+    // The mistake this catches: normalising each bar against the one above it
+    // draws 770 → 170 → 146 as "full, 22%, 86%", which reads as a funnel that
+    // barely loses anything at the last step. It loses 81% overall.
+    const bars = funnelBars(steps, funnelBox, 20, 10);
+    expect(bars.map((b) => b.width)).toEqual([100, (170 / 770) * 100, (146 / 770) * 100]);
+    expect(bars[1].share).toBeCloseTo(170 / 770, 12);
+    expect(bars[2].share).toBeCloseTo(146 / 770, 12);
+  });
+
+  it('reports the drop into each step, and none for the first', () => {
+    const bars = funnelBars(steps, funnelBox, 20, 10);
+    expect(bars.map((b) => b.dropped)).toEqual([0, 600, 24]);
+  });
+
+  it('stacks bars by height plus gap, from the top pad', () => {
+    const bars = funnelBars(steps, funnelBox, 20, 10);
+    expect(bars.map((b) => b.y)).toEqual([0, 30, 60]);
+    expect(bars.every((b) => b.x === 0 && b.height === 20)).toBe(true);
+    expect(funnelHeight(3, funnelBox, 20, 10)).toBe(80);
+    expect(funnelHeight(0, funnelBox, 20, 10)).toBe(0);
+  });
+
+  it('draws an empty funnel rather than NaN when nothing was evaluated', () => {
+    const bars = funnelBars(
+      [
+        { label: 'Evaluated', count: 0 },
+        { label: 'Traded', count: 0 },
+      ],
+      funnelBox,
+    );
+    expect(bars.map((b) => b.width)).toEqual([0, 0]);
+    expect(bars.map((b) => b.share)).toEqual([0, 0]);
+  });
+
+  it('lets a later step overflow rather than clamping a contradiction out of sight', () => {
+    // A step bigger than the top is bad data. Silently truncating it to 100%
+    // would hide the only evidence that something is wrong.
+    const bars = funnelBars(
+      [
+        { label: 'a', count: 10 },
+        { label: 'b', count: 20 },
+      ],
+      funnelBox,
+    );
+    expect(bars[1].width).toBe(200);
+    expect(bars[1].dropped).toBe(-10);
+  });
+
+  it('is empty for no steps', () => {
+    expect(funnelBars([], funnelBox)).toEqual([]);
+  });
+});
+
+describe('groupedBars', () => {
+  /** 100 wide, 100 tall usable; padTop 0 and padBottom 0 keep the arithmetic exact. */
+  const barBox: Box = { width: 100, height: 100, padLeft: 0, padRight: 0, padTop: 0, padBottom: 0 };
+
+  it('puts every series on one scale, zero-based', () => {
+    // Two groups, two series. groupWidth = (100 - 14) / 2 = 43;
+    // barWidth = (43 - 3) / 2 = 20.
+    const rects = groupedBars([[59, 68], [1, 1]], barBox);
+    expect(rects[0][0]).toEqual({ x: 0, y: 100 - (59 / 68) * 100, width: 20, height: (59 / 68) * 100 });
+    expect(rects[0][1]).toEqual({ x: 23, y: 0, width: 20, height: 100 });
+    // The second group is scaled against the SAME maximum, which is the point:
+    // a trade band of 1 next to a hold band of 68 must look like almost nothing.
+    expect(rects[1][0].height).toBeCloseTo((1 / 68) * 100, 10);
+    expect(rects[1][0].x).toBe(57);
+  });
+
+  it('sits every bar on the baseline', () => {
+    const rects = groupedBars([[10, 5]], barBox);
+    for (const rect of rects[0]) expect(rect.y + rect.height).toBeCloseTo(100, 10);
+  });
+
+  it('draws zero-height bars when every value is zero, rather than dividing by it', () => {
+    const rects = groupedBars([[0, 0]], barBox);
+    expect(rects[0].map((r) => r.height)).toEqual([0, 0]);
+    expect(rects[0].every((r) => r.y === 100)).toBe(true);
+  });
+
+  it('clamps a negative to zero height instead of inverting the bar', () => {
+    const rects = groupedBars([[-4, 8]], barBox);
+    expect(rects[0][0].height).toBe(0);
+    expect(rects[0][1].height).toBe(100);
+  });
+
+  it('is empty for no groups', () => {
+    expect(groupedBars([], barBox)).toEqual([]);
+    expect(groupedBars([[]], barBox)).toEqual([[]]);
   });
 });

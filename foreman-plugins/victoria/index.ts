@@ -2,7 +2,7 @@
  * The Victoria use-case shell — UC-3, the first real domain plugin.
  *
  * Victoria is omega's autonomous crypto quant system. An objective carrying
- * `useCase: 'victoria'` gets six domain tabs alongside the core chrome, all
+ * `useCase: 'victoria'` gets ten domain tabs alongside the core chrome, all
  * reading the omega Go API on :8080 through the shell's own typed client in
  * `./client.ts`.
  *
@@ -20,6 +20,10 @@ import { VictoriaLive } from './views/Live.js';
 import { VictoriaTrades } from './views/Trades.js';
 import { VictoriaEquity } from './views/Equity.js';
 import { VictoriaSignals } from './views/Signals.js';
+import { VictoriaGates } from './views/Gates.js';
+import { VictoriaConviction } from './views/Conviction.js';
+import { VictoriaForensics } from './views/Forensics.js';
+import { VictoriaJournal } from './views/Journal.js';
 
 /**
  * The accent.
@@ -52,6 +56,15 @@ export const victoriaUseCase: UseCaseShell = {
     { id: 'victoria-trades', label: 'Trades', order: 40, component: VictoriaTrades },
     { id: 'victoria-equity', label: 'Equity', order: 50, component: VictoriaEquity },
     { id: 'victoria-signals', label: 'Signals', order: 60, component: VictoriaSignals },
+    // Phase 2. The order is the order a run is actually read in: did it ship
+    // (Gates), why did it trade what it traded (Conviction), what changed
+    // against the run before it (Forensics), and what did we say we were
+    // testing (Journal) — the narrative last, because it is the thing that
+    // links back to the first.
+    { id: 'victoria-gates', label: 'Gates', order: 70, component: VictoriaGates },
+    { id: 'victoria-conviction', label: 'Conviction', order: 80, component: VictoriaConviction },
+    { id: 'victoria-forensics', label: 'Forensics', order: 90, component: VictoriaForensics },
+    { id: 'victoria-journal', label: 'Journal', order: 100, component: VictoriaJournal },
   ],
   dataSources: [OMEGA_SOURCE],
 };

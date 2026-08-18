@@ -22,8 +22,10 @@
  *      what is true, which is that the number is not recorded.
  *
  * Profit factor and max drawdown are in the *results file* but not in the
- * `/versions` projection, and no endpoint exposes the raw file. They are named
- * as phase-2 work rather than faked from what is here.
+ * `/versions` projection, and no endpoint exposes the raw file — still true
+ * after phase 2. They are named rather than faked from what is here. Where a
+ * run has a gate result, `/api/v1/training/gates` does carry max drawdown, and
+ * the Gates tab shows it there.
  */
 import { useMemo, useState } from 'react';
 import { Pill } from '@omega-harness/usecase-kit/ui';
@@ -100,7 +102,7 @@ function RunDetail({ version, previous }: { version: string; previous: string | 
         gate result. The six hard gates (PnL floor, regime parity, drawdown
         ceiling, trade-count floor, signal integrity, auto-apply audit) are
         written to <span className="font-mono">data/{version}_gate_result.json</span> and
-        have no endpoint yet.
+        are shown on the Gates tab.
       </p>
     </div>
   );

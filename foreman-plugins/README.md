@@ -4,7 +4,7 @@ Omega's domain tabs in the Foreman control plane. Two of them:
 
 | Directory | Shell | What it is |
 | --- | --- | --- |
-| `victoria/` | `@omega-foreman/victoria` | The trading desk — six tabs over the Go API on `:8080` (Overview, Runs, Live, Trades, Equity, Signals) |
+| `victoria/` | `@omega-foreman/victoria` | The trading desk — ten tabs over the Go API on `:8080` (Overview, Runs, Live, Trades, Equity, Signals, Gates, Conviction, Forensics, Journal) |
 | `polymarket/` | `@omega-foreman/polymarket` | Prediction markets — one tab, transcribed from `projects/polymarket.yaml`, with **no backend yet** and saying so |
 
 They live here rather than in the harness because they are *omega's* domain
@@ -73,7 +73,12 @@ Full detail is in the harness's `docs/USE-CASE-SHELLS.md`. The three that bite:
    `UseCaseShell` object and does nothing else at import time — no
    registration, no fetching. Registering is the host's job.
 2. **`UseCaseViewProps` is six fields and never widens.** Domain data comes from
-   the shell's own typed client (`createDataSource`), never from the host.
+   the shell's own typed client (`createDataSource`), never from the host. Note
+   what this costs: `onOpenView` takes a view id and nothing else, so "open the
+   Gates board **for V270**" has no channel in the contract. Victoria carries
+   that one value in a module-level store *inside the plugin*
+   (`victoria/store.ts`) rather than asking the host to widen — a plugin-private
+   variable is a shell's business; a new prop is a Foreman API decision.
 3. **Never render a number you did not get.** Absent is an em dash. An empty
    state, an error state and a no-backend state must look different, because
    they have different fixes and only one of them is the operator's.

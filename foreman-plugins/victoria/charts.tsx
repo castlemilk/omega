@@ -10,12 +10,16 @@ import {
   areaPath,
   correlationColor,
   extent,
+  funnelBars,
+  funnelHeight,
+  groupedBars,
   linePath,
   scaleX,
   scaleY,
   ticks,
   trainEndX,
   type Box,
+  type FunnelStep,
 } from './geometry.js';
 
 const AXIS = '#3d3d45'; // ghost
@@ -237,6 +241,164 @@ export function ChartLegend({ series }: { series: readonly LineSeries[] }) {
           {s.label}
         </span>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The stepped funnel.
+ *
+ * Bars, not a tapering polygon: a polygon funnel encodes the count in an area
+ * the eye reads as a length anyway, and it cannot show a step that grew. Widths
+ * are shares of the first step (see `funnelBars`), each bar carries its own
+ * count and share as text, and the drop between steps is stated in words
+ * underneath — the drop is the finding, and leaving it to be inferred from two
+ * bar lengths is how a funnel becomes decoration.
+ */
+export function Funnel({
+  steps,
+  width = 720,
+  color = 'var(--uc-accent)',
+}: {
+  steps: readonly FunnelStep[];
+  width?: number;
+  color?: string;
+}) {
+  const barHeight = 30;
+  // The gap carries each step's drop note, and `padBottom` is what keeps the
+  // LAST step's note inside the viewBox — without it the final drop ("24
+  // filtered") is drawn below the SVG and silently clipped, which was exactly
+  // the bug the first live walk of this view found.
+  const gap = 34;
+  const box: Box = { width, height: 0, padLeft: 0, padRight: 0, padTop: 0, padBottom: 20 };
+  const bars = funnelBars(steps, box, barHeight, gap);
+  const height = funnelHeight(steps.length, box, barHeight, gap);
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${String(width)} ${String(height)}`}
+      role="img"
+      aria-label={`funnel: ${steps.map((s) => `${s.label} ${String(s.count)}`).join(', ')}`}
+      className="block"
+    >
+      {bars.map((bar) => (
+        <g key={bar.label}>
+          {/* The track: the full width the first step occupied, so a short bar
+              reads as a share rather than as a bar of unknown scale. */}
+          <rect x={bar.x} y={bar.y} width={width} height={bar.height} rx={3} fill="rgba(255,255,255,.04)" />
+          <rect x={bar.x} y={bar.y} width={bar.width} height={bar.height} rx={3} fill={color} opacity={0.28} />
+          <rect x={bar.x} y={bar.y} width={Math.min(bar.width, 2)} height={bar.height} fill={color} />
+          <text x={bar.x + 10} y={bar.y + 19} className="font-mono" fontSize={11} fill="#e8e8ea">
+            {bar.label}
+          </text>
+          <text
+            x={width - 10}
+            y={bar.y + 19}
+            textAnchor="end"
+            className="font-mono"
+            fontSize={11}
+            fill="#c8c8ce"
+          >
+            {String(bar.count)} · {(bar.share * 100).toFixed(1)}%
+          </text>
+          {bar.note != null && (
+            <text x={bar.x + 10} y={bar.y + bar.height + 14} className="font-mono" fontSize={9.5} fill="#8a8a92">
+              ↳ {bar.note}
+            </text>
+          )}
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+/**
+ * Side-by-side bars for A-vs-B comparisons.
+ *
+ * Two runs' histograms on one scale (see `groupedBars`), each group labelled
+ * under the axis and each bar carrying its value above it. Values are formatted
+ * by the caller, because the same chart draws counts in one panel and
+ * percentages in the next and only the caller knows which.
+ */
+export function GroupedBarChart({
+  groups,
+  seriesColors,
+  seriesLabels,
+  formatValue = (v: number) => v.toFixed(2),
+  width = 340,
+  height = 170,
+}: {
+  groups: readonly { label: string; values: readonly number[] }[];
+  seriesColors: readonly string[];
+  seriesLabels: readonly string[];
+  formatValue?: (value: number) => string;
+  width?: number;
+  height?: number;
+}) {
+  const box: Box = { width, height, padLeft: 6, padRight: 6, padTop: 18, padBottom: 26 };
+  const rects = groupedBars(groups.map((g) => g.values), box);
+  const baseline = height - box.padBottom;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <svg
+        width="100%"
+        viewBox={`0 0 ${String(width)} ${String(height)}`}
+        role="img"
+        aria-label={`${seriesLabels.join(' versus ')} across ${groups.map((g) => g.label).join(', ')}`}
+        className="block"
+      >
+        <line x1={box.padLeft} x2={width - box.padRight} y1={baseline} y2={baseline} stroke={AXIS} strokeWidth={1} />
+        {rects.map((group, gi) => (
+          <g key={groups[gi].label}>
+            {group.map((rect, si) => (
+              <g key={si}>
+                <rect
+                  x={rect.x}
+                  y={rect.y}
+                  width={rect.width}
+                  height={rect.height}
+                  fill={seriesColors[si] ?? '#6b6b74'}
+                  opacity={0.75}
+                  rx={2}
+                />
+                <text
+                  x={rect.x + rect.width / 2}
+                  y={rect.y - 4}
+                  textAnchor="middle"
+                  className="font-mono"
+                  fontSize={8.5}
+                  fill="#8a8a92"
+                >
+                  {formatValue(groups[gi].values[si])}
+                </text>
+              </g>
+            ))}
+            <text
+              x={(group[0]?.x ?? box.padLeft) + (group.length * (group[0]?.width ?? 0)) / 2}
+              y={baseline + 13}
+              textAnchor="middle"
+              className="font-mono"
+              fontSize={9}
+              fill="#565660"
+            >
+              {groups[gi].label}
+            </text>
+          </g>
+        ))}
+      </svg>
+      <div className="flex flex-wrap items-center gap-3">
+        {seriesLabels.map((label, i) => (
+          <span key={label} className="flex items-center gap-1.5 font-mono text-[9.5px] text-ink3">
+            <span
+              className="inline-block h-2 w-2 rounded-[2px]"
+              style={{ background: seriesColors[i] ?? '#6b6b74' }}
+            />
+            {label}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

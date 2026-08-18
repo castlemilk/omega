@@ -16,7 +16,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   compareVersions,
+  getDecisionTraces,
   getEquityCurve,
+  getForensics,
+  getGates,
+  getTrainingLog,
+  listForensics,
+  listTrainingLog,
   getPnL,
   getPortfolio,
   getPositions,
@@ -29,7 +35,13 @@ import {
   getVersions,
   streamTraining,
   type CompareResponse,
+  type DecisionTracesResponse,
   type EquityCurve,
+  type ForensicsList,
+  type ForensicsResponse,
+  type GateResult,
+  type TrainingLogDetail,
+  type TrainingLogEntry,
   type PnL,
   type Portfolio,
   type Position,
@@ -317,6 +329,67 @@ export function useVictoriaSignals(version?: string): Async<SignalsData> {
       ]);
       return { snapshot, correlation };
     },
+    [version],
+  );
+}
+
+// ── Gates ────────────────────────────────────────────────────────────────────
+
+/**
+ * The gate board.
+ *
+ * `null` version means "whatever the newest gate file is" and is a real request,
+ * unlike the compare hook's null: the handler resolves the latest itself and
+ * reports that it did via `resolved_latest`. A 404 (no gate file for that
+ * version, or none at all) rejects and the view renders the handler's sentence.
+ */
+export function useVictoriaGates(version: string | null): Async<GateResult> {
+  return useAsync(() => getGates(version ?? undefined), [version]);
+}
+
+// ── Conviction ───────────────────────────────────────────────────────────────
+
+/**
+ * Decision traces for one version.
+ *
+ * No version selected means no request: the handler 400s without one, and a rail
+ * full of 400s from merely opening the tab is the noise the Runs view already
+ * refuses to make.
+ */
+export function useVictoriaDecisionTraces(
+  version: string | null,
+): Async<DecisionTracesResponse | null> {
+  return useAsync(
+    () => (version ? getDecisionTraces(version) : Promise.resolve(null)),
+    [version],
+  );
+}
+
+// ── Forensics ────────────────────────────────────────────────────────────────
+
+export function useVictoriaForensicsList(): Async<ForensicsList> {
+  return useAsync(() => listForensics(), []);
+}
+
+export function useVictoriaForensics(
+  baseline: string | null,
+  target: string | null,
+): Async<ForensicsResponse | null> {
+  return useAsync(
+    () => (baseline && target ? getForensics(baseline, target) : Promise.resolve(null)),
+    [baseline, target],
+  );
+}
+
+// ── Journal ──────────────────────────────────────────────────────────────────
+
+export function useVictoriaJournal(): Async<TrainingLogEntry[]> {
+  return useAsync(() => listTrainingLog(), []);
+}
+
+export function useVictoriaJournalEntry(version: string | null): Async<TrainingLogDetail | null> {
+  return useAsync(
+    () => (version ? getTrainingLog(version) : Promise.resolve(null)),
     [version],
   );
 }
