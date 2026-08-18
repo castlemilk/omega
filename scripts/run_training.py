@@ -80,7 +80,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from omega.eval.v49_gates import check_v49_gates
+# Standing-baseline gates (2026-08-18). omega/eval/v49_gates.py is retired in
+# place — still importable and still tested, but no longer called from here.
+from omega.eval.standing_gates import check_standing_gates, error_payload
 
 
 # ---------------------------------------------------------------------------
@@ -2029,43 +2031,84 @@ def run(
         _gate_on, _ic_on, _ic_off, _ic_on + _ic_off,
     )
 
-    # V49 hard gates — compare this run against the previous version.
-    baseline_label = _find_baseline_version(version)
-    if baseline_label is not None:
-        baseline_results = AUDIT_DIR / f"{baseline_label}_results.json"
-        baseline_trades = AUDIT_DIR / f"{baseline_label}_trades.csv"
-        gate_out = AUDIT_DIR / f"{version}_gate_result.json"
-        try:
-            gate_result = check_v49_gates(
-                v49_results=results_file,
-                v49_trades=trades_csv,
-                v48_results=baseline_results,
-                v48_trades=baseline_trades,
-                out_path=gate_out,
-            )
-            if gate_result.passed:
-                log.info(
-                    "%s gates PASSED vs %s (all %d checks green)",
-                    version.upper(),
-                    baseline_label,
-                    len(gate_result.gates),
-                )
-            else:
-                log.error(
-                    "%s gates FAILED vs %s — %d failures:",
-                    version.upper(),
-                    baseline_label,
-                    len(gate_result.failures),
-                )
-                for f in gate_result.failures:
-                    log.error("  ✗ %s", f)
-                log.error("Gate report: %s", gate_out)
-        except Exception as exc:
-            log.exception("V49 gate check crashed: %s", exc)
-    else:
-        log.warning(
-            "%s: no baseline version found for gate comparison", version.upper()
+    # Standing-baseline gates — POST-RUN evaluation only; nothing below this
+    # comment can influence trading, sizing or signals. It reads the artifacts
+    # this run already wrote and produces one file.
+    #
+    # Repointed 2026-08-18 from omega/eval/v49_gates.py (N-1 sibling comparison,
+    # which resolved nothing for 39 of the 51 most recent cell labels and
+    # compared deterministic replays to themselves) onto the campaign's standing
+    # baseline in data/standing_baseline.json — the journal's per-family PnL
+    # floors (training_log/V271.md:6). v49_gates stays importable for history.
+    #
+    # Two invariants: a gate file is written for EVERY verdict, including
+    # NO_BASELINE and ERROR (the old code wrote nothing and logged a warning —
+    # a silent skip); and a gate crash is recorded in the file, never swallowed,
+    # but also never allowed to kill the run.
+    gate_out = AUDIT_DIR / f"{version}_gate_result.json"
+    try:
+        # The N-1 sibling is OPTIONAL and informational — it exists only to
+        # detect a run that reproduced a prior run. It is not the gate.
+        baseline_label = _find_baseline_version(version)
+        sibling_results = sibling_trades = None
+        if baseline_label is not None:
+            _sr = AUDIT_DIR / f"{baseline_label}_results.json"
+            _st = AUDIT_DIR / f"{baseline_label}_trades.csv"
+            sibling_results = _sr if _sr.exists() else None
+            sibling_trades = _st if _st.exists() else None
+
+        gate_result = check_standing_gates(
+            results_file,
+            trades_csv,
+            None,
+            version=version,
+            sibling_label=baseline_label,
+            sibling_results=sibling_results,
+            sibling_trades_path=sibling_trades,
+            out_path=gate_out,
         )
+        _v = gate_result.verdict
+        if _v == "PASS":
+            log.info(
+                "%s standing gates PASS (family=%s, floor $%s)",
+                version.upper(),
+                gate_result.family,
+                gate_result.standing_baseline_used.get("pnl_floor_usd"),
+            )
+        elif _v == "FAIL":
+            log.error(
+                "%s standing gates FAIL (family=%s) — %d failure(s):",
+                version.upper(),
+                gate_result.family,
+                len(gate_result.failures),
+            )
+            for f in gate_result.failures:
+                log.error("  ✗ %s", f)
+        elif _v == "NO_BASELINE":
+            log.error(
+                "%s standing gates NO_BASELINE — the cell label matched no regime "
+                "family in data/standing_baseline.json, so no standing floor could "
+                "be applied. This is NOT a pass. Add a family_patterns entry or "
+                "rename the cell.",
+                version.upper(),
+            )
+        elif _v == "NO_OP":
+            log.warning(
+                "%s standing gates NO_OP — frozen cache reproduced %s exactly; this "
+                "run measured nothing new.",
+                version.upper(),
+                baseline_label,
+            )
+        for note in gate_result.notes:
+            log.info("  · %s", note)
+        log.info("Gate report: %s", gate_out)
+    except Exception as exc:  # noqa: BLE001 - the run must survive; the file is the record
+        log.exception("Standing gate check crashed: %s", exc)
+        try:
+            error_payload(version, exc, out_path=gate_out)
+            log.error("Wrote ERROR gate report: %s", gate_out)
+        except Exception:  # noqa: BLE001
+            log.exception("Could not even write the ERROR gate report to %s", gate_out)
 
     # Performance attribution report
     try:

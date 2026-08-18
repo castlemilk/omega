@@ -104,20 +104,76 @@ Each run produces:
 - `data/{version}_results.json` — aggregate stats (PnL, trades, win rate, observability metrics)
 - `data/{version}_trades.csv` — per-trade log: `cycle,timestamp,symbol,side,size,entry_price,exit_price,pnl,slippage,hold_cycles,conviction,regime,sit_out_reason`
 - `data/{version}_progress.json` — periodic snapshots during the run
-- `data/{version}_gate_result.json` — hard gate pass/fail report (V49+)
+- `data/{version}_gate_result.json` — standing-baseline gate verdict (always written; see below)
 - `/tmp/{version}_metrics.jsonl` — per-cycle JSONL metrics (not committed)
 
-### Hard gates (`omega/eval/v49_gates.py`)
+### Standing-baseline gates (`omega/eval/standing_gates.py`)
 
-Every training run automatically checks six gates against the previous version:
-1. PnL floor (v_new >= v_prev)
-2. Regime parity (non-negative in every regime: `crisis`, `high_vol`, `normal`)
-3. Drawdown ceiling
-4. Trade count floor (>= 20)
-5. Signal integrity tests
-6. Auto-apply audit (meta-analyst safety)
+Gates are **post-run evaluation only** — they read the artifacts a finished run
+wrote and produce one file. Nothing in the gate path can influence trading,
+sizing or signals.
 
-Gate failure writes `data/{version}_gate_result.json` with specific failure reasons. The run is NOT automatically merged on failure.
+**The floors come from the training journal, not from the previous run.** Every
+pre-registration since V240 carries a "Standing baseline (MUST NOT MOVE)" line —
+currently `omega/nodes/victoria/training_log/V271.md:6`: **crisis +$599 / trend
++$2,997 / recent +$30**. Those numbers are transcribed, with citations, into
+`data/standing_baseline.json` (committed **config**, not run output — the one
+file under `data/` that is hand-maintained). Moving the standing baseline is a
+journal act with its own pre-registration; editing that file to make a run pass
+is the thing the gate exists to prevent.
+
+Each run is mapped to a regime **family** (`crisis` / `trend` / `recent`) from
+its `provenance.snapshot` (via `data/walk_forward_manifest.json`, authoritative)
+or, failing that, from the cell label (`family_patterns` in the config). The
+substrate wins over the name; a conflict is recorded, not hidden.
+
+Gates evaluated:
+
+| Gate | Assertion |
+|---|---|
+| `family_pnl_floor` | candidate PnL ≥ the family's standing floor |
+| `trade_count_floor` | ≥ 20 closed trades (prevents "win by sitting out") |
+| `drawdown_ceiling` | only when `observability.max_drawdown_usd` is present — otherwise `not_evaluated` |
+
+Plus a `sibling_comparison` block against the N-1 cell, which is **informational
+only**: it exists to detect a run that reproduced a prior run, and never decides
+a pass or a fail.
+
+**Verdict vocabulary** (a first-class `verdict` field, not inferred from
+`passed`), in precedence order:
+
+- **`FAIL`** — at least one evaluated gate failed.
+- **`NO_BASELINE`** — the cell's family could not be resolved, so no standing
+  floor applies. Loud, and the file is still written. This is **not** a pass.
+- **`NO_OP`** — the run used a frozen cache and reproduced its N-1 sibling
+  exactly (identical trade fingerprint — timestamp column dropped — or identical
+  trade count and PnL). It measured nothing new.
+- **`PASS`** — every evaluated gate passed.
+- **`ERROR`** — gate evaluation itself raised. Written by `run_training.py`; the
+  training run survives, but the failure is a record, never a silence.
+
+Per-gate status is `pass` / `fail` / **`not_evaluated`**. A gate whose input
+block is absent reports `not_evaluated` and **never** `pass`.
+
+`data/{version}_gate_result.json` is written for **every** verdict.
+
+#### `omega/eval/v49_gates.py` — RETIRED IN PLACE (2026-08-18)
+
+Still importable and still tested, kept for reading historical gate files; **no
+longer called by `run_training.py`**. It compared a run to its N-1 sibling cell
+by exact-suffix label decrement, which by 2026-08-18 was:
+
+- resolving **nothing** for 39 of the 51 most recent cell labels (renamed cells)
+  → a logged warning and **no gate file at all**;
+- comparing deterministic replays **to themselves** when it did resolve (18 gate
+  files in `data/` carry identical baseline and candidate summaries);
+- running three gates that could not fail — `signal_integrity` and
+  `auto_apply_audit` returned True when their input block was absent (it always
+  was), and `max_drawdown` defaulted to `0.0` so `drawdown_ceiling` compared
+  `0.0 <= 0.0` forever. Only `pnl_floor` and `trade_count_floor` were real.
+
+Do not resurrect the "six hard gates on every run" claim; it described a
+mechanism that had stopped running.
 
 ### Forensics tool
 

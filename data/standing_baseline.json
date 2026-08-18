@@ -1,0 +1,68 @@
+{
+  "updated": "2026-08-18",
+  "source": "omega/nodes/victoria/training_log/V271.md:6 (pre-registration, 2026-08-18) — \"Standing baseline (MUST NOT MOVE): crisis +$599 / trend +$2,997 / recent +$30\"",
+  "corroborating_sources": [
+    "omega/nodes/victoria/training_log/README.md:34-38 — walk-forward distribution table (as of 2026-07-11, V240 SELECTIVE UNIVERSE): crisis n=12 mean +$599, trend n=10 mean +$2,997, recent n=10 mean +$30",
+    "omega/nodes/victoria/training_log/CAMPAIGN_STATUS.md:43-44 — \"Standing baseline (the deliverable): crisis +$599 / trend +$2,997 / recent +$30\"",
+    "omega/nodes/victoria/training_log/V253.md:5 — \"Standing baseline (unchanged): crisis +$599 / trend +$2,997 / recent +$30 = +$3,626 pooled\"",
+    "omega/nodes/victoria/training_log/V267.md:146 and V267_CAPACITY_VERDICT.md:206 — baseline must not move",
+    "omega/nodes/victoria/training_log/V270_SPREAD_BUDGET_VERDICT.md:9-10 — \"Standing baseline unmoved (crisis +$599 / trend +$2,997 / recent +$30)\""
+  ],
+  "config": "V227-skew (crisis_skew ON, gate ON, X=0.12; IC OFF; brake OFF; frozen_series OFF) + universe_selective_enabled (V240.A ADOPTED) — 10-name universe, effective blacklist {BTC, DOT, LINK}. See training_log/README.md:27-33.",
+  "families": {
+    "crisis": {
+      "pnl_floor_usd": 599.0,
+      "journal_cite": "training_log/V271.md:6; README.md:36 (n=12, mean +$599, median +$65, p25 -$1,089, min -$5,005, max +$10,343)",
+      "n_windows": 12
+    },
+    "trend": {
+      "pnl_floor_usd": 2997.0,
+      "journal_cite": "training_log/V271.md:6; README.md:37 (n=10, mean +$2,997, median +$1,012, p25 -$572, min -$2,066, max +$17,367)",
+      "n_windows": 10
+    },
+    "recent": {
+      "pnl_floor_usd": 30.0,
+      "journal_cite": "training_log/V271.md:6; README.md:38 (n=10, mean +$30, median -$644, p25 -$857, min -$2,544, max +$3,451)",
+      "n_windows": 10
+    }
+  },
+  "family_patterns": [
+    {
+      "family": "crisis",
+      "pattern": "(?:^|_)crisis(?=$|[_0-9])",
+      "why": "The overwhelmingly common cell-label form: the regime token appears as its own underscore-delimited segment, optionally followed by a replicate/index digit. Real matches in data/: v199_crisis, v205_crisis, v229_grid_on_crisis_r1, bt_v132a_crisis, v231smoke_crisis_r1, v233_crisis_snap_crisis_2020q1_pre_demean_w0.2_crisis_r1, v233_smoke_pre_demean_w0.2_snap_crisis_2024aug, v203_v199_crisis_s42, v226_smoke_crisis2."
+    },
+    {
+      "family": "trend",
+      "pattern": "(?:^|_)trend(?=$|[_0-9])",
+      "why": "Same shape as crisis. Real matches in data/: v199_trend, bt_v93_trend, v229_sweep_x008_trend_r1, v216_icsel_trend_r1, v203_v201_trend_s3, bt500_v137a_trend."
+    },
+    {
+      "family": "recent",
+      "pattern": "(?:^|_)recent(?=$|[_0-9])",
+      "why": "Same shape. Real matches in data/: v199_recent, bt_v128_recent, v229_grid_off_recent_r2, v206b_recent_r1, v204_v172_recent_s42, v213loc2_recent_r1."
+    },
+    {
+      "family": "crisis",
+      "pattern": "(?:^|_)snap_crisis_",
+      "why": "Snapshot-named cells (V231-V233 era). The snapshot id itself carries the regime: snap_crisis_2020q1 / snap_crisis_2022h1 / snap_crisis_2024aug. This pattern also matches the snapshot BASENAME recorded in results provenance.snapshot, which is why it is listed separately from the bare-token rule."
+    },
+    {
+      "family": "trend",
+      "pattern": "(?:^|_)snap_trending_",
+      "why": "The trending snapshot family — snap_trending_2023q4, recorded in provenance.snapshot of 11 results files in data/. Note the journal says \"trend\" but the snapshot id says \"trending\"; this pattern is the bridge."
+    }
+  ],
+  "snapshot_regime_manifest": {
+    "path": "data/walk_forward_manifest.json",
+    "why": "The AUTHORITATIVE mapping for walk-forward cells, whose labels carry a DATE, not a regime — e.g. v252_replay_2023-09-12 (snap_wf_20230912). windows[].id -> windows[].regime is the mechanical ex-post label (label_rules in that file: crisis = max_dd >= 0.30 OR basket_ret <= -0.15; trend = basket_ret >= +0.20 and not crisis; recent = otherwise). Confirmed by training_log/V253_MATIC_POL_REMAP.md:45-47: snap_wf_20240310 = crisis, snap_wf_20230912 = trend, snap_wf_20250305 = recent.",
+    "regime_counts": {"crisis": 12, "trend": 10, "recent": 10}
+  },
+  "trade_count_floor": 20,
+  "notes": [
+    "SEMANTIC CAVEAT (read this before trusting a green tile): the journal's +$599 / +$2,997 / +$30 are the MEAN of a per-regime walk-forward DISTRIBUTION (crisis n=12, trend n=10, recent n=10 x 90-day windows, README.md:27-38), not the PnL of any single cell. The gate implemented here applies the family mean as a floor to ONE candidate cell's total PnL. That is deliberately a coarser, per-cell tripwire: it catches a cell that has fallen off the campaign's standing level, but a single cell scoring below the family mean is NOT by itself evidence the standing baseline moved (crisis's own median is +$65, far below its +$599 mean). Moving the standing baseline remains a journal act with a pre-registration; this file only records it.",
+    "The floors are per-FAMILY, not per-version. Do not edit them to make a run pass. V271.md:82 lists the standing baseline under \"Never\" for files a version may touch.",
+    "trade_count_floor 20 is carried over verbatim from omega/eval/v49_gates.py (lowered 50 -> 20 on 2026-04-06 after a 100-cycle zero streak from low signal dispersion).",
+    "There is no drawdown floor here on purpose: scripts/run_training.py never writes observability.max_drawdown_usd, so the v49 drawdown_ceiling gate compared 0.0 <= 0.0 and was permanently, vacuously green. The standing gate reports drawdown_ceiling as not_evaluated until a run actually emits the number."
+  ]
+}
