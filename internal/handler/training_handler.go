@@ -695,7 +695,7 @@ func (h *TrainingHandler) handleVersionStream(w http.ResponseWriter, r *http.Req
 						n, readErr := f.Read(buf)
 						if readErr == nil || n > 0 {
 							lastOffset += int64(n)
-							for _, line := range bytes.Split(buf[:n], []byte("\n")) {
+							for line := range bytes.SplitSeq(buf[:n], []byte("\n")) {
 								line = bytes.TrimSpace(line)
 								if len(line) == 0 {
 									continue
