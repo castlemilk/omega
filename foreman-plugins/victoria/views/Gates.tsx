@@ -45,9 +45,11 @@ import {
   type GateDetail,
   type GateResult,
   type GateSummary,
+  type GridFamilyRuling,
+  type GridRulerResult,
 } from '../client.js';
 import { pct, pnlClass, signedUsd, usd } from '../format.js';
-import { useVictoriaGates } from '../hooks.js';
+import { useVictoriaGates, useVictoriaGridRuler } from '../hooks.js';
 import { setFocusVersion, useFocusVersion } from '../store.js';
 import { Card, EmptyNote, ErrorNote, LoadingNote, Num, Table, Txt, ViewFrame } from './chrome.js';
 import { VersionPicker } from './VersionPicker.js';
@@ -508,8 +510,9 @@ export function StandingGateBoard({ result }: { result: GateResult }) {
               walk-forward window distribution, which is heavily skewed — crisis&apos;s median window
               is +$65 against its +$599 mean — so it is <em>not</em> a per-cell bar and never fails a
               run. Comparing against it honestly is a grid-level aggregation; that instrument is
-              specified in <span className="font-mono">training_log/V247_RULER.md</span> and is not
-              built yet.
+              specified in <span className="font-mono">training_log/V247_RULER.md</span> and built in{' '}
+              <span className="font-mono">omega/eval/grid_ruler.py</span>. When this run&apos;s grid
+              has been ruled, its verdict is the campaign-ruler card below.
             </p>
             {standing.journal_cite != null && standing.journal_cite !== '' && (
               <p className="text-[10px] leading-relaxed text-muted">
@@ -579,6 +582,338 @@ export function StandingGateBoard({ result }: { result: GateResult }) {
         </Card>
       )}
     </div>
+  );
+}
+
+// ── Campaign ruler (omega/eval/grid_ruler.py, training_log/V247_RULER.md) ────
+//
+// The card the gate board could not draw until the grid ruler existed.
+//
+// Everything above judges ONE CELL against a $0 floor. This judges the WHOLE
+// GRID against the STANDING BASELINE, on the only instrument V247_RULER.md says
+// can carry that question: the paired per-window Δ over the 32 frozen
+// walk-forward windows. §1 — "A verdict is a paired per-window Δ (ON − OFF)
+// aggregated per regime" — and the OFF-arm LEVEL spread, the $27k one, "can
+// never be the gate".
+//
+// It renders only when a grid verdict exists for the picked label, because one
+// usually does not: `scripts/run_grid_ruler.py` is an end-of-grid tool run by
+// hand and is deliberately not in the training loop.
+
+/** Verdict → colour and the sentence that says what actually happened. */
+export const GRID_VERDICT_TONE: Record<string, { color: string; label: string; sentence: string }> = {
+  PASS: {
+    color: '#4ec97a',
+    label: 'baseline held',
+    sentence:
+      'No regime family regressed past its MDE. This is a NO-REGRESSION result, not a proof of improvement: the ruler asks whether the standing baseline went backwards, and the answer is no.',
+  },
+  FAIL: {
+    color: '#e5675b',
+    label: 'baseline regressed',
+    sentence:
+      'At least one family’s mean-Δ fell below −MDE — a regression large enough that this instrument can actually resolve it. The failing family’s own numbers are in its row.',
+  },
+  INSUFFICIENT_GRID: {
+    color: '#e0a33a',
+    label: 'insufficient grid',
+    sentence:
+      'The run did not cover the manifest, so the campaign question was never asked. This is NOT a pass. The missing window ids are named below; the MDE bars have been widened to the actual n so that any FAIL reported alongside is one this partial grid can genuinely support.',
+  },
+  ERROR: {
+    color: '#e5675b',
+    label: 'ruler error',
+    sentence:
+      'The ruler itself raised. This card is the record of that failure, rather than a silence.',
+  },
+};
+
+/** Reading order: pooled last, because it is the row the doc calls decisive. */
+const FAMILY_ORDER = ['crisis', 'recent', 'trend', 'pooled'];
+
+/** What each family's bar is measured at, per V247_RULER.md §7. */
+const FAMILY_BLURB: Record<string, string> = {
+  crisis: 'n=12 windows · published MDE $1,565',
+  recent: 'n=10 windows · published MDE $1,043',
+  trend: 'n=10 windows · published MDE $4,118 — the worst-instrumented regime',
+  pooled: 'n=32 windows · $1,425 median-sd, $875 low-coupling, $633 near-inert',
+};
+
+export interface RulerBar {
+  family: string;
+  status: string;
+  n: number;
+  expectedN: number | null;
+  meanDelta: number | null;
+  mde: number | null;
+  margin: number | null;
+  /**
+   * `meanDelta / mde`, clamped to ±1.5 for drawing. Null when the family was not
+   * evaluated — a family with no cells has no bar, and drawing a zero-length one
+   * would read as "exactly on the baseline", which is a measurement it never made.
+   */
+  ratio: number | null;
+  tone: 'pass' | 'fail' | 'within_noise' | 'not_evaluated';
+  /** The numbers, as one assertable line. */
+  evidence: string;
+  ci: [number, number] | null;
+}
+
+/**
+ * The bars, as data — pure, so the arithmetic and the tone rules are testable
+ * without a DOM.
+ *
+ * The three-way tone is the doc's own trichotomy and collapsing it would lose
+ * the point. A negative mean-Δ INSIDE the MDE is `within_noise`, not a failure:
+ * §7 says claims below the threshold "may not be used as an acceptance bar or
+ * reported as signal", so the honest rendering is amber prose, not a red bar.
+ */
+export function rulerBars(families: Record<string, GridFamilyRuling> | undefined): RulerBar[] {
+  const all = families ?? {};
+  const known = FAMILY_ORDER.filter((f) => f in all);
+  const extra = Object.keys(all).filter((f) => !FAMILY_ORDER.includes(f)).sort();
+
+  return [...known, ...extra].map((family) => {
+    const r = all[family];
+    const meanDelta = typeof r.mean_delta_usd === 'number' ? r.mean_delta_usd : null;
+    const mde = typeof r.mde_usd === 'number' ? r.mde_usd : null;
+    const margin = typeof r.margin_usd === 'number' ? r.margin_usd : null;
+    const evaluated = r.status !== 'not_evaluated' && meanDelta !== null && mde !== null && mde > 0;
+
+    let tone: RulerBar['tone'] = 'not_evaluated';
+    if (evaluated) {
+      if (r.status === 'fail') tone = 'fail';
+      else if (meanDelta < 0) tone = 'within_noise';
+      else tone = 'pass';
+    }
+
+    const ratio = evaluated ? Math.max(-1.5, Math.min(1.5, meanDelta / mde)) : null;
+
+    const evidence = evaluated
+      ? `mean-Δ ${signedUsd(meanDelta)} vs bar ${signedUsd(-mde)} (margin ${signedUsd(margin)})`
+      : typeof r.reason === 'string' && r.reason !== ''
+        ? r.reason
+        : 'not evaluated — no covered windows in this family';
+
+    const ci = Array.isArray(r.bootstrap_ci95_usd) && r.bootstrap_ci95_usd.length === 2
+      ? ([r.bootstrap_ci95_usd[0], r.bootstrap_ci95_usd[1]] as [number, number])
+      : null;
+
+    return {
+      family,
+      status: r.status,
+      n: r.n,
+      expectedN: typeof r.expected_n === 'number' ? r.expected_n : null,
+      meanDelta,
+      mde,
+      margin,
+      ratio,
+      tone,
+      evidence,
+      ci,
+    };
+  });
+}
+
+const BAR_TONE: Record<RulerBar['tone'], { color: string; mark: string }> = {
+  pass: { color: '#4ec97a', mark: 'HELD' },
+  fail: { color: '#e5675b', mark: 'REGRESSED' },
+  within_noise: { color: '#e0a33a', mark: 'WITHIN NOISE' },
+  not_evaluated: { color: '#7c8590', mark: 'NOT EVALUATED' },
+};
+
+/**
+ * One family's Δ-vs-MDE bar.
+ *
+ * The track is centred on zero and the MDE floor sits at the left edge, so the
+ * question the picture answers is exactly the question the ruler asks: how far
+ * is the mean-Δ from the bar it would have to breach to count as a regression.
+ */
+function FamilyBar({ bar }: { bar: RulerBar }) {
+  const tone = BAR_TONE[bar.tone];
+  // Zero sits at the midpoint; ±1.5·MDE spans the track.
+  const half = bar.ratio === null ? 0 : (Math.abs(bar.ratio) / 1.5) * 50;
+  const left = bar.ratio === null ? 50 : bar.ratio < 0 ? 50 - half : 50;
+
+  return (
+    <div className="flex flex-col gap-1.5 rounded-md border border-line bg-card px-3.5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[11px] font-medium text-ink">{bar.family}</span>
+        <span
+          className="font-mono text-[10px] font-semibold tracking-[.08em]"
+          style={{ color: tone.color }}
+        >
+          {tone.mark}
+        </span>
+      </div>
+      <div className="font-mono text-[9.5px] text-faint">
+        {bar.expectedN === null || bar.n === bar.expectedN
+          ? (FAMILY_BLURB[bar.family] ?? `n=${String(bar.n)}`)
+          : `${String(bar.n)}/${String(bar.expectedN)} windows — bar widened to the actual n`}
+      </div>
+
+      {/* The track. −MDE is the left edge, 0 the middle, +MDE the right. */}
+      <div className="relative h-2 w-full rounded-sm border border-hair bg-control">
+        {/* The bar itself, growing from the zero line. */}
+        {bar.ratio !== null && (
+          <div
+            className="absolute top-0 h-full rounded-sm"
+            style={{ left: `${String(left)}%`, width: `${String(Math.max(half, 0.8))}%`, background: tone.color }}
+          />
+        )}
+        {/* The zero line — the standing baseline itself. */}
+        <div className="absolute left-1/2 top-0 h-full w-px bg-ink3" />
+        {/* The −MDE floor: the only line a family can fail by crossing. */}
+        <div className="absolute left-[16.67%] top-0 h-full w-px" style={{ background: '#e5675b80' }} />
+      </div>
+      <div className="flex justify-between font-mono text-[8.5px] text-faint">
+        <span>{bar.mde === null ? '' : `−MDE ${signedUsd(-bar.mde)}`}</span>
+        <span>0 · standing baseline</span>
+      </div>
+
+      <div className="break-words font-mono text-[10px] leading-relaxed text-ink3">{bar.evidence}</div>
+      {bar.ci !== null && (
+        <div className="font-mono text-[9.5px] text-faint">
+          bootstrap CI95 [{signedUsd(bar.ci[0])}, {signedUsd(bar.ci[1])}]
+          {bar.ci[0] > 0 || bar.ci[1] < 0 ? '' : ' — contains zero'}
+        </div>
+      )}
+      {bar.tone === 'within_noise' && (
+        <div className="break-words rounded-md border border-warn/30 bg-warn/10 px-2 py-1.5 font-mono text-[10px] leading-relaxed text-warn">
+          A regression this instrument cannot resolve. V247_RULER.md §7 forbids reading it as signal,
+          so it is neither a failure nor a silence.
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The campaign-ruler card.
+ *
+ * Exported separately from its fetch so it can be rendered against a real
+ * verdict file in tests.
+ */
+export function CampaignRulerCard({ result }: { result: GridRulerResult }) {
+  const verdict = String(result.verdict);
+  const tone = GRID_VERDICT_TONE[verdict] ?? {
+    color: '#7c8590',
+    label: verdict.toLowerCase(),
+    sentence: 'This verdict file carries a verdict this card has not been taught to explain.',
+  };
+  const bars = rulerBars(result.families);
+  const coverage = result.coverage;
+  const perFamily = coverage?.per_family ?? {};
+  const missing = Object.entries(perFamily).filter(([, c]) => c.missing.length > 0);
+
+  return (
+    <Card
+      label="Campaign ruler — the whole grid against the standing baseline"
+      right={<span className="font-mono text-[9.5px] text-faint">/api/v1/training/grid-ruler</span>}
+    >
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="font-mono text-[13px] font-semibold text-ink">{result.run_label}</span>
+          <Pill color={tone.color}>{verdict}</Pill>
+          {coverage !== undefined && (
+            <span className="font-mono text-[9.5px] text-faint">
+              {String(coverage.covered_windows ?? 0)}/{String(coverage.expected_windows ?? 0)} manifest
+              windows{coverage.pairing != null && coverage.pairing !== '' ? ` · ${coverage.pairing}` : ''}
+            </span>
+          )}
+        </div>
+
+        {result.resolved_prefix === true && (
+          // Load-bearing: without this line a reader takes the GRID's verdict for
+          // their CELL's, which is precisely the conflation the two-layer split
+          // exists to prevent.
+          <p className="rounded-md border border-warn/30 bg-warn/10 px-3 py-2 text-[10.5px] leading-relaxed text-warn">
+            This is the verdict for the grid <span className="font-mono">{result.run_label}</span>, not
+            for <span className="font-mono">{result.requested ?? 'the cell you picked'}</span>. A grid
+            verdict covers all {String(coverage?.expected_windows ?? 32)} windows at once; the cell you
+            picked is one of them, and its own per-cell gates are the board above.
+          </p>
+        )}
+
+        <p
+          className="rounded-md border px-3 py-2 text-[10.5px] leading-relaxed"
+          style={{ borderColor: `${tone.color}4d`, background: `${tone.color}14`, color: tone.color }}
+        >
+          {tone.sentence}
+        </p>
+
+        {typeof result.error === 'string' && result.error !== '' && (
+          <div className="break-words font-mono text-[10.5px] text-danger-tint">{result.error}</div>
+        )}
+
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+          {bars.map((bar) => (
+            <FamilyBar key={bar.family} bar={bar} />
+          ))}
+        </div>
+
+        {result.failures.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {result.failures.map((f) => (
+              <div key={f} className="break-words font-mono text-[10.5px] text-danger-tint">
+                {f}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {missing.length > 0 && (
+          <div className="flex flex-col gap-1.5 rounded-md border border-warn/30 bg-warn/10 px-3 py-2">
+            <span className="font-mono text-[10px] font-semibold text-warn">
+              Manifest windows this run never covered
+            </span>
+            {missing.map(([family, c]) => (
+              <div key={family} className="break-words font-mono text-[9.5px] leading-relaxed text-warn">
+                {family} {String(c.covered)}/{String(c.expected)} — missing {c.missing.join(', ')}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {coverage?.unpairable_cells !== undefined && coverage.unpairable_cells.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-[10px] text-ink3">
+              Cells excluded — they named no manifest window, so they were dropped rather than
+              counted as zero:
+            </span>
+            {coverage.unpairable_cells.map((c) => (
+              <div key={c.label} className="break-words font-mono text-[9.5px] leading-relaxed text-faint">
+                {c.label}: {c.reason}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {result.ruler_notes !== undefined && result.ruler_notes.length > 0 && (
+          // Every conservative interpretation the ruler made, in full. The card is
+          // only as trustworthy as its choices are legible, so none are truncated.
+          <div className="flex flex-col gap-1.5">
+            <span className="font-mono text-[10px] text-ink3">Ruler notes</span>
+            {result.ruler_notes.map((n) => (
+              <div key={n} className="break-words font-mono text-[9.5px] leading-relaxed text-muted">
+                {n}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-[10px] leading-relaxed text-muted">
+          The bar is one-sided and it is a <span className="font-semibold">no-regression floor</span>:
+          a family fails iff its mean paired Δ falls below −MDE, where MDE = 2.80·sd/√n at 80% power
+          and α=0.05. It is recomputed at the grid&apos;s actual n, so a short grid gets a wider bar.
+          Passing does <em>not</em> mean the candidate improved — V247_RULER.md §5&apos;s anti-Goodhart
+          guard keeps acceptance bars in each run&apos;s own pre-registration, so this ruler may not
+          invent one. Spec:{' '}
+          <span className="font-mono">training_log/V247_RULER.md</span> · producer{' '}
+          <span className="font-mono">scripts/run_grid_ruler.py</span>.
+        </p>
+      </div>
+    </Card>
   );
 }
 
@@ -742,6 +1077,11 @@ export function VictoriaGates(_props: UseCaseViewProps) {
   // right run — `onOpenView` carries a view id and nothing else. See `../store.ts`.
   const asked = useFocusVersion() ?? '';
   const state = useVictoriaGates(asked === '' ? null : asked);
+  // The grid verdict for the picked label, if one exists. It is a SEPARATE
+  // request on purpose: a 404 here is the ordinary case (the ruler is an
+  // end-of-grid tool run by hand) and must never take the gate board down with
+  // it. Only asked-for labels are looked up — see `useVictoriaGridRuler`.
+  const ruler = useVictoriaGridRuler(asked === '' ? null : asked);
 
   return (
     <ViewFrame
@@ -766,7 +1106,14 @@ export function VictoriaGates(_props: UseCaseViewProps) {
           <LoadingNote what="loading gate result" />
         </Card>
       ) : (
-        <GateBoard result={state.data} />
+        <div className="flex flex-col gap-4">
+          <GateBoard result={state.data} />
+          {/* Absent unless this label's grid has actually been ruled. No empty
+              state and no error tile: a missing grid verdict is the normal
+              condition, and a card that shouted about it would be the cry-wolf
+              alarm the gate board itself was rewritten to remove. */}
+          {ruler.data !== null && <CampaignRulerCard result={ruler.data} />}
+        </div>
       )}
     </ViewFrame>
   );

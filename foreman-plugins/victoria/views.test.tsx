@@ -20,14 +20,23 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { DataSourceError } from '@omega-harness/usecase-kit';
 import type { ObjectiveState, UseCaseViewProps } from '@omega-harness/usecase-kit';
-import type { DecisionTrace, ForensicsReport, GateResult, TrainingLogDetail } from './client.js';
-import { GATE_VERDICTS } from './client.js';
+import type {
+  DecisionTrace,
+  ForensicsReport,
+  GateResult,
+  GridRulerResult,
+  TrainingLogDetail,
+} from './client.js';
+import { GATE_VERDICTS, GRID_VERDICTS } from './client.js';
 import {
+  CampaignRulerCard,
+  GRID_VERDICT_TONE,
   GateBoard,
   GateLoadFailure,
   VERDICT_TONE,
   VictoriaGates,
   campaignMeanAdvisory,
+  rulerBars,
   standingGateEvidence,
 } from './views/Gates.js';
 import { ConvictionFunnel, NoDecisionTraces, VictoriaConviction } from './views/Conviction.js';
@@ -487,6 +496,221 @@ describe('the Gates board, standing-baseline shape', () => {
       expect(VERDICT_TONE[verdict]).toBeDefined();
       expect(VERDICT_TONE[verdict]?.sentence.length).toBeGreaterThan(20);
     }
+  });
+});
+
+// ── Campaign ruler ───────────────────────────────────────────────────────────
+
+/**
+ * REAL ruler output: `check_grid_ruler()` over the V246 exit-adaptivity grid
+ * committed in the omega repo's `tests/fixtures/v247_paired_grids.json`,
+ * declared low-coupling. Every number below is reproduced by the Python and
+ * traces to V247_RULER.md:
+ *
+ *   - pooled mean-Δ **+$626.94** is §3's published "+627";
+ *   - pooled MDE **$875.12** is §4's "for a V246-class low-coupling mechanism
+ *     the pooled MDE at n=32 is $875";
+ *   - crisis/recent/trend Δ-sd 1023 / 1149 / 2699 are §3's v246_exit_adapt row.
+ */
+const RULER_PASS: GridRulerResult = {
+  run_label: 'v246_wf',
+  verdict: 'PASS',
+  passed: true,
+  failures: [],
+  ruler_notes: [],
+  resolved_latest: false,
+  families: {
+    crisis: {
+      family: 'crisis', status: 'pass', n: 12, expected_n: 12,
+      mean_delta_usd: 523.2075, sd_usd: 1023.1545, mde_usd: 827.3491,
+      published_mde_usd: 1565, margin_usd: 1350.5566,
+      bootstrap_ci95_usd: [-25.9875, 1078.0311],
+    },
+    recent: {
+      family: 'recent', status: 'pass', n: 10, expected_n: 10,
+      mean_delta_usd: 71.527, sd_usd: 1149.4338, mde_usd: 1017.9439,
+      published_mde_usd: 1043, margin_usd: 1089.4709,
+      bootstrap_ci95_usd: [-571.739, 783.0331],
+    },
+    trend: {
+      family: 'trend', status: 'pass', n: 10, expected_n: 10,
+      mean_delta_usd: 1306.847, sd_usd: 2699.4801, mde_usd: 2391.1493,
+      published_mde_usd: 4118, margin_usd: 3697.9963,
+      bootstrap_ci95_usd: [-211.4996, 2991.6817],
+    },
+    pooled: {
+      family: 'pooled', status: 'pass', n: 32, expected_n: 32,
+      mean_delta_usd: 626.9447, sd_usd: 1767.3336, mde_usd: 875.1155,
+      published_mde_usd: 1425, margin_usd: 1502.0602,
+      bootstrap_ci95_usd: [53.2395, 1258.0491],
+    },
+  },
+  coverage: {
+    expected_windows: 32,
+    covered_windows: 32,
+    complete: true,
+    pairing: 'paired_per_window',
+    per_family: {
+      crisis: { expected: 12, covered: 12, missing: [] },
+      recent: { expected: 10, covered: 10, missing: [] },
+      trend: { expected: 10, covered: 10, missing: [] },
+    },
+    unpairable_cells: [],
+  },
+};
+
+describe('the campaign ruler card', () => {
+  it('renders the verdict, the run, and coverage', () => {
+    const html = renderToStaticMarkup(<CampaignRulerCard result={RULER_PASS} />);
+    expect(html).toContain('v246_wf');
+    expect(html).toContain('PASS');
+    expect(html).toContain('32/32 manifest windows');
+    expect(html).toContain('paired_per_window');
+    // A PASS must not be allowed to read as "the candidate improved".
+    expect(html).toContain('NO-REGRESSION');
+    expect(html).toContain('V247_RULER.md');
+  });
+
+  it('draws a bar per family with its mean-Δ against its own MDE', () => {
+    const html = renderToStaticMarkup(<CampaignRulerCard result={RULER_PASS} />);
+    for (const family of ['crisis', 'recent', 'trend', 'pooled']) {
+      expect(html).toContain(family);
+    }
+    // V247_RULER.md §3's published pooled +$627 and §4's low-coupling $875 bar.
+    expect(html).toContain('+$626.94');
+    expect(html).toContain('-$875.12');
+    expect(html).toContain('HELD');
+  });
+
+  it('computes the bars, and never draws one for a family it did not measure', () => {
+    const bars = rulerBars(RULER_PASS.families);
+    expect(bars.map((b) => b.family)).toEqual(['crisis', 'recent', 'trend', 'pooled']);
+
+    const pooled = bars[3];
+    expect(pooled.tone).toBe('pass');
+    expect(pooled.n).toBe(32);
+    // +626.94 / 875.12 — comfortably above the floor, well under the clamp.
+    expect(pooled.ratio).toBeCloseTo(0.7164, 3);
+    expect(pooled.evidence).toBe('mean-Δ +$626.94 vs bar -$875.12 (margin +$1,502.06)');
+
+    // A family with no covered windows has NO bar. A zero-length one would read
+    // as "exactly on the baseline" — a measurement that was never made.
+    const [none] = rulerBars({
+      crisis: { family: 'crisis', status: 'not_evaluated', n: 0, reason: 'no candidate cell resolved to a crisis window — nothing to pair' },
+    });
+    expect(none.tone).toBe('not_evaluated');
+    expect(none.ratio).toBeNull();
+    expect(none.evidence).toContain('nothing to pair');
+  });
+
+  it('renders a negative Δ inside the MDE as within-noise, never as a failure', () => {
+    // V245's real pooled −$31 (V247_RULER.md §3) against the median-row bar.
+    const [bar] = rulerBars({
+      pooled: {
+        family: 'pooled', status: 'pass', n: 32, expected_n: 32,
+        mean_delta_usd: -31.2, sd_usd: 1278, mde_usd: 632.9,
+        published_mde_usd: 1425, margin_usd: 601.7,
+        advisory: 'regression_within_noise',
+      },
+    });
+    expect(bar.tone).toBe('within_noise');
+    expect(bar.ratio).toBeLessThan(0);
+
+    const html = renderToStaticMarkup(
+      <CampaignRulerCard result={{ ...RULER_PASS, families: { pooled: { family: 'pooled', status: 'pass', n: 32, mean_delta_usd: -31.2, mde_usd: 632.9, margin_usd: 601.7 } } }} />,
+    );
+    expect(html).toContain('WITHIN NOISE');
+    expect(html).toContain('§7 forbids reading it as signal');
+    expect(html).not.toContain('REGRESSED');
+  });
+
+  it('renders a real regression as a failure with the ruler’s own sentence', () => {
+    const html = renderToStaticMarkup(
+      <CampaignRulerCard
+        result={{
+          ...RULER_PASS,
+          verdict: 'FAIL',
+          passed: false,
+          failures: [
+            'grid_regression[pooled]: mean-Δ -1,900.00 is below −MDE -875.12 (n=32, Δ-sd assumed $1,767); the standing baseline regressed by more than this instrument’s resolution',
+          ],
+          families: {
+            pooled: { family: 'pooled', status: 'fail', n: 32, expected_n: 32, mean_delta_usd: -1900, mde_usd: 875.1155, margin_usd: -1024.88 },
+          },
+        }}
+      />,
+    );
+    expect(html).toContain('FAIL');
+    expect(html).toContain('REGRESSED');
+    expect(html).toContain('grid_regression[pooled]');
+    expect(html).toContain('baseline regressed');
+  });
+
+  it('renders INSUFFICIENT_GRID loudly, names the missing windows, and is not a pass', () => {
+    const html = renderToStaticMarkup(
+      <CampaignRulerCard
+        result={{
+          run_label: 'v232',
+          verdict: 'INSUFFICIENT_GRID',
+          passed: false,
+          failures: [],
+          resolved_latest: false,
+          families: {
+            crisis: { family: 'crisis', status: 'not_evaluated', n: 0, expected_n: 12, reason: 'no candidate cell resolved to a crisis window — nothing to pair' },
+          },
+          coverage: {
+            expected_windows: 32,
+            covered_windows: 0,
+            complete: false,
+            per_family: {
+              crisis: { expected: 12, covered: 0, missing: ['snap_wf_20200101', 'snap_wf_20200629'] },
+            },
+            unpairable_cells: [
+              { label: 'v232_crisis_snap_crisis_2020q1_off_crisis_r1', reason: "snapshot 'snap_crisis_2020q1' is not a walk_forward_manifest window id — not a walk-forward cell" },
+            ],
+          },
+          ruler_notes: ['INSUFFICIENT_GRID: 32 of 32 manifest windows are not covered by this run'],
+        }}
+      />,
+    );
+    expect(html).toContain('INSUFFICIENT_GRID');
+    expect(html).toContain('This is NOT a pass');
+    expect(html).toContain('0/32 manifest windows');
+    expect(html).toContain('snap_wf_20200101');
+    expect(html).toContain('Manifest windows this run never covered');
+    // Excluded cells are named, not silently dropped.
+    expect(html).toContain('not a walk-forward cell');
+    expect(html).toContain('NOT EVALUATED');
+    // The ruler's own conservative notes are shown in full.
+    expect(html).toContain('32 of 32 manifest windows are not covered');
+  });
+
+  it('says out loud when a CELL label was resolved to its GRID', () => {
+    const html = renderToStaticMarkup(
+      <CampaignRulerCard
+        result={{ ...RULER_PASS, resolved_prefix: true, requested: 'v246_wf_snap_wf_20230912_on_trend_r1' }}
+      />,
+    );
+    expect(html).toContain('is the verdict for the grid');
+    expect(html).toContain('v246_wf_snap_wf_20230912_on_trend_r1');
+  });
+
+  it('has a tone and a sentence for every grid verdict in the vocabulary', () => {
+    for (const verdict of GRID_VERDICTS) {
+      expect(GRID_VERDICT_TONE[verdict]).toBeDefined();
+      expect(GRID_VERDICT_TONE[verdict]?.sentence.length).toBeGreaterThan(20);
+    }
+  });
+
+  it('is absent from the gate board until a grid has actually been ruled', () => {
+    // The ruler is an end-of-grid tool run by hand, so most labels have no
+    // verdict. That must render as nothing at all — not an error, not an empty
+    // card. Server rendering never runs effects, so the container is in its
+    // loading state and the card is necessarily absent; the assertion that
+    // matters is that nothing shouts.
+    const html = renderToStaticMarkup(<VictoriaGates {...props} />);
+    expect(html).not.toContain('Campaign ruler');
+    expect(html).not.toContain('INSUFFICIENT_GRID');
   });
 });
 

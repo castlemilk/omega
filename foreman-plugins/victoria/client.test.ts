@@ -22,6 +22,8 @@ import {
   getEquityCurve,
   getForensics,
   getGates,
+  getGridRuler,
+  getGridRulerOrNull,
   getTrainingLog,
   listForensics,
   listTrainingLog,
@@ -576,6 +578,95 @@ describe('phase-2 projections', () => {
       status: 404,
       bodyExcerpt: 'no gate result for version "V270"',
     });
+  });
+
+  it('reads a grid verdict, keeping every family ruling intact', async () => {
+    // Real `check_grid_ruler()` output over the V246 grid (low coupling),
+    // reduced. V247_RULER.md §3 publishes pooled +$627; §4 publishes the
+    // V246-class low-coupling pooled MDE of $875.
+    stubFetch(() =>
+      json({
+        run_label: 'v246_wf',
+        verdict: 'PASS',
+        passed: true,
+        families: {
+          pooled: {
+            family: 'pooled',
+            status: 'pass',
+            n: 32,
+            expected_n: 32,
+            mean_delta_usd: 626.9447,
+            sd_usd: 1767.3336,
+            mde_usd: 875.1155,
+            published_mde_usd: 1425,
+            margin_usd: 1502.0602,
+            bootstrap_ci95_usd: [53.2395, 1258.0491],
+          },
+        },
+        coverage: { expected_windows: 32, covered_windows: 32, complete: true, pairing: 'paired_per_window' },
+        failures: [],
+        ruler_notes: [],
+        resolved_latest: false,
+      }),
+    );
+
+    const r = await getGridRuler('v246_wf');
+    expect(r.verdict).toBe('PASS');
+    expect(r.passed).toBe(true);
+    expect(r.families?.pooled.mean_delta_usd).toBeCloseTo(626.9447, 4);
+    expect(r.families?.pooled.mde_usd).toBeCloseTo(875.1155, 4);
+    expect(r.families?.pooled.bootstrap_ci95_usd).toEqual([53.2395, 1258.0491]);
+    expect(r.coverage?.complete).toBe(true);
+  });
+
+  it('reads INSUFFICIENT_GRID as a verdict, not as an error and not as a pass', async () => {
+    stubFetch(() =>
+      json({
+        run_label: 'v232',
+        verdict: 'INSUFFICIENT_GRID',
+        passed: false,
+        coverage: {
+          expected_windows: 32,
+          covered_windows: 0,
+          complete: false,
+          per_family: { crisis: { expected: 12, covered: 0, missing: ['snap_wf_20200101'] } },
+        },
+        failures: [],
+        resolved_latest: false,
+      }),
+    );
+
+    const r = await getGridRuler('v232');
+    expect(r.verdict).toBe('INSUFFICIENT_GRID');
+    expect(r.passed).toBe(false);
+    expect(r.coverage?.per_family?.crisis.missing).toEqual(['snap_wf_20200101']);
+  });
+
+  it('sends the run as ?run=, and omits it entirely for the latest verdict', async () => {
+    const calls = stubFetch(() => json({ run_label: 'x', verdict: 'PASS', passed: true, failures: [], resolved_latest: true }));
+    await getGridRuler('v246_wf');
+    await getGridRuler();
+
+    expect(calls.map((c) => c.url)).toEqual([
+      `${BASE}/api/v1/training/grid-ruler?run=v246_wf`,
+      `${BASE}/api/v1/training/grid-ruler`,
+    ]);
+  });
+
+  it('turns a 404 grid verdict into null, because most runs never had one', async () => {
+    // The ruler is an end-of-grid tool run by hand and is deliberately NOT in
+    // the training loop, so "no verdict" is the ordinary state. A rejection here
+    // would put a red card on the gate board for every ungridded cell.
+    stubFetch(() => new Response('no grid verdict for run "v94"\n', { status: 404 }));
+    await expect(getGridRulerOrNull('v94')).resolves.toBeNull();
+  });
+
+  it('still rejects a grid-verdict 500 — only the 404 is ordinary', async () => {
+    // Matched on the status, not on prose: a 500 whose body mentioned "404"
+    // must not be swallowed into an absent card.
+    stubFetch(() => new Response('failed to parse grid verdict\n', { status: 500 }));
+    await expect(getGridRulerOrNull('v246_wf')).rejects.toBeInstanceOf(DataSourceError);
+    await expect(getGridRulerOrNull('v246_wf')).rejects.toMatchObject({ status: 500 });
   });
 
   it('reads the forensics list, keeping the unpairable files separate', async () => {

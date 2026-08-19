@@ -24,7 +24,11 @@
  * json tags, so those types are snake_case and their required fields really are
  * always present.
  */
-import { createDataSource, type UseCaseDataSourceConfig } from '@omega-harness/usecase-kit';
+import {
+  createDataSource,
+  DataSourceError,
+  type UseCaseDataSourceConfig,
+} from '@omega-harness/usecase-kit';
 
 /**
  * The omega Go API.
@@ -804,6 +808,149 @@ export const getGates = (version?: string): Promise<GateResult> =>
   omega.getJson<GateResult>(
     version ? `/api/v1/training/gates?version=${encodeURIComponent(version)}` : '/api/v1/training/gates',
   );
+
+// ── Grid ruler (the campaign-level verdict) ──────────────────────────────────
+//
+// A DIFFERENT SUBJECT from the gate board above, and the distinction is the
+// whole point of the instrument:
+//
+//   - a gate result judges ONE CELL (one 90-day window) against a $0 floor;
+//   - a grid verdict judges ONE GRID (all 32 manifest windows) against the
+//     STANDING BASELINE, on the paired per-window Δ that
+//     `training_log/V247_RULER.md` specifies.
+//
+// The campaign means the gate board can only whisper about (+$599 crisis /
+// +$2,997 trend / +$30 recent) are readable HERE, and only here, because only
+// here is there an n to read them at.
+
+/** The families the ruler rules on. `pooled` is all 32 windows together. */
+export const GRID_FAMILIES = ['crisis', 'recent', 'trend', 'pooled'] as const;
+export type GridFamily = (typeof GRID_FAMILIES)[number];
+
+/**
+ * A grid verdict.
+ *
+ * `INSUFFICIENT_GRID` is the one that matters most and the one a naive board
+ * would get wrong: it is emphatically **not** a pass. It means the run did not
+ * cover the manifest, so the campaign question was never actually asked.
+ */
+export type GridVerdictName = 'PASS' | 'FAIL' | 'INSUFFICIENT_GRID' | 'ERROR';
+
+export const GRID_VERDICTS: readonly GridVerdictName[] = [
+  'PASS',
+  'FAIL',
+  'INSUFFICIENT_GRID',
+  'ERROR',
+];
+
+/** One family's ruling. Writer: `omega/eval/grid_ruler.FamilyRuling`. */
+export interface GridFamilyRuling {
+  family: string;
+  /** `pass` | `fail` | `not_evaluated`. A family with no cells is the last one. */
+  status: string;
+  /** Windows actually covered, which is what the bar is computed at. */
+  n: number;
+  /** Windows the manifest says this family has. */
+  expected_n?: number;
+  /** The verdict statistic: mean paired Δ (candidate − standing), same window. */
+  mean_delta_usd?: number;
+  sd_usd?: number;
+  se_usd?: number;
+  two_se_usd?: number;
+  /**
+   * The bar, one-sided: a family FAILS iff `mean_delta_usd < −mde_usd`.
+   * Recomputed at the grid's ACTUAL n, so a short grid gets a wider bar.
+   */
+  mde_usd?: number;
+  /** The published §7 threshold at the manifest's n, for comparison. */
+  published_mde_usd?: number;
+  /** `mean_delta_usd − (−mde_usd)` — headroom above the floor. Negative = failed. */
+  margin_usd?: number;
+  bootstrap_ci95_usd?: [number, number];
+  /**
+   * `regression_within_noise` when the mean-Δ is negative but inside the MDE.
+   * V247_RULER.md §7 forbids reading signal into that, so it is neither a
+   * failure nor a silence — it rides as a note.
+   */
+  advisory?: string;
+  reason?: string;
+  [key: string]: unknown;
+}
+
+/** Which manifest windows the run actually covered. */
+export interface GridCoverage {
+  expected_windows?: number;
+  covered_windows?: number;
+  complete?: boolean;
+  /** `paired_per_window` when every candidate window found its baseline twin. */
+  pairing?: string;
+  manifest_built_by?: string;
+  per_family?: Record<string, { expected: number; covered: number; missing: string[] }>;
+  /** Cells that named no manifest window — excluded, never zeroed. */
+  unpairable_cells?: { label: string; reason: string }[];
+}
+
+/** `gridRulerResponse` from `/api/v1/training/grid-ruler`. */
+export interface GridRulerResult {
+  run_label: string;
+  verdict: GridVerdictName | string;
+  passed: boolean;
+  families?: Record<string, GridFamilyRuling>;
+  coverage?: GridCoverage;
+  failures: string[];
+  /**
+   * Every conservative interpretation the ruler made, in its own words — an
+   * undeclared coupling class, a widened bar, a deduped cell. These are not
+   * decoration: the ruler is only trustworthy to the extent its choices are
+   * legible, so the card renders all of them.
+   */
+  ruler_notes?: string[];
+  standing_distribution_used?: unknown;
+  provenance?: unknown;
+  error?: string;
+  raw?: unknown;
+  /** True when no run was asked for and the handler picked the newest verdict. */
+  resolved_latest: boolean;
+  /**
+   * True when the label asked for had no verdict of its own and the grid it
+   * belongs to was served instead. The card must say so — otherwise a reader
+   * takes a grid's PASS for their cell's.
+   */
+  resolved_prefix?: boolean;
+  /** The label actually asked for, when it differs from `run_label`. */
+  requested?: string;
+}
+
+/**
+ * The campaign ruler for a run, or for the newest verdict when omitted.
+ *
+ * 404 is the ordinary case, not an error to shout about: the ruler is an
+ * end-of-grid tool run by hand, so most labels will never have one. Callers
+ * that want "show the card only if it exists" should use
+ * {@link getGridRulerOrNull}.
+ */
+export const getGridRuler = (run?: string): Promise<GridRulerResult> =>
+  omega.getJson<GridRulerResult>(
+    run ? `/api/v1/training/grid-ruler?run=${encodeURIComponent(run)}` : '/api/v1/training/grid-ruler',
+  );
+
+/**
+ * The campaign ruler, with "no verdict for this run" as `null` rather than a
+ * rejection.
+ *
+ * This is the shape the Gates board wants. A missing grid verdict is the NORMAL
+ * state — the ruler is not wired into the training loop, by design — so a cell
+ * without one must render an absent card, never a red one. Only a 404 is
+ * swallowed: a 500 is a real failure and still rejects.
+ */
+export const getGridRulerOrNull = (run?: string): Promise<GridRulerResult | null> =>
+  getGridRuler(run).catch((err: unknown) => {
+    // Matched on the STATUS, not on the message. A DataSourceError carries the
+    // real code; sniffing "404" out of prose would also swallow a 500 whose body
+    // happened to mention one.
+    if (err instanceof DataSourceError && err.status === 404) return null;
+    throw err;
+  });
 
 /** Every `{baseline}-{target}-forensics.json` in the data directory. */
 export const listForensics = (): Promise<ForensicsList> =>

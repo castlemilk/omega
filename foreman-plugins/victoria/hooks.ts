@@ -20,6 +20,7 @@ import {
   getEquityCurve,
   getForensics,
   getGates,
+  getGridRulerOrNull,
   getTrainingLog,
   listForensics,
   listTrainingLog,
@@ -40,6 +41,7 @@ import {
   type ForensicsList,
   type ForensicsResponse,
   type GateResult,
+  type GridRulerResult,
   type TrainingLogDetail,
   type TrainingLogEntry,
   type PnL,
@@ -345,6 +347,26 @@ export function useVictoriaSignals(version?: string): Async<SignalsData> {
  */
 export function useVictoriaGates(version: string | null): Async<GateResult> {
   return useAsync(() => getGates(version ?? undefined), [version]);
+}
+
+/**
+ * The campaign ruler for the picked label, or `null` when there is none.
+ *
+ * `null` here means "no grid verdict exists", which is the ORDINARY state and
+ * not an error: `scripts/run_grid_ruler.py` is an end-of-grid tool run by hand
+ * and is deliberately not wired into the training loop, so most labels will
+ * never have a verdict file. The card renders only when one does.
+ *
+ * A null version is NOT a request. The gate board's null means "the latest gate
+ * file", but the latest GRID verdict has no relationship to the gate cell on
+ * screen — serving it would put a different run's campaign verdict under this
+ * run's gates, which is the one confusion this whole surface exists to prevent.
+ */
+export function useVictoriaGridRuler(version: string | null): Async<GridRulerResult | null> {
+  return useAsync(
+    () => (version ? getGridRulerOrNull(version) : Promise.resolve(null)),
+    [version],
+  );
 }
 
 // ── Conviction ───────────────────────────────────────────────────────────────
