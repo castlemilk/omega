@@ -54,7 +54,31 @@ class FundingRegimeClassifier:
 
         ``market_index[i]`` is the cross-sectional mean funding on ``dates[i]``.
         Days before the lookback is available fall back to NEAR_ZERO.
+
+        **Full-span standardization** — every date's label depends on the mean
+        and std of the ENTIRE series, including that date's future. Legitimate
+        for descriptive window counting inside a scorer; NOT computable
+        forward. Use :meth:`classify_span_causal` for anything online.
         """
+        return self._classify(dates, market_index, causal=False)
+
+    def classify_span_causal(
+        self, dates: list[str], market_index: list[float]
+    ) -> dict[str, FundingRegime]:
+        """Causal twin of :meth:`classify_span` (V272).
+
+        Identical in every respect except that the two standardizations use an
+        **expanding window** (prefix only): date ``i``'s z-scores are computed
+        from ``x[0..i]``, never from later dates. The 30d trailing avg/vol were
+        already causal; the ``i < avg_lookback -> NEAR_ZERO`` burn-in and the
+        fixed a-priori boundaries are unchanged. No extra burn-in parameter is
+        introduced (that would be a tuned free parameter).
+        """
+        return self._classify(dates, market_index, causal=True)
+
+    def _classify(
+        self, dates: list[str], market_index: list[float], causal: bool
+    ) -> dict[str, FundingRegime]:
         n = len(dates)
         avg = [0.0] * n
         vol = [0.0] * n
@@ -69,8 +93,9 @@ class FundingRegimeClassifier:
             else:
                 vol[i] = 0.0
 
-        za = _standardize(avg)
-        zv = _standardize(vol)
+        std_fn = _standardize_causal if causal else _standardize
+        za = std_fn(avg)
+        zv = std_fn(vol)
 
         out: dict[str, FundingRegime] = {}
         for i, d in enumerate(dates):
@@ -116,3 +141,24 @@ def _standardize(xs: list[float]) -> list[float]:
     if std == 0.0:
         return [0.0] * n
     return [(x - mean) / std for x in xs]
+
+
+def _standardize_causal(xs: list[float]) -> list[float]:
+    """Expanding-window standardization (V272): z[i] uses only ``xs[0..i]``.
+
+    Population std over the prefix, ``math.fsum`` reductions (permutation
+    invariant). ``z[0] = 0.0`` and any degenerate (constant) prefix yields
+    ``0.0`` — a semantic degeneracy fence, never a small epsilon (V221).
+    """
+    out: list[float] = []
+    for i in range(len(xs)):
+        prefix = xs[: i + 1]
+        m = len(prefix)
+        if m == 1 or max(prefix) == min(prefix):
+            out.append(0.0)
+            continue
+        mean = math.fsum(prefix) / m
+        var = math.fsum((x - mean) ** 2 for x in prefix) / m
+        std = math.sqrt(var)
+        out.append(0.0 if std == 0.0 else (prefix[-1] - mean) / std)
+    return out

@@ -78,3 +78,8 @@ third_party/
 data/v269_logs/
 data/v269_ledger/
 data/frozen_series/binance_depth_forward/
+
+# V272 causal-filter scorer artifacts — regenerable byte-identically from
+# scripts/v272_causal_filter.py (G-DET PASS); all reported numbers live in
+# omega/nodes/victoria/training_log/V272.md.
+data/v272/
