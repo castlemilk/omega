@@ -63,6 +63,7 @@ func (h *TrainingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/training/trade-details", h.handleTradeDetails)
 	mux.HandleFunc("/api/v1/training/decision-traces", h.handleDecisionTraces)
 	mux.HandleFunc("/api/v1/training/gates", h.handleGates)
+	mux.HandleFunc("/api/v1/training/grid-ruler", h.handleGridRuler)
 	mux.HandleFunc("/api/v1/training/forensics", h.handleForensics)
 	mux.HandleFunc("/api/v1/training/log", h.handleTrainingLog)
 	mux.HandleFunc("/api/v1/signals/correlation", h.handleSignalCorrelation)
@@ -1315,6 +1316,207 @@ func (h *TrainingHandler) handleGates(w http.ResponseWriter, r *http.Request) {
 		Error:            raw.Error,
 		Raw:              json.RawMessage(data),
 		ResolvedLatest:   resolvedLatest,
+	})
+}
+
+// ── Grid ruler (campaign-level verdict) ───────────────────────────────────────
+
+// gridVerdictFileSuffix is the filename written by omega/eval/grid_ruler.py via
+// scripts/run_grid_ruler.py: `{run_label}_grid_verdict.json`.
+//
+// It is a SIBLING ROUTE to /gates rather than a `?grid=1` flag on it, because
+// the grain differs: a gate result is per CELL (one 90-day window), a grid
+// verdict is per GRID (a whole 32-window run). One version label maps to at most
+// one gate file but a grid verdict covers many labels at once, so folding them
+// into one response would force a reader to know which of the two subjects a
+// field belonged to.
+const gridVerdictFileSuffix = "_grid_verdict.json"
+
+// rawGridVerdict mirrors omega/eval/grid_ruler.GridVerdict.to_dict(). Only ONE
+// shape exists (there is no archive predating it), so unlike the gate handler
+// nothing here has to be projected two ways. The per-family rulings are held as
+// RawMessage and passed through untouched: the ruler decides what evidence a
+// family carries, not this handler.
+type rawGridVerdict struct {
+	RunLabel   string                     `json:"run_label"`
+	Verdict    string                     `json:"verdict"`
+	Passed     bool                       `json:"passed"`
+	Families   map[string]json.RawMessage `json:"families"`
+	Coverage   json.RawMessage            `json:"coverage"`
+	Failures   []string                   `json:"failures"`
+	RulerNotes []string                   `json:"ruler_notes"`
+	Standing   json.RawMessage            `json:"standing_distribution_used"`
+	Provenance json.RawMessage            `json:"provenance"`
+	Error      string                     `json:"error"`
+}
+
+type gridRulerResponse struct {
+	RunLabel   string                     `json:"run_label"`
+	Verdict    string                     `json:"verdict"`
+	Passed     bool                       `json:"passed"`
+	Families   map[string]json.RawMessage `json:"families,omitempty"`
+	Coverage   json.RawMessage            `json:"coverage,omitempty"`
+	Failures   []string                   `json:"failures"`
+	RulerNotes []string                   `json:"ruler_notes,omitempty"`
+	Standing   json.RawMessage            `json:"standing_distribution_used,omitempty"`
+	Provenance json.RawMessage            `json:"provenance,omitempty"`
+	Error      string                     `json:"error,omitempty"`
+	Raw        json.RawMessage            `json:"raw"`
+	// True when no run was asked for and the newest verdict file was picked.
+	ResolvedLatest bool `json:"resolved_latest"`
+	// True when the asked-for label had no verdict file of its own and the
+	// longest grid-verdict label that PREFIXES it was served instead. This is
+	// how a CELL label ("v246_wf_snap_wf_20230912") finds the GRID it belongs to
+	// ("v246_wf"). It is surfaced, not hidden: the board must be able to say
+	// "this is the grid's verdict, not this cell's".
+	ResolvedPrefix bool `json:"resolved_prefix,omitempty"`
+	// The label actually asked for, when it differs from run_label.
+	Requested string `json:"requested,omitempty"`
+}
+
+// gridVerdictLabels lists the run labels with a *_grid_verdict.json in dir.
+func gridVerdictLabels(dir string) []string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var out []string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), gridVerdictFileSuffix) {
+			continue
+		}
+		out = append(out, strings.TrimSuffix(e.Name(), gridVerdictFileSuffix))
+	}
+	return out
+}
+
+// latestGridVerdict returns the run label of the most recently written
+// *_grid_verdict.json. Modification time decides "latest", for the same reason
+// it does in latestGateVersion: run labels do not sort usefully.
+func latestGridVerdict(dir string) string {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	var best string
+	var bestMod int64
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), gridVerdictFileSuffix) {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		mod := info.ModTime().UnixNano()
+		name := strings.TrimSuffix(e.Name(), gridVerdictFileSuffix)
+		if mod > bestMod || (mod == bestMod && name > best) {
+			bestMod, best = mod, name
+		}
+	}
+	return best
+}
+
+// longestGridPrefix returns the longest label in `labels` that is a prefix of
+// `asked`, or "". Deterministic: on equal length the lexically greater wins, so
+// two labels of the same length can never make the answer depend on ReadDir
+// order.
+func longestGridPrefix(labels []string, asked string) string {
+	best := ""
+	for _, label := range labels {
+		if !strings.HasPrefix(asked, label) {
+			continue
+		}
+		if len(label) > len(best) || (len(label) == len(best) && label > best) {
+			best = label
+		}
+	}
+	return best
+}
+
+// handleGridRuler serves data/{run}_grid_verdict.json (produced by
+// omega/eval/grid_ruler.py via scripts/run_grid_ruler.py).
+//
+// Query param: run (optional — defaults to the most recent verdict file). When
+// `run` names no verdict file of its own, the longest grid-verdict label that
+// prefixes it is served with resolved_prefix=true, which is how the Gates board
+// finds the grid a picked CELL belongs to.
+func (h *TrainingHandler) handleGridRuler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	asked := r.URL.Query().Get("run")
+	resolvedLatest := false
+	resolvedPrefix := false
+	run := asked
+
+	if run == "" {
+		run = latestGridVerdict(h.progressDir)
+		resolvedLatest = true
+		if run == "" {
+			http.Error(w, "no grid verdicts found", http.StatusNotFound)
+			return
+		}
+	}
+	if !isSafeVersion(run) {
+		http.Error(w, "invalid run parameter", http.StatusBadRequest)
+		return
+	}
+
+	path := filepath.Join(h.progressDir, run+gridVerdictFileSuffix)
+	data, err := os.ReadFile(path) //nolint:gosec // path built from an isSafeVersion-validated identifier
+	if err != nil && os.IsNotExist(err) && !resolvedLatest {
+		if prefix := longestGridPrefix(gridVerdictLabels(h.progressDir), run); prefix != "" {
+			run = prefix
+			resolvedPrefix = true
+			path = filepath.Join(h.progressDir, run+gridVerdictFileSuffix)
+			data, err = os.ReadFile(path) //nolint:gosec // label came from ReadDir of progressDir
+		}
+	}
+	if err != nil {
+		if os.IsNotExist(err) {
+			http.Error(w, fmt.Sprintf("no grid verdict for run %q", asked), http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to read grid verdict", http.StatusInternalServerError)
+		return
+	}
+
+	var raw rawGridVerdict
+	if err := json.Unmarshal(data, &raw); err != nil {
+		http.Error(w, "failed to parse grid verdict", http.StatusInternalServerError)
+		return
+	}
+	if raw.Failures == nil {
+		raw.Failures = []string{}
+	}
+	label := raw.RunLabel
+	if label == "" {
+		label = run
+	}
+	requested := ""
+	if resolvedPrefix {
+		requested = asked
+	}
+
+	writeJSON(w, gridRulerResponse{
+		RunLabel:       label,
+		Verdict:        raw.Verdict,
+		Passed:         raw.Passed,
+		Families:       raw.Families,
+		Coverage:       raw.Coverage,
+		Failures:       raw.Failures,
+		RulerNotes:     raw.RulerNotes,
+		Standing:       raw.Standing,
+		Provenance:     raw.Provenance,
+		Error:          raw.Error,
+		Raw:            json.RawMessage(data),
+		ResolvedLatest: resolvedLatest,
+		ResolvedPrefix: resolvedPrefix,
+		Requested:      requested,
 	})
 }
 

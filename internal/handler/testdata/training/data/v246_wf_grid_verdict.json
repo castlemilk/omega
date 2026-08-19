@@ -1,0 +1,433 @@
+{
+  "run_label": "v246_wf",
+  "verdict": "PASS",
+  "passed": true,
+  "families": {
+    "crisis": {
+      "family": "crisis",
+      "status": "pass",
+      "n": 12,
+      "expected_n": 12,
+      "mean_delta_usd": 523.2075,
+      "sd_usd": 1023.1545,
+      "se_usd": 295.3593,
+      "two_se_usd": 590.7185,
+      "delta_p25_usd": 0.0,
+      "candidate_level_p25_usd": -878.59,
+      "baseline_level_p25_usd": -1089.175,
+      "candidate_mean_usd": 1121.7417,
+      "baseline_mean_usd": 598.5342,
+      "bootstrap_ci95_usd": [
+        -25.9875,
+        1078.0311
+      ],
+      "mde_usd": 827.3491,
+      "delta_sd_assumed_usd": 1023.0,
+      "published_mde_usd": 1565.0,
+      "margin_usd": 1350.5566
+    },
+    "recent": {
+      "family": "recent",
+      "status": "pass",
+      "n": 10,
+      "expected_n": 10,
+      "mean_delta_usd": 71.527,
+      "sd_usd": 1149.4338,
+      "se_usd": 363.4829,
+      "two_se_usd": 726.9658,
+      "delta_p25_usd": -406.5375,
+      "candidate_level_p25_usd": -759.3075,
+      "baseline_level_p25_usd": -856.51,
+      "candidate_mean_usd": 101.168,
+      "baseline_mean_usd": 29.641,
+      "bootstrap_ci95_usd": [
+        -571.739,
+        783.0331
+      ],
+      "mde_usd": 1017.9439,
+      "delta_sd_assumed_usd": 1149.0,
+      "published_mde_usd": 1043.0,
+      "margin_usd": 1089.4709
+    },
+    "trend": {
+      "family": "trend",
+      "status": "pass",
+      "n": 10,
+      "expected_n": 10,
+      "mean_delta_usd": 1306.847,
+      "sd_usd": 2699.4801,
+      "se_usd": 853.6506,
+      "two_se_usd": 1707.3011,
+      "delta_p25_usd": -443.985,
+      "candidate_level_p25_usd": -383.9925,
+      "baseline_level_p25_usd": -572.0075,
+      "candidate_mean_usd": 4303.765,
+      "baseline_mean_usd": 2996.918,
+      "bootstrap_ci95_usd": [
+        -211.4996,
+        2991.6817
+      ],
+      "mde_usd": 2391.1493,
+      "delta_sd_assumed_usd": 2699.0,
+      "published_mde_usd": 4118.0,
+      "margin_usd": 3697.9963
+    },
+    "pooled": {
+      "family": "pooled",
+      "status": "pass",
+      "n": 32,
+      "expected_n": 32,
+      "mean_delta_usd": 626.9447,
+      "sd_usd": 1767.3336,
+      "se_usd": 312.4234,
+      "two_se_usd": 624.8468,
+      "delta_p25_usd": -378.1525,
+      "candidate_level_p25_usd": -692.9725,
+      "baseline_level_p25_usd": -839.41,
+      "candidate_mean_usd": 1797.1947,
+      "baseline_mean_usd": 1170.25,
+      "bootstrap_ci95_usd": [
+        53.2395,
+        1258.0491
+      ],
+      "mde_usd": 875.1155,
+      "delta_sd_assumed_usd": 1767.0,
+      "published_mde_usd": 1425.0,
+      "margin_usd": 1502.0602
+    }
+  },
+  "coverage": {
+    "manifest_built_by": "scripts/walk_forward_freeze.py (V235)",
+    "expected_windows": 32,
+    "covered_windows": 32,
+    "complete": true,
+    "pairing": "paired_per_window",
+    "per_family": {
+      "crisis": {
+        "expected": 12,
+        "covered": 12,
+        "missing": []
+      },
+      "recent": {
+        "expected": 10,
+        "covered": 10,
+        "missing": []
+      },
+      "trend": {
+        "expected": 10,
+        "covered": 10,
+        "missing": []
+      }
+    },
+    "unpairable_cells": []
+  },
+  "failures": [],
+  "ruler_notes": [],
+  "standing_distribution_used": {
+    "source": "$OMEGA_AUDIT_OUTPUT_DIR/v246/distribution.json, rows where config == \"universe_selective\" (sha256 296500dc13085ee58967b9e320bc62928b5b48bf78b08cb0c1a8d2b47cbe05e4). Transcribed 2026-08-19.",
+    "config": "universe_selective (V227-skew + universe_selective_enabled, V240.A ADOPTED) \u2014 identical to the `config` field above. This IS the standing main arm.",
+    "corroboration": "The same 32 OFF-arm values appear byte-identically (max abs diff 0.000) in FOUR other committed grids on the same volume \u2014 v240_wf, v241, v243a_wf and v245 \u2014 which is the cross-check scripts/v247_ruler.py performs at startup. Their per-regime means reproduce the journal to the cent: crisis +$598.53, trend +$2,996.92, recent +$29.64 (README.md:36-38 rounds these to +$599 / +$2,997 / +$30). All 32 cells carry determinism PASS with pnl_spread $0.00.",
+    "updated": "2026-08-18",
+    "per_family": {
+      "crisis": {
+        "n": 12,
+        "mean_usd": 598.53,
+        "sd_usd": 3840.7
+      },
+      "recent": {
+        "n": 10,
+        "mean_usd": 29.64,
+        "sd_usd": 1790.47
+      },
+      "trend": {
+        "n": 10,
+        "mean_usd": 2996.92,
+        "sd_usd": 5864.8
+      }
+    },
+    "campaign_means_usd": {
+      "crisis": 599.0,
+      "recent": 30.0,
+      "trend": 2997.0
+    }
+  },
+  "provenance": {
+    "spec": "omega/nodes/victoria/training_log/V247_RULER.md (Phase 0, the instrument) and V247_RULER_CANDIDATES.md (Phase 1, candidate \u03b2 = PRIMARY, adopted). Implemented by omega/eval/grid_ruler.py.",
+    "instrument": "paired per-window \u0394 (candidate \u2212 standing baseline), aggregated per regime family and pooled. V247_RULER.md \u00a71: \"A verdict is a paired per-window \u0394 (ON \u2212 OFF) aggregated per regime\" \u2014 and, of the two distributions named there, only the paired \u0394 is the verdict instrument; the OFF-arm LEVEL spread \"can never be the gate\".",
+    "bar": "one-sided NO-REGRESSION. A family FAILS iff its mean-\u0394 is more negative than that family's MDE. V247_RULER.md \u00a77 states the thresholds as a symmetric unfalsifiability rule (\"claims below $X at n=Y: unfalsifiable, may not be used as an acceptance bar\"); \u00a76 names the direction this module gates in \u2014 \"a floor does not need to DETECT small effects, only to reject large regressions\".",
+    "mde_formula": "MDE = (z_{1-\u03b1/2} + z_{power}) \u00b7 sd / sqrt(n) = 2.801585 \u00b7 sd / sqrt(n), two-sided \u03b1=0.05 at 80% power (V247_RULER.md \u00a74, and scripts/v247_ruler.py:mde). Normal approximation \u2014 slightly optimistic below n\u224815, as the doc says. The ruler recomputes it at the grid's ACTUAL n so a short grid gets a correspondingly WIDER bar rather than the published one applied out of range.",
+    "coupling_class": "low",
+    "coupling_class_declared": "low",
+    "delta_sd_usd": {
+      "crisis": 1023.0,
+      "pooled": 1767.0,
+      "recent": 1149.0,
+      "trend": 2699.0
+    },
+    "bootstrap": {
+      "resamples": 20000,
+      "seed": 42
+    },
+    "gate_advisory_recent_floor": false,
+    "advisory_recent_floor_usd": -360.0
+  },
+  "cells": [
+    {
+      "window": "snap_wf_20200101",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20200101",
+      "candidate_pnl_usd": -2638.6,
+      "baseline_pnl_usd": -2709.05,
+      "delta_usd": 70.45
+    },
+    {
+      "window": "snap_wf_20200629",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20200629",
+      "candidate_pnl_usd": 297.53,
+      "baseline_pnl_usd": 155.46,
+      "delta_usd": 142.07
+    },
+    {
+      "window": "snap_wf_20210326",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20210326",
+      "candidate_pnl_usd": 12143.74,
+      "baseline_pnl_usd": 10343.34,
+      "delta_usd": 1800.4
+    },
+    {
+      "window": "snap_wf_20211221",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20211221",
+      "candidate_pnl_usd": -5004.58,
+      "baseline_pnl_usd": -5004.58,
+      "delta_usd": 0.0
+    },
+    {
+      "window": "snap_wf_20220321",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20220321",
+      "candidate_pnl_usd": -504.97,
+      "baseline_pnl_usd": -24.81,
+      "delta_usd": -480.16
+    },
+    {
+      "window": "snap_wf_20220917",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20220917",
+      "candidate_pnl_usd": 1948.13,
+      "baseline_pnl_usd": 1203.39,
+      "delta_usd": 744.74
+    },
+    {
+      "window": "snap_wf_20230614",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20230614",
+      "candidate_pnl_usd": -1999.45,
+      "baseline_pnl_usd": -1999.45,
+      "delta_usd": 0.0
+    },
+    {
+      "window": "snap_wf_20240310",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20240310",
+      "candidate_pnl_usd": 1715.63,
+      "baseline_pnl_usd": 1149.76,
+      "delta_usd": 565.87
+    },
+    {
+      "window": "snap_wf_20240608",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20240608",
+      "candidate_pnl_usd": 2849.24,
+      "baseline_pnl_usd": 4178.38,
+      "delta_usd": -1329.14
+    },
+    {
+      "window": "snap_wf_20241205",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20241205",
+      "candidate_pnl_usd": 1487.24,
+      "baseline_pnl_usd": -685.19,
+      "delta_usd": 2172.43
+    },
+    {
+      "window": "snap_wf_20250901",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20250901",
+      "candidate_pnl_usd": 1050.26,
+      "baseline_pnl_usd": -785.75,
+      "delta_usd": 1836.01
+    },
+    {
+      "window": "snap_wf_20251130",
+      "family": "crisis",
+      "label": "v246_exit_adapt_snap_wf_20251130",
+      "candidate_pnl_usd": 2116.73,
+      "baseline_pnl_usd": 1360.91,
+      "delta_usd": 755.82
+    },
+    {
+      "window": "snap_wf_20200813",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20200813",
+      "candidate_pnl_usd": 2110.98,
+      "baseline_pnl_usd": 2550.91,
+      "delta_usd": -439.93
+    },
+    {
+      "window": "snap_wf_20210922",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20210922",
+      "candidate_pnl_usd": 1671.59,
+      "baseline_pnl_usd": -865.06,
+      "delta_usd": 2536.65
+    },
+    {
+      "window": "snap_wf_20230130",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20230130",
+      "candidate_pnl_usd": 301.25,
+      "baseline_pnl_usd": -594.2,
+      "delta_usd": 895.45
+    },
+    {
+      "window": "snap_wf_20230316",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20230316",
+      "candidate_pnl_usd": -2907.83,
+      "baseline_pnl_usd": -2543.87,
+      "delta_usd": -363.96
+    },
+    {
+      "window": "snap_wf_20230430",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20230430",
+      "candidate_pnl_usd": 698.6,
+      "baseline_pnl_usd": 97.68,
+      "delta_usd": 600.92
+    },
+    {
+      "window": "snap_wf_20230729",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20230729",
+      "candidate_pnl_usd": -837.48,
+      "baseline_pnl_usd": -692.84,
+      "delta_usd": -144.64
+    },
+    {
+      "window": "snap_wf_20240723",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20240723",
+      "candidate_pnl_usd": 1553.52,
+      "baseline_pnl_usd": 3450.63,
+      "delta_usd": -1897.11
+    },
+    {
+      "window": "snap_wf_20250305",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20250305",
+      "candidate_pnl_usd": 351.25,
+      "baseline_pnl_usd": 771.98,
+      "delta_usd": -420.73
+    },
+    {
+      "window": "snap_wf_20250718",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20250718",
+      "candidate_pnl_usd": -524.79,
+      "baseline_pnl_usd": -830.86,
+      "delta_usd": 306.07
+    },
+    {
+      "window": "snap_wf_20260228",
+      "family": "recent",
+      "label": "v246_exit_adapt_snap_wf_20260228",
+      "candidate_pnl_usd": -1405.41,
+      "baseline_pnl_usd": -1047.96,
+      "delta_usd": -357.45
+    },
+    {
+      "window": "snap_wf_20200331",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20200331",
+      "candidate_pnl_usd": -1660.74,
+      "baseline_pnl_usd": -1354.74,
+      "delta_usd": -306.0
+    },
+    {
+      "window": "snap_wf_20200927",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20200927",
+      "candidate_pnl_usd": 2008.4,
+      "baseline_pnl_usd": -17.78,
+      "delta_usd": 2026.18
+    },
+    {
+      "window": "snap_wf_20201226",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20201226",
+      "candidate_pnl_usd": 16314.61,
+      "baseline_pnl_usd": 17366.58,
+      "delta_usd": -1051.97
+    },
+    {
+      "window": "snap_wf_20210624",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20210624",
+      "candidate_pnl_usd": -806.14,
+      "baseline_pnl_usd": -316.16,
+      "delta_usd": -489.98
+    },
+    {
+      "window": "snap_wf_20220619",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20220619",
+      "candidate_pnl_usd": 429.78,
+      "baseline_pnl_usd": 2687.34,
+      "delta_usd": -2257.56
+    },
+    {
+      "window": "snap_wf_20221216",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20221216",
+      "candidate_pnl_usd": -655.25,
+      "baseline_pnl_usd": -657.29,
+      "delta_usd": 2.04
+    },
+    {
+      "window": "snap_wf_20230912",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20230912",
+      "candidate_pnl_usd": 8339.43,
+      "baseline_pnl_usd": 4679.67,
+      "delta_usd": 3659.76
+    },
+    {
+      "window": "snap_wf_20231211",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20231211",
+      "candidate_pnl_usd": 8688.79,
+      "baseline_pnl_usd": 7606.27,
+      "delta_usd": 1082.52
+    },
+    {
+      "window": "snap_wf_20240906",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20240906",
+      "candidate_pnl_usd": 8535.15,
+      "baseline_pnl_usd": 2041.32,
+      "delta_usd": 6493.83
+    },
+    {
+      "window": "snap_wf_20250603",
+      "family": "trend",
+      "label": "v246_exit_adapt_snap_wf_20250603",
+      "candidate_pnl_usd": 1843.62,
+      "baseline_pnl_usd": -2066.03,
+      "delta_usd": 3909.65
+    }
+  ],
+  "ruler_module": "omega/eval/grid_ruler.py"
+}

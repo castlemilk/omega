@@ -1,0 +1,200 @@
+{
+  "run_label": "v232",
+  "verdict": "INSUFFICIENT_GRID",
+  "passed": false,
+  "families": {
+    "crisis": {
+      "family": "crisis",
+      "status": "not_evaluated",
+      "n": 0,
+      "expected_n": 12,
+      "reason": "no candidate cell resolved to a crisis window \u2014 nothing to pair"
+    },
+    "recent": {
+      "family": "recent",
+      "status": "not_evaluated",
+      "n": 0,
+      "expected_n": 10,
+      "reason": "no candidate cell resolved to a recent window \u2014 nothing to pair"
+    },
+    "trend": {
+      "family": "trend",
+      "status": "not_evaluated",
+      "n": 0,
+      "expected_n": 10,
+      "reason": "no candidate cell resolved to a trend window \u2014 nothing to pair"
+    },
+    "pooled": {
+      "family": "pooled",
+      "status": "not_evaluated",
+      "n": 0,
+      "expected_n": 32,
+      "reason": "no candidate cell resolved to a pooled window \u2014 nothing to pair"
+    }
+  },
+  "coverage": {
+    "manifest_built_by": "scripts/walk_forward_freeze.py (V235)",
+    "expected_windows": 32,
+    "covered_windows": 0,
+    "complete": false,
+    "pairing": "paired_per_window",
+    "per_family": {
+      "crisis": {
+        "expected": 12,
+        "covered": 0,
+        "missing": [
+          "snap_wf_20200101",
+          "snap_wf_20200629",
+          "snap_wf_20210326",
+          "snap_wf_20211221",
+          "snap_wf_20220321",
+          "snap_wf_20220917",
+          "snap_wf_20230614",
+          "snap_wf_20240310",
+          "snap_wf_20240608",
+          "snap_wf_20241205",
+          "snap_wf_20250901",
+          "snap_wf_20251130"
+        ]
+      },
+      "recent": {
+        "expected": 10,
+        "covered": 0,
+        "missing": [
+          "snap_wf_20200813",
+          "snap_wf_20210922",
+          "snap_wf_20230130",
+          "snap_wf_20230316",
+          "snap_wf_20230430",
+          "snap_wf_20230729",
+          "snap_wf_20240723",
+          "snap_wf_20250305",
+          "snap_wf_20250718",
+          "snap_wf_20260228"
+        ]
+      },
+      "trend": {
+        "expected": 10,
+        "covered": 0,
+        "missing": [
+          "snap_wf_20200331",
+          "snap_wf_20200927",
+          "snap_wf_20201226",
+          "snap_wf_20210624",
+          "snap_wf_20220619",
+          "snap_wf_20221216",
+          "snap_wf_20230912",
+          "snap_wf_20231211",
+          "snap_wf_20240906",
+          "snap_wf_20250603"
+        ]
+      }
+    },
+    "unpairable_cells": [],
+    "skipped_cells": [
+      {
+        "label": "v232_crisis_snap_crisis_2020q1_off_crisis_r1",
+        "why": "snapshot 'snap_crisis_2020q1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2020q1_off_crisis_r2",
+        "why": "snapshot 'snap_crisis_2020q1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2020q1_on_crisis_r1",
+        "why": "snapshot 'snap_crisis_2020q1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2020q1_on_crisis_r2",
+        "why": "snapshot 'snap_crisis_2020q1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2022h1_off_crisis_r1",
+        "why": "snapshot 'snap_crisis_2022h1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2022h1_off_crisis_r2",
+        "why": "snapshot 'snap_crisis_2022h1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2022h1_on_crisis_r1",
+        "why": "snapshot 'snap_crisis_2022h1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2022h1_on_crisis_r2",
+        "why": "snapshot 'snap_crisis_2022h1' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2024aug_off_crisis_r1",
+        "why": "snapshot 'snap_crisis_2024aug' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2024aug_off_crisis_r2",
+        "why": "snapshot 'snap_crisis_2024aug' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2024aug_on_crisis_r1",
+        "why": "snapshot 'snap_crisis_2024aug' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      },
+      {
+        "label": "v232_crisis_snap_crisis_2024aug_on_crisis_r2",
+        "why": "snapshot 'snap_crisis_2024aug' is not a walk_forward_manifest window id \u2014 not a walk-forward cell"
+      }
+    ]
+  },
+  "failures": [],
+  "ruler_notes": [
+    "no coupling class was declared, so the mechanism-agnostic 'median' \u0394-sd row is used. V247_RULER.md \u00a77: 'Any pre-reg must declare its expected coupling class (exit-only / sizing-only / selection-changing) \u2014 it determines which MDE row applies.' The ruler will not infer one from results. This is the CONSERVATIVE direction for a no-regression gate: the median \u0394-sd is the widest of the low-coupling rows, so the bar is harder to breach than a class-specific bar.",
+    "INSUFFICIENT_GRID: 32 of 32 manifest windows are not covered by this run \u2014 crisis: 12/12 missing (snap_wf_20200101, snap_wf_20200629, snap_wf_20210326, snap_wf_20211221 \u2026); recent: 10/10 missing (snap_wf_20200813, snap_wf_20210922, snap_wf_20230130, snap_wf_20230316 \u2026); trend: 10/10 missing (snap_wf_20200331, snap_wf_20200927, snap_wf_20201226, snap_wf_20210624 \u2026). The campaign ruler is a whole-grid instrument; a partial grid is not a pass, and the MDE bars above have been widened to the actual n rather than the published n so that any FAIL reported alongside is one the partial grid can actually support."
+  ],
+  "standing_distribution_used": {
+    "source": "$OMEGA_AUDIT_OUTPUT_DIR/v246/distribution.json, rows where config == \"universe_selective\" (sha256 296500dc13085ee58967b9e320bc62928b5b48bf78b08cb0c1a8d2b47cbe05e4). Transcribed 2026-08-19.",
+    "config": "universe_selective (V227-skew + universe_selective_enabled, V240.A ADOPTED) \u2014 identical to the `config` field above. This IS the standing main arm.",
+    "corroboration": "The same 32 OFF-arm values appear byte-identically (max abs diff 0.000) in FOUR other committed grids on the same volume \u2014 v240_wf, v241, v243a_wf and v245 \u2014 which is the cross-check scripts/v247_ruler.py performs at startup. Their per-regime means reproduce the journal to the cent: crisis +$598.53, trend +$2,996.92, recent +$29.64 (README.md:36-38 rounds these to +$599 / +$2,997 / +$30). All 32 cells carry determinism PASS with pnl_spread $0.00.",
+    "updated": "2026-08-18",
+    "per_family": {
+      "crisis": {
+        "n": 12,
+        "mean_usd": 598.53,
+        "sd_usd": 3840.7
+      },
+      "recent": {
+        "n": 10,
+        "mean_usd": 29.64,
+        "sd_usd": 1790.47
+      },
+      "trend": {
+        "n": 10,
+        "mean_usd": 2996.92,
+        "sd_usd": 5864.8
+      }
+    },
+    "campaign_means_usd": {
+      "crisis": 599.0,
+      "recent": 30.0,
+      "trend": 2997.0
+    }
+  },
+  "provenance": {
+    "spec": "omega/nodes/victoria/training_log/V247_RULER.md (Phase 0, the instrument) and V247_RULER_CANDIDATES.md (Phase 1, candidate \u03b2 = PRIMARY, adopted). Implemented by omega/eval/grid_ruler.py.",
+    "instrument": "paired per-window \u0394 (candidate \u2212 standing baseline), aggregated per regime family and pooled. V247_RULER.md \u00a71: \"A verdict is a paired per-window \u0394 (ON \u2212 OFF) aggregated per regime\" \u2014 and, of the two distributions named there, only the paired \u0394 is the verdict instrument; the OFF-arm LEVEL spread \"can never be the gate\".",
+    "bar": "one-sided NO-REGRESSION. A family FAILS iff its mean-\u0394 is more negative than that family's MDE. V247_RULER.md \u00a77 states the thresholds as a symmetric unfalsifiability rule (\"claims below $X at n=Y: unfalsifiable, may not be used as an acceptance bar\"); \u00a76 names the direction this module gates in \u2014 \"a floor does not need to DETECT small effects, only to reject large regressions\".",
+    "mde_formula": "MDE = (z_{1-\u03b1/2} + z_{power}) \u00b7 sd / sqrt(n) = 2.801585 \u00b7 sd / sqrt(n), two-sided \u03b1=0.05 at 80% power (V247_RULER.md \u00a74, and scripts/v247_ruler.py:mde). Normal approximation \u2014 slightly optimistic below n\u224815, as the doc says. The ruler recomputes it at the grid's ACTUAL n so a short grid gets a correspondingly WIDER bar rather than the published one applied out of range.",
+    "coupling_class": "median",
+    "coupling_class_declared": null,
+    "delta_sd_usd": {
+      "crisis": 1935.0,
+      "pooled": 2876.0,
+      "recent": 1178.0,
+      "trend": 4648.0
+    },
+    "bootstrap": {
+      "resamples": 20000,
+      "seed": 42
+    },
+    "gate_advisory_recent_floor": false,
+    "advisory_recent_floor_usd": -360.0
+  },
+  "cells": [],
+  "ruler_module": "omega/eval/grid_ruler.py"
+}

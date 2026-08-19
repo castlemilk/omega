@@ -560,6 +560,298 @@ func TestGates_NoGateFilesAtAll(t *testing.T) {
 	}
 }
 
+// ── /api/v1/training/grid-ruler ───────────────────────────────────────────────
+//
+// Fixtures are REAL ruler output, not hand-written JSON:
+//
+//   - v246_wf_grid_verdict.json — omega/eval/grid_ruler.check_grid_ruler() over
+//     the V246 exit-adaptivity grid committed in tests/fixtures/v247_paired_grids.json,
+//     declared low-coupling. Its pooled mean-Δ (+$626.94) and pooled MDE ($875.12)
+//     are V247_RULER.md §3/§4's published +$627 and $875.
+//   - v232_grid_verdict.json — the ruler run against the real v232 crisis-snapshot
+//     cells in the repo's data directory. Those are not walk-forward manifest
+//     windows, so the honest answer is INSUFFICIENT_GRID with 0/32 coverage.
+//
+// The handler must not interpret either: its whole job is to find the right file
+// and hand it over intact.
+
+// gridVerdictBody is the wire shape of gridRulerResponse, as a consumer sees it.
+type gridVerdictBody struct {
+	RunLabel   string                     `json:"run_label"`
+	Verdict    string                     `json:"verdict"`
+	Passed     bool                       `json:"passed"`
+	Families   map[string]json.RawMessage `json:"families"`
+	Coverage   json.RawMessage            `json:"coverage"`
+	Failures   []string                   `json:"failures"`
+	RulerNotes []string                   `json:"ruler_notes"`
+	Standing   json.RawMessage            `json:"standing_distribution_used"`
+	Provenance json.RawMessage            `json:"provenance"`
+	Raw        json.RawMessage            `json:"raw"`
+
+	ResolvedLatest bool   `json:"resolved_latest"`
+	ResolvedPrefix bool   `json:"resolved_prefix"`
+	Requested      string `json:"requested"`
+}
+
+func TestGridRuler_HappyPath(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
+		filepath.Join(dir, "v246_wf_grid_verdict.json"))
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body gridVerdictBody
+	resp := getJSON(t, srv.URL+"/api/v1/training/grid-ruler?run=v246_wf", &body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if body.RunLabel != "v246_wf" {
+		t.Errorf("run_label = %q, want v246_wf", body.RunLabel)
+	}
+	if body.Verdict != "PASS" || !body.Passed {
+		t.Errorf("verdict = %q passed = %v, want PASS/true", body.Verdict, body.Passed)
+	}
+	if body.ResolvedLatest {
+		t.Error("resolved_latest should be false when a run was named")
+	}
+	if body.ResolvedPrefix {
+		t.Error("resolved_prefix should be false when the run has its own file")
+	}
+	// The four families V247_RULER.md rules on. Pooled is the one the doc calls
+	// the decision-relevant instrument, so its absence would gut the card.
+	for _, fam := range []string{"crisis", "recent", "trend", "pooled"} {
+		if _, ok := body.Families[fam]; !ok {
+			t.Errorf("families missing %q", fam)
+		}
+	}
+	if len(body.Coverage) == 0 {
+		t.Error("coverage should be passed through")
+	}
+	if len(body.RulerNotes) == 0 {
+		t.Error("ruler_notes should be passed through — every conservative choice lives there")
+	}
+	if len(body.Standing) == 0 {
+		t.Error("standing_distribution_used should be passed through")
+	}
+	if body.Failures == nil {
+		t.Error("failures should be [] not null")
+	}
+}
+
+// The pooled ruling must survive the handler with its arithmetic intact: this is
+// the number the card draws its bar from, and V247_RULER.md §4 fixes both values.
+func TestGridRuler_PooledRulingSurvivesUntouched(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
+		filepath.Join(dir, "v246_wf_grid_verdict.json"))
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body gridVerdictBody
+	getJSON(t, srv.URL+"/api/v1/training/grid-ruler?run=v246_wf", &body)
+
+	var pooled struct {
+		Family    string  `json:"family"`
+		Status    string  `json:"status"`
+		N         int     `json:"n"`
+		MeanDelta float64 `json:"mean_delta_usd"`
+		MDE       float64 `json:"mde_usd"`
+	}
+	if err := json.Unmarshal(body.Families["pooled"], &pooled); err != nil {
+		t.Fatalf("unmarshal pooled ruling: %v", err)
+	}
+	if pooled.N != 32 {
+		t.Errorf("pooled n = %d, want 32 (the manifest's window count)", pooled.N)
+	}
+	if pooled.Status != "pass" {
+		t.Errorf("pooled status = %q, want pass", pooled.Status)
+	}
+	// V247_RULER.md §3: v246_exit_adapt pooled Δ mean +$627.
+	if pooled.MeanDelta < 626 || pooled.MeanDelta > 628 {
+		t.Errorf("pooled mean_delta_usd = %v, want ≈+627 (V247_RULER.md §3)", pooled.MeanDelta)
+	}
+	// V247_RULER.md §4: a V246-class low-coupling pooled MDE at n=32 is $875.
+	if pooled.MDE < 874 || pooled.MDE > 876 {
+		t.Errorf("pooled mde_usd = %v, want ≈875 (V247_RULER.md §4)", pooled.MDE)
+	}
+}
+
+// INSUFFICIENT_GRID must reach the board as itself. It is emphatically not a
+// pass, and the handler flattening it into one would defeat the whole ruler.
+func TestGridRuler_InsufficientGridIsNotAPass(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join(fixtureDataDir, "v232_grid_verdict.json"),
+		filepath.Join(dir, "v232_grid_verdict.json"))
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body gridVerdictBody
+	resp := getJSON(t, srv.URL+"/api/v1/training/grid-ruler?run=v232", &body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200 — an insufficient grid is a verdict, not an error", resp.StatusCode)
+	}
+	if body.Verdict != "INSUFFICIENT_GRID" {
+		t.Errorf("verdict = %q, want INSUFFICIENT_GRID", body.Verdict)
+	}
+	if body.Passed {
+		t.Error("INSUFFICIENT_GRID must never arrive as passed=true")
+	}
+
+	// The missing window ids are the entire point of the loud verdict.
+	var coverage struct {
+		Complete  bool `json:"complete"`
+		PerFamily map[string]struct {
+			Expected int      `json:"expected"`
+			Covered  int      `json:"covered"`
+			Missing  []string `json:"missing"`
+		} `json:"per_family"`
+	}
+	if err := json.Unmarshal(body.Coverage, &coverage); err != nil {
+		t.Fatalf("unmarshal coverage: %v", err)
+	}
+	if coverage.Complete {
+		t.Error("coverage.complete should be false")
+	}
+	if len(coverage.PerFamily["crisis"].Missing) != 12 {
+		t.Errorf("crisis missing = %d windows, want 12",
+			len(coverage.PerFamily["crisis"].Missing))
+	}
+}
+
+// A CELL label finds the GRID it belongs to, and says that it did so.
+func TestGridRuler_ResolvesACellLabelToItsGridByPrefix(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
+		filepath.Join(dir, "v246_wf_grid_verdict.json"))
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body gridVerdictBody
+	cell := "v246_wf_snap_wf_20230912_on_trend_r1"
+	resp := getJSON(t, srv.URL+"/api/v1/training/grid-ruler?run="+cell, &body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if body.RunLabel != "v246_wf" {
+		t.Errorf("run_label = %q, want the grid v246_wf", body.RunLabel)
+	}
+	if !body.ResolvedPrefix {
+		t.Error("resolved_prefix must be true — the board has to be able to say this is the grid's verdict, not the cell's")
+	}
+	if body.Requested != cell {
+		t.Errorf("requested = %q, want the cell label %q", body.Requested, cell)
+	}
+	if body.ResolvedLatest {
+		t.Error("resolved_latest should be false — a run was named")
+	}
+}
+
+// Prefix resolution must pick the LONGEST match, never merely the first: v2 and
+// v246_wf both prefix a v246_wf cell and only one of them is its grid.
+func TestGridRuler_PrefixResolutionPicksTheLongestMatch(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
+		filepath.Join(dir, "v246_wf_grid_verdict.json"))
+	copyFixture(t, filepath.Join(fixtureDataDir, "v232_grid_verdict.json"),
+		filepath.Join(dir, "v2_grid_verdict.json"))
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body gridVerdictBody
+	getJSON(t, srv.URL+"/api/v1/training/grid-ruler?run=v246_wf_snap_wf_20230912", &body)
+	// run_label comes from the file's own field, so assert on what was served.
+	if body.Verdict != "PASS" {
+		t.Errorf("verdict = %q — the shorter v2 prefix won over v246_wf", body.Verdict)
+	}
+	if body.RunLabel != "v246_wf" {
+		t.Errorf("run_label = %q, want v246_wf", body.RunLabel)
+	}
+}
+
+func TestGridRuler_ResolvesLatestWhenNoRunAsked(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
+		filepath.Join(dir, "v246_wf_grid_verdict.json"))
+	copyFixture(t, filepath.Join(fixtureDataDir, "v232_grid_verdict.json"),
+		filepath.Join(dir, "v232_grid_verdict.json"))
+	// v232 is written second → newest mtime → "latest", same rule as /gates.
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body gridVerdictBody
+	resp := getJSON(t, srv.URL+"/api/v1/training/grid-ruler", &body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if body.RunLabel != "v232" {
+		t.Errorf("latest run_label = %q, want v232", body.RunLabel)
+	}
+	if !body.ResolvedLatest {
+		t.Error("resolved_latest should be true")
+	}
+}
+
+// A label that no grid verdict prefixes is a 404 — "the ruler never ran for
+// this" — and must name what was asked for. It is not an empty pass.
+func TestGridRuler_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
+		filepath.Join(dir, "v246_wf_grid_verdict.json"))
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	resp, err := http.Get(srv.URL + "/api/v1/training/grid-ruler?run=v999_wf") //nolint:noctx
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", resp.StatusCode)
+	}
+	if msg := readBody(t, resp); !strings.Contains(msg, "v999_wf") {
+		t.Errorf("404 body %q should name the run that was asked for", msg)
+	}
+}
+
+func TestGridRuler_NoVerdictFilesAtAll(t *testing.T) {
+	srv, cleanup := newTrainingServer(t, t.TempDir(), "")
+	defer cleanup()
+
+	resp, err := http.Get(srv.URL + "/api/v1/training/grid-ruler") //nolint:noctx
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404", resp.StatusCode)
+	}
+}
+
+// A grid verdict must never be served for a traversal-shaped label, on the same
+// isSafeVersion guard the rest of the file-backed endpoints use.
+func TestGridRuler_RejectsPathTraversal(t *testing.T) {
+	srv, cleanup := newTrainingServer(t, t.TempDir(), "")
+	defer cleanup()
+
+	for _, run := range []string{"../../etc/passwd", "v246/../../secret", "v246 wf"} {
+		resp, err := http.Get(srv.URL + "/api/v1/training/grid-ruler?run=" + url.QueryEscape(run)) //nolint:noctx
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			t.Errorf("run=%q returned 200, want a rejection", run)
+		}
+	}
+}
+
 // ── /api/v1/training/forensics ────────────────────────────────────────────────
 
 func TestForensics_HappyPath(t *testing.T) {
