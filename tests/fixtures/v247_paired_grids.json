@@ -1,0 +1,853 @@
+{
+  "_what": "Candidate (ON) arm per-window PnL for the four completed paired walk-forward grids that omega/nodes/victoria/training_log/V247_RULER.md calibrated the ruler from.",
+  "_source": "$OMEGA_AUDIT_OUTPUT_DIR/{v241,v243a_wf,v245,v246}/distribution.json \u2014 the same four files scripts/v247_ruler.py reads. Transcribed 2026-08-19.",
+  "_why": "These are REAL results, not invented numbers, and V247_RULER.md \u00a73 publishes the paired-\u0394 mean and sd for every (grid, regime) pair. Pairing them against the standing baseline committed in data/standing_baseline.json must reproduce all 16 published means and all 16 published sds \u2014 which is the strongest correctness test available for the ruler's arithmetic.",
+  "_off_arm": "The OFF arm of all four grids is config 'universe_selective' and lives in data/standing_baseline.json under distributions.per_family; it is byte-identical across all four files.",
+  "published_delta_mean_usd": {
+    "v241_reasoning": {
+      "recent": 227,
+      "trend": -69,
+      "crisis": -48,
+      "pooled": 31
+    },
+    "v243a_blacklist_ext": {
+      "recent": 232,
+      "trend": 2007,
+      "crisis": 1326,
+      "pooled": 1197
+    },
+    "v245_gdelt": {
+      "recent": -129,
+      "trend": -236,
+      "crisis": 220,
+      "pooled": -31
+    },
+    "v246_exit_adapt": {
+      "recent": 72,
+      "trend": 1307,
+      "crisis": 523,
+      "pooled": 627
+    }
+  },
+  "published_delta_sd_usd": {
+    "v241_reasoning": {
+      "recent": 1660,
+      "trend": 7354,
+      "crisis": 2848,
+      "pooled": 4404
+    },
+    "v243a_blacklist_ext": {
+      "recent": 1127,
+      "trend": 6596,
+      "crisis": 2581,
+      "pooled": 3985
+    },
+    "v245_gdelt": {
+      "recent": 1206,
+      "trend": 1414,
+      "crisis": 1289,
+      "pooled": 1278
+    },
+    "v246_exit_adapt": {
+      "recent": 1149,
+      "trend": 2699,
+      "crisis": 1023,
+      "pooled": 1767
+    }
+  },
+  "_published_cite": "V247_RULER.md \u00a73, 'Paired \u0394 distributions \u2014 the verdict instrument'",
+  "grids": {
+    "v241_reasoning": {
+      "config": "reasoning_on",
+      "file": "v241/distribution.json",
+      "cells": [
+        {
+          "window": "snap_wf_20200101",
+          "regime": "crisis",
+          "pnl_usd": 2105.7,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20200331",
+          "regime": "trend",
+          "pnl_usd": -2863.05,
+          "trades": 17
+        },
+        {
+          "window": "snap_wf_20200629",
+          "regime": "crisis",
+          "pnl_usd": 2054.22,
+          "trades": 19
+        },
+        {
+          "window": "snap_wf_20200813",
+          "regime": "recent",
+          "pnl_usd": 3570.83,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20200927",
+          "regime": "trend",
+          "pnl_usd": 3226.27,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20201226",
+          "regime": "trend",
+          "pnl_usd": -1366.86,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20210326",
+          "regime": "crisis",
+          "pnl_usd": 3223.22,
+          "trades": 20
+        },
+        {
+          "window": "snap_wf_20210624",
+          "regime": "trend",
+          "pnl_usd": 8295.55,
+          "trades": 16
+        },
+        {
+          "window": "snap_wf_20210922",
+          "regime": "recent",
+          "pnl_usd": 47.22,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20211221",
+          "regime": "crisis",
+          "pnl_usd": -2892.98,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20220321",
+          "regime": "crisis",
+          "pnl_usd": 180.95,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20220619",
+          "regime": "trend",
+          "pnl_usd": 1691.72,
+          "trades": 22
+        },
+        {
+          "window": "snap_wf_20220917",
+          "regime": "crisis",
+          "pnl_usd": 2048.19,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20221216",
+          "regime": "trend",
+          "pnl_usd": -272.12,
+          "trades": 9
+        },
+        {
+          "window": "snap_wf_20230130",
+          "regime": "recent",
+          "pnl_usd": -1304.89,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20230316",
+          "regime": "recent",
+          "pnl_usd": -3872.72,
+          "trades": 17
+        },
+        {
+          "window": "snap_wf_20230430",
+          "regime": "recent",
+          "pnl_usd": -592.0,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20230614",
+          "regime": "crisis",
+          "pnl_usd": -4152.12,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20230729",
+          "regime": "recent",
+          "pnl_usd": -2516.13,
+          "trades": 15
+        },
+        {
+          "window": "snap_wf_20230912",
+          "regime": "trend",
+          "pnl_usd": 9842.44,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20231211",
+          "regime": "trend",
+          "pnl_usd": 12095.87,
+          "trades": 19
+        },
+        {
+          "window": "snap_wf_20240310",
+          "regime": "crisis",
+          "pnl_usd": 1647.3,
+          "trades": 15
+        },
+        {
+          "window": "snap_wf_20240608",
+          "regime": "crisis",
+          "pnl_usd": 3269.13,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20240723",
+          "regime": "recent",
+          "pnl_usd": 2868.05,
+          "trades": 19
+        },
+        {
+          "window": "snap_wf_20240906",
+          "regime": "trend",
+          "pnl_usd": 1458.04,
+          "trades": 9
+        },
+        {
+          "window": "snap_wf_20241205",
+          "regime": "crisis",
+          "pnl_usd": -608.49,
+          "trades": 18
+        },
+        {
+          "window": "snap_wf_20250305",
+          "regime": "recent",
+          "pnl_usd": 4763.08,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20250603",
+          "regime": "trend",
+          "pnl_usd": -2831.33,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20250718",
+          "regime": "recent",
+          "pnl_usd": -65.25,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20250901",
+          "regime": "crisis",
+          "pnl_usd": -1698.89,
+          "trades": 18
+        },
+        {
+          "window": "snap_wf_20251130",
+          "regime": "crisis",
+          "pnl_usd": 1429.91,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20260228",
+          "regime": "recent",
+          "pnl_usd": -336.16,
+          "trades": 13
+        }
+      ]
+    },
+    "v243a_blacklist_ext": {
+      "config": "universe_selective_ext",
+      "file": "v243a_wf/distribution.json",
+      "cells": [
+        {
+          "window": "snap_wf_20200101",
+          "regime": "crisis",
+          "pnl_usd": -2692.3,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20200331",
+          "regime": "trend",
+          "pnl_usd": -630.66,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20200629",
+          "regime": "crisis",
+          "pnl_usd": -219.19,
+          "trades": 19
+        },
+        {
+          "window": "snap_wf_20200813",
+          "regime": "recent",
+          "pnl_usd": 2722.33,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20200927",
+          "regime": "trend",
+          "pnl_usd": -701.46,
+          "trades": 15
+        },
+        {
+          "window": "snap_wf_20201226",
+          "regime": "trend",
+          "pnl_usd": 37807.82,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20210326",
+          "regime": "crisis",
+          "pnl_usd": 9609.47,
+          "trades": 16
+        },
+        {
+          "window": "snap_wf_20210624",
+          "regime": "trend",
+          "pnl_usd": -709.22,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20210922",
+          "regime": "recent",
+          "pnl_usd": 947.49,
+          "trades": 15
+        },
+        {
+          "window": "snap_wf_20211221",
+          "regime": "crisis",
+          "pnl_usd": 2417.42,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20220321",
+          "regime": "crisis",
+          "pnl_usd": -1009.78,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20220619",
+          "regime": "trend",
+          "pnl_usd": 537.11,
+          "trades": 19
+        },
+        {
+          "window": "snap_wf_20220917",
+          "regime": "crisis",
+          "pnl_usd": 1110.85,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20221216",
+          "regime": "trend",
+          "pnl_usd": -264.34,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20230130",
+          "regime": "recent",
+          "pnl_usd": -590.56,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20230316",
+          "regime": "recent",
+          "pnl_usd": -648.56,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20230430",
+          "regime": "recent",
+          "pnl_usd": -137.45,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20230614",
+          "regime": "crisis",
+          "pnl_usd": -3140.04,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20230729",
+          "regime": "recent",
+          "pnl_usd": -2366.47,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20230912",
+          "regime": "trend",
+          "pnl_usd": 3900.74,
+          "trades": 7
+        },
+        {
+          "window": "snap_wf_20231211",
+          "regime": "trend",
+          "pnl_usd": 10287.48,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20240310",
+          "regime": "crisis",
+          "pnl_usd": 4268.0,
+          "trades": 15
+        },
+        {
+          "window": "snap_wf_20240608",
+          "regime": "crisis",
+          "pnl_usd": 8184.84,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20240723",
+          "regime": "recent",
+          "pnl_usd": 4303.31,
+          "trades": 16
+        },
+        {
+          "window": "snap_wf_20240906",
+          "regime": "trend",
+          "pnl_usd": 1564.39,
+          "trades": 9
+        },
+        {
+          "window": "snap_wf_20241205",
+          "regime": "crisis",
+          "pnl_usd": 1144.16,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20250305",
+          "regime": "recent",
+          "pnl_usd": -196.5,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20250603",
+          "regime": "trend",
+          "pnl_usd": -1751.73,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20250718",
+          "regime": "recent",
+          "pnl_usd": -1066.87,
+          "trades": 7
+        },
+        {
+          "window": "snap_wf_20250901",
+          "regime": "crisis",
+          "pnl_usd": 1892.04,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20251130",
+          "regime": "crisis",
+          "pnl_usd": 1531.92,
+          "trades": 7
+        },
+        {
+          "window": "snap_wf_20260228",
+          "regime": "recent",
+          "pnl_usd": -345.94,
+          "trades": 15
+        }
+      ]
+    },
+    "v245_gdelt": {
+      "config": "gdelt_solo",
+      "file": "v245/distribution.json",
+      "cells": [
+        {
+          "window": "snap_wf_20200101",
+          "regime": "crisis",
+          "pnl_usd": 809.8,
+          "trades": 9
+        },
+        {
+          "window": "snap_wf_20200331",
+          "regime": "trend",
+          "pnl_usd": -2062.98,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20200629",
+          "regime": "crisis",
+          "pnl_usd": 933.33,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20200813",
+          "regime": "recent",
+          "pnl_usd": 1811.01,
+          "trades": 4
+        },
+        {
+          "window": "snap_wf_20200927",
+          "regime": "trend",
+          "pnl_usd": 2866.02,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20201226",
+          "regime": "trend",
+          "pnl_usd": 16421.31,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20210326",
+          "regime": "crisis",
+          "pnl_usd": 9937.33,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20210624",
+          "regime": "trend",
+          "pnl_usd": 969.14,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20210922",
+          "regime": "recent",
+          "pnl_usd": -483.94,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20211221",
+          "regime": "crisis",
+          "pnl_usd": -4860.34,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20220321",
+          "regime": "crisis",
+          "pnl_usd": -107.66,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20220619",
+          "regime": "trend",
+          "pnl_usd": 1136.16,
+          "trades": 18
+        },
+        {
+          "window": "snap_wf_20220917",
+          "regime": "crisis",
+          "pnl_usd": 1816.72,
+          "trades": 7
+        },
+        {
+          "window": "snap_wf_20221216",
+          "regime": "trend",
+          "pnl_usd": -505.3,
+          "trades": 4
+        },
+        {
+          "window": "snap_wf_20230130",
+          "regime": "recent",
+          "pnl_usd": -923.34,
+          "trades": 9
+        },
+        {
+          "window": "snap_wf_20230316",
+          "regime": "recent",
+          "pnl_usd": -2675.25,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20230430",
+          "regime": "recent",
+          "pnl_usd": -167.9,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20230614",
+          "regime": "crisis",
+          "pnl_usd": -2123.16,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20230729",
+          "regime": "recent",
+          "pnl_usd": -1542.52,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20230912",
+          "regime": "trend",
+          "pnl_usd": 3273.49,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20231211",
+          "regime": "trend",
+          "pnl_usd": 5965.57,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20240310",
+          "regime": "crisis",
+          "pnl_usd": 771.72,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20240608",
+          "regime": "crisis",
+          "pnl_usd": 4365.05,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20240723",
+          "regime": "recent",
+          "pnl_usd": 1547.51,
+          "trades": 19
+        },
+        {
+          "window": "snap_wf_20240906",
+          "regime": "trend",
+          "pnl_usd": 1848.66,
+          "trades": 5
+        },
+        {
+          "window": "snap_wf_20241205",
+          "regime": "crisis",
+          "pnl_usd": -2852.21,
+          "trades": 20
+        },
+        {
+          "window": "snap_wf_20250305",
+          "regime": "recent",
+          "pnl_usd": 426.51,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20250603",
+          "regime": "trend",
+          "pnl_usd": -2304.68,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20250718",
+          "regime": "recent",
+          "pnl_usd": -744.03,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20250901",
+          "regime": "crisis",
+          "pnl_usd": -143.41,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20251130",
+          "regime": "crisis",
+          "pnl_usd": 1277.47,
+          "trades": 10
+        },
+        {
+          "window": "snap_wf_20260228",
+          "regime": "recent",
+          "pnl_usd": 1762.65,
+          "trades": 10
+        }
+      ]
+    },
+    "v246_exit_adapt": {
+      "config": "exit_adapt",
+      "file": "v246/distribution.json",
+      "cells": [
+        {
+          "window": "snap_wf_20200101",
+          "regime": "crisis",
+          "pnl_usd": -2638.6,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20200331",
+          "regime": "trend",
+          "pnl_usd": -1660.74,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20200629",
+          "regime": "crisis",
+          "pnl_usd": 297.53,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20200813",
+          "regime": "recent",
+          "pnl_usd": 2110.98,
+          "trades": 4
+        },
+        {
+          "window": "snap_wf_20200927",
+          "regime": "trend",
+          "pnl_usd": 2008.4,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20201226",
+          "regime": "trend",
+          "pnl_usd": 16314.61,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20210326",
+          "regime": "crisis",
+          "pnl_usd": 12143.74,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20210624",
+          "regime": "trend",
+          "pnl_usd": -806.14,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20210922",
+          "regime": "recent",
+          "pnl_usd": 1671.59,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20211221",
+          "regime": "crisis",
+          "pnl_usd": -5004.58,
+          "trades": 9
+        },
+        {
+          "window": "snap_wf_20220321",
+          "regime": "crisis",
+          "pnl_usd": -504.97,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20220619",
+          "regime": "trend",
+          "pnl_usd": 429.78,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20220917",
+          "regime": "crisis",
+          "pnl_usd": 1948.13,
+          "trades": 7
+        },
+        {
+          "window": "snap_wf_20221216",
+          "regime": "trend",
+          "pnl_usd": -655.25,
+          "trades": 5
+        },
+        {
+          "window": "snap_wf_20230130",
+          "regime": "recent",
+          "pnl_usd": 301.25,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20230316",
+          "regime": "recent",
+          "pnl_usd": -2907.83,
+          "trades": 14
+        },
+        {
+          "window": "snap_wf_20230430",
+          "regime": "recent",
+          "pnl_usd": 698.6,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20230614",
+          "regime": "crisis",
+          "pnl_usd": -1999.45,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20230729",
+          "regime": "recent",
+          "pnl_usd": -837.48,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20230912",
+          "regime": "trend",
+          "pnl_usd": 8339.43,
+          "trades": 7
+        },
+        {
+          "window": "snap_wf_20231211",
+          "regime": "trend",
+          "pnl_usd": 8688.79,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20240310",
+          "regime": "crisis",
+          "pnl_usd": 1715.63,
+          "trades": 8
+        },
+        {
+          "window": "snap_wf_20240608",
+          "regime": "crisis",
+          "pnl_usd": 2849.24,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20240723",
+          "regime": "recent",
+          "pnl_usd": 1553.52,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20240906",
+          "regime": "trend",
+          "pnl_usd": 8535.15,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20241205",
+          "regime": "crisis",
+          "pnl_usd": 1487.24,
+          "trades": 16
+        },
+        {
+          "window": "snap_wf_20250305",
+          "regime": "recent",
+          "pnl_usd": 351.25,
+          "trades": 13
+        },
+        {
+          "window": "snap_wf_20250603",
+          "regime": "trend",
+          "pnl_usd": 1843.62,
+          "trades": 7
+        },
+        {
+          "window": "snap_wf_20250718",
+          "regime": "recent",
+          "pnl_usd": -524.79,
+          "trades": 11
+        },
+        {
+          "window": "snap_wf_20250901",
+          "regime": "crisis",
+          "pnl_usd": 1050.26,
+          "trades": 12
+        },
+        {
+          "window": "snap_wf_20251130",
+          "regime": "crisis",
+          "pnl_usd": 2116.73,
+          "trades": 6
+        },
+        {
+          "window": "snap_wf_20260228",
+          "regime": "recent",
+          "pnl_usd": -1405.41,
+          "trades": 12
+        }
+      ]
+    }
+  }
+}

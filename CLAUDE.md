@@ -145,13 +145,9 @@ its family's campaign mean **passes**, and its `cell_pnl_floor` gate carries
 rides in `notes`, never in `failures`, and does not move the verdict. The
 Foreman board renders it as an amber note on a PASS tile, not as a failure tint.
 
-**Future work: grid-level aggregation.** The campaign mean is a *grid*-level
-ruler — the honest comparison against it is a whole walk-forward grid, not one
-cell. `omega/nodes/victoria/training_log/V247_RULER.md` is that instrument's
-spec: paired per-window Δ, pooled MDE ≈ **$875** for a low-coupling mechanism
-(per-regime MDE $1,043 recent / $1,565 crisis / $4,118 trend at current n), and
-a declared coupling class per pre-registration. Nothing in this module does that
-yet.
+**Grid-level aggregation lives in `omega/eval/grid_ruler.py`** — see
+"Campaign ruler" below. The campaign mean is a *grid*-level ruler and this
+module (a per-cell one) deliberately never gates on it.
 
 Gates evaluated:
 
@@ -183,6 +179,65 @@ Per-gate status is `pass` / `fail` / **`not_evaluated`**. A gate whose input
 block is absent reports `not_evaluated` and **never** `pass`.
 
 `data/{version}_gate_result.json` is written for **every** verdict.
+
+### Campaign ruler (`omega/eval/grid_ruler.py`)
+
+The **grid**-level layer: it gates the standing baseline itself, where
+`standing_gates.py` only gates one cell. Spec:
+`omega/nodes/victoria/training_log/V247_RULER.md` (Phase 0 — the instrument) and
+`V247_RULER_CANDIDATES.md` (Phase 1 — candidate β, adopted as PRIMARY).
+
+```bash
+python3 scripts/run_grid_ruler.py --run v246_wf            # writes data/v246_wf_grid_verdict.json
+python3 scripts/run_grid_ruler.py --run v246_wf --coupling low --no-write
+```
+
+**Run it ONCE, after a whole grid finishes — never per cell.** It is
+deliberately NOT wired into `run_training.py`, which is invoked per cell and has
+no concept of the set; the natural future hook is the last line of a grid runner
+(`scripts/v2*_wf_grid.sh`, `scripts/walk_forward_grid.sh`). Read-only apart from
+the one verdict file it writes.
+
+**The instrument** is a **paired per-window Δ** (candidate − standing baseline,
+same window), aggregated per regime family and pooled over all 32 manifest
+windows — V247_RULER.md §1. The OFF-arm *level* spread is explicitly not the
+ruler ("it can never be the gate"). The standing baseline's 32 per-window values
+are committed in `data/standing_baseline.json` under `distributions` (transcribed
+from the four committed grids; their means reproduce +$599 / +$2,997 / +$30 to
+the cent).
+
+**The bar** is one-sided **no-regression**: a family FAILS iff its mean-Δ is
+below −MDE, where MDE = 2.801585·sd/√n (α=0.05, 80% power). §7's standing
+thresholds — **$1,043 recent / $1,565 crisis / $4,118 trend** at current n, and
+**$1,425 pooled** (median-sd) / **$875** low-coupling / **$633** near-inert —
+are reproduced by that formula from the Δ-sd table in the config. A regression
+*inside* the MDE is unfalsifiable per §7, so it is neither a FAIL nor a silence:
+it rides as the `regression_within_noise` advisory. The MDE is recomputed at the
+grid's **actual** n, so a short grid gets a correspondingly wider bar.
+
+**Coupling class** (`--coupling median|inert|low|heavy`) selects the Δ-sd row;
+§7 requires a pre-registration to declare one. Undeclared ⇒ the mechanism-
+agnostic `median` row, which is the widest (hence slowest to shout FAIL).
+
+**Not gated, only reported:** candidate β's *acceptance* bar (pooled mean-Δ ≥ a
+pre-registered $ number with a bootstrap CI excluding 0), its −1·SE recent floor,
+and its dual-tail Δ-p25 / level-p25 clause. β fixes exact $ bars in the pre-reg
+*before* a run, so a standing scorer must not invent one. All the numbers those
+gates need are in the verdict file; `grid_ruler.gate_advisory_recent_floor` in
+the config turns the recent floor into a real failure when a pre-reg adopts it.
+
+**Verdict vocabulary** (precedence `ERROR` > `FAIL` > `INSUFFICIENT_GRID` >
+`PASS`), written to `data/{run_label}_grid_verdict.json`:
+
+- **`FAIL`** — a family's mean-Δ is below −MDE, pooled or per-regime.
+- **`INSUFFICIENT_GRID`** — the run does not cover the 32 manifest windows (or
+  the config has no per-window values). Loud, names the missing window ids per
+  family, and is **never** a pass.
+- **`PASS`** — no family regressed beyond its MDE. May carry advisories.
+- **`ERROR`** — ruler evaluation itself raised.
+
+The Foreman Gates view renders it as a compact "Campaign ruler" card
+(`/api/v1/training/grid-ruler?run=…`).
 
 #### `omega/eval/v49_gates.py` — RETIRED IN PLACE (2026-08-18)
 

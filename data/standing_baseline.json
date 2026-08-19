@@ -61,6 +61,95 @@
     "why": "The AUTHORITATIVE mapping for walk-forward cells, whose labels carry a DATE, not a regime — e.g. v252_replay_2023-09-12 (snap_wf_20230912). windows[].id -> windows[].regime is the mechanical ex-post label (label_rules in that file: crisis = max_dd >= 0.30 OR basket_ret <= -0.15; trend = basket_ret >= +0.20 and not crisis; recent = otherwise). Confirmed by training_log/V253_MATIC_POL_REMAP.md:45-47: snap_wf_20240310 = crisis, snap_wf_20230912 = trend, snap_wf_20250305 = recent.",
     "regime_counts": {"crisis": 12, "trend": 10, "recent": 10}
   },
+  "distributions": {
+    "what": "The STANDING BASELINE's per-window PnL, one value per walk-forward window — the OFF arm that a candidate grid is paired against. This is the object the campaign mean is a mean OF; the grid ruler needs the values, not the summary, because its instrument is a PAIRED per-window delta (V247_RULER.md \u00a71: \"A verdict is a paired per-window \u0394 (ON \u2212 OFF) aggregated per regime\").",
+    "config": "universe_selective (V227-skew + universe_selective_enabled, V240.A ADOPTED) \u2014 identical to the `config` field above. This IS the standing main arm.",
+    "source": "$OMEGA_AUDIT_OUTPUT_DIR/v246/distribution.json, rows where config == \"universe_selective\" (sha256 296500dc13085ee58967b9e320bc62928b5b48bf78b08cb0c1a8d2b47cbe05e4). Transcribed 2026-08-19.",
+    "corroboration": "The same 32 OFF-arm values appear byte-identically (max abs diff 0.000) in FOUR other committed grids on the same volume \u2014 v240_wf, v241, v243a_wf and v245 \u2014 which is the cross-check scripts/v247_ruler.py performs at startup. Their per-regime means reproduce the journal to the cent: crisis +$598.53, trend +$2,996.92, recent +$29.64 (README.md:36-38 rounds these to +$599 / +$2,997 / +$30). All 32 cells carry determinism PASS with pnl_spread $0.00.",
+    "unit": "USD PnL per 90-day window",
+    "windows_manifest": "data/walk_forward_manifest.json \u2014 every window id below is a windows[].id there, and every regime below equals that entry's windows[].regime (verified at transcription).",
+    "per_family": {
+      "crisis": {
+        "n": 12,
+        "mean_usd": 598.53,
+        "sd_usd": 3840.7,
+        "windows": [
+          {"window": "snap_wf_20200101", "pnl_usd": -2709.05, "trades": 13, "determinism": "PASS"},
+          {"window": "snap_wf_20200629", "pnl_usd": 155.46, "trades": 14, "determinism": "PASS"},
+          {"window": "snap_wf_20210326", "pnl_usd": 10343.34, "trades": 14, "determinism": "PASS"},
+          {"window": "snap_wf_20211221", "pnl_usd": -5004.58, "trades": 9, "determinism": "PASS"},
+          {"window": "snap_wf_20220321", "pnl_usd": -24.81, "trades": 12, "determinism": "PASS"},
+          {"window": "snap_wf_20220917", "pnl_usd": 1203.39, "trades": 8, "determinism": "PASS"},
+          {"window": "snap_wf_20230614", "pnl_usd": -1999.45, "trades": 8, "determinism": "PASS"},
+          {"window": "snap_wf_20240310", "pnl_usd": 1149.76, "trades": 9, "determinism": "PASS"},
+          {"window": "snap_wf_20240608", "pnl_usd": 4178.38, "trades": 7, "determinism": "PASS"},
+          {"window": "snap_wf_20241205", "pnl_usd": -685.19, "trades": 18, "determinism": "PASS"},
+          {"window": "snap_wf_20250901", "pnl_usd": -785.75, "trades": 12, "determinism": "PASS"},
+          {"window": "snap_wf_20251130", "pnl_usd": 1360.91, "trades": 6, "determinism": "PASS"}
+        ]
+      },
+      "trend": {
+        "n": 10,
+        "mean_usd": 2996.92,
+        "sd_usd": 5864.8,
+        "windows": [
+          {"window": "snap_wf_20200331", "pnl_usd": -1354.74, "trades": 11, "determinism": "PASS"},
+          {"window": "snap_wf_20200927", "pnl_usd": -17.78, "trades": 14, "determinism": "PASS"},
+          {"window": "snap_wf_20201226", "pnl_usd": 17366.58, "trades": 13, "determinism": "PASS"},
+          {"window": "snap_wf_20210624", "pnl_usd": -316.16, "trades": 14, "determinism": "PASS"},
+          {"window": "snap_wf_20220619", "pnl_usd": 2687.34, "trades": 16, "determinism": "PASS"},
+          {"window": "snap_wf_20221216", "pnl_usd": -657.29, "trades": 6, "determinism": "PASS"},
+          {"window": "snap_wf_20230912", "pnl_usd": 4679.67, "trades": 6, "determinism": "PASS"},
+          {"window": "snap_wf_20231211", "pnl_usd": 7606.27, "trades": 12, "determinism": "PASS"},
+          {"window": "snap_wf_20240906", "pnl_usd": 2041.32, "trades": 5, "determinism": "PASS"},
+          {"window": "snap_wf_20250603", "pnl_usd": -2066.03, "trades": 7, "determinism": "PASS"}
+        ]
+      },
+      "recent": {
+        "n": 10,
+        "mean_usd": 29.64,
+        "sd_usd": 1790.47,
+        "windows": [
+          {"window": "snap_wf_20200813", "pnl_usd": 2550.91, "trades": 5, "determinism": "PASS"},
+          {"window": "snap_wf_20210922", "pnl_usd": -865.06, "trades": 11, "determinism": "PASS"},
+          {"window": "snap_wf_20230130", "pnl_usd": -594.2, "trades": 8, "determinism": "PASS"},
+          {"window": "snap_wf_20230316", "pnl_usd": -2543.87, "trades": 14, "determinism": "PASS"},
+          {"window": "snap_wf_20230430", "pnl_usd": 97.68, "trades": 8, "determinism": "PASS"},
+          {"window": "snap_wf_20230729", "pnl_usd": -692.84, "trades": 12, "determinism": "PASS"},
+          {"window": "snap_wf_20240723", "pnl_usd": 3450.63, "trades": 13, "determinism": "PASS"},
+          {"window": "snap_wf_20250305", "pnl_usd": 771.98, "trades": 13, "determinism": "PASS"},
+          {"window": "snap_wf_20250718", "pnl_usd": -830.86, "trades": 12, "determinism": "PASS"},
+          {"window": "snap_wf_20260228", "pnl_usd": -1047.96, "trades": 13, "determinism": "PASS"}
+        ]
+      }
+    }
+  },
+  "grid_ruler": {
+    "spec": "omega/nodes/victoria/training_log/V247_RULER.md (Phase 0, the instrument) and V247_RULER_CANDIDATES.md (Phase 1, candidate β = PRIMARY, adopted). Implemented by omega/eval/grid_ruler.py.",
+    "instrument": "paired per-window Δ (candidate − standing baseline), aggregated per regime family and pooled. V247_RULER.md §1: \"A verdict is a paired per-window Δ (ON − OFF) aggregated per regime\" — and, of the two distributions named there, only the paired Δ is the verdict instrument; the OFF-arm LEVEL spread \"can never be the gate\".",
+    "bar": "one-sided NO-REGRESSION. A family FAILS iff its mean-Δ is more negative than that family's MDE. V247_RULER.md §7 states the thresholds as a symmetric unfalsifiability rule (\"claims below $X at n=Y: unfalsifiable, may not be used as an acceptance bar\"); §6 names the direction this module gates in — \"a floor does not need to DETECT small effects, only to reject large regressions\".",
+    "mde_formula": "MDE = (z_{1-α/2} + z_{power}) · sd / sqrt(n) = 2.801585 · sd / sqrt(n), two-sided α=0.05 at 80% power (V247_RULER.md §4, and scripts/v247_ruler.py:mde). Normal approximation — slightly optimistic below n≈15, as the doc says. The ruler recomputes it at the grid's ACTUAL n so a short grid gets a correspondingly WIDER bar rather than the published one applied out of range.",
+    "delta_sd_usd": {
+      "_what": "Δ-sd per family per COUPLING CLASS. V247_RULER.md §3 finding 1: \"Δ-sd is mechanism-conditional, by up to 5×\"; §7: \"Any pre-reg must declare its expected coupling class — it determines which MDE row applies.\" Rows transcribed from §3's table (per-grid) and §4's table (median).",
+      "median": {"_cite": "V247_RULER.md §4, \"median Δ sd\" column — the mechanism-AGNOSTIC row, and the one §7's standing thresholds are computed from", "recent": 1178.0, "trend": 4648.0, "crisis": 1935.0, "pooled": 2876.0},
+      "inert": {"_cite": "V247_RULER.md §3, v245_gdelt row — \"a V245-class near-inert feed\"", "recent": 1206.0, "trend": 1414.0, "crisis": 1289.0, "pooled": 1278.0},
+      "low": {"_cite": "V247_RULER.md §3, v246_exit_adapt row — \"a V246-class low-coupling mechanism\" (exit-only / sizing-only)", "recent": 1149.0, "trend": 2699.0, "crisis": 1023.0, "pooled": 1767.0},
+      "heavy": {"_cite": "V247_RULER.md §3, v241_reasoning row — \"a V241-class heavy intervention\" (selection-changing). §4: \"heavy-coupling mechanisms are unmeasurable on this manifest, full stop.\"", "recent": 1660.0, "trend": 7354.0, "crisis": 2848.0, "pooled": 4404.0}
+    },
+    "default_coupling_class": "median",
+    "why_default_median": "A coupling class is a PRE-REGISTRATION act (V247_RULER.md §7), not something a scorer may infer from results. Absent a declared class the ruler uses the mechanism-agnostic median row, which is exactly the row §7's standing thresholds are stated in ($1,043 recent / $4,118 trend / $1,565 crisis at current n). It is also the CONSERVATIVE choice for a no-regression gate on a low-coupling bet: median Δ-sd exceeds the low-coupling Δ-sd in every family, so the bar is wider and the ruler is SLOWER to shout FAIL than a class-specific bar would be. Declaring `--coupling low` narrows it.",
+    "published_mde_usd_at_current_n": {
+      "_cite": "V247_RULER.md §4 / §7 — recomputing the formula above at n = 10/10/12/32 reproduces these to within $1 (the residual is the doc's own inconsistent rounding: recent computes to 1,043.64 and is published as 1,043; pooled computes to 1,424.35 and is published as 1,425). tests/test_grid_ruler.py pins all four.",
+      "recent": 1043.0, "trend": 4118.0, "crisis": 1565.0, "pooled": 1425.0
+    },
+    "n_at_publication": {"recent": 10, "trend": 10, "crisis": 12, "pooled": 32},
+    "advisory_recent_floor_usd": -360.0,
+    "advisory_recent_floor_note": "Candidate β's \"recent no-regression floor (one-sided): recent mean-Δ ≥ −1·SE (≈ −$360 for low-coupling mechanisms)\" (V247_RULER_CANDIDATES.md §β). REPORTED, NOT GATED here — β says exact $ bars \"are fixed in the pre-reg BEFORE any run\", so a standing scorer may not impose one it invented. A pre-registration that adopts it turns it into a failure by setting gate_advisory_recent_floor true.",
+    "gate_advisory_recent_floor": false,
+    "dual_tail": "β's third clause: \"report BOTH Δ-p25 and level-p25 per regime; the pre-reg must name which one it gates on.\" Both are reported per family. Neither is gated — same reason as the recent floor.",
+    "bootstrap": {"resamples": 20000, "seed": 42, "_cite": "matches scripts/v247_ruler.py (BOOT_N=20000, random.Random(42)) so a ruler CI is comparable with the published §2/§3 CIs"},
+    "required_windows": "all 32 ids in data/walk_forward_manifest.json. Fewer is INSUFFICIENT_GRID — never a pass."
+  },
   "trade_count_floor": 20,
   "notes": [
     "WHY per_cell_floor_usd AND campaign_mean_usd ARE TWO DIFFERENT NUMBERS (2026-08-19). campaign_mean_usd (+$599 / +$2,997 / +$30) is the MEAN of a per-regime walk-forward DISTRIBUTION (crisis n=12, trend n=10, recent n=10 x 90-day windows, README.md:27-38), not the PnL of any single cell — and those distributions are heavily right-skewed: crisis's own MEDIAN is +$65 against a +$599 mean, and recent's median is -$644 against a +$30 mean. Applying a family mean as a per-cell bar would therefore FAIL the majority of legitimate cells (over half of crisis, and most of recent, by construction) — an alarm that cries wolf until nobody reads it. So the campaign mean is NOT a per-cell bar, and is not used as one.",
