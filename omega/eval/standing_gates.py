@@ -25,17 +25,37 @@ The discipline that *was* actually being enforced lives in the training journal:
 every pre-registration since V240 carries a **standing baseline** line — e.g.
 `training_log/V271.md:6`, "Standing baseline (MUST NOT MOVE): crisis +$599 /
 trend +$2,997 / recent +$30". Those are per-regime-family PnL levels for the
-whole campaign, not a sibling diff. This module gates against **those**, read
-from `data/standing_baseline.json` (config, committed, provenanced).
+whole campaign, not a sibling diff. This module reads them from
+`data/standing_baseline.json` (config, committed, provenanced).
+
+Two numbers, two jobs (revised 2026-08-19)
+------------------------------------------
+
+`per_cell_floor_usd` (0.0 for all three families) is the **bar**. A cell that
+loses money fails; nothing else does. It needs no distributional argument to be
+defensible, which is exactly what a per-cell verdict has to be.
+
+`campaign_mean_usd` (+$599 / +$2,997 / +$30) is **not a per-cell bar** and is
+not used as one. It is the MEAN of a per-regime walk-forward distribution
+(crisis n=12, trend n=10, recent n=10), and those distributions are heavily
+right-skewed — crisis's median is +$65 against its +$599 mean, recent's is
+-$644 against +$30. Failing every cell below the mean would fail most
+legitimate crisis cells and nearly every legitimate recent one: an alarm that
+cries wolf until nobody reads it. So a cell at or above its floor but below its
+family's campaign mean **passes**, carrying `advisory: "below_campaign_mean"`
+and the margin. The advisory never touches the verdict.
+
+The campaign mean is a GRID-level ruler; comparing a whole grid against it is
+future work, and `training_log/V247_RULER.md` is that instrument's spec.
 
 Verdict vocabulary (a first-class field, not inferred from `passed`)
 --------------------------------------------------------------------
 
-``PASS``          every evaluated gate passed.
+``PASS``          every evaluated gate passed. May carry advisories.
 ``FAIL``          at least one evaluated gate failed.
-``NO_BASELINE``   the cell's regime family could not be resolved, so the family
-                  PnL floor is *not evaluated*. Loud, and the file is still
-                  written — this is the case the old code turned into silence.
+``NO_BASELINE``   the cell's regime family could not be resolved, so the
+                  per-cell PnL floor is *not evaluated*. Loud, and the file is
+                  still written — the case the old code turned into silence.
 ``NO_OP``         the run reproduced a prior run rather than measuring anything
                   new (frozen cache + an N-1 sibling with an identical trade
                   fingerprint, or identical trade count and PnL). This is the
@@ -64,7 +84,9 @@ from pathlib import Path
 from typing import Any
 
 __all__ = [
+    "ADVISORY_BELOW_CAMPAIGN_MEAN",
     "DEFAULT_BASELINE_PATH",
+    "DEFAULT_PER_CELL_FLOOR_USD",
     "TRADE_COUNT_FLOOR",
     "VERDICT_ERROR",
     "VERDICT_FAIL",
@@ -86,6 +108,15 @@ DEFAULT_BASELINE_PATH = ROOT / "data" / "standing_baseline.json"
 # Carried over verbatim from v49_gates.TRADE_COUNT_FLOOR (lowered 50 -> 20 on
 # 2026-04-06). Overridable from the config file.
 TRADE_COUNT_FLOOR = 20
+
+# The per-cell bar when a family's config entry does not name one: a cell that
+# loses money fails. Deliberately not the campaign mean — see the module
+# docstring and the notes in data/standing_baseline.json.
+DEFAULT_PER_CELL_FLOOR_USD = 0.0
+
+# Emitted on a PASSING gate whose PnL sits under its family's campaign mean.
+# Informational: it does not enter `failures` and does not move the verdict.
+ADVISORY_BELOW_CAMPAIGN_MEAN = "below_campaign_mean"
 
 VERDICT_PASS = "PASS"
 VERDICT_FAIL = "FAIL"
@@ -333,32 +364,46 @@ def trades_fingerprint(path: Path | str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def _gate_family_pnl_floor(
+def _gate_cell_pnl_floor(
     summary: dict[str, Any],
     family: str | None,
     families: dict[str, Any],
-) -> tuple[GateCheck, str | None]:
+) -> tuple[GateCheck, str | None, str | None]:
+    """The per-cell bar: FAIL iff the cell's PnL is below its family's floor.
+
+    The floor is `per_cell_floor_usd`, 0.0 by default — a cell that lost money.
+    The family's `campaign_mean_usd` is reported alongside and, when the cell
+    passes but sits under it, raises an ADVISORY. Returns
+    `(check, failure, advisory_note)`; the advisory is prose for `notes` and is
+    deliberately not a failure.
+    """
     if family is None:
         return (
             GateCheck(
                 STATUS_NOT_EVALUATED,
-                {"reason": "cell family unresolved — no standing floor applies"},
+                {"reason": "cell family unresolved — no per-cell floor applies"},
             ),
+            None,
             None,
         )
     spec = families.get(family)
-    if not spec or spec.get("pnl_floor_usd") is None:
+    if not spec:
         return (
             GateCheck(
                 STATUS_NOT_EVALUATED,
                 {
                     "family": family,
-                    "reason": f"standing baseline config carries no pnl_floor_usd for family {family!r}",
+                    "reason": f"standing baseline config carries no entry for family {family!r}",
                 },
             ),
             None,
+            None,
         )
-    floor = float(spec["pnl_floor_usd"])
+    raw_floor = spec.get("per_cell_floor_usd")
+    floor = DEFAULT_PER_CELL_FLOOR_USD if raw_floor is None else float(raw_floor)
+    mean = spec.get("campaign_mean_usd")
+    campaign_mean = float(mean) if mean is not None else None
+
     pnl = summary.get("pnl")
     if pnl is None:
         return (
@@ -371,21 +416,45 @@ def _gate_family_pnl_floor(
                 },
             ),
             None,
+            None,
         )
-    detail = {
+
+    detail: dict[str, Any] = {
         "family": family,
         "candidate_pnl_usd": pnl,
         "floor_usd": floor,
         "margin_usd": round(pnl - floor, 4),
         "journal_cite": spec.get("journal_cite"),
     }
-    if pnl >= floor:
-        return GateCheck(STATUS_PASS, detail), None
-    return (
-        GateCheck(STATUS_FAIL, detail),
-        f"family_pnl_floor[{family}]: candidate {pnl:+.2f} < standing floor {floor:+.2f} "
-        f"(margin {pnl - floor:+.2f})",
-    )
+    if campaign_mean is not None:
+        detail["campaign_mean_usd"] = campaign_mean
+        detail["campaign_mean_margin_usd"] = round(pnl - campaign_mean, 4)
+        detail["campaign_mean_note"] = (
+            "informational — the campaign mean is a grid-level ruler over the "
+            "family's walk-forward window set, not a per-cell bar"
+        )
+
+    if pnl < floor:
+        return (
+            GateCheck(STATUS_FAIL, detail),
+            f"cell_pnl_floor[{family}]: candidate {pnl:+.2f} < per-cell floor {floor:+.2f} "
+            f"(margin {pnl - floor:+.2f})",
+            None,
+        )
+
+    advisory_note: str | None = None
+    if campaign_mean is not None and pnl < campaign_mean:
+        detail["advisory"] = ADVISORY_BELOW_CAMPAIGN_MEAN
+        advisory_note = (
+            f"ADVISORY {ADVISORY_BELOW_CAMPAIGN_MEAN}[{family}]: candidate {pnl:+.2f} clears the "
+            f"per-cell floor {floor:+.2f} but sits {abs(pnl - campaign_mean):,.2f} below the "
+            f"family's campaign mean {campaign_mean:+.2f}. This is INFORMATIONAL and does not "
+            f"affect the verdict: the campaign mean is the mean of a skewed per-regime "
+            f"distribution (crisis's median is +$65 against its +$599 mean), so a single cell "
+            f"below it is not evidence the standing baseline moved. The honest comparison "
+            f"against the mean is grid-level — see training_log/V247_RULER.md."
+        )
+    return GateCheck(STATUS_PASS, detail), None, advisory_note
 
 
 def _gate_trade_count_floor(summary: dict[str, Any], floor: int) -> tuple[GateCheck, str | None]:
@@ -468,9 +537,11 @@ def check_standing_gates(
     """Evaluate a candidate cell against the standing campaign baseline.
 
     The PRIMARY comparison is the candidate's PnL against its regime family's
-    standing floor. The N-1 sibling (`sibling_*`, optional) is a SECONDARY,
-    purely informational signal used for no-op detection; it never decides a
-    pass or a fail on its own.
+    per-cell floor (`per_cell_floor_usd`, 0.0 — did this cell lose money). The
+    family's campaign mean is reported and may raise an advisory, but is not a
+    bar. The N-1 sibling (`sibling_*`, optional) is likewise SECONDARY and
+    purely informational, used for no-op detection; neither decides a pass or a
+    fail on its own.
     """
     config = (
         baseline_config
@@ -489,10 +560,14 @@ def check_standing_gates(
     gates: dict[str, GateCheck] = {}
     failures: list[str] = []
 
-    check, failure = _gate_family_pnl_floor(summary, family, families)
-    gates["family_pnl_floor"] = check
+    check, failure, advisory = _gate_cell_pnl_floor(summary, family, families)
+    gates["cell_pnl_floor"] = check
     if failure:
         failures.append(failure)
+    if advisory:
+        # An advisory rides in `notes`, never in `failures` — `failures` is what
+        # the verdict is computed from, and this must not touch the verdict.
+        notes.append(advisory)
 
     check, failure = _gate_trade_count_floor(summary, trade_floor)
     gates["trade_count_floor"] = check
@@ -568,8 +643,13 @@ def check_standing_gates(
         "trade_count_floor": trade_floor,
     }
     if family and family in families:
-        standing_used["pnl_floor_usd"] = families[family].get("pnl_floor_usd")
-        standing_used["journal_cite"] = families[family].get("journal_cite")
+        spec = families[family]
+        raw_floor = spec.get("per_cell_floor_usd")
+        standing_used["per_cell_floor_usd"] = (
+            DEFAULT_PER_CELL_FLOOR_USD if raw_floor is None else float(raw_floor)
+        )
+        standing_used["campaign_mean_usd"] = spec.get("campaign_mean_usd")
+        standing_used["journal_cite"] = spec.get("journal_cite")
 
     result = StandingGateResult(
         version=str(label),

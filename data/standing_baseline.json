@@ -11,17 +11,20 @@
   "config": "V227-skew (crisis_skew ON, gate ON, X=0.12; IC OFF; brake OFF; frozen_series OFF) + universe_selective_enabled (V240.A ADOPTED) — 10-name universe, effective blacklist {BTC, DOT, LINK}. See training_log/README.md:27-33.",
   "families": {
     "crisis": {
-      "pnl_floor_usd": 599.0,
+      "per_cell_floor_usd": 0.0,
+      "campaign_mean_usd": 599.0,
       "journal_cite": "training_log/V271.md:6; README.md:36 (n=12, mean +$599, median +$65, p25 -$1,089, min -$5,005, max +$10,343)",
       "n_windows": 12
     },
     "trend": {
-      "pnl_floor_usd": 2997.0,
+      "per_cell_floor_usd": 0.0,
+      "campaign_mean_usd": 2997.0,
       "journal_cite": "training_log/V271.md:6; README.md:37 (n=10, mean +$2,997, median +$1,012, p25 -$572, min -$2,066, max +$17,367)",
       "n_windows": 10
     },
     "recent": {
-      "pnl_floor_usd": 30.0,
+      "per_cell_floor_usd": 0.0,
+      "campaign_mean_usd": 30.0,
       "journal_cite": "training_log/V271.md:6; README.md:38 (n=10, mean +$30, median -$644, p25 -$857, min -$2,544, max +$3,451)",
       "n_windows": 10
     }
@@ -60,8 +63,10 @@
   },
   "trade_count_floor": 20,
   "notes": [
-    "SEMANTIC CAVEAT (read this before trusting a green tile): the journal's +$599 / +$2,997 / +$30 are the MEAN of a per-regime walk-forward DISTRIBUTION (crisis n=12, trend n=10, recent n=10 x 90-day windows, README.md:27-38), not the PnL of any single cell. The gate implemented here applies the family mean as a floor to ONE candidate cell's total PnL. That is deliberately a coarser, per-cell tripwire: it catches a cell that has fallen off the campaign's standing level, but a single cell scoring below the family mean is NOT by itself evidence the standing baseline moved (crisis's own median is +$65, far below its +$599 mean). Moving the standing baseline remains a journal act with a pre-registration; this file only records it.",
-    "The floors are per-FAMILY, not per-version. Do not edit them to make a run pass. V271.md:82 lists the standing baseline under \"Never\" for files a version may touch.",
+    "WHY per_cell_floor_usd AND campaign_mean_usd ARE TWO DIFFERENT NUMBERS (2026-08-19). campaign_mean_usd (+$599 / +$2,997 / +$30) is the MEAN of a per-regime walk-forward DISTRIBUTION (crisis n=12, trend n=10, recent n=10 x 90-day windows, README.md:27-38), not the PnL of any single cell — and those distributions are heavily right-skewed: crisis's own MEDIAN is +$65 against a +$599 mean, and recent's median is -$644 against a +$30 mean. Applying a family mean as a per-cell bar would therefore FAIL the majority of legitimate cells (over half of crisis, and most of recent, by construction) — an alarm that cries wolf until nobody reads it. So the campaign mean is NOT a per-cell bar, and is not used as one.",
+    "per_cell_floor_usd IS the unambiguous per-cell bar: a cell that LOSES MONEY fails, and nothing else does. 0.0 for all three families. It is a floor a legitimate cell can be judged against without knowing the shape of the family distribution: PnL < 0 needs no distributional argument to be bad news. Configurable per family so a future pre-registration can raise a family's bar; raising it is a journal act, not a convenience.",
+    "campaign_mean_usd is retained as INFORMATIONAL. A cell whose PnL is >= its per-cell floor but < its family's campaign mean passes, and carries advisory=\"below_campaign_mean\" with the margin. It never affects the verdict. The campaign mean is a GRID-level ruler (a mean over the whole per-regime window set), so the honest comparison against it is a whole-grid aggregation, which this module does not yet do — see V247_RULER.md for what that instrument has to look like (pooled paired-delta MDE ~$875 for a low-coupling mechanism; per-regime MDE $1,043 recent / $1,565 crisis / $4,118 trend).",
+    "The numbers are per-FAMILY, not per-version. Do not edit them to make a run pass. V271.md:82 lists the standing baseline under \"Never\" for files a version may touch.",
     "trade_count_floor 20 is carried over verbatim from omega/eval/v49_gates.py (lowered 50 -> 20 on 2026-04-06 after a 100-cycle zero streak from low signal dispersion).",
     "There is no drawdown floor here on purpose: scripts/run_training.py never writes observability.max_drawdown_usd, so the v49 drawdown_ceiling gate compared 0.0 <= 0.0 and was permanently, vacuously green. The standing gate reports drawdown_ceiling as not_evaluated until a run actually emits the number."
   ]

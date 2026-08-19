@@ -322,14 +322,14 @@ func TestGates_StandingShape(t *testing.T) {
   "verdict": "FAIL",
   "passed": false,
   "gates": {
-    "family_pnl_floor": {"status": "fail", "family": "crisis", "candidate_pnl_usd": 412.55, "floor_usd": 599.0, "margin_usd": -186.45},
+    "cell_pnl_floor": {"status": "fail", "family": "crisis", "candidate_pnl_usd": -186.45, "floor_usd": 0.0, "margin_usd": -186.45, "campaign_mean_usd": 599.0},
     "trade_count_floor": {"status": "pass", "trades": 24, "floor": 20},
     "drawdown_ceiling": {"status": "not_evaluated", "reason": "observability.max_drawdown_usd absent"}
   },
-  "failures": ["family_pnl_floor[crisis]: candidate +412.55 < standing floor +599.00 (margin -186.45)"],
+  "failures": ["cell_pnl_floor[crisis]: candidate -186.45 < per-cell floor +0.00 (margin -186.45)"],
   "notes": ["candidate trade fingerprint (timestamp column dropped): e6289844ea6023a5"],
-  "standing_baseline_used": {"family": "crisis", "family_source": "snapshot_pattern", "pnl_floor_usd": 599.0},
-  "candidate_summary": {"version": "v272_crisis_r1", "pnl": 412.55, "trades": 24, "win_rate": 0.4167, "max_drawdown": null},
+  "standing_baseline_used": {"family": "crisis", "family_source": "snapshot_pattern", "per_cell_floor_usd": 0.0, "campaign_mean_usd": 599.0},
+  "candidate_summary": {"version": "v272_crisis_r1", "pnl": -186.45, "trades": 24, "win_rate": 0.4167, "max_drawdown": null},
   "sibling_comparison": {"status": "informational", "sibling_label": "v271_crisis_r1", "delta_pnl_usd": 0.0}
 }`
 	if err := os.WriteFile(filepath.Join(dir, "v272_crisis_r1_gate_result.json"), []byte(standing), 0o600); err != nil {
@@ -365,8 +365,8 @@ func TestGates_StandingShape(t *testing.T) {
 	}
 	// The lossy bool projection: pass -> true, fail -> false, not_evaluated
 	// OMITTED (guessing a bool for it would be the exact lie this replaces).
-	if v, ok := body.Gates["family_pnl_floor"]; !ok || v {
-		t.Errorf("gates[family_pnl_floor] = %v, %v; want false, true", v, ok)
+	if v, ok := body.Gates["cell_pnl_floor"]; !ok || v {
+		t.Errorf("gates[cell_pnl_floor] = %v, %v; want false, true", v, ok)
 	}
 	if v, ok := body.Gates["trade_count_floor"]; !ok || !v {
 		t.Errorf("gates[trade_count_floor] = %v, %v; want true, true", v, ok)
@@ -375,7 +375,7 @@ func TestGates_StandingShape(t *testing.T) {
 		t.Error("a not_evaluated gate must not appear in the bool map")
 	}
 	// The unlossy projection keeps all three, with their numbers.
-	for _, g := range []string{"family_pnl_floor", "trade_count_floor", "drawdown_ceiling"} {
+	for _, g := range []string{"cell_pnl_floor", "trade_count_floor", "drawdown_ceiling"} {
 		if _, ok := body.GateDetails[g]; !ok {
 			t.Errorf("gate_details missing %q", g)
 		}
@@ -383,11 +383,82 @@ func TestGates_StandingShape(t *testing.T) {
 	if len(body.Baseline) != 0 {
 		t.Error("a standing-gate file has no baseline run; baseline_summary should be omitted")
 	}
-	if body.Candidate.Version != "v272_crisis_r1" || body.Candidate.PnL != 412.55 {
+	if body.Candidate.Version != "v272_crisis_r1" || body.Candidate.PnL != -186.45 {
 		t.Errorf("candidate_summary = %+v", body.Candidate)
 	}
 	if len(body.Notes) != 1 || len(body.Standing) == 0 || len(body.Sibling) == 0 {
 		t.Errorf("notes/standing_baseline_used/sibling_comparison not passed through: %+v", body)
+	}
+}
+
+// TestGates_StandingAdvisory covers the 2026-08-19 revision: the per-cell bar is
+// per_cell_floor_usd ($0), and a cell above it but below its family's
+// campaign_mean_usd PASSES carrying advisory="below_campaign_mean".
+//
+// What this pins on the handler is that the advisory survives. Per-gate objects
+// are held as json.RawMessage and re-emitted verbatim, so a field the handler
+// has never heard of reaches the board intact — but the bool projection is
+// decoded, and it must read this gate as a PASS. A file whose gate says "pass"
+// while the board tints it red would be exactly the cry-wolf alarm the revision
+// removes.
+func TestGates_StandingAdvisory(t *testing.T) {
+	dir := t.TempDir()
+	const standing = `{
+  "version": "v273_crisis_r1",
+  "family": "crisis",
+  "verdict": "PASS",
+  "passed": true,
+  "gates": {
+    "cell_pnl_floor": {"status": "pass", "family": "crisis", "candidate_pnl_usd": 412.55, "floor_usd": 0.0, "margin_usd": 412.55, "campaign_mean_usd": 599.0, "campaign_mean_margin_usd": -186.45, "advisory": "below_campaign_mean"},
+    "trade_count_floor": {"status": "pass", "trades": 24, "floor": 20}
+  },
+  "failures": [],
+  "notes": ["ADVISORY below_campaign_mean[crisis]: candidate +412.55 clears the per-cell floor +0.00"],
+  "standing_baseline_used": {"family": "crisis", "per_cell_floor_usd": 0.0, "campaign_mean_usd": 599.0},
+  "candidate_summary": {"version": "v273_crisis_r1", "pnl": 412.55, "trades": 24}
+}`
+	if err := os.WriteFile(filepath.Join(dir, "v273_crisis_r1_gate_result.json"), []byte(standing), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	srv, cleanup := newTrainingServer(t, dir, "")
+	defer cleanup()
+
+	var body struct {
+		Verdict     string                     `json:"verdict"`
+		Passed      bool                       `json:"passed"`
+		Gates       map[string]bool            `json:"gates"`
+		GateDetails map[string]json.RawMessage `json:"gate_details"`
+		Failures    []string                   `json:"failures"`
+	}
+	resp := getJSON(t, srv.URL+"/api/v1/training/gates?version=v273_crisis_r1", &body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	if body.Verdict != "PASS" || !body.Passed {
+		t.Errorf("verdict/passed = %q/%v, want PASS/true", body.Verdict, body.Passed)
+	}
+	if v, ok := body.Gates["cell_pnl_floor"]; !ok || !v {
+		t.Errorf("gates[cell_pnl_floor] = %v, %v; want true, true — an advisory is not a failure", v, ok)
+	}
+	if len(body.Failures) != 0 {
+		t.Errorf("failures = %v, want empty: an advisory never enters failures", body.Failures)
+	}
+	var detail struct {
+		Status             string  `json:"status"`
+		Advisory           string  `json:"advisory"`
+		CampaignMeanUSD    float64 `json:"campaign_mean_usd"`
+		CampaignMeanMargin float64 `json:"campaign_mean_margin_usd"`
+		FloorUSD           float64 `json:"floor_usd"`
+	}
+	if err := json.Unmarshal(body.GateDetails["cell_pnl_floor"], &detail); err != nil {
+		t.Fatalf("gate_details[cell_pnl_floor]: %v", err)
+	}
+	if detail.Status != "pass" || detail.Advisory != "below_campaign_mean" {
+		t.Errorf("status/advisory = %q/%q", detail.Status, detail.Advisory)
+	}
+	if detail.FloorUSD != 0.0 || detail.CampaignMeanUSD != 599.0 || detail.CampaignMeanMargin != -186.45 {
+		t.Errorf("floor/mean/margin = %v/%v/%v", detail.FloorUSD, detail.CampaignMeanUSD, detail.CampaignMeanMargin)
 	}
 }
 

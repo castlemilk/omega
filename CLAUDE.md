@@ -113,7 +113,7 @@ Gates are **post-run evaluation only** — they read the artifacts a finished ru
 wrote and produce one file. Nothing in the gate path can influence trading,
 sizing or signals.
 
-**The floors come from the training journal, not from the previous run.** Every
+**The numbers come from the training journal, not from the previous run.** Every
 pre-registration since V240 carries a "Standing baseline (MUST NOT MOVE)" line —
 currently `omega/nodes/victoria/training_log/V271.md:6`: **crisis +$599 / trend
 +$2,997 / recent +$30**. Those numbers are transcribed, with citations, into
@@ -127,11 +127,37 @@ its `provenance.snapshot` (via `data/walk_forward_manifest.json`, authoritative)
 or, failing that, from the cell label (`family_patterns` in the config). The
 substrate wins over the name; a conflict is recorded, not hidden.
 
+#### Two numbers, two jobs (revised 2026-08-19)
+
+`per_cell_floor_usd` — **the bar**, `0.0` for all three families. A cell that
+lost money fails; nothing else does. Configurable per family (raising it is a
+journal act).
+
+`campaign_mean_usd` — the journal's +$599 / +$2,997 / +$30, **advisory only,
+never a bar**. They are the MEAN of a per-regime walk-forward distribution
+(crisis n=12, trend n=10, recent n=10) and those distributions are heavily
+right-skewed: crisis's median window is **+$65** against its +$599 mean;
+recent's is **-$644** against +$30. Failing every cell below the mean would fail
+most legitimate crisis cells and nearly every legitimate recent one — an alarm
+that cries wolf until nobody reads it. So a cell at or above its floor but below
+its family's campaign mean **passes**, and its `cell_pnl_floor` gate carries
+`advisory: "below_campaign_mean"` plus `campaign_mean_margin_usd`. The advisory
+rides in `notes`, never in `failures`, and does not move the verdict. The
+Foreman board renders it as an amber note on a PASS tile, not as a failure tint.
+
+**Future work: grid-level aggregation.** The campaign mean is a *grid*-level
+ruler — the honest comparison against it is a whole walk-forward grid, not one
+cell. `omega/nodes/victoria/training_log/V247_RULER.md` is that instrument's
+spec: paired per-window Δ, pooled MDE ≈ **$875** for a low-coupling mechanism
+(per-regime MDE $1,043 recent / $1,565 crisis / $4,118 trend at current n), and
+a declared coupling class per pre-registration. Nothing in this module does that
+yet.
+
 Gates evaluated:
 
 | Gate | Assertion |
 |---|---|
-| `family_pnl_floor` | candidate PnL ≥ the family's standing floor |
+| `cell_pnl_floor` | candidate PnL ≥ the family's `per_cell_floor_usd` ($0 — did this cell lose money). Reports the campaign mean alongside, and raises the `below_campaign_mean` advisory on a pass that sits under it. |
 | `trade_count_floor` | ≥ 20 closed trades (prevents "win by sitting out") |
 | `drawdown_ceiling` | only when `observability.max_drawdown_usd` is present — otherwise `not_evaluated` |
 
@@ -143,12 +169,13 @@ a pass or a fail.
 `passed`), in precedence order:
 
 - **`FAIL`** — at least one evaluated gate failed.
-- **`NO_BASELINE`** — the cell's family could not be resolved, so no standing
+- **`NO_BASELINE`** — the cell's family could not be resolved, so no per-cell
   floor applies. Loud, and the file is still written. This is **not** a pass.
 - **`NO_OP`** — the run used a frozen cache and reproduced its N-1 sibling
   exactly (identical trade fingerprint — timestamp column dropped — or identical
   trade count and PnL). It measured nothing new.
-- **`PASS`** — every evaluated gate passed.
+- **`PASS`** — every evaluated gate passed. May carry advisories (see above);
+  an advisory is never a failure.
 - **`ERROR`** — gate evaluation itself raised. Written by `run_training.py`; the
   training run survives, but the failure is a record, never a silence.
 

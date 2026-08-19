@@ -2038,8 +2038,14 @@ def run(
     # Repointed 2026-08-18 from omega/eval/v49_gates.py (N-1 sibling comparison,
     # which resolved nothing for 39 of the 51 most recent cell labels and
     # compared deterministic replays to themselves) onto the campaign's standing
-    # baseline in data/standing_baseline.json — the journal's per-family PnL
-    # floors (training_log/V271.md:6). v49_gates stays importable for history.
+    # baseline in data/standing_baseline.json (training_log/V271.md:6).
+    # v49_gates stays importable for history.
+    #
+    # Revised 2026-08-19: the per-cell BAR is per_cell_floor_usd (0.0 — a cell
+    # that lost money fails). The journal's crisis +$599 / trend +$2,997 /
+    # recent +$30 are campaign MEANS of skewed distributions (crisis's median is
+    # +$65), so using them per cell would have failed most legitimate cells;
+    # they are now an advisory on a passing gate, never a verdict.
     #
     # Two invariants: a gate file is written for EVERY verdict, including
     # NO_BASELINE and ERROR (the old code wrote nothing and logged a warning —
@@ -2069,11 +2075,15 @@ def run(
         )
         _v = gate_result.verdict
         if _v == "PASS":
+            # The floor is the per-cell bar (0.0 — did this cell lose money),
+            # NOT the campaign mean; the mean rides along as an advisory that
+            # cannot fail the run. See omega/eval/standing_gates.py.
             log.info(
-                "%s standing gates PASS (family=%s, floor $%s)",
+                "%s standing gates PASS (family=%s, per-cell floor $%s, campaign mean $%s)",
                 version.upper(),
                 gate_result.family,
-                gate_result.standing_baseline_used.get("pnl_floor_usd"),
+                gate_result.standing_baseline_used.get("per_cell_floor_usd"),
+                gate_result.standing_baseline_used.get("campaign_mean_usd"),
             )
         elif _v == "FAIL":
             log.error(

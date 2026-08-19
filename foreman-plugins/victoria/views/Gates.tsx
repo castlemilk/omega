@@ -8,10 +8,12 @@
  *
  *   - **Standing** (`omega/eval/standing_gates.py`, from 2026-08-18) — carries a
  *     `verdict` of PASS / FAIL / NO_OP / NO_BASELINE / ERROR, per-gate
- *     `pass|fail|not_evaluated`, and the journal floor it was judged against.
- *     There is no baseline RUN in this shape: the campaign's standing level for
- *     the cell's regime family is the thing compared, and the N-1 sibling is
- *     demoted to an informational no-op detector.
+ *     `pass|fail|not_evaluated`, and the floor it was judged against. There is
+ *     no baseline RUN in this shape. The bar is the family's PER-CELL floor
+ *     ($0: did this cell lose money); the journal's campaign mean is rendered
+ *     as an amber ADVISORY on a passing tile, never as a failure tint, because
+ *     it is a mean over a skewed window distribution and not a per-cell bar.
+ *     The N-1 sibling is likewise an informational no-op detector.
  *   - **Legacy** (`omega/eval/v49_gates.py`) — the six-gate sibling comparison,
  *     280 archived files of it. A file with no `verdict` renders exactly as it
  *     did before the standing board existed. That is a hard requirement: the
@@ -222,13 +224,13 @@ function GateTile({
 
 /** Human labels for the standing gates. Keys are the file's, verbatim. */
 const STANDING_GATE_LABELS: Record<string, string> = {
-  family_pnl_floor: 'Family PnL floor',
+  cell_pnl_floor: 'Per-cell PnL floor',
   trade_count_floor: 'Trade-count floor',
   drawdown_ceiling: 'Drawdown ceiling',
 };
 
 const STANDING_GATE_BLURBS: Record<string, string> = {
-  family_pnl_floor: 'candidate PnL ≥ the journal’s standing floor for this regime family',
+  cell_pnl_floor: 'candidate PnL ≥ the per-cell floor ($0 — did this cell lose money)',
   trade_count_floor: 'at least 20 closed trades',
   drawdown_ceiling: 'only evaluated when the run emitted a drawdown number',
 };
@@ -249,7 +251,7 @@ export const VERDICT_TONE: Record<
     color: '#4ec97a',
     label: 'gates passed',
     sentence:
-      'Every evaluated gate passed against the standing baseline for this cell’s regime family.',
+      'Every evaluated gate passed. The per-cell bar is the $0 floor — did this cell lose money — not the campaign mean; a cell under its family’s campaign mean still passes, with an amber advisory on the tile.',
   },
   FAIL: {
     color: '#e5675b',
@@ -266,7 +268,7 @@ export const VERDICT_TONE: Record<
     color: '#a78bfa',
     label: 'no baseline',
     sentence:
-      'This cell’s regime family could not be resolved, so no standing floor could be applied and the PnL gate was not evaluated. This is NOT a pass. Under the old gates this case wrote no file at all — a silent skip. Fix it by adding a family_patterns entry to data/standing_baseline.json or by naming the cell after its regime.',
+      'This cell’s regime family could not be resolved, so no per-cell floor could be applied and the PnL gate was not evaluated. This is NOT a pass. Under the old gates this case wrote no file at all — a silent skip. Fix it by adding a family_patterns entry to data/standing_baseline.json or by naming the cell after its regime.',
   },
   ERROR: {
     color: '#e5675b',
@@ -287,10 +289,28 @@ const STATUS_TONE: Record<string, { border: string; bg: string; text: string; ma
   },
 };
 
+/**
+ * The amber advisory line for a passing gate that sits under its family's
+ * campaign mean, or `null` when there is nothing to say.
+ *
+ * This is deliberately NOT a failure and must never be tinted as one. The
+ * campaign means (+$599 / +$2,997 / +$30) are means of skewed per-regime
+ * walk-forward distributions — crisis's own median window is +$65 — so a cell
+ * under one is an ordinary cell, not a broken one. The ruler that can actually
+ * be read against the mean is grid-level, which is why the note says so.
+ */
+export function campaignMeanAdvisory(detail: GateDetail): string | null {
+  if (detail.advisory !== 'below_campaign_mean') return null;
+  const margin = detail.campaign_mean_margin_usd;
+  const shortfall = typeof margin === 'number' ? usd(Math.abs(margin)) : '—';
+  const mean = typeof detail.campaign_mean_usd === 'number' ? signedUsd(detail.campaign_mean_usd) : '—';
+  return `below campaign mean by ${shortfall} (mean ${mean}) — informational; the campaign ruler is grid-level, not per-cell.`;
+}
+
 /** The evidence line under a standing gate tile, as text. Pure, so it is assertable. */
 export function standingGateEvidence(gate: string, detail: GateDetail): string[] {
   const lines: string[] = [];
-  if (gate === 'family_pnl_floor' && typeof detail.floor_usd === 'number') {
+  if (gate === 'cell_pnl_floor' && typeof detail.floor_usd === 'number') {
     lines.push(
       `${signedUsd(detail.candidate_pnl_usd ?? 0)} vs floor ${signedUsd(detail.floor_usd)}` +
         (typeof detail.margin_usd === 'number' ? ` (margin ${signedUsd(detail.margin_usd)})` : ''),
@@ -321,6 +341,7 @@ function StandingGateTile({ gate, detail }: { gate: string; detail?: GateDetail 
     mark: status === 'absent' ? '—' : status.toUpperCase(),
   };
   const evidence = detail ? standingGateEvidence(gate, detail) : [];
+  const advisory = detail ? campaignMeanAdvisory(detail) : null;
 
   return (
     <div
@@ -346,6 +367,14 @@ function StandingGateTile({ gate, detail }: { gate: string; detail?: GateDetail 
           {line}
         </div>
       ))}
+      {advisory !== null && (
+        // Amber, and only amber: the tile itself keeps its PASS tint. An
+        // advisory that read as a failure would be the cry-wolf alarm this
+        // whole revision exists to remove.
+        <div className="break-words rounded-md border border-warn/30 bg-warn/10 px-2 py-1.5 font-mono text-[10px] leading-relaxed text-warn">
+          {advisory}
+        </div>
+      )}
     </div>
   );
 }
@@ -438,9 +467,19 @@ export function StandingGateBoard({ result }: { result: GateResult }) {
           <div className="flex flex-col gap-2">
             <Table head={['', 'Value']}>
               <tr className="border-b border-hair">
-                <Txt className="font-mono text-ink3">PnL floor</Txt>
+                <Txt className="font-mono text-ink3">Per-cell floor (the bar)</Txt>
                 <Num className="text-ink2">
-                  {typeof standing.pnl_floor_usd === 'number' ? signedUsd(standing.pnl_floor_usd) : '—'}
+                  {typeof standing.per_cell_floor_usd === 'number'
+                    ? signedUsd(standing.per_cell_floor_usd)
+                    : '—'}
+                </Num>
+              </tr>
+              <tr className="border-b border-hair">
+                <Txt className="font-mono text-ink3">Campaign mean (advisory)</Txt>
+                <Num className="text-ink3">
+                  {typeof standing.campaign_mean_usd === 'number'
+                    ? signedUsd(standing.campaign_mean_usd)
+                    : '—'}
                 </Num>
               </tr>
               <tr className="border-b border-hair">
@@ -462,11 +501,20 @@ export function StandingGateBoard({ result }: { result: GateResult }) {
                 </Num>
               </tr>
             </Table>
+            <p className="text-[10px] leading-relaxed text-muted">
+              The <span className="font-semibold">per-cell floor</span> is the bar: a cell that lost
+              money fails, and nothing else does. The{' '}
+              <span className="font-semibold">campaign mean</span> is the mean of this family&apos;s
+              walk-forward window distribution, which is heavily skewed — crisis&apos;s median window
+              is +$65 against its +$599 mean — so it is <em>not</em> a per-cell bar and never fails a
+              run. Comparing against it honestly is a grid-level aggregation; that instrument is
+              specified in <span className="font-mono">training_log/V247_RULER.md</span> and is not
+              built yet.
+            </p>
             {standing.journal_cite != null && standing.journal_cite !== '' && (
               <p className="text-[10px] leading-relaxed text-muted">
-                Floor cited from <span className="font-mono">{standing.journal_cite}</span>. The
-                floors are a journal act: they move only with a pre-registration, never to make a
-                run pass.
+                Cited from <span className="font-mono">{standing.journal_cite}</span>. These numbers
+                are a journal act: they move only with a pre-registration, never to make a run pass.
               </p>
             )}
             {standing.source != null && standing.source !== '' && (
@@ -698,7 +746,7 @@ export function VictoriaGates(_props: UseCaseViewProps) {
   return (
     <ViewFrame
       title="Gates"
-      subtitle="The gates a finished training run is judged by. Since 2026-08-18 that is omega/eval/standing_gates.py, which measures a run against the campaign's standing baseline for its regime family (the journal's crisis +$599 / trend +$2,997 / recent +$30) and carries an explicit verdict — PASS, FAIL, NO_OP, NO_BASELINE or ERROR. Archived files predating that repoint carry the older six-gate sibling comparison and are rendered as they were written."
+      subtitle="The gates a finished training run is judged by. Since 2026-08-18 that is omega/eval/standing_gates.py, which carries an explicit verdict — PASS, FAIL, NO_OP, NO_BASELINE or ERROR. The per-cell bar is $0: a cell that lost money fails, and nothing else does. The journal's crisis +$599 / trend +$2,997 / recent +$30 are campaign MEANS of skewed walk-forward distributions (crisis's median window is +$65), so they are reported as an advisory on a passing cell rather than used as a per-cell bar. Archived files predating the repoint carry the older six-gate sibling comparison and are rendered as they were written."
       actions={
         <VersionPicker
           value={asked}

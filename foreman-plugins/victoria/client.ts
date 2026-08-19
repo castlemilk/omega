@@ -401,14 +401,19 @@ export type GateName = (typeof GATE_NAMES)[number];
  * The standing-baseline gates (`omega/eval/standing_gates.py`, 2026-08-18), which
  * replaced the v49 sibling comparison as the live path.
  *
- * The names are DIFFERENT from `GATE_NAMES` on purpose — `family_pnl_floor` is
- * not `pnl_floor`. The old gate asked "did this run beat the previous one"; the
- * new one asks "is this run still at the campaign's standing level for its
- * regime family" (the journal's crisis +$599 / trend +$2,997 / recent +$30). A
- * file carries one vocabulary or the other, never both.
+ * The names are DIFFERENT from `GATE_NAMES` on purpose — `cell_pnl_floor` is not
+ * `pnl_floor`. The old gate asked "did this run beat the previous one"; this one
+ * asks the per-cell question that needs no distributional argument: "did this
+ * cell lose money" (`per_cell_floor_usd`, $0). A file carries one vocabulary or
+ * the other, never both.
+ *
+ * The journal's crisis +$599 / trend +$2,997 / recent +$30 are still here, but
+ * as `campaign_mean_usd` — an ADVISORY, not a bar. They are means of skewed
+ * per-regime walk-forward distributions (crisis's median is +$65), so a cell
+ * below one is not a failing cell; see `GateDetail.advisory`.
  */
 export const STANDING_GATE_NAMES = [
-  'family_pnl_floor',
+  'cell_pnl_floor',
   'trade_count_floor',
   'drawdown_ceiling',
 ] as const;
@@ -452,6 +457,17 @@ export interface GateDetail {
   candidate_pnl_usd?: number;
   floor_usd?: number;
   margin_usd?: number;
+  /**
+   * `"below_campaign_mean"` on a PASSING `cell_pnl_floor` whose PnL sits under
+   * its family's campaign mean. Informational: the gate passed, the verdict is
+   * unaffected, and the board must render it as a note rather than a failure.
+   */
+  advisory?: string;
+  /** The family's campaign mean — reported for context, never used as a bar. */
+  campaign_mean_usd?: number;
+  /** candidate PnL − campaign mean. Negative when the advisory is present. */
+  campaign_mean_margin_usd?: number;
+  campaign_mean_note?: string;
   journal_cite?: string;
   trades?: number;
   floor?: number;
@@ -467,7 +483,10 @@ export interface StandingBaselineUsed {
   family?: string | null;
   /** How the family was resolved: manifest / snapshot_pattern / label_pattern / unresolved. */
   family_source?: string;
-  pnl_floor_usd?: number;
+  /** The per-cell bar actually applied ($0 by default). */
+  per_cell_floor_usd?: number;
+  /** The journal's campaign mean for the family — advisory only. */
+  campaign_mean_usd?: number;
   trade_count_floor?: number;
   journal_cite?: string;
 }

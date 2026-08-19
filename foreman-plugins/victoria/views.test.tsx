@@ -27,6 +27,7 @@ import {
   GateLoadFailure,
   VERDICT_TONE,
   VictoriaGates,
+  campaignMeanAdvisory,
   standingGateEvidence,
 } from './views/Gates.js';
 import { ConvictionFunnel, NoDecisionTraces, VictoriaConviction } from './views/Conviction.js';
@@ -212,22 +213,24 @@ describe('the Gates board', () => {
 
 /**
  * A real standing-gate file, as `omega/eval/standing_gates.py` writes it and the
- * handler projects it. This one FAILS its family floor: crisis's standing floor
- * is +$599 (training_log/V271.md:6) and the run made +$412.55.
+ * handler projects it. This one FAILS the per-cell floor — the cell lost money
+ * (-$186.45), which is the only thing that fails a cell.
  */
 const STANDING_RESULT: GateResult = {
   version: 'v272_crisis_r1',
   passed: false,
   verdict: 'FAIL',
   family: 'crisis',
-  gates: { family_pnl_floor: false, trade_count_floor: true },
+  gates: { cell_pnl_floor: false, trade_count_floor: true },
   gate_details: {
-    family_pnl_floor: {
+    cell_pnl_floor: {
       status: 'fail',
       family: 'crisis',
-      candidate_pnl_usd: 412.55,
-      floor_usd: 599,
+      candidate_pnl_usd: -186.45,
+      floor_usd: 0,
       margin_usd: -186.45,
+      campaign_mean_usd: 599,
+      campaign_mean_margin_usd: -785.45,
       journal_cite: 'training_log/V271.md:6',
     },
     trade_count_floor: { status: 'pass', trades: 24, floor: 20 },
@@ -241,13 +244,14 @@ const STANDING_RESULT: GateResult = {
     updated: '2026-08-18',
     family: 'crisis',
     family_source: 'snapshot_pattern',
-    pnl_floor_usd: 599,
+    per_cell_floor_usd: 0,
+    campaign_mean_usd: 599,
     trade_count_floor: 20,
     journal_cite: 'training_log/V271.md:6',
   },
-  candidate_summary: { version: 'v272_crisis_r1', pnl: 412.55, trades: 24, win_rate: 0.4167 },
+  candidate_summary: { version: 'v272_crisis_r1', pnl: -186.45, trades: 24, win_rate: 0.4167 },
   failures: [
-    'family_pnl_floor[crisis]: candidate +412.55 < standing floor +599.00 (margin -186.45)',
+    'cell_pnl_floor[crisis]: candidate -186.45 < per-cell floor +0.00 (margin -186.45)',
   ],
   notes: ['candidate trade fingerprint (timestamp column dropped): e6289844ea6023a5…'],
   resolved_latest: false,
@@ -259,11 +263,70 @@ describe('the Gates board, standing-baseline shape', () => {
     expect(html).toContain('v272_crisis_r1');
     expect(html).toContain('FAIL');
     expect(html).toContain('family: crisis');
-    expect(html).toContain('Family PnL floor');
-    expect(html).toContain('$599.00');
+    expect(html).toContain('Per-cell PnL floor');
     expect(html).toContain('-$186.45');
     expect(html).toContain('Standing baseline applied');
     expect(html).toContain('training_log/V271.md:6');
+    // Both numbers are on the board, in their distinct roles.
+    expect(html).toContain('Per-cell floor (the bar)');
+    expect(html).toContain('Campaign mean (advisory)');
+    expect(html).toContain('$599.00');
+  });
+
+  it('renders a positive-below-mean cell as a PASS with an amber advisory, not a failure', () => {
+    // The revision, rendered: +$412.55 in crisis clears the $0 per-cell floor
+    // but sits under the +$599 campaign mean. Crisis's median walk-forward
+    // window is +$65, so failing this cell would fail most legitimate ones.
+    const html = renderToStaticMarkup(
+      <GateBoard
+        result={{
+          ...STANDING_RESULT,
+          verdict: 'PASS',
+          passed: true,
+          failures: [],
+          gates: { cell_pnl_floor: true, trade_count_floor: true },
+          gate_details: {
+            ...STANDING_RESULT.gate_details,
+            cell_pnl_floor: {
+              status: 'pass',
+              family: 'crisis',
+              candidate_pnl_usd: 412.55,
+              floor_usd: 0,
+              margin_usd: 412.55,
+              campaign_mean_usd: 599,
+              campaign_mean_margin_usd: -186.45,
+              advisory: 'below_campaign_mean',
+            },
+          },
+          candidate_summary: { version: 'v272_crisis_r1', pnl: 412.55, trades: 24 },
+        }}
+      />,
+    );
+    expect(html).toContain('PASS');
+    expect(html).toContain('below campaign mean by $186.45');
+    expect(html).toContain('informational');
+    expect(html).toContain('grid-level');
+    // Amber, not red: the advisory must not be tinted or worded as a failure.
+    expect(html).toContain('text-warn');
+    expect(html).not.toContain('gates failed');
+    expect(html).not.toContain('FAIL');
+  });
+
+  it('builds the advisory line only for a below-mean gate', () => {
+    expect(
+      campaignMeanAdvisory({
+        status: 'pass',
+        advisory: 'below_campaign_mean',
+        campaign_mean_usd: 2997,
+        campaign_mean_margin_usd: -1997,
+      }),
+    ).toBe(
+      'below campaign mean by $1,997.00 (mean +$2,997.00) — informational; the campaign ruler is grid-level, not per-cell.',
+    );
+    // No advisory field: nothing to say.
+    expect(
+      campaignMeanAdvisory({ status: 'pass', campaign_mean_usd: 599, campaign_mean_margin_usd: 101 }),
+    ).toBeNull();
   });
 
   it('says NOT EVALUATED for a gate whose input was absent, never PASS', () => {
@@ -283,12 +346,14 @@ describe('the Gates board, standing-baseline shape', () => {
           failures: [],
           gate_details: {
             ...STANDING_RESULT.gate_details,
-            family_pnl_floor: {
+            cell_pnl_floor: {
               status: 'pass',
               family: 'crisis',
               candidate_pnl_usd: 1149.76,
-              floor_usd: 599,
-              margin_usd: 550.76,
+              floor_usd: 0,
+              margin_usd: 1149.76,
+              campaign_mean_usd: 599,
+              campaign_mean_margin_usd: 550.76,
             },
           },
           sibling_comparison: {
@@ -324,7 +389,7 @@ describe('the Gates board, standing-baseline shape', () => {
           family: null,
           failures: [],
           gate_details: {
-            family_pnl_floor: {
+            cell_pnl_floor: {
               status: 'not_evaluated',
               reason: 'cell family unresolved — no standing floor applies',
             },
@@ -334,7 +399,8 @@ describe('the Gates board, standing-baseline shape', () => {
             ...STANDING_RESULT.standing_baseline_used,
             family: null,
             family_source: 'unresolved',
-            pnl_floor_usd: undefined,
+            per_cell_floor_usd: undefined,
+            campaign_mean_usd: undefined,
           },
         }}
       />,
@@ -366,7 +432,7 @@ describe('the Gates board, standing-baseline shape', () => {
     expect(html).toContain('not reported by this gate file');
   });
 
-  it('renders a PASS as a pass, with the floor it cleared', () => {
+  it('renders an above-the-mean PASS as a pass, with no advisory at all', () => {
     const html = renderToStaticMarkup(
       <GateBoard
         result={{
@@ -376,32 +442,35 @@ describe('the Gates board, standing-baseline shape', () => {
           failures: [],
           gate_details: {
             ...STANDING_RESULT.gate_details,
-            family_pnl_floor: {
+            cell_pnl_floor: {
               status: 'pass',
               family: 'crisis',
               candidate_pnl_usd: 700,
-              floor_usd: 599,
-              margin_usd: 101,
+              floor_usd: 0,
+              margin_usd: 700,
+              campaign_mean_usd: 599,
+              campaign_mean_margin_usd: 101,
             },
           },
         }}
       />,
     );
     expect(html).toContain('PASS');
-    expect(html).toContain('+$101.00');
+    expect(html).toContain('+$700.00');
     expect(html).toContain('Every evaluated gate passed');
+    expect(html).not.toContain('below campaign mean');
   });
 
   it('builds the evidence line for each standing gate', () => {
     expect(
-      standingGateEvidence('family_pnl_floor', {
+      standingGateEvidence('cell_pnl_floor', {
         status: 'fail',
         family: 'crisis',
-        candidate_pnl_usd: 412.55,
-        floor_usd: 599,
+        candidate_pnl_usd: -186.45,
+        floor_usd: 0,
         margin_usd: -186.45,
       }),
-    ).toEqual(['+$412.55 vs floor +$599.00 (margin -$186.45)', 'family: crisis']);
+    ).toEqual(['-$186.45 vs floor $0.00 (margin -$186.45)', 'family: crisis']);
     expect(standingGateEvidence('trade_count_floor', { status: 'pass', trades: 24, floor: 20 })).toEqual([
       '24 trades vs floor 20',
     ]);
