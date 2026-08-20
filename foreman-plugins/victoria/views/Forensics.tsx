@@ -26,7 +26,7 @@ import { useState } from 'react';
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
 import { GroupedBarChart } from '../charts.js';
 import type { ForensicsEntry, ForensicsReport } from '../client.js';
-import { pct, pnlClass, ratio, regimeColor, signedUsd, usd } from '../format.js';
+import { pct, pluralize, pnlClass, ratio, regimeColor, signedUsd, usd } from '../format.js';
 import { useVictoriaForensics, useVictoriaForensicsList } from '../hooks.js';
 import { Async, Card, EmptyNote, Num, Stat, Table, Txt, ViewFrame } from './chrome.js';
 
@@ -386,12 +386,18 @@ export function ForensicsList({
           </Table>
           {unpaired.length > 0 && (
             <p className="text-[10.5px] leading-relaxed text-muted">
-              {String(unpaired.length)} file{unpaired.length === 1 ? '' : 's'} in the data directory
-              end in <span className="font-mono">forensics.json</span> without the{' '}
-              <span className="font-mono">&#123;baseline&#125;-&#123;target&#125;</span> naming and
-              are not openable here:{' '}
-              <span className="font-mono text-ink3">{unpaired.join(', ')}</span>. They are different
-              documents — <span className="font-mono">v240_universe_forensics.json</span> is a
+              {String(unpaired.length)} {pluralize(unpaired.length, 'file', 'files')} in the data
+              directory {pluralize(unpaired.length, 'ends', 'end')} in{' '}
+              <span className="font-mono">forensics.json</span> without the{' '}
+              <span className="font-mono">&#123;baseline&#125;-&#123;target&#125;</span> naming and{' '}
+              {pluralize(unpaired.length, 'is', 'are')} not openable here:{' '}
+              <span className="font-mono text-ink3">{unpaired.join(', ')}</span>.{' '}
+              {pluralize(
+                unpaired.length,
+                'It is a different document',
+                'They are different documents',
+              )}{' '}
+              — <span className="font-mono">v240_universe_forensics.json</span> is a
               universe-selection sweep, not a run diff.
             </p>
           )}

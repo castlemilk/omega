@@ -73,6 +73,19 @@ export function signedCount(value: Maybe): string {
   return `${value > 0 ? '+' : ''}${String(Math.round(value))}`;
 }
 
+/**
+ * The word that agrees with `count` — `pluralize(1, 'file', 'files')` → "file".
+ *
+ * Deliberately takes both forms rather than appending an "s", because the
+ * sentences that need it need verbs as well as nouns: "1 file **ends** … and
+ * **is** not openable" against "2 files **end** … and **are** not openable".
+ * A helper that only handled nouns would leave the verbs disagreeing, which is
+ * exactly the bug it exists to fix.
+ */
+export function pluralize(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
+}
+
 /** Foreman token colour for a PnL figure. Flat/absent stays neutral. */
 export function pnlClass(value: Maybe): string {
   if (!ok(value) || value === 0) return 'text-ink3';
