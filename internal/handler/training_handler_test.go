@@ -628,8 +628,11 @@ func TestGridRuler_HappyPath(t *testing.T) {
 	if len(body.Coverage) == 0 {
 		t.Error("coverage should be passed through")
 	}
-	if len(body.RulerNotes) == 0 {
-		t.Error("ruler_notes should be passed through — every conservative choice lives there")
+	// [] not null, same rule as failures: a clean run legitimately has zero
+	// conservative choices to flag, but the FIELD must always arrive so "no
+	// notes" stays distinguishable from "handler dropped them".
+	if body.RulerNotes == nil {
+		t.Error("ruler_notes should be passed through as [] — every conservative choice lives there when present")
 	}
 	if len(body.Standing) == 0 {
 		t.Error("standing_distribution_used should be passed through")

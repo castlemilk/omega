@@ -1357,7 +1357,9 @@ type gridRulerResponse struct {
 	Families   map[string]json.RawMessage `json:"families,omitempty"`
 	Coverage   json.RawMessage            `json:"coverage,omitempty"`
 	Failures   []string                   `json:"failures"`
-	RulerNotes []string                   `json:"ruler_notes,omitempty"`
+	// No omitempty: [] must reach the client (see the nil-normalization at the
+	// call site — absence would be indistinguishable from a dropped field).
+	RulerNotes []string                   `json:"ruler_notes"`
 	Standing   json.RawMessage            `json:"standing_distribution_used,omitempty"`
 	Provenance json.RawMessage            `json:"provenance,omitempty"`
 	Error      string                     `json:"error,omitempty"`
@@ -1492,6 +1494,12 @@ func (h *TrainingHandler) handleGridRuler(w http.ResponseWriter, r *http.Request
 	}
 	if raw.Failures == nil {
 		raw.Failures = []string{}
+	}
+	// Same []-not-null rule as failures: an empty ruler_notes means "no
+	// conservative choices to flag" and must stay distinguishable from the
+	// handler having dropped the field.
+	if raw.RulerNotes == nil {
+		raw.RulerNotes = []string{}
 	}
 	label := raw.RunLabel
 	if label == "" {
