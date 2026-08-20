@@ -51,6 +51,22 @@ is "passes the does-not-regress bar with more breadth", not a significance
 claim. Previous (V235/V238/V239-era, 4-name legacy) baseline for reference:
 crisis +$819 / trend +$1,941 / recent −$516.
 
+**V274 (2026-08-20) certified this table's provenance and re-ran it.** V273's H3
+flagged `ic_seed_weighting` / `per_regime_ic_weighting` as **defaults-ON** in
+`features.py` and its §7 concluded these three numbers "were all produced with
+retrospectively-derived IC weights in the conviction filter". **That conclusion was
+wrong** — inferred from the defaults, never checked against the run record. All
+**32/32** cells behind this table record `"ic_seed_weighting": false` explicitly
+(the arm at `scripts/v240_wf_grid.sh:48`), reproduce the table's means to the cent,
+and re-ran on 2026-08-20 at **0.000000 drift** (crisis $1,149.76 / trend $4,679.67 /
+recent $771.98 sentinels, exact). **The standing baseline is the causal control, not
+the contaminated arm.** The IC-ON counterfactual was measured over the same 32
+windows: it moves **all 32 cells**, changes 31 trade counts, flips **8 signs**, and
+swings one crisis window 7× — yet every family mean-Δ lands inside its own MDE
+(crisis +$78/$2,329, trend +$892/$2,383, recent −$6/$1,060, pooled +$306/$1,174).
+A heavy-coupling knob with a large per-cell footprint and no resolvable direction:
+it stays OFF. See `V274.md`.
+
 **V238 (2026-07-10) re-confirmed these numbers to the cent** — its `main` cells
 are byte-identical to the V235 grid (`nonzero_diffs: {}`, 32/32), so the
 frozen-series feed build did NOT move the standing baseline. The **"signals
