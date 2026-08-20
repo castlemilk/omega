@@ -994,6 +994,35 @@ class VictoriaFeatures:
     """V248: loser max hold while runtime regime == crisis."""
 
     # ------------------------------------------------------------------
+    # V275 — crisis-term recompute-proofing (invariance, not a new signal)
+    # ------------------------------------------------------------------
+
+    crisis_term_rebind_enabled: bool = False
+    """V275: make the V227 crisis-skew term survive every downstream recompute of
+    ``composite``. The term is applied ONCE, additively, post-demean and lives ONLY
+    in ``composite`` (never a ``*_signal`` key — that is what stops the basket
+    selector trimming a one-sided term). Three default-dependent paths then discard
+    ``composite`` and rebuild it from the ``*_signal`` keys, silently dropping the
+    term while its fire counters keep incrementing:
+      1. ``strategy._compute_weighted_conviction`` — with ``ic_seed_weighting`` ON
+         (the DEFAULT; 18 seeded ICs) the IC-weighted return never reads
+         ``composite`` at all, so the crisis term loses its primary lever;
+      2. ``strategy._apply_regime_signal_weights`` — mean-of-``*_signal`` recompute
+         (inert only because ``strategy_selector_enabled`` defaults False);
+      3. the V141 crisis-dampening and V153 trend-dampening recomputes inside the
+         per-ticker candidate loop, immediately before the conviction filter (inert
+         only because the dampening weights default 1.0 — and the V141 one fires
+         under ``_is_bear_context``, exactly when the crisis term fires).
+    When ON, ``signals/crisis_rebind.py`` re-applies the ALREADY-GATED, ALREADY-
+    STASHED term (``weight * value``, never re-derived, never re-gated) at the end
+    of each recompute site, and adds the same magnitude to the IC-weighted
+    conviction return. Idempotent (double-application guarded). Observability:
+    ``crisis_rebind_composite_cycles`` / ``crisis_rebind_ic_cycles``.
+    Default OFF ⇒ the stash keys are never written and no call site does anything
+    ⇒ byte-identical to the standing main. This is an INVARIANCE change, not a new
+    signal: it does not alter the gate, the weight, or when the term fires."""
+
+    # ------------------------------------------------------------------
     # Class methods
     # ------------------------------------------------------------------
 
