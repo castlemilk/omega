@@ -11,24 +11,100 @@
  *      `events` option in UC-3; without it this panel would sit at "connecting"
  *      forever against a perfectly healthy stream.
  *   3. `/api/v1/training/progress` — enrichment only: PnL/win-rate history,
- *      regime, activity log. It is **expected to fail**. The handler unmarshals
- *      `data/training_progress.json` into a struct while omega's own
- *      `run_training.py` writes a JSON *array* there, so it answers HTTP 500 on
- *      the real repo data. That failure is rendered in its own panel and does
- *      not take the view down — the alternative, catching it and showing an
- *      idle run, would report a healthy system that is actually broken.
+ *      regime, activity log. It is allowed to fail. The handler used to
+ *      unmarshal `data/training_progress.json` into a struct while omega's own
+ *      `run_training.py` wrote a JSON *array* there, and answered HTTP 500 on
+ *      the real repo data; `loadProgress` now accepts both shapes, but the
+ *      failure branch stays and is rendered in its own panel rather than taking
+ *      the view down — the alternative, catching it and showing an idle run,
+ *      would report a healthy system that is actually broken.
+ *
+ * ── Live is a claim, and it has to be earned ─────────────────────────────────
+ * None of these three says "a run is happening" on its own. `status` is
+ * **inferred from a file's mtime**: `loadProgress` labels the checkpoint array
+ * `running` only while `data/training_progress.json` was written inside
+ * `runningWindow` (10 minutes) and `complete` otherwise, and `/metrics` copies
+ * that status through. So a record from a run that ended weeks ago arrives
+ * looking exactly like a live one apart from that word — which is how this view
+ * came to show `CYCLE 45 / 0` and a flat sparkline for a trainer that was not
+ * running. `liveness()` is the one place that decides, and everything that would
+ * read as live is behind it.
  */
-import { clock, Pill, StatusDot } from '@omega-harness/usecase-kit/ui';
+import { ago, clock, Pill, StatusDot } from '@omega-harness/usecase-kit/ui';
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
 import { Sparkline } from '../charts.js';
-import type { TrainingMetrics } from '../client.js';
+import type { TrainingMetrics, TrainingProgress } from '../client.js';
 import { pct, pnlClass, regimeColor, signedUsd } from '../format.js';
 import { useVictoriaLiveStream, useVictoriaMetrics, useVictoriaProgress } from '../hooks.js';
 import { Async, Card, EmptyNote, ErrorNote, LoadingNote, Stat, ViewFrame } from './chrome.js';
 
-/** A run is idle when nothing has cycled and the backend says so. */
-function isIdle(m: TrainingMetrics): boolean {
-  return m.status === 'idle' && m.current_cycle === 0 && m.total_trades === 0;
+/** The only status the omega API uses to mean "a run is going right now". */
+export const RUNNING_STATUS = 'running';
+
+export interface Liveness {
+  live: boolean;
+  /** Every reason the payload is not a live run, in the operator's words. */
+  reasons: string[];
+}
+
+/**
+ * Is this payload describing a run in progress, or a record of an old one?
+ *
+ * Three independent ways to fail, all of them observed on the real repo data
+ * (2026-08-20: `status: "complete"`, cycle 45, total 0):
+ *
+ *   - the status the API inferred from the progress file's mtime is not
+ *     `running`;
+ *   - there is no cycle total, so "45 / 0" is a fraction with no denominator
+ *     rather than a progress reading;
+ *   - the counter is past the total, which no run in progress can be.
+ *
+ * All the reasons are collected rather than short-circuited: the empty state has
+ * to say *why*, and "not running" and "and its numbers are incoherent" are two
+ * different things to know.
+ */
+export function liveness(p: {
+  status?: string;
+  current_cycle?: number;
+  total_cycles?: number;
+}): Liveness {
+  const status = p.status ?? '';
+  const current = p.current_cycle ?? 0;
+  const total = p.total_cycles ?? 0;
+  const reasons: string[] = [];
+
+  if (status !== RUNNING_STATUS) {
+    reasons.push(
+      status === ''
+        ? 'the API reported no status at all'
+        : `the API reports status “${status}”, not “running” — it infers that from data/training_progress.json's mtime, and the file has not been written in the last ten minutes`,
+    );
+  }
+  if (total <= 0) {
+    reasons.push(
+      `the record carries no cycle total (total_cycles is ${String(total)}), so “${String(current)} / ${String(total)}” is not a progress reading`,
+    );
+  } else if (current > total) {
+    reasons.push(
+      `the cycle counter (${String(current)}) is past the recorded total (${String(total)})`,
+    );
+  }
+  return { live: reasons.length === 0, reasons };
+}
+
+/**
+ * Can this series be drawn as a trend?
+ *
+ * Two values are the minimum for a line at all (`Sparkline` already says "no
+ * history" below that). The second clause is the one that matters here: a
+ * series of identical values — in practice a column of exact zeros carried by a
+ * stale record — draws a confident flat line that reads as a measured result of
+ * "no change", when what it actually is is a column the writer never filled.
+ * Saying how many points it holds and that they are all the same value is
+ * strictly more information than the line was carrying.
+ */
+export function plottable(values: readonly number[]): boolean {
+  return values.length >= 2 && values.some((v) => v !== values[0]);
 }
 
 function StreamPanel() {
@@ -110,44 +186,151 @@ function ProgressPanel() {
 
   const p = progress.data;
   if (!p) return null;
+  return <ProgressDetail progress={p} />;
+}
 
+/**
+ * Why a series is not drawn, in the terms of the series itself.
+ *
+ * Never "no data": the record may hold twenty points and still have nothing to
+ * plot, and an operator who is told "no data" will go looking for a file that is
+ * sitting right there, full of zeros.
+ */
+export function unplottableReason(
+  values: readonly number[],
+  format: (v: number) => string,
+): string {
+  if (values.length === 0) return 'nothing to plot — the record carries no points for this series';
+  if (values.length === 1) return 'nothing to plot — one recorded point is not a trend';
+  return `nothing to plot — all ${String(values.length)} recorded points are the same value (${format(values[0])})`;
+}
+
+function Series({
+  label,
+  values,
+  color,
+  format,
+}: {
+  label: string;
+  values: readonly number[];
+  color: string;
+  format: (v: number) => string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="font-mono text-[9.5px] uppercase tracking-[.08em] text-faint">{label}</span>
+      {plottable(values) ? (
+        <Sparkline values={values} width={300} height={40} color={color} label={label} />
+      ) : (
+        <p className="max-w-[40ch] font-mono text-[9.5px] leading-relaxed text-faint">
+          {unplottableReason(values, format)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The run's own progress record, separated from the fetch so both a live and a
+ * stale payload render on a fixture.
+ *
+ * `now` is injectable for the same reason: "3d ago" is part of the sentence this
+ * panel asserts, and a clock a test cannot fix is a sentence a test cannot read.
+ */
+export function ProgressDetail({
+  progress: p,
+  now = Date.now(),
+}: {
+  progress: TrainingProgress;
+  now?: number;
+}) {
+  const state = liveness(p);
   const pnlSeries = (p.pnl_history ?? []).map((h) => h.pnl);
   const winSeries = (p.win_rate_history ?? []).map((h) => h.win_rate);
   const activity = (p.activity_log ?? []).slice(-24).reverse();
-  const regime = p.current_regime?.name;
+  const regime = p.current_regime?.name ?? '';
+  // "unknown" is the literal regime run_training.py writes for a cycle it could
+  // not classify, and the confidence beside it is a Go zero value the JSON always
+  // emits — the pill used to read "unknown 0%", which is a measurement of nothing
+  // dressed as one.
+  const namedRegime = regime !== '' && regime.toLowerCase() !== 'unknown';
+  const confidence = p.current_regime?.confidence;
+  const runId = p.run_id ?? '';
+  const startedAt = p.started_at ?? '';
+  const current = p.current_cycle ?? 0;
+  const total = p.total_cycles ?? 0;
 
   return (
     <Card
       label="Run detail"
       right={
-        regime != null && (
+        namedRegime ? (
           <Pill color={regimeColor(regime)}>
             {regime}
-            {p.current_regime?.confidence != null
-              ? ` ${pct(p.current_regime.confidence, 0)}`
-              : ''}
+            {confidence != null && confidence > 0 ? ` ${pct(confidence, 0)}` : ''}
           </Pill>
+        ) : (
+          <span className="font-mono text-[9.5px] text-faint">
+            {regime === '' ? 'no regime recorded' : 'regime not classified'}
+          </span>
         )
       }
     >
       <div className="flex flex-col gap-3.5">
+        {!state.live && (
+          <EmptyNote
+            title="No training run in progress"
+            detail={
+              <span className="flex flex-col gap-1.5 text-left">
+                <span>
+                  Last recorded progress: cycle <span className="font-mono">{String(current)}</span>
+                  {total > 0 ? (
+                    <> of <span className="font-mono">{String(total)}</span></>
+                  ) : (
+                    <> (the record carries no cycle total)</>
+                  )}
+                  ,{' '}
+                  {runId !== '' ? (
+                    <>run <span className="font-mono">{runId}</span></>
+                  ) : (
+                    <>
+                      no run id — <span className="font-mono">run_training.py</span> writes a
+                      checkpoint array, which has no <span className="font-mono">run_id</span> field
+                    </>
+                  )}
+                  ,{' '}
+                  {startedAt === ''
+                    ? 'and no start timestamp'
+                    : `first checkpoint ${ago(startedAt, now)}`}
+                  .
+                </span>
+                {state.reasons.map((r) => (
+                  <span key={r}>· {r}</span>
+                ))}
+                <span>
+                  What is below is that record, not a run in flight. Start one with{' '}
+                  <span className="font-mono">scripts/run_training.py</span>; finished runs are in
+                  the Runs tab.
+                </span>
+              </span>
+            }
+          />
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <span className="font-mono text-[9.5px] uppercase tracking-[.08em] text-faint">
-              PnL by cycle
-            </span>
-            <Sparkline values={pnlSeries} width={300} height={40} color="#4ec97a" label="PnL by cycle" />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="font-mono text-[9.5px] uppercase tracking-[.08em] text-faint">
-              Win rate by cycle
-            </span>
-            <Sparkline values={winSeries} width={300} height={40} color="#5b9dff" label="win rate by cycle" />
-          </div>
+          <Series label="PnL by cycle" values={pnlSeries} color="#4ec97a" format={signedUsd} />
+          <Series
+            label="Win rate by cycle"
+            values={winSeries}
+            color="#5b9dff"
+            format={(v) => pct(v)}
+          />
         </div>
 
         {activity.length === 0 ? (
-          <EmptyNote title="No activity logged for this run" />
+          <EmptyNote
+            title="No activity logged for this run"
+            detail="The progress record's activity_log is empty. The checkpoint array run_training.py writes carries per-cycle numbers but no log lines, so this list stays empty for every run stored in that shape."
+          />
         ) : (
           <div className="flex max-h-56 flex-col gap-1 overflow-y-auto">
             {activity.map((a, i) => (
@@ -167,6 +350,72 @@ function ProgressPanel() {
   );
 }
 
+/** The aggregate strip, separated from the fetch so both states render on a fixture. */
+export function LiveMetrics({ metrics: m }: { metrics: TrainingMetrics }) {
+  const state = liveness(m);
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        <Stat
+          label="Cycle"
+          // A cycle counter is a *live* reading. With no run in flight there is
+          // no such reading — the last recorded one is reported below, in a
+          // sentence that can say what it is.
+          value={state.live ? `${String(m.current_cycle)} / ${String(m.total_cycles)}` : '—'}
+          hint={state.live ? m.status : 'no run in progress'}
+        />
+        <Stat
+          label="Total PnL"
+          value={signedUsd(m.total_pnl)}
+          tone={pnlClass(m.total_pnl)}
+          hint={`realised ${signedUsd(m.realised_pnl)}`}
+        />
+        <Stat label="Win rate" value={pct(m.win_rate)} hint={`${String(m.total_trades)} trades`} />
+        <Stat
+          label="Memory"
+          value={String(m.memory_count.total)}
+          hint={`${String(m.memory_count.episodic)} episodic · ${String(m.memory_count.semantic)} semantic`}
+        />
+      </div>
+
+      {!state.live && (
+        <Card>
+          <EmptyNote
+            title="No training run in progress"
+            detail={
+              <span className="flex flex-col gap-1.5 text-left">
+                <span>The omega API is not reporting a run in flight:</span>
+                {state.reasons.map((r) => (
+                  <span key={r}>· {r}</span>
+                ))}
+                <span>
+                  The three figures beside the cycle counter are database aggregates over{' '}
+                  <span className="font-mono">{String(m.total_trades)}</span> trades in the victoria
+                  tables — they are real, and they are not live. Start a run with{' '}
+                  <span className="font-mono">scripts/run_training.py</span>; finished runs are in
+                  the Runs tab.
+                </span>
+              </span>
+            }
+          />
+        </Card>
+      )}
+
+      {m.signal_health.length > 0 && (
+        <Card label="Signal health">
+          <div className="flex flex-wrap gap-2">
+            {m.signal_health.map((s) => (
+              <Pill key={s.name}>
+                {s.name} {s.value.toFixed(3)}
+              </Pill>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 export function VictoriaLive(_props: UseCaseViewProps) {
   const metrics = useVictoriaMetrics();
 
@@ -177,54 +426,7 @@ export function VictoriaLive(_props: UseCaseViewProps) {
     >
       <div className="flex flex-col gap-4">
         <Async state={metrics} what="loading training metrics">
-          {(m) => (
-            <div className="flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-                <Stat
-                  label="Cycle"
-                  value={`${String(m.current_cycle)} / ${String(m.total_cycles)}`}
-                  hint={m.status}
-                />
-                <Stat
-                  label="Total PnL"
-                  value={signedUsd(m.total_pnl)}
-                  tone={pnlClass(m.total_pnl)}
-                  hint={`realised ${signedUsd(m.realised_pnl)}`}
-                />
-                <Stat
-                  label="Win rate"
-                  value={pct(m.win_rate)}
-                  hint={`${String(m.total_trades)} trades`}
-                />
-                <Stat
-                  label="Memory"
-                  value={String(m.memory_count.total)}
-                  hint={`${String(m.memory_count.episodic)} episodic · ${String(m.memory_count.semantic)} semantic`}
-                />
-              </div>
-
-              {isIdle(m) && (
-                <Card>
-                  <EmptyNote
-                    title="No training run in flight"
-                    detail="The omega API reports status “idle” with no cycles and no trades. Start one with scripts/run_training.py and this view fills in live; completed runs are in the Runs tab."
-                  />
-                </Card>
-              )}
-
-              {m.signal_health.length > 0 && (
-                <Card label="Signal health">
-                  <div className="flex flex-wrap gap-2">
-                    {m.signal_health.map((s) => (
-                      <Pill key={s.name}>
-                        {s.name} {s.value.toFixed(3)}
-                      </Pill>
-                    ))}
-                  </div>
-                </Card>
-              )}
-            </div>
-          )}
+          {(m) => <LiveMetrics metrics={m} />}
         </Async>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

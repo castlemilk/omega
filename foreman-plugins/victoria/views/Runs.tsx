@@ -15,11 +15,14 @@
  *      `version` field written *inside* a results file over the filename, and
  *      two files in the omega data directory both declare `"v10"` — 450 rows,
  *      449 distinct labels (observed live). Rows are therefore keyed on
- *      position, not on the label.
+ *      position, not on the label — and the later occurrence of a repeated one
+ *      is marked, so a reader can tell a data quirk from a rendering bug.
  *   3. **`sharpe_ratio` is 0 for every row.** The handler reads
  *      `eval.sharpe_ratio` from a results file that does not carry that key.
  *      Rendering "0.00" would assert a real, terrible Sharpe; an em dash says
- *      what is true, which is that the number is not recorded.
+ *      what is true, which is that the number is not recorded. The column
+ *      header says so too, and both the qualifier and the note under the table
+ *      are derived from the rows, so the day a run records a Sharpe they go.
  *
  * Profit factor and max drawdown are in the *results file* but not in the
  * `/versions` projection, and no endpoint exposes the raw file — still true
@@ -30,7 +33,7 @@
 import { useMemo, useState } from 'react';
 import { Pill } from '@omega-harness/usecase-kit/ui';
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
-import type { VersionInfo } from '../client.js';
+import type { CompareResponse, VersionInfo } from '../client.js';
 import { pct, pnlClass, ratio, signedCount, signedPct, signedUsd } from '../format.js';
 import { useVictoriaCompare, useVictoriaVersions } from '../hooks.js';
 import { Async, Card, EmptyNote, ErrorNote, LoadingNote, Num, Table, Txt, ViewFrame } from './chrome.js';
@@ -55,6 +58,45 @@ export function predecessorOf(sorted: readonly VersionInfo[], version: string): 
   return sorted[idx + 1].version;
 }
 
+/**
+ * How many rows the ledger draws before an operator asks for the rest.
+ *
+ * The live corpus is 450 rows and every one of them was being mounted on first
+ * paint. Virtualisation would be the wrong instrument for a list nobody scrolls
+ * past the top of, so the cap is a plain slice with the real total stated on the
+ * control that lifts it — truncation an operator cannot see is a lie about how
+ * much data there is.
+ */
+export const RUN_ROW_CAP = 100;
+
+/**
+ * `true` at each index whose label already appeared earlier in the list.
+ *
+ * Version labels are not unique (see the header note): two results files both
+ * declare `v10`. The rows are already position-keyed so React never warns, but
+ * a reader seeing the same label twice has no way to tell a duplicate from a
+ * rendering bug. This marks the later occurrences so the quirk is visible.
+ */
+export function duplicateLabelFlags(rows: readonly VersionInfo[]): boolean[] {
+  const seen = new Set<string>();
+  return rows.map((r) => {
+    const already = seen.has(r.version);
+    seen.add(r.version);
+    return already;
+  });
+}
+
+/**
+ * Whether any row carries a Sharpe the API actually recorded.
+ *
+ * Derived rather than hard-coded: the column is empty today because
+ * `/api/v1/training/versions` reads `eval.sharpe_ratio` from results files that
+ * do not write that key, but the day one does, the header must stop saying so.
+ */
+export function sharpeRecorded(rows: readonly VersionInfo[]): boolean {
+  return rows.some((r) => Number.isFinite(r.sharpe_ratio) && r.sharpe_ratio !== 0);
+}
+
 function VerdictPill({ verdict }: { verdict: string }) {
   const color =
     verdict === 'improved' ? '#4ec97a' : verdict === 'regressed' ? '#e5675b' : '#6b6b74';
@@ -75,7 +117,15 @@ function RunDetail({ version, previous }: { version: string; previous: string | 
   if (compare.error) return <ErrorNote error={compare.error} what={`comparing ${previous} → ${version}`} />;
   if (compare.loading || !compare.data) return <LoadingNote what="comparing" />;
 
-  const d = compare.data;
+  return <RunComparePanel data={compare.data} />;
+}
+
+/**
+ * The compare panel, separated from its fetch so the copy an operator actually
+ * reads is renderable against a fixture. Server rendering never runs effects, so
+ * a component that owns its own request can only ever be asserted on "loading…".
+ */
+export function RunComparePanel({ data: d }: { data: CompareResponse }) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 font-mono text-[10.5px] text-ink3">
@@ -99,11 +149,102 @@ function RunDetail({ version, previous }: { version: string; previous: string | 
       </div>
       <p className="text-[10.5px] leading-relaxed text-muted">
         The verdict is decided on PnL delta alone, by the omega API — it is not a
-        gate result. The six hard gates (PnL floor, regime parity, drawdown
-        ceiling, trade-count floor, signal integrity, auto-apply audit) are
-        written to <span className="font-mono">data/{version}_gate_result.json</span> and
-        are shown on the Gates tab.
+        gate result. Whether {d.target} may become a baseline is decided by the
+        standing-baseline gates — per-cell PnL floor, trade-count floor, drawdown
+        ceiling — which return one of PASS, FAIL, NO_BASELINE, NO_OP or ERROR.
+        The Gates tab shows that verdict for any run one has been recorded for.
       </p>
+    </div>
+  );
+}
+
+/**
+ * The ledger table itself — controlled, so both the capped and the full render
+ * are assertable against a fixture without a DOM.
+ */
+export function RunsLedger({
+  rows,
+  expanded,
+  onExpand,
+  selected,
+  onSelect,
+}: {
+  rows: readonly VersionInfo[];
+  expanded: boolean;
+  onExpand: () => void;
+  selected: string | null;
+  onSelect: (version: string) => void;
+}) {
+  const flags = duplicateLabelFlags(rows);
+  const truncated = !expanded && rows.length > RUN_ROW_CAP;
+  const visible = truncated ? rows.slice(0, RUN_ROW_CAP) : rows;
+  const recorded = sharpeRecorded(rows);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Table
+        head={['Version', 'PnL', 'Trades', 'Win rate', recorded ? 'Sharpe' : 'Sharpe (not recorded)']}
+      >
+        {visible.map((r, i) => (
+          <tr
+            // NOT keyed on version alone: `version` is not unique.
+            // The handler prefers the `version` field written
+            // *inside* a results file over the filename, and two
+            // different files in the omega data directory both
+            // declare "v10" — which React reports as a duplicate-key
+            // warning and can render as a dropped row. The backend
+            // cannot disambiguate them either (`/compare` resolves a
+            // version to `data/<version>_results.json`), so the
+            // ledger keys on position and selects on the string,
+            // which is as precise as the API allows.
+            key={`${r.version}-${String(i)}`}
+            onClick={() => { onSelect(r.version); }}
+            className={`cursor-pointer border-b border-hair last:border-0 hover:bg-cardAlt ${
+              r.version === selected ? 'bg-cardAlt' : ''
+            }`}
+          >
+            <Txt className="font-mono font-medium text-ink">
+              {r.version}
+              {flags[i] && (
+                <span className="ml-1.5 font-mono text-[9px] font-normal text-faint">
+                  (duplicate label)
+                </span>
+              )}
+            </Txt>
+            <Num className={pnlClass(r.total_pnl)}>{signedUsd(r.total_pnl)}</Num>
+            <Num className="text-ink3">{String(r.total_trades)}</Num>
+            <Num className="text-ink2">{pct(r.win_rate)}</Num>
+            {/* 0 here means "not recorded" — see the header note. */}
+            <Num className="text-ink3">{r.sharpe_ratio === 0 ? '—' : ratio(r.sharpe_ratio)}</Num>
+          </tr>
+        ))}
+      </Table>
+
+      {truncated && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-hair pt-3">
+          <span className="text-[10.5px] leading-relaxed text-muted">
+            Showing the first {String(RUN_ROW_CAP)} of {String(rows.length)} runs. The rest are not
+            rendered yet — this list is truncated, not complete.
+          </span>
+          <button
+            type="button"
+            onClick={onExpand}
+            className="rounded-md border border-line bg-control px-2.5 py-1.5 font-mono text-[10px] text-ink3 hover:text-ink"
+          >
+            Show all {String(rows.length)} runs
+          </button>
+        </div>
+      )}
+
+      {!recorded && (
+        <p className="text-[10px] leading-relaxed text-muted">
+          No run here carries a Sharpe ratio, which is why that column is empty.{' '}
+          <span className="font-mono">/api/v1/training/versions</span> reads{' '}
+          <span className="font-mono">eval.sharpe_ratio</span> and the results files do not write
+          that key. The column stays, empty, rather than rendering the API&apos;s 0 as{' '}
+          <span className="font-mono">0.00</span> — that would assert a real and terrible Sharpe.
+        </p>
+      )}
     </div>
   );
 }
@@ -112,6 +253,9 @@ export function VictoriaRuns(_props: UseCaseViewProps) {
   const versions = useVictoriaVersions();
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  // Re-capped whenever the filter changes: "show all" was asked of one list and
+  // must not silently carry over to a different one.
+  const [expanded, setExpanded] = useState(false);
 
   const sorted = useMemo(() => sortVersions(versions.data ?? []), [versions.data]);
   const shown = useMemo(() => {
@@ -126,7 +270,7 @@ export function VictoriaRuns(_props: UseCaseViewProps) {
       actions={
         <input
           value={filter}
-          onChange={(e) => { setFilter(e.target.value); }}
+          onChange={(e) => { setFilter(e.target.value); setExpanded(false); }}
           placeholder="filter versions…"
           aria-label="Filter versions"
           className="w-52 rounded-md border border-line bg-control px-2.5 py-1.5 font-mono text-[10.5px] text-ink placeholder:text-ghost focus:border-edge focus:outline-none"
@@ -166,36 +310,18 @@ export function VictoriaRuns(_props: UseCaseViewProps) {
                 right={<span className="font-mono text-[9.5px] text-faint">/api/v1/training/versions</span>}
               >
                 {shown.length === 0 ? (
-                  <EmptyNote title="No run matches that filter" />
+                  <EmptyNote
+                    title="No run matches that filter"
+                    detail={`None of the ${String(rows.length)} run labels contain "${filter.trim()}".`}
+                  />
                 ) : (
-                  <Table head={['Version', 'PnL', 'Trades', 'Win rate', 'Sharpe']}>
-                    {shown.map((r, i) => (
-                      <tr
-                        // NOT keyed on version alone: `version` is not unique.
-                        // The handler prefers the `version` field written
-                        // *inside* a results file over the filename, and two
-                        // different files in the omega data directory both
-                        // declare "v10" — which React reports as a duplicate-key
-                        // warning and can render as a dropped row. The backend
-                        // cannot disambiguate them either (`/compare` resolves a
-                        // version to `data/<version>_results.json`), so the
-                        // ledger keys on position and selects on the string,
-                        // which is as precise as the API allows.
-                        key={`${r.version}-${String(i)}`}
-                        onClick={() => { setSelected(r.version === selected ? null : r.version); }}
-                        className={`cursor-pointer border-b border-hair last:border-0 hover:bg-cardAlt ${
-                          r.version === selected ? 'bg-cardAlt' : ''
-                        }`}
-                      >
-                        <Txt className="font-mono font-medium text-ink">{r.version}</Txt>
-                        <Num className={pnlClass(r.total_pnl)}>{signedUsd(r.total_pnl)}</Num>
-                        <Num className="text-ink3">{String(r.total_trades)}</Num>
-                        <Num className="text-ink2">{pct(r.win_rate)}</Num>
-                        {/* 0 here means "not recorded" — see the header note. */}
-                        <Num className="text-ink3">{r.sharpe_ratio === 0 ? '—' : ratio(r.sharpe_ratio)}</Num>
-                      </tr>
-                    ))}
-                  </Table>
+                  <RunsLedger
+                    rows={shown}
+                    expanded={expanded}
+                    onExpand={() => { setExpanded(true); }}
+                    selected={selected}
+                    onSelect={(v) => { setSelected(v === selected ? null : v); }}
+                  />
                 )}
               </Card>
             </div>

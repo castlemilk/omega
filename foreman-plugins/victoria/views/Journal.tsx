@@ -27,6 +27,16 @@
  * for, and it will work the moment gates are written for a journalled run — but
  * the button says what it will find, and the Gates view renders the 404 as "the
  * gates never ran for that label", not as a failure.
+ *
+ * Two *different* things separate the corpora and only one of them is fixable
+ * here. The label CASE is: journal cells are `V270`, every gate file on disk is
+ * `v270_gate_result.json`, and the handler resolves the label by string, so the
+ * jump used to carry a label that could not match even if the file existed —
+ * `gateLabel` lowercases it (see there for why client-side and not in the fetch
+ * layer). The corpora themselves are the other, and no amount of normalising
+ * closes it; a lowercased `v270` still 404s today because no per-cell gate has
+ * ever been run for that journal cell. That is an honest empty state and the
+ * Gates view says so in those terms.
  */
 import { useMemo, useState } from 'react';
 import { Pill } from '@omega-harness/usecase-kit/ui';
@@ -36,6 +46,42 @@ import { Markdown } from '../markdown.js';
 import { useVictoriaJournal, useVictoriaJournalEntry } from '../hooks.js';
 import { setFocusVersion } from '../store.js';
 import { Async, Card, EmptyNote, ErrorNote, LoadingNote, ViewFrame } from './chrome.js';
+
+/**
+ * A journal version as the gate corpus spells it.
+ *
+ * The journal writes `V270.md`; `data/` holds `v270_gate_result.json`, and every
+ * one of the 280 gate files is lowercase. The gates handler matches the label as
+ * a string, so `V270` cannot resolve — the jump was guaranteed to 404 on the
+ * spelling alone, before the question of whether the file exists.
+ *
+ * Normalised HERE, at the jump, rather than in `client.getGates`: the picker is
+ * a free-text input over a corpus whose labels are the truth (`v232_crisis_snap`
+ * — case included), and a fetch layer that quietly lowercased whatever an
+ * operator typed would be papering over a case-sensitive API and would make a
+ * genuinely-uppercase label unreachable. What is being converted is one known
+ * naming convention into another, which is a fact about these two corpora and
+ * belongs where that fact is known.
+ */
+export function gateLabel(version: string): string {
+  return version.toLowerCase();
+}
+
+/** The view id the Gates board is registered under, in the shell's manifest. */
+export const GATES_VIEW_ID = 'victoria-gates';
+
+/**
+ * Seed the Gates picker and go there.
+ *
+ * Exported so the value that reaches the store is assertable without a click:
+ * the whole point of the jump is *which label* it carries, and a test that only
+ * proved "navigation happened" would have passed all through the era when every
+ * jump landed on a 404 it had caused itself.
+ */
+export function openGatesFor(version: string, onOpenView: (viewId: string) => void): void {
+  setFocusVersion(gateLabel(version));
+  onOpenView(GATES_VIEW_ID);
+}
 
 /** Newest first, by the same natural order the Runs ledger uses for versions. */
 const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
@@ -206,10 +252,7 @@ export function VictoriaJournal(props: UseCaseViewProps) {
           ) : (
             <JournalEntry
               detail={detail.data}
-              onOpenGates={(version) => {
-                setFocusVersion(version);
-                props.onOpenView('victoria-gates');
-              }}
+              onOpenGates={(version) => { openGatesFor(version, props.onOpenView); }}
             />
           ))}
 

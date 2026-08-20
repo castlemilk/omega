@@ -93,6 +93,26 @@ export function unclaimedFailures(failures: readonly string[], gates: readonly s
 }
 
 /**
+ * The gate module's own hard-coded version tokens, in baseline-then-candidate
+ * order. `v49_gates.py` named its two sides `v48_summary` / `v49_summary` and
+ * built its failure prose out of the same two literals, so a file comparing
+ * v93 to v94 still says `pnl_floor: v49 -37.86 < v48 130.91`.
+ */
+const HARDCODED_FAILURE_LABELS = ['v48', 'v49'] as const;
+
+/**
+ * Which of those literals actually appear in this file's failure strings.
+ *
+ * Matched as whole words so `v480` and `v49_replay` are not mistaken for the
+ * placeholder. Exported so the detection is assertable without a board.
+ */
+export function hardcodedFailureLabels(failures: readonly string[]): string[] {
+  return HARDCODED_FAILURE_LABELS.filter((token) =>
+    failures.some((f) => new RegExp(`(^|[^0-9A-Za-z_])${token}([^0-9A-Za-z_]|$)`).test(f)),
+  );
+}
+
+/**
  * Whether the two summaries carry the same measurements.
  *
  * Version is excluded on purpose: it is the field that differs in the 19 files
@@ -942,6 +962,15 @@ function LegacyGateBoard({ result }: { result: GateResult }) {
   const known: readonly string[] = GATE_NAMES;
   const gateKeys = [...known, ...Object.keys(result.gates).filter((g) => !known.includes(g))];
   const unclaimed = unclaimedFailures(result.failures, gateKeys);
+  // The v48/v49 literals in the failure prose are the gate module's own field
+  // names, not the runs. Only worth saying when they are actually present AND
+  // they are not the real labels — a file that genuinely compared v48 to v49
+  // needs no disclaimer, and an unconditional note would be noise on 280 files.
+  const placeholders = hardcodedFailureLabels(result.failures).filter(
+    (p) => p !== baseline?.version && p !== candidate?.version,
+  );
+  const showPlaceholderNote =
+    placeholders.length > 0 && (baseline?.version != null || candidate?.version != null);
 
   return (
     <div className="flex flex-col gap-4">
@@ -973,6 +1002,23 @@ function LegacyGateBoard({ result }: { result: GateResult }) {
           />
         ))}
       </div>
+
+      {showPlaceholderNote && (
+        <p className="font-mono text-[9.5px] leading-relaxed text-faint">
+          The failure lines key their two sides as{' '}
+          {placeholders.map((p, i) => (
+            <span key={p}>
+              {i > 0 ? ' and ' : ''}
+              <span className="text-ink3">{p}</span>
+            </span>
+          ))}{' '}
+          — v49_gates.py&apos;s own hard-coded field names, which are not the versions compared. The
+          real labels are <span className="text-ink3">{baseline?.version ?? 'not named in this file'}</span>{' '}
+          (baseline) and{' '}
+          <span className="text-ink3">{candidate?.version ?? 'not named in this file'}</span>{' '}
+          (candidate), read from each summary&apos;s <span className="text-ink3">version</span> field.
+        </p>
+      )}
 
       {unclaimed.length > 0 && (
         <Card label="Failures not attributed to a gate">
@@ -1050,13 +1096,19 @@ export function GateLoadFailure({
     <>
       <ErrorNote error={error} what={`loading gates for ${version === '' ? 'the latest run' : version}`} />
       <p className="mt-3 text-[10.5px] leading-relaxed text-muted">
-        A missing gate result is not a failed gate: it means the gates never ran for that label.{' '}
-        <span className="font-mono">scripts/run_training.py</span> writes{' '}
-        <span className="font-mono">data/&#123;version&#125;_gate_result.json</span> at the end of a
+        A missing gate result is not a failed gate: it means no{' '}
+        <span className="font-mono">data/&#123;version&#125;_gate_result.json</span> exists for that
+        label. <span className="font-mono">scripts/run_training.py</span> writes one at the end of a
         run via <span className="font-mono">omega/eval/standing_gates.py</span> (before 2026-08-18,{' '}
-        <span className="font-mono">omega/eval/v49_gates.py</span>). Since that repoint a file is
-        written for <em>every</em> verdict, so a 404 on a recent label means the run itself never
-        reached the end. Version labels are case-sensitive on the wire.
+        <span className="font-mono">omega/eval/v49_gates.py</span>) — under the label of the{' '}
+        <em>cell it ran</em>, and cell labels are a different family from the journal&apos;s version
+        labels. The journal runs V148 → V270; the 280 gate files in{' '}
+        <span className="font-mono">data/</span> are the v50–v127 era plus suffixed cells like{' '}
+        <span className="font-mono">v232_crisis_snap_…_r2</span>, and the two sets do not currently
+        intersect. So a journal label with no gate file is the ordinary case — a per-cell gate was
+        never run for it — and says nothing about whether that run finished. Labels are matched
+        case-sensitively on the wire; the Journal&apos;s jump lowercases its <span className="font-mono">V270</span>{' '}
+        to <span className="font-mono">v270</span> first, because every gate file on disk is lowercase.
       </p>
       {version !== '' && onShowLatest && (
         <button
