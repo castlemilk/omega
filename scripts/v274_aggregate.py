@@ -15,6 +15,7 @@ import glob
 import json
 import math
 import os
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -32,11 +33,21 @@ SENTINELS = {
 }
 
 
-def load_cells(pattern: str) -> dict[str, dict]:
+def load_cells(pattern: str, wid_re: str) -> dict[str, dict]:
+    """Key cells by the window id embedded in the cell DIRECTORY name.
+
+    summary.json's own `window` field is only populated when the caller exports
+    WINDOW_LABEL (the grid runners do; scripts/v274_smoke.sh does not, so its
+    three sentinel cells record "default"). The directory name always carries it.
+    """
     out = {}
+    rx = re.compile(wid_re)
     for f in sorted(glob.glob(str(AUDIT / pattern))):
+        m = rx.search(os.path.basename(os.path.dirname(f)))
+        if not m:
+            continue
         s = json.load(open(f))
-        out[s["window"]] = {
+        out[m.group(1)] = {
             "gate": s["gate"],
             "pnl": s["pnls"][0],
             "pnls": s["pnls"],
@@ -64,9 +75,12 @@ def main() -> int:
     sb_cfg = json.load(open(ROOT / "data" / "standing_baseline.json"))
     sb_family = sb_cfg["distributions"]["per_family"]
 
-    base = load_cells("v240wf_*_universe_selective_*_determinism/summary.json")
-    cand = load_cells("v274_on_*_determinism/summary.json")
-    off_smoke = load_cells("v274_off_*_determinism/summary.json")
+    base = load_cells(
+        "v240wf_*_universe_selective_*_determinism/summary.json",
+        r"^v240wf_(snap_wf_\d+)_universe_selective_",
+    )
+    cand = load_cells("v274_on_*_determinism/summary.json", r"^v274_on_(snap_wf_\d+)_")
+    off_smoke = load_cells("v274_off_*_determinism/summary.json", r"^v274_off_(snap_wf_\d+)_")
 
     res: dict = {"version": "v274", "bars": {"g1_tolerance": G1_TOLERANCE, "g4_tolerance": G4_TOLERANCE}}
 
