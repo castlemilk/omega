@@ -11,6 +11,7 @@
  * repo, and a test that only checked "five rows rendered" would pass while the
  * node types drifted from the file they claim to come from.
  */
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 // `renderToStaticMarkup` rather than a DOM: the repo has no jsdom and no
 // testing-library, and this view is static — there is nothing to click. Server
@@ -39,6 +40,16 @@ describe('the manifest', () => {
 
   it('takes its name from projects/polymarket.yaml', () => {
     expect(polymarketUseCase.name).toBe('Polymarket — prediction markets');
+  });
+
+  it('states its package version, and describes itself as the stub it is', () => {
+    const pkg = JSON.parse(
+      readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    expect(polymarketUseCase.version).toBe(pkg.version);
+    // The Plugins surface is where someone decides whether to start an
+    // objective on this shell, so the description must not read like a product.
+    expect(polymarketUseCase.description).toMatch(/stub/i);
   });
 
   it('namespaces its one view id, so no core tab is shadowed', () => {

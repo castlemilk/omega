@@ -4,12 +4,13 @@
  * This repository has no harness in it, so what is asserted here is everything
  * the shell decides for itself: its manifest, and the pure logic its views are
  * built out of. The other half — that the harness's roster actually registers
- * this shell, and that its tabs land after the core six in the right order —
+ * this shell, and that its tabs land after the core chrome tabs in the right order —
  * is asserted in the harness, against the generated roster
  * (`apps/web/src/foreman/usecases/roster.test.ts`). Neither side can assert the
  * other's half, and duplicating either would mean a test that passes against a
  * copy rather than against the thing that ships.
  */
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 import { victoriaUseCase } from './index.js';
 import { predecessorOf, sortVersions } from './views/Runs.js';
@@ -48,6 +49,19 @@ describe('the manifest', () => {
     expect(victoriaUseCase.dataSources).toHaveLength(1);
     expect(victoriaUseCase.dataSources?.[0].id).toBe('omega-api');
     expect(victoriaUseCase.dataSources?.[0].envVar).toBe('VITE_UC_VICTORIA_URL');
+  });
+
+  it('states the version its package declares, and says what it is for', () => {
+    // The manifest hardcodes the version because it may not touch a filesystem
+    // (see `manifest-cost.test.ts`). A test may, so this is what keeps the
+    // hardcoded string honest when package.json moves.
+    const pkg = JSON.parse(
+      readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+    ) as { version: string };
+    expect(victoriaUseCase.version).toBe(pkg.version);
+    // The Plugins surface renders this under the name; an empty one would leave
+    // the flagship shell describing itself as nothing.
+    expect(victoriaUseCase.description).toMatch(/trading/i);
   });
 
   it('carries an accent that is legible on the canvas', () => {

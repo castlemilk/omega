@@ -42,6 +42,16 @@ export const VICTORIA_ACCENT = '#3fd97d';
 export const victoriaUseCase: UseCaseShell = {
   id: 'victoria',
   name: 'Victoria — market trading',
+  // Hardcoded, and deliberately: `./package.json` declares `"version":
+  // "0.1.0"`, but a manifest is a pure export that a browser bundle imports —
+  // it has no filesystem to read the file from, and giving it one would make
+  // registration cost I/O. Bump both together; `manifest-cost.test.ts` is the
+  // test that keeps this module data-only.
+  version: '0.1.0',
+  description:
+    'Market trading over the omega engine — training runs and their gates, ' +
+    'live desk state, per-trade and equity detail, signal and conviction ' +
+    'breakdowns, run-to-run forensics, and the training journal.',
   accent: VICTORIA_ACCENT,
   // Only 'harness' is renamed. A Victoria harness really is a desk agent, and
   // the word survives contact with the rest of the chrome ("spawn a desk

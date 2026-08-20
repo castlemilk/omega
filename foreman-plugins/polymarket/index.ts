@@ -42,6 +42,17 @@ export const polymarketUseCase: UseCaseShell = {
   // `domain: prediction_markets`; the shell name is both, in Victoria's
   // "<name> — <what it is>" form.
   name: 'Polymarket — prediction markets',
+  // Same rule as Victoria's: the string `./package.json` carries, hardcoded,
+  // because the manifest never touches a filesystem.
+  version: '0.1.0',
+  // Honest, because the Plugins surface is where someone decides whether to
+  // start an objective on this shell. The nodes exist in the omega repo; what
+  // does not exist is anything serving them over HTTP, so the one tab shows the
+  // configuration and the named phase-2 list and claims nothing else.
+  description:
+    'Prediction markets — a stub. The omega nodes exist but nothing serves ' +
+    'them over HTTP yet, so the single tab shows the configuration and what ' +
+    'phase 2 would add, and the shell declares no backend.',
   accent: POLYMARKET_ACCENT,
   // No vocabulary. Victoria renames 'harness' to 'desk agent' because a
   // Victoria harness genuinely is one and the word survives everywhere the
