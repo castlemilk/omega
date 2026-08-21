@@ -14,6 +14,7 @@ import {
   funnelHeight,
   groupedBars,
   linePath,
+  regimeBands,
   scaleX,
   scaleY,
   ticks,
@@ -91,6 +92,16 @@ export interface LineSeries {
  * it, and comparing the strategy against its benchmark is the entire reason the
  * benchmark is on the chart.
  */
+export interface ChartMarker {
+  /** Index into the primary series' x positions. */
+  index: number;
+  /** The y value, on the shared extent. */
+  value: number;
+  color: string;
+  /** Tooltip text — the marker's reason for existing. */
+  label?: string;
+}
+
 export function LineChart({
   series,
   height = 260,
@@ -99,6 +110,7 @@ export function LineChart({
   xLabels,
   formatY = (v: number) => v.toFixed(0),
   tickCount = 4,
+  markers,
 }: {
   series: readonly LineSeries[];
   height?: number;
@@ -109,6 +121,8 @@ export function LineChart({
   xLabels?: readonly string[];
   formatY?: (value: number) => string;
   tickCount?: number;
+  /** Point events (e.g. executed trades) drawn on the shared scale. */
+  markers?: readonly ChartMarker[];
 }) {
   const box: Box = { width, height, padLeft: 52, padRight: 12, padTop: 12, padBottom: 24 };
   const all = series.flatMap((s) => [...s.values]);
@@ -213,6 +227,24 @@ export function LineChart({
             {xLabels[xLabels.length - 1]}
           </text>
         </>
+      )}
+
+      {/* point events on the shared scale — a marker off-scale is refused by
+          the same logic as trainEndX: wrong place is worse than absent */}
+      {markers?.map((m, i) =>
+        Number.isFinite(m.value) && m.index >= 0 && m.index < count ? (
+          <circle
+            key={i}
+            cx={scaleX(m.index, count, box)}
+            cy={scaleY(m.value, ext, box)}
+            r={2.75}
+            fill={m.color}
+            stroke="#0d0d10"
+            strokeWidth={0.75}
+          >
+            {m.label != null && <title>{m.label}</title>}
+          </circle>
+        ) : null,
       )}
 
       {/* endpoint dot on the primary series, so "where are we now" is findable */}
@@ -400,6 +432,62 @@ export function GroupedBarChart({
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * The regime timeline: consecutive same-regime cycles as horizontal bands.
+ *
+ * Padding defaults match `LineChart`'s plot area so a strip rendered directly
+ * beneath one shares its x scale — a crisis band must sit under the stretch of
+ * curve it actually labelled. Colours come from the caller (`regimeColor` in
+ * format.ts — domain colours have one home); a null-regime band renders as a
+ * hollow hatch, because "no regime recorded" is a gap, not a fourth regime.
+ */
+export function RegimeStrip({
+  regimes,
+  width = 720,
+  height = 16,
+  padLeft = 52,
+  padRight = 12,
+  colorOf,
+}: {
+  regimes: readonly (string | null | undefined)[];
+  width?: number;
+  height?: number;
+  padLeft?: number;
+  padRight?: number;
+  colorOf: (regime: string | null) => string;
+}) {
+  const box: Box = { width, height, padLeft, padRight, padTop: 0, padBottom: 0 };
+  const bands = regimeBands(regimes, box);
+  if (bands.length === 0) return null;
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${String(width)} ${String(height)}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={`regime timeline over ${String(regimes.length)} cycles`}
+      className="block"
+    >
+      {bands.map((band) => (
+        <rect
+          key={band.start}
+          x={band.x}
+          y={2}
+          width={band.width}
+          height={height - 4}
+          rx={2}
+          fill={band.regime === null ? 'rgba(255,255,255,.04)' : colorOf(band.regime)}
+          opacity={band.regime === null ? 1 : 0.55}
+        >
+          <title>
+            {`${band.regime ?? 'no regime recorded'} · cycles ${String(band.start)}–${String(band.end)} (${String(band.count)})`}
+          </title>
+        </rect>
+      ))}
+    </svg>
   );
 }
 

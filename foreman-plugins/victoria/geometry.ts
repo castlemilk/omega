@@ -262,6 +262,85 @@ export function correlationBucket(value: number): number {
   return sign * 4;
 }
 
+// ── Regime bands ─────────────────────────────────────────────────────────────
+
+export interface RegimeBand {
+  /** The regime label, or null for a stretch of cycles with no recorded regime. */
+  regime: string | null;
+  /** First cycle index in the band (into the input array). */
+  start: number;
+  /** Last cycle index, inclusive. */
+  end: number;
+  /** How many cycles the band spans. */
+  count: number;
+  x: number;
+  width: number;
+}
+
+/**
+ * Consecutive same-regime runs compressed into horizontal bands.
+ *
+ * Each input slot gets an equal share of the plot width — cycles, not
+ * timestamps, are the x axis everywhere else in this plugin, and a band chart
+ * on a different scale to the line chart above it would invite reading a
+ * crisis band against the wrong stretch of curve. Slots, not point centres:
+ * a band covers the whole cycle it labels, so band edges land BETWEEN cycles
+ * (at i * span/n), not on the `scaleX` point positions.
+ *
+ * Missing labels (null/undefined/'') become bands with `regime: null` rather
+ * than being merged into a neighbour — a gap in the regime record is a fact
+ * about the data, and smoothing it over would manufacture a regime that was
+ * never computed.
+ */
+export function regimeBands(
+  regimes: readonly (string | null | undefined)[],
+  box: Box,
+): RegimeBand[] {
+  const n = regimes.length;
+  if (n === 0) return [];
+  const span = box.width - box.padLeft - box.padRight;
+  const bands: RegimeBand[] = [];
+  let start = 0;
+  const norm = (v: string | null | undefined): string | null => (v == null || v === '' ? null : v);
+  for (let i = 1; i <= n; i++) {
+    if (i === n || norm(regimes[i]) !== norm(regimes[start])) {
+      const count = i - start;
+      bands.push({
+        regime: norm(regimes[start]),
+        start,
+        end: i - 1,
+        count,
+        x: box.padLeft + (span * start) / n,
+        width: (span * count) / n,
+      });
+      start = i;
+    }
+  }
+  return bands;
+}
+
+// ── Drawdown ─────────────────────────────────────────────────────────────────
+
+/**
+ * Per-point drawdown fractions from the running peak: 0 at a new high,
+ * negative underwater. `[100, 110, 99]` → `[0, 0, -0.1]`.
+ *
+ * Derived, not reported — callers must label it as such (honesty rule 4): the
+ * backend's own `dd` field, when present, wins. Non-finite points contribute 0
+ * and do not move the peak (a NaN in the equity feed must not turn into a
+ * fictitious 100% drawdown), and a non-positive peak yields 0 because a
+ * drawdown fraction of a zero or negative equity base has no meaning.
+ */
+export function drawdownSeries(values: readonly number[]): number[] {
+  let peak = Number.NEGATIVE_INFINITY;
+  return values.map((v) => {
+    if (!Number.isFinite(v)) return 0;
+    if (v > peak) peak = v;
+    if (peak <= 0) return 0;
+    return (v - peak) / peak;
+  });
+}
+
 /** Bucket -4..4 to a fill. Positive warms toward the accent, negative cools to info. */
 export function correlationColor(value: number): string {
   const bucket = correlationBucket(value);

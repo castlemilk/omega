@@ -27,10 +27,10 @@
  */
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
 import { HeatGrid } from '../charts.js';
-import type { Signal, SignalsSnapshot } from '../client.js';
+import type { Signal, SignalICHistory, SignalsSnapshot } from '../client.js';
 import { ratio } from '../format.js';
 import type { SignalsData } from '../hooks.js';
-import { useVictoriaSignals } from '../hooks.js';
+import { useVictoriaSignalIC, useVictoriaSignals } from '../hooks.js';
 import { Async, Card, EmptyNote, Num, Stat, Table, Txt, ViewFrame } from './chrome.js';
 
 /**
@@ -260,8 +260,99 @@ export function SignalsPanel({ snapshot, correlation }: SignalsData) {
   );
 }
 
+// ── Seeded IC corpus ─────────────────────────────────────────────────────────
+
+/** One signal's row in the IC board, pooled + per-regime, sorted by |pooled|. */
+export interface ICRow {
+  name: string;
+  pooled: number | null;
+  normal: number | null;
+  crisis: number | null;
+  highVol: number | null;
+}
+
+/**
+ * Rows for the board: the union of signals named by either seeded block, so a
+ * signal with a regime IC but no pooled one (or vice versa) still appears —
+ * dropping it would hide exactly the kind of corpus gap worth seeing.
+ */
+export function icRows(ic: SignalICHistory): ICRow[] {
+  const pooled = ic.seeded_pooled_ics ?? {};
+  const regime = ic.seeded_regime_ics ?? {};
+  const names = [...new Set([...Object.keys(pooled), ...Object.keys(regime)])];
+  const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+  return names
+    .map((name) => ({
+      name,
+      pooled: num(pooled[name]),
+      normal: num(regime[name]?.normal),
+      crisis: num(regime[name]?.crisis),
+      highVol: num(regime[name]?.high_vol),
+    }))
+    .sort((a, b) => Math.abs(b.pooled ?? 0) - Math.abs(a.pooled ?? 0));
+}
+
+/** A negative IC reads in danger tone — an anti-predictive seed is a finding. */
+function icTone(v: number | null): string {
+  if (v === null) return 'text-faint';
+  return v < 0 ? 'text-danger' : 'text-ink2';
+}
+
+/**
+ * The seeded IC corpus from data/signal_ic_history.json — what the conviction
+ * weighting BOOTS from, which is not the same thing as what a run measured.
+ * The provenance line and the live-observation count keep that distinction on
+ * screen rather than in a code comment.
+ */
+export function SignalICBoard({ ic }: { ic: SignalICHistory }) {
+  const rows = icRows(ic);
+  const liveCount = Object.keys(ic.signals ?? {}).length;
+  if (rows.length === 0) {
+    return (
+      <EmptyNote
+        title="No seeded ICs"
+        detail="data/signal_ic_history.json exists but carries no seeded_pooled_ics or seeded_regime_ics entries."
+      />
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <Table head={['Signal', 'Pooled IC', 'normal', 'crisis', 'high_vol']}>
+        {rows.map((row) => (
+          <tr key={row.name} className="border-b border-hair last:border-0">
+            <Txt className="font-mono font-medium text-ink">{row.name}</Txt>
+            <Num className={icTone(row.pooled)}>{ratio(row.pooled, 4)}</Num>
+            <Num className={icTone(row.normal)}>{ratio(row.normal, 4)}</Num>
+            <Num className={icTone(row.crisis)}>{ratio(row.crisis, 4)}</Num>
+            <Num className={icTone(row.highVol)}>{ratio(row.highVol, 4)}</Num>
+          </tr>
+        ))}
+      </Table>
+      <p className="text-[10.5px] leading-relaxed text-muted">
+        These are <span className="font-medium text-ink2">seeded</span> ICs
+        {ic.seed_provenance?.version != null && ic.seed_provenance.version !== '' ? (
+          <> (transcribed from <span className="font-mono">{ic.seed_provenance.version}</span>)</>
+        ) : null}
+        {ic.seed_provenance?.source != null && ic.seed_provenance.source !== '' ? (
+          <>, source: {ic.seed_provenance.source}</>
+        ) : null}
+        {' '}— the priors conviction weighting boots from, not measurements this
+        run made.{' '}
+        {liveCount === 0 ? (
+          <>The SignalDecayDetector&apos;s live observation store is empty: no run has
+          persisted measured ICs over these seeds yet.</>
+        ) : (
+          <>The SignalDecayDetector holds live observations for {String(liveCount)}{' '}
+          signal{liveCount === 1 ? '' : 's'} on top of the seeds.</>
+        )}
+      </p>
+    </div>
+  );
+}
+
 export function VictoriaSignals(_props: UseCaseViewProps) {
   const state = useVictoriaSignals();
+  const icState = useVictoriaSignalIC();
 
   return (
     <ViewFrame
@@ -271,6 +362,16 @@ export function VictoriaSignals(_props: UseCaseViewProps) {
       <Async state={state} what="loading signals">
         {(data) => <SignalsPanel {...data} />}
       </Async>
+      <div className="mt-4">
+        <Card
+          label="Seeded IC corpus"
+          right={<span className="font-mono text-[9.5px] text-faint">/api/v1/signals/ic-history</span>}
+        >
+          <Async state={icState} what="loading IC history">
+            {(ic) => <SignalICBoard ic={ic} />}
+          </Async>
+        </Card>
+      </div>
     </ViewFrame>
   );
 }

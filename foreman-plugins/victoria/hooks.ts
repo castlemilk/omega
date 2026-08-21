@@ -16,8 +16,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   compareVersions,
+  getCycleMetrics,
   getDecisionTraces,
   getEquityCurve,
+  getSignalICHistory,
   getForensics,
   getGates,
   getGridRulerOrNull,
@@ -36,7 +38,9 @@ import {
   getVersions,
   streamTraining,
   type CompareResponse,
+  type CycleMetric,
   type DecisionTracesResponse,
+  type SignalICHistory,
   type EquityCurve,
   type ForensicsList,
   type ForensicsResponse,
@@ -367,6 +371,26 @@ export function useVictoriaGridRuler(version: string | null): Async<GridRulerRes
     () => (version ? getGridRulerOrNull(version) : Promise.resolve(null)),
     [version],
   );
+}
+
+// ── Per-cycle metrics ────────────────────────────────────────────────────────
+
+/**
+ * The per-cycle metrics JSONL for a version (or the newest run when omitted).
+ *
+ * An empty array is an ordinary answer, not an error: the durable copy lands in
+ * data/ only at run end (run_training.py), and runs finished before that
+ * mechanism existed have nothing anywhere. The view says so, per honesty rule 1.
+ */
+export function useVictoriaCycleMetrics(version?: string): Async<CycleMetric[]> {
+  return useAsync(() => getCycleMetrics(version), [version]);
+}
+
+// ── Signal IC history ────────────────────────────────────────────────────────
+
+/** The seeded IC corpus. A 404 rejects and renders with the path it names. */
+export function useVictoriaSignalIC(): Async<SignalICHistory> {
+  return useAsync(() => getSignalICHistory(), []);
 }
 
 // ── Conviction ───────────────────────────────────────────────────────────────

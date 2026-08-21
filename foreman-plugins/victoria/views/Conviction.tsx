@@ -25,8 +25,8 @@ import { useMemo, useState } from 'react';
 import { Pill } from '@omega-harness/usecase-kit/ui';
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
 import { DECISION_TRACE_LIMIT, type DecisionTrace } from '../client.js';
-import { Funnel } from '../charts.js';
-import { pct, ratio, regimeColor } from '../format.js';
+import { ChartLegend, Funnel, LineChart, RegimeStrip, type ChartMarker, type LineSeries } from '../charts.js';
+import { pct, ratio, regimeColor, sideColor } from '../format.js';
 import { useVictoriaDecisionTraces } from '../hooks.js';
 import { setFocusVersion, useFocusVersion } from '../store.js';
 import { Async, Card, EmptyNote, Num, Stat, Table, Txt, ViewFrame } from './chrome.js';
@@ -138,10 +138,231 @@ export function contextOf(traces: readonly DecisionTrace[]): DecisionTrace | nul
   return traces.length > 0 ? traces[0] : null;
 }
 
+// ── Regime timeline ──────────────────────────────────────────────────────────
+
+/**
+ * The regime per cycle, in cycle order.
+ *
+ * Read off the FIRST trace of each cycle: regime is per-cycle portfolio state
+ * repeated onto every ticker row (see `contextOf`), so any row of the cycle
+ * carries it. A cycle whose rows all lack a regime yields null and renders as
+ * a gap band, not as its neighbour's regime.
+ */
+export function regimeByCycle(traces: readonly DecisionTrace[]): {
+  cycles: number[];
+  regimes: (string | null)[];
+} {
+  const byCycle = new Map<number, string | null>();
+  for (const t of traces) {
+    if (typeof t.cycle !== 'number') continue;
+    if (!byCycle.has(t.cycle)) byCycle.set(t.cycle, t.regime ?? null);
+  }
+  const cycles = [...byCycle.keys()].sort((a, b) => a - b);
+  return { cycles, regimes: cycles.map((c) => byCycle.get(c) ?? null) };
+}
+
+export interface RegimeAggregate {
+  regime: string | null;
+  cycles: number;
+  evaluated: number;
+  proposed: number;
+  traded: number;
+}
+
+/** Funnel counts per regime — where each regime's decisions actually went. */
+export function regimeAggregates(traces: readonly DecisionTrace[]): RegimeAggregate[] {
+  const byRegime = new Map<string | null, { cycleSet: Set<number>; rows: DecisionTrace[] }>();
+  for (const t of traces) {
+    const key = t.regime ?? null;
+    const entry = byRegime.get(key) ?? { cycleSet: new Set<number>(), rows: [] };
+    if (typeof t.cycle === 'number') entry.cycleSet.add(t.cycle);
+    entry.rows.push(t);
+    byRegime.set(key, entry);
+  }
+  return [...byRegime]
+    .map(([regime, { cycleSet, rows }]) => {
+      const counts = funnelCounts(rows);
+      return {
+        regime,
+        cycles: cycleSet.size,
+        evaluated: counts.evaluated,
+        proposed: counts.proposed,
+        traded: counts.traded,
+      };
+    })
+    .sort((a, b) => b.evaluated - a.evaluated);
+}
+
+// ── Conviction vs thresholds ─────────────────────────────────────────────────
+
+/** Distinct tickers in the traces, alphabetical. */
+export function tickersOf(traces: readonly DecisionTrace[]): string[] {
+  const seen = new Set<string>();
+  for (const t of traces) if (t.ticker != null && t.ticker !== '') seen.add(t.ticker);
+  return [...seen].sort((a, b) => a.localeCompare(b));
+}
+
+export interface ThresholdSeries {
+  cycles: number[];
+  regimes: (string | null)[];
+  conviction: number[];
+  longThresh: number[];
+  /** short_thresh NEGATED: shorts gate on |conviction| ≥ short_thresh with a
+   *  negative conviction, so the bar the line has to cross sits below zero. */
+  shortThreshMirrored: number[];
+  markers: ChartMarker[];
+  /** Rows for this ticker that carry no weighted_conviction — not drawn. */
+  dropped: number;
+}
+
+/**
+ * One ticker's conviction against the regime-adaptive thresholds, per cycle.
+ *
+ * Only rows with a `weighted_conviction` are plotted — absent means the value
+ * was never computed (honesty rule 3), and drawing it as 0 would invent a flat
+ * conviction. The count of dropped rows is returned so the view can say so.
+ * Markers sit where `final_decision` was TRADE, coloured by the proposed side.
+ */
+export function tickerThresholdSeries(
+  traces: readonly DecisionTrace[],
+  ticker: string,
+): ThresholdSeries {
+  const rows = traces
+    .filter((t) => t.ticker === ticker && typeof t.cycle === 'number')
+    .sort((a, b) => (a.cycle ?? 0) - (b.cycle ?? 0));
+  const plotted = rows.filter((t) => typeof t.weighted_conviction === 'number');
+  const markers: ChartMarker[] = [];
+  plotted.forEach((t, i) => {
+    if ((t.final_decision ?? '').toUpperCase() === 'TRADE') {
+      markers.push({
+        index: i,
+        value: t.weighted_conviction ?? 0,
+        color: sideColor(t.proposal),
+        label: `cycle ${String(t.cycle ?? '—')}: ${t.proposal ?? 'TRADE'} at ${ratio(t.weighted_conviction, 4)}`,
+      });
+    }
+  });
+  return {
+    cycles: plotted.map((t) => t.cycle ?? 0),
+    regimes: plotted.map((t) => t.regime ?? null),
+    conviction: plotted.map((t) => t.weighted_conviction ?? 0),
+    longThresh: plotted.map((t) => t.long_thresh ?? 0),
+    shortThreshMirrored: plotted.map((t) => -(t.short_thresh ?? 0)),
+    markers,
+    dropped: rows.length - plotted.length,
+  };
+}
+
 function DecisionPill({ decision }: { decision: string | undefined }) {
   const d = (decision ?? '').toUpperCase();
   const color = d === 'TRADE' ? '#4ec97a' : d === 'FILTERED' ? '#e5c04a' : '#6b6b74';
   return <Pill color={color}>{d === '' ? '—' : d}</Pill>;
+}
+
+/** The regime timeline: bands over the loaded cycles plus per-regime funnels. */
+export function RegimeTimeline({ traces }: { traces: readonly DecisionTrace[] }) {
+  const { cycles, regimes } = useMemo(() => regimeByCycle(traces), [traces]);
+  const aggregates = useMemo(() => regimeAggregates(traces), [traces]);
+  if (cycles.length === 0) {
+    return (
+      <EmptyNote
+        title="No cycle numbers in these traces"
+        detail="Every loaded trace lacks a cycle field, so there is no timeline to band."
+      />
+    );
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <RegimeStrip regimes={regimes} padLeft={0} padRight={0} height={20} colorOf={regimeColor} />
+      <div className="flex items-center justify-between font-mono text-[9.5px] text-faint">
+        <span>cycle {String(cycles[0])}</span>
+        <span>
+          {[...new Set(regimes.filter((r): r is string => r !== null))].map((r) => (
+            <span key={r} className="ml-3 inline-flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-[2px]" style={{ background: regimeColor(r) }} />
+              {r}
+            </span>
+          ))}
+        </span>
+        <span>cycle {String(cycles[cycles.length - 1])}</span>
+      </div>
+      <Table head={['Regime', 'Cycles', 'Evaluated', 'Proposed', 'Traded', 'Conversion']}>
+        {aggregates.map((a) => (
+          <tr key={a.regime ?? 'unlabelled'} className="border-b border-hair last:border-0">
+            <Txt className="font-mono font-medium" >
+              <span className="flex items-center gap-2">
+                <span
+                  className="inline-block h-2 w-2 flex-none rounded-[2px]"
+                  style={{ background: a.regime === null ? 'rgba(255,255,255,.12)' : regimeColor(a.regime) }}
+                />
+                <span className="text-ink">{a.regime ?? 'no regime recorded'}</span>
+              </span>
+            </Txt>
+            <Num className="text-ink3">{String(a.cycles)}</Num>
+            <Num className="text-ink3">{String(a.evaluated)}</Num>
+            <Num className="text-ink2">{String(a.proposed)}</Num>
+            <Num className={a.traded > 0 ? 'text-ok' : 'text-ink3'}>{String(a.traded)}</Num>
+            <Num className="text-ink3">{a.evaluated > 0 ? pct(a.traded / a.evaluated) : '—'}</Num>
+          </tr>
+        ))}
+      </Table>
+    </div>
+  );
+}
+
+/** One ticker's conviction line against the bars it had to clear. */
+export function ThresholdBands({
+  traces,
+  ticker,
+}: {
+  traces: readonly DecisionTrace[];
+  ticker: string;
+}) {
+  const s = useMemo(() => tickerThresholdSeries(traces, ticker), [traces, ticker]);
+  if (s.cycles.length < 2) {
+    return (
+      <EmptyNote
+        title={`Not enough plotted cycles for ${ticker}`}
+        detail={
+          s.dropped > 0
+            ? `${String(s.dropped)} of this ticker's rows carry no weighted_conviction, and fewer than two remain to draw a line through.`
+            : 'Fewer than two cycles with a conviction value — nothing to draw a line through.'
+        }
+      />
+    );
+  }
+  const series: LineSeries[] = [
+    { values: s.conviction, color: 'var(--uc-accent)', label: 'weighted conviction' },
+    { values: s.longThresh, color: '#4ec97a', label: 'long threshold', dashed: true },
+    { values: s.shortThreshMirrored, color: '#e5675b', label: 'short threshold (mirrored below zero)', dashed: true },
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <LineChart
+        series={series}
+        height={200}
+        markers={s.markers}
+        xLabels={s.cycles.map((c) => `cycle ${String(c)}`)}
+        formatY={(v) => v.toFixed(2)}
+        tickCount={4}
+      />
+      <RegimeStrip regimes={s.regimes} height={12} colorOf={regimeColor} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <ChartLegend series={series} />
+        <span className="font-mono text-[9.5px] text-faint">
+          {String(s.markers.length)} trade{s.markers.length === 1 ? '' : 's'} marked
+          {s.dropped > 0 ? ` · ${String(s.dropped)} rows without a conviction value not drawn` : ''}
+        </span>
+      </div>
+      <p className="text-[10.5px] leading-relaxed text-muted">
+        A long fires when the conviction line crosses the upper dashed bar; a short when it
+        crosses the lower one (shorts gate on |conviction| against{' '}
+        <span className="font-mono">short_thresh</span>, so the bar is drawn mirrored below
+        zero). The bars move because the thresholds are regime-adaptive — the strip underneath
+        shows which regime set them.
+      </p>
+    </div>
+  );
 }
 
 /** The funnel and its tables, separated from the fetch so it renders on a fixture. */
@@ -168,6 +389,9 @@ export function ConvictionFunnel({
   const decisions = decisionCounts(selected);
   const blocking = blockingBreakdown(selected);
   const context = contextOf(selected);
+  const tickers = useMemo(() => tickersOf(traces), [traces]);
+  const [pickedTicker, setPickedTicker] = useState('');
+  const ticker = pickedTicker !== '' && tickers.includes(pickedTicker) ? pickedTicker : tickers[0] ?? '';
 
   return (
     <div className="flex flex-col gap-4">
@@ -207,6 +431,51 @@ export function ConvictionFunnel({
             is longer than what is drawn here. These counts describe the first{' '}
             {String(traces.length)} traces, not the whole run.
           </p>
+        )}
+      </Card>
+
+      <Card
+        label="Regime timeline"
+        right={
+          <span className="font-mono text-[9.5px] text-faint">
+            all loaded cycles — regime is per-cycle state, so the cycle filter above does not apply
+          </span>
+        }
+      >
+        <RegimeTimeline traces={traces} />
+      </Card>
+
+      <Card
+        label={ticker === '' ? 'Conviction vs thresholds' : `Conviction vs thresholds · ${ticker}`}
+        right={
+          tickers.length > 0 ? (
+            <span className="flex items-center gap-2">
+              <label htmlFor="victoria-conviction-ticker" className="font-mono text-[9.5px] text-faint">
+                ticker
+              </label>
+              <select
+                id="victoria-conviction-ticker"
+                value={ticker}
+                onChange={(e) => { setPickedTicker(e.target.value); }}
+                className="rounded-md border border-line bg-control px-2 py-1 font-mono text-[10px] text-ink focus:border-edge focus:outline-none"
+              >
+                {tickers.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </span>
+          ) : undefined
+        }
+      >
+        {ticker === '' ? (
+          <EmptyNote
+            title="No tickers in these traces"
+            detail="Every loaded trace lacks a ticker field, so there is nothing to plot a conviction line for."
+          />
+        ) : (
+          <ThresholdBands traces={traces} ticker={ticker} />
         )}
       </Card>
 

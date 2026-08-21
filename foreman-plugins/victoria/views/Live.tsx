@@ -32,10 +32,15 @@
  */
 import { ago, clock, Pill, StatusDot } from '@omega-harness/usecase-kit/ui';
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
-import { Sparkline } from '../charts.js';
-import type { TrainingMetrics, TrainingProgress } from '../client.js';
-import { pct, pnlClass, regimeColor, signedUsd } from '../format.js';
-import { useVictoriaLiveStream, useVictoriaMetrics, useVictoriaProgress } from '../hooks.js';
+import { RegimeStrip, Sparkline } from '../charts.js';
+import type { CycleMetric, TrainingMetrics, TrainingProgress } from '../client.js';
+import { pct, pnlClass, ratio, regimeColor, signedUsd } from '../format.js';
+import {
+  useVictoriaCycleMetrics,
+  useVictoriaLiveStream,
+  useVictoriaMetrics,
+  useVictoriaProgress,
+} from '../hooks.js';
 import { Async, Card, EmptyNote, ErrorNote, LoadingNote, Stat, ViewFrame } from './chrome.js';
 
 /** The only status the omega API uses to mean "a run is going right now". */
@@ -350,6 +355,109 @@ export function ProgressDetail({
   );
 }
 
+// ── Per-cycle metrics ────────────────────────────────────────────────────────
+
+export interface CycleSeries {
+  version: string;
+  cycles: number[];
+  regimes: (string | null)[];
+  composite: number[];
+  basketStd: number[];
+  newTrades: number[];
+  zeroStreak: number[];
+  /** Rows whose composite_score was null — real cycles, not drawn on that line. */
+  compositeDropped: number;
+}
+
+/**
+ * The sparkline series a metrics JSONL yields.
+ *
+ * `composite` drops null scores (a cycle the strategy computed no composite
+ * for) rather than plotting them as 0 — the count of dropped rows rides along
+ * so the panel can say so. The other series are integers the writer always
+ * fills. Regimes keep full cycle alignment for the strip.
+ */
+export function cycleSeries(rows: readonly CycleMetric[]): CycleSeries {
+  const ordered = [...rows].sort((a, b) => (a.cycle ?? 0) - (b.cycle ?? 0));
+  const compositeRows = ordered.filter((r) => typeof r.composite_score === 'number');
+  return {
+    version: ordered[0]?.version ?? '',
+    cycles: ordered.map((r) => r.cycle ?? 0),
+    regimes: ordered.map((r) => r.regime ?? null),
+    composite: compositeRows.map((r) => r.composite_score ?? 0),
+    basketStd: ordered.map((r) => r.basket_std ?? 0),
+    newTrades: ordered.map((r) => r.new_trades ?? 0),
+    zeroStreak: ordered.map((r) => r.zero_streak ?? 0),
+    compositeDropped: ordered.length - compositeRows.length,
+  };
+}
+
+/** The per-cycle JSONL, drawn. Separated from the fetch for fixture rendering. */
+export function CycleMetricsPanel({ rows }: { rows: readonly CycleMetric[] }) {
+  if (rows.length === 0) {
+    return (
+      <EmptyNote
+        title="No per-cycle metrics"
+        detail={
+          <>
+            The API answered 200 with zero rows — no{' '}
+            <span className="font-mono">&#123;version&#125;_metrics.jsonl</span> exists in{' '}
+            <span className="font-mono">data/</span> (the durable copy{' '}
+            <span className="font-mono">run_training.py</span> places at run end) or in the
+            ephemeral <span className="font-mono">/tmp</span> sink a run writes while in
+            flight. Runs finished before the durable-copy mechanism landed have nothing
+            anywhere.
+          </>
+        }
+      />
+    );
+  }
+  const s = cycleSeries(rows);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between font-mono text-[9.5px] text-faint">
+        <span>
+          {s.version !== '' ? `${s.version} · ` : ''}
+          {String(s.cycles.length)} cycles
+        </span>
+        <span>
+          cycle {String(s.cycles[0])} → {String(s.cycles[s.cycles.length - 1])}
+        </span>
+      </div>
+      <RegimeStrip regimes={s.regimes} padLeft={0} padRight={0} height={14} colorOf={regimeColor} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Series
+          label={
+            s.compositeDropped > 0
+              ? `Composite score (${String(s.compositeDropped)} null cycles not drawn)`
+              : 'Composite score'
+          }
+          values={s.composite}
+          color="#e8963c"
+          format={(v) => ratio(v, 4)}
+        />
+        <Series label="Basket std" values={s.basketStd} color="#5b9dff" format={(v) => ratio(v, 4)} />
+        <Series label="New trades by cycle" values={s.newTrades} color="#4ec97a" format={(v) => String(v)} />
+        <Series label="Zero-trade streak" values={s.zeroStreak} color="#e5675b" format={(v) => String(v)} />
+      </div>
+    </div>
+  );
+}
+
+function CycleMetricsCard() {
+  const state = useVictoriaCycleMetrics();
+  return (
+    <Card
+      label="Per-cycle metrics"
+      right={<span className="font-mono text-[9.5px] text-faint">/api/v1/training/jsonl</span>}
+    >
+      <Async state={state} what="loading per-cycle metrics">
+        {(rows) => <CycleMetricsPanel rows={rows} />}
+      </Async>
+    </Card>
+  );
+}
+
 /** The aggregate strip, separated from the fetch so both states render on a fixture. */
 export function LiveMetrics({ metrics: m }: { metrics: TrainingMetrics }) {
   const state = liveness(m);
@@ -433,6 +541,8 @@ export function VictoriaLive(_props: UseCaseViewProps) {
           <StreamPanel />
           <ProgressPanel />
         </div>
+
+        <CycleMetricsCard />
       </div>
     </ViewFrame>
   );
