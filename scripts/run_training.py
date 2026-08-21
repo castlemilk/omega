@@ -70,6 +70,7 @@ import hashlib
 import json
 import logging
 import math
+import shutil
 import struct
 import subprocess
 import time
@@ -2038,6 +2039,19 @@ def run(
             "profit_factor": round(profit_factor, 3) if profit_factor != float("inf") else None,
         },
     }
+
+    # Durable per-cycle metrics — copy the /tmp (or $AUDIT/tmp) JSONL sink into
+    # AUDIT_DIR at run end so the per-cycle series survives a reboot and the API
+    # (/api/v1/training/jsonl) can serve finished runs from data/ instead of the
+    # ephemeral sink. The live path is untouched: the trainer still appends to
+    # TMP_SINK_DIR during the run; this is a one-shot copy of the finished file.
+    metrics_durable = AUDIT_DIR / f"{version}_metrics.jsonl"
+    try:
+        if metrics_jsonl.exists() and metrics_jsonl.resolve() != metrics_durable.resolve():
+            shutil.copyfile(metrics_jsonl, metrics_durable)
+            results["observability"]["metrics_jsonl_durable"] = str(metrics_durable)
+    except OSError as exc:
+        log.warning("Could not copy metrics JSONL to %s (non-fatal): %s", metrics_durable, exc)
 
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2)

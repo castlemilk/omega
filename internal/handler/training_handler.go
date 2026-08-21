@@ -67,6 +67,7 @@ func (h *TrainingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/v1/training/forensics", h.handleForensics)
 	mux.HandleFunc("/api/v1/training/log", h.handleTrainingLog)
 	mux.HandleFunc("/api/v1/signals/correlation", h.handleSignalCorrelation)
+	mux.HandleFunc("/api/v1/signals/ic-history", h.handleSignalICHistory)
 }
 
 // ── JSON types ────────────────────────────────────────────────────────────────
@@ -611,13 +612,19 @@ func (h *TrainingHandler) handleJSONL(w http.ResponseWriter, r *http.Request) {
 			version = latest
 		}
 	}
-	if version == "" {
+	if version == "" || !isSafeVersion(version) {
 		writeJSON(w, []json.RawMessage{})
 		return
 	}
 
-	jsonlPath := fmt.Sprintf("/tmp/%s_metrics.jsonl", version)
+	// Prefer the durable copy run_training.py places under progressDir at run
+	// end; fall back to the ephemeral /tmp sink for a run still in flight (or
+	// finished before the durable copy existed).
+	jsonlPath := filepath.Join(h.progressDir, version+"_metrics.jsonl")
 	data, err := os.ReadFile(jsonlPath) //nolint:gosec
+	if err != nil {
+		data, err = os.ReadFile(fmt.Sprintf("/tmp/%s_metrics.jsonl", version)) //nolint:gosec
+	}
 	if err != nil {
 		writeJSON(w, []json.RawMessage{})
 		return
@@ -1091,6 +1098,33 @@ func (h *TrainingHandler) handleSignalCorrelation(w http.ResponseWriter, r *http
 		return
 	}
 	result["version"] = version
+	writeJSON(w, result)
+}
+
+// handleSignalICHistory serves data/signal_ic_history.json — the seeded
+// per-signal pooled/regime ICs plus the SignalDecayDetector's observation
+// store (omega/nodes/victoria/signal_decay.py owns the file). Passed through
+// verbatim; a missing file is a 404 with the path named, never an empty 200
+// that looks like "no signals".
+func (h *TrainingHandler) handleSignalICHistory(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	icPath := filepath.Join(h.progressDir, "signal_ic_history.json")
+	data, err := os.ReadFile(icPath) //nolint:gosec
+	if err != nil {
+		http.Error(w, fmt.Sprintf("signal IC history not found at %s", icPath), http.StatusNotFound)
+		return
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal(data, &result); err != nil {
+		http.Error(w, "failed to parse signal IC history", http.StatusInternalServerError)
+		return
+	}
 	writeJSON(w, result)
 }
 
