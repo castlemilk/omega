@@ -67,7 +67,12 @@ here is generated live. Verified, not assumed.
 
 ## The rules, in short
 
-Full detail is in the harness's `docs/USE-CASE-SHELLS.md`. The three that bite:
+Full detail is in the harness's `docs/USE-CASE-SHELLS.md`. For anything
+visual — charts, analytics tiles, signal views — read
+`victoria/RENDERING.md` first: it is the handover for the rendering stack,
+the data-contract traps (omit-zero Connect JSON, named SSE events, the
+version-label namespaces), and the honesty rules every view follows. The
+three that bite:
 
 1. **A shell is a pure export.** The entry module exports exactly one
    `UseCaseShell` object and does nothing else at import time — no
