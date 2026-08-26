@@ -14,7 +14,7 @@ DISCARDS ``composite`` and rebuilds it from the ``*_signal`` keys — silently
 dropping the crisis term while its fire counters keep incrementing:
 
 1. ``strategy._compute_weighted_conviction`` — with ``ic_seed_weighting`` ON
-   (the DEFAULT, 18 seeded ICs) the IC-weighted return
+   (opt-in since V275; 18 seeded ICs) the IC-weighted return
    ``fsum(weighted_terms)/total_ic`` never reads ``composite`` at all.
 2. ``strategy._apply_regime_signal_weights`` — recomputes ``composite`` as a
    plain mean of ``*_signal`` keys. Inert only because

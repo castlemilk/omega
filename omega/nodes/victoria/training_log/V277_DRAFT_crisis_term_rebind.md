@@ -1,4 +1,4 @@
-# V275 (DRAFT) — Crisis-term recompute-proofing: make the V227 term invariant to three defaults
+# V277 (DRAFT) — Crisis-term recompute-proofing: make the V227 term invariant to three defaults
 
 > ## ⚠️ DRAFT — NOT APPROVED, NOT PRE-REGISTERED, NOT RUN
 >
@@ -6,7 +6,7 @@
 > operator, **no** cells have been run, **no** numbers in it are observations, and the
 > feature flag it describes (`crisis_term_rebind_enabled`) ships **default `False`**.
 > Nothing here moves the standing baseline. Approving this draft means: reviewing §2's
-> bars, fixing them, renaming the file to `V275.md`, committing it, and only then
+> bars, fixing them, renaming the file to `V277.md`, committing it, and only then
 > launching §4's grid. Until that happens the code on this branch is a dormant,
 > byte-identical-by-default seam.
 

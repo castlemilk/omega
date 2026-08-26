@@ -1259,9 +1259,12 @@ class StrategyNode(Node):
         _ic_conviction = math.fsum(_weighted_terms) / total_ic
         # V275: the IC-weighted path is built purely from the `*_signal` keys, so
         # the crisis term — which lives ONLY in `composite` — is absent from it.
-        # With ic_seed_weighting ON (the DEFAULT) this is the path that runs, which
-        # means the crisis term silently loses its primary lever while its fire
-        # counters keep incrementing. Add the SAME stashed magnitude the composite
+        # Whenever an arm opts into ic_seed_weighting this is the path that runs,
+        # which means the crisis term silently loses its primary lever while its
+        # fire counters keep incrementing. (ic_seed_weighting defaults False since
+        # V275 and per_regime_ic_weighting since V276 — IC weighting is opt-in, so
+        # this path is dormant on defaults rather than, as V275 first read it, the
+        # path that runs by default.) Add the SAME stashed magnitude the composite
         # path used (weight threaded from the bind site, never re-derived here; the
         # gate is never re-evaluated). No-op unless the flag is ON.
         if getattr(self.features, "crisis_term_rebind_enabled", False):

@@ -1033,7 +1033,7 @@ class VictoriaFeatures:
     ``composite`` and rebuild it from the ``*_signal`` keys, silently dropping the
     term while its fire counters keep incrementing:
       1. ``strategy._compute_weighted_conviction`` — with ``ic_seed_weighting`` ON
-         (the DEFAULT; 18 seeded ICs) the IC-weighted return never reads
+         (opt-in since V275; 18 seeded ICs) the IC-weighted return never reads
          ``composite`` at all, so the crisis term loses its primary lever;
       2. ``strategy._apply_regime_signal_weights`` — mean-of-``*_signal`` recompute
          (inert only because ``strategy_selector_enabled`` defaults False);

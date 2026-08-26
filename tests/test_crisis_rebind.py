@@ -1,11 +1,11 @@
-"""V275: tests for the crisis-term recompute-proofing seam.
+"""V277 (DRAFT): tests for the crisis-term recompute-proofing seam.
 
 The V227 crisis-skew term lives ONLY in ``composite`` (never a ``*_signal`` key).
 Three downstream paths rebuild ``composite`` from the ``*_signal`` keys and thereby
 DROP the term:
 
   1. ``strategy._compute_weighted_conviction`` IC-weighted return (active whenever
-     ``ic_seed_weighting`` is ON — the DEFAULT),
+     an arm opts into ``ic_seed_weighting``; default False since V275),
   2. ``strategy._apply_regime_signal_weights`` (inert only because
      ``strategy_selector_enabled`` defaults False),
   3. the V141 crisis-dampening / V153 trend-dampening recomputes in
