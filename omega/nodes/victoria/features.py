@@ -696,11 +696,28 @@ class VictoriaFeatures:
     Pinned by `tests/test_features_defaults.py`; see `training_log/V275.md`.
     """
 
-    per_regime_ic_weighting: bool = True
+    per_regime_ic_weighting: bool = False
     """V170 flag, first DECLARED in V222 (was undeclared → getattr→False silent
     no-op, documented by the startup wiring banner since V218). When ON,
     _compute_weighted_conviction looks up the current regime's IC for each
     signal in _regime_ics before falling back to the pooled _signal_ics value.
+
+    V276 flipped this default True → False, completing the V273/H3 pair that V275
+    deliberately half-finished. Unlike its sibling `ic_seed_weighting`, this flag
+    IS read at the strategy layer (`strategy.py:1135`, guards at `:1205`/`:1223`),
+    so the flip is NOT inert by construction — it is inert *conditionally*: both
+    guards read `if _per_regime and self._regime_ics`, and `_regime_ics` has exactly
+    one populate path (`update_regime_ics`, called only at
+    `scripts/run_training.py:1155`, inside the `ic_seed_weighting` gate at `:1106`).
+    Under IC-OFF that dict is empty, both guards short-circuit, and this flag cannot
+    be observed at any value.
+
+    V275's audit found all 44 arms inherited this default and 7 were live under it,
+    so the flip could not come first: V276 Part A pinned
+    `"per_regime_ic_weighting": true` into those 7 arms — preserving exactly what
+    they measured, V274's own ARM_ON among them — and only then flipped the default.
+    Per-regime IC weighting is now something an arm opts into.
+    Pinned by `tests/test_features_defaults.py`; see `training_log/V276.md`.
     """
 
     regime_conditional_ic_weighting: bool = False
