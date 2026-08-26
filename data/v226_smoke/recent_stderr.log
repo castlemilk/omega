@@ -1,0 +1,28 @@
+hmmlearn not available — using numpy GMM fallback
+15:10:59 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED_API_KEY not set — using DEMO_KEY (30 req/day limit). Set FRED_API_KEY env var for full access.
+15:10:59 WARNING omega.core.training_preflight: PREFLIGHT WARN: No exchange API responded (tried Binance, Coinbase, CoinGecko). Trading signals will use stale/cached data.
+15:10:59 WARNING omega.core.training_preflight: PREFLIGHT COMPLETE — 1 issue(s) found (training will continue with degraded capabilities): No exchange API responded (tried Binance, Coinbase, CoinGecko). Trading signals will use stale/cached data.
+15:10:59 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED_API_KEY not set — using DEMO_KEY (30 req/day limit). Set FRED_API_KEY env var for full access.
+15:10:59 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/lifecycle unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/lifecycle) — continuing
+15:10:59 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch failed: <urlopen error OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: https://api.alternative.me/fng/?limit=30>
+15:10:59 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch returned no data — returning 0.0 (cold cache) (cache_age=1781761260s)
+15:10:59 WARNING omega.nodes.victoria.data_cache: MacroDataCache: FRED_API_KEY not set — using DEMO_KEY (30 req/day limit). Set FRED_API_KEY env var for full access.
+15:11:02 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/diagnostics) — continuing
+15:11:02 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions) — continuing
+15:11:12 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch failed: <urlopen error OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: https://api.alternative.me/fng/?limit=30>
+15:11:12 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch returned no data — returning 0.0 (cold cache) (cache_age=1781761273s)
+15:11:14 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/diagnostics) — continuing
+15:11:14 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions) — continuing
+15:11:24 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch failed: <urlopen error OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: https://api.alternative.me/fng/?limit=30>
+15:11:24 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch returned no data — returning 0.0 (cold cache) (cache_age=1781761284s)
+15:11:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/diagnostics) — continuing
+15:11:25 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions) — continuing
+15:11:35 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch failed: <urlopen error OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: https://api.alternative.me/fng/?limit=30>
+15:11:35 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch returned no data — returning 0.0 (cold cache) (cache_age=1781761295s)
+15:11:37 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/diagnostics) — continuing
+15:11:37 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions) — continuing
+15:11:47 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch failed: <urlopen error OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: https://api.alternative.me/fng/?limit=30>
+15:11:47 WARNING omega.nodes.victoria.signals.fear_greed: FearGreedSignal: fetch returned no data — returning 0.0 (cold cache) (cache_age=1781761307s)
+15:11:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/diagnostics unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/diagnostics) — continuing
+15:11:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/decisions) — continuing
+15:11:48 WARNING omega.core.heartbeat_client: heartbeat: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/lifecycle unreachable (OMEGA_FROZEN_CACHE: live HTTP blocked in backtest: http://localhost:8080/api/v1/nodes/victoria_v226_smoke_recent/lifecycle) — continuing

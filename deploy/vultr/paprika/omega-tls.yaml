@@ -1,0 +1,41 @@
+# Public issuer for Gateway origin TLS. HTTP-01 challenges attach to the
+# shared Envoy Gateway HTTP listener.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    email: ben.ebsworth@gmail.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - group: gateway.networking.k8s.io
+                kind: Gateway
+                name: paprika
+                namespace: envoy-gateway-system
+                sectionName: http
+---
+# Certificate for browser/Cloudflare origin traffic through Envoy Gateway.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: paprika-tls
+  namespace: paprika-e2e
+spec:
+  secretName: paprika-tls
+  dnsNames:
+    - paprika.benebsworth.com
+    - origin-vke.telesis.dev
+    - origin-vke.brandbrain.dev
+    - api.brandbrain.dev
+    - origin-vke.cuttlefish.sh
+    - api.cuttlefish.sh
+    - origin-vke.flaggr.dev
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer

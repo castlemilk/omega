@@ -1,0 +1,152 @@
+13:44:55 RNG seed set to 42 (deterministic mode)
+13:44:55 BACKTEST MODE: WS signals disabled (whale_prints, ws_microstructure)
+13:44:55 ======================================================================
+13:44:55 Training Run v229_smoke_trend — 40 cycles  sleep=0s
+13:44:55 CoinGecko key  : CG-YPzBAPag5...
+13:44:55 Database URL   : postgresql://omega:omega@localhost:5432/...
+13:44:55 Metrics JSONL  : /tmp/v229_smoke_trend_metrics.jsonl
+13:44:55 Log file       : /tmp/v229_smoke_trend_training.log
+13:44:55 Features ON    : crisis_skew_enabled, crisis_skew_regime_gate_enabled, ffg_gate1_enabled, ffg_gate4_enabled, ic_drawdown_gate_enabled, ic_seed_weighting, per_regime_ic_weighting, regime_conditional_ic_weighting
+13:44:55 ======================================================================
+13:44:55 V215: frozen-cache HTTP guard ARMED — all outbound urllib blocked + logged to /Users/benebsworth/projects/omega/data/v229_smoke_trend_http_during_backtest.jsonl
+13:44:55 [startup] subsystem wiring (flag → wired?):
+13:44:55 [startup]   strategy_selector:         off
+13:44:55 [startup]   regime_signal_weighting:   UNDECLARED — getattr→False, flag is a silent no-op
+13:44:55 [startup]   mode_transition_blend:     off
+13:44:55 [startup]   bayesian_regime:           off
+13:44:55 [startup]   hmm_regime:                UNDECLARED — getattr→False, flag is a silent no-op
+13:44:55 [startup]   per_regime_ic_weighting:   ON → ACTIVE
+13:44:55 [startup]   crisis_skew:               ON · module importable → ACTIVE
+13:44:55 [startup]   crisis_skew: ON (regime_gated=1, W=0.2), frozen=1 (additive post-demean, source=OHLCV)
+13:44:55 ======================================================================
+13:44:55 [startup] V219 substrate preflight (frozen cache):
+13:44:55 [startup]   manifest OK: cc5359e18ef79d9f5227f47b3e8c9e3a  data/frozen_advanced_signals.json
+13:44:55 [startup]   manifest OK: 384c326308dbae3d2966bf7dce3868bf  data/frozen_funding_cache.json
+13:44:55 [startup]   manifest OK: 397b943808e9ca5772dbfcc5a7fb4282  data/macro_cache.db
+13:44:55 [startup]   MACRO HEALTH: 4/4 series usable via read path (usable=DGS2,DGS10,DTWEXBGS,VIXCLS)
+13:44:55 [startup]   FUNDING HEALTH: 5 symbols cached
+13:44:55 [startup]   V219 substrate preflight PASS
+13:44:55 V207a: OMEGA_FROZEN_CACHE=1 — skipping macro warm_up (no live FRED/funding fetches)
+13:44:55 BACKTEST MODE: ingestion replaced by ReplayIngestionNode (snap_trending_2023q4, 153 steps)
+13:44:55 ImprovementEngine: SyntheticEvaluator injected
+13:44:55 [startup]   V224 R3 empirical ICs: target=trend fit_on=['crisis', 'recent']
+13:44:55 [startup]   IC seeds loaded (R3): pooled=4 signals, per-regime=4 signals
+13:44:55 [startup]   IC weights applied: {'ollivier_ricci_signal': 0.01, 'ricci_curvature_signal': 0.11, 'sma_crossover': -0.01, 'spy_signal': 0.2}
+13:44:55 [startup]   IC-weighting ACTIVE: _signal_ics=4 signals, _regime_ics=4 signals
+13:44:55 Decision snapshots → /tmp/v229_smoke_trend_decisions.jsonl (+ Postgres if configured)
+13:44:55 SignalDecayDetector: loaded from data/signal_ic_history.json
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 0) ═══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [91mUNKN ⚠️[0m
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m [93mnone yet[0m
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m [93mn/a[0m
+  [1mTRADES:       [0m open=0 closed=0 | PnL=$+0.00 | WR=0%
+  [1mLONG/SHORT:   [0m longs=0 shorts=0
+  [1mBLOCKERS:     [0m [91mRegime detector not firing | No signal data yet (first cycle?)[0m
+[96m══════════════════════════════════════════════════════[0m
+
+13:44:57 Cycle   1/40 [NORM] OK       | fresh=0.0min | open= 4 closed=  0 | PnL=$+0 wr=0% | improve=0 sem_db=30 | 1.5s/c ETA 57s | zero_streak=1
+13:45:03 Cycle   5/40 [NORM] OK       | fresh=0.0min | open= 4 closed=  5 | PnL=$-695 wr=20% | improve=0 sem_db=30 | 1.5s/c ETA 52s | zero_streak=0
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 10) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.00)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 7/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.17 ([91mSELL[0m) | ETH: -0.13 ([91mSELL[0m) | SOL: +0.04 (HOLD) | BNB: -0.06 ([91mSELL[0m) | XRP: +0.04 (HOLD) | ADA: +0.04 (HOLD) | DOT: +0.04 (HOLD) | AVAX: +0.04 (HOLD) | LINK: +0.04 (HOLD) | MATIC: +0.04 (HOLD) | NEAR: +0.04 (HOLD) | SUI: +0.04 (HOLD) | ARB: +0.04 (HOLD)
+  [1mTRADES:       [0m open=4 closed=8 | PnL=$-434.14 | WR=38%
+  [1mLONG/SHORT:   [0m longs=8 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+13:45:28 Cycle  10/40 [NORM] OK       | fresh=0.0min | open= 4 closed=  8 | PnL=$-434 wr=38% | improve=0 sem_db=30 | 3.2s/c ETA 97s | zero_streak=1
+13:45:34 Cycle  15/40 [HIGH] OK       | fresh=0.0min | open= 0 closed= 12 | PnL=$-771 wr=42% | improve=1 sem_db=30 | 2.6s/c ETA 64s | zero_streak=2
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 20) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 7/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: -0.10 ([91mSELL[0m) | ETH: -0.09 ([91mSELL[0m) | SOL: +0.17 ([92mBUY[0m) | BNB: -0.12 ([91mSELL[0m) | XRP: -0.25 ([91mSELL[0m) | ADA: +0.02 (HOLD) | DOT: +0.02 (HOLD) | AVAX: +0.17 ([92mBUY[0m) | LINK: -0.01 (HOLD) | MATIC: +0.17 ([92mBUY[0m) | NEAR: +0.17 ([92mBUY[0m) | SUI: +0.04 (HOLD) | ARB: -0.19 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=12 | PnL=$-771.28 | WR=42%
+  [1mLONG/SHORT:   [0m longs=8 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+13:45:55 Cycle  20/40 [NORM] OK       | fresh=0.0min | open= 0 closed= 12 | PnL=$-771 wr=42% | improve=1 sem_db=30 | 3.0s/c ETA 60s | zero_streak=7
+13:46:01 Cycle  25/40 [CRIS] OK       | fresh=0.0min | open= 0 closed= 12 | PnL=$-771 wr=42% | improve=1 sem_db=30 | 2.6s/c ETA 39s | zero_streak=12
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 30) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mCRISIS[0m (conf: 0.38)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 6/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.03 (HOLD) | ETH: +0.03 (HOLD) | SOL: +0.02 (HOLD) | BNB: -0.16 ([91mSELL[0m) | XRP: -0.09 ([91mSELL[0m) | ADA: +0.06 ([92mBUY[0m) | DOT: -0.04 (HOLD) | AVAX: +0.20 ([92mBUY[0m) | LINK: -0.02 (HOLD) | MATIC: -0.26 ([91mSELL[0m) | NEAR: +0.13 ([92mBUY[0m) | SUI: +0.21 ([92mBUY[0m) | ARB: -0.12 ([91mSELL[0m)
+  [1mTRADES:       [0m open=0 closed=12 | PnL=$-771.28 | WR=42%
+  [1mLONG/SHORT:   [0m longs=8 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+13:46:20 ZERO_STREAK_ALERT cycle=30 streak=16 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:20 Cycle  30/40 [CRIS] OK       | fresh=0.0min | open= 0 closed= 12 | PnL=$-771 wr=42% | improve=1 sem_db=30 | 2.8s/c ETA 28s | zero_streak=17
+13:46:22 ZERO_STREAK_ALERT cycle=31 streak=17 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:23 ZERO_STREAK_ALERT cycle=32 streak=18 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:25 ZERO_STREAK_ALERT cycle=33 streak=19 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:26 ZERO_STREAK_ALERT cycle=34 streak=20 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:27 ZERO_STREAK_ALERT cycle=35 streak=21 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:27 Cycle  35/40 [CRIS] OK       | fresh=0.0min | open= 0 closed= 12 | PnL=$-771 wr=42% | improve=1 sem_db=30 | 2.6s/c ETA 13s | zero_streak=22
+13:46:27 ZERO_STREAK_ALERT cycle=36 streak=22 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:28 ZERO_STREAK_ALERT cycle=37 streak=23 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:29 ZERO_STREAK_ALERT cycle=38 streak=24 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:30 ZERO_STREAK_ALERT cycle=39 streak=25 basket_std=0.2000 basket_mean=0.0000 composites={}
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 40) ══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [93mNORMAL[0m (conf: 0.39)
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m 7/20 active
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m BTC: +0.09 ([92mBUY[0m) | ETH: +0.03 (HOLD) | SOL: +0.05 ([92mBUY[0m) | BNB: -0.24 ([91mSELL[0m) | XRP: -0.13 ([91mSELL[0m) | ADA: +0.09 ([92mBUY[0m) | DOT: +0.09 ([92mBUY[0m) | AVAX: +0.09 ([92mBUY[0m) | LINK: -0.04 (HOLD) | MATIC: -0.06 ([91mSELL[0m) | NEAR: +0.09 ([92mBUY[0m) | SUI: -0.01 (HOLD) | ARB: -0.05 (HOLD)
+  [1mTRADES:       [0m open=0 closed=12 | PnL=$-771.28 | WR=42%
+  [1mLONG/SHORT:   [0m longs=8 shorts=4
+  [1mBLOCKERS:     [0m [92mNONE[0m
+[96m══════════════════════════════════════════════════════[0m
+
+13:46:47 ZERO_STREAK_ALERT cycle=40 streak=26 basket_std=0.2000 basket_mean=0.0000 composites={}
+13:46:47 Cycle  40/40 [NORM] OK       | fresh=0.0min | open= 0 closed= 12 | PnL=$-771 wr=42% | improve=1 sem_db=30 | 2.8s/c ETA 0s | zero_streak=27
+13:46:47 [V223] IC-gate summary: regime_conditional=True → IC-ON 22 cycles, BYPASS(crisis/high_vol) 18 cycles (of 40)
+13:46:47 V229_SMOKE_TREND gates FAILED vs v228_smoke_trend — 3 failures:
+13:46:47   ✗ pnl_floor: v49 -771.28 < v48 -695.18
+13:46:47   ✗ regime_parity[high_vol]: v49 -337.14 < v48 +0.00 (delta -337.14)
+13:46:47   ✗ trade_count_floor: v49 trades 12 < 20
+13:46:47 Gate report: /Users/benebsworth/projects/omega/data/v229_smoke_trend_gate_result.json
+13:46:47 Attribution — alpha: $-1754.66  beta: $+2695694.68  timing: $+2691295.65  selection: $+0.00
+13:46:47 Attribution report  : /Users/benebsworth/projects/omega/data/v229_smoke_trend_attribution.json
+13:46:47 
+13:46:47 ======================================================================
+13:46:47 V229_SMOKE_TREND COMPLETE — 40 cycles in 111s (2.78s/cycle)
+13:46:47 ======================================================================
+13:46:47 improve_calls         : 1
+13:46:47 semantic_patterns_db  : 30
+13:46:47 Closed trades         : 12  (long=8  short=4)
+13:46:47 Total PnL             : $-771.28  (engine realised: $-771.28)
+13:46:47 Win rate              : 41.7%  (5/12)
+13:46:47 Profit factor         : 0.75
+13:46:47 --- Observability ---
+13:46:47 Zero-trade cycles     : 32 / 40  (80%)
+13:46:47 Circuit breaker trips : 0
+13:46:47 Final vol threshold   : 0.000
+13:46:47 Metrics JSONL         : /tmp/v229_smoke_trend_metrics.jsonl
+13:46:47 Results               : /Users/benebsworth/projects/omega/data/v229_smoke_trend_results.json
+13:46:47 ======================================================================

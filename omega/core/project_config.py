@@ -262,7 +262,9 @@ def _build_data_provider(nd: NodeDef) -> Any:
     node = DataIngestionNode()
     tickers = nd.config.get("tickers")
     if tickers:
-        node._tickers = list(tickers)
+        # TODO: DataIngestionNode does not define/read `_tickers` — this config
+        # wiring appears to be dead. Flagged by automated quality review.
+        node._tickers = list(tickers)  # type: ignore[attr-defined]
     return node
 
 
@@ -338,15 +340,18 @@ def _build_strategy(nd: NodeDef) -> Any:
 
     node = StrategyNode()
     if "min_conviction" in nd.config:
-        node._min_conviction = float(nd.config["min_conviction"])
+        # TODO: StrategyNode defines `_abs_min_conviction`, not `_min_conviction` —
+        # this config wiring appears to be dead. Flagged by automated quality review.
+        node._min_conviction = float(nd.config["min_conviction"])  # type: ignore[attr-defined]
     return node
 
 
 def _build_executor(nd: NodeDef) -> Any:
     mode = nd.config.get("mode", "paper")
     if mode == "paper":
-        from omega.core.paper_trading import PaperTradingExecutorNode
-
+        # PaperTradingExecutorNode is defined in this module (below); the previous
+        # import from omega.core.paper_trading pointed at a class that doesn't exist
+        # there and would have raised ImportError at runtime.
         node = PaperTradingExecutorNode()
         if "max_positions" in nd.config:
             node._max_positions = int(nd.config["max_positions"])

@@ -356,29 +356,29 @@ class SignalEvolutionTracker:
             ev.cycles_below_ic_threshold = 0  # reset on recovery
 
         if ev.cycles_below_ic_threshold >= self._retirement_window:
+            # current_state != RETIRED is guaranteed by the early return above.
             ev.retirement_reason = SignalRetirementReason.LOW_IC
-            if ev.current_state != SignalLifecycle.RETIRED:
-                ev.transitions.append(
-                    StateTransition(
-                        from_state=ev.current_state,
-                        to_state=SignalLifecycle.RETIRED,
-                        timestamp=datetime.now(),
-                        evidence=(
-                            f"IC={ic:.4f} below threshold={self._ic_threshold:.4f} "
-                            f"for {ev.cycles_below_ic_threshold} consecutive cycles "
-                            f"(window={self._retirement_window})"
-                        ),
-                        signal_value=ic,
-                    )
+            ev.transitions.append(
+                StateTransition(
+                    from_state=ev.current_state,
+                    to_state=SignalLifecycle.RETIRED,
+                    timestamp=datetime.now(),
+                    evidence=(
+                        f"IC={ic:.4f} below threshold={self._ic_threshold:.4f} "
+                        f"for {ev.cycles_below_ic_threshold} consecutive cycles "
+                        f"(window={self._retirement_window})"
+                    ),
+                    signal_value=ic,
                 )
-                ev.current_state = SignalLifecycle.RETIRED
-                logger.warning(
-                    "Signal '%s' auto-retired: IC=%.4f below %.4f for %d cycles",
-                    signal_name,
-                    ic,
-                    self._ic_threshold,
-                    ev.cycles_below_ic_threshold,
-                )
+            )
+            ev.current_state = SignalLifecycle.RETIRED
+            logger.warning(
+                "Signal '%s' auto-retired: IC=%.4f below %.4f for %d cycles",
+                signal_name,
+                ic,
+                self._ic_threshold,
+                ev.cycles_below_ic_threshold,
+            )
 
     def is_retired(self, signal_name: str) -> bool:
         """Return True if the named signal has been auto-retired."""

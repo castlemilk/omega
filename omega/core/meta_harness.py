@@ -700,6 +700,8 @@ Respond with ONLY valid JSON (no markdown fences):
 }}"""
 
         try:
+            if self._brain is None:
+                raise ValueError("LLM brain not initialised")
             response_text = self._brain.consult(prompt, tier=ModelTier.DEEP)
             if not response_text:
                 raise ValueError("Empty LLM response")

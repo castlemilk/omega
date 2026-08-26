@@ -1,0 +1,39 @@
+# GatewayClass for Envoy Gateway
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+---
+# Gateway for Paprika. Cloudflare terminates TLS at the edge (real cert) and
+# proxies to this LB on HTTPS (port 443) with a self-signed origin cert.
+# Cloudflare SSL mode: Full (allows self-signed origin certs).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: paprika
+  namespace: envoy-gateway-system
+  annotations:
+    gateway.envoyproxy.io/envoyproxy: envoy-gateway-system/custom-proxy-config
+spec:
+  gatewayClassName: eg
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: paprika-tls
+            namespace: paprika-e2e
+      allowedRoutes:
+        namespaces:
+          from: All

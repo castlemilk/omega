@@ -248,7 +248,8 @@ def compute_health_score(
             continue
         if not isinstance(sig_val, dict):
             continue
-        val = float(sig_val.get("value", sig_val.get("composite", 1.0)))
+        raw_val = sig_val.get("value", sig_val.get("composite", 1.0))
+        val = float(raw_val) if raw_val is not None else 1.0
         conf = float(sig_val.get("confidence", 1.0))
         if val == 0.0 and conf == 0.0:
             score -= 5

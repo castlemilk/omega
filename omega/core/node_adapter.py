@@ -385,12 +385,17 @@ class DataAdapter(NodeAdapter):
         pairs = inputs.get("pairs", ["BTCUSDT", "ETHUSDT", "SOLUSDT"])
         interval = inputs.get("interval", "1d")
         limit = inputs.get("limit", 90)
+        layer = self._layer
+        if layer is None:
+            raise RuntimeError(
+                "Resilience layer not initialised; _on_startup must run before _process"
+            )
         loop = asyncio.get_event_loop()
         market_data = await loop.run_in_executor(
             None,
-            lambda: self._layer.fetch_with_failover(pairs, interval, limit),
+            lambda: layer.fetch_with_failover(pairs, interval, limit),
         )
-        health = self._layer.get_health_status()
+        health = layer.get_health_status()
         return {"market_data": market_data, "data_health": health}
 
     def get_metadata(self) -> NodeMetadata:
