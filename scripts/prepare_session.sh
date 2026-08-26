@@ -36,7 +36,27 @@ git config gc.auto 0 2>/dev/null || true
 
 # 4. Verify git responds promptly. If this times out the wedge is below git
 #    (kernel/FSEvents/disk) — surface it rather than retry.
-if ! timeout 5 git rev-parse HEAD > /dev/null 2>&1; then
+#
+#    Portability: GNU `timeout` is NOT present on a stock macOS (it ships with
+#    coreutils as `gtimeout`, and only if brew-installed). Calling it directly
+#    exits 127, which `!` inverts into a spurious "env is unhealthy" FAIL on a
+#    perfectly healthy machine — a hard, misleading block on step 0 of the
+#    training loop. Prefer timeout → gtimeout → perl's alarm (perl ships with
+#    macOS); only if all three are missing, probe without a bound.
+_probe_git() {
+  if command -v timeout > /dev/null 2>&1; then
+    timeout 5 git rev-parse HEAD > /dev/null 2>&1
+  elif command -v gtimeout > /dev/null 2>&1; then
+    gtimeout 5 git rev-parse HEAD > /dev/null 2>&1
+  elif command -v perl > /dev/null 2>&1; then
+    perl -e 'alarm 5; exec @ARGV or exit 127' git rev-parse HEAD > /dev/null 2>&1
+  else
+    echo "[prepare_session] WARN: no timeout/gtimeout/perl — probing git unbounded." >&2
+    git rev-parse HEAD > /dev/null 2>&1
+  fi
+}
+
+if ! _probe_git; then
   echo "[prepare_session] FAIL: git did not respond within 5s — env is unhealthy."
   echo "[prepare_session] Do NOT retry. Report to the user: manual cleanup needed."
   exit 1
