@@ -48,7 +48,7 @@ SUM="$OUT/grid_progress.log"
 SESSION_STATE=data/SESSION_STATE.json
 
 MAIN='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "ic_seed_weighting": false, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false}'
-TRENDIC='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false, "ic_seed_weighting": true, "regime_conditional_ic_weighting": true, "ic_drawdown_gate_enabled": true, "ic_drawdown_threshold": 0.12}'
+TRENDIC='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false, "ic_seed_weighting": true, "per_regime_ic_weighting": true, "regime_conditional_ic_weighting": true, "ic_drawdown_gate_enabled": true, "ic_drawdown_threshold": 0.12}'
 
 CONFIGS="${CONFIGS:-main trendic}"
 

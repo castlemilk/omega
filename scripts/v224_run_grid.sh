@@ -34,7 +34,7 @@ run_cell() {
   grep -h "total_pnl_usd" "data/${vprefix}_${gate}_determinism/${vprefix}_${gate}_r1_results.json" 2>/dev/null | tail -1 | tee -a "$SUM"
 }
 
-R3F='{"ic_seed_weighting": true, "regime_conditional_ic_weighting": true}'
+R3F='{"ic_seed_weighting": true, "per_regime_ic_weighting": true, "regime_conditional_ic_weighting": true}'
 
 # R3 cells first (the thesis).
 run_cell trend  2 "$R3F" v224_r3 1

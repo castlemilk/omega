@@ -33,9 +33,12 @@ STATE="$OUT/grid_state.json"
 SUM="$OUT/grid_progress.log"
 
 # ARM_ON = the V240 universe_selective string with ic_seed_weighting flipped
-# false -> true. per_regime_ic_weighting is left at its features.py default
-# (True) — under IC-ON it becomes live, which is exactly the H3 configuration.
-ARM_ON='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "ic_seed_weighting": true, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false, "universe_selective_enabled": true}'
+# false -> true. per_regime_ic_weighting is now PINNED true explicitly (V276);
+# it was previously inherited from the features.py default, which V276 flipped
+# to False. The pinned value is the one V274 actually measured, so this arm is
+# byte-identical to what V274 ran — under IC-ON it is live, which is exactly the
+# H3 configuration.
+ARM_ON='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "ic_seed_weighting": true, "per_regime_ic_weighting": true, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false, "universe_selective_enabled": true}'
 
 n_for() { case " $SENTINELS " in *" $1 "*) echo 2 ;; *) echo 1 ;; esac; }
 log() { echo "$@" | tee -a "$SUM"; }

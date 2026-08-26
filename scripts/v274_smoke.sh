@@ -4,8 +4,12 @@
 #
 # ARM_OFF is byte-for-byte the V240 `universe_selective` feature string — the arm
 # that produced the standing baseline (confirmed by G0, scripts/v274_provenance_audit.py).
-# ARM_ON adds ONLY `"ic_seed_weighting": true`; per_regime_ic_weighting is left at
-# its features.py default (True) in both arms, which is doubly inert under ARM_OFF.
+# ARM_ON adds `"ic_seed_weighting": true` plus an explicit
+# `"per_regime_ic_weighting": true` — the latter PINNED by V276 to the value it
+# previously inherited from the features.py default (which V276 flipped to False),
+# so this arm still measures exactly what V274 measured. Under ARM_OFF the
+# per-regime flag is doubly inert: _regime_ics is only populated inside the
+# ic_seed_weighting-gated block at run_training.py:1106.
 #
 # No code is changed by this version. The only lever is the --features JSON.
 #
@@ -29,7 +33,7 @@ SUM="$OUT/smoke_progress.log"
 ARM_OFF='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "ic_seed_weighting": false, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false, "universe_selective_enabled": true}'
 # ARM_ON is written out in full rather than derived by string surgery from
 # ARM_OFF, so the one-key diff is auditable by eye: ic_seed_weighting false->true.
-ARM_ON='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "ic_seed_weighting": true, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false, "universe_selective_enabled": true}'
+ARM_ON='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "rv_term_brake_enabled": false, "ic_seed_weighting": true, "per_regime_ic_weighting": true, "crisis_term_predemean_enabled": false, "crisis_size_throttle_enabled": false, "universe_selective_enabled": true}'
 
 # window|gate|committed_pnl  (committed values read from the V240 artifacts)
 SENTINELS=(

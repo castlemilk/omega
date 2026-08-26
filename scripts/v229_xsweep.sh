@@ -8,7 +8,7 @@ set -u
 cd "$(dirname "$0")/.."
 sweep() {
   local gate="$1" x="$2"
-  local feats="{\"crisis_skew_enabled\": true, \"crisis_skew_regime_gate_enabled\": true, \"crisis_skew_drawdown_threshold\": 0.12, \"ic_seed_weighting\": true, \"regime_conditional_ic_weighting\": true, \"ic_drawdown_gate_enabled\": true, \"ic_drawdown_threshold\": ${x}}"
+  local feats="{\"crisis_skew_enabled\": true, \"crisis_skew_regime_gate_enabled\": true, \"crisis_skew_drawdown_threshold\": 0.12, \"ic_seed_weighting\": true, \"per_regime_ic_weighting\": true, \"regime_conditional_ic_weighting\": true, \"ic_drawdown_gate_enabled\": true, \"ic_drawdown_threshold\": ${x}}"
   local tag="v229_sweep_x${x/./}"
   local icdd="data/${tag}_${gate}_ic_dd.jsonl"; : > "$icdd"
   echo "######## SWEEP $gate X=$x $(date -u +%FT%TZ) ########"

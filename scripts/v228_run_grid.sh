@@ -12,7 +12,7 @@
 set -u
 cd "$(dirname "$0")/.."
 
-ON='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "ic_seed_weighting": true, "regime_conditional_ic_weighting": true}'
+ON='{"crisis_skew_enabled": true, "crisis_skew_regime_gate_enabled": true, "crisis_skew_drawdown_threshold": 0.12, "ic_seed_weighting": true, "per_regime_ic_weighting": true, "regime_conditional_ic_weighting": true}'
 OFF='{"crisis_skew_enabled": false, "ic_seed_weighting": false}'
 
 # cell GATE ARM FEATS ESKEW EGATE EIC R3
