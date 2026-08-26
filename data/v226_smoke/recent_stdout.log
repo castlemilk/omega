@@ -1,0 +1,73 @@
+15:10:59 RNG seed set to 42 (deterministic mode)
+15:10:59 BACKTEST MODE: WS signals disabled (whale_prints, ws_microstructure)
+15:10:59 ======================================================================
+15:10:59 Training Run v226_smoke_recent — 5 cycles  sleep=10s
+15:10:59 CoinGecko key  : CG-YPzBAPag5...
+15:10:59 Database URL   : postgres://omega:omega@localhost:5432/om...
+15:10:59 Metrics JSONL  : /tmp/v226_smoke_recent_metrics.jsonl
+15:10:59 Log file       : /tmp/v226_smoke_recent_training.log
+15:10:59 Features ON    : crisis_skew_enabled, crisis_skew_regime_gate_enabled, ffg_gate1_enabled, ffg_gate4_enabled, per_regime_ic_weighting
+15:10:59 ======================================================================
+15:10:59 V215: frozen-cache HTTP guard ARMED — all outbound urllib blocked + logged to /Users/benebsworth/projects/omega/data/v226_smoke_recent_http_during_backtest.jsonl
+15:10:59 [startup] subsystem wiring (flag → wired?):
+15:10:59 [startup]   strategy_selector:         off
+15:10:59 [startup]   regime_signal_weighting:   UNDECLARED — getattr→False, flag is a silent no-op
+15:10:59 [startup]   mode_transition_blend:     off
+15:10:59 [startup]   bayesian_regime:           off
+15:10:59 [startup]   hmm_regime:                UNDECLARED — getattr→False, flag is a silent no-op
+15:10:59 [startup]   per_regime_ic_weighting:   ON → ACTIVE
+15:10:59 [startup]   crisis_skew:               ON · module importable → ACTIVE
+15:10:59 [startup]   crisis_skew: ON (regime_gated=1, W=0.2), frozen=1 (additive post-demean, source=OHLCV)
+15:10:59 ======================================================================
+15:10:59 [startup] V219 substrate preflight (frozen cache):
+15:10:59 [startup]   manifest OK: cc5359e18ef79d9f5227f47b3e8c9e3a  data/frozen_advanced_signals.json
+15:10:59 [startup]   manifest OK: 384c326308dbae3d2966bf7dce3868bf  data/frozen_funding_cache.json
+15:10:59 [startup]   manifest OK: 397b943808e9ca5772dbfcc5a7fb4282  data/macro_cache.db
+15:10:59 [startup]   MACRO HEALTH: 4/4 series usable via read path (usable=DGS2,DGS10,DTWEXBGS,VIXCLS)
+15:10:59 [startup]   FUNDING HEALTH: 5 symbols cached
+15:10:59 [startup]   V219 substrate preflight PASS
+15:10:59 V207a: OMEGA_FROZEN_CACHE=1 — skipping macro warm_up (no live FRED/funding fetches)
+15:10:59 BACKTEST MODE: ingestion replaced by ReplayIngestionNode (snap_20260414, 60 steps)
+15:10:59 ImprovementEngine: SyntheticEvaluator injected
+15:10:59 [startup]   IC-WEIGHTING INERT: _signal_ics empty (0 signals) — conviction filter uses raw composite; pooled + per-regime IC weighting are both no-ops (update_signal_ics never called)
+15:10:59 Decision snapshots → /tmp/v226_smoke_recent_decisions.jsonl (+ Postgres if configured)
+15:10:59 SignalDecayDetector: loaded from data/signal_ic_history.json
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 0) ═══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [91mUNKN ⚠️[0m
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m [93mnone yet[0m
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m [93mn/a[0m
+  [1mTRADES:       [0m open=0 closed=0 | PnL=$+0.00 | WR=0%
+  [1mLONG/SHORT:   [0m longs=0 shorts=0
+  [1mBLOCKERS:     [0m [91mRegime detector not firing | No signal data yet (first cycle?)[0m
+[96m══════════════════════════════════════════════════════[0m
+
+15:11:02 Cycle   1/5 [NORM] OK       | fresh=0.0min | open= 0 closed=  0 | PnL=$+0 wr=0% | improve=0 sem_db=30 | 2.8s/c ETA 11s | zero_streak=1
+15:11:48 Cycle   5/5 [NORM] OK       | fresh=0.0min | open= 1 closed=  1 | PnL=$-895 wr=0% | improve=0 sem_db=30 | 9.7s/c ETA 0s | zero_streak=2
+15:11:48 [V223] IC-gate summary: regime_conditional=False → IC-ON 0 cycles, BYPASS(crisis/high_vol) 5 cycles (of 5)
+15:11:48 V226_SMOKE_RECENT gates FAILED vs v223_smoke_recent — 1 failures:
+15:11:48   ✗ trade_count_floor: v49 trades 1 < 20
+15:11:48 Gate report: /Users/benebsworth/projects/omega/data/v226_smoke_recent_gate_result.json
+15:11:48 Attribution — alpha: $-894.92  beta: $-264.00  timing: $-630.92  selection: $+0.00
+15:11:48 Attribution report  : /Users/benebsworth/projects/omega/data/v226_smoke_recent_attribution.json
+15:11:48 
+15:11:48 ======================================================================
+15:11:48 V226_SMOKE_RECENT COMPLETE — 5 cycles in 48s (9.67s/cycle)
+15:11:48 ======================================================================
+15:11:48 improve_calls         : 0
+15:11:48 semantic_patterns_db  : 30
+15:11:48 Closed trades         : 1  (long=1  short=0)
+15:11:48 Total PnL             : $-894.92  (engine realised: $-894.92)
+15:11:48 Win rate              : 0.0%  (0/1)
+15:11:48 Profit factor         : 0.00
+15:11:48 --- Observability ---
+15:11:48 Zero-trade cycles     : 4 / 5  (80%)
+15:11:48 Circuit breaker trips : 0
+15:11:48 Final vol threshold   : 0.000
+15:11:48 Metrics JSONL         : /tmp/v226_smoke_recent_metrics.jsonl
+15:11:48 Results               : /Users/benebsworth/projects/omega/data/v226_smoke_recent_results.json
+15:11:48 ======================================================================

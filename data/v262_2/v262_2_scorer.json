@@ -1,0 +1,1347 @@
+{
+  "alpha_bonferroni_2_arms": 0.025,
+  "annualized_net_floor": 0.15,
+  "arms": {
+    "M_momentum": {
+      "annualized_gross": {
+        "fully_deployed": 0.049593,
+        "fully_deployed_pct": 4.959,
+        "hold_bars": 5,
+        "holds_per_year_if_continuous": 1752.0,
+        "mean_ret_per_hold": 2.83067e-05,
+        "n": 1628,
+        "notional_usd": 10000.0
+      },
+      "annualized_net": {
+        "fully_deployed": -4.155207,
+        "fully_deployed_pct": -415.521,
+        "hold_bars": 5,
+        "holds_per_year_if_continuous": 1752.0,
+        "mean_ret_per_hold": -0.0023716933,
+        "n": 1628,
+        "notional_usd": 10000.0
+      },
+      "duty_cycle_net": {
+        "duty_cycle": 0.018443,
+        "net_return_per_unit_notional_per_symbol_year": -0.076633,
+        "pct_per_symbol_year": -7.663,
+        "symbol_years": 50.384,
+        "valid": true
+      },
+      "falsifiers": {
+        "all_pass": false,
+        "f1_detail": {
+          "ci95_deflated": {
+            "ci95_excludes_zero": true,
+            "ci95_hi": -21.6232,
+            "ci95_lo": -39.9585,
+            "ci95_lo_gt_zero": false,
+            "deflated": true,
+            "n_obs": 1628,
+            "n_resamples": 10000,
+            "point_median": -31.979,
+            "resample_size": 1267,
+            "seed": 20260730,
+            "valid": true
+          },
+          "ci95_undeflated_reported": {
+            "ci95_excludes_zero": true,
+            "ci95_hi": -24.0,
+            "ci95_lo": -38.9445,
+            "ci95_lo_gt_zero": false,
+            "deflated": false,
+            "n_obs": 1628,
+            "n_resamples": 10000,
+            "point_median": -31.979,
+            "resample_size": 1628,
+            "seed": 20260730,
+            "valid": true
+          },
+          "median_gt_zero": false,
+          "pooled_median_net_usd": -31.98
+        },
+        "f1_refuted": true,
+        "f2_detail": {
+          "alpha_bonferroni": 0.025,
+          "mwu": {
+            "n1": 695,
+            "n1_eff": 540.7,
+            "n2": 933,
+            "n2_eff": 725.9,
+            "n_eff_factor": 0.778,
+            "p_two_sided_deflated": 0.33053753,
+            "p_two_sided_raw": 0.26995912,
+            "valid": true,
+            "z_deflated": 0.973032,
+            "z_raw": 1.103157
+          },
+          "p_deflated": 0.33053753
+        },
+        "f2_refuted": true,
+        "f3_detail": {
+          "annualized_gross_pct": 4.959,
+          "annualized_net": -4.155207,
+          "annualized_net_pct": -415.521,
+          "floor": 0.15
+        },
+        "f3_refuted": true
+      },
+      "fee_bps_roundtrip_breakeven_on_median_gross": null,
+      "include": [
+        "hourly_return_z",
+        "funding",
+        "open_interest",
+        "fear_greed",
+        "vix",
+        "dxy",
+        "yield_curve",
+        "gdelt"
+      ],
+      "mwu_winners_losers_entry_abs_z": {
+        "n1": 695,
+        "n1_eff": 540.7,
+        "n2": 933,
+        "n2_eff": 725.9,
+        "n_eff_factor": 0.778,
+        "p_two_sided_deflated": 0.33053753,
+        "p_two_sided_raw": 0.26995912,
+        "valid": true,
+        "z_deflated": 0.973032,
+        "z_raw": 1.103157
+      },
+      "n_trades": 1628,
+      "params": {
+        "entry_z": 1.0,
+        "fee_bps_per_side": 12.0,
+        "hold_bars": 5,
+        "min_volume_z": 0.0,
+        "notional_usd": 10000.0
+      },
+      "per_name": {
+        "ADAUSDT": {
+          "gross": {
+            "mean_pnl_usd": 40.98,
+            "median_pnl_usd": 6.62,
+            "n": 194,
+            "p25_pnl_usd": -81.69,
+            "p75_pnl_usd": 130.4,
+            "profit_factor": 1.631,
+            "total_pnl_usd": 7949.52,
+            "win_rate": 0.5361
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 194,
+          "net": {
+            "mean_pnl_usd": 16.98,
+            "median_pnl_usd": -17.38,
+            "n": 194,
+            "p25_pnl_usd": -105.69,
+            "p75_pnl_usd": 106.4,
+            "profit_factor": 1.22,
+            "total_pnl_usd": 3293.52,
+            "win_rate": 0.4794
+          }
+        },
+        "ARBUSDT": {
+          "gross": {
+            "mean_pnl_usd": 32.58,
+            "median_pnl_usd": 19.14,
+            "n": 137,
+            "p25_pnl_usd": -128.23,
+            "p75_pnl_usd": 133.35,
+            "profit_factor": 1.359,
+            "total_pnl_usd": 4463.3,
+            "win_rate": 0.5182
+          },
+          "n_bars": 29264,
+          "n_composite_bars": 27912,
+          "n_trades": 137,
+          "net": {
+            "mean_pnl_usd": 8.58,
+            "median_pnl_usd": -4.86,
+            "n": 137,
+            "p25_pnl_usd": -152.23,
+            "p75_pnl_usd": 109.35,
+            "profit_factor": 1.084,
+            "total_pnl_usd": 1175.3,
+            "win_rate": 0.4818
+          }
+        },
+        "AVAXUSDT": {
+          "gross": {
+            "mean_pnl_usd": 16.78,
+            "median_pnl_usd": -4.7,
+            "n": 192,
+            "p25_pnl_usd": -117.98,
+            "p75_pnl_usd": 132.99,
+            "profit_factor": 1.205,
+            "total_pnl_usd": 3222.03,
+            "win_rate": 0.4792
+          },
+          "n_bars": 51143,
+          "n_composite_bars": 39359,
+          "n_trades": 192,
+          "net": {
+            "mean_pnl_usd": -7.22,
+            "median_pnl_usd": -28.7,
+            "n": 192,
+            "p25_pnl_usd": -141.98,
+            "p75_pnl_usd": 108.99,
+            "profit_factor": 0.924,
+            "total_pnl_usd": -1385.97,
+            "win_rate": 0.4219
+          }
+        },
+        "BNBUSDT": {
+          "gross": {
+            "mean_pnl_usd": -0.74,
+            "median_pnl_usd": -3.2,
+            "n": 191,
+            "p25_pnl_usd": -65.75,
+            "p75_pnl_usd": 83.0,
+            "profit_factor": 0.986,
+            "total_pnl_usd": -141.85,
+            "win_rate": 0.4712
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 191,
+          "net": {
+            "mean_pnl_usd": -24.74,
+            "median_pnl_usd": -27.2,
+            "n": 191,
+            "p25_pnl_usd": -89.75,
+            "p75_pnl_usd": 59.0,
+            "profit_factor": 0.638,
+            "total_pnl_usd": -4725.85,
+            "win_rate": 0.3927
+          }
+        },
+        "MATICUSDT": {
+          "gross": {
+            "mean_pnl_usd": -6.99,
+            "median_pnl_usd": 3.93,
+            "n": 147,
+            "p25_pnl_usd": -120.14,
+            "p75_pnl_usd": 104.65,
+            "profit_factor": 0.926,
+            "total_pnl_usd": -1028.01,
+            "win_rate": 0.5034
+          },
+          "n_bars": 41108,
+          "n_composite_bars": 23618,
+          "n_trades": 147,
+          "net": {
+            "mean_pnl_usd": -30.99,
+            "median_pnl_usd": -20.07,
+            "n": 147,
+            "p25_pnl_usd": -144.14,
+            "p75_pnl_usd": 80.65,
+            "profit_factor": 0.708,
+            "total_pnl_usd": -4556.01,
+            "win_rate": 0.4694
+          }
+        },
+        "NEARUSDT": {
+          "gross": {
+            "mean_pnl_usd": -69.77,
+            "median_pnl_usd": -20.25,
+            "n": 189,
+            "p25_pnl_usd": -192.13,
+            "p75_pnl_usd": 83.7,
+            "profit_factor": 0.497,
+            "total_pnl_usd": -13186.88,
+            "win_rate": 0.4392
+          },
+          "n_bars": 50616,
+          "n_composite_bars": 39359,
+          "n_trades": 189,
+          "net": {
+            "mean_pnl_usd": -93.77,
+            "median_pnl_usd": -44.25,
+            "n": 189,
+            "p25_pnl_usd": -216.13,
+            "p75_pnl_usd": 59.7,
+            "profit_factor": 0.386,
+            "total_pnl_usd": -17722.88,
+            "win_rate": 0.3915
+          }
+        },
+        "POLUSDT": {
+          "gross": {
+            "n": 0
+          },
+          "n_bars": 16310,
+          "n_composite_bars": 0,
+          "n_trades": 0,
+          "net": {
+            "n": 0
+          }
+        },
+        "SOLUSDT": {
+          "gross": {
+            "mean_pnl_usd": -8.15,
+            "median_pnl_usd": -15.94,
+            "n": 217,
+            "p25_pnl_usd": -119.12,
+            "p75_pnl_usd": 109.86,
+            "profit_factor": 0.905,
+            "total_pnl_usd": -1768.71,
+            "win_rate": 0.4424
+          },
+          "n_bars": 52151,
+          "n_composite_bars": 39359,
+          "n_trades": 217,
+          "net": {
+            "mean_pnl_usd": -32.15,
+            "median_pnl_usd": -39.94,
+            "n": 217,
+            "p25_pnl_usd": -143.12,
+            "p75_pnl_usd": 85.86,
+            "profit_factor": 0.678,
+            "total_pnl_usd": -6976.71,
+            "win_rate": 0.4101
+          }
+        },
+        "SUIUSDT": {
+          "gross": {
+            "mean_pnl_usd": -13.48,
+            "median_pnl_usd": -19.17,
+            "n": 110,
+            "p25_pnl_usd": -174.73,
+            "p75_pnl_usd": 126.44,
+            "profit_factor": 0.87,
+            "total_pnl_usd": -1482.73,
+            "win_rate": 0.4636
+          },
+          "n_bars": 28284,
+          "n_composite_bars": 26928,
+          "n_trades": 110,
+          "net": {
+            "mean_pnl_usd": -37.48,
+            "median_pnl_usd": -43.17,
+            "n": 110,
+            "p25_pnl_usd": -198.73,
+            "p75_pnl_usd": 102.44,
+            "profit_factor": 0.678,
+            "total_pnl_usd": -4122.73,
+            "win_rate": 0.4364
+          }
+        },
+        "XRPUSDT": {
+          "gross": {
+            "mean_pnl_usd": 9.7,
+            "median_pnl_usd": -15.49,
+            "n": 251,
+            "p25_pnl_usd": -103.49,
+            "p75_pnl_usd": 79.52,
+            "profit_factor": 1.112,
+            "total_pnl_usd": 2434.16,
+            "win_rate": 0.4382
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 251,
+          "net": {
+            "mean_pnl_usd": -14.3,
+            "median_pnl_usd": -39.49,
+            "n": 251,
+            "p25_pnl_usd": -127.49,
+            "p75_pnl_usd": 55.52,
+            "profit_factor": 0.858,
+            "total_pnl_usd": -3589.84,
+            "win_rate": 0.3984
+          }
+        }
+      },
+      "pooled_gross_stats": {
+        "mean_pnl_usd": 0.28,
+        "median_pnl_usd": -7.98,
+        "n": 1628,
+        "p25_pnl_usd": -114.68,
+        "p75_pnl_usd": 105.56,
+        "profit_factor": 1.003,
+        "total_pnl_usd": 460.83,
+        "win_rate": 0.4736
+      },
+      "pooled_net_stats": {
+        "mean_pnl_usd": -23.72,
+        "median_pnl_usd": -31.98,
+        "n": 1628,
+        "p25_pnl_usd": -138.68,
+        "p75_pnl_usd": 81.56,
+        "profit_factor": 0.765,
+        "total_pnl_usd": -38611.17,
+        "win_rate": 0.4269
+      },
+      "reported_only_names": {
+        "BTCUSDT": {
+          "gross": {
+            "mean_pnl_usd": 16.72,
+            "median_pnl_usd": 2.62,
+            "n": 310,
+            "p25_pnl_usd": -61.51,
+            "p75_pnl_usd": 85.32,
+            "profit_factor": 1.326,
+            "total_pnl_usd": 5182.06,
+            "win_rate": 0.5129
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 50285,
+          "n_trades": 310,
+          "net": {
+            "mean_pnl_usd": -7.28,
+            "median_pnl_usd": -21.38,
+            "n": 310,
+            "p25_pnl_usd": -85.51,
+            "p75_pnl_usd": 61.32,
+            "profit_factor": 0.886,
+            "total_pnl_usd": -2257.94,
+            "win_rate": 0.4226
+          }
+        },
+        "DOTUSDT": {
+          "gross": {
+            "mean_pnl_usd": -1.52,
+            "median_pnl_usd": 2.21,
+            "n": 207,
+            "p25_pnl_usd": -119.4,
+            "p75_pnl_usd": 102.04,
+            "profit_factor": 0.981,
+            "total_pnl_usd": -314.06,
+            "win_rate": 0.5024
+          },
+          "n_bars": 51966,
+          "n_composite_bars": 39359,
+          "n_trades": 207,
+          "net": {
+            "mean_pnl_usd": -25.52,
+            "median_pnl_usd": -21.79,
+            "n": 207,
+            "p25_pnl_usd": -143.4,
+            "p75_pnl_usd": 78.04,
+            "profit_factor": 0.726,
+            "total_pnl_usd": -5282.06,
+            "win_rate": 0.4348
+          }
+        },
+        "ETHUSDT": {
+          "gross": {
+            "mean_pnl_usd": -11.59,
+            "median_pnl_usd": -9.67,
+            "n": 244,
+            "p25_pnl_usd": -91.09,
+            "p75_pnl_usd": 76.97,
+            "profit_factor": 0.828,
+            "total_pnl_usd": -2828.33,
+            "win_rate": 0.4631
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 244,
+          "net": {
+            "mean_pnl_usd": -35.59,
+            "median_pnl_usd": -33.67,
+            "n": 244,
+            "p25_pnl_usd": -115.09,
+            "p75_pnl_usd": 52.97,
+            "profit_factor": 0.561,
+            "total_pnl_usd": -8684.33,
+            "win_rate": 0.3893
+          }
+        },
+        "LINKUSDT": {
+          "gross": {
+            "mean_pnl_usd": -5.35,
+            "median_pnl_usd": -5.94,
+            "n": 197,
+            "p25_pnl_usd": -109.09,
+            "p75_pnl_usd": 130.72,
+            "profit_factor": 0.944,
+            "total_pnl_usd": -1053.15,
+            "win_rate": 0.4721
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 197,
+          "net": {
+            "mean_pnl_usd": -29.35,
+            "median_pnl_usd": -29.94,
+            "n": 197,
+            "p25_pnl_usd": -133.09,
+            "p75_pnl_usd": 106.72,
+            "profit_factor": 0.731,
+            "total_pnl_usd": -5781.15,
+            "win_rate": 0.4315
+          }
+        }
+      },
+      "return_sign": 1.0
+    },
+    "R_reversion": {
+      "annualized_gross": {
+        "fully_deployed": 2.203876,
+        "fully_deployed_pct": 220.388,
+        "hold_bars": 5,
+        "holds_per_year_if_continuous": 1752.0,
+        "mean_ret_per_hold": 0.0012579204,
+        "n": 1614,
+        "notional_usd": 10000.0
+      },
+      "annualized_net": {
+        "fully_deployed": -2.000924,
+        "fully_deployed_pct": -200.092,
+        "hold_bars": 5,
+        "holds_per_year_if_continuous": 1752.0,
+        "mean_ret_per_hold": -0.0011420796,
+        "n": 1614,
+        "notional_usd": 10000.0
+      },
+      "duty_cycle_net": {
+        "duty_cycle": 0.018284,
+        "net_return_per_unit_notional_per_symbol_year": -0.036585,
+        "pct_per_symbol_year": -3.659,
+        "symbol_years": 50.384,
+        "valid": true
+      },
+      "falsifiers": {
+        "all_pass": false,
+        "f1_detail": {
+          "ci95_deflated": {
+            "ci95_excludes_zero": false,
+            "ci95_hi": 1.8023,
+            "ci95_lo": -22.9946,
+            "ci95_lo_gt_zero": false,
+            "deflated": true,
+            "n_obs": 1614,
+            "n_resamples": 10000,
+            "point_median": -9.962,
+            "resample_size": 1256,
+            "seed": 20260730,
+            "valid": true
+          },
+          "ci95_undeflated_reported": {
+            "ci95_excludes_zero": false,
+            "ci95_hi": 0.2718,
+            "ci95_lo": -19.2061,
+            "ci95_lo_gt_zero": false,
+            "deflated": false,
+            "n_obs": 1614,
+            "n_resamples": 10000,
+            "point_median": -9.962,
+            "resample_size": 1614,
+            "seed": 20260730,
+            "valid": true
+          },
+          "median_gt_zero": false,
+          "pooled_median_net_usd": -9.96
+        },
+        "f1_refuted": true,
+        "f2_detail": {
+          "alpha_bonferroni": 0.025,
+          "mwu": {
+            "n1": 770,
+            "n1_eff": 599.1,
+            "n2": 844,
+            "n2_eff": 656.6,
+            "n_eff_factor": 0.778,
+            "p_two_sided_deflated": 0.48802974,
+            "p_two_sided_raw": 0.43176118,
+            "valid": true,
+            "z_deflated": -0.693446,
+            "z_raw": -0.786181
+          },
+          "p_deflated": 0.48802974
+        },
+        "f2_refuted": true,
+        "f3_detail": {
+          "annualized_gross_pct": 220.388,
+          "annualized_net": -2.000924,
+          "annualized_net_pct": -200.092,
+          "floor": 0.15
+        },
+        "f3_refuted": true
+      },
+      "fee_bps_roundtrip_breakeven_on_median_gross": 14.038,
+      "include": [
+        "hourly_return_z",
+        "funding",
+        "open_interest",
+        "fear_greed",
+        "vix",
+        "dxy",
+        "yield_curve",
+        "gdelt"
+      ],
+      "mwu_winners_losers_entry_abs_z": {
+        "n1": 770,
+        "n1_eff": 599.1,
+        "n2": 844,
+        "n2_eff": 656.6,
+        "n_eff_factor": 0.778,
+        "p_two_sided_deflated": 0.48802974,
+        "p_two_sided_raw": 0.43176118,
+        "valid": true,
+        "z_deflated": -0.693446,
+        "z_raw": -0.786181
+      },
+      "n_trades": 1614,
+      "params": {
+        "entry_z": 1.0,
+        "fee_bps_per_side": 12.0,
+        "hold_bars": 5,
+        "min_volume_z": 0.0,
+        "notional_usd": 10000.0
+      },
+      "per_name": {
+        "ADAUSDT": {
+          "gross": {
+            "mean_pnl_usd": 26.54,
+            "median_pnl_usd": 20.03,
+            "n": 201,
+            "p25_pnl_usd": -89.24,
+            "p75_pnl_usd": 152.23,
+            "profit_factor": 1.332,
+            "total_pnl_usd": 5334.86,
+            "win_rate": 0.5423
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 201,
+          "net": {
+            "mean_pnl_usd": 2.54,
+            "median_pnl_usd": -3.97,
+            "n": 201,
+            "p25_pnl_usd": -113.24,
+            "p75_pnl_usd": 128.23,
+            "profit_factor": 1.028,
+            "total_pnl_usd": 510.86,
+            "win_rate": 0.4776
+          }
+        },
+        "ARBUSDT": {
+          "gross": {
+            "mean_pnl_usd": 28.19,
+            "median_pnl_usd": 8.03,
+            "n": 130,
+            "p25_pnl_usd": -116.0,
+            "p75_pnl_usd": 157.99,
+            "profit_factor": 1.343,
+            "total_pnl_usd": 3665.28,
+            "win_rate": 0.5077
+          },
+          "n_bars": 29264,
+          "n_composite_bars": 27912,
+          "n_trades": 130,
+          "net": {
+            "mean_pnl_usd": 4.19,
+            "median_pnl_usd": -15.97,
+            "n": 130,
+            "p25_pnl_usd": -140.0,
+            "p75_pnl_usd": 133.99,
+            "profit_factor": 1.044,
+            "total_pnl_usd": 545.28,
+            "win_rate": 0.4769
+          }
+        },
+        "AVAXUSDT": {
+          "gross": {
+            "mean_pnl_usd": 11.95,
+            "median_pnl_usd": 6.96,
+            "n": 209,
+            "p25_pnl_usd": -128.49,
+            "p75_pnl_usd": 141.9,
+            "profit_factor": 1.141,
+            "total_pnl_usd": 2496.98,
+            "win_rate": 0.5024
+          },
+          "n_bars": 51143,
+          "n_composite_bars": 39359,
+          "n_trades": 209,
+          "net": {
+            "mean_pnl_usd": -12.05,
+            "median_pnl_usd": -17.04,
+            "n": 209,
+            "p25_pnl_usd": -152.49,
+            "p75_pnl_usd": 117.9,
+            "profit_factor": 0.876,
+            "total_pnl_usd": -2519.02,
+            "win_rate": 0.4689
+          }
+        },
+        "BNBUSDT": {
+          "gross": {
+            "mean_pnl_usd": 11.39,
+            "median_pnl_usd": 11.61,
+            "n": 181,
+            "p25_pnl_usd": -63.08,
+            "p75_pnl_usd": 109.79,
+            "profit_factor": 1.194,
+            "total_pnl_usd": 2061.07,
+            "win_rate": 0.558
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 181,
+          "net": {
+            "mean_pnl_usd": -12.61,
+            "median_pnl_usd": -12.39,
+            "n": 181,
+            "p25_pnl_usd": -87.08,
+            "p75_pnl_usd": 85.79,
+            "profit_factor": 0.82,
+            "total_pnl_usd": -2282.93,
+            "win_rate": 0.4807
+          }
+        },
+        "MATICUSDT": {
+          "gross": {
+            "mean_pnl_usd": 0.83,
+            "median_pnl_usd": 5.21,
+            "n": 129,
+            "p25_pnl_usd": -109.5,
+            "p75_pnl_usd": 122.86,
+            "profit_factor": 1.01,
+            "total_pnl_usd": 107.02,
+            "win_rate": 0.5039
+          },
+          "n_bars": 41108,
+          "n_composite_bars": 23618,
+          "n_trades": 129,
+          "net": {
+            "mean_pnl_usd": -23.17,
+            "median_pnl_usd": -18.79,
+            "n": 129,
+            "p25_pnl_usd": -133.5,
+            "p75_pnl_usd": 98.86,
+            "profit_factor": 0.758,
+            "total_pnl_usd": -2988.98,
+            "win_rate": 0.4961
+          }
+        },
+        "NEARUSDT": {
+          "gross": {
+            "mean_pnl_usd": -34.07,
+            "median_pnl_usd": 0.0,
+            "n": 189,
+            "p25_pnl_usd": -150.94,
+            "p75_pnl_usd": 127.64,
+            "profit_factor": 0.713,
+            "total_pnl_usd": -6438.74,
+            "win_rate": 0.4974
+          },
+          "n_bars": 50616,
+          "n_composite_bars": 39359,
+          "n_trades": 189,
+          "net": {
+            "mean_pnl_usd": -58.07,
+            "median_pnl_usd": -24.0,
+            "n": 189,
+            "p25_pnl_usd": -174.94,
+            "p75_pnl_usd": 103.64,
+            "profit_factor": 0.556,
+            "total_pnl_usd": -10974.74,
+            "win_rate": 0.4603
+          }
+        },
+        "POLUSDT": {
+          "gross": {
+            "n": 0
+          },
+          "n_bars": 16310,
+          "n_composite_bars": 0,
+          "n_trades": 0,
+          "net": {
+            "n": 0
+          }
+        },
+        "SOLUSDT": {
+          "gross": {
+            "mean_pnl_usd": 10.62,
+            "median_pnl_usd": 13.88,
+            "n": 221,
+            "p25_pnl_usd": -84.8,
+            "p75_pnl_usd": 126.82,
+            "profit_factor": 1.127,
+            "total_pnl_usd": 2347.81,
+            "win_rate": 0.543
+          },
+          "n_bars": 52151,
+          "n_composite_bars": 39359,
+          "n_trades": 221,
+          "net": {
+            "mean_pnl_usd": -13.38,
+            "median_pnl_usd": -10.12,
+            "n": 221,
+            "p25_pnl_usd": -108.8,
+            "p75_pnl_usd": 102.82,
+            "profit_factor": 0.86,
+            "total_pnl_usd": -2956.19,
+            "win_rate": 0.4706
+          }
+        },
+        "SUIUSDT": {
+          "gross": {
+            "mean_pnl_usd": 45.76,
+            "median_pnl_usd": 25.57,
+            "n": 107,
+            "p25_pnl_usd": -115.25,
+            "p75_pnl_usd": 234.21,
+            "profit_factor": 1.559,
+            "total_pnl_usd": 4896.81,
+            "win_rate": 0.5421
+          },
+          "n_bars": 28284,
+          "n_composite_bars": 26928,
+          "n_trades": 107,
+          "net": {
+            "mean_pnl_usd": 21.76,
+            "median_pnl_usd": 1.57,
+            "n": 107,
+            "p25_pnl_usd": -139.25,
+            "p75_pnl_usd": 210.21,
+            "profit_factor": 1.233,
+            "total_pnl_usd": 2328.81,
+            "win_rate": 0.5047
+          }
+        },
+        "XRPUSDT": {
+          "gross": {
+            "mean_pnl_usd": 23.61,
+            "median_pnl_usd": 17.13,
+            "n": 247,
+            "p25_pnl_usd": -96.15,
+            "p75_pnl_usd": 126.69,
+            "profit_factor": 1.306,
+            "total_pnl_usd": 5831.73,
+            "win_rate": 0.5466
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 247,
+          "net": {
+            "mean_pnl_usd": -0.39,
+            "median_pnl_usd": -6.87,
+            "n": 247,
+            "p25_pnl_usd": -120.15,
+            "p75_pnl_usd": 102.69,
+            "profit_factor": 0.996,
+            "total_pnl_usd": -96.27,
+            "win_rate": 0.4777
+          }
+        }
+      },
+      "pooled_gross_stats": {
+        "mean_pnl_usd": 12.58,
+        "median_pnl_usd": 14.04,
+        "n": 1614,
+        "p25_pnl_usd": -104.9,
+        "p75_pnl_usd": 136.64,
+        "profit_factor": 1.151,
+        "total_pnl_usd": 20302.83,
+        "win_rate": 0.5285
+      },
+      "pooled_net_stats": {
+        "mean_pnl_usd": -11.42,
+        "median_pnl_usd": -9.96,
+        "n": 1614,
+        "p25_pnl_usd": -128.9,
+        "p75_pnl_usd": 112.64,
+        "profit_factor": 0.88,
+        "total_pnl_usd": -18433.17,
+        "win_rate": 0.4771
+      },
+      "reported_only_names": {
+        "BTCUSDT": {
+          "gross": {
+            "mean_pnl_usd": 13.8,
+            "median_pnl_usd": 13.76,
+            "n": 289,
+            "p25_pnl_usd": -65.87,
+            "p75_pnl_usd": 78.77,
+            "profit_factor": 1.255,
+            "total_pnl_usd": 3987.24,
+            "win_rate": 0.5536
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 50285,
+          "n_trades": 289,
+          "net": {
+            "mean_pnl_usd": -10.2,
+            "median_pnl_usd": -10.24,
+            "n": 289,
+            "p25_pnl_usd": -89.87,
+            "p75_pnl_usd": 54.77,
+            "profit_factor": 0.845,
+            "total_pnl_usd": -2948.76,
+            "win_rate": 0.4429
+          }
+        },
+        "DOTUSDT": {
+          "gross": {
+            "mean_pnl_usd": 16.04,
+            "median_pnl_usd": 26.86,
+            "n": 190,
+            "p25_pnl_usd": -83.42,
+            "p75_pnl_usd": 123.12,
+            "profit_factor": 1.219,
+            "total_pnl_usd": 3047.51,
+            "win_rate": 0.5684
+          },
+          "n_bars": 51966,
+          "n_composite_bars": 39359,
+          "n_trades": 190,
+          "net": {
+            "mean_pnl_usd": -7.96,
+            "median_pnl_usd": 2.86,
+            "n": 190,
+            "p25_pnl_usd": -107.42,
+            "p75_pnl_usd": 99.12,
+            "profit_factor": 0.906,
+            "total_pnl_usd": -1512.49,
+            "win_rate": 0.5053
+          }
+        },
+        "ETHUSDT": {
+          "gross": {
+            "mean_pnl_usd": -5.69,
+            "median_pnl_usd": 0.12,
+            "n": 244,
+            "p25_pnl_usd": -102.62,
+            "p75_pnl_usd": 75.55,
+            "profit_factor": 0.911,
+            "total_pnl_usd": -1387.2,
+            "win_rate": 0.5
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 244,
+          "net": {
+            "mean_pnl_usd": -29.69,
+            "median_pnl_usd": -23.88,
+            "n": 244,
+            "p25_pnl_usd": -126.62,
+            "p75_pnl_usd": 51.55,
+            "profit_factor": 0.612,
+            "total_pnl_usd": -7243.2,
+            "win_rate": 0.4467
+          }
+        },
+        "LINKUSDT": {
+          "gross": {
+            "mean_pnl_usd": 17.77,
+            "median_pnl_usd": 17.27,
+            "n": 192,
+            "p25_pnl_usd": -108.46,
+            "p75_pnl_usd": 147.67,
+            "profit_factor": 1.217,
+            "total_pnl_usd": 3410.89,
+            "win_rate": 0.5156
+          },
+          "n_bars": 57497,
+          "n_composite_bars": 39359,
+          "n_trades": 192,
+          "net": {
+            "mean_pnl_usd": -6.23,
+            "median_pnl_usd": -6.73,
+            "n": 192,
+            "p25_pnl_usd": -132.46,
+            "p75_pnl_usd": 123.67,
+            "profit_factor": 0.933,
+            "total_pnl_usd": -1197.11,
+            "win_rate": 0.474
+          }
+        }
+      },
+      "return_sign": -1.0
+    }
+  },
+  "diagnostic_hold_ladder": {
+    "M_momentum/hold_168": {
+      "annualized_gross_pct": -65.712,
+      "annualized_net_pct": -78.226,
+      "breakeven_roundtrip_bps": null,
+      "median_gross_usd": -60.41,
+      "median_net_usd": -84.41,
+      "n_trades": 429
+    },
+    "M_momentum/hold_24": {
+      "annualized_gross_pct": -100.931,
+      "annualized_net_pct": -188.531,
+      "breakeven_roundtrip_bps": null,
+      "median_gross_usd": -25.42,
+      "median_net_usd": -49.42,
+      "n_trades": 920
+    },
+    "M_momentum/hold_5": {
+      "annualized_gross_pct": 4.959,
+      "annualized_net_pct": -415.521,
+      "breakeven_roundtrip_bps": null,
+      "median_gross_usd": -7.98,
+      "median_net_usd": -31.98,
+      "n_trades": 1628
+    },
+    "M_momentum/hold_72": {
+      "annualized_gross_pct": -38.543,
+      "annualized_net_pct": -67.743,
+      "breakeven_roundtrip_bps": null,
+      "median_gross_usd": -34.71,
+      "median_net_usd": -58.71,
+      "n_trades": 578
+    },
+    "R_reversion/hold_168": {
+      "annualized_gross_pct": -78.65,
+      "annualized_net_pct": -91.164,
+      "breakeven_roundtrip_bps": null,
+      "median_gross_usd": -52.29,
+      "median_net_usd": -76.29,
+      "n_trades": 411
+    },
+    "R_reversion/hold_24": {
+      "annualized_gross_pct": -21.047,
+      "annualized_net_pct": -108.647,
+      "breakeven_roundtrip_bps": 10.5838,
+      "median_gross_usd": 10.58,
+      "median_net_usd": -13.42,
+      "n_trades": 921
+    },
+    "R_reversion/hold_5": {
+      "annualized_gross_pct": 220.388,
+      "annualized_net_pct": -200.092,
+      "breakeven_roundtrip_bps": 14.038,
+      "median_gross_usd": 14.04,
+      "median_net_usd": -9.96,
+      "n_trades": 1614
+    },
+    "R_reversion/hold_72": {
+      "annualized_gross_pct": -82.775,
+      "annualized_net_pct": -111.975,
+      "breakeven_roundtrip_bps": null,
+      "median_gross_usd": -9.95,
+      "median_net_usd": -33.95,
+      "n_trades": 585
+    }
+  },
+  "diagnostic_intraday_native_only": {
+    "M_momentum": {
+      "annualized_gross_pct": -120.552,
+      "annualized_net_pct": -541.032,
+      "mwu": {
+        "n1": 15588,
+        "n1_eff": 12127.5,
+        "n2": 22551,
+        "n2_eff": 17544.7,
+        "n_eff_factor": 0.778,
+        "p_two_sided_deflated": 0.13410415,
+        "p_two_sided_raw": 0.08942159,
+        "valid": true,
+        "z_deflated": 1.498112,
+        "z_raw": 1.698457
+      },
+      "n_trades": 38139,
+      "pooled_gross_stats": {
+        "mean_pnl_usd": -6.88,
+        "median_pnl_usd": -11.22,
+        "n": 38139,
+        "p25_pnl_usd": -124.67,
+        "p75_pnl_usd": 105.74,
+        "profit_factor": 0.926,
+        "total_pnl_usd": -262428.09,
+        "win_rate": 0.4662
+      },
+      "pooled_net_stats": {
+        "mean_pnl_usd": -30.88,
+        "median_pnl_usd": -35.22,
+        "n": 38139,
+        "p25_pnl_usd": -148.67,
+        "p75_pnl_usd": 81.74,
+        "profit_factor": 0.711,
+        "total_pnl_usd": -1177764.09,
+        "win_rate": 0.4087
+      }
+    },
+    "R_reversion": {
+      "annualized_gross_pct": 120.552,
+      "annualized_net_pct": -299.928,
+      "mwu": {
+        "n1": 17819,
+        "n1_eff": 13863.2,
+        "n2": 20320,
+        "n2_eff": 15809.0,
+        "n_eff_factor": 0.778,
+        "p_two_sided_deflated": 0.92339583,
+        "p_two_sided_raw": 0.91318957,
+        "valid": true,
+        "z_deflated": 0.096157,
+        "z_raw": 0.109016
+      },
+      "n_trades": 38139,
+      "pooled_gross_stats": {
+        "mean_pnl_usd": 6.88,
+        "median_pnl_usd": 11.22,
+        "n": 38139,
+        "p25_pnl_usd": -105.74,
+        "p75_pnl_usd": 124.67,
+        "profit_factor": 1.079,
+        "total_pnl_usd": 262428.09,
+        "win_rate": 0.5278
+      },
+      "pooled_net_stats": {
+        "mean_pnl_usd": -17.12,
+        "median_pnl_usd": -12.78,
+        "n": 38139,
+        "p25_pnl_usd": -129.74,
+        "p75_pnl_usd": 100.67,
+        "profit_factor": 0.826,
+        "total_pnl_usd": -652907.91,
+        "win_rate": 0.4672
+      }
+    }
+  },
+  "effective_verdict_universe": [
+    "SOLUSDT",
+    "BNBUSDT",
+    "AVAXUSDT",
+    "XRPUSDT",
+    "SUIUSDT",
+    "ADAUSDT",
+    "NEARUSDT",
+    "ARBUSDT",
+    "MATICUSDT"
+  ],
+  "falsifier_set": "F1 (pooled median), F2 (MWU mechanism), F3 (annualized net)",
+  "feed_blocked_symbols": [
+    "POLUSDT"
+  ],
+  "missing_frozen_feeds": [
+    "binance_funding_polusdt",
+    "binance_oi_polusdt"
+  ],
+  "n_eff": {
+    "effective_multiplier_vs_daily": "~19-21x (F4b), never 24x",
+    "one_minus_lambda2_reported": 0.872,
+    "slem_factor_used": 0.778
+  },
+  "per_symbol_coverage": {
+    "ADAUSDT": {
+      "member_valid_bars": {
+        "dxy": 56849,
+        "fear_greed": 57041,
+        "funding": 55794,
+        "gdelt": 56945,
+        "hourly_return_z": 57467,
+        "hourly_volume_z": 57468,
+        "open_interest": 39527,
+        "vix": 56969,
+        "yield_curve": 56969
+      },
+      "n_bars": 57497
+    },
+    "ARBUSDT": {
+      "member_valid_bars": {
+        "dxy": 28616,
+        "fear_greed": 28808,
+        "funding": 28008,
+        "gdelt": 28712,
+        "hourly_return_z": 29234,
+        "hourly_volume_z": 29235,
+        "open_interest": 28080,
+        "vix": 28736,
+        "yield_curve": 28736
+      },
+      "n_bars": 29264
+    },
+    "AVAXUSDT": {
+      "member_valid_bars": {
+        "dxy": 50495,
+        "fear_greed": 50687,
+        "funding": 49877,
+        "gdelt": 50591,
+        "hourly_return_z": 51113,
+        "hourly_volume_z": 51114,
+        "open_interest": 39527,
+        "vix": 50615,
+        "yield_curve": 50615
+      },
+      "n_bars": 51143
+    },
+    "BNBUSDT": {
+      "member_valid_bars": {
+        "dxy": 56849,
+        "fear_greed": 57041,
+        "funding": 55272,
+        "gdelt": 56945,
+        "hourly_return_z": 57467,
+        "hourly_volume_z": 57468,
+        "open_interest": 39527,
+        "vix": 56969,
+        "yield_curve": 56969
+      },
+      "n_bars": 57497
+    },
+    "BTCUSDT": {
+      "member_valid_bars": {
+        "dxy": 56849,
+        "fear_greed": 57041,
+        "funding": 56225,
+        "gdelt": 56945,
+        "hourly_return_z": 57467,
+        "hourly_volume_z": 57468,
+        "open_interest": 50453,
+        "vix": 56969,
+        "yield_curve": 56969
+      },
+      "n_bars": 57497
+    },
+    "DOTUSDT": {
+      "member_valid_bars": {
+        "dxy": 51318,
+        "fear_greed": 51510,
+        "funding": 50669,
+        "gdelt": 51414,
+        "hourly_return_z": 51936,
+        "hourly_volume_z": 51937,
+        "open_interest": 39527,
+        "vix": 51438,
+        "yield_curve": 51438
+      },
+      "n_bars": 51966
+    },
+    "ETHUSDT": {
+      "member_valid_bars": {
+        "dxy": 56849,
+        "fear_greed": 57041,
+        "funding": 56225,
+        "gdelt": 56945,
+        "hourly_return_z": 57467,
+        "hourly_volume_z": 57468,
+        "open_interest": 39527,
+        "vix": 56969,
+        "yield_curve": 56969
+      },
+      "n_bars": 57497
+    },
+    "LINKUSDT": {
+      "member_valid_bars": {
+        "dxy": 56849,
+        "fear_greed": 57041,
+        "funding": 55842,
+        "gdelt": 56945,
+        "hourly_return_z": 57467,
+        "hourly_volume_z": 57468,
+        "open_interest": 39527,
+        "vix": 56969,
+        "yield_curve": 56969
+      },
+      "n_bars": 57497
+    },
+    "MATICUSDT": {
+      "member_valid_bars": {
+        "dxy": 41108,
+        "fear_greed": 41108,
+        "funding": 33320,
+        "gdelt": 41108,
+        "hourly_return_z": 41078,
+        "hourly_volume_z": 41079,
+        "open_interest": 23618,
+        "vix": 41108,
+        "yield_curve": 41108
+      },
+      "n_bars": 41108
+    },
+    "NEARUSDT": {
+      "member_valid_bars": {
+        "dxy": 49968,
+        "fear_greed": 50160,
+        "funding": 49349,
+        "gdelt": 50064,
+        "hourly_return_z": 50586,
+        "hourly_volume_z": 50587,
+        "open_interest": 39527,
+        "vix": 50088,
+        "yield_curve": 50088
+      },
+      "n_bars": 50616
+    },
+    "POLUSDT": {
+      "member_valid_bars": {
+        "dxy": 15662,
+        "fear_greed": 15854,
+        "funding": 0,
+        "gdelt": 15758,
+        "hourly_return_z": 16280,
+        "hourly_volume_z": 16281,
+        "open_interest": 0,
+        "vix": 15782,
+        "yield_curve": 15782
+      },
+      "n_bars": 16310
+    },
+    "SOLUSDT": {
+      "member_valid_bars": {
+        "dxy": 51503,
+        "fear_greed": 51695,
+        "funding": 50093,
+        "gdelt": 51599,
+        "hourly_return_z": 52121,
+        "hourly_volume_z": 52122,
+        "open_interest": 39527,
+        "vix": 51623,
+        "yield_curve": 51623
+      },
+      "n_bars": 52151
+    },
+    "SUIUSDT": {
+      "member_valid_bars": {
+        "dxy": 27636,
+        "fear_greed": 27828,
+        "funding": 27024,
+        "gdelt": 27732,
+        "hourly_return_z": 28254,
+        "hourly_volume_z": 28255,
+        "open_interest": 27096,
+        "vix": 27756,
+        "yield_curve": 27756
+      },
+      "n_bars": 28284
+    },
+    "XRPUSDT": {
+      "member_valid_bars": {
+        "dxy": 56849,
+        "fear_greed": 57041,
+        "funding": 56105,
+        "gdelt": 56945,
+        "hourly_return_z": 57467,
+        "hourly_volume_z": 57468,
+        "open_interest": 39527,
+        "vix": 56969,
+        "yield_curve": 56969
+      },
+      "n_bars": 57497
+    }
+  },
+  "pre_registration": "omega/nodes/victoria/training_log/V262-2.md",
+  "reported_only": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "DOTUSDT",
+    "LINKUSDT"
+  ],
+  "verdict": "REFUTED",
+  "verdict_reason": "REFUTED: no arm passes all three falsifiers, and no arm's GROSS book clears F1/F3 with a surviving mechanism. M_momentum: fired F1+F2+F3 (median net $-31.98, MWU p_def=0.33053753, ann net -415.52%, ann gross 4.96%); R_reversion: fired F1+F2+F3 (median net $-9.96, MWU p_def=0.48802974, ann net -200.09%, ann gross 220.39%). Intraday resolution does not reopen the entry-side composite.",
+  "verdict_universe": [
+    "SOLUSDT",
+    "BNBUSDT",
+    "AVAXUSDT",
+    "XRPUSDT",
+    "SUIUSDT",
+    "POLUSDT",
+    "ADAUSDT",
+    "NEARUSDT",
+    "ARBUSDT",
+    "MATICUSDT"
+  ],
+  "version": "V262-2",
+  "winning_arm": null
+}

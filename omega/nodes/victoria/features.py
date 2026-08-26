@@ -677,12 +677,23 @@ class VictoriaFeatures:
     # V222 — IC subsystem wiring
     # ------------------------------------------------------------------
 
-    ic_seed_weighting: bool = True
+    ic_seed_weighting: bool = False
     """V222: load seeded pooled + per-regime ICs from data/signal_ic_history.json
     (keys seeded_pooled_ics / seeded_regime_ics) at training startup and feed
     them to StrategyNode.update_signal_ics / update_regime_ics. With this OFF
     (the IC-off control), _signal_ics stays empty and _compute_weighted_conviction
     degrades to the raw composite — bit-identical to pre-V222 behavior.
+
+    **V275: default flipped True → False.** The seeded ICs are win-rate priors
+    derived from completed training runs over the same corpus every walk-forward
+    window is drawn from (V273 H3), so an arm that inherited this default silently
+    inherited a lookahead-shaped overlay on its conviction filter. Every arm that
+    produced the standing baseline already typed `false` by hand — V274 verified
+    all 32 cells and re-ran at 0.000000 drift — but the correctness rested on the
+    author remembering. V275's audit found **0 of 44** feature-JSON arms in
+    `scripts/*.sh` inherit this default, so the flip is a no-op for every existing
+    arm and a guard for every future one. IC-ON is now something you opt into.
+    Pinned by `tests/test_features_defaults.py`; see `training_log/V275.md`.
     """
 
     per_regime_ic_weighting: bool = True
@@ -992,6 +1003,35 @@ class VictoriaFeatures:
     """V248: winner max hold while runtime regime == crisis."""
     exit_max_hold_lose_crisis: int = 6
     """V248: loser max hold while runtime regime == crisis."""
+
+    # ------------------------------------------------------------------
+    # V275 — crisis-term recompute-proofing (invariance, not a new signal)
+    # ------------------------------------------------------------------
+
+    crisis_term_rebind_enabled: bool = False
+    """V275: make the V227 crisis-skew term survive every downstream recompute of
+    ``composite``. The term is applied ONCE, additively, post-demean and lives ONLY
+    in ``composite`` (never a ``*_signal`` key — that is what stops the basket
+    selector trimming a one-sided term). Three default-dependent paths then discard
+    ``composite`` and rebuild it from the ``*_signal`` keys, silently dropping the
+    term while its fire counters keep incrementing:
+      1. ``strategy._compute_weighted_conviction`` — with ``ic_seed_weighting`` ON
+         (the DEFAULT; 18 seeded ICs) the IC-weighted return never reads
+         ``composite`` at all, so the crisis term loses its primary lever;
+      2. ``strategy._apply_regime_signal_weights`` — mean-of-``*_signal`` recompute
+         (inert only because ``strategy_selector_enabled`` defaults False);
+      3. the V141 crisis-dampening and V153 trend-dampening recomputes inside the
+         per-ticker candidate loop, immediately before the conviction filter (inert
+         only because the dampening weights default 1.0 — and the V141 one fires
+         under ``_is_bear_context``, exactly when the crisis term fires).
+    When ON, ``signals/crisis_rebind.py`` re-applies the ALREADY-GATED, ALREADY-
+    STASHED term (``weight * value``, never re-derived, never re-gated) at the end
+    of each recompute site, and adds the same magnitude to the IC-weighted
+    conviction return. Idempotent (double-application guarded). Observability:
+    ``crisis_rebind_composite_cycles`` / ``crisis_rebind_ic_cycles``.
+    Default OFF ⇒ the stash keys are never written and no call site does anything
+    ⇒ byte-identical to the standing main. This is an INVARIANCE change, not a new
+    signal: it does not alter the gate, the weight, or when the term fires."""
 
     # ------------------------------------------------------------------
     # Class methods

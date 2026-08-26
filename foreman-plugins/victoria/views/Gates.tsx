@@ -1149,24 +1149,27 @@ export function VictoriaGates(_props: UseCaseViewProps) {
         />
       }
     >
-      {state.error ? (
-        <Card>
-          <GateLoadFailure error={state.error} version={asked} onShowLatest={() => { setFocusVersion(null); }} />
-        </Card>
-      ) : state.loading || state.data === null ? (
-        <Card>
-          <LoadingNote what="loading gate result" />
-        </Card>
-      ) : (
-        <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
+        {state.error ? (
+          <Card>
+            <GateLoadFailure error={state.error} version={asked} onShowLatest={() => { setFocusVersion(null); }} />
+          </Card>
+        ) : state.loading || state.data === null ? (
+          <Card>
+            <LoadingNote what="loading gate result" />
+          </Card>
+        ) : (
           <GateBoard result={state.data} />
-          {/* Absent unless this label's grid has actually been ruled. No empty
-              state and no error tile: a missing grid verdict is the normal
-              condition, and a card that shouted about it would be the cry-wolf
-              alarm the gate board itself was rewritten to remove. */}
-          {ruler.data !== null && <CampaignRulerCard result={ruler.data} />}
-        </div>
-      )}
+        )}
+        {/* Absent unless this label's grid has actually been ruled. No empty
+            state and no error tile: a missing grid verdict is the normal
+            condition, and a card that shouted about it would be the cry-wolf
+            alarm the gate board itself was rewritten to remove. Deliberately
+            OUTSIDE the gate branch above: the two are separate requests, and a
+            grid cell with no per-cell gate file (a walk-forward cell judged
+            only at the campaign level) still has a ruling worth showing. */}
+        {ruler.data !== null && <CampaignRulerCard result={ruler.data} />}
+      </div>
     </ViewFrame>
   );
 }

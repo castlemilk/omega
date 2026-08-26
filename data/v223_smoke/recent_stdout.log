@@ -1,0 +1,70 @@
+17:51:40 RNG seed set to 42 (deterministic mode)
+17:51:40 BACKTEST MODE: WS signals disabled (whale_prints, ws_microstructure)
+17:51:40 ======================================================================
+17:51:40 Training Run v223_smoke_recent — 5 cycles  sleep=10s
+17:51:40 CoinGecko key  : CG-YPzBAPag5...
+17:51:40 Database URL   : postgres://omega:omega@localhost:5432/om...
+17:51:40 Metrics JSONL  : /tmp/v223_smoke_recent_metrics.jsonl
+17:51:40 Log file       : /tmp/v223_smoke_recent_training.log
+17:51:40 Features ON    : ffg_gate1_enabled, ffg_gate4_enabled, ic_seed_weighting, per_regime_ic_weighting, regime_conditional_ic_weighting
+17:51:40 ======================================================================
+17:51:40 V215: frozen-cache HTTP guard ARMED — all outbound urllib blocked + logged to /Users/benebsworth/projects/omega/data/v223_smoke_recent_http_during_backtest.jsonl
+17:51:40 [startup] subsystem wiring (flag → wired?):
+17:51:40 [startup]   strategy_selector:         off
+17:51:40 [startup]   regime_signal_weighting:   UNDECLARED — getattr→False, flag is a silent no-op
+17:51:40 [startup]   mode_transition_blend:     off
+17:51:40 [startup]   bayesian_regime:           off
+17:51:40 [startup]   hmm_regime:                UNDECLARED — getattr→False, flag is a silent no-op
+17:51:40 [startup]   per_regime_ic_weighting:   ON → ACTIVE
+17:51:40 ======================================================================
+17:51:40 [startup] V219 substrate preflight (frozen cache):
+17:51:40 [startup]   manifest OK: cc5359e18ef79d9f5227f47b3e8c9e3a  data/frozen_advanced_signals.json
+17:51:40 [startup]   manifest OK: 384c326308dbae3d2966bf7dce3868bf  data/frozen_funding_cache.json
+17:51:40 [startup]   manifest OK: 397b943808e9ca5772dbfcc5a7fb4282  data/macro_cache.db
+17:51:40 [startup]   MACRO HEALTH: 4/4 series usable via read path (usable=DGS2,DGS10,DTWEXBGS,VIXCLS)
+17:51:40 [startup]   FUNDING HEALTH: 5 symbols cached
+17:51:40 [startup]   V219 substrate preflight PASS
+17:51:41 V207a: OMEGA_FROZEN_CACHE=1 — skipping macro warm_up (no live FRED/funding fetches)
+17:51:41 BACKTEST MODE: ingestion replaced by ReplayIngestionNode (snap_20260414, 60 steps)
+17:51:41 ImprovementEngine: SyntheticEvaluator injected
+17:51:41 [startup]   IC seeds loaded: pooled=18 signals, per-regime=2 signals
+17:51:41 [startup]   IC weights applied: {'bb_signal': 0.05, 'btc_beta_signal': 0.05, 'dxy_signal': 0.05, 'fear_greed_signal': 0.0, 'funding_rate_signal': 0.05, 'market_data_signal': 0.05, 'ollivier_ricci_signal': 0.0, 'ricci_curvature_signal': 0.46, 'rmt_signal': 0.05, 'rsi_signal': 0.05, 'sma_crossover': 0.54, 'spy_signal': 0.05, 'vix_signal': 0.05, 'vol_regime_signal': 0.05, 'volume_signal': 0.05, 'vrp_signal': 0.05, 'yield_curve_signal': 0.05, 'zscore_signal': 0.05}
+17:51:41 [startup]   IC-weighting ACTIVE: _signal_ics=16 signals, _regime_ics=2 signals
+17:51:41 Decision snapshots → /tmp/v223_smoke_recent_decisions.jsonl (+ Postgres if configured)
+17:51:41 SignalDecayDetector: loaded from data/signal_ic_history.json
+
+[96m══════════════════════════════════════════════════════[0m
+[96m══ TRAINING DIAGNOSTICS (cycle 0) ═══════════════════════[0m
+[96m══════════════════════════════════════════════════════[0m
+  [1mREGIME:       [0m [91mUNKN ⚠️[0m
+  [1mDATA FRESH:   [0m [92m✅ 0.0min ago[0m
+  [1mSIGNALS:      [0m [93mnone yet[0m
+  [1mSIT-OUT:      [0m [92mNO[0m
+  [1mCONVICTION:   [0m [93mn/a[0m
+  [1mTRADES:       [0m open=0 closed=0 | PnL=$+0.00 | WR=0%
+  [1mLONG/SHORT:   [0m longs=0 shorts=0
+  [1mBLOCKERS:     [0m [91mRegime detector not firing | No signal data yet (first cycle?)[0m
+[96m══════════════════════════════════════════════════════[0m
+
+17:51:44 Cycle   1/5 [NORM] OK       | fresh=0.0min | open= 0 closed=  0 | PnL=$+0 wr=0% | improve=0 sem_db=30 | 2.8s/c ETA 11s | zero_streak=1
+17:52:30 Cycle   5/5 [NORM] OK       | fresh=0.0min | open= 2 closed=  1 | PnL=$-895 wr=0% | improve=0 sem_db=30 | 9.8s/c ETA 0s | zero_streak=2
+17:52:30 V223_SMOKE_RECENT: no baseline version found for gate comparison
+17:52:30 Attribution — alpha: $-894.92  beta: $-264.00  timing: $-630.92  selection: $+0.00
+17:52:30 Attribution report  : /Users/benebsworth/projects/omega/data/v223_smoke_recent_attribution.json
+17:52:30 
+17:52:30 ======================================================================
+17:52:30 V223_SMOKE_RECENT COMPLETE — 5 cycles in 49s (9.75s/cycle)
+17:52:30 ======================================================================
+17:52:30 improve_calls         : 0
+17:52:30 semantic_patterns_db  : 30
+17:52:30 Closed trades         : 1  (long=1  short=0)
+17:52:30 Total PnL             : $-894.92  (engine realised: $-894.92)
+17:52:30 Win rate              : 0.0%  (0/1)
+17:52:30 Profit factor         : 0.00
+17:52:30 --- Observability ---
+17:52:30 Zero-trade cycles     : 4 / 5  (80%)
+17:52:30 Circuit breaker trips : 0
+17:52:30 Final vol threshold   : 0.000
+17:52:30 Metrics JSONL         : /tmp/v223_smoke_recent_metrics.jsonl
+17:52:30 Results               : /Users/benebsworth/projects/omega/data/v223_smoke_recent_results.json
+17:52:30 ======================================================================

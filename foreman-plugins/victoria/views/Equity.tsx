@@ -15,6 +15,7 @@ import { useMemo } from 'react';
 import { Pill } from '@omega-harness/usecase-kit/ui';
 import type { UseCaseViewProps } from '@omega-harness/usecase-kit';
 import { ChartLegend, LineChart, type LineSeries } from '../charts.js';
+import { drawdownSeries } from '../geometry.js';
 import { pct, ratio, usd } from '../format.js';
 import { useVictoriaEquity } from '../hooks.js';
 import { Async, Card, EmptyNote, Stat, ViewFrame } from './chrome.js';
@@ -62,7 +63,8 @@ export function VictoriaEquity(_props: UseCaseViewProps) {
   );
 }
 
-function EquityBody({
+/** The chart body, exported so both dd provenances render on a fixture. */
+export function EquityBody({
   points,
   trainEnd,
 }: {
@@ -76,6 +78,14 @@ function EquityBody({
 
   const hasBtc = btc.some((v) => v !== 0);
   const hasDd = dd.some((v) => v !== 0);
+  // The underwater band. Reported wins; otherwise derived from the equity
+  // series itself (running-peak arithmetic in geometry.drawdownSeries) and
+  // labelled as derived — same provenance split as the Max drawdown stat.
+  const underwater = useMemo(
+    () => (hasDd ? dd : drawdownSeries(omega)),
+    [hasDd, dd, omega],
+  );
+  const hasUnderwater = underwater.some((v) => v !== 0);
 
   const series: LineSeries[] = [
     { values: omega, color: 'var(--uc-accent)', label: 'Victoria', fill: true },
@@ -128,10 +138,17 @@ function EquityBody({
         />
       </Card>
 
-      {hasDd && (
-        <Card label="Drawdown">
+      {hasUnderwater && (
+        <Card
+          label="Drawdown"
+          right={
+            <span className="font-mono text-[9.5px] text-faint">
+              {hasDd ? 'reported by the API' : 'derived from the equity series'}
+            </span>
+          }
+        >
           <LineChart
-            series={[{ values: dd, color: '#e5675b', label: 'Drawdown', fill: true }]}
+            series={[{ values: underwater, color: '#e5675b', label: 'Drawdown', fill: true }]}
             trainEnd={trainEnd}
             height={140}
             tickCount={2}

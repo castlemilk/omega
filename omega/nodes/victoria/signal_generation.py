@@ -49,6 +49,10 @@ try:
 except ImportError:
     _HAS_CRISIS_SKEW = False
 
+# V275: crisis-term recompute-proofing seam. Stdlib-only leaf module (no victoria
+# imports) so both signal_generation and strategy can import it without a cycle.
+from omega.nodes.victoria.signals import crisis_rebind as _crisis_rebind
+
 try:
     from omega.nodes.victoria.signals.rv_term_structure import (
         RVTermStructureSignal as _RVTermStructureSignal,
@@ -1720,13 +1724,22 @@ class SignalGenerationNode(Node):
             # reachable at this original site too.
             _skew_w = _v233_gated_w if _gate_on else _SKEW_W
             _skew_fired_this_cycle = False
+            # V275: when the rebind seam is armed, stash the APPLIED term
+            # (_skew_w * _skew_val — the weight is threaded from here, never
+            # duplicated downstream) so the three composite-recompute sites in
+            # strategy.py can re-apply exactly this float. Flag OFF ⇒ no stash
+            # keys are written at all ⇒ byte-identical to the standing main.
+            _rebind_on = bool(getattr(self._features, "crisis_term_rebind_enabled", False))
             for _t, _s in signals.items():
                 if not isinstance(_s, dict) or _t.startswith("_"):
                     continue
                 _skew_val = _s.get("crisis_skew", 0.0)
                 if _skew_val != 0.0 and _s.get("composite") is not None:
-                    _adj = math.fsum([_s["composite"], _skew_w * _skew_val])
+                    _wt = _skew_w * _skew_val
+                    _adj = math.fsum([_s["composite"], _wt])
                     _s["composite"] = max(-1.0, min(1.0, _adj))
+                    if _rebind_on:
+                        _crisis_rebind.stash_applied_term(_s, _wt, _s["composite"])
                     _CRISIS_SKEW_STATE["ticker_terms"] += 1
                     _skew_fired_this_cycle = True
             if _skew_fired_this_cycle:

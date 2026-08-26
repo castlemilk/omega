@@ -1,0 +1,41 @@
+# EnvoyProxy resource to configure the Envoy Gateway data plane proxy.
+# Resource limits cap the per-pod footprint on the shared single-node cluster.
+# The Gateway annotation `gateway.envoyproxy.io/envoyproxy: envoy-gateway-system/custom-proxy-config`
+# references this resource.
+#
+# NOTE: Envoy Gateway v1.4.0 may not immediately reconcile this into the proxy
+# deployment. If limits aren't picked up, patch the deployment directly:
+#   kubectl patch deployment/envoy-envoy-gateway-system-paprika-<suffix> \
+#     -n envoy-gateway-system --type=strategic -p '{
+#       "spec": {"template": {"spec": {"containers": [{
+#         "name": "envoy",
+#         "resources": {
+#           "requests": {"cpu":"50m","memory":"128Mi"},
+#           "limits": {"cpu":"200m","memory":"256Mi"}
+#         }
+#       }]}}}}
+#     }'
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: custom-proxy-config
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 1
+        container:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+        pod:
+          annotations:
+            prometheus.io/path: /stats/prometheus
+            prometheus.io/port: "19001"
+            prometheus.io/scrape: "true"

@@ -1,0 +1,29 @@
+# Service alias: envoy-gateway -> eg-envoy-gateway
+# Envoy Gateway's xDS proxy config references "envoy-gateway" but the
+# bitnami chart names the service "eg-envoy-gateway". This aliases it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: grpc
+      port: 18000
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+spec:
+  subsets:
+    - addresses:
+        - ip: 10.244.51.79
+      ports:
+        - name: grpc
+          port: 18000
+          protocol: TCP

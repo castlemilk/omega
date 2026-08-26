@@ -70,6 +70,7 @@ import hashlib
 import json
 import logging
 import math
+import shutil
 import struct
 import subprocess
 import time
@@ -1879,6 +1880,15 @@ def run(
     except Exception:
         _rv_brake_state_ref = {}
 
+    # V275: run-scoped crisis-term REBIND counters (same module-global pattern).
+    # Proves whether the recompute-proofing seam ever actually fired in this run.
+    try:
+        from omega.nodes.victoria.signals.crisis_rebind import (
+            _CRISIS_REBIND_STATE as _crisis_rebind_state_ref,
+        )
+    except Exception:
+        _crisis_rebind_state_ref = {}
+
     results = {
         "version": version,
         # V228 resiliency #5: provenance manifest — git SHA + cache md5s +
@@ -1986,6 +1996,22 @@ def run(
             "crisis_term_gated_weight": float(
                 getattr(getattr(strat, "features", None), "crisis_term_gated_weight", 0.2) or 0.2
             ),
+            # V275: crisis-term recompute-proofing. crisis_term_rebind_enabled is the
+            # parsed flag; the two counters prove the seam FIRED (not flag-on-but-
+            # inert). crisis_rebind_composite_cycles counts rebinds onto a recomputed
+            # composite (the V157 regime-weight recompute + the V141/V153 dampening
+            # recomputes); crisis_rebind_ic_cycles counts IC-weighted conviction
+            # returns that carried the term. On the standing defaults the composite
+            # counter is legitimately 0 (all three recompute sites are inert) while
+            # the IC counter is the one that should move — that asymmetry IS the
+            # diagnosis this version tests.
+            "crisis_term_rebind_enabled": bool(
+                getattr(getattr(strat, "features", None), "crisis_term_rebind_enabled", False)
+            ),
+            "crisis_rebind_composite_cycles": _crisis_rebind_state_ref.get(
+                "composite_cycles", 0
+            ),
+            "crisis_rebind_ic_cycles": _crisis_rebind_state_ref.get("ic_cycles", 0),
             # V234: crisis SIZING-LAYER throttle identity. Surfaces the parsed flags so
             # assert_cell_identity (--expect-throttle) can verify each cell ran the
             # throttle/factor its label claims (the V224 mislabeled-control class). The
@@ -2013,6 +2039,19 @@ def run(
             "profit_factor": round(profit_factor, 3) if profit_factor != float("inf") else None,
         },
     }
+
+    # Durable per-cycle metrics — copy the /tmp (or $AUDIT/tmp) JSONL sink into
+    # AUDIT_DIR at run end so the per-cycle series survives a reboot and the API
+    # (/api/v1/training/jsonl) can serve finished runs from data/ instead of the
+    # ephemeral sink. The live path is untouched: the trainer still appends to
+    # TMP_SINK_DIR during the run; this is a one-shot copy of the finished file.
+    metrics_durable = AUDIT_DIR / f"{version}_metrics.jsonl"
+    try:
+        if metrics_jsonl.exists() and metrics_jsonl.resolve() != metrics_durable.resolve():
+            shutil.copyfile(metrics_jsonl, metrics_durable)
+            results["observability"]["metrics_jsonl_durable"] = str(metrics_durable)
+    except OSError as exc:
+        log.warning("Could not copy metrics JSONL to %s (non-fatal): %s", metrics_durable, exc)
 
     with open(results_file, "w") as f:
         json.dump(results, f, indent=2)

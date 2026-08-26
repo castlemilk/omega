@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/Users/benebsworth/projects/omega/scripts/v269_depth_collector.py", line 308, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/Users/benebsworth/projects/omega/scripts/v269_depth_collector.py", line 294, in main
+    cycle(day)
+    ~~~~~^^^^^
+  File "/Users/benebsworth/projects/omega/scripts/v269_depth_collector.py", line 254, in cycle
+    append_snapshot(symbol, snap_day, snap)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/benebsworth/projects/omega/scripts/v269_depth_collector.py", line 135, in append_snapshot
+    fh.flush()
+    ~~~~~~~~^^
+OSError: [Errno 28] No space left on device

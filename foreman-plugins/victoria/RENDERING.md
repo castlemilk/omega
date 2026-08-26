@@ -152,26 +152,63 @@ These outrank visual polish, and each has a live-drive scar attached:
   in the harness's `roster.test.ts` (the host asserts exactly what it
   renders). The README states this; budget for it.
 
-## 7. Where to extend next (ranked, with the data already available)
+## 7. The 2026-08-21 build-out (the old §7 backlog, shipped)
 
-1. **Regime timeline** — crisis/high_vol/normal bands over cycles with
-   per-regime PnL; data already in trades CSVs (`regime` column) and
-   decision traces. Geometry: banded strip + per-band aggregates.
-2. **Conviction threshold bands** — the funnel shows counts; the next level
-   plots composite vs the regime-adaptive buy/sell thresholds per ticker
-   (decision snapshots carry `conviction_threshold_buy/sell`, `_thresh_scale`).
-3. **Signal health board** — per-signal IC/weight/decay from
-   `signal_performance` (`GetSignalPerformance`) + the correlation grid you
-   already render; the seeded ICs in `data/signal_ic_history.json` give a
-   real corpus.
-4. **Equity drawdown shading** — the chart has the `train_end` marker; add
-   the underwater band (geometry-first, exact-value tests on the band path).
-5. **Campaign-ruler card, populated** — renders today only when a
-   `*_grid_verdict.json` exists; the first real walk-forward grid run makes
-   it live. Until then the Gates copy references it conditionally.
-6. **Per-cycle metrics** — `/tmp/{version}_metrics.jsonl` is ephemeral; if a
-   durable home lands (e.g. copied into `data/` at run end), the Live view's
-   sparklines get real series. Don't build against `/tmp`.
+All six items landed in one pass; the mechanisms to know about:
+
+1. **Regime timeline** — `regimeBands` in geometry (slot-edge bands, missing
+   labels become their own `null` band), `RegimeStrip` in charts (padding
+   defaults match `LineChart`'s plot area so a strip under a chart shares its
+   x scale), `RegimeTimeline` + `regimeAggregates` in the Conviction view
+   (per-regime funnel counts — the first real render showed normal converting
+   at 15.2% vs crisis 7.7% on `bt_v148_recent`).
+2. **Conviction threshold bands** — `ThresholdBands` + `tickerThresholdSeries`
+   in Conviction. The trace fields are `long_thresh`/`short_thresh` (NOT the
+   `conviction_threshold_buy/sell` names this doc used to cite — those live
+   only in `decision_snapshot.py` param space). Shorts gate on |conviction| ≥
+   `short_thresh` with a negative conviction (`strategy.py`
+   `_passes_conviction_filters`), so the short bar is drawn MIRRORED below
+   zero and the legend says so. Rows without a `weighted_conviction` are
+   dropped with an on-screen count, never plotted as 0. `LineChart` grew an
+   optional `markers` prop (trade dots, refused off-scale like `trainEndX`).
+3. **Signal IC board** — new endpoint `/api/v1/signals/ic-history` serves
+   `data/signal_ic_history.json` verbatim (404 names the path); `SignalICBoard`
+   in Signals renders the seeded pooled/regime ICs with their provenance line
+   and says the SignalDecayDetector's live store is empty until a run fills it.
+   Seeded ≠ measured is the whole point of the copy.
+4. **Equity drawdown** — `drawdownSeries` in geometry (running-peak fractions;
+   non-finite points contribute 0 and never move the peak). The Drawdown card
+   now renders for a curve with no reported `dd`, labelled "derived from the
+   equity series" vs "reported by the API" — same provenance split as the
+   max-drawdown stat.
+5. **Campaign-ruler card, live** — `data/v252_replay_grid_verdict.json` exists
+   (verdict `INSUFFICIENT_GRID`, 3/32 windows — honest, not a pass). The card
+   is rendered OUTSIDE the gate-board branch in `VictoriaGates`: a walk-forward
+   cell with a grid verdict but no per-cell gate file (the v252_replay cells
+   are exactly that) must still show its ruling. The first drive caught it
+   nested inside the gate-success branch, invisible behind the gate 404.
+6. **Per-cycle metrics, durable** — `run_training.py` now copies the metrics
+   JSONL into `AUDIT_DIR/{version}_metrics.jsonl` at run end (recorded as
+   `observability.metrics_jsonl_durable` in results.json), and
+   `/api/v1/training/jsonl` prefers that copy over the `/tmp` sink (which
+   stays the live-run path). `getCycleMetrics` filters the interleaved
+   `ml_weights_snapshot` rows; `CycleMetricsPanel` in Live renders regime
+   strip + four sparklines, and its empty state names both sources. Runs
+   finished before 2026-08-21 have no durable copy anywhere — the empty
+   state says that too.
+
+## 7b. Where to extend next
+
+1. **Per-regime PnL on the timeline** — the regime timeline aggregates
+   decisions; joining trade-details PnL per regime band is the next level.
+2. **A real walk-forward grid** — 32 cells through `scripts/v2*_wf_grid.sh`
+   turns the ruler card's `INSUFFICIENT_GRID` into a real PASS/FAIL.
+3. **Live IC observations** — a run with the SignalDecayDetector persisting
+   fills `signals` in `signal_ic_history.json`; the board already discloses
+   the empty store and can grow a measured-vs-seeded comparison when it fills.
+4. **Desk-agent loop, engine-on** — the seeded victoria fleet (regime-watcher
+   → signal-auditor / execution-reviewer) accepts transcript interjects today;
+   `task dev:engine` with provider keys makes the pulses answer them.
 
 ## 8. Pointers
 

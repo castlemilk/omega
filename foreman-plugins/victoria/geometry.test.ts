@@ -11,11 +11,13 @@ import {
   areaPath,
   correlationBucket,
   correlationColor,
+  drawdownSeries,
   extent,
   funnelBars,
   funnelHeight,
   groupedBars,
   linePath,
+  regimeBands,
   scaleX,
   scaleY,
   ticks,
@@ -295,5 +297,70 @@ describe('groupedBars', () => {
   it('is empty for no groups', () => {
     expect(groupedBars([], barBox)).toEqual([]);
     expect(groupedBars([[]], barBox)).toEqual([[]]);
+  });
+});
+
+describe('regimeBands', () => {
+  // plot area is x 20..100 (80 wide); 8 cycles → each slot is exactly 10 wide
+
+  it('compresses consecutive runs into bands with exact slot-edge positions', () => {
+    const bands = regimeBands(
+      ['normal', 'normal', 'normal', 'crisis', 'crisis', 'high_vol', 'normal', 'normal'],
+      box,
+    );
+    expect(bands).toEqual([
+      { regime: 'normal', start: 0, end: 2, count: 3, x: 20, width: 30 },
+      { regime: 'crisis', start: 3, end: 4, count: 2, x: 50, width: 20 },
+      { regime: 'high_vol', start: 5, end: 5, count: 1, x: 70, width: 10 },
+      { regime: 'normal', start: 6, end: 7, count: 2, x: 80, width: 20 },
+    ]);
+  });
+
+  it('keeps a missing-regime stretch as its own null band instead of merging it', () => {
+    const bands = regimeBands(['crisis', null, undefined, '', 'crisis'], {
+      ...box,
+      width: 140,
+      padLeft: 20,
+      padRight: 20,
+    });
+    // 5 slots over 100 wide → 20 each; the three flavours of "missing" coalesce
+    expect(bands).toEqual([
+      { regime: 'crisis', start: 0, end: 0, count: 1, x: 20, width: 20 },
+      { regime: null, start: 1, end: 3, count: 3, x: 40, width: 60 },
+      { regime: 'crisis', start: 4, end: 4, count: 1, x: 100, width: 20 },
+    ]);
+  });
+
+  it('spans the whole plot with a single band for an all-one-regime run', () => {
+    expect(regimeBands(['normal', 'normal'], box)).toEqual([
+      { regime: 'normal', start: 0, end: 1, count: 2, x: 20, width: 80 },
+    ]);
+  });
+
+  it('is empty for no cycles', () => {
+    expect(regimeBands([], box)).toEqual([]);
+  });
+});
+
+describe('drawdownSeries', () => {
+  it('is zero at every new high and the exact fraction below the running peak', () => {
+    expect(drawdownSeries([100, 110, 99, 121, 110])).toEqual([0, 0, -0.1, 0, -1 / 11]);
+  });
+
+  it('measures against the running peak, never a later one', () => {
+    // the 50 is -50% of the FIRST peak; the recovery to 80 is still -20%
+    expect(drawdownSeries([100, 50, 80])).toEqual([0, -0.5, -0.2]);
+  });
+
+  it('yields 0 for non-finite points without letting them move the peak', () => {
+    expect(drawdownSeries([100, Number.NaN, 90])).toEqual([0, 0, -0.1]);
+  });
+
+  it('yields 0 while the peak is non-positive — no drawdown fraction of a zero base', () => {
+    expect(drawdownSeries([-5, -10, 4, 2])).toEqual([0, 0, 0, -0.5]);
+  });
+
+  it('is empty for an empty series', () => {
+    expect(drawdownSeries([])).toEqual([]);
   });
 });

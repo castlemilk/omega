@@ -169,6 +169,9 @@ except ImportError:
 from omega.nodes.victoria.features import VictoriaFeatures
 from omega.nodes.victoria.signal_confluence import ConfluenceAnalyzer, ConfluenceResult
 from omega.nodes.victoria.signal_correlation import SignalCorrelationMonitor
+# V275: crisis-term recompute-proofing seam. Stdlib-only leaf module (imports
+# nothing from victoria), so this is cycle-free in both directions.
+from omega.nodes.victoria.signals import crisis_rebind as _crisis_rebind
 from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 
 logger = logging.getLogger("omega.nodes.victoria.strategy")
@@ -367,7 +370,7 @@ _REGIME_SIGNAL_WEIGHTS: dict[str, dict[str, float]] = {
 }
 
 
-def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
+def _apply_regime_signal_weights(signals: dict, mode_str: str, features: object = None) -> None:
     """Apply regime-appropriate weight multipliers to per-ticker signal dicts.
 
     Mutates ``signals`` in-place: scales individual signal values and recomputes
@@ -379,7 +382,12 @@ def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
         Top-level signals dict as returned by SignalGenerationNode (keys = tickers).
     mode_str:
         Current StrategyMode value string: "TREND", "CRISIS", or "DEFAULT".
+    features:
+        VictoriaFeatures (optional). Only consulted for V275's
+        ``crisis_term_rebind_enabled``; None/absent ⇒ the seam is off, which is
+        byte-identical to the pre-V275 behaviour.
     """
+    _rebind_on = bool(getattr(features, "crisis_term_rebind_enabled", False))
     weights = _REGIME_SIGNAL_WEIGHTS.get(mode_str, {})
     if not weights:
         return  # DEFAULT: nothing to do
@@ -409,6 +417,12 @@ def _apply_regime_signal_weights(signals: dict, mode_str: str) -> None:
         ]
         if directional_vals:
             ts["composite"] = sum(directional_vals) / len(directional_vals)
+            # V275 rebind site (1 of 3): this recompute discards the V227 crisis
+            # term, which lives ONLY in `composite`. Re-apply the already-gated,
+            # already-stashed term immediately after the recompute so any future
+            # edit to the line above is covered too. No-op unless the flag is ON.
+            if _rebind_on:
+                _crisis_rebind.apply_crisis_terms(ts)
             ts["composite_method"] = f"regime_{mode_str.lower()}_weighted"
             _wlog.debug(
                 "V157 regime weights [%s] applied to %s: composite=%.4f  n=%d",
@@ -1238,8 +1252,21 @@ class StrategyNode(Node):
 
         total_ic = math.fsum(_ic_terms)
         if total_ic == 0.0:
+            # Escape hatch: the raw composite ALREADY carries the V227 crisis term
+            # (it was added at the bind site), so no V275 rebind is needed here —
+            # same for the V223/V229 bypasses above, which return the same value.
             return float(signals_dict.get("composite", 0.0))
-        return math.fsum(_weighted_terms) / total_ic
+        _ic_conviction = math.fsum(_weighted_terms) / total_ic
+        # V275: the IC-weighted path is built purely from the `*_signal` keys, so
+        # the crisis term — which lives ONLY in `composite` — is absent from it.
+        # With ic_seed_weighting ON (the DEFAULT) this is the path that runs, which
+        # means the crisis term silently loses its primary lever while its fire
+        # counters keep incrementing. Add the SAME stashed magnitude the composite
+        # path used (weight threaded from the bind site, never re-derived here; the
+        # gate is never re-evaluated). No-op unless the flag is ON.
+        if getattr(self.features, "crisis_term_rebind_enabled", False):
+            _ic_conviction = _crisis_rebind.bind_ic_conviction(signals_dict, _ic_conviction)
+        return _ic_conviction
 
     def _apply_regime_adaptive_thresholds(self, signals: dict) -> None:
         """Set per-direction conviction thresholds based on detected market regime.
@@ -1861,7 +1888,7 @@ class StrategyNode(Node):
             # individual signals then recompute composite for each ticker.
             # Runs only when both the selector AND the feature flag are active.
             if getattr(self.features, "regime_signal_weighting", False):
-                _apply_regime_signal_weights(signals, _sel_mode.value)
+                _apply_regime_signal_weights(signals, _sel_mode.value, self.features)
 
         # V162: refresh resilience state from current equity + signals.
         # Drives vol_shock hysteresis, drawdown halt/emergency-close, correlation
@@ -2578,6 +2605,14 @@ class StrategyNode(Node):
                     ]
                     if _all_sig_vals:
                         sig["composite"] = sum(_all_sig_vals) / len(_all_sig_vals)
+                        # V275 rebind site (2 of 3) — the V141 crisis-dampening
+                        # recompute. This one fires under _is_bear_context, i.e.
+                        # EXACTLY when the crisis term fires, and sits immediately
+                        # before _passes_conviction_filters. Re-apply the stashed
+                        # term so the dampening weights (default 1.0) are no longer
+                        # what keeps the crisis term alive. No-op unless flag ON.
+                        if getattr(self.features, "crisis_term_rebind_enabled", False):
+                            _crisis_rebind.apply_crisis_terms(sig)
 
                 # V153: trend signal dampening — suppress contrarian signals in bull market.
                 # Forensics: mean_reversion fights uptrends the same way fear_greed fights
@@ -2609,6 +2644,10 @@ class StrategyNode(Node):
                         ]
                         if _all_sig_vals_t:
                             sig["composite"] = sum(_all_sig_vals_t) / len(_all_sig_vals_t)
+                            # V275 rebind site (3 of 3) — the V153 trend-dampening
+                            # recompute. Same class as site 2. No-op unless flag ON.
+                            if getattr(self.features, "crisis_term_rebind_enabled", False):
+                                _crisis_rebind.apply_crisis_terms(sig)
 
                 passes, reason = self._passes_conviction_filters(
                     sig, current_cycle, direction="long"

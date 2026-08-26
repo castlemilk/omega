@@ -786,6 +786,86 @@ export const getTrainingMetrics = (): Promise<TrainingMetrics> =>
 export const getTrainingProgress = (): Promise<TrainingProgress> =>
   omega.getJson<TrainingProgress>('/api/v1/training/progress');
 
+/**
+ * One per-cycle row from `{version}_metrics.jsonl` (writer: the
+ * "Structured JSONL metric line" block in scripts/run_training.py). The file
+ * also interleaves `type: "ml_weights_snapshot"` rows every 20 cycles —
+ * `getCycleMetrics` filters those out, so consumers only see cycle rows.
+ * Served by /api/v1/training/jsonl from the durable copy under data/ (placed
+ * at run end), falling back to the ephemeral /tmp sink for a run in flight.
+ */
+export interface CycleMetric {
+  type?: string;
+  cycle?: number;
+  ts?: string;
+  version?: string;
+  regime?: string | null;
+  composite_score?: number | null;
+  trade_action?: string | null;
+  sit_out_reason?: string | null;
+  active_signals?: number;
+  ring1_pass?: boolean;
+  conviction?: string | null;
+  new_trades?: number;
+  total_closed?: number;
+  elapsed_s?: number;
+  breaker_tripped?: boolean;
+  vol_low_threshold?: number | null;
+  basket_std?: number;
+  basket_mean?: number;
+  zero_streak?: number;
+  regime_hmm?: string;
+  regime_consolidated?: string;
+  active_filters?: string[];
+  fear_greed_signal?: number | null;
+  funding_rate_btc?: number | null;
+  dxy_signal?: number | null;
+}
+
+/**
+ * Version optional: the handler auto-detects the newest `*_progress.json`.
+ * An empty array is the honest answer for "no metrics JSONL anywhere" — the
+ * handler cannot distinguish that from a run that never wrote one.
+ */
+export const getCycleMetrics = (version?: string): Promise<CycleMetric[]> =>
+  omega
+    .getJson<CycleMetric[]>(
+      version
+        ? `/api/v1/training/jsonl?version=${encodeURIComponent(version)}`
+        : '/api/v1/training/jsonl',
+    )
+    .then((rows) => rows.filter((r) => r.type == null && r.cycle != null));
+
+// ── Signal IC history (the seeded corpus) ────────────────────────────────────
+
+/**
+ * `data/signal_ic_history.json`, verbatim. Owner:
+ * omega/nodes/victoria/signal_decay.py — `signals` is the SignalDecayDetector's
+ * live observation store (empty until a run with the detector enabled persists
+ * observations), and the `seeded_*` blocks are the hand-transcribed IC corpus
+ * the conviction weighting boots from. Both facts belong on screen: a board
+ * that showed seeded ICs as if they were measured would be lying about their
+ * provenance.
+ */
+export interface SignalICHistory {
+  updated_at?: string;
+  signals?: Record<string, unknown>;
+  seeded_pooled_ics?: Record<string, number>;
+  seeded_regime_ics?: Record<string, Record<string, number>>;
+  seed_provenance?: {
+    version?: string;
+    source?: string;
+    mapping?: string;
+    defaults?: string;
+    consumers?: string;
+    [key: string]: unknown;
+  };
+}
+
+/** 404 rejects with the handler's own sentence naming the missing path. */
+export const getSignalICHistory = (): Promise<SignalICHistory> =>
+  omega.getJson<SignalICHistory>('/api/v1/signals/ic-history');
+
 /** Version is optional: the handler auto-detects the newest run when omitted. */
 export const getTradeDetails = (version?: string): Promise<TradeDetail[]> =>
   omega.getJson<TradeDetail[]>(

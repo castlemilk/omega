@@ -21,10 +21,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { DataSourceError } from '@omega-harness/usecase-kit';
 import type { ObjectiveState, UseCaseViewProps } from '@omega-harness/usecase-kit';
 import type {
+  CycleMetric,
   DecisionTrace,
   ForensicsReport,
   GateResult,
   GridRulerResult,
+  SignalICHistory,
   TrainingLogDetail,
 } from './client.js';
 import { GATE_VERDICTS, GRID_VERDICTS } from './client.js';
@@ -39,7 +41,20 @@ import {
   rulerBars,
   standingGateEvidence,
 } from './views/Gates.js';
-import { ConvictionFunnel, NoDecisionTraces, VictoriaConviction } from './views/Conviction.js';
+import {
+  ConvictionFunnel,
+  NoDecisionTraces,
+  RegimeTimeline,
+  ThresholdBands,
+  VictoriaConviction,
+  regimeAggregates,
+  regimeByCycle,
+  tickerThresholdSeries,
+  tickersOf,
+} from './views/Conviction.js';
+import { CycleMetricsPanel, cycleSeries } from './views/Live.js';
+import { SignalICBoard, icRows } from './views/Signals.js';
+import { EquityBody } from './views/Equity.js';
 import { ForensicsList, ForensicsReportView } from './views/Forensics.js';
 import { JournalEntry } from './views/Journal.js';
 import { resetFocusVersion } from './store.js';
@@ -1002,5 +1017,225 @@ describe('the Journal entry', () => {
     );
     expect(html).toContain('2 verdict files');
     expect(html).toContain('V262_F4_VERDICT.md');
+  });
+});
+
+// ── Regime timeline + threshold bands (Conviction) ───────────────────────────
+
+/**
+ * A multi-cycle, multi-regime fixture in the exact per-ticker-per-cycle shape
+ * of data/decision_traces/*.jsonl (see the TRACES fixture above for the field
+ * provenance). Two tickers over four cycles; cycle 3 carries no regime, which
+ * is a real possibility the strip must band as a gap, not smooth over.
+ */
+const TIMELINE_TRACES: DecisionTrace[] = [
+  { ticker: 'BTCUSDT', cycle: 1, regime: 'normal', weighted_conviction: 0.05, long_thresh: 0.1, short_thresh: 0.05, proposal: 'NONE', final_decision: 'HOLD' },
+  { ticker: 'ETHUSDT', cycle: 1, regime: 'normal', weighted_conviction: 0.12, long_thresh: 0.1, short_thresh: 0.05, proposal: 'LONG', final_decision: 'TRADE' },
+  { ticker: 'BTCUSDT', cycle: 2, regime: 'crisis', weighted_conviction: -0.08, long_thresh: 0.2, short_thresh: 0.05, proposal: 'SHORT', final_decision: 'TRADE' },
+  { ticker: 'ETHUSDT', cycle: 2, regime: 'crisis', weighted_conviction: -0.02, long_thresh: 0.2, short_thresh: 0.05, proposal: 'NONE', final_decision: 'HOLD' },
+  { ticker: 'BTCUSDT', cycle: 3, weighted_conviction: 0.01, long_thresh: 0.1, short_thresh: 0.05, proposal: 'NONE', final_decision: 'HOLD' },
+  { ticker: 'ETHUSDT', cycle: 3, long_thresh: 0.1, short_thresh: 0.05, proposal: 'NONE', final_decision: 'HOLD' },
+  { ticker: 'BTCUSDT', cycle: 4, regime: 'normal', weighted_conviction: 0.15, long_thresh: 0.1, short_thresh: 0.05, proposal: 'LONG', final_decision: 'FILTERED', blocking_filter: 'time_filter' },
+  { ticker: 'ETHUSDT', cycle: 4, regime: 'normal', weighted_conviction: 0.03, long_thresh: 0.1, short_thresh: 0.05, proposal: 'NONE', final_decision: 'HOLD' },
+];
+
+describe('regimeByCycle', () => {
+  it('reads one regime per cycle off the first row, in cycle order', () => {
+    expect(regimeByCycle(TIMELINE_TRACES)).toEqual({
+      cycles: [1, 2, 3, 4],
+      regimes: ['normal', 'crisis', null, 'normal'],
+    });
+  });
+
+  it('is empty when no trace carries a cycle number', () => {
+    expect(regimeByCycle([{ ticker: 'X', regime: 'normal' }])).toEqual({ cycles: [], regimes: [] });
+  });
+});
+
+describe('regimeAggregates', () => {
+  it('funnels each regime separately, missing regimes under their own row', () => {
+    expect(regimeAggregates(TIMELINE_TRACES)).toEqual([
+      { regime: 'normal', cycles: 2, evaluated: 4, proposed: 2, traded: 1 },
+      { regime: 'crisis', cycles: 1, evaluated: 2, proposed: 1, traded: 1 },
+      { regime: null, cycles: 1, evaluated: 2, proposed: 0, traded: 0 },
+    ]);
+  });
+});
+
+describe('tickerThresholdSeries', () => {
+  it('plots only rows with a conviction, mirrors the short bar, and marks trades', () => {
+    const s = tickerThresholdSeries(TIMELINE_TRACES, 'BTCUSDT');
+    expect(s.cycles).toEqual([1, 2, 3, 4]);
+    expect(s.regimes).toEqual(['normal', 'crisis', null, 'normal']);
+    expect(s.conviction).toEqual([0.05, -0.08, 0.01, 0.15]);
+    expect(s.longThresh).toEqual([0.1, 0.2, 0.1, 0.1]);
+    expect(s.shortThreshMirrored).toEqual([-0.05, -0.05, -0.05, -0.05]);
+    expect(s.dropped).toBe(0);
+    // one TRADE for BTC: the cycle-2 short, coloured by its side
+    expect(s.markers).toHaveLength(1);
+    expect(s.markers[0].index).toBe(1);
+    expect(s.markers[0].value).toBe(-0.08);
+    expect(s.markers[0].color).toBe('#e5675b');
+    expect(s.markers[0].label).toContain('cycle 2');
+  });
+
+  it('counts rows without a conviction as dropped instead of drawing them as 0', () => {
+    const s = tickerThresholdSeries(TIMELINE_TRACES, 'ETHUSDT');
+    expect(s.cycles).toEqual([1, 2, 4]); // cycle 3 has no weighted_conviction
+    expect(s.dropped).toBe(1);
+    expect(s.markers).toHaveLength(1);
+    expect(s.markers[0].color).toBe('#4ec97a'); // the cycle-1 long
+  });
+
+  it('lists tickers alphabetically', () => {
+    expect(tickersOf(TIMELINE_TRACES)).toEqual(['BTCUSDT', 'ETHUSDT']);
+  });
+});
+
+describe('the regime timeline and threshold bands, rendered', () => {
+  it('bands the timeline, names the gap, and totals each regime honestly', () => {
+    const html = renderToStaticMarkup(<RegimeTimeline traces={TIMELINE_TRACES} />);
+    expect(html).toContain('cycle 1');
+    expect(html).toContain('cycle 4');
+    expect(html).toContain('no regime recorded');
+    expect(html).toContain('crisis');
+    expect(html).toContain('Conversion');
+  });
+
+  it('draws the conviction line against both bars and says the short one is mirrored', () => {
+    const html = renderToStaticMarkup(<ThresholdBands traces={TIMELINE_TRACES} ticker="BTCUSDT" />);
+    expect(html).toContain('weighted conviction');
+    expect(html).toContain('long threshold');
+    expect(html).toContain('short threshold (mirrored below zero)');
+    expect(html).toContain('1 trade marked');
+  });
+
+  it('says how many rows were dropped for lacking a conviction value', () => {
+    const html = renderToStaticMarkup(<ThresholdBands traces={TIMELINE_TRACES} ticker="ETHUSDT" />);
+    expect(html).toContain('1 rows without a conviction value not drawn');
+  });
+
+  it('appears inside the full funnel view with a ticker selector', () => {
+    const html = renderToStaticMarkup(
+      <ConvictionFunnel traces={TIMELINE_TRACES} version="bt_test" truncated={false} cycle={null} />,
+    );
+    expect(html).toContain('Regime timeline');
+    expect(html).toContain('Conviction vs thresholds · BTCUSDT');
+    expect(html).toContain('victoria-conviction-ticker');
+  });
+});
+
+// ── Per-cycle metrics (Live) ─────────────────────────────────────────────────
+
+/** Rows in the exact shape of the "Structured JSONL metric line" block in
+ *  scripts/run_training.py (see CycleMetric in client.ts). */
+const CYCLE_ROWS: CycleMetric[] = [
+  { cycle: 1, version: 'v260', regime: 'normal', composite_score: 0.1234, basket_std: 0.18, new_trades: 0, zero_streak: 1 },
+  { cycle: 2, version: 'v260', regime: 'crisis', composite_score: null, basket_std: 0.31, new_trades: 2, zero_streak: 0 },
+  { cycle: 3, version: 'v260', regime: 'crisis', composite_score: -0.4, basket_std: 0.29, new_trades: 1, zero_streak: 0 },
+];
+
+describe('cycleSeries', () => {
+  it('orders by cycle, keeps regime alignment, and drops null composites with a count', () => {
+    const s = cycleSeries([CYCLE_ROWS[2], CYCLE_ROWS[0], CYCLE_ROWS[1]]);
+    expect(s.version).toBe('v260');
+    expect(s.cycles).toEqual([1, 2, 3]);
+    expect(s.regimes).toEqual(['normal', 'crisis', 'crisis']);
+    expect(s.composite).toEqual([0.1234, -0.4]);
+    expect(s.compositeDropped).toBe(1);
+    expect(s.basketStd).toEqual([0.18, 0.31, 0.29]);
+    expect(s.newTrades).toEqual([0, 2, 1]);
+    expect(s.zeroStreak).toEqual([1, 0, 0]);
+  });
+});
+
+describe('the per-cycle metrics panel', () => {
+  it('names both the durable and the ephemeral source when there are no rows', () => {
+    const html = renderToStaticMarkup(<CycleMetricsPanel rows={[]} />);
+    expect(html).toContain('No per-cycle metrics');
+    expect(html).toContain('_metrics.jsonl');
+    expect(html).toContain('run_training.py');
+    expect(html).toContain('/tmp');
+  });
+
+  it('renders the version, the cycle range, and the dropped-composite disclosure', () => {
+    const html = renderToStaticMarkup(<CycleMetricsPanel rows={CYCLE_ROWS} />);
+    expect(html).toContain('v260');
+    expect(html).toContain('3 cycles');
+    expect(html).toContain('Composite score (1 null cycles not drawn)');
+    expect(html).toContain('Basket std');
+    expect(html).toContain('Zero-trade streak');
+  });
+});
+
+// ── Seeded IC corpus (Signals) ───────────────────────────────────────────────
+
+/** Trimmed from data/signal_ic_history.json — seeded blocks, empty live store. */
+const IC_HISTORY: SignalICHistory = {
+  updated_at: '2026-07-01T00:00:00Z',
+  signals: {},
+  seeded_pooled_ics: { rsi_signal: 0.031, macd_crossover: -0.008, zscore_signal: 0.052 },
+  seeded_regime_ics: {
+    rsi_signal: { normal: 0.04, crisis: 0.01, high_vol: 0.02 },
+    macd_crossover: { normal: -0.01, crisis: -0.02, high_vol: 0.0 },
+  },
+  seed_provenance: { version: 'v212', source: 'pooled walk-forward ICs' },
+};
+
+describe('icRows', () => {
+  it('unions both seeded blocks and sorts by |pooled| descending', () => {
+    expect(icRows(IC_HISTORY)).toEqual([
+      { name: 'zscore_signal', pooled: 0.052, normal: null, crisis: null, highVol: null },
+      { name: 'rsi_signal', pooled: 0.031, normal: 0.04, crisis: 0.01, highVol: 0.02 },
+      { name: 'macd_crossover', pooled: -0.008, normal: -0.01, crisis: -0.02, highVol: 0 },
+    ]);
+  });
+
+  it('is empty for a file with no seeded blocks', () => {
+    expect(icRows({ updated_at: 'x', signals: {} })).toEqual([]);
+  });
+});
+
+describe('the seeded IC board', () => {
+  it('renders every signal, the provenance, and that the live store is empty', () => {
+    const html = renderToStaticMarkup(<SignalICBoard ic={IC_HISTORY} />);
+    expect(html).toContain('rsi_signal');
+    expect(html).toContain('zscore_signal');
+    expect(html).toContain('v212');
+    expect(html).toContain('pooled walk-forward ICs');
+    expect(html).toContain('live observation store is empty');
+    // a regime IC a signal never got renders as an em dash, not a zero
+    expect(html).toContain('—');
+  });
+
+  it('says so when the file carries no seeds at all', () => {
+    const html = renderToStaticMarkup(<SignalICBoard ic={{ signals: {} }} />);
+    expect(html).toContain('No seeded ICs');
+    expect(html).toContain('signal_ic_history.json');
+  });
+});
+
+// ── Equity drawdown provenance ───────────────────────────────────────────────
+
+describe('the equity drawdown card', () => {
+  const reported = [
+    { date: '2026-01-01', omega: 100, btc: 100, dd: 0 },
+    { date: '2026-01-02', omega: 110, btc: 101, dd: 0 },
+    { date: '2026-01-03', omega: 99, btc: 102, dd: -0.1 },
+  ];
+  const unreported = reported.map(({ dd: _dd, ...p }) => p);
+
+  it('labels a reported dd series as the API’s', () => {
+    const html = renderToStaticMarkup(<EquityBody points={reported} />);
+    expect(html).toContain('Drawdown');
+    expect(html).toContain('reported by the API');
+  });
+
+  it('derives the underwater band from equity when the API sends none, and says so', () => {
+    const html = renderToStaticMarkup(<EquityBody points={unreported} />);
+    expect(html).toContain('Drawdown');
+    expect(html).toContain('derived from the equity series');
+    // the stat's provenance hint agrees
+    expect(html).toContain('derived');
   });
 });
