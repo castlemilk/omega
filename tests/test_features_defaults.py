@@ -1,4 +1,4 @@
-"""V275: the IC-weighting defaults are a code default, not a clerical habit.
+"""V275/V276: the IC-weighting defaults are code defaults, not a clerical habit.
 
 Background (V273 H3 -> V274 -> V275):
 
@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import re
 
 from omega.nodes.victoria.features import VictoriaFeatures
 
@@ -45,46 +46,122 @@ def test_ic_seed_weighting_defaults_off() -> None:
     assert VictoriaFeatures().ic_seed_weighting is False
 
 
-def test_per_regime_ic_weighting_default_is_pinned_true() -> None:
-    """Deliberately pinned ``True`` -- do NOT "fix" this to match its sibling.
+def test_per_regime_ic_weighting_defaults_off() -> None:
+    """V276: the second half of the V273/H3 defect class, closed in the safe order.
 
-    V275's Phase 0 audit found the premise SPLITS. ``per_regime_ic_weighting`` is
-    absent from **all 44** arms. In the 37 arms running ``ic_seed_weighting: false``
-    it is doubly inert (``_regime_ics`` has no populate path outside the
-    ``ic_seed_weighting``-gated block at ``scripts/run_training.py:1105-1155``). But
-    in **7 arms it is live and load-bearing**::
+    V275 deliberately left this flag at ``True``. Its Phase 0 audit found that
+    ``per_regime_ic_weighting`` was absent from **all 44** feature-JSON arms, and that
+    in the 7 arms running ``ic_seed_weighting: true`` it was **live and load-bearing**
+    -- including ``scripts/v274_ic_on_grid.sh`` and ``scripts/v274_smoke.sh``, the arms
+    behind V274's headline IC-ON result. Flipping the default first would have silently
+    redefined what those arms measured.
 
-        scripts/v224_run_grid.sh:37       R3F
-        scripts/v228_run_grid.sh:15       ON
-        scripts/v229_run_grid.sh:18       ON
-        scripts/v229_xsweep.sh:11         (function-local `feats`)
-        scripts/walk_forward_grid.sh:51   TRENDIC
-        scripts/v274_ic_on_grid.sh:38     ARM_ON      <-- V274's own IC-ON arm
-        scripts/v274_smoke.sh:32          ARM_ON      <-- V274's own IC-ON arm
+    V276 pinned ``"per_regime_ic_weighting": true`` into all 7 of them first (a no-op
+    edit preserving the inherited value -- see
+    ``test_no_arm_inherits_per_regime_ic_weighting``), and only then flipped this
+    default. Doing it in the other order rewrites history.
 
-    ``v274_ic_on_grid.sh:36`` says so in a comment: *"per_regime_ic_weighting is left
-    at its features.py default"*. V274's headline result -- IC-ON moves all 32 cells,
-    8 sign flips, nets inside every MDE -- was measured with per-regime weighting ON.
-    Flipping this default would silently redefine that arm: a re-run would measure
-    something different and report the same label. That is the very reproducibility
-    defect V275 exists to close, pointed the other way.
-
-    **The correct sequence** (queued as V276-hygiene): first pin
-    ``"per_regime_ic_weighting": true`` explicitly into those 7 arms -- a no-op edit
-    that preserves what they measured -- and only then flip this default and update
-    this test. Doing it in the other order rewrites history.
+    This assertion FAILS at pre-V276 code. That is the point.
     """
-    assert VictoriaFeatures().per_regime_ic_weighting is True
+    assert VictoriaFeatures().per_regime_ic_weighting is False
 
 
-def _attribute_and_getattr_names(path: pathlib.Path) -> set[str]:
-    """Names a module actually *reads* -- ``x.foo`` and ``getattr(x, "foo", ...)``.
+def test_no_arm_inherits_per_regime_ic_weighting() -> None:
+    """No IC-ON arm may inherit ``per_regime_ic_weighting`` from the default.
+
+    This is the guard that makes the flip safe *and keeps it safe*. Any arm that
+    enables ``ic_seed_weighting`` populates ``_regime_ics`` and thereby makes the
+    per-regime flag live (see ``test_regime_ics_only_populated_under_ic_seed_weighting``
+    for the mechanism). Such an arm must state the value it wants rather than inherit
+    whatever ``features.py`` currently says -- otherwise a future default change
+    silently redefines the arm, which is the exact defect V275/V276 exist to close.
+
+    Comment lines are excluded; only real assignments are checked.
+    """
+    ic_on = re.compile(r'\\?"ic_seed_weighting\\?"\s*:\s*true')
+    per_regime = re.compile(r'\\?"per_regime_ic_weighting\\?"\s*:\s*')
+
+    inheriting: list[str] = []
+    checked = 0
+    for path in sorted((_REPO / "scripts").glob("*.sh")):
+        for lineno, line in enumerate(path.read_text(errors="replace").split("\n"), 1):
+            if line.lstrip().startswith("#") or not ic_on.search(line):
+                continue
+            checked += 1
+            if not per_regime.search(line):
+                inheriting.append(f"{path.relative_to(_REPO)}:{lineno}")
+
+    assert checked > 0, "no IC-ON arms found -- the scanner's regex has rotted."
+    assert inheriting == [], (
+        "these IC-ON arms inherit per_regime_ic_weighting from the features.py "
+        f"default instead of pinning it: {inheriting}. See training_log/V276.md §3."
+    )
+
+
+def test_regime_ics_only_populated_under_ic_seed_weighting() -> None:
+    """The mechanism behind V276's safety argument -- asserted, not assumed.
+
+    Unlike its sibling, ``per_regime_ic_weighting`` **does** have strategy-layer
+    consumers (``strategy.py:1135``, and the guards at ``:1205``/``:1223``). So the
+    flip is not safe "by construction" the way V275's was. It is safe *conditionally*:
+    both guards read ``if _per_regime and self._regime_ics``, and ``_regime_ics`` is
+    empty unless something populates it.
+
+    ``update_regime_ics`` has exactly one caller in ``scripts/``, and that call sits
+    inside the block gated on ``ic_seed_weighting`` at ``run_training.py:1106``. So
+    with IC-seeding off, ``_regime_ics`` is ``{}``, the guards short-circuit, and the
+    flag cannot be observed at any value.
+
+    If a second populate path is ever added -- or the existing one escapes the gate --
+    that argument is void, and this test is what says so.
+    """
+    runner = _REPO / "scripts" / "run_training.py"
+    tree = ast.parse(runner.read_text(encoding="utf-8", errors="replace"), str(runner))
+
+    calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "update_regime_ics"
+    ]
+    assert len(calls) == 1, (
+        f"expected exactly 1 update_regime_ics call in scripts/run_training.py, "
+        f"found {len(calls)} at lines {[c.lineno for c in calls]}. V276 §2's "
+        "conditional-inertness argument assumed a single populate path."
+    )
+
+    gated = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.If)
+        and "ic_seed_weighting" in _attribute_and_getattr_names_from_node(node.test)
+    ]
+    assert gated, "no `if ...ic_seed_weighting...` gate found in scripts/run_training.py"
+
+    call_line = calls[0].lineno
+    enclosing = [
+        node
+        for node in gated
+        if node.body
+        and node.body[0].lineno <= call_line <= max(
+            getattr(child, "end_lineno", child.lineno) for child in node.body
+        )
+    ]
+    assert enclosing, (
+        f"update_regime_ics (line {call_line}) is NOT inside an ic_seed_weighting-gated "
+        "block. _regime_ics can now be populated with IC-seeding off, which voids "
+        "V276 §2's safety argument for flipping per_regime_ic_weighting. Re-audit."
+    )
+
+
+def _attribute_and_getattr_names_from_node(root: ast.AST) -> set[str]:
+    """Names an AST subtree actually *reads* -- ``x.foo`` and ``getattr(x, "foo", ...)``.
 
     Parsed via ``ast`` so prose (comments, docstrings) is excluded by construction.
     """
-    tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"), str(path))
     names: set[str] = set()
-    for node in ast.walk(tree):
+    for node in ast.walk(root):
         if isinstance(node, ast.Attribute):
             names.add(node.attr)
         elif (
@@ -97,6 +174,13 @@ def _attribute_and_getattr_names(path: pathlib.Path) -> set[str]:
         ):
             names.add(node.args[1].value)
     return names
+
+
+def _attribute_and_getattr_names(path: pathlib.Path) -> set[str]:
+    """``_attribute_and_getattr_names_from_node`` over a whole module."""
+    return _attribute_and_getattr_names_from_node(
+        ast.parse(path.read_text(encoding="utf-8", errors="replace"), str(path))
+    )
 
 
 def test_ic_seed_weighting_has_no_strategy_layer_consumer() -> None:
