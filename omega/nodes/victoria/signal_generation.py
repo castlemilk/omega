@@ -413,6 +413,23 @@ class SignalGenerationNode(Node):
         self._signals_generated = 0
         self._last_signal_coverage = 0.0
 
+        # V280 arm — OMEGA_SIGNAL_NODE_V12=1 upgrades this node to v1.2 at construction.
+        #
+        # The six toggles above ship False and are switched on ONLY by improve()
+        # (:740-760) at iteration>=1 / >=2. Nothing in the training path calls improve():
+        # `grep -c "improve(" scripts/run_training.py` is 0, and no frozen run has ever
+        # logged "SignalGenerationNode →". So every walk-forward cell in the campaign,
+        # including the 32 behind the standing baseline, has run at v1.0 with RSI, MACD,
+        # Bollinger Bands, Z-score, BTC-beta and vol-regime DISABLED (V279's family
+        # report: `momentum 1/3 live: sma_crossover`).
+        #
+        # This arm drives the REAL improve() path rather than setting the flags directly,
+        # so it cannot drift from what the orchestrator would actually do. Default OFF ⇒
+        # byte-identical. See training_log/V280.md.
+        if os.environ.get("OMEGA_SIGNAL_NODE_V12") == "1":
+            self.improve({"iteration": 1})   # v1.1 — RSI + volume z-score
+            self.improve({"iteration": 2})   # v1.2 — MACD, BB, Z-score, BTC-beta, vol-regime
+
         # ML signal combiner — replaces equal-weight composite when trained
         self._combiner: SignalCombiner | None = None
         try:
