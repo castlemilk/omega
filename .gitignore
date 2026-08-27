@@ -53,6 +53,10 @@ data/*_determinism/
 # distributional-grid output dirs (V231+); only matters when OMEGA_AUDIT_OUTPUT_DIR
 # is unset and audit output falls back to data/ — external mounts live outside the repo
 data/v[0-9]*_dist/
+# V276: audit-output dirs (OMEGA_AUDIT_OUTPUT_DIR=data/v276) have no underscore
+# after the digits, so every data/v[0-9]*_* pattern above misses them and a
+# `git add -A` sweeps several hundred run artifacts into the index.
+data/v[0-9]*/
 data/v[0-9]*_grid.log
 # misc per-run scratch (driver .out logs, single-pid files, DONE markers,
 # interim finding notes) — all generated, never commit

@@ -67,6 +67,18 @@ swings one crisis window 7× — yet every family mean-Δ lands inside its own M
 A heavy-coupling knob with a large per-cell footprint and no resolvable direction:
 it stays OFF. See `V274.md`.
 
+> **⚠ V276 (2026-08-27) — these numbers have only ever been reproduced on ONE host.**
+> V276's paired control (run to attribute an unrelated delta) re-ran the three
+> sentinels on a second machine and got **crisis $1,082.80** (−$66.96) and
+> **recent $824.81** (+$52.83); trend reproduced exactly. Trade counts matched the
+> record on all three (9 / 6 / 13), and the deviation is present **before** any V276
+> change — it is environmental, not a regression, and V276's own effect was $0.00.
+> V274's certification above covers the *data* provenance and remains valid; what is
+> NOT pinned anywhere is the **code environment** (interpreter, numpy version, and the
+> optional signal deps `yfinance` / `websockets` / `scikit-learn`, all absent on the
+> second host). Until `V277` lands an environment manifest, **do not compare a number
+> measured on a different machine to this table.** See `V276.md` §6 R5.
+
 **V238 (2026-07-10) re-confirmed these numbers to the cent** — its `main` cells
 are byte-identical to the V235 grid (`nonzero_diffs: {}`, 32/32), so the
 frozen-series feed build did NOT move the standing baseline. The **"signals
