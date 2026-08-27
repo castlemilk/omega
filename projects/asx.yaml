@@ -36,6 +36,27 @@ nodes:
       universe: asx20_today
       universe_survivorship_safe: false
 
+  # ── Metadata: short positions (Shorted API) ────────────────
+  # ASIC short-position data via https://shorted.com.au/docs/api
+  # (Connect-RPC over JSON POST, the same framework this repo speaks).
+  # Token is MANDATORY: their usage policy states automated access
+  # requires a valid API token, and GetStockData — the only endpoint
+  # returning HISTORY — is private. Read from OMEGA_SHORTED_API_KEY;
+  # never stored in this file, never committed.
+  - type: data_provider
+    name: asx_short_positions
+    enabled: false                # no token provisioned yet
+    config:
+      provider: shorted
+      base_url: https://shorts-uiekqxovma-km.a.run.app
+      service: shorts.v1alpha1.ShortedStocksService
+      history_method: GetStockData      # private — requires token
+      token_env: OMEGA_SHORTED_API_KEY
+      frozen_root: data/frozen_series/asx/shorts
+      # Free tier 1,000 req/month is the binding constraint: fine for a
+      # 20-name study, not for a daily-refreshed ASX-300 universe.
+      rate_limit_note: "free 60/min 1000/mo; $20 tier 120/min 10000/mo"
+
 # ── Not yet declared, and why ───────────────────────────────────
 # signals:  no signal node until a survivorship-free universe confirms or kills
 #           V286 §3's reversion finding. See training_log/V287.md §3.

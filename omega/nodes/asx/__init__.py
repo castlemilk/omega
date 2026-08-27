@@ -21,9 +21,12 @@ from omega.nodes.asx.loader import (
     load_frozen_bars,
     verify_frozen_manifest,
 )
+from omega.nodes.asx.shorted import ShortedClient, freeze_short_positions
 
 __all__ = [
     "ASXUniverse",
+    "ShortedClient",
+    "freeze_short_positions",
     "freeze_universe",
     "load_frozen_bars",
     "verify_frozen_manifest",
