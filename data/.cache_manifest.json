@@ -1,9 +1,15 @@
 {
   "_note": "md5 manifest of frozen eval caches; verified at startup when OMEGA_FROZEN_CACHE=1. Mismatch => abort the run. Rebuild with scripts/build_cache_manifest.py.",
+  "_volatile_note": "volatile_files are RECORDED, never asserted: the run rewrites them (V277 \u00a71b). Drift is reported as a WARNING at startup, never an abort.",
   "files": {
     "data/frozen_advanced_signals.json": "cc5359e18ef79d9f5227f47b3e8c9e3a",
     "data/frozen_funding_cache.json": "384c326308dbae3d2966bf7dce3868bf",
-    "data/macro_cache.db": "397b943808e9ca5772dbfcc5a7fb4282"
+    "data/macro_cache.db": "397b943808e9ca5772dbfcc5a7fb4282",
+    "data/omega_victoria_state.db": "4f3e31fc1b8d30b4b0bd629f8fd47ce0"
   },
-  "generated_at": "2026-06-10T03:41:19.479045+00:00"
+  "generated_at": "2026-08-27T02:24:15.165349+00:00",
+  "volatile_files": {
+    "data/omega_victoria_memory.db": "5e34299509e900f145f5d10eeeb7ffdc",
+    "data/signal_ic_history.json": "a0e52d5a62681305d5a24b06cec4c32a"
+  }
 }
