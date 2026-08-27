@@ -6,6 +6,27 @@
 **Parent:** [`V280.md`](V280.md) (enabling the six technical signals cost $1k–$3.2k/window) · [`V279.md`](V279.md)
 **Standing baseline:** crisis +$599 / trend +$2,997 / recent +$30 — untouched
 
+> ## ⚠ CORRECTION (same day, after re-verifying against `signal_generation.py`)
+>
+> The first pass used **two unfaithful reimplementations**, found by diffing them against
+> the real code line by line:
+>
+> | Signal | first pass | actual (`signal_generation.py`) |
+> |---|---|---|
+> | `sma_crossover` | periods 10/30, scale ×20 | **periods 5/20, scale ×10** (`:394-395`) |
+> | `zscore_signal` | price-level z-score | **z-score of the latest RETURN** (`_compute_zscore_returns`) |
+>
+> The second error is the serious one: a price-level z-score is *identical by
+> construction* to `bb_signal`, which manufactured the ρ = +1.0000 "duplication defect"
+> reported in §4. **That finding is RETRACTED — it was a bug in my measurement, not in
+> the codebase.** Measured correctly, `bb` vs `zscore` correlate **−0.2201**; they are
+> distinct signals (price level vs return distribution).
+>
+> §2, §3 and §5 below carry the **corrected** numbers. Every substantive conclusion
+> survived the correction — and the equal-weight result got *worse*, not better.
+
+
+
 ---
 
 ## §1 — The question
@@ -24,26 +45,26 @@ weighting.
 
 ## §2 — Per-signal information coefficients
 
-17,344 observations, all 32 walk-forward windows, Spearman IC vs forward return:
+16,620 observations, all 32 walk-forward windows, Spearman IC vs forward return at
+**H=5** (a horizon the strategy plausibly realises):
 
-| Signal | IC (H=3) | p |
+| Signal | IC | p |
 |---|---:|---:|
-| **sma_crossover** | **+0.0403** | 1.1e-07 |
-| rsi_signal | −0.0241 | 1.5e-03 |
-| macd_crossover | +0.0039 | 0.61 — **noise** |
-| bb_signal | −0.0137 | 0.071 |
-| zscore_signal | −0.0137 | 0.071 |
+| **sma_crossover** | **+0.0283** | 2.6e-04 |
+| rsi_signal | −0.0288 | 2.0e-04 |
+| macd_crossover | −0.0051 | 0.51 — **noise** |
+| bb_signal | −0.0160 | 0.039 |
+| zscore_signal | −0.0167 | 0.031 |
 
 | Composite | IC |
 |---|---:|
-| sma_crossover alone (**v1.0, what ships**) | **+0.0403** |
-| equal-weight 5 (v1.2, what V280 enabled) | **+0.0064** (p=0.40) |
-| IC-weighted 5, weights fitted **in-sample** | +0.0319 |
+| sma_crossover alone (**v1.0, what ships**) | **+0.0283** |
+| equal-weight 5 (v1.2, what V280 enabled) | **−0.0124** |
 
-**Equal-weighting degrades the signal 6×**, which is V280's PnL result restated at the
-information level. And the IC-weighted row is an *optimistic upper bound* — its weights
-are fitted on the very data they are scored against — and it **still loses to
-sma_crossover alone**. Reweighting cannot rescue this set.
+**Equal-weighting does not merely dilute the signal — it inverts it.** The composite of
+five goes *negative* while its best member is positive. That is V280's −$1k–$3.2k
+restated at the information level, and it is a stronger result than the first pass
+reported.
 
 ## §3 — A tempting hypothesis, and its refutation
 
@@ -68,37 +89,43 @@ Read naively: invert three signals and `rsi` becomes **+0.1498**, stronger than
 
 | | OOS IC (windows 17–32) |
 |---|---:|
-| sma_crossover alone | **+0.0538** |
-| equal-weight 5, as wired | −0.0492 |
-| equal-weight 5, **signs fitted on train** | **−0.0275** |
+| sma_crossover alone | **+0.0399** |
+| equal-weight 5, as wired | −0.0075 |
+| equal-weight 5, **signs fitted on train** | **−0.0233** |
 
-The fitted signs (`sma+, rsi+, macd−, bb+, zscore+`) are **nearly the opposite** of the
-full-sample signs. The "wired backwards" pattern is an in-sample artifact: sign-fitting
-produces *negative* OOS IC — worse than leaving the signals alone.
+Sign-fitting produces *negative* OOS IC — worse than leaving the signals alone — and the
+train-fitted signs (`sma+, rsi+, macd−, bb+, zscore−`) disagree with the full-sample
+signs on three of five. The "wired backwards" pattern is an in-sample artifact.
 
 This is exactly the V227 → V231 failure mode (a shipped +$630 that distributional
 measurement erased) caught before anything was built. It cost one script.
 
-## §4 — A real defect found along the way
+## §4 — RETRACTED: the "duplicate signal" finding
 
-**`bb_signal` and `zscore_signal` are perfectly correlated: ρ = +1.0000.**
+The first pass reported `bb_signal` and `zscore_signal` as perfectly correlated
+(ρ = +1.0000) and called it a real defect. **That was wrong, and the fault was mine.**
 
-Not "similar" — identical, at every horizon, to four decimal places. Both reduce to a
-standardised distance of price below its rolling mean. Any weighting scheme that treats
-them as two signals **double-counts one**, and `AdaptiveCombiner.SIGNAL_FAMILIES` lists
-both under `mean_reversion` (V279).
+I had reimplemented `zscore_signal` as a price-level z-score. The real one
+(`_compute_zscore_returns`) standardises the *latest return* against the recent return
+distribution — a different quantity entirely. My version was algebraically identical to
+`bb_signal`, so the correlation of 1.0000 was measuring my own code against itself.
 
-This is inert today (both are off by default), but it would silently corrupt any future
-weighting work, and it is worth fixing independently of everything else here.
+Measured against faithful implementations: **ρ = −0.2201**. The two signals are distinct
+and there is no double-counting defect. Nothing needs fixing.
+
+Recorded rather than deleted, because the failure mode generalises: an offline scorer
+that *reimplements* production signals can manufacture findings that exist only in the
+scorer. Any future analysis of this kind should diff its implementations against
+`signal_generation.py` before reporting, which is how this was caught.
 
 ## §5 — Conclusion
 
-**sma_crossover is the strategy's entire signal edge, and it is stable.** IC **+0.0534**
-in-sample and **+0.0538** out-of-sample — the only quantity in this analysis that does
+**sma_crossover is the strategy's entire signal edge, and it is stable.** IC **+0.0283**
+in-sample and **+0.0399** out-of-sample — the only quantity in this analysis that does
 not move between halves.
 
-Every alternative underperforms it: as-wired (+0.0053), sign-corrected in-sample
-(+0.0250), duplicate-dropped (+0.0263), IC-weighted with lookahead weights (+0.0319).
+Every alternative underperforms it: as-wired is **negative** (−0.0124 in-sample,
+−0.0075 OOS), and sign-fitting is worse still (−0.0233 OOS).
 **No combination of these five beats using one of them alone.**
 
 This closes "improve the signal by reweighting, re-signing, or re-enabling the existing
@@ -108,15 +135,15 @@ configuration available from this set.
 
 **Improving signal therefore means finding a genuinely new predictor with stable
 out-of-sample IC above ~0.05**, not rearranging these five. And note what the bar
-implies: sma_crossover's +0.053 IC *is* the standing baseline's crisis +$599 / trend
+implies: sma_crossover's ~+0.03–0.04 IC *is* the standing baseline's crisis +$599 / trend
 +$2,997. A new signal must clear that bar out-of-sample, on a distribution, before it is
 worth wiring — and V284 is the reminder that even a clean measurement need not convert
 into PnL.
 
 ## §6 — Next steps
 
-1. **Fix the `bb_signal` / `zscore_signal` duplication** (§4). Small, real, independent
-   of any hypothesis.
+1. **Nothing to fix from §4** — that finding is retracted. Any future offline scorer
+   must diff its reimplementations against `signal_generation.py` before reporting.
 2. **Do not re-run this set.** Reweighting, sign-flipping and horizon-shifting are all
    measured and refuted above; a future version proposing any of them should read §3
    first.
