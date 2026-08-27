@@ -28,6 +28,7 @@ Signal vector uses the 11 composite SIGNAL_NAMES from victoria_node.
 from __future__ import annotations
 
 import logging
+import os
 from collections import deque
 from dataclasses import dataclass
 
@@ -41,7 +42,36 @@ try:
     _SCIPY_AVAILABLE = True
 except ImportError:
     _SCIPY_AVAILABLE = False
+    # V282: this fallback is a DIFFERENT ALGORITHM, not an approximation of the same
+    # number — mean-distance in place of true Wasserstein. It changes regime distances,
+    # hence regime labels, hence the regime-adaptive conviction thresholds, hence the
+    # trades taken. It silently moved two of three sentinels (crisis -$66.96, recent
+    # +$52.83) and cost V276/V277 two versions to diagnose, because it announced itself
+    # only as a warning on a host where nobody was reading warnings.
     logger.warning("scipy not available — falling back to simple mean-distance approximation")
+
+
+def assert_scipy_for_frozen_runs() -> None:
+    """Raise if a frozen run would silently use the fallback regime metric (V282).
+
+    A frozen run exists to produce a number comparable to committed ones. A swapped
+    regime metric makes it incomparable, so this is the V219 abort condition ("refuse to
+    produce a baseline on a drifted substrate") applied to the CODE substrate rather
+    than the data substrate.
+
+    The live path deliberately keeps warn-and-degrade: degraded live trading beats no
+    live trading, and a live run is not claiming comparability with anything.
+    """
+    if _SCIPY_AVAILABLE or os.environ.get("OMEGA_FROZEN_CACHE") != "1":
+        return
+    raise RuntimeError(
+        "V282: scipy is missing and OMEGA_FROZEN_CACHE=1. WassersteinRegimeDetector "
+        "would fall back to a mean-distance approximation — a different "
+        "regime-detection algorithm — producing numbers NOT comparable to the "
+        "committed baseline (it moved crisis by -$66.96 and recent by +$52.83). "
+        "Install it with `pip install -e '.[math]'`, or do not call this run a "
+        "baseline. See training_log/V282.md."
+    )
 
 # ---------------------------------------------------------------------------
 # Signal names (must match victoria_node.SIGNAL_NAMES)
@@ -111,6 +141,8 @@ class WassersteinRegimeDetector:
     """
 
     def __init__(self, window: int = 50, min_samples: int = 20) -> None:
+        # V282: a frozen run must not silently use the fallback regime metric.
+        assert_scipy_for_frozen_runs()
         self._window = window
         self._min_samples = min_samples
         self._signal_history: deque[np.ndarray] = deque(maxlen=window)

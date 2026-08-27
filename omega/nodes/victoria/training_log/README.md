@@ -67,6 +67,15 @@ swings one crisis window 7× — yet every family mean-Δ lands inside its own M
 A heavy-coupling knob with a large per-cell footprint and no resolvable direction:
 it stays OFF. See `V274.md`.
 
+> **✅ V282 (2026-08-27) — RESOLVED: reproduced on a second host, to the cent.**
+> The V276 caveat below is superseded. The off-host deviation was a **missing, undeclared
+> `scipy`**: without it `wasserstein_regime.py` silently swaps true Wasserstein distance
+> for a mean-distance approximation, changing regime labels and hence trades. With scipy
+> installed this host reproduces crisis **$1,149.76** / trend **$4,679.67** / recent
+> **$771.98** exactly, at $0.00 determinism. scipy is now declared in `pyproject.toml`
+> and a frozen run without it raises. See `V282.md`.
+>
+> _Superseded, kept for the record:_
 > **⚠ V276 (2026-08-27) — these numbers have only ever been reproduced on ONE host.**
 > V276's paired control (run to attribute an unrelated delta) re-ran the three
 > sentinels on a second machine and got **crisis $1,082.80** (−$66.96) and
