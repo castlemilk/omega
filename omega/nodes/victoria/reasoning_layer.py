@@ -41,12 +41,30 @@ logger = logging.getLogger("omega.nodes.victoria.reasoning_layer")
 CACHE_ROOT = Path(__file__).resolve().parents[3] / "data" / "frozen_llm_cache"
 
 DEFAULT_MODEL_ID = "gemini-3.1-pro-low"
-# agy --model strings, keyed by our stable model_id (the cache namespace).
-_AGY_MODEL_STRINGS = {
-    "gemini-3.1-pro-low": "Gemini 3.1 Pro (Low)",
-    "gemini-3.1-pro-high": "Gemini 3.1 Pro (High)",
-    "gemini-3.5-flash-medium": "Gemini 3.5 Flash (Medium)",
+# V281 — provider registry. `agy` entries keep their historical shape so the 693
+# committed gemini-3.1-pro-low cache entries and their MANIFEST stay valid; `ollama`
+# entries are new. The cache directory is namespaced by model_id, so providers never
+# shadow each other.
+#
+# Why subprocess and not in-process HTTP: the V215 fence intercepts urllib/requests
+# inside a run, which is exactly why V240 shelled out to `agy`. Cache-miss under
+# OMEGA_FROZEN_CACHE=1 still raises LLMCacheMiss, so a live call can only happen in an
+# explicit OMEGA_LLM_CACHE_FILL=1 run. See training_log/V281.md §2.
+_PROVIDERS: dict[str, dict[str, str]] = {
+    "gemini-3.1-pro-low": {"kind": "agy", "model": "Gemini 3.1 Pro (Low)"},
+    "gemini-3.1-pro-high": {"kind": "agy", "model": "Gemini 3.1 Pro (High)"},
+    "gemini-3.5-flash-medium": {"kind": "agy", "model": "Gemini 3.5 Flash (Medium)"},
+    # Local, thinking-capable. `thinking` is returned by the ollama API as a field
+    # SEPARATE from `response`, so no tag-stripping is needed.
+    "qwen3.8-27b-mlx": {"kind": "ollama", "model": "qwen3.8:27b-mlx"},
+    "qwen3-14b": {"kind": "ollama", "model": "qwen3:14b"},
+    "gemma3-27b": {"kind": "ollama", "model": "gemma3:27b"},
 }
+
+# Deterministic sampling for cache-fill reproducibility. Determinism of a REPLAY is
+# guaranteed by the frozen cache regardless; this only makes a re-fill reproduce.
+_OLLAMA_SEED = 42
+_OLLAMA_URL = "http://localhost:11434/api/generate"
 
 _MAX_MALFORMED_RETRIES = 2
 # V241 contract tightening: the layer may never up-size past the strategy's
@@ -74,6 +92,9 @@ class BasketReview:
     cached: bool = False
     prompt_hash: str = ""
     raw: dict = field(default_factory=dict)
+    # V281: the model's reasoning trace, captured for audit. NEVER load-bearing —
+    # only keep/drop/size_scale can affect a position.
+    thinking: str = ""
 
 
 def _frozen_mode() -> bool:
@@ -101,10 +122,16 @@ class ReasoningLayer:
         agy_bin: str = "agy",
         timeout_s: float = 300.0,
     ) -> None:
-        if model_id not in _AGY_MODEL_STRINGS:
-            raise ValueError(f"unknown model_id {model_id!r} (no agy model string)")
+        if model_id not in _PROVIDERS:
+            raise ValueError(
+                f"unknown model_id {model_id!r} — known: {sorted(_PROVIDERS)}"
+            )
         self.model_id = model_id
-        self._agy_model = _AGY_MODEL_STRINGS[model_id]
+        spec = _PROVIDERS[model_id]
+        self._provider = spec["kind"]
+        # Kept under its historical name: the committed MANIFEST records
+        # "agy_model_string" and older entries must keep resolving.
+        self._agy_model = spec["model"]
         self._agy_bin = agy_bin
         self._timeout_s = timeout_s
         self._cache_dir = (cache_root or CACHE_ROOT) / model_id
@@ -289,20 +316,23 @@ class ReasoningLayer:
     # ---------------------------------------------------------- live call
 
     def _call_live(self, prompt: str, phash: str) -> dict:
-        """One agy subprocess call per unique prompt; bounded retry on
-        malformed JSON, then raise (no neutral fallback)."""
+        """One provider call per unique prompt; bounded retry on malformed JSON,
+        then raise (no neutral fallback).
+
+        V281: dispatches on the registered provider kind. Reached only when
+        `_frozen_mode()` is False — i.e. a live run, or an explicit
+        OMEGA_LLM_CACHE_FILL=1 fill. A frozen replay raises LLMCacheMiss upstream and
+        never gets here.
+        """
         last_err: Exception | None = None
         for attempt in range(_MAX_MALFORMED_RETRIES + 1):
-            proc = subprocess.run(
-                [self._agy_bin, "--model", self._agy_model, "-p", prompt],
-                capture_output=True,
-                text=True,
-                timeout=self._timeout_s,
-            )
-            if proc.returncode != 0:
-                raise RuntimeError(f"agy exited {proc.returncode}: {proc.stderr.strip()[:500]}")
+            text, thinking = self._invoke_provider(prompt)
             try:
-                response = self._extract_json(proc.stdout)
+                response = self._extract_json(text)
+                if thinking:
+                    # Audit-only. The validator reads named keys and ignores extras,
+                    # so this rides into `raw` and can never affect a position.
+                    response["_thinking"] = thinking
                 self._cache_store(phash, prompt, response)
                 return response
             except Exception as exc:
@@ -314,6 +344,74 @@ class ReasoningLayer:
                     exc,
                 )
         raise LLMMalformedOutput(str(last_err))
+
+    def _invoke_provider(self, prompt: str) -> tuple[str, str]:
+        """Return (raw_text, thinking) from the configured provider.
+
+        `thinking` is "" for providers that do not expose a reasoning trace.
+        """
+        if self._provider == "ollama":
+            return self._call_ollama(prompt)
+        return self._call_agy(prompt)
+
+    def _call_agy(self, prompt: str) -> tuple[str, str]:
+        """The V240 path, unchanged. agy exposes no reasoning trace."""
+        proc = subprocess.run(
+            [self._agy_bin, "--model", self._agy_model, "-p", prompt],
+            capture_output=True,
+            text=True,
+            timeout=self._timeout_s,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(f"agy exited {proc.returncode}: {proc.stderr.strip()[:500]}")
+        return proc.stdout, ""
+
+    def _call_ollama(self, prompt: str) -> tuple[str, str]:
+        """V281: local thinking-capable model via the ollama HTTP API, over curl.
+
+        curl rather than urllib **by design**: the V215 fence intercepts in-process
+        HTTP inside a run, which is why V240 shelled out to `agy`. A subprocess is the
+        established, sanctioned shape for the LLM path (V281.md §2), and it is not a
+        bypass — a frozen replay never reaches a live call at all.
+
+        temperature=0 + a fixed seed make a re-fill reproduce; replay determinism is
+        guaranteed by the frozen cache regardless of what the model does.
+
+        The API returns `thinking` as a field SEPARATE from `response`, so the trace
+        needs no tag-stripping and the JSON contract stays clean.
+        """
+        payload = json.dumps(
+            {
+                "model": self._agy_model,
+                "prompt": prompt,
+                "stream": False,
+                "think": True,
+                "options": {"temperature": 0, "seed": _OLLAMA_SEED},
+            }
+        )
+        proc = subprocess.run(
+            ["curl", "-s", "--max-time", str(int(self._timeout_s)),
+             _OLLAMA_URL, "-H", "Content-Type: application/json", "-d", payload],
+            capture_output=True,
+            text=True,
+            timeout=self._timeout_s + 30,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"ollama curl exited {proc.returncode}: {proc.stderr.strip()[:500]}"
+            )
+        if not proc.stdout.strip():
+            raise RuntimeError(
+                f"ollama returned nothing for model {self._agy_model!r} — is the "
+                "server running (`ollama list`)?"
+            )
+        try:
+            body = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"ollama response was not JSON: {exc}") from exc
+        if body.get("error"):
+            raise RuntimeError(f"ollama error: {str(body['error'])[:300]}")
+        return str(body.get("response", "")), str(body.get("thinking", "") or "")
 
     @staticmethod
     def _extract_json(text: str) -> dict:
@@ -369,6 +467,7 @@ class ReasoningLayer:
             reasoning=str(raw.get("reasoning", "")),
             confidence=confidence,
             raw=raw,
+            thinking=str(raw.get("_thinking", "")),
         )
 
 
