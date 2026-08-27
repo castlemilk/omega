@@ -563,6 +563,15 @@ class StrategyNode(Node):
         # V54: 200/200 cycles blocked because current market vol rank is below 5th pct of
         # its own 50d history. abs_conviction_floor handles low-signal environments.
         self._vol_high_threshold: float = 0.80  # percentile above which vol is "chaotic"
+        # V283 Phase 0 probe — OMEGA_VOL_HIGH_THRESHOLD overrides the only LIVE vol gate
+        # (vol_low has been disabled at 0.0 since V55). Set to >1.0 to disable the gate
+        # entirely, which bounds how much PnL this gate can move in either direction —
+        # and therefore how much ANY volatility forecaster could contribute through it.
+        # Unset => 0.80, byte-identical to today. Measurement only; see
+        # training_log/V283_PHASE0_VOL_HEADROOM.md.
+        _vht = os.environ.get("OMEGA_VOL_HIGH_THRESHOLD")
+        if _vht:
+            self._vol_high_threshold = float(_vht)
 
         # --- Multi-cycle confirmation (V63): track last 2 signal directions per symbol ---
         # Only enter a trade when the current direction matches the previous cycle's direction.
@@ -1796,8 +1805,16 @@ class StrategyNode(Node):
             if not isinstance(data, dict):
                 continue
             prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
-            if len(prices) >= 101:
-                vol_rank = self._vol_percentile_rank(prices, window=20, lookback=100)
+            # V283 Phase 0 probe: the >=101 requirement makes this gate STRUCTURALLY DEAD
+            # in every walk-forward window — a 90-day lookback carries 91 bars, so
+            # vol_rank stays None and neither the vol_low nor the vol_high branch has
+            # ever executed in a frozen run. Confirmed by sweeping _vol_high_threshold
+            # over {0.60, 0.80, 0.90, 1.01}: byte-identical PnL on all three sentinels.
+            # OMEGA_VOL_LOOKBACK lets the probe fit the gate to the window and measure
+            # whether an ACTIVE vol gate helps at all. Unset => 100, byte-identical.
+            _lb = int(os.environ.get("OMEGA_VOL_LOOKBACK", "100"))
+            if len(prices) >= _lb + 1:
+                vol_rank = self._vol_percentile_rank(prices, window=20, lookback=_lb)
                 break
 
         if vol_rank is not None:
