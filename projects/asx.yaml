@@ -1,0 +1,45 @@
+# projects/asx.yaml
+# ──────────────────────────────────────────────────────────────
+# ASX — Australian equities research system
+#
+# A PROJECT definition (CLAUDE.md "Platform vs Project Separation").
+# Forked from Victoria's METHOD — walk-forward, frozen substrate,
+# pre-registered gates — but explicitly NOT its model: V286 measured
+# that Victoria's one working signal does not transfer to the ASX.
+#
+# STATUS: data layer only. No signal or strategy node is declared
+# here, deliberately. Nothing about the ASX price signal is validated
+# yet (V286 §5: the headline reversion finding may be pure
+# survivorship bias), and declaring a strategy node for a strategy
+# that does not exist is how a scaffold becomes a claim.
+# ──────────────────────────────────────────────────────────────
+
+name: asx
+description: Australian equities research — frozen-substrate data layer (pre-signal)
+
+metadata:
+  fork_of: victoria           # method, not model
+  status: data-layer-only
+  first_finding: omega/nodes/victoria/training_log/V286_PHASE0_ASX.md
+  blocking_question: survivorship-free universe (V286 §5)
+
+nodes:
+  # ── Data layer ──────────────────────────────────────────────
+  - type: data_provider
+    name: asx_bars
+    config:
+      provider: yfinance          # daily bars, auto-adjusted (splits + dividends)
+      interval: 1d
+      frozen_root: data/frozen_series/asx
+      # The universe is survivorship-BIASED by construction and is flagged as such
+      # in the manifest. It is for plumbing and smoke tests only — never a verdict.
+      universe: asx20_today
+      universe_survivorship_safe: false
+
+# ── Not yet declared, and why ───────────────────────────────────
+# signals:  no signal node until a survivorship-free universe confirms or kills
+#           V286 §3's reversion finding. See training_log/V287.md §3.
+# metadata: news / announcements / fundamentals are NOT historically available on
+#           the free path (measured 2026-08-27) — recent-only news, forward-only
+#           calendar, point-in-time `info`. Backtesting on them would be lookahead.
+#           A metadata node waits on an acquired source WITH history.
