@@ -41,6 +41,7 @@ Signal magnitude is scaled by how much stronger the correlation is beyond -0.5.
 
 import logging
 import math
+import os
 from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.dxy_signal")
@@ -65,6 +66,27 @@ def _pearson(xs: list[float], ys: list[float]) -> float | None:
     if denom_x == 0 or denom_y == 0:
         return None
     return num / (denom_x * denom_y)
+
+
+# V278 — H2 arm: the macro-cache lookahead fence.
+#
+# Under OMEGA_FROZEN_CACHE=1, MacroDataCache._read_macro anchors its lookback to the
+# cache's own newest row (data_cache.py:298, SELECT MAX(date)) rather than to the
+# replayed bar. The committed cache spans 2025-12-09 -> 2026-06-10, and every
+# walk-forward window predates its EARLIEST row, so this consumer reads years of the
+# replayed bar's future. vix_signal.py:106 and spy_signal.py:116 already fence exactly
+# this class of leak; these two macro consumers never did (V273 §6 H2).
+#
+# OMEGA_MACRO_BAR_FENCE=1 turns the arm ON. Default OFF => byte-identical to pre-V278.
+# The fence returns an EMPTY series, routing through each signal's existing
+# "data unavailable" path, which is the causally honest state: no macro row from this
+# cache is legitimately visible at the replayed bar.
+# See training_log/V278.md.
+def _macro_fence_active() -> bool:
+    return (
+        os.environ.get("OMEGA_FROZEN_CACHE") == "1"
+        and os.environ.get("OMEGA_MACRO_BAR_FENCE") == "1"
+    )
 
 
 class DXYSignal:
@@ -163,6 +185,9 @@ class DXYSignal:
 
     def _get_dollar_prices(self) -> list[float]:
         """Load FRED DTWEXBGS prices from the macro data cache."""
+        if _macro_fence_active():
+            # V278 H2 arm: empty => compute() returns 0.0 via its own length guard.
+            return []
         if self._cache is None:
             from omega.nodes.victoria.data_cache import get_cache
 

@@ -52,6 +52,7 @@ float in [-0.6, 0.4]:
 """
 
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.signals.yield_curve")
@@ -59,6 +60,27 @@ logger = logging.getLogger("omega.nodes.victoria.signals.yield_curve")
 _SHOCK_THRESHOLD_BP = 15.0  # 10Y day-over-day move (basis points) to trigger shock
 _INVERSION_MILD_BP = -20.0  # above this: mild inversion
 _STEEPEN_MIN_DAYS = 30  # minimum days inverted before steepening signal fires
+
+
+# V278 — H2 arm: the macro-cache lookahead fence.
+#
+# Under OMEGA_FROZEN_CACHE=1, MacroDataCache._read_macro anchors its lookback to the
+# cache's own newest row (data_cache.py:298, SELECT MAX(date)) rather than to the
+# replayed bar. The committed cache spans 2025-12-09 -> 2026-06-10, and every
+# walk-forward window predates its EARLIEST row, so this consumer reads years of the
+# replayed bar's future. vix_signal.py:106 and spy_signal.py:116 already fence exactly
+# this class of leak; these two macro consumers never did (V273 §6 H2).
+#
+# OMEGA_MACRO_BAR_FENCE=1 turns the arm ON. Default OFF => byte-identical to pre-V278.
+# The fence returns an EMPTY series, routing through each signal's existing
+# "data unavailable" path, which is the causally honest state: no macro row from this
+# cache is legitimately visible at the replayed bar.
+# See training_log/V278.md.
+def _macro_fence_active() -> bool:
+    return (
+        os.environ.get("OMEGA_FROZEN_CACHE") == "1"
+        and os.environ.get("OMEGA_MACRO_BAR_FENCE") == "1"
+    )
 
 
 class YieldCurveSignal:
@@ -215,6 +237,10 @@ class YieldCurveSignal:
 
     def _load_rates(self, series_id: str) -> list[float]:
         """Read rate values from the macro data cache."""
+        if _macro_fence_active():
+            # V278 H2 arm: empty => compute() returns _last_signal (0.0) and
+            # compute_with_meta() returns the existing "stub" dict.
+            return []
         if self._cache is None:
             from omega.nodes.victoria.data_cache import get_cache
 
