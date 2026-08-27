@@ -649,6 +649,30 @@ def _v219_substrate_preflight(log: logging.Logger) -> None:
             "scripts/build_cache_manifest.py and commit. Aborting.")
         sys.exit(1)
 
+    # ── 1b. V277: volatile state files — REPORTED, never asserted ────────────
+    # check_determinism.sh snapshots these as run state and the comment at :179-181
+    # calls them "STABLE/COMMITTED INPUTS", but every run rewrites them (V277 §1b:
+    # signal_decay.py:82 persists the IC history, the semantic-memory store writes the
+    # memory DB via :314). Asserting them would abort every run after the first. A
+    # recorded hash still makes drift visible instead of silent, which is the value the
+    # V219 manifest actually delivers.
+    for rel, want_md5 in sorted((manifest.get("volatile_files") or {}).items()):
+        p = ROOT / rel
+        if not p.exists():
+            log.warning("[startup]   volatile MISSING: %s", rel)
+            continue
+        h = hashlib.md5()
+        with open(p, "rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                h.update(chunk)
+        got = h.hexdigest()
+        if got == want_md5:
+            log.info("[startup]   volatile OK: %s  %s", want_md5, rel)
+        else:
+            log.warning(
+                "[startup]   volatile DRIFTED (expected — the run rewrites it; "
+                "NOT an abort): %s  %s != %s", rel, got, want_md5)
+
     # ── 2. Macro health (via the real read path) ─────────────────────────────
     from omega.nodes.victoria.data_cache import MACRO_SERIES, MacroDataCache
 

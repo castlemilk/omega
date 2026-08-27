@@ -45,6 +45,24 @@ _FROZEN_FILES = [
     "data/macro_cache.db",
     "data/frozen_funding_cache.json",
     "data/frozen_advanced_signals.json",
+    # V277: the determinism harness snapshots this as run state and it is provably
+    # STABLE across a run (md5 unchanged over a full 3-cell pass). Asserted.
+    "data/omega_victoria_state.db",
+]
+
+# V277 — RECORDED but never asserted. check_determinism.sh snapshots these as state
+# and run_training.py:179-181 declares them "STABLE/COMMITTED INPUTS", but a probe
+# over one 3-cell pass shows every run REWRITES them:
+#     data/omega_victoria_memory.db   5e34299... -> b272ad5...
+#     data/signal_ic_history.json     a0e52d5... -> 3b9633c...
+# (signal_decay.py:82 persists the IC history; the semantic-memory store writes the
+# memory DB via run_training.py:314.) Asserting them would abort every run after the
+# first — the V219 tripwire firing on its own exhaust. Recording the hash still turns
+# an invisible drift into a visible one, which is the value V219 actually delivered.
+# See training_log/V277.md §1b.
+_VOLATILE_FILES = [
+    "data/omega_victoria_memory.db",
+    "data/signal_ic_history.json",
 ]
 
 
@@ -93,7 +111,11 @@ def main() -> int:
         "_note": "md5 manifest of frozen eval caches; verified at startup when "
                  "OMEGA_FROZEN_CACHE=1. Mismatch => abort the run. "
                  "Rebuild with scripts/build_cache_manifest.py.",
+        "_volatile_note": "volatile_files are RECORDED, never asserted: the run "
+                          "rewrites them (V277 §1b). Drift is reported as a WARNING "
+                          "at startup, never an abort.",
         "files": {},
+        "volatile_files": {},
     }
     for rel in _FROZEN_FILES:
         p = ROOT / rel
@@ -102,6 +124,14 @@ def main() -> int:
             return 1
         manifest["files"][rel] = _md5(p)
 
+    for rel in _VOLATILE_FILES:
+        p = ROOT / rel
+        if not p.exists():
+            print(f"WARNING: volatile file missing (recorded as absent): {rel}",
+                  file=sys.stderr)
+            continue
+        manifest["volatile_files"][rel] = _md5(p)
+
     # Stamp generated_at LAST and outside the verified set (the manifest hashes
     # the listed files, never itself).
     manifest["generated_at"] = datetime.now(UTC).isoformat()
@@ -109,7 +139,9 @@ def main() -> int:
 
     print(f"\nWrote {MANIFEST.relative_to(ROOT)}:")
     for rel, md5 in sorted(manifest["files"].items()):
-        print(f"  {md5}  {rel}")
+        print(f"  {md5}  {rel}   [asserted]")
+    for rel, md5 in sorted(manifest["volatile_files"].items()):
+        print(f"  {md5}  {rel}   [recorded, not asserted]")
     return 0
 
 
