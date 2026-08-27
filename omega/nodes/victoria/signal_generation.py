@@ -884,6 +884,60 @@ class SignalGenerationNode(Node):
             logger.warning("frozen series compute error: %s", _exc)
             return float("nan")
 
+    def _report_family_inertness(self, signals: dict[str, Any]) -> None:
+        """V279: log which signal FAMILIES have no live member. Fires once per process.
+
+        Why this exists: the V213 startup banner reports flag *wiring* — undeclared
+        flags, failed module imports. It cannot see a correctly-declared, correctly
+        imported signal whose *value* is identically zero on every ticker. V279's
+        Phase 0 found all four `cross_asset` members in exactly that state, and it took
+        a four-step probe rather than one grep. This is that grep.
+
+        Reads `AdaptiveCombiner.SIGNAL_FAMILIES` rather than restating the family map,
+        so the report cannot drift from the thing it describes.
+
+        Pure logging: it reads `signals` and returns None. Never raises — an
+        observability helper that can break a run is worse than no helper.
+        """
+        if getattr(self, "_family_report_done", False):
+            return
+        self._family_report_done = True
+        try:
+            from omega.nodes.victoria.adaptive_combiner import (
+                AdaptiveCombiner as _AdaptiveCombinerCls,
+            )
+
+            families = getattr(_AdaptiveCombinerCls, "SIGNAL_FAMILIES", None)
+            if not families:
+                return
+
+            logger.info("[startup] V279 signal-family liveness (frozen=%s):",
+                        os.environ.get("OMEGA_FROZEN_CACHE", "0"))
+            for family, members in sorted(families.items()):
+                live = [
+                    m for m in members
+                    if any(
+                        isinstance(ts, dict)
+                        and isinstance(ts.get(m), (int, float))
+                        and ts.get(m) != 0.0
+                        for ts in signals.values()
+                    )
+                ]
+                if live:
+                    logger.info(
+                        "[startup]   %-16s %d/%d live: %s",
+                        family, len(live), len(members), ",".join(sorted(live)),
+                    )
+                else:
+                    # Greppable token, matching the V213 banner's vocabulary.
+                    logger.info(
+                        "[startup]   %-16s 0/%d live — INERT (no member non-zero on "
+                        "any ticker; nothing in this family reaches the composite)",
+                        family, len(members),
+                    )
+        except Exception as exc:  # pragma: no cover - observability must never break a run
+            logger.debug("family inertness report failed: %s", exc)
+
     def _compute_all_signals(self, market_data: dict[str, Any]) -> dict[str, Any]:
         signals: dict[str, Any] = {}
 
@@ -1489,6 +1543,11 @@ class SignalGenerationNode(Node):
                         ts["composite_method"] = _adj_method + "+reinforced"
 
             signals[ticker] = ts
+
+        # V279: one-shot signal-family inertness report. Placed HERE because this is
+        # the first point at which `signals` is complete for the per-ticker signal
+        # keys, and before the BTC-beta block below mutates it.
+        self._report_family_inertness(signals)
 
         # BTC beta for all assets (requires BTC in market_data)
         if self._use_btc_beta and "BTCUSDT" in market_data and market_data["BTCUSDT"]:

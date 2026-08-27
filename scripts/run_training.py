@@ -257,6 +257,20 @@ def _setup_logging(version: str) -> logging.Logger:
     log.addHandler(fhandler)
     log.setLevel(logging.INFO)
     log.propagate = False
+
+    # V279: basicConfig puts the ROOT logger at WARNING and the INFO handlers above
+    # live only on `training.<version>`, so module-level INFO is suppressed — which is
+    # why the V213 wiring banner (emitted via `log`) is visible while
+    # signal_generation's own startup lines never were. Route that ONE module's INFO to
+    # the same handlers so the V279 signal-family liveness report lands in the run log
+    # beside the banner it complements. Scoped to this module deliberately: its INFO is
+    # ~22 one-time init lines, not per-cycle traffic. Nothing else is re-levelled.
+    _sg_log = logging.getLogger("omega.nodes.victoria.signal_generation")
+    _sg_log.addHandler(handler)
+    _sg_log.addHandler(fhandler)
+    _sg_log.setLevel(logging.INFO)
+    _sg_log.propagate = False
+
     return log
 
 
