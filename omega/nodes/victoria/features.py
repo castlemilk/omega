@@ -903,6 +903,44 @@ class VictoriaFeatures:
     position. Only consulted when crisis_size_throttle_enabled is True. Reuses
     crisis_skew_drawdown_threshold (0.12) as the gate threshold — no new threshold."""
 
+    vol_target_sizing_enabled: bool = False
+    """V284: per-ticker volatility-target sizing — the first LIVE consumer of a
+    volatility estimate in this strategy.
+
+    V283 Phase 0 established that the only volatility-driven decision (`_check_sit_out`)
+    is inert in seven measured configurations: it needs >=101 bars where walk-forward
+    windows carry 91, and even fitted to the window the rank sits at ~0.017, far below
+    its 0.80 trigger. So a better volatility forecast (V283 Phase 1 measured TimesFM's
+    conditional edge at +0.39 over naive) had nowhere to go.
+
+    This is the mechanism that gives it somewhere. For each ticker with a position:
+
+        vol_t  = stdev of the last `vol_target_window` per-bar returns
+        ref_t  = median of the rolling vol series over `vol_target_lookback`
+        mult_t = clamp(ref_t / vol_t, vol_target_floor, 1.0)
+        weights[t] *= mult_t
+
+    MULTIPLICATIVE and TRIM-ONLY by construction. It de-risks a ticker whose current
+    volatility exceeds its own recent median and never up-sizes. Because it multiplies
+    weights AFTER selection it cannot dilute the composite — the failure mode V280
+    measured at -$1k to -$3.2k per window when signals were added additively.
+
+    Uses the NAIVE estimator deliberately: prove the mechanism with a cheap input, then
+    swapping in TimesFM is a clean isolated upgrade. Default OFF => byte-identical.
+    See `training_log/V284.md`."""
+
+    vol_target_floor: float = 0.5
+    """V284: minimum sizing multiplier. 1.0 => the mechanism is a no-op."""
+
+    vol_target_window: int = 20
+    """V284: bars in the realized-vol estimate."""
+
+    vol_target_lookback: int = 60
+    """V284: bars of rolling-vol history whose MEDIAN is the per-ticker reference.
+    Self-normalising, so no cross-asset scale constant is needed. Chosen to fit the
+    91-bar walk-forward window — the off-by-ten mismatch that made V283's gate
+    structurally dead."""
+
     frozen_series_enabled: bool = False
     """V238: serve the six info-class signals (fear_greed, vix, dxy, yield_curve,
     whale_flow, gdelt) from the frozen historical series in data/frozen_series/

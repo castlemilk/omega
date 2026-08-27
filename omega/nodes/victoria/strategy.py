@@ -141,6 +141,7 @@ Improvement arc:
 import logging
 import math
 import os
+import statistics
 import time
 import uuid
 from datetime import UTC, datetime
@@ -553,6 +554,7 @@ class StrategyNode(Node):
         self._sit_out_regime_count: int = 0  # uncertain regime → 75% size reduction
         self._sit_out_vol_low_count: int = 0  # dead-calm vol → full sit-out
         self._sit_out_vol_high_count: int = 0  # chaotic vol → 50% size reduction
+        self._vol_target_fire_count: int = 0  # V284: cycles where vol-target trimmed
         self._normal_trade_count: int = 0  # cycles with full-size trading
 
         # --- Sit-out thresholds (mutable so circuit breaker can adapt them) ---
@@ -1754,6 +1756,50 @@ class StrategyNode(Node):
         return result
 
     # ------------------------------------------------------------------ sit-out filters
+
+    def _vol_target_multipliers(
+        self, market_data: dict[str, Any], tickers: list[str]
+    ) -> dict[str, float]:
+        """V284: per-ticker trim-only sizing multiplier from realized volatility.
+
+        mult = clamp(median(rolling vol) / current vol, floor, 1.0)
+
+        Returns {} when the flag's inputs are unusable, so the caller no-ops rather than
+        silently sizing on a degenerate estimate. Never returns a value > 1.0: this
+        de-risks, it never adds leverage.
+        """
+        window = int(getattr(self.features, "vol_target_window", 20))
+        lookback = int(getattr(self.features, "vol_target_lookback", 60))
+        floor = float(getattr(self.features, "vol_target_floor", 0.5))
+        out: dict[str, float] = {}
+        for t in tickers:
+            data = market_data.get(t)
+            if not isinstance(data, dict):
+                continue
+            prices = self._clean_prices(data.get("adjclose") or data.get("close", []))
+            if len(prices) < window + 5:
+                continue
+            vols: list[float] = []
+            for i in range(window, len(prices)):
+                rets = [
+                    (prices[j] - prices[j - 1]) / prices[j - 1]
+                    for j in range(i - window + 1, i + 1)
+                    if prices[j - 1] != 0
+                ]
+                if len(rets) < 2:
+                    continue
+                m = math.fsum(rets) / len(rets)
+                var = math.fsum((r - m) ** 2 for r in rets) / (len(rets) - 1)
+                vols.append(math.sqrt(var))
+            if len(vols) < 5:
+                continue
+            recent = vols[-lookback:] if len(vols) > lookback else vols
+            ref = statistics.median(recent)
+            cur = vols[-1]
+            if cur <= 0.0 or ref <= 0.0:
+                continue
+            out[t] = max(floor, min(1.0, ref / cur))
+        return out
 
     def _vol_percentile_rank(
         self, prices: list[float], window: int = 20, lookback: int = 100
@@ -3707,6 +3753,19 @@ class StrategyNode(Node):
         # (block off, or conditional gate's bear_prob check passed), de-risk by
         # multiplying weights. This converts the binary block into a graded
         # response — half-size in benign vol, full block (size_mult=0) in crisis.
+        # V284: per-ticker volatility-target sizing — the first LIVE consumer of a
+        # volatility estimate (V283 Phase 0 proved the sit-out gate never executes).
+        # Trim-only and multiplicative, applied AFTER selection, so it cannot dilute the
+        # composite the way V280's additive signals did. See training_log/V284.md.
+        if getattr(self.features, "vol_target_sizing_enabled", False) and weights:
+            _vt_mults = self._vol_target_multipliers(market_data, list(weights))
+            if _vt_mults:
+                weights = {t: w * _vt_mults.get(t, 1.0) for t, w in weights.items()}
+                _trimmed = {t: round(m, 3) for t, m in _vt_mults.items() if m < 0.999}
+                if _trimmed:
+                    self._vol_target_fire_count += 1
+                    logger.info("V284 vol-target sizing: trimmed %s", _trimmed)
+
         _hv_size_mult = float(getattr(self.features, "high_vol_size_mult", 1.0))
         if _hv_size_mult < 1.0 and _is_high_vol and weights:
             weights = {t: w * _hv_size_mult for t, w in weights.items()}

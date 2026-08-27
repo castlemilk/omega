@@ -265,11 +265,19 @@ def _setup_logging(version: str) -> logging.Logger:
     # the same handlers so the V279 signal-family liveness report lands in the run log
     # beside the banner it complements. Scoped to this module deliberately: its INFO is
     # ~22 one-time init lines, not per-cycle traffic. Nothing else is re-levelled.
-    _sg_log = logging.getLogger("omega.nodes.victoria.signal_generation")
-    _sg_log.addHandler(handler)
-    _sg_log.addHandler(fhandler)
-    _sg_log.setLevel(logging.INFO)
-    _sg_log.propagate = False
+    # V284 extends this to strategy.py for the same reason: a sizing overlay that
+    # logs when it fires is the only cheap evidence that an arm is LIVE rather than
+    # silently inert — the failure mode behind V279, V280, V282 and V283. ~50 INFO
+    # call sites, mostly per-cycle decisions, which is the traffic worth seeing.
+    for _mod in (
+        "omega.nodes.victoria.signal_generation",
+        "omega.nodes.victoria.strategy",
+    ):
+        _m_log = logging.getLogger(_mod)
+        _m_log.addHandler(handler)
+        _m_log.addHandler(fhandler)
+        _m_log.setLevel(logging.INFO)
+        _m_log.propagate = False
 
     return log
 
