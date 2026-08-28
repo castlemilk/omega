@@ -143,6 +143,10 @@ class ShortedClient:
     base_url: str = BASE_URL
     timeout_s: float = 30.0
     max_retries: int = 3
+    # Public endpoints are documented auth-optional and a provisioned anonymous tier
+    # exists (30/min, 500/month). Private endpoints (GetStockData, MintToken) still
+    # require a token, and minting one requires the $20/mo plan.
+    require_token: bool = True
 
     def __post_init__(self) -> None:
         self.token = self.token or os.environ.get("OMEGA_SHORTED_API_KEY") or None
@@ -153,7 +157,7 @@ class ShortedClient:
         body: dict[str, Any] | None = None,
         service: str = "ShortedStocksService",
     ) -> dict[str, Any]:
-        if not self.token:
+        if not self.token and self.require_token:
             raise ShortedAuthError(
                 "OMEGA_SHORTED_API_KEY is not set. The Shorted usage policy requires a "
                 "valid API token for automated access ('Scraping without authentication "
@@ -183,6 +187,84 @@ class ShortedClient:
                 # Never echo the response body verbatim — it can carry request context.
                 raise RuntimeError(f"shorted {method}: HTTP {exc.code}") from None
         raise ShortedRateLimitError(f"{method}: rate limited after {self.max_retries} attempts")
+
+
+PANEL_DIR_NAME = "short_panel"
+
+
+def fetch_available_dates(client: ShortedClient | None = None) -> list[str]:
+    """Dates the API will serve. Measured 2026-08-28: 90 of them, ~4 months."""
+    cl = client or ShortedClient(require_token=False)
+    resp = cl.call("GetAvailableDates", {}, service="MarketService")
+    dates = resp.get("dates") or resp.get("availableDates") or []
+    return sorted(str(d) for d in dates)
+
+
+def freeze_market_panel(
+    dates: list[str] | None = None,
+    out_root: Path | None = None,
+    client: ShortedClient | None = None,
+    pace_s: float = 2.2,
+) -> dict[str, Any]:
+    """Freeze the 740-name ASIC short-position panel, one request per date.
+
+    `limit` is honoured by GetMarketByDate (verified: limit=1000 returns all 740 in a
+    single response), so a date costs ONE request rather than fifteen. That is what makes
+    a 90-date backfill fit inside the anonymous tier's 500/month budget — at 50/page it
+    would have needed ~1,350 and been infeasible.
+
+    Paced at ~2.2s to stay under the documented 30/min anonymous limit. Idempotent:
+    dates already frozen are skipped, so a re-run costs nothing and an interrupted
+    backfill resumes.
+    """
+    from omega.nodes.asx.loader import _md5
+
+    cl = client or ShortedClient(require_token=False)
+    root = (out_root or Path(__file__).resolve().parents[3] / "data" / "frozen_series" / "asx") / PANEL_DIR_NAME
+    root.mkdir(parents=True, exist_ok=True)
+
+    targets = dates if dates is not None else fetch_available_dates(cl)
+    fetched, skipped = [], []
+    for d in targets:
+        path = root / f"{d}.json"
+        if path.is_file():
+            skipped.append(d)
+            continue
+        resp = cl.call("GetMarketByDate", {"date": d, "limit": 1000}, service="MarketService")
+        stocks = resp.get("stocks", [])
+        path.write_text(
+            json.dumps(
+                {
+                    "date": d,
+                    "fetched_at": datetime.now(UTC).isoformat(),
+                    "source": f"{PACKAGE}.MarketService/GetMarketByDate",
+                    "tier": "anonymous" if not cl.token else "token",
+                    "total_count": resp.get("totalCount"),
+                    "n_returned": len(stocks),
+                    "stocks": stocks,
+                },
+                sort_keys=True,
+            ) + "\n"
+        )
+        fetched.append(d)
+        time.sleep(pace_s)
+
+    files = sorted(p.name for p in root.glob("*.json") if p.name != "MANIFEST.json")
+    manifest = {
+        "_note": (
+            "md5 manifest of the frozen ASIC short-position panel (Shorted "
+            "MarketService/GetMarketByDate). One file per trading date, ~740 securities "
+            "each. fetched_at is provenance: short positions are a REPORTED and revisable "
+            "series, so a date pulled today is not necessarily the date pulled later."
+        ),
+        "source": BASE_URL,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "n_dates": len(files),
+        "files": {n: _md5(root / n) for n in files},
+    }
+    (root / "MANIFEST.json").write_text(json.dumps(manifest, indent=1, sort_keys=True) + "\n")
+    logger.info("panel: %d fetched, %d already present", len(fetched), len(skipped))
+    return {"fetched": fetched, "skipped": skipped, "manifest": manifest}
 
 
 def probe_service_paths(client: ShortedClient | None = None) -> dict[str, str]:
