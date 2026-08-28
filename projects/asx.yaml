@@ -48,9 +48,18 @@ nodes:
     enabled: false                # no token provisioned yet
     config:
       provider: shorted
-      base_url: https://shorts-uiekqxovma-km.a.run.app
-      service: shorts.v1alpha1.ShortedStocksService
+      base_url: https://api.shorted.com.au
+      package: shorts.v1alpha1
       history_method: GetStockData      # private — requires token
+      # Surface read from the docs 2026-08-28. Two discoveries matter most:
+      #  MarketService.GetAvailableDates + GetMarketByDate — IF these return the
+      #    market AS OF a date including later-delisted names, they address the
+      #    survivorship problem V286 §5 flagged as blocking the ASX thesis.
+      #    That is a hypothesis to TEST, not an established fact.
+      #  NewsService.GetStockNews / GetMarketNews — the news surface the brief
+      #    asked for. Historical depth UNKNOWN and must be measured first: V287 §1
+      #    found the free yfinance metadata was recent-only, hence unbacktestable.
+      services_to_confirm: [MarketService, NewsService, StockService]
       token_env: OMEGA_SHORTED_API_KEY
       frozen_root: data/frozen_series/asx/shorts
       # Free tier 1,000 req/month is the binding constraint: fine for a

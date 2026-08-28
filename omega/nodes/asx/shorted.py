@@ -38,18 +38,75 @@ from urllib import error, request
 
 logger = logging.getLogger("omega.nodes.asx.shorted")
 
-BASE_URL = "https://shorts-uiekqxovma-km.a.run.app"
-SERVICE = "shorts.v1alpha1.ShortedStocksService"
+BASE_URL = "https://api.shorted.com.au"
+PACKAGE = "shorts.v1alpha1"
+SERVICE = f"{PACKAGE}.ShortedStocksService"   # confirmed verbatim in the curl guide
 USER_AGENT = "omega-asx/0.1 (+research; contact via repo owner)"
 
-# Documented methods. `private` mirrors the docs' Public/Private split.
+# Service surface, read from the docs 2026-08-28. Only the ShortedStocksService path is
+# CONFIRMED verbatim by the curl guide; the other services are documented by name and
+# their fully-qualified paths are assumed to share the `shorts.v1alpha1` package. Verify
+# with `probe_service_paths()` once a token exists rather than trusting this map.
+SERVICES: dict[str, dict[str, Any]] = {
+    "ShortedStocksService": {
+        "confirmed_path": True,
+        "methods": {
+            "GetTopShorts": {"private": False},
+            "GetStock": {"private": False},
+            "GetStockData": {"private": True},      # <- the only HISTORY endpoint
+            "GetStockDetails": {"private": False},
+            "GetIndustryTreeMap": {"private": False},
+            "SearchStocks": {"private": False},
+        },
+    },
+    # Point-in-time market state. GetAvailableDates + GetMarketByDate are the most
+    # valuable pair in this API for our purposes: if GetMarketByDate returns the market
+    # AS OF a date — including names that later delisted — it addresses the
+    # survivorship problem that V286 §5 identified as blocking the whole ASX thesis.
+    # That is a HYPOTHESIS about the endpoint, to be tested, not an established fact.
+    "MarketService": {
+        "confirmed_path": False,
+        "methods": {
+            "GetAvailableDates": {"private": False},
+            "GetMarketByDate": {"private": False},
+            "GetTopShorts": {"private": False},
+            "GetIndustryTreeMap": {"private": False},
+            "GetBattlegroundStocks": {"private": False},
+            "GetShortCampaignScoreboard": {"private": False},
+        },
+    },
+    # The news/announcement surface the ASX brief asked for. Historical depth is
+    # UNKNOWN and is the first thing to measure — V287 §1 found the free yfinance
+    # metadata was recent-only, which made it useless for a backtest.
+    "NewsService": {
+        "confirmed_path": False,
+        "methods": {
+            "GetStockNews": {"private": False},
+            "GetMarketNews": {"private": False},
+            "GetRelatedNews": {"private": False},
+            "GetEditorialTake": {"private": False},
+            "ListEditorialTakes": {"private": False},
+        },
+    },
+    "StockService": {
+        "confirmed_path": False,
+        "methods": {
+            "GetDirectorTrades": {"private": False},
+            "GetEventTimeline": {"private": False},
+            "GetDividendHistory": {"private": False},
+            "GetStockSignals": {"private": False},
+            "GetStockFinancialHighlights": {"private": False},
+            "GetPeerComparison": {"private": False},
+            "GetCompanyTaxProfile": {"private": False},
+            "GetStockGraph": {"private": False},
+            "GetStockVerdict": {"private": False},
+        },
+    },
+}
+
+# Back-compat flat view.
 METHODS = {
-    "GetTopShorts": {"private": False, "body": {"limit": 10, "offset": 0}},
-    "GetStock": {"private": False, "body": {"productCode": "BHP"}},
-    "SearchStocks": {"private": False, "body": {}},
-    "GetStockDetails": {"private": False, "body": {"productCode": "BHP"}},
-    "GetIndustryTreeMap": {"private": False, "body": {}},
-    "GetStockData": {"private": True, "body": {"productCode": "BHP"}},
+    m: v for svc in SERVICES.values() for m, v in svc["methods"].items()
 }
 
 
@@ -73,7 +130,12 @@ class ShortedClient:
     def __post_init__(self) -> None:
         self.token = self.token or os.environ.get("OMEGA_SHORTED_API_KEY") or None
 
-    def call(self, method: str, body: dict[str, Any] | None = None) -> dict[str, Any]:
+    def call(
+        self,
+        method: str,
+        body: dict[str, Any] | None = None,
+        service: str = "ShortedStocksService",
+    ) -> dict[str, Any]:
         if not self.token:
             raise ShortedAuthError(
                 "OMEGA_SHORTED_API_KEY is not set. The Shorted usage policy requires a "
@@ -82,7 +144,7 @@ class ShortedClient:
                 "— is private. Mint a token at https://shorted.com.au/docs/api and export "
                 "it; it is read from the environment and never persisted."
             )
-        url = f"{self.base_url}/{SERVICE}/{method}"
+        url = f"{self.base_url}/{PACKAGE}.{service}/{method}"
         payload = json.dumps(body or {}).encode()
         for attempt in range(self.max_retries):
             req = request.Request(url, data=payload, method="POST")
@@ -104,6 +166,27 @@ class ShortedClient:
                 # Never echo the response body verbatim — it can carry request context.
                 raise RuntimeError(f"shorted {method}: HTTP {exc.code}") from None
         raise ShortedRateLimitError(f"{method}: rate limited after {self.max_retries} attempts")
+
+
+def probe_service_paths(client: ShortedClient | None = None) -> dict[str, str]:
+    """Confirm which fully-qualified service paths actually resolve.
+
+    Only `ShortedStocksService` is confirmed verbatim by the docs' curl example; the
+    other service names are documented without their package. Rather than hardcode a
+    guess, this probes each with a trivial body and reports the HTTP outcome, so the
+    SERVICES map above can be corrected from evidence. Requires a token (automated
+    access does).
+    """
+    cl = client or ShortedClient()
+    out: dict[str, str] = {}
+    for svc, spec in SERVICES.items():
+        method = next(iter(spec["methods"]))
+        try:
+            cl.call(method, {}, service=svc)
+            out[f"{PACKAGE}.{svc}/{method}"] = "OK"
+        except Exception as exc:
+            out[f"{PACKAGE}.{svc}/{method}"] = type(exc).__name__ + ": " + str(exc)[:60]
+    return out
 
 
 def freeze_short_positions(
@@ -130,7 +213,7 @@ def freeze_short_positions(
 
     written: list[str] = []
     for code in sorted(product_codes):
-        data = cl.call("GetStockData", {"productCode": code})
+        data = cl.call("GetStockData", {"productCode": code}, service="ShortedStocksService")
         path = root / f"{code}.json"
         path.write_text(
             json.dumps(
