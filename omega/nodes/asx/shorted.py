@@ -47,6 +47,23 @@ USER_AGENT = "omega-asx/0.1 (+research; contact via repo owner)"
 # CONFIRMED verbatim by the curl guide; the other services are documented by name and
 # their fully-qualified paths are assumed to share the `shorts.v1alpha1` package. Verify
 # with `probe_service_paths()` once a token exists rather than trusting this map.
+# MEASURED 2026-08-28 on the ANONYMOUS tier (no token), correct UA +
+# Connect-Protocol-Version: 1. The tier is selectively useful, not uniformly so:
+#
+#   GetMarketByDate    200 WITH REAL VALUES — 740 securities/date, 50/page,
+#                      `previousDate` chains backwards. The one genuinely useful
+#                      anonymous endpoint.
+#   GetStock           200 but EVERY FIELD None — shape without data.
+#   GetTopShorts       200 but percentageShorted null.
+#   GetStockNews       400 "product code is required" on every field-name variant
+#                      tried (productCode/product_code/code/symbol/ticker), incl.
+#                      the spelling GetStock accepts. Effectively unavailable.
+#   GetAvailableDates  200 — but only 90 dates, 2026-04-17 -> 2026-08-21.
+#
+# HISTORY IS ~4 MONTHS. That is the decisive fact: it does NOT solve the
+# survivorship problem V286 §5 raised, which needs a decade. What it DOES support
+# is forward accumulation of a clean 740-name panel — the V249 phase-transition
+# logic applied to the ASX.
 SERVICES: dict[str, dict[str, Any]] = {
     "ShortedStocksService": {
         "confirmed_path": True,
