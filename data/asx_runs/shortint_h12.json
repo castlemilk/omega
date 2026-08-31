@@ -1,0 +1,124 @@
+{
+ "periods": [
+  {
+   "cost": 0.0015,
+   "date": "2011-01-31",
+   "gross_return": -0.27186863752506985,
+   "n": 4,
+   "net_return": -0.27336863752506985,
+   "priced": 4,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0015,
+   "date": "2012-05-31",
+   "gross_return": 0.5972824339158185,
+   "n": 4,
+   "net_return": 0.5957824339158185,
+   "priced": 4,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0015,
+   "date": "2013-10-31",
+   "gross_return": 0.6560315688189058,
+   "n": 4,
+   "net_return": 0.6545315688189058,
+   "priced": 4,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0012,
+   "date": "2015-04-30",
+   "gross_return": 0.04571465835472356,
+   "n": 5,
+   "net_return": 0.04451465835472356,
+   "priced": 5,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0014999999999999998,
+   "date": "2016-09-30",
+   "gross_return": 0.18549074345850783,
+   "n": 6,
+   "net_return": 0.18399074345850783,
+   "priced": 6,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0015,
+   "date": "2018-01-31",
+   "gross_return": 0.4194693061578817,
+   "n": 8,
+   "net_return": 0.4179693061578817,
+   "priced": 8,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.001125,
+   "date": "2019-05-31",
+   "gross_return": 0.19620883086042348,
+   "n": 8,
+   "net_return": 0.1950838308604235,
+   "priced": 8,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0018,
+   "date": "2020-11-30",
+   "gross_return": 0.7892963659588009,
+   "n": 10,
+   "net_return": 0.7874963659588009,
+   "priced": 10,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0016363636363636363,
+   "date": "2022-03-31",
+   "gross_return": 0.07304624466374927,
+   "n": 11,
+   "net_return": 0.07140988102738564,
+   "priced": 11,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.00175,
+   "date": "2023-07-31",
+   "gross_return": 1.5030634340634934,
+   "n": 12,
+   "net_return": 1.5013134340634935,
+   "priced": 12,
+   "unpriced_at_exit": 0
+  },
+  {
+   "cost": 0.0012500000000000002,
+   "date": "2025-01-31",
+   "gross_return": 0.09589553847579496,
+   "n": 12,
+   "net_return": 0.09464553847579496,
+   "priced": 12,
+   "unpriced_at_exit": 0
+  }
+ ],
+ "provenance": {
+  "cost_bps_round_trip": 30.0,
+  "hold_periods": 12,
+  "label": "asx-shortint-v1",
+  "n_codes": 68,
+  "n_dates": 133,
+  "notes": "survivor-only universe; yfinance prices; fixed 7d lag pending #550",
+  "price_source": "yfinance-frozen",
+  "publication_lag_days": 7,
+  "survivorship_safe": false
+ },
+ "summary": {
+  "hit_rate": 0.9090909090909091,
+  "mean_return": 0.3884881021424242,
+  "median_negative": false,
+  "median_return": 0.1950838308604235,
+  "outlier_driven": true,
+  "periods": 11,
+  "top3_share_of_total": 0.6887636625184885,
+  "total_cost": 0.016261363636363636
+ }
+}
