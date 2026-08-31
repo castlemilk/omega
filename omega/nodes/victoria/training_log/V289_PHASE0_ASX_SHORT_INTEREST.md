@@ -105,3 +105,64 @@ split.
 
 Do **not** build a strategy from §4's headline number. The number that matters is §3's
 IC, and its honest t-statistic is under 1.
+
+
+---
+
+## §7 — Follow-up (2026-08-31): the long-only test, and it fails
+
+§6 item 2 named the long-only variant as the highest-value follow-up, because it tests
+whether §4's borrow objection actually binds. Run:
+
+### The borrow objection does NOT bind
+
+Decomposing the long/short spread into its legs (excess over the equal-weight universe):
+
+| H | Q1 − mkt (**long**) | mkt − Q5 (short) | total | long share |
+|---:|---:|---:|---:|---:|
+| 3m | +4.44% | +3.09% | +7.53% | **59%** |
+| 6m | +8.28% | +5.51% | +13.79% | **60%** |
+| 12m | +15.37% | +9.67% | +25.04% | **61%** |
+
+**~60% of the spread is in the tradeable long leg.** So the strategy does not depend on
+shorting hard-to-borrow names — objection §4.3 is answered, and answered favourably.
+
+### But the return profile is not a process
+
+Long-only excess is not significant after adjusting for overlapping windows (t_adj 1.25–1.37,
+against a ~2 bar), and the **hit rate is a coin flip**: 52% / 49% / 51%. A large positive
+mean with a 50% hit rate means outliers, and the decomposition confirms it:
+
+| H | mean | **median** | winsorised 5% | skew | top-3 periods' share of total |
+|---:|---:|---:|---:|---:|---:|
+| 3m | +4.44% | **+0.30%** | +1.81% | 4.51 | **61%** |
+| 6m | +8.28% | **−0.28%** | +3.91% | 3.36 | 36% |
+| 12m | +15.37% | +1.46% | +14.92% | 2.26 | 20% |
+
+At H=3, **three periods carry 61% of the entire return**. At H=6 the **median period
+loses money** while the mean is +8.28%. That is a lottery with positive expectation, not
+an edge you can run a book on — and with ~15 independent draws at H=12, the one horizon
+that looks robust is also the one with the least evidence.
+
+### Verdict
+
+**The sign is real; the trade is not.** §3's IC finding stands — negative at every
+horizon, sign-stable across halves, magnitude comparable to Victoria's entire edge. What
+does not stand is any claim that this converts into returns: the long-only profile is
+outlier-driven, the median is ~0, and the significance is under the bar at every horizon.
+
+This is the fourth time in this campaign that a clean measurement has failed to become
+PnL (V283 forecaster with no consumer, V284 consumer that lost money, V285 table that
+died OOS, now this). The pattern is worth naming: **a stable IC is necessary and nowhere
+near sufficient.**
+
+### What would still change the answer
+
+1. **The de-biased universe (§6 item 1) is now the binding constraint, not a caveat.**
+   66 survivors cannot distinguish "outlier-driven" from "the outliers are exactly the
+   delisted names I am missing." Filed upstream as
+   [castlemilk/shorted.com.au#541](https://github.com/castlemilk/shorted.com.au/issues/541).
+2. **Non-overlapping evaluation** — annual rebalance at H=12, so the ~15 independent
+   draws are counted honestly rather than inflated to 182.
+3. Do **not** pursue the L/S book. Its extra return over long-only comes from the leg
+   that is hardest to borrow, for a spread whose significance is already under 1.
