@@ -174,6 +174,18 @@ class ShortedClient:
             req.add_header("Authorization", f"Bearer {self.token}")
             try:
                 with request.urlopen(req, timeout=self.timeout_s) as resp:
+                    # The limiter went live upstream (#533); quota state is now
+                    # observable rather than guessed. Surfaced at DEBUG so a long
+                    # backfill can be watched approaching its cap instead of
+                    # discovering it as a 429.
+                    remaining = resp.headers.get("x-ratelimit-remaining")
+                    if remaining is not None and remaining.isdigit() and int(remaining) < 5:
+                        logger.warning(
+                            "shorted: %s requests left this window (limit %s, resets %s)",
+                            remaining,
+                            resp.headers.get("x-ratelimit-limit", "?"),
+                            resp.headers.get("x-ratelimit-reset", "?"),
+                        )
                     return json.loads(resp.read().decode())
             except error.HTTPError as exc:
                 if exc.code == 429:
