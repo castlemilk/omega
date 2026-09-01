@@ -24,10 +24,13 @@ import logging
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from omega.nodes.asx.panel import PanelSpec, build_panel
 from omega.nodes.asx.portfolio import PortfolioSpec, build_target, turnover
+
+if TYPE_CHECKING:
+    from omega.nodes.asx.benchmark import IndexBenchmark
 
 logger = logging.getLogger("omega.nodes.asx.engine")
 
@@ -36,8 +39,8 @@ logger = logging.getLogger("omega.nodes.asx.engine")
 class CostModel:
     """ASX retail friction. Defaults are deliberately pessimistic."""
 
-    bps_per_side: float = 10.0     # ~0.1%/side brokerage
-    slippage_bps: float = 5.0      # spread/impact on a mid/small-cap book
+    bps_per_side: float = 10.0  # ~0.1%/side brokerage
+    slippage_bps: float = 5.0  # spread/impact on a mid/small-cap book
 
     def charge(self, one_way_turnover: float) -> float:
         """Cost as a fraction of NAV for a rebalance of the given turnover."""
@@ -112,8 +115,14 @@ def run(
         if not tgt.weights:
             prev = {}
             res.periods.append(
-                {"date": d, "gross_return": 0.0, "cost": 0.0, "net_return": 0.0,
-                 "n": 0, "skipped": tgt.diagnostics.get("reason")}
+                {
+                    "date": d,
+                    "gross_return": 0.0,
+                    "cost": 0.0,
+                    "net_return": 0.0,
+                    "n": 0,
+                    "skipped": tgt.diagnostics.get("reason"),
+                }
             )
             continue
 
@@ -122,7 +131,7 @@ def run(
         for c, w in tgt.weights.items():
             p0, p1 = day[c]["price"], nxt.get(c, {}).get("price")
             if p1 is None or p0 <= 0:
-                continue          # delisted or unpriced: contributes nothing, counted below
+                continue  # delisted or unpriced: contributes nothing, counted below
             gross += w * (p1 / p0 - 1.0)
             priced += 1
 
@@ -148,44 +157,93 @@ def run(
 def write_run(res: RunResult, out: Path) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
-        json.dumps({"provenance": res.provenance, "summary": res.summary(),
-                    "periods": res.periods}, indent=1, sort_keys=True) + "\n"
+        json.dumps(
+            {"provenance": res.provenance, "summary": res.summary(), "periods": res.periods},
+            indent=1,
+            sort_keys=True,
+        )
+        + "\n"
     )
     return out
 
 
-def benchmark_relative(res: RunResult, panel: dict[str, Any]) -> dict[str, Any]:
-    """Excess over the equal-weight investable universe.
+def benchmark_relative(
+    res: RunResult,
+    panel: dict[str, Any],
+    benchmark: IndexBenchmark | None = None,
+) -> dict[str, Any]:
+    """Excess over a real index, with the periods it cannot cover reported, not hidden.
 
     NOT optional, and separated only so the omission is visible: the raw numbers `run()`
     reports are ABSOLUTE, and 2011-2026 on the ASX was a bull market. A +38% 12-month
     absolute return is mostly beta. The signal's claim is that the least-shorted quintile
-    beats the universe, and only this function tests that claim.
+    beats the market, and only this function tests that claim.
+
+    Two comparators are reported and never blended:
+
+    - ``excess_vs_index`` — against XJT (total return), the honest number. Computed only
+      for periods the index covers; `covered_periods` says how many that was.
+    - ``excess_vs_universe`` — against the equal-weight surviving universe. This is the
+      old proxy, kept because it is the ONLY comparator available before 2024-09-02, and
+      labelled ``biased: True`` because it is survivor-only and drawn from the same names
+      the signal ranks. It flatters the strategy; it is a fallback, not a result.
+
+    A period outside index coverage contributes to the universe number and is counted in
+    ``uncovered_periods`` — it never silently borrows a zero benchmark.
     """
-    out = []
+    from omega.nodes.asx.benchmark import IndexBenchmark
+
+    bm = benchmark if benchmark is not None else IndexBenchmark()
+    vs_index: list[float] = []
+    vs_univ: list[float] = []
+    uncovered = 0
+
     ordered = sorted(panel)
     idx = {d: i for i, d in enumerate(ordered)}
+    h = res.provenance.get("hold_periods", 1)
+
     for p in res.periods:
         d = p["date"]
         i = idx.get(d)
-        if i is None or p.get("n", 0) == 0:
+        if i is None or p.get("n", 0) == 0 or i + h >= len(ordered):
             continue
-        h = res.provenance.get("hold_periods", 1)
-        if i + h >= len(ordered):
-            continue
-        day, nxt = panel[d], panel[ordered[i + h]]
-        rs = [nxt[c]["price"] / day[c]["price"] - 1.0 for c in day if c in nxt and day[c]["price"] > 0]
-        if not rs:
-            continue
-        mkt = statistics.fmean(rs)
-        out.append(p["net_return"] - mkt)
-    if not out:
-        return {"periods": 0}
-    srt = sorted(out, reverse=True)
+        d_next = ordered[i + h]
+        day, nxt = panel[d], panel[d_next]
+
+        rs = [
+            nxt[c]["price"] / day[c]["price"] - 1.0
+            for c in day
+            if c in nxt and day[c]["price"] > 0
+        ]
+        if rs:
+            vs_univ.append(p["net_return"] - statistics.fmean(rs))
+
+        mkt = bm.total_return(d, d_next)
+        if mkt is None:
+            uncovered += 1
+        else:
+            vs_index.append(p["net_return"] - mkt)
+
+    def stats(xs: list[float]) -> dict[str, Any]:
+        if not xs:
+            return {"periods": 0}
+        srt = sorted(xs, reverse=True)
+        return {
+            "periods": len(xs),
+            "mean_excess": statistics.fmean(xs),
+            "median_excess": statistics.median(xs),
+            "hit_rate": sum(1 for x in xs if x > 0) / len(xs),
+            "top3_share": sum(srt[:3]) / sum(xs) if sum(xs) else float("nan"),
+        }
+
     return {
-        "periods": len(out),
-        "mean_excess": statistics.fmean(out),
-        "median_excess": statistics.median(out),
-        "hit_rate": sum(1 for x in out if x > 0) / len(out),
-        "top3_share": sum(srt[:3]) / sum(out) if sum(out) else float("nan"),
+        "benchmark": bm.provenance(),
+        "covered_periods": len(vs_index),
+        "uncovered_periods": uncovered,
+        "excess_vs_index": stats(vs_index),
+        "excess_vs_universe": {
+            **stats(vs_univ),
+            "biased": True,
+            "why": "survivor-only, drawn from the ranked universe",
+        },
     }

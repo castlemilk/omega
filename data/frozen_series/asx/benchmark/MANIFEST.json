@@ -1,0 +1,31 @@
+{
+ "frozen_on": "2026-09-01",
+ "limitation": "API returns ~2 years only; MAX/10Y/explicit-from all cap at 2024-09-02. Cannot benchmark the pre-2024 study period.",
+ "series": {
+  "XAO": {
+   "first": "2024-09-02",
+   "last": "2026-09-01",
+   "md5": "027ee8c90f1ce1063b326d0d058a7172",
+   "n": 506
+  },
+  "XJO": {
+   "first": "2024-09-02",
+   "last": "2026-09-01",
+   "md5": "612716e6d0cf447932b0ac1059f0e48d",
+   "n": 506
+  },
+  "XJT": {
+   "first": "2024-09-02",
+   "last": "2026-09-01",
+   "md5": "352b1d54becbb003804ec13f36960e83",
+   "n": 505
+  },
+  "XKO": {
+   "first": "2024-09-02",
+   "last": "2026-09-01",
+   "md5": "5b7234721ea66123d8acdb2c1d87ad8b",
+   "n": 506
+  }
+ },
+ "source": "api.shorted.com.au MarketService/GetIndexSeries (period=MAX, maxPoints=0)"
+}
