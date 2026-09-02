@@ -1,0 +1,379 @@
+{
+ "codes": {
+  "88E": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "ADN": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2614,
+   "status": "ok"
+  },
+  "AEE": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2732,
+   "status": "ok"
+  },
+  "AEU": {
+   "status": "no_history"
+  },
+  "AFI": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "AIZ": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2735,
+   "status": "ok"
+  },
+  "AL3": {
+   "first": "2020-04-20",
+   "last": "2026-08-20",
+   "n": 1629,
+   "status": "ok"
+  },
+  "ARB": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2711,
+   "status": "ok"
+  },
+  "ASM": {
+   "first": "2020-07-27",
+   "last": "2026-08-20",
+   "n": 1558,
+   "status": "ok"
+  },
+  "ASN": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "AUC": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "AX1": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "AXQ": {
+   "status": "no_history"
+  },
+  "BAP": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2733,
+   "status": "ok"
+  },
+  "BC8": {
+   "first": "2018-01-29",
+   "last": "2026-08-20",
+   "n": 2197,
+   "status": "ok"
+  },
+  "BCI": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2732,
+   "status": "ok"
+  },
+  "BKB": {
+   "status": "no_history"
+  },
+  "BOT": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2708,
+   "status": "ok"
+  },
+  "C79": {
+   "first": "2022-05-02",
+   "last": "2026-08-20",
+   "n": 1104,
+   "status": "ok"
+  },
+  "CHC": {
+   "first": "2015-10-19",
+   "last": "2026-08-20",
+   "n": 3011,
+   "status": "ok"
+  },
+  "CIP": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "CLW": {
+   "first": "2016-11-07",
+   "last": "2026-08-20",
+   "n": 2509,
+   "status": "ok"
+  },
+  "CVN": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2708,
+   "status": "ok"
+  },
+  "CY5": {
+   "first": "2018-01-14",
+   "last": "2026-08-20",
+   "n": 2206,
+   "status": "ok"
+  },
+  "DRR": {
+   "first": "2020-10-19",
+   "last": "2026-08-20",
+   "n": 1496,
+   "status": "ok"
+  },
+  "DUB": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "DVP": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "DXI": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "EBR": {
+   "first": "2021-11-22",
+   "last": "2026-08-20",
+   "n": 1217,
+   "status": "ok"
+  },
+  "EGH": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "EMR": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2732,
+   "status": "ok"
+  },
+  "FDV": {
+   "first": "2016-08-26",
+   "last": "2026-08-20",
+   "n": 2570,
+   "status": "ok"
+  },
+  "FPH": {
+   "first": "2015-10-19",
+   "last": "2026-08-20",
+   "n": 3017,
+   "status": "ok"
+  },
+  "FTI": {
+   "status": "no_history"
+  },
+  "GG8": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2708,
+   "status": "ok"
+  },
+  "GLN": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "HVN": {
+   "first": "2015-10-19",
+   "last": "2026-08-20",
+   "n": 3011,
+   "status": "ok"
+  },
+  "IFT": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "IOO": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "IPH": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2733,
+   "status": "ok"
+  },
+  "IRI": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "KCN": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2708,
+   "status": "ok"
+  },
+  "KLS": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "MEL": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "MEZ": {
+   "first": "2016-01-07",
+   "last": "2026-08-20",
+   "n": 2731,
+   "status": "ok"
+  },
+  "MTS": {
+   "status": "no_history"
+  },
+  "MYS": {
+   "status": "no_history"
+  },
+  "NEC": {
+   "first": "2015-10-19",
+   "last": "2026-08-20",
+   "n": 3011,
+   "status": "ok"
+  },
+  "PDN": {
+   "first": "2016-01-07",
+   "last": "2026-08-26",
+   "n": 2738,
+   "status": "ok"
+  },
+  "PYC": {
+   "status": "no_history"
+  },
+  "RAS": {
+   "status": "no_history"
+  },
+  "REP": {
+   "status": "no_history"
+  },
+  "RML": {
+   "status": "no_history"
+  },
+  "SEK": {
+   "first": "2015-10-19",
+   "last": "2026-08-20",
+   "n": 3011,
+   "status": "ok"
+  },
+  "SHO": {
+   "first": "2016-01-07",
+   "last": "2026-08-21",
+   "n": 2643,
+   "status": "ok"
+  },
+  "SHV": {
+   "status": "no_history"
+  },
+  "SLS": {
+   "status": "no_history"
+  },
+  "SLX": {
+   "first": "2016-01-07",
+   "last": "2026-08-21",
+   "n": 2735,
+   "status": "ok"
+  },
+  "STG": {
+   "first": "2018-10-21",
+   "last": "2026-08-21",
+   "n": 2009,
+   "status": "ok"
+  },
+  "SVM": {
+   "status": "no_history"
+  },
+  "TAH": {
+   "first": "2015-10-19",
+   "last": "2026-08-21",
+   "n": 3009,
+   "status": "ok"
+  },
+  "TEA": {
+   "first": "2024-04-29",
+   "last": "2026-08-21",
+   "n": 587,
+   "status": "ok"
+  },
+  "TPG": {
+   "first": "2015-10-19",
+   "last": "2026-08-21",
+   "n": 3012,
+   "status": "ok"
+  },
+  "USL": {
+   "status": "no_history"
+  },
+  "VHM": {
+   "first": "2023-01-08",
+   "last": "2026-08-21",
+   "n": 928,
+   "status": "ok"
+  },
+  "WGX": {
+   "first": "2016-12-05",
+   "last": "2026-08-21",
+   "n": 2476,
+   "status": "ok"
+  },
+  "WOR": {
+   "first": "2016-01-07",
+   "last": "2026-08-21",
+   "n": 2720,
+   "status": "ok"
+  },
+  "WTC": {
+   "first": "2016-04-11",
+   "last": "2026-08-21",
+   "n": 2894,
+   "status": "ok"
+  },
+  "XRF": {
+   "first": "2016-01-07",
+   "last": "2026-08-21",
+   "n": 2718,
+   "status": "ok"
+  }
+ },
+ "fields": "adjusted_close is split+dividend adjusted; volume enables a real ADV filter (#551)",
+ "frozen_on": "2026-09-01",
+ "source": "api.shorted.com.au ShortedStocksService/GetStockPrices (period=MAX, maxPoints=0)"
+}

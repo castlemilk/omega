@@ -33,10 +33,19 @@ class PortfolioSpec:
     long_only: bool = True            # V289 §7: the long leg carries ~60% of the spread
     min_names_to_trade: int = 10      # refuse to trade a thin cross-section
 
-    # Placeholder for #551 (no ADV/market-cap in the API). When liquidity lands this
-    # becomes a real filter; today it is declared and inert, and `explain()` says so
-    # rather than letting a reader assume the universe is liquidity-screened.
-    min_adv_aud: float | None = None
+    # LIVE since 2026-09-01. Upstream GetStockPrices now returns `volume` alongside a
+    # split/dividend-adjusted close, so `panel.ApiPriceSource.adv20` computes a
+    # point-in-time trailing 20-session dollar volume and this became a real filter.
+    #
+    # It is not a refinement. Without it the engine ranked sub-cent stocks where one
+    # tick is a +20% return: AEU at $0.0140 -> $0.3500 contributed +200% to a single
+    # week, 88E turns over $10k/day. Any statistic computed over a book like that
+    # describes the tick size, not the signal.
+    min_adv_aud: float | None = 500_000.0
+
+    # A price floor does the same job on a different axis and needs no volume data.
+    # Knowable at entry, so it introduces no lookahead.
+    min_price_aud: float | None = 0.20
 
 
 @dataclass
@@ -75,7 +84,40 @@ def build_target(
         )
         return Target(date, {}, diagnostics)
 
-    scores = {c: v["short"] for c, v in day.items()}
+    # Liquidity and price screens run BEFORE ranking, so an excluded name cannot be
+    # selected and cannot alter the quantile boundary either.
+    eligible = dict(day)
+    dropped: dict[str, int] = {}
+
+    if spec.min_price_aud is not None:
+        before = len(eligible)
+        eligible = {c: v for c, v in eligible.items() if v["price"] >= spec.min_price_aud}
+        dropped["below_min_price"] = before - len(eligible)
+
+    have_adv = any("adv20_aud" in v for v in day.values())
+    if spec.min_adv_aud is not None and have_adv:
+        before = len(eligible)
+        # A name with no ADV reading is EXCLUDED, not waved through: an absent
+        # liquidity number is not evidence of liquidity (V279).
+        eligible = {
+            c: v for c, v in eligible.items()
+            if v.get("adv20_aud") is not None and v["adv20_aud"] >= spec.min_adv_aud
+        }
+        dropped["below_min_adv_or_unknown"] = before - len(eligible)
+
+    diagnostics["dropped"] = {k: v for k, v in dropped.items() if v}
+    diagnostics["eligible"] = len(eligible)
+    diagnostics["adv_data_present"] = have_adv
+    if spec.min_adv_aud is not None and not have_adv:
+        diagnostics["adv_filter_inert"] = "no volume in panel — price source lacks adv20"
+
+    if len(eligible) < spec.min_names_to_trade:
+        diagnostics["reason"] = (
+            f"too few eligible after screens ({len(eligible)} < {spec.min_names_to_trade})"
+        )
+        return Target(date, {}, diagnostics)
+
+    scores = {c: v["short"] for c, v in eligible.items()}
     ordered = _rank_ascending(scores)
     n = min(spec.max_names, max(1, int(len(ordered) * spec.top_quantile)))
     picked = ordered[:n]
@@ -137,6 +179,10 @@ def explain(spec: PortfolioSpec) -> list[str]:
         f"min_names_to_trade={spec.min_names_to_trade}",
     ]
     lines.append(
-        f"adv filter: {'ACTIVE' if spec.min_adv_aud else 'INERT — no liquidity data upstream (#551)'}"
+        f"adv filter: {f'ACTIVE >= ${spec.min_adv_aud:,.0f}/day' if spec.min_adv_aud else 'DISABLED'}"
+        " (needs a price source with volume, e.g. ApiPriceSource)"
+    )
+    lines.append(
+        f"price floor: {f'ACTIVE >= ${spec.min_price_aud:.2f}' if spec.min_price_aud else 'DISABLED'}"
     )
     return lines

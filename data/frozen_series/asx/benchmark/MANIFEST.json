@@ -1,31 +1,40 @@
 {
  "frozen_on": "2026-09-01",
- "limitation": "API returns ~2 years only; MAX/10Y/explicit-from all cap at 2024-09-02. Cannot benchmark the pre-2024 study period.",
+ "limitation": "XJT (the only total-return series) begins 2019-04-29 upstream and cannot be backfilled. XJO/XAO reach 2006 but are price-only: comparing dividend-adjusted prices against them overstates excess by the market's yield (~13pp on the API's own measured window).",
  "series": {
   "XAO": {
-   "first": "2024-09-02",
+   "first": "2006-09-01",
    "last": "2026-09-01",
-   "md5": "027ee8c90f1ce1063b326d0d058a7172",
-   "n": 506
+   "md5": "d10df90c2c879663dc1b19c6c0c733e7",
+   "n": 5055,
+   "name": "All Ordinaries",
+   "return_type": "price"
   },
   "XJO": {
-   "first": "2024-09-02",
+   "first": "2006-09-01",
    "last": "2026-09-01",
-   "md5": "612716e6d0cf447932b0ac1059f0e48d",
-   "n": 506
+   "md5": "f41bc9d79f458e72df02c1690440a81b",
+   "n": 5049,
+   "name": "S&P/ASX 200",
+   "return_type": "price"
   },
   "XJT": {
-   "first": "2024-09-02",
+   "first": "2019-04-29",
    "last": "2026-09-01",
-   "md5": "352b1d54becbb003804ec13f36960e83",
-   "n": 505
+   "md5": "d67fd7880ee9a2d60ebeefd2bb3395ee",
+   "n": 1860,
+   "name": "S&P/ASX 200 Gross Total Return",
+   "return_type": "total"
   },
   "XKO": {
-   "first": "2024-09-02",
+   "first": "2013-03-05",
    "last": "2026-09-01",
-   "md5": "5b7234721ea66123d8acdb2c1d87ad8b",
-   "n": 506
+   "md5": "265a7042752a4b91fd1e3a26cc5f8bb4",
+   "n": 3339,
+   "name": "S&P/ASX 300",
+   "return_type": "price"
   }
  },
- "source": "api.shorted.com.au MarketService/GetIndexSeries (period=MAX, maxPoints=0)"
+ "source": "api.shorted.com.au MarketService/GetIndexSeries (period=MAX, maxPoints=0)",
+ "upstream": "castlemilk/shorted.com.au#572 -> #573"
 }

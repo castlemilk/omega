@@ -50,20 +50,48 @@ def test_missing_file_is_inert_not_crash(tmp_path: Path) -> None:
     assert b.provenance()["sessions"] == 0
 
 
-def test_price_only_indices_flagged(tmp_path: Path) -> None:
-    """XJO must not silently pass as a total-return comparator."""
-    (tmp_path / "XJO.csv").write_text("date,close\n2024-09-02,100.0\n2024-09-03,110.0\n")
+def test_return_type_comes_from_manifest_not_a_code_list(tmp_path: Path) -> None:
+    """The manifest is authoritative. The first version of benchmark.py guessed the
+    price/total classification from a hardcoded code list; a guess about which
+    benchmark is honest is exactly what should be read from the data."""
+    (tmp_path / "MANIFEST.json").write_text(
+        '{"series": {"XJO": {"return_type": "total"}}}'
+    )
+    (tmp_path / "XJO.csv").write_text("date,close\n2024-09-02,100.0\n")
+    # XJO is in the hardcoded PRICE_ONLY set, but the manifest says total: manifest wins.
     assert "XJO" in PRICE_ONLY
-    assert IndexBenchmark(code="XJO", root=tmp_path).provenance()["total_return_index"] is False
-    assert IndexBenchmark(code="XJT", root=tmp_path).provenance()["total_return_index"] is True
+    assert IndexBenchmark(code="XJO", root=tmp_path).is_total_return is True
 
 
-def test_frozen_series_matches_documented_limitation() -> None:
-    """Guards the real frozen data: if a backfill (#572) lands, this test should fail
-    and the 2-year limitation in the docstrings must be revisited rather than left stale."""
+def test_price_only_fallback_without_manifest(tmp_path: Path) -> None:
+    (tmp_path / "XJO.csv").write_text("date,close\n2024-09-02,100.0\n")
+    (tmp_path / "XJT.csv").write_text("date,close\n2024-09-02,100.0\n")
+    assert IndexBenchmark(code="XJO", root=tmp_path).is_total_return is False
+    assert IndexBenchmark(code="XJT", root=tmp_path).is_total_return is True
+
+
+def test_frozen_xjt_is_total_return_and_starts_2019() -> None:
+    """Guards the real frozen data. 2019-04-29 is an UPSTREAM limit that #573 states
+    cannot be backfilled, so unlike the previous 2024-09-02 floor this is not expected
+    to move. If it does, the tension this module documents has changed and the
+    docstrings must be revisited."""
     b = IndexBenchmark()
     if b.covered is None:
         pytest.skip("frozen benchmark not present")
-    assert b.covered[0] == "2024-09-02", (
-        "index coverage changed — #572 may have landed; update benchmark.py and panel docs"
-    )
+    assert b.code == "XJT"
+    assert b.is_total_return is True
+    assert b.covered[0] == "2019-04-29"
+
+
+def test_deeper_indices_are_all_price_only() -> None:
+    """The tension worth pinning: every series that reaches further back than XJT is
+    price-only, so a longer study can only be bought by giving up dividends."""
+    b = IndexBenchmark()
+    if b.covered is None:
+        pytest.skip("frozen benchmark not present")
+    for code in ("XJO", "XAO", "XKO"):
+        other = IndexBenchmark(code=code)
+        if other.covered is None:
+            continue
+        assert other.covered[0] < b.covered[0], f"{code} should predate XJT"
+        assert other.is_total_return is False, f"{code} unexpectedly total-return"

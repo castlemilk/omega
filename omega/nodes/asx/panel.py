@@ -100,6 +100,65 @@ class FrozenPriceSource:
         return out
 
 
+@dataclass
+class ApiPriceSource:
+    """Adjusted closes AND volume from the upstream API freeze (#549 seam, now filled).
+
+    Replaces the yfinance freeze for three reasons upstream states directly: the same
+    ticker convention as the short series (BHP, not BHP.AX), ONE split/dividend
+    adjustment methodology instead of two unauditable ones, and a universe that agrees
+    with the short data by construction.
+
+    It also carries ``volume``, which is what finally makes `PortfolioSpec.min_adv_aud`
+    a real filter instead of a declared-and-inert one. Before this, the engine had no
+    liquidity screen at all and loaded up on sub-cent stocks where a one-tick move is a
+    +20% return — a single half-cent name (AEU, $0.0140 -> $0.3500) contributed +200%
+    to one week and made the whole study unreadable.
+    """
+
+    root: Path = field(default_factory=lambda: FROZEN / "prices_api")
+
+    def _rows(self, code: str) -> list[tuple[str, float, float]]:
+        path = self.root / f"{code}.csv"
+        if not path.is_file():
+            return []
+        out = []
+        with open(path) as fh:
+            fh.readline()
+            for line in fh:
+                parts = line.strip().split(",")
+                if len(parts) < 4:
+                    continue
+                try:
+                    out.append((parts[0][:10], float(parts[1]), float(parts[3] or 0)))
+                except ValueError:
+                    continue
+        return out
+
+    def closes(self, code: str) -> dict[str, float]:
+        return {d: px for d, px, _ in self._rows(code)}
+
+    def adv20(self, code: str) -> dict[str, float]:
+        """Trailing 20-session average DOLLAR volume, point-in-time.
+
+        Keyed by date and computed from sessions at or BEFORE that date only, so it
+        never reveals future liquidity. A name with fewer than 20 prior sessions gets
+        no value at all rather than a short-window average, because an ADV computed
+        from three days is exactly the kind of number that quietly passes a filter it
+        should not.
+        """
+        rows = self._rows(code)
+        out: dict[str, float] = {}
+        window: list[float] = []
+        for d, px, vol in rows:
+            window.append(px * vol)
+            if len(window) > 20:
+                window.pop(0)
+            if len(window) == 20:
+                out[d] = sum(window) / 20.0
+        return out
+
+
 def load_short_series(root: Path | None = None) -> dict[str, list[tuple[str, float]]]:
     """Per-code short-interest observations, ascending by date.
 
@@ -174,6 +233,11 @@ def build_panel(
     prices = price_source or FrozenPriceSource()
     shorts = load_short_series(short_root)
     px_cache = {code: prices.closes(code) for code in shorts}
+    # adv20 is optional on the Protocol: only ApiPriceSource has volume. A source
+    # without it yields no liquidity data, and PortfolioSpec then reports its ADV
+    # filter as inert rather than silently passing every name.
+    adv_fn = getattr(prices, "adv20", None)
+    adv_cache = {code: adv_fn(code) for code in shorts} if adv_fn else {}
 
     rows: dict[str, dict[str, dict[str, float]]] = {}
     for d in dates:
@@ -185,7 +249,11 @@ def build_panel(
             p = px_cache.get(code, {}).get(d)
             if p is None or p <= 0:
                 continue
-            day[code] = {"short": s, "price": p}
+            row = {"short": s, "price": p}
+            adv = adv_cache.get(code, {}).get(d)
+            if adv is not None:
+                row["adv20_aud"] = adv
+            day[code] = row
         if len(day) >= min_names:
             rows[d] = day
 
@@ -193,5 +261,6 @@ def build_panel(
         "provenance": spec.provenance(),
         "n_dates": len(rows),
         "n_codes": len({c for day in rows.values() for c in day}),
+        "has_liquidity": bool(adv_cache),
         "panel": rows,
     }
