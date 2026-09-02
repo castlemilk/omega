@@ -135,8 +135,51 @@ class ApiPriceSource:
                     continue
         return out
 
+    # A session whose price is this many times its NEIGHBOURS on BOTH sides is an
+    # isolated spike, not a price. 10x is far outside any single-session equity move
+    # and comfortably inside the observed corruption (AMD printed 10,749x).
+    SPIKE_RATIO = 10.0
+
+    @staticmethod
+    def _despike(rows: list[tuple[str, float, float]]) -> tuple[list[tuple[str, float, float]], int]:
+        """Drop isolated spike sessions (castlemilk/shorted.com.au#582).
+
+        Upstream serves FOREIGN-exchange prices for ASX tickers that share a symbol:
+        ASX:AMD (Arrow Minerals, ~$0.02) prints $214.99 — NASDAQ's AMD — for one
+        session and then returns to $0.02. 215 of 1,006 codes are affected, almost
+        all in Nov-Dec 2025.
+
+        The test is REVERSION, not magnitude, and that distinction is the whole point:
+        a share consolidation is also a >10x move, but it is a permanent level shift,
+        so it is high against its predecessor and NORMAL against its successor. A
+        wrong-exchange print is extreme against both. Filtering on magnitude alone
+        would silently delete every legitimate consolidation in the panel.
+
+        Dropping the session (rather than interpolating) means the name simply has no
+        observation that day and is excluded from that day's cross-section — the same
+        treatment as any other missing price, and it cannot invent a return.
+        """
+        if len(rows) < 3:
+            return rows, 0
+        keep, dropped = [rows[0]], 0
+        for i in range(1, len(rows) - 1):
+            prev, cur, nxt = rows[i - 1][1], rows[i][1], rows[i + 1][1]
+            if prev > 0 and nxt > 0 and cur > 0:
+                r_prev, r_next = cur / prev, cur / nxt
+                spike_up = r_prev > ApiPriceSource.SPIKE_RATIO and r_next > ApiPriceSource.SPIKE_RATIO
+                spike_dn = r_prev < 1 / ApiPriceSource.SPIKE_RATIO and r_next < 1 / ApiPriceSource.SPIKE_RATIO
+                if spike_up or spike_dn:
+                    dropped += 1
+                    continue
+            keep.append(rows[i])
+        keep.append(rows[-1])
+        return keep, dropped
+
     def closes(self, code: str) -> dict[str, float]:
-        return {d: px for d, px, _ in self._rows(code)}
+        rows, dropped = self._despike(self._rows(code))
+        if dropped:
+            logger.warning("despiked %d session(s) for %s (#582)", dropped, code)
+        return {d: px for d, px, _ in rows}
 
     def adv20(self, code: str) -> dict[str, float]:
         """Trailing 20-session average DOLLAR volume, point-in-time.
@@ -147,7 +190,7 @@ class ApiPriceSource:
         from three days is exactly the kind of number that quietly passes a filter it
         should not.
         """
-        rows = self._rows(code)
+        rows, _ = self._despike(self._rows(code))
         out: dict[str, float] = {}
         window: list[float] = []
         for d, px, vol in rows:
