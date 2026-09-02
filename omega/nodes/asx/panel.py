@@ -159,6 +159,33 @@ class ApiPriceSource:
         return out
 
 
+def load_short_series_csv(root: Path) -> dict[str, list[tuple[str, float]]]:
+    """Per-code short-interest observations from the v3 rebuild (CSV, `date,short_pct`).
+
+    The v3 layout is the point-in-time universe (see `scripts/asx_build_universe.py`).
+    Each series is dated, so a name's own file states the dates it was reported and
+    therefore defines its universe membership — a delisted company simply has no rows
+    after it delisted, which is exactly the point-in-time behaviour the old survivor
+    freeze could not express.
+    """
+    out: dict[str, list[tuple[str, float]]] = {}
+    for path in sorted(root.glob("*.csv")):
+        rows: list[tuple[str, float]] = []
+        with open(path) as fh:
+            fh.readline()
+            for line in fh:
+                parts = line.strip().split(",")
+                if len(parts) < 2:
+                    continue
+                try:
+                    rows.append((parts[0][:10], float(parts[1])))
+                except ValueError:
+                    continue
+        if rows:
+            out[path.stem] = sorted(rows)
+    return out
+
+
 def load_short_series(root: Path | None = None) -> dict[str, list[tuple[str, float]]]:
     """Per-code short-interest observations, ascending by date.
 
@@ -222,6 +249,7 @@ def build_panel(
     price_source: PriceSource | None = None,
     short_root: Path | None = None,
     min_names: int = 10,
+    short_series: dict[str, list[tuple[str, float]]] | None = None,
 ) -> dict[str, Any]:
     """Assemble ``{date: {code: {short, price}}}`` under point-in-time rules.
 
@@ -231,7 +259,7 @@ def build_panel(
     errors.
     """
     prices = price_source or FrozenPriceSource()
-    shorts = load_short_series(short_root)
+    shorts = short_series if short_series is not None else load_short_series(short_root)
     px_cache = {code: prices.closes(code) for code in shorts}
     # adv20 is optional on the Protocol: only ApiPriceSource has volume. A source
     # without it yields no liquidity data, and PortfolioSpec then reports its ADV
