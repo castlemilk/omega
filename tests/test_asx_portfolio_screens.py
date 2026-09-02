@@ -67,3 +67,34 @@ def test_refuses_to_trade_when_screens_leave_too_few() -> None:
     t = build_target("2024-01-01", _day(12, price=0.01), PortfolioSpec())
     assert t.weights == {}
     assert "too few eligible" in t.diagnostics["reason"]
+
+
+def test_concentration_cap_survives_normalisation() -> None:
+    """The cap must bind AFTER the book is normalised, not before.
+
+    Capping to max_weight and then scaling back to fully-invested returns every
+    position to its uncapped size — the cap does nothing. That is how one corrupt
+    price (AIZ printed at $224.32, a NZ dual-listing) held a 16% position in a
+    six-name book and moved a single week by 66%.
+    """
+    day = {f"C{i}": {"short": i / 100.0, "price": 1.0, "adv20_aud": 5e6} for i in range(30)}
+    t = build_target("2024-01-01", day, PortfolioSpec())
+    assert len(t.weights) == 6, "quantile should select 6 of 30"
+    assert max(t.weights.values()) <= PortfolioSpec().max_weight + 1e-9
+
+
+def test_book_stays_under_invested_rather_than_breaching_the_cap() -> None:
+    """A concentration limit that yields whenever it binds is not a limit."""
+    day = {f"C{i}": {"short": i / 100.0, "price": 1.0, "adv20_aud": 5e6} for i in range(30)}
+    t = build_target("2024-01-01", day, PortfolioSpec())
+    invested = sum(t.weights.values())
+    assert invested < 1.0
+    assert t.diagnostics["invested"] == round(invested, 4)
+
+
+def test_large_book_is_fully_invested() -> None:
+    """With enough names the cap never binds, so nothing is left on the table."""
+    day = {f"C{i:03d}": {"short": i / 1000.0, "price": 1.0, "adv20_aud": 5e6} for i in range(200)}
+    t = build_target("2024-01-01", day, PortfolioSpec())
+    assert abs(sum(t.weights.values()) - 1.0) < 1e-6
+    assert max(t.weights.values()) <= PortfolioSpec().max_weight + 1e-9

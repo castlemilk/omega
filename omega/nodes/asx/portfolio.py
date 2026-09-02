@@ -135,7 +135,32 @@ def build_target(
     weights = {c: v for c, v in weights.items() if v > 0}
     total = sum(weights.values())
     if total > 0:
-        weights = {c: v / total for c, v in weights.items()}   # re-normalise to fully invested
+        # Re-normalise to fully invested, then RE-APPLY the cap and repeat.
+        #
+        # Normalising alone silently undoes the concentration cap: a 6-name book
+        # capped at 8% sums to 0.48, and scaling that back to 1.0 returns every
+        # position to 16.7% — the cap did nothing. That is how one corrupted
+        # price (AIZ at $224.32, a New Zealand dual-listing) took a 16% position
+        # and moved a single week by 66%.
+        #
+        # Iterating to a fixed point is the standard water-filling fix: cap,
+        # redistribute the freed weight over uncapped names, cap again. When
+        # every name is at the cap the book is deliberately left UNDER-invested
+        # rather than breaching it — a concentration limit that yields whenever
+        # it binds is not a limit.
+        for _ in range(16):
+            weights = {c: v / total for c, v in weights.items()}
+            over = {c: v for c, v in weights.items() if v > spec.max_weight + 1e-12}
+            if not over:
+                break
+            weights = {c: min(v, spec.max_weight) for c, v in weights.items()}
+            total = sum(weights.values())
+            if total <= 0 or len(over) == len(weights):
+                break
+        capped_total = sum(weights.values())
+        if capped_total > 1.0 + 1e-9:
+            weights = {c: v / capped_total for c, v in weights.items()}
+        diagnostics["invested"] = round(sum(weights.values()), 4)
 
     diagnostics.update(
         {
