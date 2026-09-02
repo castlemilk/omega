@@ -27,7 +27,6 @@ none, so the survivorship hole is a number in the manifest rather than a silent 
 from __future__ import annotations
 
 import json
-import os
 import sys
 import time
 import urllib.error
@@ -41,11 +40,22 @@ BASE = "https://api.shorted.com.au/shorts.v1alpha1"
 START = "2019-04-01"
 UA = "omega-asx-research/0.1"
 
-# Anonymous callers get 30/min and 500/month (docs/rate-limiting.md §2.1), which is
-# far below the ~3,300 requests a full rebuild needs. A bearer token moves the caller
-# into its account's tier. The value is read from the environment and passed straight
-# to the transport — never logged, never written to any artifact.
+# Anonymous callers get 30/min and 500/month (docs/rate-limiting.md §2.1), far below
+# the ~3,300 requests a full rebuild needs. Authentication is obtained by OAuth
+# (scripts/shorted_oauth.py) rather than a pasted API key: you approve once in a
+# browser and the token refreshes itself. $OMEGA_SHORTED_API_KEY still overrides,
+# for CI where no browser exists.
 TOKEN_ENV = "OMEGA_SHORTED_API_KEY"
+
+try:
+    from shorted_oauth import get_access_token
+except ImportError:  # invoked from outside scripts/
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from shorted_oauth import get_access_token
+
+# Resolved once per process: the flow is interactive, and re-prompting mid-fetch
+# would block a long run behind a browser nobody is watching.
+_TOKEN: str | None = None
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "frozen_series" / "asx" / "v3"
 
@@ -65,9 +75,8 @@ def api(svc: str, body: dict) -> tuple[int, dict]:
             ("User-Agent", UA),
         ):
             req.add_header(k, v)
-        tok = os.environ.get(TOKEN_ENV)
-        if tok:
-            req.add_header("Authorization", f"Bearer {tok}")
+        if _TOKEN:
+            req.add_header("Authorization", f"Bearer {_TOKEN}")
         try:
             with urllib.request.urlopen(req, timeout=90) as r:
                 return r.status, json.loads(r.read().decode())
@@ -207,7 +216,14 @@ def stage3_prices(codes: list[str]) -> dict:
 
 
 def main() -> int:
+    global _TOKEN
     OUT.mkdir(parents=True, exist_ok=True)
+    try:
+        _TOKEN = get_access_token()
+    except Exception as e:
+        print(f"  auth failed ({e}); continuing ANONYMOUSLY at 30/min", flush=True)
+        _TOKEN = None
+    print(f"  auth: {'bearer (oauth)' if _TOKEN else 'anonymous'}", flush=True)
     # GetAvailableDates caps `limit` at 1000 (2000 -> HTTP 400) and returns the most
     # recent page, so walk backwards with `before` until the window is covered.
     avail: set[str] = set()
@@ -261,7 +277,7 @@ def main() -> int:
                 "no_price_history": nopx,
                 "throttled": throttled,
                 "complete": not throttled,
-                "auth": "bearer" if os.environ.get(TOKEN_ENV) else "anonymous",
+                "auth": "bearer" if _TOKEN else "anonymous",
                 "survivorship_note": (
                     f"{len(nopx)}/{len(names)} codes have no upstream price history "
                     "(castlemilk/shorted.com.au#576). They are IN the universe and "

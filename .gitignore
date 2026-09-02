@@ -89,3 +89,6 @@ data/frozen_series/binance_depth_forward/
 # scripts/v272_causal_filter.py (G-DET PASS); all reported numbers live in
 # omega/nodes/victoria/training_log/V272.md.
 data/v272/
+
+# OAuth token cache lives in ~/.config/omega, never here — but belt and braces.
+.oauth_cache.json
