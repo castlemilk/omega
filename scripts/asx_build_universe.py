@@ -152,9 +152,15 @@ def stage2_shorts(codes: list[str]) -> dict:
         if f.is_file():
             stat[c] = "cached"
             continue
+        # full_resolution: the default buckets 5Y/10Y/MAX into WEEKLY AVERAGES, which
+        # is right for a chart and wrong for research — BHP returns 846 bucketed points
+        # against 4,085 real observations. A weekly mean also cannot be aligned to a
+        # trading calendar or used for an event window, and it forced the blunt
+        # hand-rolled publication lag in panel.knowable_short. max_points=0 keeps the
+        # whole series after that.
         st, body = api(
             "ShortedStocksService/GetStockData",
-            {"productCode": c, "period": "max"},
+            {"productCode": c, "period": "max", "fullResolution": True, "maxPoints": 0},
         )
         pts = [
             p for p in (body.get("points") or [])
