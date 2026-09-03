@@ -35,9 +35,11 @@ from pathlib import Path
 
 BASE = "https://api.shorted.com.au/shorts.v1alpha1"
 
-# Study window floor: XJT (the only total-return benchmark) begins 2019-04-29
-# upstream and cannot be backfilled (#573), so nothing earlier is measurable.
-START = "2019-04-01"
+# Study window floor. XJT (total-return) begins 2019-04-29 and cannot be backfilled
+# (#573), but XKO (price-only) reaches 2013-03-05 and is valid for a Q1-Q5 SPREAD
+# test, which is benchmark-relative and so unaffected by missing dividends. The
+# universe must be enumerated over the whole span or the early years are survivor-only.
+START = "2013-01-01"
 UA = "omega-asx-research/0.1"
 
 # Anonymous callers get 30/min and 500/month (docs/rate-limiting.md §2.1), far below
