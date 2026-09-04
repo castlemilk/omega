@@ -81,7 +81,19 @@ _COINBASE_INTX_MAP = {
 # ── Database path ──────────────────────────────────────────────────────────────
 
 
+# Overriding this is what keeps a test run from writing the COMMITTED cache.
+# data/macro_cache.db is frozen substrate under data/.cache_manifest.json, and any
+# code that opened the cache with no explicit path used to write it in place — so
+# `pytest tests/` dirtied the working tree and test_cache_manifest then failed
+# until someone ran `git restore`. A guard that fires after every test run is
+# indistinguishable from a broken guard, which is worse than no guard.
+MACRO_CACHE_PATH_ENV = "OMEGA_MACRO_CACHE_PATH"
+
+
 def _default_db_path() -> Path:
+    override = os.environ.get(MACRO_CACHE_PATH_ENV, "").strip()
+    if override:
+        return Path(override)
     root = Path(__file__).resolve().parent.parent.parent.parent  # project root
     return root / "data" / "macro_cache.db"
 
