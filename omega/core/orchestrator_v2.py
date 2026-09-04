@@ -182,7 +182,13 @@ class DebateGateLearner:
     If blocked proposals would have been losses, raise it.
 
     Update rule (EMA):
-      threshold += alpha * (target_block_rate - actual_block_rate)
+      threshold -= alpha * (target_block_rate - actual_block_rate)
+
+    The SIGN is the whole controller. Blocking is `max_disagreement > threshold`,
+    so a HIGHER threshold blocks LESS. If we are blocking below target we must
+    LOWER the threshold to block more. The rule was written with the opposite sign,
+    which made this a positive feedback loop: block nothing -> raise the threshold
+    -> block even less, ratcheting to max_threshold within ~40 proposals.
 
     Target: block proposals that would lose, pass the ones that would win.
     """
@@ -243,16 +249,20 @@ class DebateGateLearner:
         blocked_count = sum(1 for e in self._history if e["blocked"])
         actual_block_rate = blocked_count / total if total > 0 else 0.0
 
-        # EMA update: push threshold toward the rate that achieves target_block_rate
+        # EMA update: push the threshold toward the target block rate.
+        #
+        # Blocking is `max_disagreement > threshold`, so raising the threshold blocks
+        # LESS. Under-blocking therefore has to LOWER it. The original sign did the
+        # reverse and turned this into positive feedback.
         delta = self._alpha * (self._target_block_rate - actual_block_rate)
-        new_threshold = self.threshold + delta
+        new_threshold = self.threshold - delta
         self.threshold = max(self._min_threshold, min(self._max_threshold, new_threshold))
 
         logger.debug(
             "DebateGateLearner: actual_block_rate=%.2f target=%.2f threshold %.3f→%.3f",
             actual_block_rate,
             self._target_block_rate,
-            self.threshold - delta,
+            self.threshold + delta,
             self.threshold,
         )
         return self.threshold

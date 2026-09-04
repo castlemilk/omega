@@ -578,3 +578,65 @@ class TestAdversarialPressureV2:
         # Threshold adjustment may or may not fire depending on timing,
         # but the field should exist in the report
         assert hasattr(report, "threshold_adjustment")
+
+
+class TestDebateGateLearnerDirection:
+    """The gate learner's feedback sign.
+
+    Blocking is `max_disagreement > threshold`, so a HIGHER threshold blocks LESS.
+    The update rule was `threshold += alpha * (target - actual)`, which raised the
+    threshold when the gate was under-blocking — positive feedback that ratcheted
+    it to max_threshold within about 40 proposals and left the gate wide open.
+    """
+
+    def _learner(self):
+        from omega.core.orchestrator_v2 import DebateGateLearner
+
+        return DebateGateLearner()
+
+    def test_under_blocking_tightens(self) -> None:
+        gl = self._learner()
+        start = gl.threshold
+        for i in range(30):
+            gl.record_proposal(blocked=False, cycle_id=str(i), proposal={})
+            gl.update_threshold()
+        assert gl.threshold < start, (
+            "blocking below target must LOWER the threshold so the gate blocks more; "
+            "raising it is the runaway this test exists to prevent"
+        )
+
+    def test_over_blocking_loosens(self) -> None:
+        gl = self._learner()
+        start = gl.threshold
+        for i in range(30):
+            gl.record_proposal(blocked=True, cycle_id=str(i), proposal={})
+            gl.update_threshold()
+        assert gl.threshold > start
+
+    def test_threshold_stays_within_bounds(self) -> None:
+        gl = self._learner()
+        for i in range(500):
+            gl.record_proposal(blocked=False, cycle_id=str(i), proposal={})
+            gl.update_threshold()
+        assert 0.10 <= gl.threshold <= 1.5
+
+    def test_at_target_rate_the_threshold_stops_moving(self) -> None:
+        """At the setpoint the controller must come to rest.
+
+        Not "stays near its initial value": this is an integrator, so an early
+        transient (the first window is 100% blocked, which legitimately loosens it)
+        is carried forward permanently. What matters is that once the measured rate
+        equals the target, delta is zero and the threshold stops moving. A
+        controller that kept drifting at its setpoint would be the runaway again.
+        """
+        gl = self._learner()
+        for i in range(60):
+            gl.record_proposal(blocked=(i % 10 < 3), cycle_id=str(i), proposal={})
+            gl.update_threshold()
+        settled = gl.threshold
+        for i in range(60, 120):
+            gl.record_proposal(blocked=(i % 10 < 3), cycle_id=str(i), proposal={})
+            gl.update_threshold()
+        assert gl.threshold == pytest.approx(settled, abs=1e-9), (
+            f"threshold moved {settled} -> {gl.threshold} while blocking at the target rate"
+        )

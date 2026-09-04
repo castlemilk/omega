@@ -666,16 +666,22 @@ class TestAdversarialGateRejectsLowQualityProposals:
         )
 
     def test_high_disagreement_blocks_pico_proposal(self):
-        """When Ring 1 fires with extreme disagreement (score < 0.6), PICO proposals must be blocked."""
-        # max_disagreement=0.9 → score=0.1 < 0.6 threshold → proposal must be blocked
-        mock_adv = ConfigurableDisagreementAdversarial(max_disagreement=0.9)
+        """Extreme Ring 1 disagreement must block a PICO proposal.
+
+        Used 0.9 against an old 0.6 threshold. The gate was recalibrated to an
+        initial threshold of 1.0 with a 1.5 ceiling, because whale_flow naturally
+        produces 1.0-1.3 disagreement even after tanh dampening — so 0.9 is now
+        ordinary and blocking it would reject normal signal diversity. 1.4 is above
+        the calibrated band and is what a genuine outlier looks like.
+        """
+        mock_adv = ConfigurableDisagreementAdversarial(max_disagreement=1.4)
         orch = OmegaOrchestrator(adversarial=mock_adv)
         orch.register_node(StrategyNode("strat", capabilities=["construct_portfolio"]))
 
         result = orch.run_one_cycle()
 
         assert result.trades_executed == 0, (
-            f"Expected 0 trades (blocked: disagreement=0.9, score=0.1 < 0.6), "
+            f"Expected 0 trades (blocked: disagreement=1.4 > calibrated threshold 1.0), "
             f"got {result.trades_executed}"
         )
         blocked_flags = [
