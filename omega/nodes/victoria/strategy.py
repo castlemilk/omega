@@ -1682,7 +1682,7 @@ class StrategyNode(Node):
         if self._is_crisis and direction == "short":
             _effective_floor = self._short_conviction_threshold  # 0.04 in crisis
         else:
-            _effective_floor = self._abs_min_conviction  # 0.06 in normal/high_vol (V81)
+            _effective_floor = self._abs_min_conviction  # 0.02 since V93 (was 0.06, V81)
         if abs(w_conv) < _effective_floor:
             return False, f"abs_min_conviction({abs(w_conv):.2f}<{_effective_floor:.2f})"
         base_threshold = (

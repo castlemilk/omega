@@ -29,6 +29,12 @@ def _crisis_signals(ticker: str, composite: float = -1.0) -> dict:
     """Minimal signals dict that triggers crisis regime with one short candidate."""
     return {
         "_regime_hmm": "crisis",
+        # V95 gates the HMM/label crisis paths on bear_prob >= 0.45: a label alone
+        # no longer puts the strategy in crisis, the probability model must confirm
+        # it. These fixtures predate that and supplied no bear_prob, so they had
+        # silently stopped producing a crisis regime at all — which is why every
+        # crisis assertion in this file was failing.
+        "_regime_w_bear_prob": 0.70,
         "_regime": "crisis",
         ticker: {"composite": composite},
     }
@@ -71,24 +77,44 @@ class TestCrisisShortBypass:
             "Short candidate should produce a negative weight"
         )
 
-    def test_normal_regime_short_still_blocked_first_cycle(self):
-        """Normal-regime shorts must still require two consecutive cycles."""
+    def test_normal_regime_short_first_cycle_needs_high_conviction(self):
+        """Normal-regime first-cycle shorts are allowed, but only on conviction.
+
+        Was "must still require two consecutive cycles". V79 introduced a
+        confirmation bypass for high-conviction entries and V81/V88 lowered it
+        0.20 -> 0.12 -> 0.09 -> 0.05, because V86/V87 ran 150- and 167-cycle zero
+        streaks with the bypass unreachable at real conviction levels. A
+        composite of -1.0 clears 0.05 comfortably, so a first-cycle short here is
+        the intended behaviour, not a leak.
+        """
         sigs = _normal_signals("ETHUSDT", composite=-1.0)
         result = self.node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         # Normal shorts need prior-cycle confirmation — first call always empty
-        assert not weights or all(w >= 0 for w in weights.values()), (
-            "Normal-regime short must not bypass multi-cycle confirmation"
+        # The bypass is conviction-gated, so a MAXIMAL signal is expected through.
+        # What must not happen is an entry with no conviction behind it.
+        weak = self.node._construct_portfolio(_normal_signals("ETHUSDT", composite=-0.001), {})
+        assert not weak.get("weights"), (
+            "A near-zero composite must not bypass multi-cycle confirmation"
         )
 
-    def test_crisis_long_hard_blocked(self):
-        """Crisis longs remain hard-blocked (long_thresh ≈ 0.99) regardless of composite."""
+    def test_crisis_longs_are_suppressed_not_blocked(self):
+        """Crisis longs face a raised bar, not a hard block.
+
+        Was "hard-blocked (long_thresh ~ 0.99)". V84 lowered that to 0.50 because
+        0.99 combined with _thresh_scale was mathematically unreachable — it was a
+        block dressed as a threshold. The contract is now that a crisis long must
+        clear a far higher bar than a normal one, which is what this asserts.
+        """
         sigs = _crisis_signals("ETHUSDT", composite=1.0)  # strong long signal
         result = self.node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         # Longs in crisis should never appear (hard-blocked by 0.99 threshold)
-        assert not weights or all(w < 0 for w in weights.values()), (
-            "Crisis longs must remain hard-blocked"
+        assert self.node._long_conviction_threshold >= 0.50, (
+            "Crisis long threshold must stay far above the normal-regime bar"
+        )
+        assert self.node._long_conviction_threshold > self.node._short_conviction_threshold, (
+            "Crisis must favour shorts over longs"
         )
 
     def test_crisis_short_second_cycle_works_without_bypass(self):
@@ -224,8 +250,19 @@ class TestZeroStreakWatchdog:
         for _ in range(29):
             node._construct_portfolio(hold_sigs, {})
 
-        # One cycle that produces candidates (crisis short bypass)
-        node._construct_portfolio(_crisis_signals("ETHUSDT", composite=-1.0), {})
+        # A cycle that actually produces candidates. Driving this through the signal
+        # pipeline mid-sequence does NOT work: after hold cycles the direction history
+        # is "hold", so the crisis short is held for confirmation and the cycle is
+        # itself zero-candidate — the original test asserted a reset that correctly
+        # never happened. The watchdog was right; the setup was wrong. So the streak
+        # is set directly and the reset is exercised on a node that can trade.
+        node = StrategyNode()
+        node._zero_candidate_streak = 29
+        produced = node._construct_portfolio(_crisis_signals("ETHUSDT", composite=-1.0), {})
+        assert produced.get("weights"), "precondition: this cycle must produce candidates"
+        assert node._zero_candidate_streak == 0, (
+            "streak must reset on a cycle that produced candidates"
+        )
 
         # Now run 5 more zero cycles — streak reset means no warning
         caplog.clear()

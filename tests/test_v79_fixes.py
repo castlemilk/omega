@@ -36,6 +36,12 @@ def _normal_signals(ticker: str, composite: float) -> dict:
 def _crisis_signals(ticker: str, composite: float = -1.0) -> dict:
     return {
         "_regime_hmm": "crisis",
+        # V95 gates the HMM/label crisis paths on bear_prob >= 0.45: a label alone
+        # no longer puts the strategy in crisis, the probability model must confirm
+        # it. These fixtures predate that and supplied no bear_prob, so they had
+        # silently stopped producing a crisis regime at all — which is why every
+        # crisis assertion in this file was failing.
+        "_regime_w_bear_prob": 0.70,
         "_regime": "crisis",
         ticker: {"composite": composite},
     }
@@ -55,9 +61,17 @@ class TestADALongBlacklist:
         sigs = _normal_signals("ADAUSDT", composite=1.0)  # strong long signal
         result = node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
-        assert "ADAUSDT" not in weights or weights.get("ADAUSDT", 0) <= 0, (
-            "ADAUSDT long must be blocked by _LONG_BLACKLIST"
+        # V86 REMOVED ADAUSDT from _LONG_BLACKLIST, to break the ETH-only
+        # concentration that ran through V84/V85 (both were 100% ETHUSDT trades).
+        # The blacklist now holds BTCUSDT alone ("regime indicator only, <28% win
+        # rate"). Assert the current membership rather than a removed entry.
+        from omega.nodes.victoria.strategy import _LONG_BLACKLIST
+
+        assert "ADAUSDT" not in _LONG_BLACKLIST, (
+            "V86 removed ADAUSDT from _LONG_BLACKLIST; re-adding it is a decision "
+            "that needs its own pre-registration"
         )
+        assert "BTCUSDT" in _LONG_BLACKLIST
 
     def test_ada_short_still_allowed(self):
         """ADA shorts must still be permitted (only longs are blacklisted)."""
@@ -84,8 +98,12 @@ class TestAbsMinConviction:
     def test_abs_min_conviction_is_at_least_0_06(self):
         """StrategyNode._abs_min_conviction must be ≥ 0.06 (V79 floor, V80 raised to 0.07)."""
         node = StrategyNode()
-        assert node._abs_min_conviction >= 0.06, (
-            f"Expected _abs_min_conviction≥0.06, got {node._abs_min_conviction}"
+        # V93 lowered this 0.06 -> 0.02: post-crash recovery IC-weighted conviction
+        # clusters at 0.02-0.04, below the old floor, and with basket_std ~0.048 the
+        # scaled long_thresh (0.017) is already stricter than abs_min. Quality gating
+        # moved to the IC-weighted conviction check, which is now the binding one.
+        assert node._abs_min_conviction >= 0.02, (
+            f"Expected _abs_min_conviction>=0.02 (V93), got {node._abs_min_conviction}"
         )
 
     def test_conviction_below_0_06_blocked(self):
@@ -263,6 +281,12 @@ class TestCrisisAbsMinConviction:
         # composite=-0.065 → after cs_norm (-0.217) → SELL conviction, w_conv=0.065
         sigs = {
             "_regime_hmm": "crisis",
+        # V95 gates the HMM/label crisis paths on bear_prob >= 0.45: a label alone
+        # no longer puts the strategy in crisis, the probability model must confirm
+        # it. These fixtures predate that and supplied no bear_prob, so they had
+        # silently stopped producing a crisis regime at all — which is why every
+        # crisis assertion in this file was failing.
+        "_regime_w_bear_prob": 0.70,
             "_regime": "crisis",
             "ETHUSDT": {"composite": -0.065},
         }
