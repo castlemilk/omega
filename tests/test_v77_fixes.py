@@ -14,8 +14,6 @@ import logging
 import urllib.request
 from unittest.mock import patch
 
-import pytest
-
 from omega.nodes.victoria.signals.fear_greed import FearGreedSignal
 from omega.nodes.victoria.signals.funding_rate import FundingRateSignal
 from omega.nodes.victoria.strategy import StrategyNode
@@ -87,10 +85,8 @@ class TestCrisisShortBypass:
         composite of -1.0 clears 0.05 comfortably, so a first-cycle short here is
         the intended behaviour, not a leak.
         """
-        sigs = _normal_signals("ETHUSDT", composite=-1.0)
-        result = self.node._construct_portfolio(sigs, {})
-        weights = result.get("weights", {})
-        # Normal shorts need prior-cycle confirmation — first call always empty
+        # A maximal signal goes through by design (the V88 bypass at w_conv >= 0.05).
+        self.node._construct_portfolio(_normal_signals("ETHUSDT", composite=-1.0), {})
         # The bypass is conviction-gated, so a MAXIMAL signal is expected through.
         # What must not happen is an entry with no conviction behind it.
         weak = self.node._construct_portfolio(_normal_signals("ETHUSDT", composite=-0.001), {})
@@ -106,10 +102,8 @@ class TestCrisisShortBypass:
         block dressed as a threshold. The contract is now that a crisis long must
         clear a far higher bar than a normal one, which is what this asserts.
         """
-        sigs = _crisis_signals("ETHUSDT", composite=1.0)  # strong long signal
-        result = self.node._construct_portfolio(sigs, {})
-        weights = result.get("weights", {})
-        # Longs in crisis should never appear (hard-blocked by 0.99 threshold)
+        # Put the node in crisis, then inspect the bar it set.
+        self.node._construct_portfolio(_crisis_signals("ETHUSDT", composite=1.0), {})
         assert self.node._long_conviction_threshold >= 0.50, (
             "Crisis long threshold must stay far above the normal-regime bar"
         )
@@ -154,9 +148,8 @@ class TestFundingRateNullWarning:
         sig = FundingRateSignal()
         with patch.object(
             urllib.request, "urlopen", side_effect=Exception("429 Too Many Requests")
-        ):
-            with caplog.at_level(logging.DEBUG, logger="omega.nodes.victoria.signals.funding_rate"):
-                sig._fetch_all_rates(["ETHUSDT"])
+        ), caplog.at_level(logging.DEBUG, logger="omega.nodes.victoria.signals.funding_rate"):
+            sig._fetch_all_rates(["ETHUSDT"])
 
         warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
         assert warning_records, (

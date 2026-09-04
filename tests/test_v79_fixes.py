@@ -15,8 +15,6 @@ import urllib.error
 import urllib.request
 from unittest.mock import patch
 
-import pytest
-
 from omega.nodes.victoria.data_cache import _FRED_PERM_FAILED, MacroDataCache
 from omega.nodes.victoria.strategy import StrategyNode
 
@@ -58,9 +56,7 @@ class TestADALongBlacklist:
     def test_ada_long_blocked_in_normal_regime(self):
         """Strong ADA long signal must be blocked — ADA is in _LONG_BLACKLIST."""
         node = StrategyNode()
-        sigs = _normal_signals("ADAUSDT", composite=1.0)  # strong long signal
-        result = node._construct_portfolio(sigs, {})
-        weights = result.get("weights", {})
+        node._construct_portfolio(_normal_signals("ADAUSDT", composite=1.0), {})
         # V86 REMOVED ADAUSDT from _LONG_BLACKLIST, to break the ETH-only
         # concentration that ran through V84/V85 (both were 100% ETHUSDT trades).
         # The blacklist now holds BTCUSDT alone ("regime indicator only, <28% win
