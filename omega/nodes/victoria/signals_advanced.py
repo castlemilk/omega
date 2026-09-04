@@ -75,11 +75,31 @@ class SignalValue:
 
 
 def _returns(prices: list[float]) -> list[float]:
-    return [
-        (prices[i] - prices[i - 1]) / prices[i - 1]
-        for i in range(1, len(prices))
-        if prices[i - 1] != 0
-    ]
+    """Simple returns, skipping any pair we cannot compute.
+
+    The guard used to be `prices[i - 1] != 0` alone, which lets None through —
+    `None != 0` is True — and the subtraction then raised
+    `TypeError: unsupported operand type(s) for -: 'float' and 'NoneType'`,
+    taking down the whole signal on one malformed bar. A None in an OHLCV series is
+    routine: a venue gaps a candle, a merge leaves a hole.
+
+    A pair with a missing endpoint is DROPPED rather than defaulted. Substituting
+    0.0 would be a fabricated observation — it asserts the price did not move when
+    the truth is we do not know — and would bias every downstream correlation
+    toward zero. Dropping shortens the series, which is honest: we have fewer
+    observations than bars.
+    """
+    out: list[float] = []
+    for i in range(1, len(prices)):
+        prev, cur = prices[i - 1], prices[i]
+        if not isinstance(prev, (int, float)) or not isinstance(cur, (int, float)):
+            continue
+        if isinstance(prev, bool) or isinstance(cur, bool):
+            continue
+        if prev == 0 or prev != prev or cur != cur:  # zero divisor, or NaN
+            continue
+        out.append((cur - prev) / prev)
+    return out
 
 
 def _zscore(values: list[float], period: int) -> float | None:

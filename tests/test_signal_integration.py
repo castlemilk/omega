@@ -396,14 +396,16 @@ class TestAltDataSignal:
         from omega.nodes.victoria.alt_data_signals import AltDataSignalProvider
 
         sig = AltDataSignalProvider()
-        result = sig.compute(_make_market_data())
+        # compute() takes no market data: the provider fetches its own alt-data
+        # sources, which is exactly why this test patches urlopen to fail.
+        result = sig.compute()
         _assert_signal_value(result, label="alt_data")
 
     def test_empty_input(self) -> None:
         from omega.nodes.victoria.alt_data_signals import AltDataSignalProvider
 
         sig = AltDataSignalProvider()
-        result = sig.compute({})
+        result = sig.compute()
         assert -1.0 <= result.value <= 1.0
 
 
@@ -424,7 +426,7 @@ class TestSpectralGraphSignal:
                 "microstructure", "sentiment", "vrp", "market_data",
                 "onchain", "long_short_ratio", "btc_dominance",
             ]}
-            result = sig.update(signal_values)
+            result = sig.compute(signal_values)
         # During warmup, should return a neutral/low-confidence signal
         assert -1.0 <= result.value <= 1.0
         assert 0.0 <= result.confidence <= 1.0
@@ -444,14 +446,14 @@ class TestSpectralGraphSignal:
                     "onchain", "long_short_ratio", "btc_dominance",
                 ]
             }
-            result = sig.update(signal_values)
+            result = sig.compute(signal_values)
         _assert_signal_value(result, label="spectral_graph")
 
     def test_empty_signal_values(self) -> None:
         from omega.nodes.victoria.spectral_signals import SpectralGraphSignal
 
         sig = SpectralGraphSignal()
-        result = sig.update({})
+        result = sig.compute({})
         assert -1.0 <= result.value <= 1.0
 
 
@@ -627,7 +629,7 @@ class TestRMTDenoiser:
                 ticker: float(rng.uniform(0.8, 1.2))
                 for ticker in _TICKERS
             }
-            result = denoiser.update(price_matrix)
+            result = denoiser.compute(price_matrix)
 
         assert result is not None
         # RMTDenoiser returns a dict/SignalValue — check the key output fields
@@ -641,7 +643,7 @@ class TestRMTDenoiser:
         from omega.nodes.victoria.rmt_denoiser import RMTDenoiser
 
         denoiser = RMTDenoiser(window=50)
-        result = denoiser.update({"BTCUSDT": 1.0})
+        result = denoiser.compute({"BTCUSDT": 1.0})
         # Should not raise; during warmup returns a low-confidence signal
         assert result is not None
 
