@@ -20,7 +20,6 @@ from omega.nodes.victoria.signals.fear_greed import FearGreedSignal
 from omega.nodes.victoria.signals.funding_rate import FundingRateSignal
 from omega.nodes.victoria.strategy import StrategyNode
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

@@ -4,6 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+# Marked slow: these run real multi-cycle Victoria simulations and take minutes.
+# Unmarked, they made `pytest tests/` appear to hang, so the suite was not run —
+# which is how a whole stale TestRegimeAdaptivity class sat failing unnoticed.
+pytestmark = pytest.mark.slow
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

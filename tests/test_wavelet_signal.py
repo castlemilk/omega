@@ -22,7 +22,6 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -74,7 +73,6 @@ def _assert_signal_value(sv, *, label: str = "") -> None:
 
 
 from omega.nodes.victoria.wavelet_signal import WaveletSignal
-
 
 # ---------------------------------------------------------------------------
 # Structure tests
@@ -305,6 +303,7 @@ class TestNumpyHaarFallback:
         with patch.dict("sys.modules", {"pywt": None}):
             # Force re-import with pywt mocked as unavailable
             import importlib
+
             import omega.nodes.victoria.wavelet_signal as ws_mod
             importlib.reload(ws_mod)
             sig = ws_mod.WaveletSignal()

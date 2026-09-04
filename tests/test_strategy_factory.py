@@ -1,4 +1,5 @@
 import pytest
+
 from omega.core.strategy_factory import SignalHotLoader
 
 

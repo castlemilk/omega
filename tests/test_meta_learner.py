@@ -21,9 +21,15 @@ from pathlib import Path
 import pytest
 
 from omega.nodes.victoria.meta_learner import (
-    MetaLearner, T_MIN, T_MAX, T_SHARPEN, T_SOFTEN, PF_HIGH, PF_LOW, ROLLING_WINDOW
+    PF_HIGH,
+    PF_LOW,
+    ROLLING_WINDOW,
+    T_MAX,
+    T_MIN,
+    T_SHARPEN,
+    T_SOFTEN,
+    MetaLearner,
 )
-
 
 # ── helpers ────────────────────────────────────────────────────────────────
 

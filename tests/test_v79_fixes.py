@@ -11,15 +11,14 @@ Fixes covered:
 from __future__ import annotations
 
 import logging
-from unittest.mock import patch
 import urllib.error
 import urllib.request
+from unittest.mock import patch
 
 import pytest
 
+from omega.nodes.victoria.data_cache import _FRED_PERM_FAILED, MacroDataCache
 from omega.nodes.victoria.strategy import StrategyNode
-from omega.nodes.victoria.data_cache import MacroDataCache, _FRED_PERM_FAILED
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -190,8 +189,10 @@ class TestFREDPermFailedSuppression:
 
     def test_perm_failed_series_not_refetched(self):
         """After HTTP 400, _refresh_macro must skip the series without hitting FRED."""
+        import os
+        import tempfile
+
         from omega.nodes.victoria import data_cache as dc
-        import tempfile, os
 
         # Pre-populate the perm-failed set
         _FRED_PERM_FAILED.add("DGS2")

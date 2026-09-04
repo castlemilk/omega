@@ -15,14 +15,15 @@ Tests cover:
 """
 
 import math
+
 import pytest
+
 from omega.nodes.victoria.exit_controller import (
     ExitConfig,
     ExitController,
-    compute_atr,
     aggregate_disposition,
+    compute_atr,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

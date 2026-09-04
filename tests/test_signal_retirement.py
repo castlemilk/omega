@@ -10,7 +10,6 @@ from omega.core.node_skills import (
     SignalRetirementReason,
 )
 
-
 IC_THRESHOLD = 0.02
 RETIREMENT_WINDOW = 50
 

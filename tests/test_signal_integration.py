@@ -24,7 +24,6 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -596,7 +595,9 @@ class TestWassersteinRegimeDetector:
 
     def test_update_centroids(self) -> None:
         from omega.nodes.victoria.wasserstein_regime import (
-            BULL, N_SIGNALS, WassersteinRegimeDetector,
+            BULL,
+            N_SIGNALS,
+            WassersteinRegimeDetector,
         )
 
         det = WassersteinRegimeDetector()

@@ -15,6 +15,11 @@ from omega.eval.backtest_bridge import BacktestMode, BacktestResult, OmegaBackte
 from omega.eval.baselines import buy_and_hold
 from omega.eval.metrics import EvalReport
 
+# Marked slow: these run real multi-cycle Victoria simulations and take minutes.
+# Unmarked, they made `pytest tests/` appear to hang, so the suite was not run —
+# which is how a whole stale TestRegimeAdaptivity class sat failing unnoticed.
+pytestmark = pytest.mark.slow
+
 
 def _make_ohlcv(
     n: int = 200,

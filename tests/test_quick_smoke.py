@@ -14,7 +14,6 @@ from __future__ import annotations
 import math
 import uuid
 
-
 # ---------------------------------------------------------------------------
 # Helpers (defined at module level so they don't contribute to import time)
 # ---------------------------------------------------------------------------

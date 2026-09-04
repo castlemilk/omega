@@ -18,6 +18,8 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from omega.core.brain import (
     _TIER_DEFAULTS,
     _TIER_ENV,
@@ -28,6 +30,11 @@ from omega.core.brain import (
     NoBrain,
     OpenAIBrain,
 )
+
+# Marked slow: these run real multi-cycle Victoria simulations and take minutes.
+# Unmarked, they made `pytest tests/` appear to hang, so the suite was not run —
+# which is how a whole stale TestRegimeAdaptivity class sat failing unnoticed.
+pytestmark = pytest.mark.slow
 
 # ---------------------------------------------------------------------------
 # ModelTier enum

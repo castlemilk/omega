@@ -18,7 +18,6 @@ import math
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -136,7 +135,11 @@ class TestNewsProjectionLayer:
         assert result.signal_multipliers.get("vrp", 1.0) > 1.0
 
     def test_multipliers_always_in_valid_range(self) -> None:
-        from omega.nodes.victoria.news_projection import NewsProjectionLayer, _MAX_BOOST, _MIN_BOOST
+        from omega.nodes.victoria.news_projection import (
+            _MAX_BOOST,
+            _MIN_BOOST,
+            NewsProjectionLayer,
+        )
 
         proj = NewsProjectionLayer()
         texts = [
@@ -343,8 +346,8 @@ class TestConformalPrediction:
 
     def test_forecast_signal_includes_uncertainty_in_raw(self) -> None:
         """TimeseriesForecastSignal.compute() raw output includes bootstrap fields."""
-        from unittest.mock import patch
         import urllib.error
+        from unittest.mock import patch
 
         from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 
@@ -373,8 +376,8 @@ class TestConformalPrediction:
 
     def test_high_uncertainty_sets_regime_tag(self) -> None:
         """When avg_uncertainty > 0.7, regime_tag should be high_uncertainty."""
-        from unittest.mock import patch
         import urllib.error
+        from unittest.mock import patch
 
         from omega.nodes.victoria.timeseries_forecast import TimeseriesForecastSignal
 

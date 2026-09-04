@@ -1,6 +1,8 @@
 """Tests for omega.core.circuit_breaker."""
 import time
+
 import pytest
+
 from omega.core.circuit_breaker import CircuitBreaker
 
 

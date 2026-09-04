@@ -24,7 +24,6 @@ from omega.nodes.victoria.reasoning_layer import (
     ReasoningLayer,
 )
 
-
 # ----------------------------------------------------------------- G1: compat
 
 def test_agy_model_ids_still_construct_and_route_to_agy() -> None:

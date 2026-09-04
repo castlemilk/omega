@@ -280,10 +280,13 @@ Filters applied per ticker per cycle, in order:
 3. **Weighted conviction** — IC-weighted composite exceeds regime-adaptive threshold
 4. **Regime/vol gate** — higher bar in high-vol regime (1.25x multiplier)
 
-Regime-adaptive thresholds (set in `_apply_regime_adaptive_thresholds`):
-- **CRISIS/BEAR** (bear_prob >= 0.55): long=0.20 (suppressed), short=0.05 (permissive)
+Regime-adaptive thresholds (set in `_apply_regime_adaptive_thresholds`). These
+have moved repeatedly and this table was stale for ~90 versions — verify against
+the code before relying on it:
+- **CRISIS/BEAR** (bear_prob >= 0.65 — V91 raised it from 0.55): long=0.50
+  (suppressed; V84 lowered from a 0.99 hard-block), short=0.04 (permissive)
 - **BULL** (bull_prob >= 0.55): long=0.05 (permissive), short=0.20 (suppressed)
-- **NORMAL** (else): long=0.10, short=0.05 (V49 fix)
+- **NORMAL** (else): long=0.07, short=0.07 (V87/V95 — 0.10 was tried and reverted twice)
 
 All thresholds are further scaled by `_thresh_scale = basket_std / 0.20`.
 

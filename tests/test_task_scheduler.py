@@ -1,8 +1,9 @@
 import json
-import pytest
 from datetime import datetime, timezone
-from omega.core.task_scheduler import TaskScheduler, CronExpression
 
+import pytest
+
+from omega.core.task_scheduler import CronExpression, TaskScheduler
 
 # ── CronExpression parsing ─────────────────────────────────────────────────────
 

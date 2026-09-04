@@ -19,6 +19,8 @@ Run before every training iteration:
   pytest tests/test_signal_integrity.py -v --timeout=30
 """
 
+
+
 from __future__ import annotations
 
 import math
@@ -33,6 +35,11 @@ from omega.nodes.victoria.strategy import (
     StrategyNode,
     score_to_conviction,
 )
+
+# Marked slow: these run real multi-cycle Victoria simulations and take minutes.
+# Unmarked, they made `pytest tests/` appear to hang, so the suite was not run —
+# which is how a whole stale TestRegimeAdaptivity class sat failing unnoticed.
+pytestmark = pytest.mark.slow
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -538,10 +545,10 @@ class TestRegimeAdaptivity:
         node._apply_regime_adaptive_thresholds(
             {"_regime_w_bear_prob": 0.25, "_regime_w_bull_prob": 0.30}
         )
-        assert node._long_conviction_threshold == 0.10
-        assert node._short_conviction_threshold == 0.10, (
+        assert node._long_conviction_threshold == 0.07
+        assert node._short_conviction_threshold == 0.07, (
             f"Normal short threshold={node._short_conviction_threshold} "
-            f"(expected 0.10 — V50 revert, V49 0.05 caused normal-regime collapse)"
+            f"(expected 0.07 — V95 reverted to V88's calibration)"
         )
 
     def test_bear_regime_suppresses_longs_permits_shorts(self):
@@ -550,11 +557,11 @@ class TestRegimeAdaptivity:
         node._apply_regime_adaptive_thresholds(
             {"_regime_w_bear_prob": 0.75, "_regime_w_bull_prob": 0.10}
         )
-        assert node._short_conviction_threshold == 0.05, (
+        assert node._short_conviction_threshold == 0.04, (
             f"Bear short threshold={node._short_conviction_threshold} "
             f"(expected 0.05 — permissive shorts in bear market)"
         )
-        assert node._long_conviction_threshold == 0.20, (
+        assert node._long_conviction_threshold == 0.50, (
             f"Bear long threshold={node._long_conviction_threshold} "
             f"(expected 0.20 — suppressed longs in bear market)"
         )
@@ -635,24 +642,33 @@ class TestRegimeAdaptivity:
             f"Composites: {_get_composites(signals)}"
         )
 
-    def test_bear_detection_threshold_at_055(self):
-        """Regression: BEAR mode activates at bear_prob ≥ 0.55 (not lower)."""
+    def test_bear_detection_threshold_at_065(self):
+        """Regression: BEAR mode activates at bear_prob >= 0.65 (not lower).
+
+        Was written against 0.55 and asserted a NORMAL long threshold of 0.10.
+        Both numbers moved and the test was never updated, so it had been failing
+        silently — V91 raised the crisis trigger 0.55 -> 0.65, and V87 settled the
+        NORMAL long threshold at 0.07 after the V83-V95 tuning sequence.
+
+        It went unnoticed because this file takes minutes to run and carries no
+        `slow` marker, so it is not in any routine run.
+        """
         node = StrategyNode()
 
         # Just below threshold → NORMAL
         node._apply_regime_adaptive_thresholds(
-            {"_regime_w_bear_prob": 0.549, "_regime_w_bull_prob": 0.10}
+            {"_regime_w_bear_prob": 0.649, "_regime_w_bull_prob": 0.10}
         )
-        assert node._long_conviction_threshold == 0.10, (
-            "Bear regime triggering below 0.55 threshold — over-sensitive"
+        assert node._long_conviction_threshold == 0.07, (
+            "Bear regime triggering below the 0.65 threshold — over-sensitive"
         )
 
         # At threshold → BEAR
         node._apply_regime_adaptive_thresholds(
-            {"_regime_w_bear_prob": 0.55, "_regime_w_bull_prob": 0.10}
+            {"_regime_w_bear_prob": 0.65, "_regime_w_bull_prob": 0.10}
         )
-        assert node._long_conviction_threshold == 0.20, (
-            "Bear regime not activating at 0.55 threshold"
+        assert node._long_conviction_threshold == 0.50, (
+            "Bear regime not activating at the 0.65 threshold"
         )
 
 
@@ -825,20 +841,20 @@ class TestRegressionGuard:
             f"Composites: {composites}"
         )
 
-    def test_bear_threshold_at_055(self):
-        """Regression: BEAR regime activates at exactly bear_prob ≥ 0.55."""
+    def test_bear_threshold_at_065(self):
+        """Regression: BEAR regime activates at exactly bear_prob >= 0.65 (V91)."""
         node = StrategyNode()
 
         node._apply_regime_adaptive_thresholds(
             {"_regime_w_bear_prob": 0.549, "_regime_w_bull_prob": 0.10}
         )
-        assert node._long_conviction_threshold == 0.10, "Bear activating below 0.55"
+        assert node._long_conviction_threshold == 0.07, "Bear activating below 0.65"
 
         node._apply_regime_adaptive_thresholds(
-            {"_regime_w_bear_prob": 0.55, "_regime_w_bull_prob": 0.10}
+            {"_regime_w_bear_prob": 0.65, "_regime_w_bull_prob": 0.10}
         )
-        assert node._long_conviction_threshold == 0.20, "Bear not activating at 0.55"
-        assert node._short_conviction_threshold == 0.05, "Bear short threshold wrong"
+        assert node._long_conviction_threshold == 0.50, "Bear not activating at 0.65"
+        assert node._short_conviction_threshold == 0.04, "Bear short threshold wrong"
 
     def test_bull_threshold_at_055(self):
         """Regression: BULL regime activates at exactly bull_prob ≥ 0.55."""
@@ -847,7 +863,7 @@ class TestRegressionGuard:
         node._apply_regime_adaptive_thresholds(
             {"_regime_w_bear_prob": 0.10, "_regime_w_bull_prob": 0.549}
         )
-        assert node._long_conviction_threshold == 0.10, "Bull activating below 0.55"
+        assert node._long_conviction_threshold == 0.07, "Bull activating below 0.55"
 
         node._apply_regime_adaptive_thresholds(
             {"_regime_w_bear_prob": 0.10, "_regime_w_bull_prob": 0.55}

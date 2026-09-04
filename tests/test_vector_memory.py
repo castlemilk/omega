@@ -1,4 +1,5 @@
 import pytest
+
 from omega.core.vector_memory import VectorMemoryLayer
 
 

@@ -1288,7 +1288,7 @@ class StrategyNode(Node):
         Called once per cycle at the start of _construct_portfolio so that long
         and short candidates are evaluated against regime-appropriate bars:
 
-          CRISIS/BEAR  (bear_prob ≥ 0.55 or HMM == "bear")
+          CRISIS/BEAR  (bear_prob ≥ 0.65 or HMM == "bear"; V91 raised 0.55 → 0.65)
             → long_threshold = 0.50  (longs heavily suppressed; V84: was 0.99 hard-block)
             → short_threshold = 0.04 (shorts permissive — trade the trend)
 
@@ -1297,7 +1297,8 @@ class StrategyNode(Node):
             → short_threshold = 0.20 (shorts suppressed)
 
           HIGH_VOL / NORMAL / unknown
-            → balanced thresholds: long = short = 0.10
+            → balanced thresholds: long = short = 0.07 (V87/V95; see the inline
+              history below — 0.10 was tried and reverted twice)
             (position size is already reduced 50% by the sit-out filter)
         """
         bear_prob = float(signals.get("_regime_w_bear_prob", -1.0))
@@ -1532,7 +1533,7 @@ class StrategyNode(Node):
             self._short_conviction_threshold = 0.07
             logger.debug(
                 "Regime-adaptive: NORMAL (bear_prob=%.2f, bull_prob=%.2f, hmm=%s) "
-                "→ long_thresh=0.10, short_thresh=0.07 (V95)",
+                "→ long_thresh=0.07, short_thresh=0.07 (V95)",
                 max(bear_prob, 0.0),
                 max(bull_prob, 0.0),
                 regime_hmm,

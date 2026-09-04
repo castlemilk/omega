@@ -11,12 +11,11 @@ from pathlib import Path
 import pytest
 
 from omega.nodes.victoria.bayesian_regime import (
+    REGIMES,
     BayesianRegimeDetector,
     RegimePosterior,
     RegimePrior,
-    REGIMES,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers

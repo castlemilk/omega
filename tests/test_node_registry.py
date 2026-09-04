@@ -5,13 +5,14 @@ Tests for omega.core.node_registry
 from __future__ import annotations
 
 import pytest
+
 from omega.core.node_registry import (
-    Port,
-    NodeTypeSpec,
     NodeTypeRegistry,
+    NodeTypeSpec,
+    Port,
     get_registry,
-    reset_registry,
     node_type,
+    reset_registry,
 )
 
 

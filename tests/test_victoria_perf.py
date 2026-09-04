@@ -37,6 +37,11 @@ from omega.nodes.victoria.risk_management import RiskManagementNode
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 from omega.nodes.victoria.strategy import StrategyNode
 
+# Marked slow: these run real multi-cycle Victoria simulations and take minutes.
+# Unmarked, they made `pytest tests/` appear to hang, so the suite was not run —
+# which is how a whole stale TestRegimeAdaptivity class sat failing unnoticed.
+pytestmark = pytest.mark.slow
+
 # ---------------------------------------------------------------------------
 # Thresholds (generous — CI machines vary widely)
 # ---------------------------------------------------------------------------

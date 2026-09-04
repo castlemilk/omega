@@ -1,7 +1,9 @@
 import json
 import logging
+
 import pytest
-from omega.core.self_repair import SelfRepairLoop, RepairReport, LogError
+
+from omega.core.self_repair import LogError, RepairReport, SelfRepairLoop
 
 
 def test_repair_report_defaults():

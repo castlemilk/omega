@@ -4,8 +4,9 @@ Tests for omega.core.project_config
 
 from __future__ import annotations
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from omega.core.node_registry import reset_registry
 
@@ -140,8 +141,8 @@ class TestTopologicalOrder:
 
 class TestProjectLoaderValidation:
     def test_valid_project_passes(self):
-        from omega.core.project_config import ProjectLoader
         import omega.core.node_registry  # ensure built-ins are registered  # noqa
+        from omega.core.project_config import ProjectLoader
 
         loader = ProjectLoader()
         config = loader.load_from_dict({
@@ -160,8 +161,8 @@ class TestProjectLoaderValidation:
         assert errors == [], errors
 
     def test_unknown_node_type_error(self):
-        from omega.core.project_config import ProjectLoader
         import omega.core.node_registry  # noqa
+        from omega.core.project_config import ProjectLoader
 
         loader = ProjectLoader()
         config = loader.load_from_dict({
@@ -174,8 +175,8 @@ class TestProjectLoaderValidation:
         assert any("unicorn_node" in e for e in errors)
 
     def test_duplicate_name_error(self):
-        from omega.core.project_config import ProjectLoader
         import omega.core.node_registry  # noqa
+        from omega.core.project_config import ProjectLoader
 
         loader = ProjectLoader()
         config = loader.load_from_dict({
@@ -189,8 +190,8 @@ class TestProjectLoaderValidation:
         assert any("Duplicate" in e and "feed" in e for e in errors)
 
     def test_missing_source_connection_error(self):
-        from omega.core.project_config import ProjectLoader
         import omega.core.node_registry  # noqa
+        from omega.core.project_config import ProjectLoader
 
         loader = ProjectLoader()
         config = loader.load_from_dict({
@@ -214,8 +215,8 @@ class TestProjectLoaderValidation:
 
 class TestProjectLoaderFileLoad:
     def test_load_victoria_yaml(self):
-        from omega.core.project_config import ProjectLoader
         import omega.core.node_registry  # noqa
+        from omega.core.project_config import ProjectLoader
 
         # Find victoria.yaml relative to repo root
         here = Path(__file__).parent.parent
@@ -247,8 +248,8 @@ class TestProjectLoaderFileLoad:
 
 class TestProjectInstantiation:
     def test_instantiate_with_custom_factory(self):
-        from omega.core.project_config import ProjectLoader, register_factory, NodeDef
         import omega.core.node_registry  # noqa
+        from omega.core.project_config import NodeDef, ProjectLoader, register_factory
 
         sentinel = object()
 
@@ -268,8 +269,8 @@ class TestProjectInstantiation:
         assert instances["feed"] is sentinel
 
     def test_no_factory_raises(self):
-        from omega.core.project_config import ProjectLoader
         import omega.core.node_registry  # noqa
+        from omega.core.project_config import ProjectLoader
 
         loader = ProjectLoader()
         config = loader.load_from_dict({
