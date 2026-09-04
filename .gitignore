@@ -92,3 +92,9 @@ data/v272/
 
 # OAuth token cache lives in ~/.config/omega, never here — but belt and braces.
 .oauth_cache.json
+
+# Frozen ASX panel: 128MB, rebuilt by scripts/asx_build_universe.py in ~15min.
+# The DATA is not committed; data/frozen_series/asx/v3.manifest.json is, so a
+# rebuild is verifiable rather than merely repeatable (the V219/V277 trade).
+data/frozen_series/asx/v3/
+data/frozen_series/asx/prices_api/
