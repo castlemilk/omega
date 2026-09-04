@@ -10,7 +10,13 @@ if str(SCRIPT_DIR) not in sys.path:
 def test_find_baseline_version_decrements_to_existing(tmp_path: Path, monkeypatch):
     import run_training
 
+    # AUDIT_DIR, not DATA_DIR: _find_baseline_version reads AUDIT_DIR, which is
+    # computed at import as OMEGA_AUDIT_OUTPUT_DIR or DATA_DIR. Patching DATA_DIR
+    # afterwards cannot move it, so these tests were pointing at the real data/
+    # directory and finding nothing. Patch both, so the test keeps working whichever
+    # the function reads.
     monkeypatch.setattr(run_training, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(run_training, "AUDIT_DIR", tmp_path)
     (tmp_path / "v48_results.json").write_text("{}")
     (tmp_path / "v48_trades.csv").write_text("")
 
@@ -20,7 +26,13 @@ def test_find_baseline_version_decrements_to_existing(tmp_path: Path, monkeypatc
 def test_find_baseline_version_skips_missing(tmp_path: Path, monkeypatch):
     import run_training
 
+    # AUDIT_DIR, not DATA_DIR: _find_baseline_version reads AUDIT_DIR, which is
+    # computed at import as OMEGA_AUDIT_OUTPUT_DIR or DATA_DIR. Patching DATA_DIR
+    # afterwards cannot move it, so these tests were pointing at the real data/
+    # directory and finding nothing. Patch both, so the test keeps working whichever
+    # the function reads.
     monkeypatch.setattr(run_training, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(run_training, "AUDIT_DIR", tmp_path)
     (tmp_path / "v46_results.json").write_text("{}")
     (tmp_path / "v46_trades.csv").write_text("")
 
@@ -30,12 +42,24 @@ def test_find_baseline_version_skips_missing(tmp_path: Path, monkeypatch):
 def test_find_baseline_version_none_for_v1(tmp_path: Path, monkeypatch):
     import run_training
 
+    # AUDIT_DIR, not DATA_DIR: _find_baseline_version reads AUDIT_DIR, which is
+    # computed at import as OMEGA_AUDIT_OUTPUT_DIR or DATA_DIR. Patching DATA_DIR
+    # afterwards cannot move it, so these tests were pointing at the real data/
+    # directory and finding nothing. Patch both, so the test keeps working whichever
+    # the function reads.
     monkeypatch.setattr(run_training, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(run_training, "AUDIT_DIR", tmp_path)
     assert run_training._find_baseline_version("v1") is None
 
 
 def test_find_baseline_version_none_for_non_numeric(tmp_path: Path, monkeypatch):
     import run_training
 
+    # AUDIT_DIR, not DATA_DIR: _find_baseline_version reads AUDIT_DIR, which is
+    # computed at import as OMEGA_AUDIT_OUTPUT_DIR or DATA_DIR. Patching DATA_DIR
+    # afterwards cannot move it, so these tests were pointing at the real data/
+    # directory and finding nothing. Patch both, so the test keeps working whichever
+    # the function reads.
     monkeypatch.setattr(run_training, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(run_training, "AUDIT_DIR", tmp_path)
     assert run_training._find_baseline_version("experimental") is None

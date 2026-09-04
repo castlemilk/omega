@@ -61,7 +61,18 @@ if "--frozen-cache" in sys.argv or "--backtest-snapshot" in sys.argv:
         if os.environ.get(_blas_var) != "1":
             os.environ[_blas_var] = "1"
             _need_reexec = True
-if _need_reexec:
+# Only when this file is the entry point. `os.execvpe` REPLACES the running
+# process, so on import it hijacks whatever imported us: `import run_training`
+# inside a pytest worker re-execs that worker as a fresh `python` running pytest's
+# own argv. Under xdist that surfaces as "worker crashed"; run serially it re-runs
+# the whole suite recursively. Four tests in test_v49_gate_wiring failed this way
+# and the cause was invisible, because a crashed worker reports no assertion.
+#
+# Guarding on __name__ keeps the determinism guarantee exactly where it was
+# argued for — the script entry point, before numpy and its BLAS backend load —
+# while making the module importable. A caller that imports this for its helpers
+# is not running a training cycle and has no determinism requirement to pin.
+if _need_reexec and __name__ == "__main__":
     os.execvpe(sys.executable, [sys.executable] + sys.argv, os.environ)
 
 import argparse
