@@ -112,7 +112,7 @@ PERSONA_CONSERVATIVE = RiskPersona(
 
 PERSONA_NEUTRAL = RiskPersona(
     name="neutral",
-    max_position=_MAX_POSITION_SIZE,  # 25% — matches original logic
+    max_position=_MAX_POSITION_SIZE,  # 20% — matches the standalone limit
     max_portfolio_var=_MAX_PORTFOLIO_VAR,  # 2% — matches original logic
     max_correlation_threshold=0.90,
     vrp_fear_scale=_VRP_FEAR_POSITION_SCALE,

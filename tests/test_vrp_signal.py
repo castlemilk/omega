@@ -13,7 +13,11 @@ import pytest
 
 from omega.core.node import NodeInput
 from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
-from omega.nodes.victoria.risk_management import RiskManagementNode
+from omega.nodes.victoria.risk_management import (
+    _MAX_POSITION_SIZE,
+    _VRP_FEAR_POSITION_SCALE,
+    RiskManagementNode,
+)
 from omega.nodes.victoria.vrp_data import (
     FundingRateVolProxy,
     RealizedVolCalculator,
@@ -255,7 +259,16 @@ class TestVRPSignalNode:
         ohlcv = _make_ohlcv(n=60, vol=0.02)
         market_data = {"BTCUSDT": ohlcv}
 
-        # No iv_override → Deribit fetch will fail in test environment
+        # Force the Deribit leg to miss rather than assuming it will.
+        #
+        # This used to rely on "Deribit fetch will fail in test environment", which
+        # is only true offline. With network it returns a real IV (0.3782 when this
+        # was written), the RV fallback never runs, and the test asserts a positive
+        # VRP against an IV/RV ratio the market happened to have that minute —
+        # failing for a reason that says nothing about the code. A unit test should
+        # not depend on an exchange being unreachable.
+        node._deribit.fetch_iv = lambda *_a, **_k: None  # type: ignore[method-assign]
+
         out = node.execute(
             NodeInput(
                 action="compute_vrp",
@@ -458,7 +471,12 @@ class TestVRPRiskManagement:
         assert result["vrp_position_scale"] == 0.75
         # Effective max is 0.25 * 0.75 = 0.1875; 0.25 > 0.1875 → violation
         assert len(result["violations"]) > 0
-        assert result["max_position_limit"] == pytest.approx(0.1875)
+        # _MAX_POSITION_SIZE (0.20) * the FEAR scale (0.75). Was 0.1875, which
+        # assumed a 0.25 cap — the constant was lowered to 0.20 and this was not
+        # updated. Derived from the constants rather than hardcoded, so the next
+        # change to either breaks the source and not this assertion.
+        expected = _MAX_POSITION_SIZE * _VRP_FEAR_POSITION_SCALE
+        assert result["max_position_limit"] == pytest.approx(expected)
 
     def test_complacency_circuit_breaker(self):
         node = RiskManagementNode()
