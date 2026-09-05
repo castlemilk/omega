@@ -479,21 +479,31 @@ class TestDataCoverageAndFallback:
     @patch("omega.nodes.victoria.data_ingestion.BybitProvider.fetch_klines")
     @patch("omega.nodes.victoria.data_providers.CoinGeckoProvider.fetch_klines")
     @patch("omega.nodes.victoria.data_providers.CryptoCompareProvider.fetch_klines")
+    @patch("omega.nodes.victoria.data_providers.CoinbaseProvider.fetch_klines")
+    @patch("omega.nodes.victoria.data_providers.KrakenProvider.fetch_klines")
     @patch("omega.nodes.victoria.data_ingestion.FearGreedProvider.fetch")
     @patch("omega.nodes.victoria.data_ingestion.DefiLlamaProvider.fetch")
     def test_coverage_rate_decreases_on_binance_failure(
-        self, mock_defi, mock_fg, mock_cc, mock_cg, mock_bybit, mock_binance
+        self, mock_defi, mock_fg, mock_kraken, mock_coinbase, mock_cc, mock_cg,
+        mock_bybit, mock_binance
     ):
+        # Coinbase and Kraken must be patched too. The test said "all four
+        # providers fail" and patched four, but the chain grew to six — and per
+        # CLAUDE.md those two are precisely the ones that WORK from the US, so
+        # they refilled coverage to 1.0 and the test asserted against a fallback
+        # doing its job.
         mock_binance.return_value = None
         mock_bybit.return_value = None
         mock_cg.return_value = None
         mock_cc.return_value = None
+        mock_coinbase.return_value = None
+        mock_kraken.return_value = None
         mock_fg.return_value = {}
         mock_defi.return_value = {}
 
         self.data_node.execute(_make_input("fetch_market_data"))
         state = self.data_node.get_state()
-        # Coverage should be 0 since all four providers fail
+        # Coverage should drop once every kline provider fails
         assert state.metrics["coverage_rate"] < 1.0
 
     @patch("omega.nodes.victoria.data_ingestion.BinanceProvider.fetch_klines")
@@ -642,20 +652,34 @@ class TestV53Regressions:
         }
         self.strat._apply_regime_adaptive_thresholds(crisis_signals)
         # Even a strong IC-weighted conviction of 0.80 should not exceed 0.99 threshold
-        assert self.strat._long_conviction_threshold == 0.99
-        assert self.strat._short_conviction_threshold == 0.05
+        # V84 lowered the crisis long bar 0.99 -> 0.50 and the short bar to 0.04.
+        # 0.99 combined with _thresh_scale was mathematically unreachable — a block
+        # dressed as a threshold. The contract is that crisis raises the long bar far
+        # above normal and favours shorts, which is what this now asserts.
+        assert self.strat._long_conviction_threshold == 0.50
+        assert self.strat._short_conviction_threshold == 0.04
+        assert (
+            self.strat._long_conviction_threshold
+            > self.strat._short_conviction_threshold
+        )
 
-    def test_hmm_crisis_label_triggers_crisis_threshold(self):
-        """HMM label 'crisis' alone (Wasserstein flat) should trigger crisis gate."""
+    def test_hmm_crisis_label_alone_does_not_trigger_crisis(self):
+        """An HMM 'crisis' label alone must NOT trigger the crisis gate.
+
+        This asserted the opposite, and V95 reversed it deliberately: the HMM and
+        label crisis paths are now gated on bear_prob >= 0.45, so "the probability
+        model confirms genuine crisis before blocking all longs". A label firing on
+        flat 1/3 priors is exactly the false positive that gate exists to stop.
+        """
         flat_wasserstein = {
             "_regime_w_bear_prob": 0.333,  # stuck at prior
             "_regime_w_bull_prob": 0.333,
             "_regime_hmm": "crisis",
         }
         self.strat._apply_regime_adaptive_thresholds(flat_wasserstein)
-        assert self.strat._long_conviction_threshold == 0.99, (
-            "HMM 'crisis' label should trigger 0.99 long threshold even when "
-            "Wasserstein is stuck at 1/3 priors"
+        assert self.strat._long_conviction_threshold == 0.07, (
+            "bear_prob 0.333 is below V95's 0.45 confirmation gate, so this must "
+            "stay in NORMAL — a label alone is not evidence of a crisis"
         )
 
     def test_abs_conviction_floor_blocks_low_conviction(self):
@@ -687,6 +711,8 @@ class TestV53Regressions:
         """MATICUSDT must be in trading blacklist (zero-PnL stale-price bug)."""
         from omega.nodes.victoria.strategy import _TRADING_BLACKLIST
 
-        assert "MATICUSDT" in _TRADING_BLACKLIST, (
+        # MATIC was rebranded POL; the blacklist tracks the live ticker, so the
+        # entry is POLUSDT. Asserting the retired symbol tested nothing.
+        assert "POLUSDT" in _TRADING_BLACKLIST, (
             "MATICUSDT must be blacklisted — exit_price == entry_price on 100% of V52 trades"
         )
