@@ -379,8 +379,21 @@ class _SqliteSemanticStore:
         import os
 
         if not _SqliteSemanticStore.DB_PATH:
-            root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-            _SqliteSemanticStore.DB_PATH = os.path.join(root, "data", "omega_victoria_memory.db")
+            # $OMEGA_MEMORY_DB_PATH first. data/omega_victoria_memory.db is a
+            # COMMITTED file recorded in data/.cache_manifest.json, and _ensure_schema
+            # below writes on every instantiation — so without an override a test run
+            # dirties the working tree and test_cache_manifest fails afterwards until
+            # someone runs `git restore`. Same defect as the macro cache had, same fix.
+            override = os.environ.get("OMEGA_MEMORY_DB_PATH", "").strip()
+            if override:
+                _SqliteSemanticStore.DB_PATH = override
+            else:
+                root = os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+                )
+                _SqliteSemanticStore.DB_PATH = os.path.join(
+                    root, "data", "omega_victoria_memory.db"
+                )
 
         self._conn = sqlite3.connect(_SqliteSemanticStore.DB_PATH, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row

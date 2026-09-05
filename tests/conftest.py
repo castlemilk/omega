@@ -50,7 +50,10 @@ def _fail_if_substrate_dirtied(_isolate_frozen_substrate):
     was last time — by a manifest failure hours later, in a different context.
     """
     root = Path(__file__).resolve().parents[1]
-    watched = [root / "data" / "macro_cache.db"]
+    watched = [
+        root / "data" / "macro_cache.db",
+        root / "data" / "omega_victoria_memory.db",
+    ]
     before = {p: (p.stat().st_mtime_ns, p.stat().st_size) for p in watched if p.is_file()}
     yield
     moved = [
