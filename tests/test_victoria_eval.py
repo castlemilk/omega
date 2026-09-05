@@ -206,7 +206,12 @@ class TestInformationCoefficient:
         out = node.execute(_make_input("compute_signals", market_data={"BTCUSDT": data}))
         sig = out.result.get("BTCUSDT", {}).get("sma_crossover", 0.0)
         # Strong uptrend → sma_crossover should be +1 (buy signal)
-        assert sig == 1.0
+        # sma_crossover is PROPORTIONAL now, not binary. It is
+        # (short - long) / long * 10, clipped to [-1, 1] — the hard +/-1 was
+        # "the root cause of chronic adversarial-gate divergence" because it
+        # inflated composite magnitude against every other signal type. So
+        # assert the DIRECTION, which is what these tests are actually about.
+        assert 0.0 < sig <= 1.0
 
     def test_sma_signal_ic_on_downtrending_market(self):
         node = SignalGenerationNode()
@@ -215,7 +220,12 @@ class TestInformationCoefficient:
         out = node.execute(_make_input("compute_signals", market_data={"BTCUSDT": data}))
         sig = out.result.get("BTCUSDT", {}).get("sma_crossover", 0.0)
         # Strong downtrend → sma_crossover should be -1 (sell signal)
-        assert sig == -1.0
+        # sma_crossover is PROPORTIONAL now, not binary. It is
+        # (short - long) / long * 10, clipped to [-1, 1] — the hard +/-1 was
+        # "the root cause of chronic adversarial-gate divergence" because it
+        # inflated composite magnitude against every other signal type. So
+        # assert the DIRECTION, which is what these tests are actually about.
+        assert -1.0 <= sig < 0.0
 
 
 # ---------------------------------------------------------------------------
@@ -574,7 +584,12 @@ class TestSignalQuality:
         out = node.execute(_make_input("compute_signals", market_data={"BTC": data}))
         btc = out.result.get("BTC", {})
         # On uptrend, short SMA > long SMA → bullish
-        assert btc.get("sma_crossover") == 1.0
+        # sma_crossover is PROPORTIONAL now, not binary. It is
+        # (short - long) / long * 10, clipped to [-1, 1] — the hard +/-1 was
+        # "the root cause of chronic adversarial-gate divergence" because it
+        # inflated composite magnitude against every other signal type. So
+        # assert the DIRECTION, which is what these tests are actually about.
+        assert 0.0 < btc.get("sma_crossover", 0.0) <= 1.0
 
     def test_bollinger_band_signal_on_mean_reverting_market(self):
         node = SignalGenerationNode()
@@ -623,7 +638,12 @@ class TestSignalQuality:
         out = node.execute(_make_input("compute_signals", market_data={"BTC": data}))
         # At v1.0 composite = sma_crossover = 1.0 for uptrend
         sma = out.result.get("BTC", {}).get("sma_crossover", 0.0)
-        assert sma == 1.0, "SMA crossover should be bullish on consistent uptrend"
+        # sma_crossover is PROPORTIONAL now, not binary. It is
+        # (short - long) / long * 10, clipped to [-1, 1] — the hard +/-1 was
+        # "the root cause of chronic adversarial-gate divergence" because it
+        # inflated composite magnitude against every other signal type. So
+        # assert the DIRECTION, which is what these tests are actually about.
+        assert 0.0 < sma <= 1.0, "SMA crossover should be bullish on consistent uptrend"
 
     def test_signals_not_all_identical_on_random_prices(self):
         """Signals should vary across different random price series."""
