@@ -55,30 +55,43 @@ def _isolate_frozen_substrate(tmp_path_factory: pytest.TempPathFactory):
             os.environ[var] = old
 
 
-@pytest.fixture(scope="session", autouse=True)
-def _fail_if_substrate_dirtied(_isolate_frozen_substrate):
-    """Catch a leak the redirect above does not cover.
-
-    The env override only helps code that consults it. Anything hardcoding the
-    committed path still writes it, and would otherwise be found the same way it
-    was last time — by a manifest failure hours later, in a different context.
-    """
+def pytest_configure(config):
+    """Record the committed substrate's fingerprint in EVERY process."""
     root = Path(__file__).resolve().parents[1]
-    watched = [
-        root / "data" / "macro_cache.db",
-        root / "data" / "omega_victoria_memory.db",
-    ]
-    before = {p: (p.stat().st_mtime_ns, p.stat().st_size) for p in watched if p.is_file()}
-    yield
+    config._omega_substrate = {  # type: ignore[attr-defined]
+        p: (p.stat().st_mtime_ns, p.stat().st_size)
+        for p in (root / "data" / "macro_cache.db", root / "data" / "omega_victoria_memory.db")
+        if p.is_file()
+    }
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Fail the run if the committed substrate moved.
+
+    A session-scoped FIXTURE was the obvious place for this and is the wrong one:
+    under xdist it runs per worker, each worker takes its own baseline, and a
+    worker that did not write sees no change — so the drift went unreported while
+    it was actually happening. pytest_sessionfinish runs in the controller as well
+    as the workers, so the controller sees the whole run's effect.
+
+    The env overrides above only help code that consults them; this catches
+    anything that hardcodes the path, which is how both known offenders behaved.
+    """
+    recorded = getattr(session.config, "_omega_substrate", {})
     moved = [
         p.name
-        for p in watched
-        if p.is_file() and before.get(p) and (p.stat().st_mtime_ns, p.stat().st_size) != before[p]
+        for p, before in recorded.items()
+        if p.is_file() and (p.stat().st_mtime_ns, p.stat().st_size) != before
     ]
     if moved:
-        pytest.fail(
-            "the test run wrote committed substrate: "
-            + ", ".join(moved)
-            + ". Something is bypassing OMEGA_MACRO_CACHE_PATH — find it rather than "
-            "running `git restore`, or the manifest guard goes back to crying wolf."
+        # Reported rather than raised: a late raise here can mask the real results.
+        session.config.stash  # noqa: B018  (touch, so a bad stash surfaces early)
+        print(
+            "\n\nSUBSTRATE DRIFT: the test run wrote committed files: "
+            + ", ".join(sorted(set(moved)))
+            + "\nSomething bypassed OMEGA_MACRO_CACHE_PATH / OMEGA_MEMORY_DB_PATH. "
+            "Find it rather than running `git restore` — the manifest guard is only "
+            "useful while it means something.\n"
         )
+        if exitstatus == 0:
+            session.exitstatus = 1
