@@ -385,9 +385,15 @@ class TestAdversarialPressureV2:
                 "v_b": {"BTC": 0.75, "ETH": 0.72},
             }
         else:
+            # OPPOSING signs, not just different magnitudes. Ring 1 measures cosine
+            # distance, which is magnitude-invariant: {0.9, 0.8} vs {0.1, 0.1} points
+            # the same way and scores 0.0017, comfortably below any threshold. This
+            # fixture "disagreed" in a way Ring 1 is designed not to care about, so
+            # every test relying on it was silently exercising the agree path.
+            # Opposing directions score 2.0; orthogonal score 1.0.
             return {
                 "v_a": {"BTC": 0.9, "ETH": 0.8},
-                "v_b": {"BTC": 0.1, "ETH": 0.1},
+                "v_b": {"BTC": -0.9, "ETH": -0.8},
             }
 
     def test_run_v2_returns_report(self):

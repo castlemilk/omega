@@ -12,7 +12,7 @@ from omega.core.backtest_evaluator import (
     _run_parameterised_strategy,
 )
 from omega.core.bayesian_optimizer import DiscreteParam
-from omega.core.improvement_engine import ImprovementEngine
+from omega.core.improvement_engine import ImprovementEngine, SyntheticEvaluator
 
 # ---------------------------------------------------------------------------
 # Synthetic price generator
@@ -214,12 +214,17 @@ class TestBacktestEvaluator:
 
 
 class TestImprovementEngineWithBacktestEvaluator:
-    def test_engine_uses_null_evaluator_by_default(self):
+    def test_engine_uses_a_functional_evaluator_by_default(self):
         """Default evaluator is NullEvaluator — domain must inject its own."""
-        from omega.core.improvement_engine import NullEvaluator
 
         engine = ImprovementEngine()
-        assert isinstance(engine._evaluator, NullEvaluator)
+        # SyntheticEvaluator, not NullEvaluator. The default was changed
+        # deliberately and _default_evaluator documents why: NullEvaluator raised
+        # NotImplementedError on every evaluate() call, so the orchestrator's
+        # improvement cycle crashed and logged "ImprovementEngine has no evaluator
+        # configured" — an engine that is inert unless configured, which is the
+        # failure mode V279 named. A functional default is the point.
+        assert isinstance(engine._evaluator, SyntheticEvaluator)
 
     def test_set_evaluator_replaces(self):
         from omega.core.improvement_engine import SyntheticEvaluator
