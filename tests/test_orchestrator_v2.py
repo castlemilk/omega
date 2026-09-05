@@ -571,10 +571,14 @@ class TestAdversarialIntegration:
             def execute(self, inp: NodeInput) -> NodeOutput:
                 self._exec_count += 1
                 if inp.action == "compute_signals":
+                    # THREE signals, not two. Ring 1 is skipped below three
+                    # confident signals and is handed empty variant_outputs so it
+                    # cannot fire spuriously — so with two, this test was asserting
+                    # against a deliberately empty dict.
                     return NodeOutput(
                         request_id=inp.request_id,
                         success=True,
-                        result={"BTC": 0.8, "ETH": 0.3},
+                        result={"BTC": 0.8, "ETH": 0.3, "SOL": 0.5},
                         metrics={},
                     )
                 if inp.action == "construct_portfolio":
