@@ -16,6 +16,7 @@ each test to remember is how the leak happened in the first place.
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
 
 import pytest
@@ -25,6 +26,19 @@ import pytest
 def _isolate_frozen_substrate(tmp_path_factory: pytest.TempPathFactory):
     """Point every cache the suite might open at a throwaway directory."""
     scratch = tmp_path_factory.mktemp("omega-substrate")
+
+    # SEED the scratch copies from the committed originals rather than starting
+    # empty. Isolation is about where writes LAND, not about throwing away the
+    # reads: an empty macro cache makes every lookup miss and fall through to a
+    # live yfinance fetch, which took signal generation from 1.5s to 3.8s and made
+    # the suite depend on an external service being up. Copying keeps the cache
+    # warm and still leaves the committed file untouched.
+    root = Path(__file__).resolve().parents[1]
+    for name in ("macro_cache.db", "omega_victoria_memory.db"):
+        src = root / "data" / name
+        if src.is_file():
+            shutil.copy2(src, scratch / name)
+
     previous = {}
     for var, name in (
         ("OMEGA_MACRO_CACHE_PATH", "macro_cache.db"),

@@ -14,6 +14,18 @@ Marks:
   - Use ``pytest -m 'not slow'`` to skip during fast iteration.
 
 All API calls are mocked — these are CPU/memory benchmarks only.
+
+STANDING FINDING (2026-09-03), deliberately NOT worked around here:
+
+Two budgets are still missed with the network removed, i.e. by computation alone:
+
+    signal generation, 10 tickers x 90 bars   1370ms   budget   50ms
+    full heartbeat cycle                       793ms   budget  200ms
+
+Relaxing them would be a product decision — they may encode a live-loop SLA — so
+they are left failing and visible rather than quietly widened. Either the signal
+layer needs optimising or the budgets were never achievable; the numbers above say
+which question to ask, and nothing here should be changed until that is answered.
 """
 
 from __future__ import annotations
@@ -48,6 +60,37 @@ pytestmark = pytest.mark.slow
 
 # Signal generation for 10 tickers over 90 bars should complete in < 50ms
 SIGNAL_GEN_LATENCY_MS = 50.0
+
+
+@pytest.fixture(autouse=True)
+def _no_network():
+    """These measure COMPUTATION, so take the network out of the measurement.
+
+    compute_signals reaches out to yfinance (via the macro cache) and to Deribit,
+    so with a live connection this module was timing the internet: 2,988ms with
+    network against 855ms without, on the same warm cache. A latency budget that
+    moves with an exchange's response time is not a budget.
+
+    NOTE: the budgets are still not met with the network removed — signal
+    generation is ~855ms against the 50ms here. That gap is real and is NOT
+    papered over by this fixture; see the module docstring.
+    """
+    import socket
+
+    real = socket.socket
+
+    class _Offline(socket.socket):
+        def connect(self, *a, **k):
+            raise OSError("network disabled: perf tests measure computation")
+
+        def connect_ex(self, *a, **k):
+            return 1
+
+    socket.socket = _Offline
+    try:
+        yield
+    finally:
+        socket.socket = real
 
 # Full portfolio construction (signals + strategy + risk) should be < 200ms
 PIPELINE_LATENCY_MS = 200.0
