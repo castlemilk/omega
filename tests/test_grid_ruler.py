@@ -524,7 +524,15 @@ def test_cli_resolves_a_real_prefix_over_the_real_data_dir(tmp_path):
     """v252_replay is three REAL walk-forward cells in data/ — a genuine partial grid.
 
     The data dir is read-only here: `--out` points at tmp_path.
+
+    SKIPPED when those cells are absent. Run artifacts (data/v*_results.json) are
+    gitignored and, per CLAUDE.md, do not even propagate to worktrees — so on a
+    fresh clone or in CI this test could only ever fail. A check that fails
+    everywhere except one developer's machine is not a check, and it was one of the
+    33 standing failures that made the whole suite unreadable.
     """
+    if not list((ROOT / "data").glob("v252_replay*_results.json")):
+        pytest.skip("v252_replay cells not present in data/ (gitignored run artifacts)")
     out = tmp_path / "v252_replay_grid_verdict.json"
     proc = subprocess.run(
         [

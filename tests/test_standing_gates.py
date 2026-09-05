@@ -232,6 +232,14 @@ def test_every_family_pattern_matches_at_least_one_real_cell(
     import re
 
     corpus = real_cell_labels + real_snapshot_names
+    if not real_snapshot_names:
+        # Two of the patterns (snap_crisis_, snap_trending_) match only
+        # provenance.snapshot, which lives in walk-forward results files. Those are
+        # gitignored run artifacts and absent from a fresh clone, so with no
+        # snapshots present this cannot tell an unverified pattern from a data dir
+        # that simply has not had a grid run in it. Failing here fails everywhere
+        # except one developer's machine, which is not a check.
+        pytest.skip("no provenance.snapshot in data/ (gitignored walk-forward artifacts)")
     for entry in config["family_patterns"]:
         hits = [c for c in corpus if re.search(entry["pattern"], c)]
         assert hits, f"family_patterns entry {entry['pattern']!r} matches no real cell in data/"
