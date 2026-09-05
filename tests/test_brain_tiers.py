@@ -31,11 +31,6 @@ from omega.core.brain import (
     OpenAIBrain,
 )
 
-# Marked slow: these run real multi-cycle Victoria simulations and take minutes.
-# Unmarked, they made `pytest tests/` appear to hang, so the suite was not run —
-# which is how a whole stale TestRegimeAdaptivity class sat failing unnoticed.
-pytestmark = pytest.mark.slow
-
 # ---------------------------------------------------------------------------
 # ModelTier enum
 # ---------------------------------------------------------------------------
@@ -83,12 +78,32 @@ def test_tier_model_anthropic_defaults():
 
 def test_tier_model_env_override_quick(monkeypatch):
     monkeypatch.setenv("OMEGA_BRAIN_QUICK_MODEL", "custom-quick-model")
+    # Disable the shell transport. AnthropicBrain is "shell path first, urllib
+    # fallback" — it invokes the `claude` CLI by subprocess and only falls back to
+    # urllib. These tests patch urlopen, so on any machine with an authenticated
+    # CLI the patch intercepted nothing and the assertions ran against REAL model
+    # output: that is why test_anthropic_consult_no_api_key received a genuine
+    # answer where it expected "". Every run of this file was also spending real
+    # tokens.
+    monkeypatch.setattr(
+        "omega.core.brain.AnthropicBrain._shell_consult", lambda *a, **k: ""
+    )
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
     assert brain._tier_model(ModelTier.QUICK) == "custom-quick-model"
 
 
 def test_tier_model_env_override_deep(monkeypatch):
     monkeypatch.setenv("OMEGA_BRAIN_DEEP_MODEL", "custom-deep-model")
+    # Disable the shell transport. AnthropicBrain is "shell path first, urllib
+    # fallback" — it invokes the `claude` CLI by subprocess and only falls back to
+    # urllib. These tests patch urlopen, so on any machine with an authenticated
+    # CLI the patch intercepted nothing and the assertions ran against REAL model
+    # output: that is why test_anthropic_consult_no_api_key received a genuine
+    # answer where it expected "". Every run of this file was also spending real
+    # tokens.
+    monkeypatch.setattr(
+        "omega.core.brain.AnthropicBrain._shell_consult", lambda *a, **k: ""
+    )
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
     assert brain._tier_model(ModelTier.DEEP) == "custom-deep-model"
 
@@ -142,6 +157,16 @@ def test_anthropic_consult_no_api_key(monkeypatch):
     from omega.core import credentials as creds_mod
     monkeypatch.setattr(creds_mod.credentials, "_cache", {})
     monkeypatch.setattr(creds_mod.credentials, "_env_file_loaded", True)  # skip .env load
+    # Disable the shell transport. AnthropicBrain is "shell path first, urllib
+    # fallback" — it invokes the `claude` CLI by subprocess and only falls back to
+    # urllib. These tests patch urlopen, so on any machine with an authenticated
+    # CLI the patch intercepted nothing and the assertions ran against REAL model
+    # output: that is why test_anthropic_consult_no_api_key received a genuine
+    # answer where it expected "". Every run of this file was also spending real
+    # tokens.
+    monkeypatch.setattr(
+        "omega.core.brain.AnthropicBrain._shell_consult", lambda *a, **k: ""
+    )
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
     # no key set — should return ""
     result = brain.consult("hello")
@@ -150,6 +175,16 @@ def test_anthropic_consult_no_api_key(monkeypatch):
 
 def test_anthropic_consult_quick_uses_haiku(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    # Disable the shell transport. AnthropicBrain is "shell path first, urllib
+    # fallback" — it invokes the `claude` CLI by subprocess and only falls back to
+    # urllib. These tests patch urlopen, so on any machine with an authenticated
+    # CLI the patch intercepted nothing and the assertions ran against REAL model
+    # output: that is why test_anthropic_consult_no_api_key received a genuine
+    # answer where it expected "". Every run of this file was also spending real
+    # tokens.
+    monkeypatch.setattr(
+        "omega.core.brain.AnthropicBrain._shell_consult", lambda *a, **k: ""
+    )
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
 
     captured = {}
@@ -168,6 +203,16 @@ def test_anthropic_consult_quick_uses_haiku(monkeypatch):
 
 def test_anthropic_consult_deep_uses_opus(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    # Disable the shell transport. AnthropicBrain is "shell path first, urllib
+    # fallback" — it invokes the `claude` CLI by subprocess and only falls back to
+    # urllib. These tests patch urlopen, so on any machine with an authenticated
+    # CLI the patch intercepted nothing and the assertions ran against REAL model
+    # output: that is why test_anthropic_consult_no_api_key received a genuine
+    # answer where it expected "". Every run of this file was also spending real
+    # tokens.
+    monkeypatch.setattr(
+        "omega.core.brain.AnthropicBrain._shell_consult", lambda *a, **k: ""
+    )
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
 
     captured = {}
@@ -187,6 +232,16 @@ def test_anthropic_consult_deep_uses_opus(monkeypatch):
 def test_anthropic_consult_env_model_override(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
     monkeypatch.setenv("OMEGA_BRAIN_QUICK_MODEL", "claude-sonnet-4-6")
+    # Disable the shell transport. AnthropicBrain is "shell path first, urllib
+    # fallback" — it invokes the `claude` CLI by subprocess and only falls back to
+    # urllib. These tests patch urlopen, so on any machine with an authenticated
+    # CLI the patch intercepted nothing and the assertions ran against REAL model
+    # output: that is why test_anthropic_consult_no_api_key received a genuine
+    # answer where it expected "". Every run of this file was also spending real
+    # tokens.
+    monkeypatch.setattr(
+        "omega.core.brain.AnthropicBrain._shell_consult", lambda *a, **k: ""
+    )
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
 
     captured = {}
@@ -205,6 +260,16 @@ def test_anthropic_consult_env_model_override(monkeypatch):
 
 def test_anthropic_consult_error_returns_empty(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+    # Disable the shell transport. AnthropicBrain is "shell path first, urllib
+    # fallback" — it invokes the `claude` CLI by subprocess and only falls back to
+    # urllib. These tests patch urlopen, so on any machine with an authenticated
+    # CLI the patch intercepted nothing and the assertions ran against REAL model
+    # output: that is why test_anthropic_consult_no_api_key received a genuine
+    # answer where it expected "". Every run of this file was also spending real
+    # tokens.
+    monkeypatch.setattr(
+        "omega.core.brain.AnthropicBrain._shell_consult", lambda *a, **k: ""
+    )
     brain = AnthropicBrain(BrainConfig(provider="anthropic"))
 
     def fake_urlopen(req, timeout=30):
