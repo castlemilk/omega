@@ -118,8 +118,9 @@ def print_trace(rec: dict, no_color: bool = False) -> None:
     applicable = thresh.get("long_thresh" if direction == "long" else "short_thresh", 0.0)
     gap_color = _GREEN if (gap or 0) >= 0 else _RED
 
+    demeaned = comp.get("demeaned", 0)
     print(
-        f"  composite={_c(f'{comp.get(\"demeaned\", 0):.4f}', _CYAN)}  "
+        f"  composite={_c(f'{demeaned:.4f}', _CYAN)}  "
         f"w_conv={_c(f'{wc:.4f}', _CYAN)}  "
         f"threshold={_c(f'{applicable:.4f}', _YELLOW)}  "
         f"gap={_c(f'{gap:+.4f}', gap_color)}  "
