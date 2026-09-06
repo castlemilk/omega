@@ -108,7 +108,8 @@ def _build_signals(market_data: dict | None = None, enable_all: bool = True) -> 
     inp = _make_node_input("compute_signals", market_data=market_data)
     out = node.execute(inp)
     assert out.success, f"Signal generation failed: {out.errors}"
-    return out.result  # type: ignore[return-value]
+    signals: dict = out.result  # NodeOutput.result is Any
+    return signals
 
 
 def _get_composites(signals: dict) -> dict[str, float]:
@@ -832,7 +833,7 @@ class TestRegressionGuard:
         out = node.execute(_make_node_input("compute_signals", market_data=market_data))
         assert out.success
 
-        composites = _get_composites(out.result)  # type: ignore[arg-type]
+        composites = _get_composites(out.result)
         assert len(composites) >= 3, "Not enough tickers for demeaning check"
 
         basket_mean = sum(composites.values()) / len(composites)

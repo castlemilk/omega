@@ -19,6 +19,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -554,8 +555,10 @@ def test_no_op_when_frozen_cache_reproduces_the_sibling(tmp_path: Path, config: 
     )
     assert out.verdict == VERDICT_NO_OP
     assert out.passed is False
-    assert out.sibling_comparison["identical_trade_fingerprint"] is True
-    assert out.sibling_comparison["status"] == "informational"
+    sibling = out.sibling_comparison
+    assert sibling is not None
+    assert sibling["identical_trade_fingerprint"] is True
+    assert sibling["status"] == "informational"
     assert any("NO_OP" in n for n in out.notes)
 
 
@@ -569,7 +572,9 @@ def test_not_a_no_op_when_the_cache_was_not_frozen(tmp_path: Path, config: dict)
         sibling_label="v299_crisis_r1", sibling_results=sib_res, sibling_trades_path=sib_trades,
     )
     assert out.verdict == VERDICT_PASS
-    assert out.sibling_comparison["identical_numbers"] is True
+    sibling = out.sibling_comparison
+    assert sibling is not None
+    assert sibling["identical_numbers"] is True
 
 
 def test_no_op_never_masks_a_real_failure(tmp_path: Path, config: dict):
@@ -691,7 +696,7 @@ def test_old_vacuous_self_comparison_no_longer_reads_as_a_bare_pass(tmp_path: Pa
     or a real FAIL against the per-cell floor — never a bare PASS whose only
     evidence is a comparison with itself.
     """
-    identical = dict(pnl=1149.76, trades=42, frozen_cache=True)
+    identical: dict[str, Any] = dict(pnl=1149.76, trades=42, frozen_cache=True)
     sib_res = _results(tmp_path, "v251_crisis_r1", **identical)
     sib_trades = _trades(tmp_path, "v251_crisis_r1", _TWO_TRADES)
     cand_res = _results(tmp_path, "v252_crisis_r1", **identical)
@@ -708,8 +713,10 @@ def test_old_vacuous_self_comparison_no_longer_reads_as_a_bare_pass(tmp_path: Pa
     # …but the run reproduced its sibling, so the verdict names that.
     assert out.verdict == VERDICT_NO_OP
     assert out.passed is False
-    assert out.sibling_comparison["delta_pnl_usd"] == 0.0
-    assert out.sibling_comparison["status"] == "informational"
+    sibling = out.sibling_comparison
+    assert sibling is not None
+    assert sibling["delta_pnl_usd"] == 0.0
+    assert sibling["status"] == "informational"
 
 
 def test_real_corpus_gate_files_are_reported_against_the_per_cell_floor(tmp_path: Path, config: dict):

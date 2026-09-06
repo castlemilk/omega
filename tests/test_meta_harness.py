@@ -10,6 +10,7 @@ network calls. The LLM proposer is disabled (OMEGA_META_LLM unset).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -90,8 +91,8 @@ class TestComputeScore:
 
 
 class TestStrategyIteration:
-    def _make_iter(self, **kwargs) -> StrategyIteration:
-        defaults = dict(
+    def _make_iter(self, **kwargs: Any) -> StrategyIteration:
+        defaults: dict[str, Any] = dict(
             iteration_id=1,
             parent_id=None,
             changes_description="test change",

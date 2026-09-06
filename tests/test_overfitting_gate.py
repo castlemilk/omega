@@ -19,7 +19,7 @@ class TestOverfittingGateTypes:
         assert hasattr(result, "threshold")
         assert hasattr(result, "gap")
 
-    def test_is_immutable(self):
+    def test_is_immutable(self) -> None:
         result = check_overfitting(1.0, 0.5, 1.5, 0.9)
         with pytest.raises((AttributeError, TypeError)):
             result.passed = False  # type: ignore[misc]

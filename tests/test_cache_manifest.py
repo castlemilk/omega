@@ -21,7 +21,8 @@ _MANIFEST = _REPO / "data" / ".cache_manifest.json"
 
 
 def _manifest() -> dict:
-    return json.loads(_MANIFEST.read_text())
+    data: dict = json.loads(_MANIFEST.read_text())
+    return data
 
 
 def test_state_db_is_asserted() -> None:

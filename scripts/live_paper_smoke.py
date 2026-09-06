@@ -151,8 +151,9 @@ def run(cfg: LivePaperConfig, dates: list[date]) -> dict:
     record("F5", "no live poller resolves a frozen path", "PASS" if f5_ok else "FAIL", "; ".join(f5_detail))
 
     # F6 — reproducibility: refetch a reachable feed, content_md5 identical.
-    repro_target = next((n for n in crypto_fresh_names if results[n].reachable), None)
-    if repro_target:
+    repro_target = next((n for n in crypto_fresh_names if results[n].reachable and results[n].doc), None)
+    base_doc = results[repro_target].doc if repro_target else None
+    if repro_target and base_doc:
         sym = repro_target.replace("ohlcv_close_", "").replace("binance_funding_", "").upper()
         if repro_target.startswith("ohlcv_close_"):
             r2 = feeds.fetch_ohlcv(cfg, sym, anchor)
@@ -160,11 +161,11 @@ def run(cfg: LivePaperConfig, dates: list[date]) -> dict:
             r2 = feeds.fetch_funding(cfg, sym, anchor)
         else:
             r2 = feeds.fetch_fear_greed(cfg, anchor)
-        m1 = results[repro_target].doc["content_md5"]
+        m1 = base_doc["content_md5"]
         m2 = r2.doc["content_md5"] if r2.doc else None
         # Compare only observations for the requested past dates (the newest date's
         # bar can still be forming; past dates are the "stability of the past" claim).
-        s1 = {d: v for d, v in results[repro_target].doc["series"].items() if d in iso[:-1]}
+        s1 = {d: v for d, v in base_doc["series"].items() if d in iso[:-1]}
         s2 = {d: v for d, v in (r2.doc["series"].items() if r2.doc else [])} if r2.doc else {}
         s2 = {d: v for d, v in s2.items() if d in iso[:-1]}
         past_stable = s1 == s2 and bool(s1)
@@ -189,7 +190,9 @@ def run(cfg: LivePaperConfig, dates: list[date]) -> dict:
         ok = verify_cache(target) and json.loads(target.read_text()).get("name") == probe_name
         stray.unlink(missing_ok=True)
         # Re-write (atomic) and confirm still valid — simulates resume.
-        write_cache(target, results[probe_name].doc) if probe_name in results and results[probe_name].doc else None
+        probe_doc = results[probe_name].doc if probe_name in results else None
+        if probe_doc:
+            write_cache(target, probe_doc)
         record("F8", "restart mid-fetch resumes cleanly (stray .tmp ignored)", "PASS" if ok else "FAIL", f"committed file intact beside stray .tmp: {ok}")
     else:
         record("F8", "restart resilience", "BLOCKED", "no committed cache file to probe")
@@ -204,8 +207,8 @@ def run(cfg: LivePaperConfig, dates: list[date]) -> dict:
             "n_obs": (r.doc or {}).get("n_obs"), "error": r.error,
         }
         for d in iso:
-            st = r.per_asof.get(d)
-            row[weekdays[d]] = f"{st.status}/{st.staleness_days}d" if st else "-"
+            picked = r.per_asof.get(d)
+            row[weekdays[d]] = f"{picked.status}/{picked.staleness_days}d" if picked else "-"
         table.append(row)
 
     n_fail = sum(1 for c in checks if c["verdict"] == "FAIL")

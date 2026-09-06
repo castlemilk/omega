@@ -250,7 +250,7 @@ class TestVRPSignalNode:
         assert r["vrp_regime"] == "NEUTRAL"
         assert r["confidence"] < 0.5
 
-    def test_rv_only_fallback_produces_nonzero_vrp(self):
+    def test_rv_only_fallback_produces_nonzero_vrp(self) -> None:
         """When Deribit is unreachable but OHLCV is present, VRP should be non-zero.
 
         The fallback: iv = rv * 1.15 → vrp = iv - rv = 0.15 * rv > 0.

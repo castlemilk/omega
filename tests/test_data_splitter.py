@@ -112,7 +112,7 @@ class TestSplitProportions:
         from datetime import timedelta
         assert test_start == validate_end + timedelta(days=1)
 
-    def test_split_is_immutable(self):
+    def test_split_is_immutable(self) -> None:
         """DateSplit is frozen — cannot be accidentally mutated."""
         ds = DataSplitter("2020-01-01", "2022-12-31")
         s = ds.split()

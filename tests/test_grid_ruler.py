@@ -67,7 +67,8 @@ def manifest() -> dict:
 
 @pytest.fixture(scope="module")
 def grids() -> dict:
-    return json.loads(FIXTURE.read_text())
+    data: dict = json.loads(FIXTURE.read_text())
+    return data
 
 
 def cells_for(grids: dict, name: str) -> list[GridCell]:

@@ -55,4 +55,4 @@ def test_all_unusable_returns_empty() -> None:
 
 def test_bools_are_not_prices() -> None:
     """bool is a subclass of int, so a stray True would otherwise compute as 1.0."""
-    assert _returns([True, 100.0]) == []  # type: ignore[list-item]
+    assert _returns([True, 100.0]) == []

@@ -13,11 +13,13 @@ from __future__ import annotations
 
 import logging
 
+import pytest
+
 from omega.nodes.victoria.adaptive_combiner import AdaptiveCombiner
 from omega.nodes.victoria.signal_generation import SignalGenerationNode
 
 
-def _report(signals: dict, caplog) -> str:
+def _report(signals: dict, caplog: pytest.LogCaptureFixture) -> str:
     node = SignalGenerationNode.__new__(SignalGenerationNode)  # no __init__ side effects
     with caplog.at_level(logging.INFO, logger="omega.nodes.victoria.signal_generation"):
         node._report_family_inertness(signals)

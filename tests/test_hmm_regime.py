@@ -363,7 +363,7 @@ class TestHMMWassersteinDivergence:
         result = self._divergence(hmm, wass)
         assert result["value"] < 0
 
-    def test_missing_inputs_return_zero(self):
+    def test_missing_inputs_return_zero(self) -> None:
         result = self._divergence(None, {"regime": BULL})  # type: ignore[arg-type]
         assert result["value"] == 0.0
         assert result["l1_distance"] == 0.0

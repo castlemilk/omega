@@ -696,7 +696,7 @@ def test_malformed_ohlcv_does_not_raise(signal_class: str, module: str) -> None:
         "SOLUSDT": None,
     }
     try:
-        result = sig.compute(malformed)  # type: ignore[attr-defined]
+        result = sig.compute(malformed)
         # If it returns something, it must be valid
         if result is not None and hasattr(result, "value"):
             assert math.isfinite(float(result.value))

@@ -55,7 +55,7 @@ def _isolate_frozen_substrate(tmp_path_factory: pytest.TempPathFactory):
             os.environ[var] = old
 
 
-def pytest_configure(config):
+def pytest_configure(config: pytest.Config) -> None:
     """Record the committed substrate's fingerprint in EVERY process."""
     root = Path(__file__).resolve().parents[1]
     config._omega_substrate = {  # type: ignore[attr-defined]
