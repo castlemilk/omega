@@ -132,6 +132,18 @@ pretty = true
 ignore_missing_imports = true
 disable_error_code = ["import-untyped"]
 
+# Do not type-check third-party STUBS. numpy 2.5.2 ships a stub using a PEP 695
+# `type X = ...` alias that mypy 2.3.1 cannot parse, and the resulting error is
+# fatal: "errors prevented further checking" means mypy stops before it reaches
+# any project file. Verified by adding a function returning a str from an `-> int`
+# signature — mypy reported ZERO errors. The type checker has been checking
+# nothing, while `make typecheck` and scripts/ci.sh both reported success.
+[[tool.mypy.overrides]]
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true
+ignore_errors = true
+
 [[tool.mypy.overrides]]
 # Generated protobuf code — skip entirely
 module = ["gen.*"]

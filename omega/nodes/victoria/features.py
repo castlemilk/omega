@@ -31,6 +31,7 @@ import json
 import logging
 import os
 from dataclasses import asdict, dataclass
+from typing import Any
 
 logger = logging.getLogger("omega.victoria.features")
 
@@ -1456,7 +1457,7 @@ _PRESETS["v131_early_N3K05"] = VictoriaFeatures(
 # Fix: suppress the trailing stop until `trailing_stop_min_age` cycles have
 # elapsed, giving losers a chance to recover before the stop fires.
 # ---------------------------------------------------------------------------
-_V132_BASE = {
+_V132_BASE: dict[str, Any] = {
     # Full signal stack (carried forward from _V131_BASE)
     "decision_embeddings": True,
     "ws_microstructure": True,
@@ -1531,7 +1532,7 @@ _PRESETS["v132_fix_c"] = VictoriaFeatures(
 # Base: V132c (best V132 preset: -$377 crisis, +$6,891 recent, -$2,132 trend).
 # ---------------------------------------------------------------------------
 
-_V133_BASE = {
+_V133_BASE: dict[str, Any] = {
     # Full signal stack (V115 foundation)
     "decision_embeddings": True,
     "ws_microstructure": True,
@@ -1597,7 +1598,7 @@ _PRESETS["v133_gate_only"] = VictoriaFeatures(
 # production with 1000s of trades, Gate 2 would activate normally.
 # Also relax ffg_divergence_threshold 0.05→0.03 to allow borderline entries.
 # Target: n≥20 per snapshot while maintaining PF > 1.5.
-_V134_BASE = {
+_V134_BASE: dict[str, Any] = {
     **_V133_BASE,
     "ffg_divergence_threshold": 0.03,  # relaxed from 0.05
     "ffg_disposition_min_trades": 100,  # disable Gate 2 in 150-cycle backtest
@@ -1616,7 +1617,7 @@ _PRESETS["v134_gate_calibrated"] = VictoriaFeatures(**_V134_BASE)
 # All three disable the legacy stop (atr_stop_enabled=True) and set the appropriate
 # mae_stop_k. Keeping all other V133a settings (sl_guard + AND-gate disabled for
 # clean isolation of the ATR stop effect).
-_V135_BASE = {
+_V135_BASE: dict[str, Any] = {
     # Same signal stack as V133 base but without the AND-gate (isolate ATR stop)
     "decision_embeddings": True,
     "ws_microstructure": True,
@@ -1659,7 +1660,7 @@ _PRESETS["v135c_atr_k15"] = VictoriaFeatures(**{**_V135_BASE, "mae_stop_k": 1.5}
 #            partially — this tests whether Gate 2 fires less aggressively).
 # V133v2_b: AND-gate + new Gate 2 + ATR stop. ATR stops = clean exits, so
 #            clean_exit_ratio should stay high → Gate 2 rarely blocks.
-_V133V2_BASE = {
+_V133V2_BASE: dict[str, Any] = {
     **_V133_BASE,
     "four_factor_and_gate": True,
     "ffg_exit_quality_gate": True,  # V133v2: new Gate 2
@@ -1688,7 +1689,7 @@ _PRESETS["v133v2_b"] = VictoriaFeatures(
 #   v136a: crisis_long_block + crisis_short_permissive(0.5) + ATR stop K=1.2
 #   v136b: same but crisis_short_permissive × 0.4 (more aggressive short threshold)
 #   v136c: v136a + crisis_position_size_boost=1.5 (bigger shorts in crisis)
-_V136_BASE = {
+_V136_BASE: dict[str, Any] = {
     "decision_embeddings": True,
     "ws_microstructure": True,
     "temporal_memory": True,
@@ -1743,7 +1744,7 @@ _PRESETS["v136c_size_boost"] = VictoriaFeatures(
 #   v137b: AND-gate minus Gate 1 (divergence off — test if over-filtering)
 #   v137c: AND-gate minus Gate 4 (pair network off — ORC/Fiedler noise test)
 # ---------------------------------------------------------------------------
-_V137_BASE = {
+_V137_BASE: dict[str, Any] = {
     **_V136_BASE,  # crisis_long_block + ATR K=1.2 etc.
     "four_factor_and_gate": True,
     "ffg_exit_quality_gate": True,  # V133v2 exit-quality Gate 2
@@ -1765,7 +1766,7 @@ _PRESETS["v137c_no_gate4"] = VictoriaFeatures(
 # V138 — V137a champion + signal improvements + geopolitical data
 # ---------------------------------------------------------------------------
 # Run ONLY after all flags are unit-tested and greenlit by user.
-_V138_BASE = {
+_V138_BASE: dict[str, Any] = {
     **_V137_BASE,
     "improved_momentum_derivative": True,
     "signal_memory_warm_start": True,
@@ -1782,7 +1783,7 @@ _PRESETS["v138_full"] = VictoriaFeatures(**_V138_BASE)
 # In backtest, pre-bar seeding injects wrong-era regime bias (e.g. late-2021
 # bullish history at the start of a H1-2022 crisis replay).
 # improved_momentum_derivative + signal_reasoning remain enabled.
-_V1381_BASE = {
+_V1381_BASE: dict[str, Any] = {
     **_V137_BASE,
     "improved_momentum_derivative": True,
     "signal_memory_warm_start": False,  # disabled: backtest regime mismatch
@@ -1799,7 +1800,7 @@ _PRESETS["v138_1"] = VictoriaFeatures(**_V1381_BASE)
 # modifier < 0.5 → veto (entry skipped regardless of quant score).
 # Backtest: fully deterministic via SHA256-keyed file cache per (provider, model, input).
 # Provider-agnostic: swap via llm_analyst_provider flag without code changes.
-_V139_BASE = {
+_V139_BASE: dict[str, Any] = {
     **_V1381_BASE,
     "llm_analyst_enabled": True,
     "llm_analyst_call_every_n": 10,
@@ -1869,7 +1870,7 @@ _PRESETS["v139_llm_analyst"] = _PRESETS["v139_cli"]
 # ---------------------------------------------------------------------------
 # Same V139_BASE config; only provider/model/api_base/api_key_env differ.
 # Endpoints verified: Kimi=moonshot.cn, GLM=bigmodel.cn, MiniMax=minimax.chat
-_V140_BASE = {
+_V140_BASE: dict[str, Any] = {
     **_V1381_BASE,
     "llm_analyst_enabled": True,
     "llm_analyst_call_every_n": 10,
@@ -1921,7 +1922,7 @@ _PRESETS["v140_claude_haiku"] = VictoriaFeatures(
 #   4. Crisis exit asymmetry: tighter long trail, wider short trail, zero-MFE exit
 #   5. fear_greed_signal crisis-poison: coded bullish in bear market → dampen 0.1×
 #   6. sma_crossover crisis-poison: dead-cat bounce signals → dampen 0.2×
-_V141_BASE = {
+_V141_BASE: dict[str, Any] = {
     **_V1381_BASE,
     # V139 LLM analyst (Haiku via CLI)
     "llm_analyst_enabled": True,
@@ -1972,7 +1973,7 @@ _PRESETS["v141_crisis_no_llm"] = VictoriaFeatures(
 #   2. Gate regime hysteresis to only engage when bear_prob > 0.50 at onset
 #   3. Block all entries in high_vol regime (0% WR, structural loser across all versions)
 #   4. Keep LLM crisis mode (proved +$3,161 delta vs no-LLM in V141)
-_V142_BASE = {
+_V142_BASE: dict[str, Any] = {
     **_V141_BASE,
     # Fix 1: conservative bear_prob gate (revert from 0.35)
     "bear_prob_long_block_threshold": 0.55,
@@ -1995,7 +1996,7 @@ _PRESETS["v142_no_llm"] = VictoriaFeatures(
 # multiplicative sigmoid confidence factors. Position size ∝ product of factors.
 # Validated by parameter sensitivity test: bear_prob center 0.30→0.60 sweep
 # should show PnL range < $5,000 (vs $30,000 with hard gates).
-_V143_BASE = {
+_V143_BASE: dict[str, Any] = {
     **_V142_BASE,
     # Phase 1: enable continuous surfaces
     "continuous_surfaces": True,
@@ -2026,7 +2027,7 @@ for _center_10x in [30, 35, 40, 45, 50, 55, 60]:
 #   PF < 0.8 → T += 0.02  (soften: miscalibrated)
 #   T ∈ [0.05, 0.30]; μ EMA toward mean entry_value of winners
 # State persisted to data/meta_learner_state.json across cycles.
-_V144_BASE = {
+_V144_BASE: dict[str, Any] = {
     **_V143_BASE,
     "meta_learning_enabled": True,
 }
@@ -2045,7 +2046,7 @@ _PRESETS["v144_no_llm"] = VictoriaFeatures(
 # Every 50 cycles, an LLM receives regime PF, signal IC drift, and surface
 # parameters, and suggests temperature / center adjustments. The suggestions
 # are blended at 30% weight with the meta-learner's config.
-_V145_BASE = {
+_V145_BASE: dict[str, Any] = {
     **_V144_BASE,
     "llm_meta_controller": True,
     # MiniMax (Anthropic-compat) via hermes auth.json — confirmed working 2026-04-19
@@ -2065,7 +2066,7 @@ _PRESETS["v145_zai"] = VictoriaFeatures(**_V145_BASE)  # legacy alias
 # majority-vote aggregation that preserves uncertainty information:
 #   conviction = agreement_ratio × max_confidence_of_majority
 # Backward compatible with V144 confidence surfaces + meta-learner.
-_V146_BASE = {**_V144_BASE, "ensemble_voting": True}
+_V146_BASE: dict[str, Any] = {**_V144_BASE, "ensemble_voting": True}
 _PRESETS["v146"] = VictoriaFeatures(**_V146_BASE)
 
 # ---------------------------------------------------------------------------
@@ -2078,7 +2079,7 @@ _PRESETS["v146"] = VictoriaFeatures(**_V146_BASE)
 # Likelihood distributions are learned online via Welford updates each time
 # a trade closes with a known regime label.
 # State: data/bayesian_regime_state.json (persisted across cycles).
-_V147_BASE = {**_V146_BASE, "bayesian_regime": True}
+_V147_BASE: dict[str, Any] = {**_V146_BASE, "bayesian_regime": True}
 _PRESETS["v147"] = VictoriaFeatures(**_V147_BASE)
 
 # ---------------------------------------------------------------------------
@@ -2094,7 +2095,7 @@ _PRESETS["v147"] = VictoriaFeatures(**_V147_BASE)
 #   2. continuous_sizing: position size ∝ sigmoid(bull_prob) for longs,
 #      sigmoid(bear_prob) for shorts. Trades always execute; only size varies.
 # LLM: MiniMax (Anthropic-compat) via hermes auth.json — trade-level analyst.
-_V148_BASE = {
+_V148_BASE: dict[str, Any] = {
     **_V142_BASE,
     # V144 meta-learner — exit tuning only (not entry gating)
     "meta_learning_enabled": True,
