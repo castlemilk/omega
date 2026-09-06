@@ -136,6 +136,10 @@ class TestCrisisShortBypass:
 # ---------------------------------------------------------------------------
 
 
+_FUNDING_LOGGER = "omega.nodes.victoria.signals.funding_rate"
+_FEAR_GREED_LOGGER = "omega.nodes.victoria.signals.fear_greed"
+
+
 class TestFundingRateNullWarning:
     """V77 Fix 2: FundingRateSignal._fetch_all_rates should warn on network failure."""
 
@@ -144,14 +148,42 @@ class TestFundingRateNullWarning:
 
         Before fix: logger.debug("FundingRateSignal fetch failed: ...") — silent in prod.
         After fix:  logger.warning("...") — visible in training logs.
+
+        Two things this test used to get wrong, both of which made it assert
+        nothing while appearing to pass:
+
+        1. It asked for ETHUSDT, which the committed macro cache HAS a row for.
+           A failed refresh leaves that stale row in place, `_get_cached_rate`
+           returns it, and the warning is correctly not emitted. The symbol has
+           to be one the cache does not carry for the failure path to be reached
+           at all.
+        2. It accepted a WARNING from ANY logger. What it was actually catching
+           was MacroDataCache's one-shot "FRED_API_KEY not set" warning, emitted
+           when the cache singleton is first built. So the test passed on my
+           machine (the singleton happened to be built inside its caplog window)
+           and failed on CI (an earlier test in the same xdist worker had already
+           built it). Records are now filtered to the logger under test.
         """
         sig = FundingRateSignal()
-        with patch.object(
-            urllib.request, "urlopen", side_effect=Exception("429 Too Many Requests")
-        ), caplog.at_level(logging.DEBUG, logger="omega.nodes.victoria.signals.funding_rate"):
-            sig._fetch_all_rates(["ETHUSDT"])
+        # Build the cache singleton first, so its one-shot startup warnings are
+        # emitted OUTSIDE the window this test inspects.
+        sig._fetch_all_rates(["ETHUSDT"])
 
-        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
+        caplog.clear()
+        with (
+            patch.object(
+                urllib.request, "urlopen", side_effect=Exception("429 Too Many Requests")
+            ),
+            caplog.at_level(logging.DEBUG, logger=_FUNDING_LOGGER),
+        ):
+            # A symbol with no cached row: every source fails, nothing to fall
+            # back on, so the signal has no rate and must say so.
+            rates = sig._fetch_all_rates(["DOGEUSDT"])
+
+        assert rates == {"DOGEUSDT": None}, "the fixture must actually reach the failure path"
+        warning_records = [
+            r for r in caplog.records if r.levelno >= logging.WARNING and r.name == _FUNDING_LOGGER
+        ]
         assert warning_records, (
             "_fetch_all_rates must emit WARNING on network failure so it shows in training logs"
         )
@@ -179,10 +211,14 @@ class TestFearGreedNullWarning:
             result = sig.compute()
 
         assert result == 0.0, "Should still return 0.0 on failure"
-        warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]
-        assert warning_records, (
-            "FearGreedSignal must warn when cold-cache fetch returns no data"
-        )
+        # Filtered by logger for the same reason as the funding test above: an
+        # unfiltered WARNING check passes on whatever else happens to log.
+        warning_records = [
+            r
+            for r in caplog.records
+            if r.levelno >= logging.WARNING and r.name == _FEAR_GREED_LOGGER
+        ]
+        assert warning_records, "FearGreedSignal must warn when cold-cache fetch returns no data"
 
 
 # ---------------------------------------------------------------------------
@@ -273,3 +309,112 @@ class TestZeroStreakWatchdog:
         assert not streak_warnings, (
             "Zero-streak counter must reset after a cycle with candidates"
         )
+
+
+# ---------------------------------------------------------------------------
+# FFG blocks must survive into the decision trace
+# ---------------------------------------------------------------------------
+
+
+class TestFFGReachesDecisionTrace:
+    """A ticker the four-factor gate blocks must say so in _last_ticker_decisions.
+
+    The trace at the end of ``_construct_portfolio`` is a *reconstruction*: it
+    re-derives each ticker's fate from signals and conviction, and knows nothing
+    about FFG, which runs later in the cycle. FFG used to record its blocks by
+    writing a plain ``{"action": "SKIP_FFG", ...}`` dict straight into
+    ``_last_ticker_decisions`` — which the reconstruction's wholesale rebind then
+    overwrote. So an FFG-blocked ticker was reported as whatever the
+    reconstruction guessed, and the block itself appeared nowhere.
+
+    There was no test over this path at all, which is how it stayed that way.
+    """
+
+    def test_blocked_ticker_is_recorded_as_filtered_by_ffg(self, monkeypatch):
+        from omega.core.decision_snapshot import TickerDecision
+        from omega.nodes.victoria import four_factor_gate as ffg_mod
+
+        node = StrategyNode()
+        node.features.four_factor_and_gate = True
+
+        def _always_fail(self, ctx):
+            return ffg_mod.GateResult(
+                all_pass=False,
+                cross_market_divergence=False,
+                disposition=True,
+                capital_velocity=True,
+                pair_network=True,
+                failing_gates=["cross_market_divergence"],
+            )
+
+        monkeypatch.setattr(ffg_mod.FourFactorGate, "evaluate", _always_fail)
+
+        # A maximal crisis short: without FFG this trades (see TestCrisisShortBypass).
+        result = node._construct_portfolio(_crisis_signals("ETHUSDT", composite=-1.0), {})
+
+        assert not result.get("weights"), "FFG failing every gate must block the entry"
+
+        trace = node._last_ticker_decisions
+        assert "ETHUSDT" in trace, "the blocked ticker must still appear in the trace"
+        decision = trace["ETHUSDT"]
+        assert isinstance(decision, TickerDecision), (
+            "the trace holds TickerDecision only; a plain dict here is the old bug"
+        )
+        assert decision.final_action == "FILTERED"
+        assert "cross_market_divergence" in decision.filter_reason, (
+            f"filter_reason should name the failing gate, got {decision.filter_reason!r}"
+        )
+        assert any("ffg:" in f for f in decision.filters_applied), (
+            f"filters_applied should record the FFG step, got {decision.filters_applied}"
+        )
+
+    def test_unblocked_ticker_carries_no_ffg_filter(self, monkeypatch):
+        """The converse: a passing gate must not leave an FFG mark on the trace."""
+        from omega.nodes.victoria import four_factor_gate as ffg_mod
+
+        node = StrategyNode()
+        node.features.four_factor_and_gate = True
+
+        def _always_pass(self, ctx):
+            return ffg_mod.GateResult(
+                all_pass=True,
+                cross_market_divergence=True,
+                disposition=True,
+                capital_velocity=True,
+                pair_network=True,
+            )
+
+        monkeypatch.setattr(ffg_mod.FourFactorGate, "evaluate", _always_pass)
+
+        node._construct_portfolio(_crisis_signals("ETHUSDT", composite=-1.0), {})
+        decision = node._last_ticker_decisions["ETHUSDT"]
+        assert not any("ffg:" in f for f in decision.filters_applied)
+        assert "ffg(" not in decision.filter_reason
+
+
+class TestZeroCandidateCycleStillTraces:
+    """A cycle where nothing survives the filters must still explain itself.
+
+    ``_construct_portfolio`` returns early when no candidate clears the filter
+    stack, and the decision-trace builder used to sit only on the path below that
+    return. So the cycles whose reasoning is most worth having — V86 and V87 each
+    logged zero-candidate streaks of 150+ cycles — wrote an EMPTY per-ticker trace
+    into the snapshot. The absence looked like "no tickers considered" rather than
+    "considered and rejected, here is the gate".
+    """
+
+    def test_no_candidates_still_produces_a_per_ticker_trace(self):
+        from omega.core.decision_snapshot import TickerDecision
+
+        node = StrategyNode()
+        # A near-zero composite clears no threshold, so no candidate survives.
+        result = node._construct_portfolio(_normal_signals("ETHUSDT", composite=0.0001), {})
+
+        assert not result.get("weights"), "fixture must produce a zero-candidate cycle"
+        trace = node._last_ticker_decisions
+        assert "ETHUSDT" in trace, (
+            "a rejected ticker must still appear in the trace; an empty trace is the bug"
+        )
+        assert isinstance(trace["ETHUSDT"], TickerDecision)
+        assert trace["ETHUSDT"].final_action in ("FILTERED", "HOLD")
+        assert trace["ETHUSDT"].filters_applied, "the trace must name the gate that stopped it"
