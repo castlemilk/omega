@@ -1,0 +1,99 @@
+# Why this exists.
+#
+# scripts/ci.sh has run pytest, ruff, mypy, go vet and go test for a long time,
+# and nothing ever invoked it — there was no workflow, and no git hook. The cost
+# of that was measured rather than guessed: 54 standing test failures, a mypy step
+# that aborted inside a numpy stub and therefore checked ZERO project files while
+# reporting success, and ten test files so slow (they made live network calls)
+# that `pytest tests/` looked like it hung.
+#
+# So the fast suite runs on every push. The slow suite runs nightly, because it
+# takes ~15 minutes and its value is catching drift, not blocking a commit.
+#
+# mypy and ruff are NOT gates yet: there is a standing backlog that surfaced the
+# moment the type checker started working. They run in report-only mode so the
+# number is visible and can be driven down, and should be promoted to blocking
+# once it reaches zero. A gate that fails on day one gets disabled on day two.
+
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 14 * * *" # 00:00 AEST — the slow suite
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  fast:
+    name: python (fast)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: pytest (excluding slow)
+        # -m "not slow": the slow files run real multi-cycle simulations and take
+        # ~15 min. They are covered by the nightly job below.
+        run: python -m pytest tests/ -q -m "not slow" --no-header
+      - name: substrate is unchanged
+        # The suite used to write data/macro_cache.db and the memory DB — files
+        # that are committed and asserted by data/.cache_manifest.json. If a test
+        # writes them again, fail here rather than discovering it in someone's
+        # working tree days later.
+        run: |
+          if [ -n "$(git status --porcelain data/)" ]; then
+            echo "::error::the test run modified committed data/ files"
+            git status --porcelain data/
+            exit 1
+          fi
+
+  slow:
+    name: python (slow, nightly)
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: pytest (slow only)
+        run: python -m pytest tests/ -q -m "slow" --no-header
+
+  quality:
+    name: lint + types (report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: ruff
+        continue-on-error: true
+        run: ruff check omega/ tests/
+      - name: mypy
+        # Report-only until the backlog reaches zero. It surfaced the moment the
+        # checker started working again; blocking on it now would just get this
+        # workflow turned off.
+        continue-on-error: true
+        run: mypy omega/
