@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/benebsworth/omega/internal/handler"
 )
@@ -52,6 +53,21 @@ func copyFixture(t *testing.T, src, dst string) {
 	}
 	if err := os.WriteFile(dst, data, 0o600); err != nil {
 		t.Fatalf("write %s: %v", dst, err)
+	}
+}
+
+// copyFixtureAt copies a fixture and then stamps an explicit modification time
+// on it. The "latest" resolvers order gate and verdict files by mtime, so a
+// test of that rule has to control mtime rather than infer it from write order:
+// two os.WriteFile calls in a row can land in the same filesystem timestamp
+// tick, and then the tie-break (lexically greater name) decides instead. That
+// is not hypothetical — it is how these tests failed on CI while passing on
+// macOS, with "v94" beating "bt_v132a_crisis" and "v246_wf" beating "v232".
+func copyFixtureAt(t *testing.T, src, dst string, mod time.Time) {
+	t.Helper()
+	copyFixture(t, src, dst)
+	if err := os.Chtimes(dst, mod, mod); err != nil {
+		t.Fatalf("chtimes %s: %v", dst, err)
 	}
 }
 
@@ -500,11 +516,13 @@ func TestGates_BacktestCellVersion(t *testing.T) {
 
 func TestGates_LatestWhenNoVersion(t *testing.T) {
 	dir := t.TempDir()
-	copyFixture(t, filepath.Join(fixtureDataDir, "v94_gate_result.json"),
-		filepath.Join(dir, "v94_gate_result.json"))
-	copyFixture(t, filepath.Join(fixtureDataDir, "bt_v132a_crisis_gate_result.json"),
-		filepath.Join(dir, "bt_v132a_crisis_gate_result.json"))
-	// bt_v132a_crisis is written second → newest mtime → "latest".
+	base := time.Date(2026, 8, 19, 12, 0, 0, 0, time.UTC)
+	copyFixtureAt(t, filepath.Join(fixtureDataDir, "v94_gate_result.json"),
+		filepath.Join(dir, "v94_gate_result.json"), base)
+	copyFixtureAt(t, filepath.Join(fixtureDataDir, "bt_v132a_crisis_gate_result.json"),
+		filepath.Join(dir, "bt_v132a_crisis_gate_result.json"), base.Add(time.Hour))
+	// bt_v132a_crisis carries the newer mtime → "latest". It is also the
+	// lexically smaller name, so a resolver that sorted by name would fail here.
 
 	srv, cleanup := newTrainingServer(t, dir, "")
 	defer cleanup()
@@ -778,11 +796,13 @@ func TestGridRuler_PrefixResolutionPicksTheLongestMatch(t *testing.T) {
 
 func TestGridRuler_ResolvesLatestWhenNoRunAsked(t *testing.T) {
 	dir := t.TempDir()
-	copyFixture(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
-		filepath.Join(dir, "v246_wf_grid_verdict.json"))
-	copyFixture(t, filepath.Join(fixtureDataDir, "v232_grid_verdict.json"),
-		filepath.Join(dir, "v232_grid_verdict.json"))
-	// v232 is written second → newest mtime → "latest", same rule as /gates.
+	base := time.Date(2026, 8, 19, 12, 0, 0, 0, time.UTC)
+	copyFixtureAt(t, filepath.Join(fixtureDataDir, "v246_wf_grid_verdict.json"),
+		filepath.Join(dir, "v246_wf_grid_verdict.json"), base)
+	copyFixtureAt(t, filepath.Join(fixtureDataDir, "v232_grid_verdict.json"),
+		filepath.Join(dir, "v232_grid_verdict.json"), base.Add(time.Hour))
+	// v232 carries the newer mtime → "latest", same rule as /gates. It is also
+	// the lexically smaller name, so name-ordering would fail here too.
 
 	srv, cleanup := newTrainingServer(t, dir, "")
 	defer cleanup()
