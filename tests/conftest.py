@@ -15,6 +15,8 @@ each test to remember is how the leak happened in the first place.
 
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import shutil
 from pathlib import Path
@@ -55,13 +57,43 @@ def _isolate_frozen_substrate(tmp_path_factory: pytest.TempPathFactory):
             os.environ[var] = old
 
 
+def _content_md5(path: Path) -> str:
+    h = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _asserted_substrate(root: Path) -> list[Path]:
+    """The committed cache files the manifest actually asserts.
+
+    Read from `data/.cache_manifest.json` rather than hardcoded, so this guard
+    and the thing it protects cannot disagree. `volatile_files` is deliberately
+    excluded: the manifest records those and never asserts them, because the run
+    is expected to rewrite them (V277 1b). `omega_victoria_memory.db` is one, so
+    flagging it here was raising an alarm the manifest itself does not raise.
+    """
+    manifest = root / "data" / ".cache_manifest.json"
+    try:
+        entries = json.loads(manifest.read_text())["files"]
+    except (OSError, KeyError, ValueError):
+        return []
+    return [p for rel in entries if (p := root / rel).is_file()]
+
+
 def pytest_configure(config: pytest.Config) -> None:
-    """Record the committed substrate's fingerprint in EVERY process."""
+    """Record the committed substrate's fingerprint in EVERY process.
+
+    Content md5, not mtime+size. mtime moves for reasons that are not drift —
+    a WAL checkpoint that restores identical bytes, or SQLite opening the file
+    read-write and touching it — and a guard that fires on those is a guard that
+    gets ignored. md5 is also exactly what the manifest asserts, so a report here
+    means `test_cache_manifest.py` would fail too.
+    """
     root = Path(__file__).resolve().parents[1]
     config._omega_substrate = {  # type: ignore[attr-defined]
-        p: (p.stat().st_mtime_ns, p.stat().st_size)
-        for p in (root / "data" / "macro_cache.db", root / "data" / "omega_victoria_memory.db")
-        if p.is_file()
+        p: _content_md5(p) for p in _asserted_substrate(root)
     }
 
 
@@ -78,11 +110,7 @@ def pytest_sessionfinish(session, exitstatus):
     anything that hardcodes the path, which is how both known offenders behaved.
     """
     recorded = getattr(session.config, "_omega_substrate", {})
-    moved = [
-        p.name
-        for p, before in recorded.items()
-        if p.is_file() and (p.stat().st_mtime_ns, p.stat().st_size) != before
-    ]
+    moved = [p.name for p, before in recorded.items() if p.is_file() and _content_md5(p) != before]
     if moved:
         # Reported rather than raised: a late raise here can mask the real results.
         session.config.stash  # noqa: B018  (touch, so a bad stash surfaces early)
