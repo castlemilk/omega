@@ -515,10 +515,9 @@ class StrategyNode(Node):
         # V166: rolling per-signal history for live normalization (z-score). Keyed
         # by signal name (not per-ticker — pooling across tickers gives more samples
         # for the same signal's intrinsic distribution).
-        # NOTE: this attribute is *shared* with the V63 multi-cycle direction
-        # history below (same name, re-bound a few lines down): V166 keys it by
-        # signal name with list[float], V63 keys it by ticker with list[str].
-        self._signal_history: dict[str, list[Any]] = {}
+        # V166: rolling window of raw signal VALUES, keyed by signal name, used
+        # to z-score each signal in _compute_weighted_conviction.
+        self._signal_value_history: dict[str, list[float]] = {}
         # Tracking counters
         self._proposals_generated: int = 0  # tickers that passed basic conviction screen
         self._proposals_filtered: int = 0  # tickers blocked by conviction filters
@@ -582,10 +581,17 @@ class StrategyNode(Node):
         # --- Multi-cycle confirmation (V63): track last 2 signal directions per symbol ---
         # Only enter a trade when the current direction matches the previous cycle's direction.
         # Prevents whipsaw entries on single-cycle signal spikes.
-        # Values: "long" | "short" | "hold"
-        # V63 re-binds the V166 attribute above; values here are list[str]
-        # ("long" | "short" | "hold"), keyed by ticker.
-        self._signal_history = {}
+        # V63: last two proposal DIRECTIONS per ticker, for the multi-cycle
+        # confirmation gate. Values: "long" | "short" | "hold".
+        #
+        # This used to be the same dict as _signal_value_history above — one
+        # name, re-bound here, serving two features with different key spaces
+        # (signal name vs ticker) and different value types (float vs str). It
+        # only survived because no signal was ever named after a ticker. Had one
+        # been, the -2: trim here would have silently capped the z-score window
+        # at two entries, below the five it needs, disabling normalisation
+        # without a word; and summing a window holding "long" would have raised.
+        self._direction_history: dict[str, list[str]] = {}
         # V75: track consecutive cycles where Fiedler regime is "fragmented"
         # Sustained fragmentation + moderate bear_prob = elevated crash risk ahead of HMM label
         self._fiedler_fragmented_streak: int = 0
@@ -674,10 +680,11 @@ class StrategyNode(Node):
             )
 
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
-        # Normally TickerDecision instances (written wholesale at the end of
-        # _construct_portfolio); the two SKIP_FFG breadcrumbs written mid-cycle
-        # are plain dicts, hence Any rather than TickerDecision.
-        self._last_ticker_decisions: dict[str, Any] = {}
+        # TickerDecision instances only, written wholesale at the end of
+        # _construct_portfolio. It used to also hold plain "SKIP_FFG" dicts
+        # written mid-cycle, which the wholesale write then dropped; FFG blocks
+        # now reach the trace as a filter on the TickerDecision itself.
+        self._last_ticker_decisions: dict[str, TickerDecision] = {}
 
         # --- Observability extensions (gated by self.features) ---
         self._trace_writer: TraceWriter | None = None
@@ -1256,7 +1263,7 @@ class StrategyNode(Node):
             if math.isnan(fv) or math.isinf(fv):
                 continue
             if _norm_enabled:
-                hist = self._signal_history.setdefault(k, [])
+                hist = self._signal_value_history.setdefault(k, [])
                 hist.append(fv)
                 if len(hist) > _norm_window:
                     del hist[0]
@@ -1935,6 +1942,176 @@ class StrategyNode(Node):
             return None
         return datetime.fromtimestamp(latest, UTC)
 
+    def _build_ticker_decisions(
+        self,
+        signals: dict[str, Any],
+        convictions: dict[str, ConvictionLevel],
+        weights: dict[str, float],
+        current_cycle: int,
+        _cs_norm: float,
+        _block_longs: bool,
+        _block_shorts: bool,
+        _regime_hmm: str,
+        _regime_confidence: float,
+        _ffg_blocked: dict[str, tuple[str, list[str]]],
+    ) -> dict[str, TickerDecision]:
+        """Re-derive each ticker's fate this cycle as a TickerDecision.
+
+        Called from BOTH exits of _construct_portfolio. It used to sit only on
+        the path that builds a portfolio, so on any cycle where no candidate
+        survived the filters — the early return above — the trace was left
+        empty. That is the cycle whose reasoning is most worth having: V86 and
+        V87 each ran zero-candidate streaks of 150+ cycles, and the decision
+        snapshot for every one of them recorded nothing at all.
+
+        `weights` is {} on the no-candidate path, which is correct: nothing is
+        TRADE there, and every ticker resolves to FILTERED or HOLD.
+        """
+        # ── Build per-ticker decision traces for full tensor observability ──
+        # Done before updating _last_trade_cycle so time-filter check is consistent.
+        # _raw_composite / _basket_mean are stored by signal_generation.py before demeaning.
+        _buy_threshold_raw = 0.2 / _cs_norm  # composite > this → BUY conviction
+        _ticker_decisions: dict[str, TickerDecision] = {}
+        for _td_ticker, _td_sig in signals.items():
+            if (
+                _td_ticker.startswith("_")
+                or _td_ticker.startswith("adv_")
+                or not isinstance(_td_sig, dict)
+            ):
+                continue
+            if "composite" not in _td_sig:
+                continue
+
+            _td_signal_traces = [
+                SignalTrace(
+                    signal_name=_k,
+                    raw_value=float(_td_sig[_k]),
+                    rationale_text="",
+                    inputs_used={
+                        ik: _td_sig[ik]
+                        for ik in (
+                            # include the raw indicator values for context
+                            {
+                                "sma_crossover": ["sma_short", "sma_long"],
+                                "rsi_signal": ["rsi"],
+                                "macd_crossover": ["macd", "macd_signal_line"],
+                                "bb_signal": ["bb_upper", "bb_lower", "bb_mid"],
+                                "zscore_signal": ["zscore"],
+                                "volume_signal": ["volume_zscore"],
+                                "btc_beta_signal": ["btc_beta"],
+                                "vol_regime_signal": ["vol_regime", "recent_vol_ann"],
+                            }.get(_k, [])
+                        )
+                        if ik in _td_sig and isinstance(_td_sig[ik], (int, float, str))
+                    },
+                )
+                for _k, _v in _td_sig.items()
+                if (_k.endswith("_signal") or _k == "sma_crossover")
+                and isinstance(_v, (int, float))
+            ]
+
+            _td_demeaned = float(_td_sig.get("composite", 0.0))
+            _td_raw = float(_td_sig.get("_raw_composite", _td_demeaned))
+            _td_bm = float(_td_sig.get("_basket_mean", 0.0))
+            _td_c = convictions.get(_td_ticker, ConvictionLevel.HOLD)
+            _td_filters: list[str] = []
+            _td_proposal = "NONE"
+            _td_final = "HOLD"
+            _td_reason = ""
+
+            if _universe_blocked(_td_ticker, self.features):
+                _td_filters.append("blacklist:skip")
+                _td_final = "HOLD"
+                _td_reason = "blacklist"
+            elif _td_c == ConvictionLevel.HOLD:
+                _td_filters.append(f"conviction_gate:hold(score={_td_demeaned * _cs_norm:.3f})")
+            elif _td_c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
+                if _td_ticker in _LONG_BLACKLIST:
+                    _td_filters.append("long_blacklist:skip")
+                    _td_final = "FILTERED"
+                    _td_reason = "long_blacklist"
+                elif _td_demeaned <= self._signal_threshold:
+                    _td_filters.append(
+                        f"signal_threshold:skip(composite={_td_demeaned:.4f}<={self._signal_threshold:.4f})"
+                    )
+                    _td_final = "FILTERED"
+                    _td_reason = "signal_threshold"
+                else:
+                    _td_proposal = "LONG"
+                    if _block_longs:
+                        _td_filters.append(
+                            f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})"
+                        )
+                        _td_final = "FILTERED"
+                        _td_reason = f"regime_block({_regime_hmm})"
+                    else:
+                        _td_passes, _td_filter_reason = self._passes_conviction_filters(
+                            _td_sig, current_cycle, "long"
+                        )
+                        if not _td_passes:
+                            _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
+                            _td_final = "FILTERED"
+                            _td_reason = _td_filter_reason
+                        else:
+                            _td_filters.append("conviction_filters:pass")
+                            _td_final = "TRADE" if _td_ticker in weights else "FILTERED"
+                            if _td_final == "FILTERED":
+                                _td_reason = "position_limit"
+            elif _td_c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
+                if _td_demeaned >= -self._signal_threshold:
+                    _td_filters.append("signal_threshold:skip")
+                    _td_final = "FILTERED"
+                    _td_reason = "signal_threshold"
+                else:
+                    _td_proposal = "SHORT"
+                    if _block_shorts:
+                        _td_filters.append(
+                            f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})"
+                        )
+                        _td_final = "FILTERED"
+                        _td_reason = f"regime_block({_regime_hmm})"
+                    else:
+                        _td_passes, _td_filter_reason = self._passes_conviction_filters(
+                            _td_sig, current_cycle, "short"
+                        )
+                        if not _td_passes:
+                            _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
+                            _td_final = "FILTERED"
+                            _td_reason = _td_filter_reason
+                        else:
+                            _td_filters.append("conviction_filters:pass")
+                            _td_final = "TRADE" if _td_ticker in weights else "FILTERED"
+                            if _td_final == "FILTERED":
+                                _td_reason = "position_limit"
+
+            # FFG ran after this reconstruction's logic and blocked the entry.
+            # It is the last word on the ticker, so it overrides whatever the
+            # re-derivation concluded.
+            if _td_ticker in _ffg_blocked:
+                _ffg_dir, _ffg_gates = _ffg_blocked[_td_ticker]
+                _td_filters.append(f"ffg:filtered({';'.join(_ffg_gates)})")
+                _td_proposal = _ffg_dir.upper()
+                _td_final = "FILTERED"
+                _td_reason = f"ffg({';'.join(_ffg_gates)})"
+
+            _ticker_decisions[_td_ticker] = TickerDecision(
+                ticker=_td_ticker,
+                signal_traces=_td_signal_traces,
+                raw_composite=_td_raw,
+                basket_mean=_td_bm,
+                demeaned_composite=_td_demeaned,
+                conviction=_td_c.name,
+                conviction_score=_td_demeaned * _cs_norm,
+                conviction_threshold_buy=_buy_threshold_raw,
+                conviction_threshold_sell=-_buy_threshold_raw,
+                proposal=_td_proposal,
+                filters_applied=_td_filters,
+                final_action=_td_final,
+                filter_reason=_td_reason,
+            )
+
+        return _ticker_decisions
+
     def _construct_portfolio(
         self, signals: dict[str, Any], market_data: dict[str, Any]
     ) -> dict[str, Any]:
@@ -1948,6 +2125,15 @@ class StrategyNode(Node):
         """
         current_cycle = self._execution_count
         self._last_ticker_decisions = {}  # reset each cycle
+        # Tickers the Fiedler Fragmentation Gate blocked this cycle, with the
+        # gates that failed. Collected here and folded into the TickerDecision
+        # reconstruction below, because that reconstruction re-derives each
+        # ticker's fate from signals and conviction and has no way to know FFG
+        # ran. Writing the block straight into _last_ticker_decisions (as this
+        # did) put a plain dict there that the wholesale rebind at the end of
+        # this method then discarded — so an FFG-blocked ticker was recorded as
+        # whatever the reconstruction guessed instead.
+        _ffg_blocked: dict[str, tuple[str, list[str]]] = {}
         self._last_confluence = {}  # reset confluence cache each cycle
 
         # V216: bar-time clock for sizing-side time-of-day windows. In frozen backtest
@@ -2502,10 +2688,10 @@ class StrategyNode(Node):
             # firing against HOLD-level composites via edge cases in the filter stack.
             if c == ConvictionLevel.HOLD:
                 # Record neutral direction for multi-cycle history
-                _hist = self._signal_history.setdefault(ticker, [])
+                _hist = self._direction_history.setdefault(ticker, [])
                 _hist.append("hold")
                 if len(_hist) > 2:
-                    self._signal_history[ticker] = _hist[-2:]
+                    self._direction_history[ticker] = _hist[-2:]
                 continue
             if c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
                 if ticker in _LONG_BLACKLIST:
@@ -2628,11 +2814,11 @@ class StrategyNode(Node):
                 # requires two consecutive long signals; at low conviction, this is impossible
                 # without bypass. 0.05 is 1.4x scaled long_thresh (0.07*~0.5=0.035) — still
                 # meaningful quality floor relative to what the market is producing.
-                _prev_hist = self._signal_history.get(ticker, [])
-                _hist = self._signal_history.setdefault(ticker, [])
+                _prev_hist = self._direction_history.get(ticker, [])
+                _hist = self._direction_history.setdefault(ticker, [])
                 _hist.append("long")
                 if len(_hist) > 2:
-                    self._signal_history[ticker] = _hist[-2:]
+                    self._direction_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "long":
                     _wconv_long = abs(self._compute_weighted_conviction(sig))
                     if _wconv_long >= 0.05:
@@ -2904,11 +3090,7 @@ class StrategyNode(Node):
                             ticker,
                             "; ".join(_ffg_result.failing_gates),
                         )
-                        self._last_ticker_decisions[ticker] = {
-                            "action": "SKIP_FFG",
-                            "direction": "long",
-                            "failing_gates": _ffg_result.failing_gates,
-                        }
+                        _ffg_blocked[ticker] = ("long", list(_ffg_result.failing_gates))
                         continue
                 # V143: surface evaluation for long entry
                 if _use_surface:
@@ -2935,11 +3117,11 @@ class StrategyNode(Node):
                 if sig.get("composite", 0.0) >= -self._signal_threshold:
                     continue
                 # Multi-cycle confirmation (V63 C+D): only enter if last cycle was also short.
-                _prev_hist = self._signal_history.get(ticker, [])
-                _hist = self._signal_history.setdefault(ticker, [])
+                _prev_hist = self._direction_history.get(ticker, [])
+                _hist = self._direction_history.setdefault(ticker, [])
                 _hist.append("short")
                 if len(_hist) > 2:
-                    self._signal_history[ticker] = _hist[-2:]
+                    self._direction_history[ticker] = _hist[-2:]
                 if not _prev_hist or _prev_hist[-1] != "short":
                     # V77: crisis short bypass — skip 2-cycle confirmation in crisis regime
                     # when the per-symbol composite is sufficiently negative.
@@ -3221,11 +3403,7 @@ class StrategyNode(Node):
                             ticker,
                             "; ".join(_ffg_result.failing_gates),
                         )
-                        self._last_ticker_decisions[ticker] = {
-                            "action": "SKIP_FFG",
-                            "direction": "short",
-                            "failing_gates": _ffg_result.failing_gates,
-                        }
+                        _ffg_blocked[ticker] = ("short", list(_ffg_result.failing_gates))
                         continue
                 # V143: surface evaluation for short entry
                 if _use_surface:
@@ -3295,6 +3473,21 @@ class StrategyNode(Node):
             conviction_dist = {level.name: 0 for level in ConvictionLevel}
             for c in convictions.values():
                 conviction_dist[c.name] += 1
+            # The trace matters MORE here than on the trading path: this is the
+            # "nothing traded this cycle" exit, and until now it left
+            # _last_ticker_decisions empty, so the snapshot could not say why.
+            self._last_ticker_decisions = self._build_ticker_decisions(
+                signals,
+                convictions,
+                {},
+                current_cycle,
+                _cs_norm,
+                _block_longs,
+                _block_shorts,
+                _regime_hmm,
+                _regime_confidence,
+                _ffg_blocked,
+            )
             return {
                 "weights": {},
                 "positions": 0,
@@ -3826,140 +4019,21 @@ class StrategyNode(Node):
         # Also run a quick backtest
         bt = self._backtest(signals, market_data)
 
-        # ── Build per-ticker decision traces for full tensor observability ──
-        # Done before updating _last_trade_cycle so time-filter check is consistent.
-        # _raw_composite / _basket_mean are stored by signal_generation.py before demeaning.
-        _buy_threshold_raw = 0.2 / _cs_norm  # composite > this → BUY conviction
-        _ticker_decisions: dict[str, TickerDecision] = {}
-        for _td_ticker, _td_sig in signals.items():
-            if (
-                _td_ticker.startswith("_")
-                or _td_ticker.startswith("adv_")
-                or not isinstance(_td_sig, dict)
-            ):
-                continue
-            if "composite" not in _td_sig:
-                continue
-
-            _td_signal_traces = [
-                SignalTrace(
-                    signal_name=_k,
-                    raw_value=float(_td_sig[_k]),
-                    rationale_text="",
-                    inputs_used={
-                        ik: _td_sig[ik]
-                        for ik in (
-                            # include the raw indicator values for context
-                            {
-                                "sma_crossover": ["sma_short", "sma_long"],
-                                "rsi_signal": ["rsi"],
-                                "macd_crossover": ["macd", "macd_signal_line"],
-                                "bb_signal": ["bb_upper", "bb_lower", "bb_mid"],
-                                "zscore_signal": ["zscore"],
-                                "volume_signal": ["volume_zscore"],
-                                "btc_beta_signal": ["btc_beta"],
-                                "vol_regime_signal": ["vol_regime", "recent_vol_ann"],
-                            }.get(_k, [])
-                        )
-                        if ik in _td_sig and isinstance(_td_sig[ik], (int, float, str))
-                    },
-                )
-                for _k, _v in _td_sig.items()
-                if (_k.endswith("_signal") or _k == "sma_crossover")
-                and isinstance(_v, (int, float))
-            ]
-
-            _td_demeaned = float(_td_sig.get("composite", 0.0))
-            _td_raw = float(_td_sig.get("_raw_composite", _td_demeaned))
-            _td_bm = float(_td_sig.get("_basket_mean", 0.0))
-            _td_c = convictions.get(_td_ticker, ConvictionLevel.HOLD)
-            _td_filters: list[str] = []
-            _td_proposal = "NONE"
-            _td_final = "HOLD"
-            _td_reason = ""
-
-            if _universe_blocked(_td_ticker, self.features):
-                _td_filters.append("blacklist:skip")
-                _td_final = "HOLD"
-                _td_reason = "blacklist"
-            elif _td_c == ConvictionLevel.HOLD:
-                _td_filters.append(f"conviction_gate:hold(score={_td_demeaned * _cs_norm:.3f})")
-            elif _td_c in (ConvictionLevel.STRONG_BUY, ConvictionLevel.BUY):
-                if _td_ticker in _LONG_BLACKLIST:
-                    _td_filters.append("long_blacklist:skip")
-                    _td_final = "FILTERED"
-                    _td_reason = "long_blacklist"
-                elif _td_demeaned <= self._signal_threshold:
-                    _td_filters.append(
-                        f"signal_threshold:skip(composite={_td_demeaned:.4f}<={self._signal_threshold:.4f})"
-                    )
-                    _td_final = "FILTERED"
-                    _td_reason = "signal_threshold"
-                else:
-                    _td_proposal = "LONG"
-                    if _block_longs:
-                        _td_filters.append(
-                            f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})"
-                        )
-                        _td_final = "FILTERED"
-                        _td_reason = f"regime_block({_regime_hmm})"
-                    else:
-                        _td_passes, _td_filter_reason = self._passes_conviction_filters(
-                            _td_sig, current_cycle, "long"
-                        )
-                        if not _td_passes:
-                            _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
-                            _td_final = "FILTERED"
-                            _td_reason = _td_filter_reason
-                        else:
-                            _td_filters.append("conviction_filters:pass")
-                            _td_final = "TRADE" if _td_ticker in weights else "FILTERED"
-                            if _td_final == "FILTERED":
-                                _td_reason = "position_limit"
-            elif _td_c in (ConvictionLevel.SELL, ConvictionLevel.STRONG_SELL):
-                if _td_demeaned >= -self._signal_threshold:
-                    _td_filters.append("signal_threshold:skip")
-                    _td_final = "FILTERED"
-                    _td_reason = "signal_threshold"
-                else:
-                    _td_proposal = "SHORT"
-                    if _block_shorts:
-                        _td_filters.append(
-                            f"regime_block:filtered({_regime_hmm}@{_regime_confidence:.2f})"
-                        )
-                        _td_final = "FILTERED"
-                        _td_reason = f"regime_block({_regime_hmm})"
-                    else:
-                        _td_passes, _td_filter_reason = self._passes_conviction_filters(
-                            _td_sig, current_cycle, "short"
-                        )
-                        if not _td_passes:
-                            _td_filters.append(f"conviction_filters:filtered({_td_filter_reason})")
-                            _td_final = "FILTERED"
-                            _td_reason = _td_filter_reason
-                        else:
-                            _td_filters.append("conviction_filters:pass")
-                            _td_final = "TRADE" if _td_ticker in weights else "FILTERED"
-                            if _td_final == "FILTERED":
-                                _td_reason = "position_limit"
-
-            _ticker_decisions[_td_ticker] = TickerDecision(
-                ticker=_td_ticker,
-                signal_traces=_td_signal_traces,
-                raw_composite=_td_raw,
-                basket_mean=_td_bm,
-                demeaned_composite=_td_demeaned,
-                conviction=_td_c.name,
-                conviction_score=_td_demeaned * _cs_norm,
-                conviction_threshold_buy=_buy_threshold_raw,
-                conviction_threshold_sell=-_buy_threshold_raw,
-                proposal=_td_proposal,
-                filters_applied=_td_filters,
-                final_action=_td_final,
-                filter_reason=_td_reason,
-            )
-
-        self._last_ticker_decisions = _ticker_decisions
+        # ── Per-ticker decision traces ───────────────────────────────────
+        # Done before updating _last_trade_cycle so the time-filter check is
+        # consistent.
+        self._last_ticker_decisions = _ticker_decisions = self._build_ticker_decisions(
+            signals,
+            convictions,
+            weights,
+            current_cycle,
+            _cs_norm,
+            _block_longs,
+            _block_shorts,
+            _regime_hmm,
+            _regime_confidence,
+            _ffg_blocked,
+        )
         # ── end decision traces ──────────────────────────────────────────────
 
         # ── Signal correlation monitor (gated) ───────────────────────────────

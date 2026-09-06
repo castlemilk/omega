@@ -139,8 +139,8 @@ class TestSidewaysIsNormal:
     def test_sol_short_blocked_in_sideways_regime(self):
         """SOL short must be blocked when _regime='sideways' (HMM normal label)."""
         node = StrategyNode()
-        # Provide prior-cycle short history via _signal_history to pass multi-cycle check
-        node._signal_history["SOLUSDT"] = ["short"]
+        # Provide prior-cycle short history via _direction_history to pass multi-cycle check
+        node._direction_history["SOLUSDT"] = ["short"]
         sigs = {
             "_regime_hmm": "sideways",
             "_regime": "sideways",
@@ -167,7 +167,7 @@ class TestSidewaysIsNormal:
             "_regime": "sideways",
             "ETHUSDT": {"composite": 0.065},
         }
-        node._signal_history["ETHUSDT"] = ["long"]  # pass multi-cycle confirmation
+        node._direction_history["ETHUSDT"] = ["long"]  # pass multi-cycle confirmation
         result = node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         assert weights.get("ETHUSDT", 0) <= 0, (
@@ -292,7 +292,7 @@ class TestCrisisAbsMinConviction:
         }
         # Pre-load history so multi-cycle confirmation passes without bypass
         # (V82 added composite <= -0.10 gate on bypass; signal_history avoids that dependency)
-        node._signal_history["ETHUSDT"] = ["short"]
+        node._direction_history["ETHUSDT"] = ["short"]
         result = node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         # Should produce a short candidate, not be blocked by abs_min_conviction
@@ -314,7 +314,7 @@ class TestCrisisAbsMinConviction:
             "_regime": "normal",
             "ETHUSDT": {"composite": -0.065},
         }
-        node._signal_history["ETHUSDT"] = ["short"]
+        node._direction_history["ETHUSDT"] = ["short"]
         result = node._construct_portfolio(sigs, {})
         weights = result.get("weights", {})
         assert "ETHUSDT" not in weights or weights.get("ETHUSDT", 0) >= 0, (

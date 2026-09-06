@@ -40,7 +40,7 @@ def _make_strategy(features: VictoriaFeatures, signal_ics: dict[str, float]) -> 
     s._ic_skip_cycles = 0
     s._logged_ic_regimes = set()
     s._ic_source = "seed"
-    s._signal_history = {}
+    s._signal_value_history = {}
     return s
 
 
