@@ -10,10 +10,10 @@
 # So the fast suite runs on every push. The slow suite runs nightly, because it
 # takes ~15 minutes and its value is catching drift, not blocking a commit.
 #
-# mypy and ruff are NOT gates yet: there is a standing backlog that surfaced the
-# moment the type checker started working. They run in report-only mode so the
-# number is visible and can be driven down, and should be promoted to blocking
-# once it reaches zero. A gate that fails on day one gets disabled on day two.
+# mypy and ruff started here in report-only mode, because a standing backlog
+# surfaced the moment the type checker began working and a gate that fails on
+# day one gets disabled on day two. Both backlogs are now zero and both are
+# blocking, so the job is no longer labelled "report only".
 
 name: tests
 
@@ -80,7 +80,7 @@ jobs:
         run: python -m pytest tests/ -q -m "slow" --no-header
 
   quality:
-    name: lint + types (report only)
+    name: lint + types
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -95,15 +95,12 @@ jobs:
       - name: ruff
         # BLOCKING: the backlog is cleared (113 -> 0), so this is a gate now.
         run: ruff check omega/ tests/
-      - name: mypy (omega, blocking)
-        # BLOCKING: omega/ is at zero.
-        run: mypy omega/
-      - name: mypy (tests, report only)
-        # pyproject declares files = ["omega", "tests"], so tests/ was always in
-        # scope and simply never surfaced. Report-only until that backlog is
-        # cleared, then fold both into a single blocking `mypy` step.
-        continue-on-error: true
-        run: mypy tests/
+      - name: mypy
+        # BLOCKING, and with no argument: this runs pyproject's declared
+        # files = ["omega", "tests"], both of which are now at zero (454 files).
+        # tests/ had always been in scope and simply never surfaced; its 33
+        # errors are cleared, so the two steps fold back into this one.
+        run: mypy
 
   go:
     name: go
