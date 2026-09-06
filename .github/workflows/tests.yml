@@ -92,8 +92,19 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
+      - name: python parses
+        # The cheapest gate here, and the one with no backlog: every .py file
+        # must compile under the pinned interpreter. ruff and mypy only look at
+        # omega/ and tests/, so scripts/ was unchecked — and scripts/
+        # view_activations.py sat in the tree for months unable to parse at all
+        # (a backslash escape inside an f-string expression, illegal on every
+        # CPython). A file that cannot be imported is not a style question.
+        run: python -m compileall -q scripts/ omega/ tests/
       - name: ruff
         # BLOCKING: the backlog is cleared (113 -> 0), so this is a gate now.
+        # Scoped to omega/ and tests/; scripts/ still carries ~297 style
+        # findings. The parse gate above covers the part of scripts/ that
+        # actually breaks things.
         run: ruff check omega/ tests/
       - name: mypy
         # BLOCKING, and with no argument: this runs pyproject's declared
