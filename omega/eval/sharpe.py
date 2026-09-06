@@ -49,7 +49,17 @@ def compute_sharpe(
     variance = sum((x - mean_ex) ** 2 for x in excess) / (n - 1)
     std = math.sqrt(variance)
 
-    if std == 0.0:
+    # Relative tolerance, not `== 0.0`. `variance` is a floating-point accumulation,
+    # so a constant series does not reliably produce an exact zero: it did locally
+    # (CPython 3.14) and did NOT in CI (3.11), where compute_sharpe([0.01] * 100)
+    # returned 2.28e+16 instead of the 0.0 this docstring promises. An exact-zero
+    # guard on a summed float cannot keep that promise on every platform.
+    #
+    # Scaled by the data's own magnitude so the threshold means "indistinguishable
+    # from constant" rather than a fixed epsilon that is wrong for very small or
+    # very large returns.
+    scale = max((abs(x) for x in excess), default=0.0) or 1.0
+    if std <= 1e-12 * scale:
         return 0.0
 
     return mean_ex / std * math.sqrt(periods_per_year)
@@ -135,7 +145,12 @@ def sharpe_difference_significant(
     variance_d = sum((d - mean_d) ** 2 for d in diffs) / (n - 1)
     std_d = math.sqrt(variance_d) if variance_d > 0 else 0.0
 
-    if std_d == 0.0:
+    # Same relative tolerance as compute_sharpe, and for the same reason: `variance_d`
+    # is a summed float, so two identical series do not reliably leave an exact zero.
+    # Here the consequence is worse than a wrong number — a denormal residue makes
+    # t_stat enormous and turns "these are identical" into a significant result.
+    scale_d = max((abs(d) for d in diffs), default=0.0) or 1.0
+    if std_d <= 1e-12 * scale_d:
         # Identical — not significant
         return (False, 1.0)
 

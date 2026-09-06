@@ -12,6 +12,11 @@ license = { text = "MIT" }
 dependencies = [
     "psycopg[binary]>=3.1",   # Postgres driver; replaces sqlite3
     "betterproto>=0.9.0",     # Runtime for generated protobuf dataclasses (gen/python/)
+    # RUNTIME, not test-only: omega/core/config.py and omega/core/project_config.py
+    # both import it, and projects register through YAML in projects/. It was
+    # undeclared, so a clean install imported fine on any machine that happened to
+    # have it and failed on one that did not — which is exactly what CI did.
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -104,6 +109,12 @@ ignore = [
 "omega/nodes/victoria/ml_combiner.py" = ["N803", "N806"]
 # strategy.py: __future__ + long docstring triggers E402 for all subsequent imports
 "omega/nodes/victoria/strategy.py" = ["E402"]
+# Tests inherit the maths notation of the module under test: X = observation
+# matrix, T = transition matrix (mirrors the hmm_regime.py entry above).
+"tests/test_hmm_regime.py" = ["N806"]
+# T is the softmax temperature the meta-learner adjusts; the module under test
+# exports it as T_MIN/T_MAX, and the tests are named after the same symbol.
+"tests/test_meta_learner.py" = ["N802", "N806"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["omega"]

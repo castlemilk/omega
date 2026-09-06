@@ -42,10 +42,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-      - name: pytest (excluding slow)
-        # -m "not slow": the slow files run real multi-cycle simulations and take
-        # ~15 min. They are covered by the nightly job below.
-        run: python -m pytest tests/ -q -m "not slow" --no-header
+      - name: pytest (unit only)
+        # Excludes three marker sets, all defined in pyproject.toml:
+        #   slow        real multi-cycle simulations, ~15 min — nightly job below
+        #   integration needs external services
+        #   e2e         needs the Go API server and Postgres running
+        # The first run of this workflow excluded only `slow` and hit 7 errors from
+        # test_e2e_eval trying to reach localhost:5432 and start a Go binary.
+        run: python -m pytest tests/ -q -m "not slow and not integration and not e2e" --no-header
       - name: substrate is unchanged
         # The suite used to write data/macro_cache.db and the memory DB — files
         # that are committed and asserted by data/.cache_manifest.json. If a test
