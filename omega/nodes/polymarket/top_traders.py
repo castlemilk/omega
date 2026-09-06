@@ -352,6 +352,37 @@ class TopTradersNode(Node):
             },
         )
 
+    def get_capabilities(self) -> list[str]:
+        return ["consensus", "multi_consensus", "aggregate"]
+
+    def describe(self) -> str:
+        return (
+            "Infers smart-money consensus on a Polymarket outcome from order-book "
+            "flow: top-of-book depth imbalance, size-weighted mid skew, and 24h "
+            "volume pulse. Returns a bull/bear/neutral direction with a confidence "
+            "in [0, 1]. There is no public top-traders API — these are proxies for "
+            "informed positioning, not observed trader identities."
+        )
+
+    def evaluate(self) -> dict[str, float]:
+        return {
+            "error_rate": self._error_count / max(1, self._exec_count),
+            "avg_latency_ms": self._total_latency_ms / max(1, self._exec_count),
+            "execution_count": float(self._exec_count),
+        }
+
+    def improve(self, feedback: dict[str, Any]) -> bool:
+        """
+        Accept no feedback, and say so rather than claiming a change.
+
+        The only tunables this node has — ``_BULL_THRESHOLD`` and
+        ``_BEAR_THRESHOLD`` — are module constants read by ``get_consensus``,
+        a free function that takes no threshold argument. There is no
+        per-instance state for feedback to move, so returning True here would
+        report an adaptation that did not happen.
+        """
+        return False
+
     def execute(self, input_: NodeInput) -> NodeOutput:
         import time
 
