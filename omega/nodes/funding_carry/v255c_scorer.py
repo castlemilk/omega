@@ -26,6 +26,7 @@ import math
 import os
 import random
 from dataclasses import asdict
+from typing import Any
 
 from .basis_data import BasisLoader
 from .basis_hedge import empirical_basis_check
@@ -349,8 +350,16 @@ def run_v255c(
     return result
 
 
-def _verdict_reason(verdict, ff, pooled_median, ann_gross, any_sig,
-                    basis_source="zero", basis_app=None, boot=None) -> str:
+def _verdict_reason(
+    verdict: str,
+    ff: dict[str, bool],
+    pooled_median: float,
+    ann_gross: dict[str, Any],
+    any_sig: bool,
+    basis_source: str = "zero",
+    basis_app: dict[str, Any] | None = None,
+    boot: dict[str, Any] | None = None,
+) -> str:
     if verdict == "REFUTED":
         parts = []
         if ff["f1_pooled_median_net_le_0"]:

@@ -14,7 +14,6 @@ Tests cover:
   - Integration smoke test via PaperTradingEngine
 """
 
-import math
 
 import pytest
 

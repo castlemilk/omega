@@ -24,6 +24,10 @@ Falls back to 0.0 if all sources fail or < min_periods of history available.
 import logging
 import math
 from collections import deque
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from omega.nodes.victoria.data_cache import MacroDataCache
 
 logger = logging.getLogger("omega.nodes.victoria.signals.funding_rate")
 
@@ -43,13 +47,15 @@ class FundingRateSignal:
     def __init__(self, window: int = 30) -> None:
         self._window = window
         # Rolling buffer of funding rates per symbol (for z-score history)
-        self._history: dict[str, deque] = {}
+        self._history: dict[str, deque[float]] = {}
         # Last 3 raw rates per symbol (for velocity / derivative)
-        self._velocity_history: dict[str, deque] = {}
+        self._velocity_history: dict[str, deque[float]] = {}
         # Last raw rate per symbol (for inspection)
         self._last_rates: dict[str, float] = {}
         # Lazy-loaded cache
-        self._cache = None
+        # Quoted on purpose: MacroDataCache is a TYPE_CHECKING-only import, and an
+        # attribute-target annotation is evaluated at runtime before py314 (PEP 649).
+        self._cache: "MacroDataCache | None" = None  # noqa: UP037
 
     def compute(self, symbol: str, rate: float | None = None) -> float:
         """

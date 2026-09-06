@@ -186,17 +186,22 @@ class _NumpyGMM:
     def score(self, X: np.ndarray) -> float:
         """Return total log-likelihood."""
         if self.means_ is None:
-            return -np.inf
+            return float(-np.inf)
         return self._log_likelihood
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """Return (n_samples, K) posterior responsibilities."""
         if self.means_ is None:
             return np.full((len(X), self.n_components), 1.0 / self.n_components)
-        log_likelihoods = -0.5 * np.log(2 * np.pi * self.vars_[None, :]) - 0.5 * (
-            (X[:, None] - self.means_[None, :]) ** 2 / self.vars_[None, :]
+        # fit() sets means_/vars_/weights_ together; alias them so the guard
+        # above narrows all three for mypy (pure aliasing, no behaviour change).
+        means: Any = self.means_
+        variances: Any = self.vars_
+        weights: Any = self.weights_
+        log_likelihoods = -0.5 * np.log(2 * np.pi * variances[None, :]) - 0.5 * (
+            (X[:, None] - means[None, :]) ** 2 / variances[None, :]
         )
-        log_resp = np.log(self.weights_[None, :] + 1e-300) + log_likelihoods
+        log_resp = np.log(weights[None, :] + 1e-300) + log_likelihoods
         log_resp -= log_resp.max(axis=1, keepdims=True)
         resp = np.exp(log_resp)
         resp /= resp.sum(axis=1, keepdims=True)
@@ -397,7 +402,7 @@ class HMMRegimeDetector:
         self._fit_quality = float(ll / len(returns))
         self._model = gmm
 
-        means = gmm.means_  # (3,)
+        means: Any = gmm.means_  # (3,)
         self._state_label_map = self._label_states(means)
 
         state_seq = gmm.predict(returns)

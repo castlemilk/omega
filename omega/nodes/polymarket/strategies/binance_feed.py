@@ -143,7 +143,7 @@ class BinancePriceFeed:
                     return
                 await self._handle_message(raw)
 
-    async def _handle_message(self, raw: str) -> None:
+    async def _handle_message(self, raw: str | bytes) -> None:
         """Parse one Binance trade message and update state."""
         try:
             msg = json.loads(raw)

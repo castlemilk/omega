@@ -164,7 +164,7 @@ class TestNewsProjectionLayer:
         proj = NewsProjectionLayer()
         # Feed same strong signal 3 times
         for _ in range(3):
-            r = proj.project(
+            proj.project(
                 raw_text="massive liquidation cascade forced sell margin call whale shorts"
             )
         # After 3 cycles, EMA should be moving (not pinned at 1.0)
@@ -251,7 +251,6 @@ class TestApplyNewsPrior:
         assert abs(sum(allocation.weights.values()) - 1.0) < 1e-6
 
     def test_apply_news_prior_low_strength_noop(self) -> None:
-        from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
 
         alloc = self._make_allocator()
         before = alloc.allocate().weights.copy()
@@ -262,14 +261,12 @@ class TestApplyNewsPrior:
             assert abs(before[sig] - after[sig]) < 1e-9, f"{sig}: weight changed on near-zero strength"
 
     def test_apply_news_prior_shifts_weights_toward_boosted_signals(self) -> None:
-        from omega.nodes.victoria.dynamic_weights import DynamicWeightAllocator
         from omega.nodes.victoria.news_projection import NewsProjectionLayer
 
         alloc = self._make_allocator()
         proj = NewsProjectionLayer(signal_names=list(alloc._signals))
 
         # Derivatives news → should boost carry and vrp
-        before = alloc.allocate().weights.copy()
         result = proj.project(
             raw_text="funding rate open interest futures premium options implied vol deribit perpetual"
         )

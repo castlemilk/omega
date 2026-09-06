@@ -193,9 +193,11 @@ class TestFREDPermFailedSuppression:
         error_400 = urllib.error.HTTPError(
             url="http://x", code=400, msg="Bad Request", hdrs=None, fp=None
         )
-        with patch.object(urllib.request, "urlopen", side_effect=error_400):
-            with caplog.at_level(logging.WARNING, logger="omega.nodes.victoria.data_cache"):
-                dc._fetch_fred_observations("DGS10", "DEMO_KEY")
+        with (
+            patch.object(urllib.request, "urlopen", side_effect=error_400),
+            caplog.at_level(logging.WARNING, logger="omega.nodes.victoria.data_cache"),
+        ):
+            dc._fetch_fred_observations("DGS10", "DEMO_KEY")
 
         assert "DGS10" in _FRED_PERM_FAILED, (
             "HTTP 400 must add series to _FRED_PERM_FAILED"
@@ -240,9 +242,11 @@ class TestFREDPermFailedSuppression:
         error_400 = urllib.error.HTTPError(
             url="http://x", code=400, msg="Bad Request", hdrs=None, fp=None
         )
-        with patch.object(urllib.request, "urlopen", side_effect=error_400):
-            with caplog.at_level(logging.WARNING, logger="omega.nodes.victoria.data_cache"):
-                dc._fetch_fred_observations("DTWEXBGS", "DEMO_KEY")
+        with (
+            patch.object(urllib.request, "urlopen", side_effect=error_400),
+            caplog.at_level(logging.WARNING, logger="omega.nodes.victoria.data_cache"),
+        ):
+            dc._fetch_fred_observations("DTWEXBGS", "DEMO_KEY")
 
         warning_count = sum(
             1 for r in caplog.records

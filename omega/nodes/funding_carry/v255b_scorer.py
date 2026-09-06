@@ -21,6 +21,7 @@ import json
 import math
 import os
 from dataclasses import asdict
+from typing import Any
 
 from .basis_hedge import (
     BasisHedgeParams,
@@ -186,7 +187,14 @@ def run_v255b(
     return result
 
 
-def _verdict_reason(verdict, ff, pooled_median, ann, any_sig, basis_check) -> str:
+def _verdict_reason(
+    verdict: str,
+    ff: dict[str, bool],
+    pooled_median: float,
+    ann: dict[str, Any],
+    any_sig: bool,
+    basis_check: dict[str, Any],
+) -> str:
     if verdict == "REFUTED":
         parts = []
         if ff["f1_pooled_median_net_le_0"]:

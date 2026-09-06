@@ -11,8 +11,6 @@ The fix is a per-signal OMEGA_FROZEN_CACHE fence. These tests pin it.
 
 from __future__ import annotations
 
-import os
-
 from omega.nodes.victoria.signals.spy_signal import SPYSignal
 from omega.nodes.victoria.signals.vix_signal import VIXSignal
 

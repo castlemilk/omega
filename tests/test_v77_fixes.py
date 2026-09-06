@@ -172,9 +172,11 @@ class TestFearGreedNullWarning:
         sig._cache = []
         sig._last_signal = 0.0
 
-        with patch.object(sig, "_fetch", return_value=[]):
-            with caplog.at_level(logging.DEBUG, logger="omega.nodes.victoria.signals.fear_greed"):
-                result = sig.compute()
+        with (
+            patch.object(sig, "_fetch", return_value=[]),
+            caplog.at_level(logging.DEBUG, logger="omega.nodes.victoria.signals.fear_greed"),
+        ):
+            result = sig.compute()
 
         assert result == 0.0, "Should still return 0.0 on failure"
         warning_records = [r for r in caplog.records if r.levelno >= logging.WARNING]

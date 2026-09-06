@@ -19,7 +19,6 @@ from typing import Any
 from unittest.mock import patch
 
 import numpy as np
-import pytest
 
 from omega.nodes.victoria.hmm_regime import (
     BEAR,
@@ -322,7 +321,7 @@ class TestHMMWassersteinDivergence:
             float(w_out.get("bear_prob", 1 / 3)),
             float(w_out.get("sideways_prob", 1 / 3)),
         ]
-        l1 = sum(abs(a - b) for a, b in zip(hmm_vec, w_vec))
+        l1 = sum(abs(a - b) for a, b in zip(hmm_vec, w_vec, strict=False))
         direction = hmm_vec[0] - w_vec[0]
         signed_value = l1 * (1.0 if direction >= 0 else -1.0)
         hmm_fit_q = float(hmm_out.get("fit_quality", 0.0))

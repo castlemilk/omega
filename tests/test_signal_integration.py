@@ -17,9 +17,8 @@ from __future__ import annotations
 
 import math
 import urllib.error
-from collections import namedtuple
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -78,7 +77,7 @@ def _assert_signal_value(sv: Any, *, label: str = "") -> None:
             assert math.isfinite(rv), f"{tag}raw[{rk!r}]={rv!r} is not finite"
 
 
-def _network_error(*args, **kwargs):  # noqa: ANN001, ANN002, ANN003
+def _network_error(*args, **kwargs):
     """Drop-in replacement for urllib.request.urlopen that always raises."""
     raise urllib.error.URLError("network mocked offline")
 
@@ -635,9 +634,8 @@ class TestRMTDenoiser:
         # RMTDenoiser returns a dict/SignalValue — check the key output fields
         if hasattr(result, "value"):
             assert -1.0 <= result.value <= 1.0
-        elif isinstance(result, dict):
-            if "value" in result:
-                assert -1.0 <= float(result["value"]) <= 1.0
+        elif isinstance(result, dict) and "value" in result:
+            assert -1.0 <= float(result["value"]) <= 1.0
 
     def test_warmup_fallback(self) -> None:
         from omega.nodes.victoria.rmt_denoiser import RMTDenoiser

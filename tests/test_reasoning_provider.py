@@ -66,14 +66,16 @@ def test_frozen_replay_raises_cache_miss_for_the_local_provider(tmp_path) -> Non
     layer = ReasoningLayer(model_id="qwen3.8-27b-mlx", cache_root=tmp_path)
     env = {k: v for k, v in os.environ.items() if k != "OMEGA_LLM_CACHE_FILL"}
     env["OMEGA_FROZEN_CACHE"] = "1"
-    with mock.patch.dict(os.environ, env, clear=True):
-        with mock.patch.object(ReasoningLayer, "_invoke_provider") as spy:
-            with pytest.raises(LLMCacheMiss):
-                layer.review_basket(
-                    {"cycle": 1, "regime": "normal"},
-                    [{"symbol": "ETHUSDT", "side": "long", "weight": 0.5}],
-                )
-            spy.assert_not_called()
+    with (
+        mock.patch.dict(os.environ, env, clear=True),
+        mock.patch.object(ReasoningLayer, "_invoke_provider") as spy,
+    ):
+        with pytest.raises(LLMCacheMiss):
+            layer.review_basket(
+                {"cycle": 1, "regime": "normal"},
+                [{"symbol": "ETHUSDT", "side": "long", "weight": 0.5}],
+            )
+        spy.assert_not_called()
 
 
 # ---------------------------------------------------- G3: bounded authority
@@ -93,11 +95,10 @@ def test_size_scale_is_still_clamped_to_one_for_a_local_model(tmp_path) -> None:
         "reasoning": "very confident",
         "confidence": 0.99,
     })
-    with mock.patch.dict(os.environ, {"OMEGA_LLM_CACHE_FILL": "1"}):
-        with mock.patch.object(
-            ReasoningLayer, "_invoke_provider", return_value=(rogue, "some thinking")
-        ):
-            _kept, review, _ = layer.review_basket({"cycle": 1}, candidates)
+    with mock.patch.dict(os.environ, {"OMEGA_LLM_CACHE_FILL": "1"}), mock.patch.object(
+        ReasoningLayer, "_invoke_provider", return_value=(rogue, "some thinking")
+    ):
+        _kept, review, _ = layer.review_basket({"cycle": 1}, candidates)
     assert review.size_scale.get("ETHUSDT", 1.0) <= 1.0, (
         f"local model up-sized a position to {review.size_scale.get('ETHUSDT')} — the "
         "V241 [0,1] contract has been widened by the provider change."
@@ -111,14 +112,13 @@ def test_thinking_is_captured_but_not_load_bearing(tmp_path) -> None:
         "keep": ["ETHUSDT"], "drop": [], "size_scale": {},
         "reasoning": "r", "confidence": 0.5,
     })
-    with mock.patch.dict(os.environ, {"OMEGA_LLM_CACHE_FILL": "1"}):
-        with mock.patch.object(
-            ReasoningLayer, "_invoke_provider",
-            return_value=(payload, "step 1: consider vol"),
-        ):
-            _kept, review, _ = layer.review_basket(
-                {"cycle": 1}, [{"symbol": "ETHUSDT", "side": "long", "weight": 0.5}]
-            )
+    with mock.patch.dict(os.environ, {"OMEGA_LLM_CACHE_FILL": "1"}), mock.patch.object(
+        ReasoningLayer, "_invoke_provider",
+        return_value=(payload, "step 1: consider vol"),
+    ):
+        _kept, review, _ = layer.review_basket(
+            {"cycle": 1}, [{"symbol": "ETHUSDT", "side": "long", "weight": 0.5}]
+        )
     assert review.thinking == "step 1: consider vol"
     assert "ETHUSDT" in review.keep
 

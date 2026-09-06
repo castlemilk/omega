@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -235,7 +236,7 @@ class TraceReader:
     def __init__(self, path: str | Path) -> None:
         self._path = Path(path)
 
-    def iter_traces(self):
+    def iter_traces(self) -> Iterator[DecisionTrace]:
         """Generator over all traces. Memory-efficient for large files."""
         if not self._path.exists():
             return

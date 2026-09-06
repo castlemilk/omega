@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from omega.nodes.victoria.ensemble_voter import EnsembleResult, EnsembleVoter, Vote
+from omega.nodes.victoria.ensemble_voter import EnsembleVoter, Vote
 
 
 @pytest.fixture()

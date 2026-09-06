@@ -51,7 +51,7 @@ def _market_data() -> dict:
 
 def test_signal_generation_imports():
     """Smoke: signal_generation module imports without error."""
-    from omega.nodes.victoria.signal_generation import SignalGenerationNode  # noqa: F401
+    from omega.nodes.victoria.signal_generation import SignalGenerationNode
 
     assert SignalGenerationNode is not None
 

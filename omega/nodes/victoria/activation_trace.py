@@ -52,7 +52,7 @@ import math
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 logger = logging.getLogger("omega.victoria.activation_trace")
 
@@ -320,7 +320,7 @@ class ActivationTracer:
         self._dir = Path(output_dir) / "activation_traces"
         self._dir.mkdir(parents=True, exist_ok=True)
         self._path = self._dir / f"{version}.jsonl"
-        self._fh = None
+        self._fh: TextIO | None = None
         # pending[ticker] = ActivationTrace (entry recorded, exit not yet)
         self._pending: dict[str, ActivationTrace] = {}
 

@@ -41,17 +41,17 @@ class TestConstitutionalConstraints:
 
     def test_hard_position_violation(self):
         metrics = {"max_position_pct": 40.0}  # > 25
-        passed, violations = self.c.check(metrics)
+        passed, _violations = self.c.check(metrics)
         assert not passed
 
     def test_register_custom_constraint(self):
         self.c.register("custom_check", "latency_ms", 500.0, direction="max", severity="hard")
         metrics = {"latency_ms": 600.0}
-        passed, violations = self.c.check(metrics)
+        passed, _violations = self.c.check(metrics)
         assert not passed
 
     def test_missing_metric_passes(self):
-        passed, violations = self.c.check({"unknown_metric": 999.0})
+        passed, _violations = self.c.check({"unknown_metric": 999.0})
         assert passed
 
 

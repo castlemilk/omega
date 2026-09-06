@@ -47,12 +47,14 @@ def test_frozen_run_without_scipy_raises() -> None:
     Mirrors the V219 rule ("refuse to produce a baseline on a drifted substrate"),
     applied to the code substrate.
     """
-    with mock.patch.object(wr, "_SCIPY_AVAILABLE", False):
-        with mock.patch.dict(os.environ, {"OMEGA_FROZEN_CACHE": "1"}):
-            with pytest.raises(RuntimeError, match="V282"):
-                wr.assert_scipy_for_frozen_runs()
-            with pytest.raises(RuntimeError, match="scipy"):
-                wr.WassersteinRegimeDetector()
+    with (
+        mock.patch.object(wr, "_SCIPY_AVAILABLE", False),
+        mock.patch.dict(os.environ, {"OMEGA_FROZEN_CACHE": "1"}),
+    ):
+        with pytest.raises(RuntimeError, match="V282"):
+            wr.assert_scipy_for_frozen_runs()
+        with pytest.raises(RuntimeError, match="scipy"):
+            wr.WassersteinRegimeDetector()
 
 
 def test_live_run_without_scipy_still_degrades_gracefully() -> None:
@@ -63,14 +65,18 @@ def test_live_run_without_scipy_still_degrades_gracefully() -> None:
     refuse.
     """
     env = {k: v for k, v in os.environ.items() if k != "OMEGA_FROZEN_CACHE"}
-    with mock.patch.object(wr, "_SCIPY_AVAILABLE", False):
-        with mock.patch.dict(os.environ, env, clear=True):
-            wr.assert_scipy_for_frozen_runs()  # must not raise
-            assert wr.WassersteinRegimeDetector() is not None
+    with (
+        mock.patch.object(wr, "_SCIPY_AVAILABLE", False),
+        mock.patch.dict(os.environ, env, clear=True),
+    ):
+        wr.assert_scipy_for_frozen_runs()  # must not raise
+        assert wr.WassersteinRegimeDetector() is not None
 
 
 def test_frozen_run_with_scipy_is_unaffected() -> None:
     """The assertion must be inert in the configuration everything actually runs in."""
-    with mock.patch.object(wr, "_SCIPY_AVAILABLE", True):
-        with mock.patch.dict(os.environ, {"OMEGA_FROZEN_CACHE": "1"}):
-            wr.assert_scipy_for_frozen_runs()  # must not raise
+    with (
+        mock.patch.object(wr, "_SCIPY_AVAILABLE", True),
+        mock.patch.dict(os.environ, {"OMEGA_FROZEN_CACHE": "1"}),
+    ):
+        wr.assert_scipy_for_frozen_runs()  # must not raise

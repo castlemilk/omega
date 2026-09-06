@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from omega.core.orchestrator_v2 import AttentionRouter
 
 

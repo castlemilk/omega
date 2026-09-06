@@ -43,7 +43,8 @@ class GateResult:
 
 
 def _load_results(path: Path) -> dict[str, Any]:
-    return json.loads(Path(path).read_text())
+    results: dict[str, Any] = json.loads(Path(path).read_text())
+    return results
 
 
 def _load_trades(path: Path) -> list[dict[str, Any]]:

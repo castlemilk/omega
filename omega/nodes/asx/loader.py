@@ -180,7 +180,8 @@ def load_frozen_bars(
     path = root / "bars" / f"{ticker.replace('.', '_')}.json"
     if not path.is_file():
         raise FileNotFoundError(f"{ticker} not frozen at {path}")
-    return json.loads(path.read_text())
+    payload: dict[str, Any] = json.loads(path.read_text())
+    return payload
 
 
 def closes(payload: dict[str, Any]) -> list[float]:

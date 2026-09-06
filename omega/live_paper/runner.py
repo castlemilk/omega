@@ -150,7 +150,8 @@ class LivePaperRunner:
         if last is None:
             return None
         try:
-            return json.loads(last)["cycle_ts"]
+            cycle_ts: str = json.loads(last)["cycle_ts"]
+            return cycle_ts
         except (json.JSONDecodeError, KeyError):
             return None
 

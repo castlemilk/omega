@@ -386,7 +386,7 @@ class TestAgreementRatio:
             "zscore_signal": 0.40,
             "vol_regime_signal": -0.10,
         }
-        passes, reason = node._passes_conviction_filters(sig, cycle=10, direction="long")
+        _passes, reason = node._passes_conviction_filters(sig, cycle=10, direction="long")
 
         assert not reason.startswith("agreement_ratio"), (
             f"Agreement ratio blocking demeaned signal: {reason}\n"
@@ -403,7 +403,7 @@ class TestAgreementRatio:
             "composite": 0.25,
             "vol_regime": "high",  # high-vol would raise threshold to 0.7 if enabled
         }
-        passes, reason = node._passes_conviction_filters(sig, cycle=10, direction="long")
+        _passes, reason = node._passes_conviction_filters(sig, cycle=10, direction="long")
 
         assert not reason.startswith("agreement_ratio"), (
             f"Agreement ratio should be skipped when no sub-signals exist. Got: {reason}"
@@ -422,7 +422,7 @@ class TestAgreementRatio:
             "rsi_signal": 0.40,
             "zscore_signal": 0.30,
         }
-        passes, reason = node._passes_conviction_filters(sig, cycle=10, direction="long")
+        _passes, reason = node._passes_conviction_filters(sig, cycle=10, direction="long")
 
         # Should not be blocked by agreement ratio (all 3 sub-signals agree: > 0)
         assert not reason.startswith("agreement_ratio"), (

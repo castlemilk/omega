@@ -1,5 +1,4 @@
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -9,21 +8,21 @@ from omega.core.task_scheduler import CronExpression, TaskScheduler
 
 def test_cron_wildcard_always_matches():
     cron = CronExpression("* * * * *")
-    dt = datetime(2026, 3, 29, 14, 30, tzinfo=timezone.utc)
+    dt = datetime(2026, 3, 29, 14, 30, tzinfo=UTC)
     assert cron.matches(dt)
 
 
 def test_cron_specific_minute_matches():
     cron = CronExpression("30 * * * *")
-    assert cron.matches(datetime(2026, 3, 29, 14, 30, tzinfo=timezone.utc))
-    assert not cron.matches(datetime(2026, 3, 29, 14, 31, tzinfo=timezone.utc))
+    assert cron.matches(datetime(2026, 3, 29, 14, 30, tzinfo=UTC))
+    assert not cron.matches(datetime(2026, 3, 29, 14, 31, tzinfo=UTC))
 
 
 def test_cron_daily_at_2am():
     cron = CronExpression("0 2 * * *")
-    assert cron.matches(datetime(2026, 3, 29, 2, 0, tzinfo=timezone.utc))
-    assert not cron.matches(datetime(2026, 3, 29, 2, 1, tzinfo=timezone.utc))
-    assert not cron.matches(datetime(2026, 3, 29, 3, 0, tzinfo=timezone.utc))
+    assert cron.matches(datetime(2026, 3, 29, 2, 0, tzinfo=UTC))
+    assert not cron.matches(datetime(2026, 3, 29, 2, 1, tzinfo=UTC))
+    assert not cron.matches(datetime(2026, 3, 29, 3, 0, tzinfo=UTC))
 
 
 def test_cron_invalid_expression_raises():
@@ -37,7 +36,7 @@ def test_add_cron_and_tick_runs_task():
     scheduler = TaskScheduler()
     ran = []
     scheduler.add_cron("test_job", "* * * * *", lambda: ran.append(1))
-    scheduler.tick(datetime(2026, 3, 29, 10, 0, tzinfo=timezone.utc))
+    scheduler.tick(datetime(2026, 3, 29, 10, 0, tzinfo=UTC))
     assert ran == [1]
 
 
@@ -45,7 +44,7 @@ def test_tick_does_not_run_task_twice_in_same_minute():
     scheduler = TaskScheduler()
     ran = []
     scheduler.add_cron("dedup_job", "* * * * *", lambda: ran.append(1))
-    dt = datetime(2026, 3, 29, 10, 0, tzinfo=timezone.utc)
+    dt = datetime(2026, 3, 29, 10, 0, tzinfo=UTC)
     scheduler.tick(dt)
     scheduler.tick(dt)  # same minute — should not re-run
     assert len(ran) == 1
@@ -55,8 +54,8 @@ def test_tick_runs_task_in_next_minute():
     scheduler = TaskScheduler()
     ran = []
     scheduler.add_cron("next_min", "* * * * *", lambda: ran.append(1))
-    dt1 = datetime(2026, 3, 29, 10, 0, tzinfo=timezone.utc)
-    dt2 = datetime(2026, 3, 29, 10, 1, tzinfo=timezone.utc)
+    dt1 = datetime(2026, 3, 29, 10, 0, tzinfo=UTC)
+    dt2 = datetime(2026, 3, 29, 10, 1, tzinfo=UTC)
     scheduler.tick(dt1)
     scheduler.tick(dt2)
     assert len(ran) == 2
@@ -65,13 +64,13 @@ def test_tick_runs_task_in_next_minute():
 def test_add_one_shot_runs_once():
     scheduler = TaskScheduler()
     ran = []
-    run_at = datetime(2026, 3, 29, 15, 0, tzinfo=timezone.utc)
+    run_at = datetime(2026, 3, 29, 15, 0, tzinfo=UTC)
     scheduler.add_one_shot("snapshot", run_at, lambda: ran.append(1))
-    scheduler.tick(datetime(2026, 3, 29, 14, 59, tzinfo=timezone.utc))
+    scheduler.tick(datetime(2026, 3, 29, 14, 59, tzinfo=UTC))
     assert ran == []
     scheduler.tick(run_at)
     assert ran == [1]
-    scheduler.tick(datetime(2026, 3, 29, 15, 1, tzinfo=timezone.utc))
+    scheduler.tick(datetime(2026, 3, 29, 15, 1, tzinfo=UTC))
     assert ran == [1]  # did not re-run
 
 
@@ -111,6 +110,6 @@ def test_task_exception_does_not_crash_scheduler():
         raise RuntimeError("task failure")
 
     scheduler.add_cron("bad_task", "* * * * *", bad_fn)
-    dt = datetime(2026, 3, 29, 10, 0, tzinfo=timezone.utc)
+    dt = datetime(2026, 3, 29, 10, 0, tzinfo=UTC)
     ran = scheduler.tick(dt)
     assert "bad_task" in ran  # it was attempted

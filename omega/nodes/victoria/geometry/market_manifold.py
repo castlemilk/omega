@@ -105,8 +105,8 @@ class ManifoldState:
 class _History:
     """Rolling history for normalisation."""
 
-    ricci: deque = field(default_factory=lambda: deque(maxlen=_WINDOW))
-    theta: deque = field(default_factory=lambda: deque(maxlen=_WINDOW))
+    ricci: deque[float] = field(default_factory=lambda: deque(maxlen=_WINDOW))
+    theta: deque[Any] = field(default_factory=lambda: deque(maxlen=_WINDOW))
 
 
 # ---------------------------------------------------------------------------

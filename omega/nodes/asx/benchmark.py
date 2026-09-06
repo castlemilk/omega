@@ -41,6 +41,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger("omega.nodes.asx.benchmark")
 
@@ -59,7 +60,9 @@ def _manifest(root: Path) -> dict:
     if not path.is_file():
         return {}
     try:
-        return json.loads(path.read_text()).get("series", {})
+        data: dict[str, Any] = json.loads(path.read_text())
+        series: dict[str, Any] = data.get("series", {})
+        return series
     except json.JSONDecodeError:
         logger.warning("unreadable benchmark manifest at %s", path)
         return {}

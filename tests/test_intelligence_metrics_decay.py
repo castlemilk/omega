@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from omega.core.intelligence_metrics import IntelligenceMetricsCollector
 
 

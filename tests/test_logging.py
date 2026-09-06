@@ -144,6 +144,6 @@ class TestBoundLogger:
         ctx.info("i")
         ctx.warning("w")
         ctx.error("e")
-        lines = [l for l in buf.getvalue().strip().split("\n") if l]
-        levels = [json.loads(l)["level"] for l in lines]
+        lines = [ln for ln in buf.getvalue().strip().split("\n") if ln]
+        levels = [json.loads(ln)["level"] for ln in lines]
         assert levels == ["DEBUG", "INFO", "WARNING", "ERROR"]

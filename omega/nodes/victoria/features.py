@@ -1406,7 +1406,7 @@ _PRESETS["v130_high_vol_gate"] = VictoriaFeatures(
 # Grid: 3 variants varying early_loss_cycles (N) and early_loss_k_atr (K).
 # All share: mfe_trail_k=0.5, mfe_retracement_cap=0.25, mae_stop_k=99.0.
 
-_V131_BASE = dict(
+_V131_BASE: dict[str, Any] = dict(
     decision_embeddings=True,
     ws_microstructure=True,
     temporal_memory=True,

@@ -130,7 +130,7 @@ class TestCreateSkill:
         assert os.path.isdir(os.path.join(tmpdir, safe))
 
     def test_sanitises_uppercase_name(self, node_and_dir):
-        node, tmpdir = node_and_dir
+        node, _tmpdir = node_and_dir
         out = node.execute(NodeInput(
             action="create_skill",
             parameters={"name": "GoLang", "content": "body", "tags": []},

@@ -21,6 +21,7 @@ import json
 import math
 import os
 from dataclasses import dataclass, field
+from typing import ClassVar
 
 # Repo-root-relative default. Callers may override for tests.
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +34,7 @@ SETTLEMENTS_PER_DAY = 3
 
 
 def _utc_date(ts: int) -> str:
-    return _dt.datetime.fromtimestamp(int(ts), _dt.timezone.utc).strftime("%Y-%m-%d")
+    return _dt.datetime.fromtimestamp(int(ts), _dt.UTC).strftime("%Y-%m-%d")
 
 
 @dataclass
@@ -77,7 +78,7 @@ class FundingDataLoader:
     # NOT inherited — funding carry is a different mechanism with its own
     # universe question, answered empirically in Phase 0. Start with the full
     # set of symbols that have frozen funding data.
-    DEFAULT_UNIVERSE = [
+    DEFAULT_UNIVERSE: ClassVar[list[str]] = [
         "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
         "DOTUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT", "NEARUSDT",
         "SUIUSDT", "ARBUSDT",
@@ -112,7 +113,7 @@ class FundingDataLoader:
                 if not isinstance(blob, dict) or "close" not in blob:
                     continue
                 bucket = out.setdefault(sym, {})
-                for ts, c in zip(blob["timestamps"], blob["close"]):
+                for ts, c in zip(blob["timestamps"], blob["close"], strict=False):
                     # De-dup by date; overlapping snapshots agree on shared days.
                     bucket[_utc_date(ts)] = float(c)
         self._close_cache = out

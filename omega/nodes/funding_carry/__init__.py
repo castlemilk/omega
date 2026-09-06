@@ -16,11 +16,11 @@ float reductions, canonical ``sorted`` iteration order everywhere.
 """
 
 from .data import FundingDataLoader, SymbolSeries
-from .regime import FundingRegimeClassifier, FundingRegime
+from .regime import FundingRegime, FundingRegimeClassifier
 
 __all__ = [
     "FundingDataLoader",
-    "SymbolSeries",
-    "FundingRegimeClassifier",
     "FundingRegime",
+    "FundingRegimeClassifier",
+    "SymbolSeries",
 ]

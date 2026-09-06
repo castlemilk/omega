@@ -186,7 +186,8 @@ class ShortedClient:
                             resp.headers.get("x-ratelimit-limit", "?"),
                             resp.headers.get("x-ratelimit-reset", "?"),
                         )
-                    return json.loads(resp.read().decode())
+                    decoded: dict[str, Any] = json.loads(resp.read().decode())
+                    return decoded
             except error.HTTPError as exc:
                 if exc.code == 429:
                     wait = int(exc.headers.get("Retry-After", "60"))

@@ -58,7 +58,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 # ---------------------------------------------------------------------------
 # Primitives
@@ -664,7 +664,7 @@ def run_sensitivity_test(
 _DEFAULT_SURFACE = ConfidenceSurface()
 
 
-def get_surface(features) -> ConfidenceSurface:
+def get_surface(features: Any) -> ConfidenceSurface:
     """
     Return the ConfidenceSurface for this feature configuration.
 

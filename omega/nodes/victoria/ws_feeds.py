@@ -42,7 +42,7 @@ logger = logging.getLogger("omega.nodes.victoria.ws_feeds")
 # Optional import — degrade gracefully if websockets not installed
 # ---------------------------------------------------------------------------
 try:
-    import websockets  # type: ignore[import]
+    import websockets
 
     _WEBSOCKETS_AVAILABLE = True
 except ImportError:  # pragma: no cover
@@ -155,7 +155,7 @@ class _SymbolState:
     vpin_buy_vol: float = 0.0
     vpin_sell_vol: float = 0.0
     vpin_trade_count: int = 0
-    vpin_scores: deque = field(default_factory=lambda: deque(maxlen=_VPIN_HISTORY))
+    vpin_scores: deque[float] = field(default_factory=lambda: deque(maxlen=_VPIN_HISTORY))
     vpin_lock: threading.Lock = field(default_factory=threading.Lock)
     # Has received at least one trade
     has_data: bool = False
@@ -596,7 +596,7 @@ class WSFeedManager:
                     break
                 self._handle_message(raw)
 
-    def _handle_message(self, raw: str) -> None:
+    def _handle_message(self, raw: str | bytes) -> None:
         """Parse a combined-stream message and update state."""
         try:
             import json as _json

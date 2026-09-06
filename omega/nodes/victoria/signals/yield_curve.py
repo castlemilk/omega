@@ -53,7 +53,10 @@ float in [-0.6, 0.4]:
 
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from omega.nodes.victoria.data_cache import MacroDataCache
 
 logger = logging.getLogger("omega.nodes.victoria.signals.yield_curve")
 
@@ -99,7 +102,9 @@ class YieldCurveSignal:
 
     def __init__(self) -> None:
         # Lazy-imported to avoid circular imports at module load
-        self._cache = None
+        # Quoted on purpose: MacroDataCache is a TYPE_CHECKING-only import, and an
+        # attribute-target annotation is evaluated at runtime before py314 (PEP 649).
+        self._cache: "MacroDataCache | None" = None  # noqa: UP037
 
         # State for steepening detection (maintained across calls)
         self._days_inverted: int = 0

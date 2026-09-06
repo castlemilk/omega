@@ -24,6 +24,7 @@ import math
 import os
 import random
 from dataclasses import asdict
+from typing import Any
 
 from omega.nodes.funding_carry.phase0_separator import (
     _median,
@@ -238,7 +239,17 @@ def run_v261(
     return result
 
 
-def _verdict_reason(verdict, f1, f2, f3, f4, ci_excl, full, loo, boot) -> str:
+def _verdict_reason(
+    verdict: str,
+    f1: bool,
+    f2: bool,
+    f3: bool,
+    f4: bool,
+    ci_excl: bool,
+    full: dict[str, Any],
+    loo: dict[str, Any],
+    boot: dict[str, Any],
+) -> str:
     med = full["pooled_median"]
     ann = full["annualized_gross"]["annualized_pct"]
     p2 = full["mwu_winners_losers"]["p_two_sided"]

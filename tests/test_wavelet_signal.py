@@ -20,7 +20,8 @@ import math
 from unittest.mock import patch
 
 import numpy as np
-import pytest
+
+from omega.nodes.victoria.wavelet_signal import WaveletSignal
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -66,13 +67,6 @@ def _assert_signal_value(sv, *, label: str = "") -> None:
     assert isinstance(sv.regime_tag, str) and sv.regime_tag, f"{tag}regime_tag must be non-empty str"
     assert isinstance(sv.raw, dict), f"{tag}raw must be dict"
 
-
-# ---------------------------------------------------------------------------
-# Import under test
-# ---------------------------------------------------------------------------
-
-
-from omega.nodes.victoria.wavelet_signal import WaveletSignal
 
 # ---------------------------------------------------------------------------
 # Structure tests
@@ -326,7 +320,7 @@ class TestNumpyHaarFallback:
         prices = np.array(_make_prices(n=64))
         approx, details = _haar_dwt(prices, level=4)
         # Reconstruct total energy from all components
-        all_coeffs = np.concatenate([approx] + details)
+        all_coeffs = np.concatenate([approx, *details])
         original_energy = float(np.sum(prices ** 2))
         reconstructed_energy = float(np.sum(all_coeffs ** 2))
         # Haar DWT is orthogonal so energies should match (within 10%)

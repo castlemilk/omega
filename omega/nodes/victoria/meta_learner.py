@@ -24,6 +24,10 @@ import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from omega.nodes.victoria.confidence_surface import SurfaceConfig
 
 logger = logging.getLogger(__name__)
 
@@ -328,7 +332,7 @@ class MetaLearner:
 
     # ── Outputs ───────────────────────────────────────────────────────────
 
-    def get_surface_config(self):
+    def get_surface_config(self) -> SurfaceConfig:
         """
         Return a SurfaceConfig populated with current learned parameters.
 
@@ -380,7 +384,7 @@ class MetaLearner:
                 for name, s in self._surfaces.items()
             },
             "regime_pf": {
-                r: round(b.profit_factor(), 3) if b.profit_factor() is not None else None
+                r: round(pf, 3) if (pf := b.profit_factor()) is not None else None
                 for r, b in self._regime_buffers.items()
             },
             "signal_ic": {k: round(v, 4) for k, v in self._signal_ic.items()},

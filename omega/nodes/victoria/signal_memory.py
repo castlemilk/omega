@@ -174,8 +174,8 @@ class SignalMemory:
         history = self.history.get(ticker, {}).get(signal)
         if not history or len(history) < 3:
             return 0.0
-        current = history[-1]
-        prev_mean = sum(list(history)[-4:-1]) / 3  # mean of 3 cycles before current
+        current: float = history[-1]
+        prev_mean: float = sum(list(history)[-4:-1]) / 3  # mean of 3 cycles before current
         denom = abs(prev_mean) + 1e-8
         return max(-1.0, min(1.0, (current - prev_mean) / denom))
 
@@ -235,7 +235,7 @@ class SignalMemory:
         Returns:
             Normalised trend slope in [-1, 1], or 0.0 if fewer than 3 cycles.
         """
-        history = list(self.history.get(ticker, {}).get(signal, []))
+        history: list[float] = list(self.history.get(ticker, {}).get(signal, []))
         n = len(history)
         if n < 3:
             return 0.0

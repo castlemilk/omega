@@ -266,7 +266,7 @@ class ReasoningLayer:
         p = self._cache_path(phash)
         if not p.is_file():
             return None
-        entry = json.loads(p.read_text())
+        entry: dict = json.loads(p.read_text())
         served = entry.get("model_id")
         if served != self.model_id:
             # V240 pre-reg: a served-model mismatch on replay is a hard error,
@@ -292,7 +292,7 @@ class ReasoningLayer:
             )
             + "\n"
         )
-        man = (
+        man: dict = (
             json.loads(self._manifest_path.read_text())
             if self._manifest_path.is_file()
             else {"model_id": self.model_id, "entries": {}}

@@ -25,7 +25,7 @@ import urllib.parse
 import urllib.request
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def _cache_load(key: str, is_historical: bool) -> dict | None:
     if is_historical:
         # Historical data never expires
         try:
-            return json.loads(path.read_text())
+            return cast("dict | None", json.loads(path.read_text()))
         except Exception:
             return None
     # Live: check TTL
@@ -77,7 +77,7 @@ def _cache_load(key: str, is_historical: bool) -> dict | None:
     if age > _CACHE_TTL_SECONDS:
         return None
     try:
-        return json.loads(path.read_text())
+        return cast("dict | None", json.loads(path.read_text()))
     except Exception:
         return None
 
@@ -114,7 +114,8 @@ class GDELTClient:
         key = _cache_key(query_name, end_dt)
         cached = _cache_load(key, is_historical)
         if cached is not None:
-            return cached.get("articles", [])
+            articles: list[dict[str, Any]] = cached.get("articles", [])
+            return articles
 
         fmt = "%Y%m%d%H%M%S"
         params = (

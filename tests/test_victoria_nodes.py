@@ -172,7 +172,7 @@ class TestDataIngestionNodeExecution:
         mock_bybit.return_value = None
         mock_cg.return_value = None
         mock_cc.return_value = None
-        out = self.node.execute(_make_input("fetch_market_data"))
+        self.node.execute(_make_input("fetch_market_data"))
         # Node execute itself succeeds (returns empty/None results, doesn't throw)
         # but pairs_failed should be non-zero
         state = self.node.get_state()

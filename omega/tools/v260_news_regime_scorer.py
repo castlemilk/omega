@@ -122,7 +122,8 @@ def _cache_load(phash: str) -> dict | None:
     p = CACHE_DIR / f"{phash}.json"
     if not p.is_file():
         return None
-    return json.loads(p.read_text())["response"]
+    response: dict = json.loads(p.read_text())["response"]
+    return response
 
 
 def _cache_store(phash: str, prompt: str, response: dict) -> None:

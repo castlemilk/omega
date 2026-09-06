@@ -201,13 +201,15 @@ class StandingGateResult:
 def load_baseline_config(path: Path | str | None = None) -> dict[str, Any]:
     """Read `data/standing_baseline.json` (or an explicit path)."""
     p = Path(path) if path is not None else DEFAULT_BASELINE_PATH
-    return json.loads(p.read_text())
+    config: dict[str, Any] = json.loads(p.read_text())
+    return config
 
 
 def _as_results(results: Path | str | dict[str, Any]) -> dict[str, Any]:
     if isinstance(results, dict):
         return results
-    return json.loads(Path(results).read_text())
+    loaded: dict[str, Any] = json.loads(Path(results).read_text())
+    return loaded
 
 
 def _load_trades(path: Path | str) -> list[dict[str, Any]]:
@@ -685,7 +687,7 @@ def error_payload(version: str, error: BaseException | str, *, out_path: Path | 
     was indistinguishable from a gate that never ran. An ERROR file is the
     record; the caller still must not let it kill the training run.
     """
-    payload = {
+    payload: dict[str, Any] = {
         "version": version,
         "family": None,
         "verdict": VERDICT_ERROR,

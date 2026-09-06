@@ -25,10 +25,11 @@ import json
 import math
 import os
 from dataclasses import asdict
+from typing import Any, cast
 
 from .data import FundingDataLoader
 from .regime import FundingRegime, FundingRegimeClassifier, build_market_index
-from .strategy import StrategyParams, Trade, simulate_universe
+from .strategy import StrategyParams, simulate_universe
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +59,7 @@ def _rank_avg(values: list[float]) -> tuple[list[float], list[int]]:
     return ranks, tie_sizes
 
 
-def mann_whitney_u(a: list[float], b: list[float]) -> dict:
+def mann_whitney_u(a: list[float], b: list[float]) -> dict[str, Any]:
     """Tie-corrected MWU with normal approximation + continuity correction.
 
     Tests group ``a`` vs group ``b``. Returns U (for a), mean, std, z, and
@@ -108,11 +109,11 @@ def _pct(xs: list[float], q: float) -> float:
     if not xs:
         return 0.0
     s = sorted(xs)
-    idx = min(len(s) - 1, max(0, int(round(q * (len(s) - 1)))))
+    idx = min(len(s) - 1, max(0, round(q * (len(s) - 1))))
     return s[idx]
 
 
-def _stats(pnls: list[float]) -> dict:
+def _stats(pnls: list[float]) -> dict[str, Any]:
     n = len(pnls)
     if n == 0:
         return {"n": 0}
@@ -137,7 +138,7 @@ def _stats(pnls: list[float]) -> dict:
 # ---------------------------------------------------------------------------
 def count_independent_windows(
     date_regimes: dict[str, FundingRegime], window_days: int = 90
-) -> dict:
+) -> dict[str, Any]:
     """Tile the span with non-overlapping ``window_days`` slots, label each by
     the majority funding regime, and count per regime. This is the funding
     analogue of V249's spot-regime independent-N audit.
@@ -151,7 +152,7 @@ def count_independent_windows(
     n_slots = span_days // window_days
     by_date = {d: date_regimes[d] for d in dates}
     counts: dict[str, int] = {r.value: 0 for r in FundingRegime}
-    slot_labels = []
+    slot_labels: list[dict[str, str]] = []
     for s in range(n_slots):
         start = d0 + _dt.timedelta(days=s * window_days)
         end = start + _dt.timedelta(days=window_days)
@@ -184,7 +185,7 @@ def run_phase0(
     params: StrategyParams | None = None,
     data_dir: str | None = None,
     out_dir: str | None = None,
-) -> dict:
+) -> dict[str, Any]:
     p = params or StrategyParams()
     loader = FundingDataLoader(data_dir=data_dir)
     universe = loader.load_universe()
@@ -211,9 +212,9 @@ def run_phase0(
     mwu = mann_whitney_u(win_z, lose_z)
 
     # scipy cross-check (diagnostic only)
-    scipy_check = None
+    scipy_check: dict[str, Any] | None = None
     try:
-        from scipy import stats as _sps  # type: ignore
+        from scipy import stats as _sps
         if win_z and lose_z:
             u, pv = _sps.mannwhitneyu(win_z, lose_z, alternative="two-sided")
             scipy_check = {"u": float(u), "p_two_sided": float(pv)}
@@ -222,7 +223,7 @@ def run_phase0(
 
     # verdict (pre-registered)
     pooled_median = _median(pooled_pnls)
-    mwu_p = mwu.get("p_two_sided") if mwu.get("valid") else 1.0
+    mwu_p = cast(float, mwu.get("p_two_sided") if mwu.get("valid") else 1.0)
     passes = bool(mwu.get("valid") and mwu_p <= 0.10 and pooled_median > 0.0)
     verdict = "ADVANCE" if passes else "REFUTED"
 
@@ -267,7 +268,7 @@ def run_phase0(
     return result
 
 
-def _verdict_reason(mwu: dict, mwu_p: float, pooled_median: float, passes: bool) -> str:
+def _verdict_reason(mwu: dict[str, Any], mwu_p: float, pooled_median: float, passes: bool) -> str:
     if not mwu.get("valid"):
         return f"MWU invalid ({mwu.get('reason', 'degenerate groups')}) — REFUTED"
     if passes:

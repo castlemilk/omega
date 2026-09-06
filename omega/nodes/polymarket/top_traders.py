@@ -360,6 +360,7 @@ class TopTradersNode(Node):
         action = input_.action
         params = input_.parameters
 
+        result: dict[str, Any] | list[dict[str, Any]]
         try:
             if action == "consensus":
                 result = self._action_consensus(params)
@@ -426,8 +427,10 @@ def _find_token_id(market: Any, outcome: str) -> str:
     for tok in market.tokens:
         if isinstance(tok, dict):
             if tok.get("outcome", "").upper() == outcome.upper():
-                return tok.get("token_id", "")
+                token_id: str = tok.get("token_id", "")
+                return token_id
         else:
             if getattr(tok, "outcome", "").upper() == outcome.upper():
-                return getattr(tok, "token_id", "")
+                attr_token_id: str = getattr(tok, "token_id", "")
+                return attr_token_id
     return ""

@@ -231,7 +231,7 @@ class TestProjectLoaderFileLoad:
 
         # All node types used in victoria.yaml should be registered
         errors = loader.validate(config)
-        assert errors == [], f"Victoria project has validation errors:\n" + "\n".join(errors)
+        assert errors == [], "Victoria project has validation errors:\n" + "\n".join(errors)
 
     def test_load_nonexistent_raises(self):
         from omega.core.project_config import ProjectLoader

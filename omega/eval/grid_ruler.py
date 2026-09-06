@@ -359,7 +359,8 @@ class GridVerdict:
 def load_manifest(path: Path | str | None = None) -> dict[str, Any]:
     """Read `data/walk_forward_manifest.json` (or an explicit path)."""
     p = Path(path) if path is not None else DEFAULT_MANIFEST_PATH
-    return json.loads(p.read_text())
+    manifest: dict[str, Any] = json.loads(p.read_text())
+    return manifest
 
 
 def _manifest_families(manifest: dict[str, Any]) -> dict[str, str]:

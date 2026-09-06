@@ -9,7 +9,6 @@ network calls. The LLM proposer is disabled (OMEGA_META_LLM unset).
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest

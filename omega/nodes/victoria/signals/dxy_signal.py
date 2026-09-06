@@ -42,7 +42,10 @@ Signal magnitude is scaled by how much stronger the correlation is beyond -0.5.
 import logging
 import math
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from omega.nodes.victoria.data_cache import MacroDataCache
 
 logger = logging.getLogger("omega.nodes.victoria.signals.dxy_signal")
 
@@ -102,7 +105,9 @@ class DXYSignal:
 
     def __init__(self, window: int = _WINDOW) -> None:
         self._window = window
-        self._cache = None  # lazy-loaded
+        # Quoted on purpose: MacroDataCache is a TYPE_CHECKING-only import, and an
+        # attribute-target annotation is evaluated at runtime before py314 (PEP 649).
+        self._cache: "MacroDataCache | None" = None  # lazy-loaded  # noqa: UP037
 
     def compute(self, market_data: dict[str, Any]) -> float:
         """

@@ -228,7 +228,9 @@ try:
     _HAS_TRADE_REINFORCER = True
 except ImportError:
     _HAS_TRADE_REINFORCER = False
-    _TradeReinforcer = None
+    # Rebinding an imported class to None is the standard optional-dep idiom;
+    # mypy has no way to express it, so the two codes are pinned narrowly here.
+    _TradeReinforcer = None  # type: ignore[assignment,misc]
 
 try:
     from omega.nodes.victoria.activation_trace import ActivationTracer as _ActivationTracer
@@ -236,7 +238,9 @@ try:
     _HAS_ACTIVATION_TRACER = True
 except ImportError:
     _HAS_ACTIVATION_TRACER = False
-    _ActivationTracer = None
+    # Rebinding an imported class to None is the standard optional-dep idiom;
+    # mypy has no way to express it, so the two codes are pinned narrowly here.
+    _ActivationTracer = None  # type: ignore[assignment,misc]
 
 try:
     from omega.nodes.victoria.ws_feeds import create_feed_manager as _create_feed_manager

@@ -35,6 +35,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from collections.abc import Callable
 from typing import Any
 
 from omega.core.circuit_breaker import CircuitBreaker
@@ -106,7 +107,7 @@ class FlowClient:
         self._cache: dict[str, tuple[float, Any]] = {}
         self._cb = CircuitBreaker("unusual_whales_flow", failure_threshold=3, recovery_timeout=300)
 
-    def _cached(self, key: str, fn, *args) -> Any | None:
+    def _cached(self, key: str, fn: Callable[..., Any], *args: Any) -> Any | None:
         if key in self._cache:
             ts, data = self._cache[key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
@@ -192,7 +193,7 @@ class DarkPoolClient:
             "unusual_whales_darkpool", failure_threshold=3, recovery_timeout=300
         )
 
-    def _cached(self, key: str, fn, *args) -> Any | None:
+    def _cached(self, key: str, fn: Callable[..., Any], *args: Any) -> Any | None:
         if key in self._cache:
             ts, data = self._cache[key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
@@ -262,7 +263,7 @@ class CongressClient:
             "unusual_whales_congress", failure_threshold=3, recovery_timeout=600
         )
 
-    def _cached(self, key: str, fn, *args) -> Any | None:
+    def _cached(self, key: str, fn: Callable[..., Any], *args: Any) -> Any | None:
         if key in self._cache:
             ts, data = self._cache[key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
@@ -332,7 +333,7 @@ class InsiderClient:
             "unusual_whales_insider", failure_threshold=3, recovery_timeout=300
         )
 
-    def _cached(self, key: str, fn, *args) -> Any | None:
+    def _cached(self, key: str, fn: Callable[..., Any], *args: Any) -> Any | None:
         if key in self._cache:
             ts, data = self._cache[key]
             if time.time() - ts < _CACHE_TTL_SECONDS:
@@ -392,7 +393,7 @@ class StockOptionsClient:
             "unusual_whales_stock", failure_threshold=3, recovery_timeout=300
         )
 
-    def _cached(self, key: str, fn, *args) -> Any | None:
+    def _cached(self, key: str, fn: Callable[..., Any], *args: Any) -> Any | None:
         if key in self._cache:
             ts, data = self._cache[key]
             if time.time() - ts < _CACHE_TTL_SECONDS:

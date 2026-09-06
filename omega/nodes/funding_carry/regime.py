@@ -25,9 +25,16 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - typing only
+    from .data import SymbolSeries
 
 
-class FundingRegime(str, Enum):
+# Deliberately NOT enum.StrEnum (UP042 suppressed below). `str(FundingRegime.X)` differs
+# between the two ("FundingRegime.X" vs "x"), and these labels are written into
+# frozen phase-0 artefacts; switching would silently change committed output.
+class FundingRegime(str, Enum):  # noqa: UP042
     POSITIVE_CARRY = "positive_carry"
     NEGATIVE_CARRY = "negative_carry"
     NEAR_ZERO = "near_zero"
@@ -114,7 +121,7 @@ class FundingRegimeClassifier:
 
 
 def build_market_index(
-    universe: dict[str, "object"],  # dict[str, SymbolSeries]
+    universe: dict[str, SymbolSeries],
 ) -> tuple[list[str], list[float]]:
     """Cross-sectional daily mean funding across all symbols present each day.
 
@@ -122,7 +129,7 @@ def build_market_index(
     """
     per_date: dict[str, list[float]] = {}
     for s in universe.values():
-        for d, f in zip(s.dates, s.funding):
+        for d, f in zip(s.dates, s.funding, strict=False):
             per_date.setdefault(d, []).append(f)
     dates = sorted(per_date)
     index = [math.fsum(per_date[d]) / len(per_date[d]) for d in dates]

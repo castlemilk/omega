@@ -3,12 +3,7 @@ Unit tests for the V147 BayesianRegimeDetector.
 """
 from __future__ import annotations
 
-import json
-import math
-import tempfile
 from pathlib import Path
-
-import pytest
 
 from omega.nodes.victoria.bayesian_regime import (
     REGIMES,

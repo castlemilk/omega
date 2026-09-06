@@ -98,7 +98,7 @@ def _fetch_ohlcv(
         )
     )
     if not out.success or not out.result:
-        raise RuntimeError(f"DataIngestionNode failed: {out.error}")
+        raise RuntimeError(f"DataIngestionNode failed: {out.errors}")
 
     market_data: dict[str, Any] = out.result
     # Persist to cache

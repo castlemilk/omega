@@ -62,7 +62,7 @@ def load_snapshot(path: str | Path) -> dict[str, Any]:
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"Backtest snapshot not found: {p}")
-    data = json.loads(p.read_text())
+    data: dict[str, Any] = json.loads(p.read_text())
     sid = data.get("_snapshot_id", str(p.stem))
     logger.info(
         "Loaded snapshot %s (%s → %s, %d symbols)",

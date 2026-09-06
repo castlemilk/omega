@@ -30,7 +30,7 @@ import json
 import logging
 import os
 import urllib.request
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +105,7 @@ def _load_hermes_auth() -> dict:
     try:
         p = os.path.expanduser(_HERMES_PATH)
         with open(p) as f:
-            return json.load(f)
+            return cast(dict, json.load(f))
     except Exception:
         return {}
 
@@ -364,15 +364,15 @@ class LLMMetaController:
                 "anthropic-version": "2023-06-01",
             }
 
-            def _extract(raw):
+            def _extract(raw: dict[str, Any]) -> str:
                 # Skip thinking blocks; fall back to thinking text if no text block
                 thinking_text = ""
                 for block in raw.get("content", []):
                     if block.get("type") == "text":
-                        return block["text"]
+                        return cast(str, block["text"])
                     if block.get("type") == "thinking":
                         thinking_text = block.get("thinking", "")
-                return thinking_text or raw["content"][0].get("text", "")
+                return thinking_text or cast(str, raw["content"][0].get("text", ""))
         else:
             url = base_url + "/chat/completions"
             body = json.dumps(
@@ -390,8 +390,8 @@ class LLMMetaController:
                 "Authorization": f"Bearer {api_key}",
             }
 
-            def _extract(raw):
-                return raw["choices"][0]["message"]["content"]
+            def _extract(raw: dict[str, Any]) -> str:
+                return cast(str, raw["choices"][0]["message"]["content"])
 
         req = urllib.request.Request(url, data=body, headers=headers, method="POST")
         with urllib.request.urlopen(req, timeout=60) as resp:

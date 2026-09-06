@@ -93,7 +93,7 @@ class WhaleFlowSignals:
         self._stable_signal: float = 0.0
         self._stable_prev_supply: float | None = None
         # OI per symbol: deque of (timestamp, oi_value) for derivative
-        self._oi_history: dict[str, deque] = {}
+        self._oi_history: dict[str, deque[tuple[float, float]]] = {}
 
     # ------------------------------------------------------------------
     # Public methods

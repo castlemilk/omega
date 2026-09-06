@@ -10,6 +10,7 @@ fence, never an epsilon (V221 lesson). Deterministic: ``math.fsum`` throughout.
 from __future__ import annotations
 
 import math
+from typing import cast
 
 WINDOW = 30
 
@@ -36,7 +37,7 @@ def _rolling_z(series: list[float | None], idx: int) -> float | None:
     window = series[idx - WINDOW + 1 : idx + 1]  # inclusive of idx, WINDOW obs
     if any(v is None for v in window):
         return None
-    w = [float(v) for v in window]
+    w = [float(v) for v in cast("list[float]", window)]
     mean = math.fsum(w) / len(w)
     std = _sample_std(w, mean)
     if std == 0.0:

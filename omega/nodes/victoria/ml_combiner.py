@@ -27,11 +27,11 @@ logger = logging.getLogger("omega.nodes.victoria.ml_combiner")
 
 # Try importing numpy; if unavailable, fall back to pure-Python ridge.
 try:
-    import numpy as np  # type: ignore[import]
+    import numpy as np
 
     _HAS_NUMPY = True
 except ImportError:
-    np = None  # type: ignore[assignment]
+    np = None
     _HAS_NUMPY = False
 
 # ---------------------------------------------------------------------------
@@ -161,7 +161,8 @@ def _numpy_ridge(X: list[list[float]], y: list[float], alpha: float) -> list[flo
         XtX = Xnp.T @ Xnp
         XtX_reg = XtX + alpha * np.eye(XtX.shape[0])
         w = np.linalg.solve(XtX_reg, Xnp.T @ ynp)
-        return w.tolist()
+        weights: list[float] = w.tolist()
+        return weights
     except Exception as exc:
         logger.debug("numpy ridge failed: %s", exc)
         return None

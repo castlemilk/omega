@@ -110,7 +110,8 @@ class TestEvolutionaryTournament:
         assert len(self.t._population) == 5
 
     def test_evaluate_returns_all_variants(self):
-        fitness_fn = lambda params: params.get("lr", 0.01) * 10
+        def fitness_fn(params):
+            return params.get("lr", 0.01) * 10
         scores = self.t.evaluate(fitness_fn)
         assert len(scores) == 5
         assert all(isinstance(v, float) for v in scores.values())
@@ -126,14 +127,16 @@ class TestEvolutionaryTournament:
         assert len(self.t._population) <= 3
 
     def test_run_tournament_returns_result(self):
-        fitness_fn = lambda params: params.get("lr", 0.01) * 100
+        def fitness_fn(params):
+            return params.get("lr", 0.01) * 100
         result = self.t.run_tournament(fitness_fn)
         assert isinstance(result, TournamentResult)
         assert result.champion_id in result.fitness_scores or result.champion_id is not None
         assert isinstance(result.fitness_scores, dict)
 
     def test_get_champion_params(self):
-        fitness_fn = lambda params: params.get("lr", 0.01)
+        def fitness_fn(params):
+            return params.get("lr", 0.01)
         self.t.run_tournament(fitness_fn)
         params = self.t.get_champion_params()
         assert params is not None
@@ -187,7 +190,8 @@ class TestAdversarialPressure:
 
     def test_ring3_dormant_by_default(self):
         self.ap.ring3.initialise_population({"lr": 0.01})
-        fitness_fn = lambda p: p.get("lr", 0.01) * 10
+        def fitness_fn(p):
+            return p.get("lr", 0.01) * 10
         report = self.ap.run(
             cycle=50,  # RING3_INTERVAL == 50
             variant_outputs={"primary": {"BTC": 0.5}},
@@ -200,7 +204,8 @@ class TestAdversarialPressure:
     def test_ring3_runs_when_activated(self):
         self.ap.active_rings = [1, 2, 3]
         self.ap.ring3.initialise_population({"lr": 0.01})
-        fitness_fn = lambda p: p.get("lr", 0.01) * 10
+        def fitness_fn(p):
+            return p.get("lr", 0.01) * 10
         report = self.ap.run(
             cycle=50,
             variant_outputs={"primary": {"BTC": 0.5}},

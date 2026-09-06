@@ -252,12 +252,12 @@ class VictoriaNode(Node):
     # ------------------------------------------------------------------
 
     @property
-    def _reinforcer(self):
+    def _reinforcer(self) -> Any:
         """Proxy to SignalGenerationNode._reinforcer for orchestrator access."""
         return getattr(self._signals, "_reinforcer", None)
 
     @property
-    def _tracer(self):
+    def _tracer(self) -> Any:
         """Proxy to SignalGenerationNode._tracer for orchestrator access.
         Also propagates _version and wires the tracer into StrategyNode.
         """

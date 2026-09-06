@@ -60,7 +60,7 @@ class TestSafetyEnvelope:
     def test_check_improvement_magnitude_boundary(self):
         s = SafetyEnvelope(max_improvement_magnitude=0.5)
         # Exactly at the limit — abs(0.5) is NOT > 0.5, so ok
-        ok, reason = s.check_improvement_magnitude(0.5)
+        ok, _reason = s.check_improvement_magnitude(0.5)
         assert ok
 
     def test_custom_max_improvement_magnitude(self):
@@ -162,7 +162,7 @@ class TestOutcomeBasedScorer:
 
     def test_sharpe_contribution_positive_returns(self):
         # Consistent positive returns → positive sharpe → higher score
-        for i in range(10):
+        for _ in range(10):
             self.scorer.record_outcome("n1", predicted=1.0, actual=1.0, return_contribution=0.05)
         score = self.scorer.score("n1")
         assert score > 0.5

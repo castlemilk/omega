@@ -170,6 +170,7 @@ except ImportError:
 from omega.nodes.victoria.features import VictoriaFeatures
 from omega.nodes.victoria.signal_confluence import ConfluenceAnalyzer, ConfluenceResult
 from omega.nodes.victoria.signal_correlation import SignalCorrelationMonitor
+
 # V275: crisis-term recompute-proofing seam. Stdlib-only leaf module (imports
 # nothing from victoria), so this is cycle-free in both directions.
 from omega.nodes.victoria.signals import crisis_rebind as _crisis_rebind
@@ -234,7 +235,7 @@ _SELECTIVE_UNIVERSE_BLACKLIST: frozenset[str] = frozenset(
 )
 
 
-def _universe_blocked(ticker: str, features) -> bool:
+def _universe_blocked(ticker: str, features: VictoriaFeatures) -> bool:
     """Whether `ticker` is excluded from trading by the universe blacklist.
 
     Precedence: universe_full_enabled (V239, blacklist = empty) >
@@ -514,7 +515,10 @@ class StrategyNode(Node):
         # V166: rolling per-signal history for live normalization (z-score). Keyed
         # by signal name (not per-ticker — pooling across tickers gives more samples
         # for the same signal's intrinsic distribution).
-        self._signal_history: dict[str, list[float]] = {}
+        # NOTE: this attribute is *shared* with the V63 multi-cycle direction
+        # history below (same name, re-bound a few lines down): V166 keys it by
+        # signal name with list[float], V63 keys it by ticker with list[str].
+        self._signal_history: dict[str, list[Any]] = {}
         # Tracking counters
         self._proposals_generated: int = 0  # tickers that passed basic conviction screen
         self._proposals_filtered: int = 0  # tickers blocked by conviction filters
@@ -579,7 +583,9 @@ class StrategyNode(Node):
         # Only enter a trade when the current direction matches the previous cycle's direction.
         # Prevents whipsaw entries on single-cycle signal spikes.
         # Values: "long" | "short" | "hold"
-        self._signal_history: dict[str, list[str]] = {}
+        # V63 re-binds the V166 attribute above; values here are list[str]
+        # ("long" | "short" | "hold"), keyed by ticker.
+        self._signal_history = {}
         # V75: track consecutive cycles where Fiedler regime is "fragmented"
         # Sustained fragmentation + moderate bear_prob = elevated crash risk ahead of HMM label
         self._fiedler_fragmented_streak: int = 0
@@ -668,7 +674,10 @@ class StrategyNode(Node):
             )
 
         # --- Per-cycle decision traces (read by run_training.py → DecisionSnapshot) ---
-        self._last_ticker_decisions: dict[str, TickerDecision] = {}
+        # Normally TickerDecision instances (written wholesale at the end of
+        # _construct_portfolio); the two SKIP_FFG breadcrumbs written mid-cycle
+        # are plain dicts, hence Any rather than TickerDecision.
+        self._last_ticker_decisions: dict[str, Any] = {}
 
         # --- Observability extensions (gated by self.features) ---
         self._trace_writer: TraceWriter | None = None
@@ -696,7 +705,7 @@ class StrategyNode(Node):
         # Track rolling trade outcomes to compute win_rate, avg_win, avg_loss
         from collections import deque
 
-        self._trade_history: deque = deque(maxlen=50)
+        self._trade_history: deque[float] = deque(maxlen=50)
         self._kelly_min_trades: int = 10  # minimum trades before using Kelly
 
         # --- V144: Meta-Learning Layer ---
@@ -3516,15 +3525,15 @@ class StrategyNode(Node):
             _w_conv = abs(self._compute_weighted_conviction(long_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
             if self.features.signal_confluence:
-                _cf = self._last_confluence.get(ticker)
-                _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
+                _cf_cached = self._last_confluence.get(ticker)
+                _boosted_conv = _w_conv * (_cf_cached.conviction_multiplier if _cf_cached else 1.0)
                 # V101 Fix 3: confluence is observer-only — warn on uncertain signals
                 # but do NOT apply size_multiplier=0.5 penalty (was gating trades).
-                if _cf and _cf.is_uncertain:
+                if _cf_cached and _cf_cached.is_uncertain:
                     logger.warning(
                         "Confluence uncertain %s (long): %s — proceeding at nominal size",
                         ticker,
-                        _cf.to_log_str(),
+                        _cf_cached.to_log_str(),
                     )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (
@@ -3548,14 +3557,14 @@ class StrategyNode(Node):
             _w_conv = abs(self._compute_weighted_conviction(short_candidates[ticker]))
             _wconv_scores[ticker] = _w_conv
             if self.features.signal_confluence:
-                _cf = self._last_confluence.get(ticker)
-                _boosted_conv = _w_conv * (_cf.conviction_multiplier if _cf else 1.0)
+                _cf_cached = self._last_confluence.get(ticker)
+                _boosted_conv = _w_conv * (_cf_cached.conviction_multiplier if _cf_cached else 1.0)
                 # V101 Fix 3: same warn-only policy for shorts
-                if _cf and _cf.is_uncertain:
+                if _cf_cached and _cf_cached.is_uncertain:
                     logger.warning(
                         "Confluence uncertain %s (short): %s — proceeding at nominal size",
                         ticker,
-                        _cf.to_log_str(),
+                        _cf_cached.to_log_str(),
                     )
                 _conv_scale = max(0.5, min(2.0, _boosted_conv / 0.25))
                 raw_weights[ticker] = (

@@ -51,6 +51,7 @@ import os
 import pickle
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger("omega.nodes.victoria.decision_embeddings")
 
@@ -320,8 +321,10 @@ class DecisionEmbedder:
         self.random_state = random_state
         self._fitted = False
         self._cluster_stats: list[ClusterStats] = []
-        self._kmeans = None
-        self._scaler = None
+        # sklearn estimators are untyped for mypy (optional dep); Any is the
+        # honest annotation, and both stay None until _fit() runs.
+        self._kmeans: Any = None
+        self._scaler: Any = None
 
     # ------------------------------------------------------------------
     # Fitting
