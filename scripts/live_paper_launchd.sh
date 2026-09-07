@@ -42,6 +42,31 @@ fi
 # has ~638 GB free, so the insurance still holds.
 export OMEGA_AUDIT_OUTPUT_DIR="${OMEGA_AUDIT_OUTPUT_DIR:-$HOME/omega-victoria-data}"
 export LIVE_PAPER_ENABLED="${LIVE_PAPER_ENABLED:-1}"
+
+# ── keep the soak OFF the committed frozen substrate (load-bearing) ───────────
+# data/macro_cache.db, omega_victoria_state.db and omega_victoria_memory.db are
+# COMMITTED files whose md5s data/.cache_manifest.json asserts. Every backtest
+# and the standing baseline read them.
+#
+# Without these three overrides the daemon resolves each path from __file__ and
+# writes the repo copy on EVERY cycle. Measured, not theorised: one forward
+# cycle moved macro_cache.db from 397b9438… to a0bed83b…, and a 90-day soak
+# would have rewritten it ~90 times while the V251 reconciliation was still
+# claiming live/frozen bit-identity against it. The tests' own guard
+# (tests/conftest.py) sets exactly these three, but it only covers pytest — a
+# daemon started by launchd is outside it entirely.
+#
+# Pointed INTO the soak's own output root so its cache is real and warm (an
+# empty macro cache makes every lookup miss and fall through to a live fetch),
+# while the repo copy stays byte-identical.
+export OMEGA_SUBSTRATE_DIR="${OMEGA_SUBSTRATE_DIR:-$OMEGA_AUDIT_OUTPUT_DIR/live_paper/substrate}"
+mkdir -p "$OMEGA_SUBSTRATE_DIR"
+for _db in macro_cache.db omega_victoria_memory.db omega_victoria_state.db; do
+  [ -f "$OMEGA_SUBSTRATE_DIR/$_db" ] || cp -p "data/$_db" "$OMEGA_SUBSTRATE_DIR/$_db" 2>/dev/null || true
+done
+export OMEGA_MACRO_CACHE_PATH="${OMEGA_MACRO_CACHE_PATH:-$OMEGA_SUBSTRATE_DIR/macro_cache.db}"
+export OMEGA_MEMORY_DB_PATH="${OMEGA_MEMORY_DB_PATH:-$OMEGA_SUBSTRATE_DIR/omega_victoria_memory.db}"
+export OMEGA_STATE_DB_PATH="${OMEGA_STATE_DB_PATH:-$OMEGA_SUBSTRATE_DIR/omega_victoria_state.db}"
 export SCHEDULER_ENABLED="${SCHEDULER_ENABLED:-1}"
 export SCHEDULER_TICK_UTC="${SCHEDULER_TICK_UTC:-02:55:00}"
 
