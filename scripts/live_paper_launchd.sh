@@ -7,9 +7,16 @@
 #      `harness/.env`. Baking them into ~/Library/LaunchAgents/*.plist would put
 #      a live API key and a DB password in a world-readable plist — so we source
 #      `harness/.env` here instead and keep the plist secret-free.
-#   2. The gamma volume is an EXTERNAL mount that can appear AFTER login. Exec'ing
-#      python before it mounts makes launchd crash-loop against a missing
-#      checkpoint dir, so we wait (bounded) for the mount first.
+#   2. The output root has to EXIST before python starts, or launchd crash-loops
+#      against a missing checkpoint dir. This was written for the gamma volume,
+#      an external mount that could appear after login; the soak now writes to
+#      local disk, where the wait passes on the first iteration. The guard is
+#      kept because its real job is "refuse to start against the wrong root",
+#      which matters more now, not less: a missing local dir would otherwise be
+#      silently created somewhere unintended.
+#   3. It execs the REPO VENV, not `python3`. On this host `python3` resolves to
+#      Homebrew 3.14 with none of numpy/psycopg/yaml installed, so the daemon
+#      died on import. The venv is the interpreter every other entrypoint uses.
 #
 # NOT scripts/live_paper_daemon.sh: that one nohup+disowns, which makes launchd
 # think the job exited and immediately restart it. Here launchd IS the supervisor,
@@ -29,7 +36,11 @@ if [ -f harness/.env ]; then
 fi
 
 # ── V253 soak configuration (matches the manual launch env, see V253 kickoff) ──
-export OMEGA_AUDIT_OUTPUT_DIR="${OMEGA_AUDIT_OUTPUT_DIR:-/Volumes/gamma-systems-2/omega-victoria-data/live_paper_v253_smoke_v2}"
+# gamma-systems-2 is gone; the soak writes to local disk. Sizing is not the
+# reason the external volume was chosen — the runbook's own math is ~0.5-2 GB
+# over the full 90 days, and the 100 GB floor was ENOSPC insurance. This host
+# has ~638 GB free, so the insurance still holds.
+export OMEGA_AUDIT_OUTPUT_DIR="${OMEGA_AUDIT_OUTPUT_DIR:-$HOME/omega-victoria-data}"
 export LIVE_PAPER_ENABLED="${LIVE_PAPER_ENABLED:-1}"
 export SCHEDULER_ENABLED="${SCHEDULER_ENABLED:-1}"
 export SCHEDULER_TICK_UTC="${SCHEDULER_TICK_UTC:-02:55:00}"
@@ -38,11 +49,14 @@ export SCHEDULER_TICK_UTC="${SCHEDULER_TICK_UTC:-02:55:00}"
 # (SELECTIVE) and to every manual daemon launch in this soak.
 export VICTORIA_FEATURES="${VICTORIA_FEATURES:-{\"crisis_skew_enabled\": true, \"crisis_skew_regime_gate_enabled\": true, \"crisis_skew_drawdown_threshold\": 0.12, \"rv_term_brake_enabled\": false, \"ic_seed_weighting\": false, \"crisis_term_predemean_enabled\": false, \"crisis_size_throttle_enabled\": false, \"universe_selective_enabled\": true}}"
 
-# ── wait for the external checkpoint volume (bounded: 10 min) ─────────────────
+# ── wait for the checkpoint root to exist (bounded: 10 min) ───────────────────
+# Local now, so this normally passes immediately. Still bounded rather than
+# instant: if the root is ever moved back onto a removable volume, this is what
+# stops launchd spinning against a path that has not appeared yet.
 CKPT_ROOT="$OMEGA_AUDIT_OUTPUT_DIR"
 for _ in $(seq 1 120); do
   [ -d "$CKPT_ROOT" ] && break
-  echo "$(date -u +%FT%TZ) waiting for $CKPT_ROOT to mount..." >&2
+  echo "$(date -u +%FT%TZ) waiting for $CKPT_ROOT to appear..." >&2
   sleep 5
 done
 if [ ! -d "$CKPT_ROOT" ]; then
@@ -88,5 +102,13 @@ mkdir -p "$(dirname "$PID_FILE")" 2>/dev/null || true
 echo $$ > "$PID_FILE" 2>/dev/null || \
   echo "$(date -u +%FT%TZ) note: cannot write $PID_FILE (TCC/launchd); authoritative pid file is $LOCAL_PID_FILE" >&2
 
-echo "=== V253 launchd live-paper daemon exec $(date -u +%FT%TZ) tick=$SCHEDULER_TICK_UTC root=$CKPT_ROOT pid=$$ ===" >&2
-exec python3 scripts/live_paper_daemon.py --mode forward
+# ── interpreter ───────────────────────────────────────────────────────────────
+# The repo venv, NOT `python3`. Measured on this host: the PATH above resolves
+# python3 to Homebrew 3.14, which has numpy, psycopg and yaml all MISSING — the
+# daemon would exit on import and launchd would crash-loop it forever. Falling
+# back to python3 only if the venv is absent keeps a bare checkout working.
+PYBIN="./.venv/bin/python"
+[ -x "$PYBIN" ] || PYBIN="python3"
+
+echo "=== V253 launchd live-paper daemon exec $(date -u +%FT%TZ) tick=$SCHEDULER_TICK_UTC root=$CKPT_ROOT py=$PYBIN pid=$$ ===" >&2
+exec "$PYBIN" scripts/live_paper_daemon.py --mode forward
