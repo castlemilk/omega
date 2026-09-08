@@ -28,11 +28,30 @@ cd "$(dirname "$0")/.."
 export PATH=/opt/homebrew/bin:/usr/bin:/bin
 
 # ── secrets (FRED_API_KEY, DATABASE_URL) — gitignored, never in the plist ──────
-if [ -f harness/.env ]; then
-  set -a
-  # shellcheck disable=SC1091
-  . ./harness/.env
-  set +a
+#
+# `.env` first, because that is where this repo's keys actually live and
+# `harness/` has never existed — the original `[ -f harness/.env ]` guard meant
+# the source was a silent no-op, so a key added to the obvious place was read by
+# nothing. The only symptom would have been FRED 400 warnings buried in
+# daemon.err, and a key that is present but unsourced looks exactly like a key
+# that was never added.
+#
+# harness/.env is still honoured, second, so it can override for a host that
+# keeps soak secrets separate from the repo's.
+for _envf in .env harness/.env; do
+  if [ -f "$_envf" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "./$_envf"
+    set +a
+  fi
+done
+
+if [ -z "${FRED_API_KEY:-}" ]; then
+  # Not fatal: VIXCLS and DTWEXBGS fail over to Yahoo. DGS2/DGS10 have no
+  # fallback, so the yield-curve input is simply absent — worth one loud line
+  # rather than 90 days of silent degradation.
+  echo "$(date -u +%FT%TZ) WARNING: FRED_API_KEY unset — DGS2/DGS10 unavailable (no fallback); VIX/DXY will use Yahoo." >&2
 fi
 
 # ── V253 soak configuration (matches the manual launch env, see V253 kickoff) ──
