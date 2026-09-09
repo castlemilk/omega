@@ -32,11 +32,97 @@ Closed 2026-07-13 by `V249.md`.
   **exactly** (crisis $1,149.76 / trend $4,679.67 / recent $771.98, $0.0000 Δ)
   through the full daemon path. Zero strategy code touched. `SCHEDULER_ENABLED=0`
   default; V253 flips ON. See `V252.md`.
-- **V253 (NEXT):** 90-day headless soak + first quarterly freeze-and-label. Entry
-  criterion (V252 tests pass) **met**. Before flipping `SCHEDULER_ENABLED=1`: apply
-  the MATIC→POL forward-universe remap (P0) + provision the run host
-  (`FRED_API_KEY`, GDELT + Binance egress) — full checklist in `V252.md` → Next
-  steps.
+- **V253 (RUNNING since 2026-09-08):** the 90-day headless soak is LIVE.
+  `SCHEDULER_ENABLED=1`, `--mode forward`, tick 02:55 UTC, supervised by launchd
+  (`com.omega.live_paper`). First cycle 2026-09-08 opened 3 fills (ARBUSDT,
+  NEARUSDT, POLUSDT) at equity 100,000. A restart the same day resumed from
+  checkpoint with all 3 positions intact — V252's crash-safe resume proven in the
+  real deployment, not just its test.
+
+  **This entry read "(NEXT)" from 2026-07-13 to 2026-09-09** while V254–V306
+  happened and the soak sat unstarted. A phase tracker whose only job is
+  answering "where are we" reported a state that had stopped being true, and the
+  sole symptom was that anyone reading it believed it. Corrected here; the ledger
+  below exists so the resume gate is a number to read rather than one to
+  re-derive.
+
+  Provisioning took four fixes, each of which would have produced a soak that
+  looked healthy and was not:
+  - **gamma-systems-2 is gone.** The wrapper defaulted `OMEGA_AUDIT_OUTPUT_DIR`
+    to it and refused to start. Now local (`~/omega-victoria-data`); the
+    runbook's own sizing is ~0.5–2 GB over 90 days against 638 GB free, so the
+    100 GB floor's ENOSPC purpose still holds.
+  - **The wrapper exec'd Homebrew `python3`**, which has numpy, psycopg and yaml
+    all missing. The daemon would have died on import and launchd's KeepAlive
+    would have crash-looped it forever — supervised, and never running a cycle.
+    Now `./.venv/bin/python`.
+  - **It sourced `harness/.env`, a path that has never existed in this repo.**
+    Guarded by `[ -f ]`, so it was a silent no-op: a key added to `.env` — the
+    obvious place — was read by nothing, and the only symptom was FRED 400s in
+    daemon.err. Now sources `.env` first, and logs a WARNING naming the exact
+    consequence when the key is absent.
+  - **The soak would have rewritten the frozen substrate every cycle.** One
+    forward cycle moved `data/macro_cache.db` from 397b9438… to a0bed83b…, a real
+    content change. That file's md5 is asserted by `.cache_manifest.json` and
+    every backtest reads it, so 90 cycles would have quietly un-frozen the
+    baseline while V251's reconciliation went on claiming bit-identity against
+    it. `tests/conftest.py` already set the three override vars for exactly this
+    reason — it covers pytest, and a launchd daemon is outside it entirely.
+
+### Independent-window ledger (the resume gate)
+
+The V### loop resumes at **20** independent recent windows (see Resume criteria
+below). Each elapsed quarter of soak yields ~1. Update this line as they accrue:
+
+| | count | as of |
+|---|---:|---|
+| independent recent windows banked | **1** | 2026-09-08 |
+| required to resume the V### loop | 20 | — |
+
+Window 1 = the soak's first completed cycle. The count is deliberately here and
+not derived on demand: V249's constraint is the whole reason the loop is paused,
+and a paused loop with no visible counter is how a pause becomes a stall.
+
+### V254–V306 — what happened while the tracker said "V253 NEXT"
+
+Summarised rather than enumerated; each has its own entry. Grouped by what they
+were actually doing, because the tracker's job is orientation, not an index.
+
+- **V254–V259 — alt-data scoping, all four tracks PAUSED on data, none refuted.**
+  Track C on-chain and Track D Polymarket both hit the same wall: the thesis is
+  untested because the data does not exist in frozen form. `V259.md` is the
+  clearest statement of the shape — a data blocker recorded as a data blocker,
+  not dressed up as a negative result.
+- **V260–V286 — the campaign retrospective (V241→V260) and the intraday freeze.**
+  1h OHLCV for all 13 names, 2020-01→2026-07, 665,824 bars, byte-identical
+  (`V262`). It does NOT by itself fire resume criterion 2: that needs a source
+  that changes regime STRUCTURE, and whether intraday regime is orthogonal to
+  macro-day regime is exactly the open question.
+- **V286–V304 — the ASX line, nine versions, CLOSED with a verdict.**
+  `V304_ASX_VERDICT.md`: least-shorted ASX names outperform (Q1−Q5 +0.298%/wk,
+  t=+2.85 over 590 weeks, replicated OOS), concentrated in the least-liquid
+  third — and a long-only book drawn from that tercile loses money at every
+  horizon but quarterly. The premium concentrates exactly where impact costs are
+  highest. **That is the mechanism, not a disappointment:** a neglect premium
+  persists because it cannot be arbitraged, and it cannot be arbitraged for the
+  same reason it is measurable. Not a strategy. The line also upstreamed six data
+  defects to shorted.com.au and corrected four of its own methodology errors.
+- **V305 — a Victoria defect sweep proposed, then WITHDRAWN on evidence.** The
+  inference was that Victoria (~300 versions, same author, same idioms) would
+  share the ASX line's three rules. Checked: it does not. The four ASX
+  methodology errors were written BY the ASX line, in code days old. The audit
+  direction was backwards — the risk is new code written fast, not old code
+  written long ago.
+- **V306 — the test suite nobody could run.** Ten Victoria files ran real
+  multi-cycle simulations with no `slow` marker, so `pytest tests/` looked like
+  it hung; inside that unrunnable suite, regression guards had rotted against
+  constants superseded ninety versions earlier, and the suite dirtied its own
+  frozen substrate on every run. The rule it bought: *a test nobody runs is worse
+  than no test — it reports coverage while guarding a contract that moved.*
+
+**Victoria's standing open problem is unchanged and named in V305:** V279-class
+inertness — components that import cleanly, are wired correctly, and do nothing.
+See OBSERVABILITY-BACKLOG.md for the queued instrument.
 
 ### What Phase 1 delivered
 

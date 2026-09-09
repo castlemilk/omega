@@ -403,6 +403,48 @@ Bonus finding while validating (V247_RULER_CANDIDATES.md §γ): within-window
 trade Δs are ANTI-correlated 4–11× vs iid — the window is the exchangeable
 unit; trade-level bootstraps overstate variance, they don't add n.
 
+### V307 #1 — generalise the inertness detector beyond signal families  (effort M, QUEUED)
+
+V279 shipped an inertness report and it works — it independently rediscovered
+that the whole `cross_asset` family is identically 0.0 in frozen runs. But it
+only knows one shape of inert: **a signal family whose members' VALUES are all
+zero**, read off `AdaptiveCombiner.SIGNAL_FAMILIES`.
+
+V305 named V279-class inertness as Victoria's standing open problem. Between
+2026-09-06 and 2026-09-08, four fresh instances turned up, and **not one would
+have been caught by the existing detector** — none is a signal family and none
+is a zero value:
+
+| instance | shape of inert | how it was actually found |
+|---|---|---|
+| `TopTradersNode` never constructible — 4 abstract methods missing, `TypeError` swallowed at DEBUG, so Polymarket smart-money consensus had NEVER run | a component that cannot be instantiated | mypy, incidentally |
+| FFG breadcrumbs written into `_last_ticker_decisions` then discarded by the wholesale rebind at the end of the same method | a write with no reader | reading the code for an unrelated fix |
+| zero-candidate cycles wrote an EMPTY per-ticker trace — V86/V87 each logged 150+ consecutive such cycles | an early return above the instrumentation | a test written for the FFG fix, failing for a different reason |
+| `fred` registered in `jobs()` but absent from `allJobModes`, so the monthly job would never walk it | registered but unreachable | wiring a secret, incidentally |
+
+Every one was found by accident. That is the argument for the instrument: the
+class is real, recurring, and currently only discoverable by luck.
+
+**What to add.** A startup/CI probe that reports, per registered component:
+constructible (can it actually be instantiated?), reachable (is it in the
+dispatch/walk that runs in production, not merely in the registry?), and
+consumed (does anything read what it writes?). The first two are cheap and
+mechanical — a construction attempt and a set-difference between registry keys
+and the production walk. The third is the hard one and should be scoped to
+"declared outputs with no declared reader" rather than attempted in general.
+
+**Precedent that the cheap half pays.** In the shorted.com.au repo the same
+set-difference — every importer in `jobs()` must appear in `allJobModes` — was
+added as a test on 2026-09-08 and immediately caught `fred`, with a message
+naming the consequence: *"registered in jobs() but absent from allJobModes: it
+would never run in production, while its freshness cadence alarms."*
+
+**Do NOT ship this as a mechanism V###.** The loop is phase-paused (V249) until
+the independent-window count reaches 20; this is observability and belongs with
+whatever version resumes the loop, or as a standalone infrastructure entry.
+Recorded now because the four instances are fresh and their detection stories
+are the design input.
+
 ## How to use this file
 
 1. During a reflection's observability-gap audit, add new gaps as `V###+1 #N`
