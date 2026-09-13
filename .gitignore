@@ -103,3 +103,7 @@ data/frozen_series/asx/prices_api/
 # audit only — md5s live in data/frozen_series/asx/intraday/MANIFEST.json; the
 # 1h study substrate next to it IS committed.
 data/frozen_series/asx/intraday/5m/
+
+# V309: the forward ASX lane's append-only store (short panels, daily prices,
+# 1h bars, weekly marks, checkpoints). Runtime output, never committed.
+data/asx_forward/
