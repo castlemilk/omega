@@ -1,7 +1,7 @@
 # V309 — The forward ASX lane: one honest observation a week, no broker, no claim
 
 **Date:** 2026-09-13
-**Status:** PRE-REGISTERED — infrastructure (the V250–V252 shape), smoke-tested, not a mechanism. Results blank below until the cycle has run.
+**Status:** LIVE — pre-registered at `245a7675` before the code; F1–F4 PASS; agent `com.omega.asx_forward` loaded 2026-09-13, first forward mark due the week after 2026-09-18.
 **Parent:** V308 (which re-scoped this from "paper book" to "forward record of the spread")
 
 ---
@@ -113,8 +113,87 @@ nothing.
 
 ## 7. Results
 
-_(blank at pre-registration)_
+Store root `~/omega-asx-forward` (the launchd agent's), `lane_start = 2026-09-13`.
+
+**F1 — PASS.** The first real cycle (2026-09-13, `--once`, 5 min 54 s, almost all
+of it the 2.2 s panel pacing):
+
+| store | written | detail |
+|---|---:|---|
+| `short_panel/` | **90** dates | 2026-05-04 → 2026-09-07, the API's full window, token tier (OAuth refresh worked headlessly) |
+| `prices/` | **24** sessions | one-month window, 760 of ~740 panel codes returned data (the panel includes a few unit codes yfinance also serves) |
+| `intraday_1h/` | **23** sessions | the 119-name V307 universe |
+| `marks.jsonl` | **19** weeks | 2026-05-08 → 2026-09-11, every one flagged `forward: false` |
+| checkpoint | 1 | atomic, md5 sidecar, `equity: 0.0` |
+
+All 19 marks are **backfill**: their books were formed before the lane started,
+over the frozen window, and the record says so. They never count toward the 52.
+The last three, for colour only:
+
+| formed | mark | panel used | eligible n | Q1−Q5 | Q1 − EW |
+|---|---|---|---:|---:|---:|
+| 2026-08-21 | 2026-08-28 | 2026-08-14 | 335 | −1.65% | −0.01% |
+| 2026-08-28 | 2026-09-04 | 2026-08-21 | 342 | +1.36% | +0.99% |
+| 2026-09-04 | 2026-09-11 | 2026-08-28 | 349 | +3.16% | +1.37% |
+
+**F2 — PASS.** A second cycle the same day: `new_panels 0, new_price_sessions 0,
+new_1h_sessions 0, marks_written 0`; manifest md5 `05d2e8fd…` before and after;
+19 marks before and after. The store is write-once in practice, not just in name.
+
+**F3 — reported, no bar.** The same mark function over the frozen substrate
+alone (v3 prices + the committed 91-date panel), 15 complete weeks
+2026-05-08 → 2026-08-14, eligible n ≈ 320–340:
+
+| | n | mean %/wk | sd | t |
+|---|---:|---:|---:|---:|
+| Q1 − Q5 spread | 15 | **−0.316** | 2.32 | −0.53 |
+| Q1 − EW universe | 15 | −0.161 | 1.54 | −0.40 |
+| V303 reference | 590 | +0.298 | | +2.85 |
+
+Fifteen weeks say nothing about a +0.3%/wk effect with a 2.3% weekly sd (the
+standard error at n = 15 is 0.6%). What F3 establishes is that the instrument
+runs end to end on real data with the declared comparator, and that the sign in
+this particular window was negative. Both are recorded; neither is a verdict.
+
+**Two defects found by the run, both in my expectations rather than the data:**
+the daily and 1h opening-bar volume artifact from V307 carries into the forward
+store unchanged (yfinance, not fixable here), and `codes_with_data` exceeds the
+panel size because the market-by-date list includes unit and ETF codes yfinance
+also prices; the eligibility screens remove them from every book, and the
+`ordinaryOnly` flag is deliberately NOT sent so the stored panel is the complete
+published record.
+
+**F4 — PASS.** `com.omega.asx_forward` loaded under launchd 2026-09-13. Because
+the scheduler never fires for a tick time already past, the first tick was
+forced today by setting the tick three minutes ahead and reloading, then
+restored to 09:00 UTC:
+
+- `scheduler_tick` at `2026-09-13T11:52:00.141Z`, target `11:52:00`, **drift
+  0.141 s**;
+- the cycle ran under the agent (`panel_tier: token`, nothing new to write, 19
+  marks unchanged) and `checkpoint_saved` with md5 `0ca913d3…`;
+- the reload delivered `scheduler_shutdown_signal`, the daemon exited cleanly,
+  launchd restarted it, and it booted from that checkpoint with the next target
+  2026-09-14 09:00 UTC.
+
+Store root `~/omega-asx-forward`; logs `~/Library/Logs/omega/asx_forward.{out,err}`;
+pid file `~/Library/Logs/omega/asx_forward.pid`. The Victoria soak
+(`com.omega.live_paper`) is untouched and still running alongside it.
 
 ## 8. Verdict
 
-_(blank at pre-registration)_
+**The lane is live, supervised, idempotent, and claims nothing.** Four
+falsifiers pass; the one number it has produced that could be mistaken for a
+result — 15 backfilled weeks at −0.32%/wk — is reported with its standard
+error and carries no verdict.
+
+What is different from every earlier ASX version is the direction of time. Each
+cycle from tomorrow appends an observation that did not exist when any of this
+was designed. At one mark a week the resume criterion (§5) is a year away, which
+is the honest price of a statistic that the campaign has otherwise only ever
+measured on data it had already seen.
+
+Two things to watch in the first fortnight, both mechanical: the first
+`forward: true` mark lands on the Friday after 2026-09-18 (a book formed on or
+after the lane start, realised a week later), and the panel window will roll
+past 2026-05-04 as ASIC publishes new dates — the store keeps what the API drops.

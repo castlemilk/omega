@@ -83,7 +83,7 @@ Window 1 = the soak's first completed cycle. The count is deliberately here and
 not derived on demand: V249's constraint is the whole reason the loop is paused,
 and a paused loop with no visible counter is how a pause becomes a stall.
 
-### V254–V308 — what happened while the tracker said "V253 NEXT"
+### V254–V309 — what happened while the tracker said "V253 NEXT"
 
 Summarised rather than enumerated; each has its own entry. Grouped by what they
 were actually doing, because the tracker's job is orientation, not an index.
@@ -134,6 +134,15 @@ were actually doing, because the tracker's job is orientation, not an index.
   `V308_ASX_EXECUTION.md` restates the ASX verdict: the neglect spread is a
   statistical fact; the long-only book has no net edge. Nothing supports
   trading the ASX from this data.
+- **V309 — the forward ASX lane is LIVE (2026-09-13), and it claims nothing.**
+  `com.omega.asx_forward` under launchd, 09:00 UTC daily: appends the ASIC short
+  panel, daily prices and the V307 universe's 1h bars to a write-once store, and
+  each week records the realised Q1−Q5 spread and Q1's excess over the
+  equal-weight eligible universe with the comparator in the record. No broker,
+  no orders, no capital. Marks formed before the lane started are flagged as
+  backfill and never count; the resume criterion is 52 *forward* weeks
+  (`V309_ASX_FORWARD.md` §5). This is the ASX analogue of V253: the passage of
+  time is the only source of observations nobody has looked at.
 
 **Victoria's standing open problem is unchanged and named in V305:** V279-class
 inertness — components that import cleanly, are wired correctly, and do nothing.
