@@ -1,0 +1,2909 @@
+{
+  "downloaded_on": "2026-09-13",
+  "files": {
+    "1h/A2M.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "bd06031c7664dd6d4ebfa19979358606",
+      "n": 5076,
+      "n_sessions": 728
+    },
+    "1h/AGL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "b6deaae01439dcd4e9c4b5ef0075f426",
+      "n": 5073,
+      "n_sessions": 728
+    },
+    "1h/ALD.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "88dd274d6163e72d70d8d42cc1f34d63",
+      "n": 5061,
+      "n_sessions": 728
+    },
+    "1h/ALL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "2d77c7803651ff5cab73a3f0a2cc4757",
+      "n": 5082,
+      "n_sessions": 728
+    },
+    "1h/ALQ.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "c78c45f2184f58ee820b781767c4bbab",
+      "n": 5077,
+      "n_sessions": 727
+    },
+    "1h/ALX.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "828689df822fa37f1d6b677a6775b05a",
+      "n": 5083,
+      "n_sessions": 729
+    },
+    "1h/AMC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "004865a9bb40accd2103c427d76bdd2e",
+      "n": 5017,
+      "n_sessions": 721
+    },
+    "1h/AMP.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "b98d8ec23f1eac514ae28f803de84082",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/ANN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "c0399e3c6083d2d0c186bcaf4f51816c",
+      "n": 5053,
+      "n_sessions": 727
+    },
+    "1h/ANZ.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "f286dd79cb1f65476261b098df2122e1",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/APA.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "1da3473d1d95831f9428d4ae9739838a",
+      "n": 5068,
+      "n_sessions": 728
+    },
+    "1h/ARB.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "27f179a4e408ee1ebccd6109a69e1c59",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/ASX.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "452114aec0a9e0f552469d6a447cae14",
+      "n": 5081,
+      "n_sessions": 728
+    },
+    "1h/AUB.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "1fe1bf1fb46f43de11b484ed473bcec7",
+      "n": 5064,
+      "n_sessions": 726
+    },
+    "1h/AZJ.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "6a2677937e1cdfe6626e8461f1fd1ad2",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/BEN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "21f02cfec08e543511e012558a9b558e",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/BHP.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "cd8dd09e57b5decf6d96cf08b09fd2ca",
+      "n": 5081,
+      "n_sessions": 728
+    },
+    "1h/BOQ.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "55abce1665508c6a61b868a5eacb93b1",
+      "n": 5067,
+      "n_sessions": 728
+    },
+    "1h/BPT.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "cf18b7e5ebd3b9fa2f1a52d633a1dd67",
+      "n": 5063,
+      "n_sessions": 728
+    },
+    "1h/BSL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "e918e4598dc5844187d7e172332e8449",
+      "n": 5068,
+      "n_sessions": 728
+    },
+    "1h/BXB.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "9d6440c520dbf0b0e9cc9110cb4c9c15",
+      "n": 5079,
+      "n_sessions": 728
+    },
+    "1h/CAR.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "a4bec7087e965e1dc0ba3b4b5bf2e6bc",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/CBA.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "ba54c7553f46356d1109bd22cbc900fb",
+      "n": 5065,
+      "n_sessions": 728
+    },
+    "1h/CGF.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "a196c4e8d377538dbb74eb4fe8c5897c",
+      "n": 5077,
+      "n_sessions": 728
+    },
+    "1h/CHC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "6a60e4971bc3ed4db4273697375a8c9f",
+      "n": 5080,
+      "n_sessions": 728
+    },
+    "1h/CHN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "924ec3b38369200c083078d1a8b48c69",
+      "n": 5069,
+      "n_sessions": 726
+    },
+    "1h/CIA.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "138456dfc8ba81afbf5795fe0493ab18",
+      "n": 5073,
+      "n_sessions": 728
+    },
+    "1h/CLW.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "5f1b515f6a0f15a7758e283a2c1d1cfd",
+      "n": 5059,
+      "n_sessions": 728
+    },
+    "1h/COH.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "052f5a6ab1360b898a822c768f4d82ab",
+      "n": 5075,
+      "n_sessions": 728
+    },
+    "1h/COL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "5cbf959f5e3ec8af863e70a94a1cb16b",
+      "n": 5082,
+      "n_sessions": 728
+    },
+    "1h/CPU.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "f64eced09b8e080be41e96c526c400d8",
+      "n": 5066,
+      "n_sessions": 728
+    },
+    "1h/CSL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "7c90ae68dbc5674f1549fdc17214eb5b",
+      "n": 5069,
+      "n_sessions": 728
+    },
+    "1h/CTD.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "a6a3229ca7f9a0b36d49b61a237a2f13",
+      "n": 3266,
+      "n_sessions": 468
+    },
+    "1h/CWY.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "4651774408e7aaf8051ac94457faed2e",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/CXO.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "edee859021d945f6939794342282faad",
+      "n": 5056,
+      "n_sessions": 726
+    },
+    "1h/DMP.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "19df4cbeff085bbf5e812bdf4393241b",
+      "n": 5063,
+      "n_sessions": 728
+    },
+    "1h/DOW.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "34fcfd9649bd204dc94216e27bc0e7fa",
+      "n": 5077,
+      "n_sessions": 728
+    },
+    "1h/DRR.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "7e44d86d031328acbd0e3a0411d0b441",
+      "n": 5068,
+      "n_sessions": 728
+    },
+    "1h/DXS.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "381cad74cd14dfb1d3cf2e02105d7be0",
+      "n": 5061,
+      "n_sessions": 728
+    },
+    "1h/EDV.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "97fd392ed616b1f820e8e06beb590678",
+      "n": 5072,
+      "n_sessions": 728
+    },
+    "1h/ELD.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "508f39ff617afebe9af1f238af1a733d",
+      "n": 5077,
+      "n_sessions": 727
+    },
+    "1h/EVN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "dcfc35bd15e67744b9f61ab6f2a3955b",
+      "n": 5077,
+      "n_sessions": 727
+    },
+    "1h/FLT.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "056e884f5052e89cc033aaed4be32d54",
+      "n": 5063,
+      "n_sessions": 728
+    },
+    "1h/FMG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "aa5176cd81eee2fe8fd3a6f971d11407",
+      "n": 5081,
+      "n_sessions": 728
+    },
+    "1h/FPH.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "bfc546016510be38434983479c8ab306",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/GMG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "0be5feb71ede7ab2bede252bec69931a",
+      "n": 5079,
+      "n_sessions": 727
+    },
+    "1h/GNC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "98c7040f9d70738bf2f24f6a1304cfa4",
+      "n": 5077,
+      "n_sessions": 728
+    },
+    "1h/GPT.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "63f037b5f43492c25ef4817bec3a8e29",
+      "n": 5072,
+      "n_sessions": 728
+    },
+    "1h/HUB.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "734c237733b93d14924b625132ca6bfa",
+      "n": 5065,
+      "n_sessions": 728
+    },
+    "1h/HVN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "d513da3f1578aef51298191721f49743",
+      "n": 5080,
+      "n_sessions": 728
+    },
+    "1h/IAG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "ffd27c4ddf53febfacc1345a8f6750c3",
+      "n": 5068,
+      "n_sessions": 728
+    },
+    "1h/IEL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "9f7dcc9145166eb316d366b0991a2325",
+      "n": 5067,
+      "n_sessions": 728
+    },
+    "1h/IGO.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "ef4bc2be8f1011725fa538eac2250226",
+      "n": 5081,
+      "n_sessions": 728
+    },
+    "1h/ILU.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "3cc3687e9085af30ae5795977ffdb8d5",
+      "n": 5075,
+      "n_sessions": 728
+    },
+    "1h/JBH.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "abd8069a0c08c54a6db978cfe140c7fe",
+      "n": 5066,
+      "n_sessions": 728
+    },
+    "1h/JHX.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "4ced7c8e8f0362d6354aa1b7647e5c65",
+      "n": 5076,
+      "n_sessions": 728
+    },
+    "1h/LLC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "2f7bb133c47ac7ff5606dbbefd983bb3",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/LOV.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "ba4269ddcdd91d33f33a23616e5e7b03",
+      "n": 5064,
+      "n_sessions": 728
+    },
+    "1h/LTR.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "13869d023ce76106e60671a67a3157b7",
+      "n": 5060,
+      "n_sessions": 727
+    },
+    "1h/LYC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "7e052347204d27a5e12583d1474cca91",
+      "n": 5072,
+      "n_sessions": 727
+    },
+    "1h/MFG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "ee9805aac4821dac6484046c4a0bdc3f",
+      "n": 5060,
+      "n_sessions": 727
+    },
+    "1h/MGR.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "d5d2ecfa0e21748b0043a1112143cb33",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/MIN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "6f02e247742cf03f3cb63807a17e1e53",
+      "n": 5071,
+      "n_sessions": 728
+    },
+    "1h/MP1.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "fc55d551233019e62d414d3c8be30d5e",
+      "n": 5052,
+      "n_sessions": 724
+    },
+    "1h/MQG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "c5b6db721e04d12f721bbadf112d8afc",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/NAB.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "8308c9356db8341ca0ce533fb9868b0b",
+      "n": 5071,
+      "n_sessions": 728
+    },
+    "1h/NEC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "57c16b330d1ad83ca3f1db7cbd0ba4f4",
+      "n": 5063,
+      "n_sessions": 728
+    },
+    "1h/NHC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "25a17d06832faf51d62e7332c5eaf391",
+      "n": 5074,
+      "n_sessions": 728
+    },
+    "1h/NST.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "21b8d167e4e3b8aa7f05ee2ddb6a2023",
+      "n": 5083,
+      "n_sessions": 728
+    },
+    "1h/NXT.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "742ae99ceb1ae1e8ba3617da3e65dad9",
+      "n": 5047,
+      "n_sessions": 724
+    },
+    "1h/ORA.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "7d37dd14978ac4627ccccdffa8bcfc1c",
+      "n": 5063,
+      "n_sessions": 728
+    },
+    "1h/ORG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "d54ed03633a2a068c5a06d06fe10cee5",
+      "n": 5074,
+      "n_sessions": 728
+    },
+    "1h/ORI.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "4b30193d48ff4527fa30c39d1e3bcc84",
+      "n": 5067,
+      "n_sessions": 727
+    },
+    "1h/PDN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "b95e15e9e85831421f2e9b67898bfc8e",
+      "n": 5004,
+      "n_sessions": 719
+    },
+    "1h/PLS.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "d278d27b6b64c5ea434c6839ff5725c6",
+      "n": 5070,
+      "n_sessions": 728
+    },
+    "1h/PME.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "dd016064c9735733d8fc03601dc1c41c",
+      "n": 5065,
+      "n_sessions": 728
+    },
+    "1h/PPT.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "96daad40ae9afbd3fcfe13b32a967877",
+      "n": 5054,
+      "n_sessions": 728
+    },
+    "1h/QAN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "88e8564a757f23f9e7307324924bd9e5",
+      "n": 5080,
+      "n_sessions": 728
+    },
+    "1h/QBE.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "d2037e2f1bd7361e9cd2cfacc47daaa5",
+      "n": 5063,
+      "n_sessions": 728
+    },
+    "1h/REA.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "231b415b2f29badcd761918c20bd45ad",
+      "n": 5059,
+      "n_sessions": 728
+    },
+    "1h/REH.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "bc7824b061fe16840a64b4b40b926ccc",
+      "n": 5082,
+      "n_sessions": 728
+    },
+    "1h/RGN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "863a2fa8e9358c83d7f5d3ad6ebbeb7d",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/RHC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "a079bf4bdfdb5b52911af699b38d30a0",
+      "n": 5072,
+      "n_sessions": 728
+    },
+    "1h/RIO.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "3ee2312e1bafbeada76f82afb9261b76",
+      "n": 5079,
+      "n_sessions": 728
+    },
+    "1h/RMD.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "c5f788d88d1956b7e8947d46a96655bd",
+      "n": 5080,
+      "n_sessions": 728
+    },
+    "1h/S32.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "63e014815d3c46fde57eff0b49e55f8b",
+      "n": 5067,
+      "n_sessions": 728
+    },
+    "1h/SCG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "7d8ab9702a7c5b97565045c016030067",
+      "n": 5071,
+      "n_sessions": 728
+    },
+    "1h/SDF.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "e094b0b8042d11a0bf7bed00b2de994b",
+      "n": 5038,
+      "n_sessions": 725
+    },
+    "1h/SEK.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "57845586ea36782b89a2984e1d82bc3a",
+      "n": 5080,
+      "n_sessions": 728
+    },
+    "1h/SFR.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "28dbc29b88ad707a65062184ced0dbf9",
+      "n": 5083,
+      "n_sessions": 728
+    },
+    "1h/SGM.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "6153242c09101608251572c60ca9e821",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/SGP.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "6c43a119263d0c4cc844c93754aeb0e8",
+      "n": 5073,
+      "n_sessions": 728
+    },
+    "1h/SGR.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "4a3f4e1037eb9f3d2c679a4711fb0d8c",
+      "n": 4698,
+      "n_sessions": 675
+    },
+    "1h/SHL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "80e2ac4300083f26ccecd973bf9aa455",
+      "n": 5085,
+      "n_sessions": 728
+    },
+    "1h/SOL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "a41380130b7d2d09d18851be6ec60093",
+      "n": 5042,
+      "n_sessions": 722
+    },
+    "1h/STO.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "1c7d3cd4558f115b9d81c4dbb6577af7",
+      "n": 5063,
+      "n_sessions": 728
+    },
+    "1h/SUL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "c8ab142edc2a24b36eabf7fa345ec126",
+      "n": 5060,
+      "n_sessions": 728
+    },
+    "1h/SUN.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "f4a493c9146840ebf625b851a7e0b54e",
+      "n": 5012,
+      "n_sessions": 721
+    },
+    "1h/TAH.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "7dd810646e5f31c4b6c5d61eb4bb7e68",
+      "n": 5070,
+      "n_sessions": 728
+    },
+    "1h/TCL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "091e2ae6c4aa3d8b84de35dcd125b5b0",
+      "n": 5080,
+      "n_sessions": 728
+    },
+    "1h/TLC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "95ac171ffe99f7608ba1aa20d7461a4a",
+      "n": 5081,
+      "n_sessions": 728
+    },
+    "1h/TLS.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "db741b9001e714f147f0e3b4d1e3b0d7",
+      "n": 5081,
+      "n_sessions": 728
+    },
+    "1h/TLX.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "c7f12b840cd8ef22fb587e75762d3214",
+      "n": 5062,
+      "n_sessions": 727
+    },
+    "1h/TNE.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "c286e0a43f3fb44bfb442d367327c369",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/TPG.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "5a0d81166f90eca99a9c80aaed4a9e14",
+      "n": 5068,
+      "n_sessions": 726
+    },
+    "1h/TWE.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "89cd8a83b90e2b625edfd4d5bc2bab28",
+      "n": 5031,
+      "n_sessions": 723
+    },
+    "1h/VCX.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "e719d8399334694e1b5b928ae9316e86",
+      "n": 5064,
+      "n_sessions": 728
+    },
+    "1h/VEA.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "0edba7c6f84fe870da3857e7bd8dc329",
+      "n": 5061,
+      "n_sessions": 726
+    },
+    "1h/VNT.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "8ab4bc2019811bffcbe4f0f221c43da1",
+      "n": 5068,
+      "n_sessions": 728
+    },
+    "1h/WBC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "10a8c5c3e37ce5ecb19907c05ba8be46",
+      "n": 5078,
+      "n_sessions": 728
+    },
+    "1h/WDS.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "3c32b668089ea7b2a87841a6771bb666",
+      "n": 5084,
+      "n_sessions": 728
+    },
+    "1h/WEB.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "7e0cdc0433f2e76a9dbc4dd020fbcf21",
+      "n": 5059,
+      "n_sessions": 725
+    },
+    "1h/WES.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "9eb84cd16d37488a68ed90f8363305d3",
+      "n": 5064,
+      "n_sessions": 728
+    },
+    "1h/WHC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "1800f5782d41b75893456398556a8250",
+      "n": 5065,
+      "n_sessions": 728
+    },
+    "1h/WOR.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "59ede3b291b93348d81852d93be715f1",
+      "n": 5054,
+      "n_sessions": 727
+    },
+    "1h/WOW.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "96cb2dce0f738d7447fa36c26a3a90a9",
+      "n": 5083,
+      "n_sessions": 728
+    },
+    "1h/WTC.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "315bec8a2ec3060552fb10135e2b9f7b",
+      "n": 5069,
+      "n_sessions": 726
+    },
+    "1h/XRO.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "e2dc1f2bb0593e7bba93fd089ccc90e9",
+      "n": 5078,
+      "n_sessions": 727
+    },
+    "1h/YAL.json.gz": {
+      "first_ts": "2023-10-26T10:00",
+      "last_ts": "2026-09-11T16:00",
+      "md5": "a7233c0e93034a0e799a41078f45e635",
+      "n": 5082,
+      "n_sessions": 728
+    },
+    "5m/A2M.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b1329c49ec47722e2c1d46a0d82173f8",
+      "n": 4376,
+      "n_sessions": 60
+    },
+    "5m/AGL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "9f880d7a0a6efdfb79cd4f723c01b95a",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/ALD.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b24138462731d9246a0bde083d140c5d",
+      "n": 4379,
+      "n_sessions": 60
+    },
+    "5m/ALL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d48bb0f8b826a6d8172e4a7208a9413e",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/ALQ.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "8aa27af52d72589a9da4eda2101f81eb",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/ALX.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "a5c2be61e72f95d7ec857aa9eca2b771",
+      "n": 4329,
+      "n_sessions": 60
+    },
+    "5m/AMC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "3ce58df1081f330314a05b06231d5ed3",
+      "n": 4379,
+      "n_sessions": 60
+    },
+    "5m/AMP.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "394119832479e545c8bdd8a3b9d02bc7",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/ANN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "48d3a390ed373fca159bae21a8798569",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/ANZ.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "21efdeb1f224b4062206b40a0d5ce9e7",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/APA.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "28c38c1c1b5b7ea8041586e36ad93751",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/ARB.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "2204031e8203dab802718941dc493865",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/ASX.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "784fcb09ddbbd536fbecad0bca4c680c",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/AUB.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b2593843a7e67cf8fac884b6f7639bf7",
+      "n": 4379,
+      "n_sessions": 60
+    },
+    "5m/AZJ.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "42135aa459f1e8889cec486800261f6e",
+      "n": 4389,
+      "n_sessions": 60
+    },
+    "5m/BEN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "a54af917db582616e353474f90083791",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/BHP.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b2ffd3f883580ed5d9aca60a6c2a88d8",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/BOQ.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "de38f5289e3a11d87afcce8731f52d01",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/BPT.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "4224eab96e70e8b40525d716cbd3f096",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/BSL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "ac62bb9227d4152322cd8357c522d580",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/BXB.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "628fbde2559820b05f1a47a3c813bcf1",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/CAR.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "981171a522b42bff791f203726f7f8c6",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/CBA.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "0df76720cddbbbbc1cb32df13f1f9efa",
+      "n": 4386,
+      "n_sessions": 60
+    },
+    "5m/CGF.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "19347782f4ca646f1d6d20444a09315f",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/CHC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "6a7f130ed527bbd895852efb55283a84",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/CHN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "42891e01c192b8f629e9e49c242afb40",
+      "n": 4284,
+      "n_sessions": 60
+    },
+    "5m/CIA.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "90c7479e0c9b384634e088055370dd76",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/CLW.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "e5e0b008c0df5c67efc3b77d9310d37b",
+      "n": 4364,
+      "n_sessions": 60
+    },
+    "5m/COH.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b02cad0ccc7d171b8bc66e5ea647f3cb",
+      "n": 4387,
+      "n_sessions": 60
+    },
+    "5m/COL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "e8d33bf8d2f02a8f9aa286f58adf512c",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/CPU.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "089741f44fd88f2af127f0397db60482",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/CSL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "7ef25383a3606b11b556c7c4b5f659db",
+      "n": 4390,
+      "n_sessions": 60
+    },
+    "5m/CTD.json.gz": {
+      "first_ts": "2026-09-03T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b0b7263dd6e3a8573246abe0c3065781",
+      "n": 509,
+      "n_sessions": 7
+    },
+    "5m/CWY.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "2f46a3152c8a696772fe056acd7f9dcf",
+      "n": 4379,
+      "n_sessions": 60
+    },
+    "5m/CXO.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b19c167f7e2c1d66b466c049915a3b49",
+      "n": 4282,
+      "n_sessions": 60
+    },
+    "5m/DMP.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "087f63d4127e30f1fa68f7330109be27",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/DOW.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "c2de9fffe8b0cd35aad818b406537ea3",
+      "n": 4379,
+      "n_sessions": 60
+    },
+    "5m/DRR.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "47a5d6b412e799d34ecb5d3918501c17",
+      "n": 4378,
+      "n_sessions": 60
+    },
+    "5m/DXS.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d30d463b1fab4862b74f555312f93761",
+      "n": 4378,
+      "n_sessions": 60
+    },
+    "5m/EDV.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "3f4a58d83d87be8cff4ed1c509fe06c6",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/ELD.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "f89bee7974a1a259e73b1ffe960dce03",
+      "n": 4368,
+      "n_sessions": 60
+    },
+    "5m/EVN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d351d9e4f8d9bf37cecc6acc5b3a5343",
+      "n": 4387,
+      "n_sessions": 60
+    },
+    "5m/FLT.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "c77e1d08b1061acd2172b1159b651db7",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/FMG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "57cc7982725f1b4a7a128c282fd8e477",
+      "n": 4389,
+      "n_sessions": 60
+    },
+    "5m/FPH.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "88a27ca23bae7920db743a2a85e1cb02",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/GMG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d4cf68e585e4248547ae6eae9e8d285c",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/GNC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "5fda567c3e7b8f733bf22c26e54645f2",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/GPT.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d2feb124f7cb7cb5b17b321fac32a596",
+      "n": 4378,
+      "n_sessions": 60
+    },
+    "5m/HUB.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "98e8ade3d221dfaf12cab38a63e1a820",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/HVN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "1d08a1b1b9578765cee2013f529369e0",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/IAG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "766adf2ae2de14802db7dc8f1afaa41a",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/IEL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "23db0862f6964d6e7f2d1425bd0bd564",
+      "n": 4371,
+      "n_sessions": 60
+    },
+    "5m/IGO.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "21006315e8ea0464ab3bbb5be382b763",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/ILU.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "c3b66a8b8a85c253d5f2f15d8f5fe5c4",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/JBH.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d9b42c36ad512f2bc328fefdde7ba20a",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/JHX.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b245a6ea9cd4a967962984ea85de23d3",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/LLC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "4e4e0bb6ac06fc126dcf5d0b266d1d31",
+      "n": 4362,
+      "n_sessions": 60
+    },
+    "5m/LOV.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "30c2b4a97e10a26766fafad9ef5485ac",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/LTR.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "aecafb59dceb36d355ebb302abf8ae2a",
+      "n": 4390,
+      "n_sessions": 60
+    },
+    "5m/LYC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "f7a92b618dcd0ab1f4e8b6e5674e66df",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/MFG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "5dceb2128ed882aa4ec2d29fb3bd1cd2",
+      "n": 4377,
+      "n_sessions": 60
+    },
+    "5m/MGR.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "049d89c65f5e537635b841d54713596d",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/MIN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "25ad763a7ec8c6ca513ca41afba8e7b5",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/MP1.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "54d95b31fb4d70f9a71f062024a02bdc",
+      "n": 4386,
+      "n_sessions": 60
+    },
+    "5m/MQG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "5937c2188ab74eb720c4b58614aa8bd9",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/NAB.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "16fb9c56aeb24659913750f8872584f6",
+      "n": 4386,
+      "n_sessions": 60
+    },
+    "5m/NEC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "58038416651ca8cdd7a09fe632f6cb24",
+      "n": 4283,
+      "n_sessions": 60
+    },
+    "5m/NHC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "b851546ef9cc9d309a0ebf67dd716240",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/NST.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "02a0d69851cd7dab2eb3053a3aa2e474",
+      "n": 4389,
+      "n_sessions": 60
+    },
+    "5m/NXT.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "5f262281774b7d4773c5f366850a4b56",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/ORA.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "3a02ef47cde0e68e79adb91a788f2648",
+      "n": 4365,
+      "n_sessions": 60
+    },
+    "5m/ORG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "e4c8af1a87c3e9fa791bc29c4e682034",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/ORI.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "25a90a106bc9a679f0fdb3273e8e0505",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/PDN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "de57adfad4492ea2df3f9698e36498dd",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/PLS.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "1bbdf399740b455fef934566d7a3db8b",
+      "n": 4387,
+      "n_sessions": 60
+    },
+    "5m/PME.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "9bc12e85ba211c9111cfa94cc5682db5",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/PPT.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "5cd7930311645c31471ef11069b2c857",
+      "n": 4322,
+      "n_sessions": 60
+    },
+    "5m/QAN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "05248dfb75638574645791edacc53cdf",
+      "n": 4387,
+      "n_sessions": 60
+    },
+    "5m/QBE.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "acd7ef188a6a24f111996845f2e9fb73",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/REA.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "72327b71cce46c24052f6183c9652769",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/REH.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "9de03b469a8afaebbabd30985898d9d2",
+      "n": 4377,
+      "n_sessions": 60
+    },
+    "5m/RGN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "ada3aaa6ed6a08a4dfb31745c49cf6ac",
+      "n": 4298,
+      "n_sessions": 60
+    },
+    "5m/RHC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d56b2e4f87e87e7619ee23d3a76e022f",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/RIO.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "1b12bfbfb24ea99b4c75e018c1506d9a",
+      "n": 4387,
+      "n_sessions": 60
+    },
+    "5m/RMD.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "e089d70293c79699e70367dac515cd57",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/S32.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "61a8116d42dc921e250a700f8998b873",
+      "n": 4392,
+      "n_sessions": 60
+    },
+    "5m/SCG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "03351883ba46533b22f847223ba3d6ab",
+      "n": 4386,
+      "n_sessions": 60
+    },
+    "5m/SDF.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d294c4d379519ee58bf7a1296c33c80e",
+      "n": 4297,
+      "n_sessions": 59
+    },
+    "5m/SEK.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "80f8e0df38eec69672f7b783727a02a7",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/SFR.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "856dfb2162686f81b9a00deea27be361",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/SGM.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "f28c059f10fb34ce8884964f6d1e22b6",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/SGP.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "c2bbd4be71648924c49c2f0728ca1d4a",
+      "n": 4386,
+      "n_sessions": 60
+    },
+    "5m/SGR.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "ab1565c1ec601262eab32c9bbb0d1c00",
+      "n": 3044,
+      "n_sessions": 60
+    },
+    "5m/SHL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "785b50572fb56b5fb0b910bd64fc6293",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/SOL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d60d709615fb47371d9def72020dcaca",
+      "n": 4378,
+      "n_sessions": 60
+    },
+    "5m/STO.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "3307842411926c9f03b7834b6c95a039",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/SUL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "3ac30e8929fe26fd37f30fda5bde368a",
+      "n": 4375,
+      "n_sessions": 60
+    },
+    "5m/SUN.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "83b26b18d2e6e5f329c31fed5c8f64a8",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/TAH.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "1ada9a88115487cf69f6c625d9887227",
+      "n": 4284,
+      "n_sessions": 60
+    },
+    "5m/TCL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "37421df7d625f61948229fa8a39a2666",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/TLC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "f16a9f7ba9645a574ae09130c684514b",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/TLS.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "dc90e75e5f165ce5620c00da4cc02eca",
+      "n": 4396,
+      "n_sessions": 60
+    },
+    "5m/TLX.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "1a36d9cd88b34e91069aa6f4deb6edee",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/TNE.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "8f1399a881c3e37b3a379a1fa7e15545",
+      "n": 4378,
+      "n_sessions": 60
+    },
+    "5m/TPG.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "6209c092dfb6e6feb092e2680041a822",
+      "n": 4369,
+      "n_sessions": 60
+    },
+    "5m/TWE.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "e632aa61f1becd73acec0c5bae70c6b7",
+      "n": 4386,
+      "n_sessions": 60
+    },
+    "5m/VCX.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "6be3d41d93d276546a64407316fd24b1",
+      "n": 4372,
+      "n_sessions": 60
+    },
+    "5m/VEA.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "bf0775db6293a7933402c06648db4f62",
+      "n": 4381,
+      "n_sessions": 60
+    },
+    "5m/VNT.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "848b768411ed10e0c5441e6eda1807f7",
+      "n": 4380,
+      "n_sessions": 60
+    },
+    "5m/WBC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "389ff8007b4b4c0a70c21206ac6f0dda",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/WDS.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "1a06c14ac10d08802f8a98b5c6ba7f41",
+      "n": 4387,
+      "n_sessions": 60
+    },
+    "5m/WEB.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "f593c3ed810c0c666141782c5e578e56",
+      "n": 4369,
+      "n_sessions": 60
+    },
+    "5m/WES.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "c22f182f0b0f0525109e7943d744fc3d",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/WHC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "ee181437b30a03cd6ffe058a06082a39",
+      "n": 4385,
+      "n_sessions": 60
+    },
+    "5m/WOR.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "d7f42fe47a55c531e984b2eb455d86fd",
+      "n": 4384,
+      "n_sessions": 60
+    },
+    "5m/WOW.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "7f626b6e86b1d5e442147e1180773dcc",
+      "n": 4383,
+      "n_sessions": 60
+    },
+    "5m/WTC.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "96d15050494a253b56976a6a88a6e8a4",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/XRO.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "5111661e7cd39bf2597fe35afb352b14",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "5m/YAL.json.gz": {
+      "first_ts": "2026-06-22T10:00",
+      "last_ts": "2026-09-11T16:10",
+      "md5": "c32c17e2d0401240258f884493f4781f",
+      "n": 4382,
+      "n_sessions": 60
+    },
+    "daily/A2M.json.gz": {
+      "md5": "53d2abef0847f8a63c4ed1d30ca10631",
+      "n": 730
+    },
+    "daily/AGL.json.gz": {
+      "md5": "d801fe22f862b8bef2fdf0a8c9f2872a",
+      "n": 730
+    },
+    "daily/ALD.json.gz": {
+      "md5": "d3c5d69f03498d868c4a041f99979088",
+      "n": 730
+    },
+    "daily/ALL.json.gz": {
+      "md5": "695e6d75790c7dd156b9b912cc68c6a8",
+      "n": 730
+    },
+    "daily/ALQ.json.gz": {
+      "md5": "002c18ee1cc59cd443e3641e705ede84",
+      "n": 730
+    },
+    "daily/ALX.json.gz": {
+      "md5": "5c396cea6a0494c8918548aab07099fa",
+      "n": 730
+    },
+    "daily/AMC.json.gz": {
+      "md5": "e4326ecff0fe3d4586753dd9f508bc06",
+      "n": 730
+    },
+    "daily/AMP.json.gz": {
+      "md5": "bc995316fb7d23c1d1a901dddd575ad2",
+      "n": 730
+    },
+    "daily/ANN.json.gz": {
+      "md5": "34a6a8db0ac7434397302c56ed8197dd",
+      "n": 730
+    },
+    "daily/ANZ.json.gz": {
+      "md5": "0a8df73c1395a2ae736601befa68e004",
+      "n": 730
+    },
+    "daily/APA.json.gz": {
+      "md5": "1cbb8ea4da6a586815adc793718e8b0c",
+      "n": 730
+    },
+    "daily/ARB.json.gz": {
+      "md5": "947e9df9a1189d13e684ee8df95ee98c",
+      "n": 730
+    },
+    "daily/ASX.json.gz": {
+      "md5": "a220bf2518b6d0b9d0b7495b015125f3",
+      "n": 730
+    },
+    "daily/AUB.json.gz": {
+      "md5": "4ac4e725783437b72a6fcc3990c06e46",
+      "n": 730
+    },
+    "daily/AZJ.json.gz": {
+      "md5": "117d100b4e2e12fc8b09205096675379",
+      "n": 730
+    },
+    "daily/BEN.json.gz": {
+      "md5": "a41eb550937e88dbca5515851ae015d2",
+      "n": 730
+    },
+    "daily/BHP.json.gz": {
+      "md5": "81981ec8caad2daef60c93465ff4ca60",
+      "n": 730
+    },
+    "daily/BOQ.json.gz": {
+      "md5": "5a223c04e025785731087dd791645d3c",
+      "n": 730
+    },
+    "daily/BPT.json.gz": {
+      "md5": "ffc75ddc1bb47983d6882ca57f866284",
+      "n": 730
+    },
+    "daily/BSL.json.gz": {
+      "md5": "e30e7b2d6703efd161de84feef45ebed",
+      "n": 730
+    },
+    "daily/BXB.json.gz": {
+      "md5": "6cb0af82c570099afae37a6e1b0bfdc4",
+      "n": 730
+    },
+    "daily/CAR.json.gz": {
+      "md5": "457cecebde16f107acd72f3f0c918623",
+      "n": 730
+    },
+    "daily/CBA.json.gz": {
+      "md5": "d169fc1d4bb2f16154c547a542322696",
+      "n": 730
+    },
+    "daily/CGF.json.gz": {
+      "md5": "dfdc3ca47399a2307c7b3c7698feaebf",
+      "n": 730
+    },
+    "daily/CHC.json.gz": {
+      "md5": "cb25535bff4311fa98286cf2700dd541",
+      "n": 730
+    },
+    "daily/CHN.json.gz": {
+      "md5": "27218e8a9da192a802a03e47eaa74dfb",
+      "n": 730
+    },
+    "daily/CIA.json.gz": {
+      "md5": "05ce4ce8bc3fde8a442cb78a4b690c47",
+      "n": 730
+    },
+    "daily/CLW.json.gz": {
+      "md5": "c4e664cfb0552e14101f0a5743f895a1",
+      "n": 730
+    },
+    "daily/COH.json.gz": {
+      "md5": "3f2956b03c9371d9c5213e2ea1ddace5",
+      "n": 730
+    },
+    "daily/COL.json.gz": {
+      "md5": "81c6cd64f77ac0765a1be0c655e6806a",
+      "n": 730
+    },
+    "daily/CPU.json.gz": {
+      "md5": "61a2cf30c718ce56b55d5bdc8ee3e14c",
+      "n": 730
+    },
+    "daily/CSL.json.gz": {
+      "md5": "72bceeb6136ff15c23d9469a5f87b62f",
+      "n": 730
+    },
+    "daily/CTD.json.gz": {
+      "md5": "9d050daec482422f2401d0eea20787ec",
+      "n": 730
+    },
+    "daily/CWY.json.gz": {
+      "md5": "82376bd2322a98b776bb0600615f2018",
+      "n": 730
+    },
+    "daily/CXO.json.gz": {
+      "md5": "7ad983a4e3d64dda7fcdf19af04cb852",
+      "n": 730
+    },
+    "daily/DMP.json.gz": {
+      "md5": "58dcc814cf19016d0fb15fe416dae8d0",
+      "n": 730
+    },
+    "daily/DOW.json.gz": {
+      "md5": "5ff34b3087f1891275ad8111c5d4baf0",
+      "n": 730
+    },
+    "daily/DRR.json.gz": {
+      "md5": "b1d14b044a176d2dc6a19e7cee2aed85",
+      "n": 730
+    },
+    "daily/DXS.json.gz": {
+      "md5": "ced40556c67753677a7f64d9a486f5db",
+      "n": 730
+    },
+    "daily/EDV.json.gz": {
+      "md5": "77f6bb2b8b0fba498c22a098542b3513",
+      "n": 730
+    },
+    "daily/ELD.json.gz": {
+      "md5": "b0da399372087962d514d134055825d4",
+      "n": 730
+    },
+    "daily/EVN.json.gz": {
+      "md5": "554149558a5d364e9e187eb09fa0ae25",
+      "n": 730
+    },
+    "daily/FLT.json.gz": {
+      "md5": "f0cd7781aeab8b4c99ecf76eefaa8ddc",
+      "n": 730
+    },
+    "daily/FMG.json.gz": {
+      "md5": "e92d6c77ee0383f3854d45bf93b28245",
+      "n": 730
+    },
+    "daily/FPH.json.gz": {
+      "md5": "90293289ec781b843d13880f24ba9828",
+      "n": 730
+    },
+    "daily/GMG.json.gz": {
+      "md5": "4879b67729392b9e8816f298f09567c0",
+      "n": 730
+    },
+    "daily/GNC.json.gz": {
+      "md5": "92be97ade05588bd014a474cc20ba62f",
+      "n": 730
+    },
+    "daily/GPT.json.gz": {
+      "md5": "e114a70b6a6fcf9d86a7df887497e06c",
+      "n": 730
+    },
+    "daily/HUB.json.gz": {
+      "md5": "021cb9ced16523213dbe735026120eb6",
+      "n": 730
+    },
+    "daily/HVN.json.gz": {
+      "md5": "a6f4b37ef7fab239036addb31d2193be",
+      "n": 730
+    },
+    "daily/IAG.json.gz": {
+      "md5": "57808d27e41e1d1cfc28c71075e49b49",
+      "n": 730
+    },
+    "daily/IEL.json.gz": {
+      "md5": "738e6618248bba6d78df45b5b69fc0de",
+      "n": 730
+    },
+    "daily/IGO.json.gz": {
+      "md5": "6b9ed2cf018f26643b4a01340441e9ca",
+      "n": 730
+    },
+    "daily/ILU.json.gz": {
+      "md5": "2993fcb42d4dccf90d93c6dd61999bdf",
+      "n": 730
+    },
+    "daily/JBH.json.gz": {
+      "md5": "1630b1e07be69e5798fd22703c83b1db",
+      "n": 730
+    },
+    "daily/JHX.json.gz": {
+      "md5": "20661c4dcd0ac4ce05ede6655be33007",
+      "n": 730
+    },
+    "daily/LLC.json.gz": {
+      "md5": "39d110e480a1f918c16436510be18da9",
+      "n": 730
+    },
+    "daily/LOV.json.gz": {
+      "md5": "8e8137505ca444769e9fa055263fce3f",
+      "n": 730
+    },
+    "daily/LTR.json.gz": {
+      "md5": "5700175bd0818095dea04b8044878ae1",
+      "n": 730
+    },
+    "daily/LYC.json.gz": {
+      "md5": "59eb12f544ce9efc1ed88e80307ded05",
+      "n": 730
+    },
+    "daily/MFG.json.gz": {
+      "md5": "4f8183c9830da2fbf1b4e3251918974e",
+      "n": 730
+    },
+    "daily/MGR.json.gz": {
+      "md5": "4fe41cd8a88a58a85d2a73ba6cbab485",
+      "n": 730
+    },
+    "daily/MIN.json.gz": {
+      "md5": "0d9987f6bb898e118410042f8ebffbaa",
+      "n": 730
+    },
+    "daily/MP1.json.gz": {
+      "md5": "ae9b3c1e423ab8239a7b7de63ef8803b",
+      "n": 730
+    },
+    "daily/MQG.json.gz": {
+      "md5": "d59ac534423c119c25b93ceb05e8569a",
+      "n": 730
+    },
+    "daily/NAB.json.gz": {
+      "md5": "7c55df90f6c4d65bd307a57fead26817",
+      "n": 730
+    },
+    "daily/NEC.json.gz": {
+      "md5": "59162aa1f59d7ae9fe72a552a4284abf",
+      "n": 730
+    },
+    "daily/NHC.json.gz": {
+      "md5": "982e921769a4c00905bf2508b9f2f792",
+      "n": 730
+    },
+    "daily/NST.json.gz": {
+      "md5": "5ba9b12b42ac25bf5c374b9ce25d8553",
+      "n": 730
+    },
+    "daily/NXT.json.gz": {
+      "md5": "b309b59fd9e6cb5219a093e103fb0659",
+      "n": 730
+    },
+    "daily/ORA.json.gz": {
+      "md5": "48f3102a154e2b2e1c191da4ffc3959d",
+      "n": 730
+    },
+    "daily/ORG.json.gz": {
+      "md5": "164faa839bdb4086c67b4461ed871a36",
+      "n": 730
+    },
+    "daily/ORI.json.gz": {
+      "md5": "9988f8e7a8fc62cec4c9ab6e9ee9305d",
+      "n": 730
+    },
+    "daily/PDN.json.gz": {
+      "md5": "9b40c1f3b71530f337ff7bf82898b116",
+      "n": 730
+    },
+    "daily/PLS.json.gz": {
+      "md5": "8d188de937fd6e4b4a04d824c29922f1",
+      "n": 730
+    },
+    "daily/PME.json.gz": {
+      "md5": "cf9b8ab2ee509fd2ea429a0e007f4285",
+      "n": 730
+    },
+    "daily/PPT.json.gz": {
+      "md5": "37b1d04c313de9467274981304df1088",
+      "n": 730
+    },
+    "daily/QAN.json.gz": {
+      "md5": "bd9704b27d64422a73de61458c38b8db",
+      "n": 730
+    },
+    "daily/QBE.json.gz": {
+      "md5": "cc753cfd0774e25d2a9709490616202b",
+      "n": 730
+    },
+    "daily/REA.json.gz": {
+      "md5": "953fc81a9b4a41f55af562b5280161fc",
+      "n": 730
+    },
+    "daily/REH.json.gz": {
+      "md5": "be1e250658899d72c58738be7fe88043",
+      "n": 730
+    },
+    "daily/RGN.json.gz": {
+      "md5": "a1cb1055cdaa51f95b1032088835b082",
+      "n": 730
+    },
+    "daily/RHC.json.gz": {
+      "md5": "f7063c7ca5255006d6c317fb03a178f9",
+      "n": 730
+    },
+    "daily/RIO.json.gz": {
+      "md5": "4ff89b9fd230e74e8187cdb5e909b8ec",
+      "n": 730
+    },
+    "daily/RMD.json.gz": {
+      "md5": "1b973e6974d1fad1dc5290064745c34f",
+      "n": 730
+    },
+    "daily/S32.json.gz": {
+      "md5": "9b1fa94d043318ae28161599a6563f09",
+      "n": 730
+    },
+    "daily/SCG.json.gz": {
+      "md5": "86b33cf0446fdee4fa93616d8406f220",
+      "n": 730
+    },
+    "daily/SDF.json.gz": {
+      "md5": "72f725995154e6fcf4e90755a058d64e",
+      "n": 730
+    },
+    "daily/SEK.json.gz": {
+      "md5": "baf1680d074d86155c671acaf23dffab",
+      "n": 730
+    },
+    "daily/SFR.json.gz": {
+      "md5": "0d2a301acafd873ff64b332b7b7d3ed9",
+      "n": 730
+    },
+    "daily/SGM.json.gz": {
+      "md5": "a462aa2671ab1284962ab59fd13d607f",
+      "n": 730
+    },
+    "daily/SGP.json.gz": {
+      "md5": "e16322f61be51daa8f919e788dd6f298",
+      "n": 730
+    },
+    "daily/SGR.json.gz": {
+      "md5": "1fbe1b9b7982ddfad1fc2bf015bf6d0d",
+      "n": 730
+    },
+    "daily/SHL.json.gz": {
+      "md5": "689d81503dc872bebcc3594c2f410f3a",
+      "n": 730
+    },
+    "daily/SOL.json.gz": {
+      "md5": "8afe857357f6acb2ea5f41d61e18c376",
+      "n": 730
+    },
+    "daily/STO.json.gz": {
+      "md5": "2304a63210e07e439ae0c7c5571cc6cf",
+      "n": 730
+    },
+    "daily/SUL.json.gz": {
+      "md5": "7e9a38baa7a3465b453298f085c817d4",
+      "n": 730
+    },
+    "daily/SUN.json.gz": {
+      "md5": "f577b2d262dfbdb61e86240ec3b92f96",
+      "n": 730
+    },
+    "daily/TAH.json.gz": {
+      "md5": "77ba0807d856b782692ea68c3e476888",
+      "n": 730
+    },
+    "daily/TCL.json.gz": {
+      "md5": "2986dc8adef444025c300cd57fc7c370",
+      "n": 730
+    },
+    "daily/TLC.json.gz": {
+      "md5": "53edbda765bb3ec845d73d619996329a",
+      "n": 730
+    },
+    "daily/TLS.json.gz": {
+      "md5": "573ffd9c2289ba34666834a382608e89",
+      "n": 730
+    },
+    "daily/TLX.json.gz": {
+      "md5": "b5cf683186f631164f771af117bf1b6b",
+      "n": 730
+    },
+    "daily/TNE.json.gz": {
+      "md5": "a34a01fff3f638fc6bdc25435d905510",
+      "n": 730
+    },
+    "daily/TPG.json.gz": {
+      "md5": "3013ff499f91b7f826e3347c48b7f666",
+      "n": 730
+    },
+    "daily/TWE.json.gz": {
+      "md5": "a86711dae2104773767c1c08ff9e2cea",
+      "n": 730
+    },
+    "daily/VCX.json.gz": {
+      "md5": "b4ffa7305ad9bf94154f2290967a47bc",
+      "n": 730
+    },
+    "daily/VEA.json.gz": {
+      "md5": "342e61c392cbd732a46d5d38a0182e3f",
+      "n": 730
+    },
+    "daily/VNT.json.gz": {
+      "md5": "1b4233814de9f9eb4b4be0f64fcfa2f8",
+      "n": 730
+    },
+    "daily/WBC.json.gz": {
+      "md5": "49f523d9f248e846ae67280b378d0c15",
+      "n": 730
+    },
+    "daily/WDS.json.gz": {
+      "md5": "7bd969fd9ffb3743228815886cac449b",
+      "n": 730
+    },
+    "daily/WEB.json.gz": {
+      "md5": "258c07877832388ef9d1fb7e728a18de",
+      "n": 730
+    },
+    "daily/WES.json.gz": {
+      "md5": "32e8aeaaf6e3f87818c3096b215b40c6",
+      "n": 730
+    },
+    "daily/WHC.json.gz": {
+      "md5": "a815d9082ba7ac7a6c4ccc37be9ad7fa",
+      "n": 730
+    },
+    "daily/WOR.json.gz": {
+      "md5": "84b8799721e278f66b4b7e0bd54ca416",
+      "n": 730
+    },
+    "daily/WOW.json.gz": {
+      "md5": "be69178548054c39e685ec7b818a2b17",
+      "n": 730
+    },
+    "daily/WTC.json.gz": {
+      "md5": "613b29500f8ba5304f8898801e46c8e9",
+      "n": 730
+    },
+    "daily/XRO.json.gz": {
+      "md5": "aa09e10f2ddc59b89d827fb723d86e15",
+      "n": 730
+    },
+    "daily/YAL.json.gz": {
+      "md5": "d9981a3dbb516cffa1cae36f83663330",
+      "n": 730
+    }
+  },
+  "freeze": "v307_asx_intraday",
+  "holes": [
+    {
+      "code": "NSR",
+      "interval": "1h",
+      "reason": "no data"
+    },
+    {
+      "code": "CTD",
+      "interval": "1h",
+      "reason": "partial: 3266 bars vs modal 5084"
+    },
+    {
+      "code": "NSR",
+      "interval": "5m",
+      "reason": "no data"
+    },
+    {
+      "code": "SGR",
+      "interval": "5m",
+      "reason": "partial: 3044 bars vs modal 4382"
+    },
+    {
+      "code": "CTD",
+      "interval": "5m",
+      "reason": "partial: 509 bars vs modal 4382"
+    },
+    {
+      "code": "NSR",
+      "interval": "1d",
+      "reason": "no data"
+    }
+  ],
+  "intervals": [
+    "1h",
+    "5m",
+    "1d"
+  ],
+  "source": "yfinance (rolling window \u2014 freeze-once; --verify hashes, never re-downloads)",
+  "tz": "Australia/Sydney",
+  "universe": [
+    {
+      "code": "BHP",
+      "median_adv_aud": 338715510.65,
+      "name": "Bhp Group",
+      "rank": 1
+    },
+    {
+      "code": "CBA",
+      "median_adv_aud": 213418702.11,
+      "name": "Commonwealth Bank Of Australia.",
+      "rank": 2
+    },
+    {
+      "code": "CSL",
+      "median_adv_aud": 190047934.7,
+      "name": "Csl",
+      "rank": 3
+    },
+    {
+      "code": "RIO",
+      "median_adv_aud": 142321678.84,
+      "name": "Rio Tinto",
+      "rank": 4
+    },
+    {
+      "code": "WDS",
+      "median_adv_aud": 142154281.98,
+      "name": "Woodside Energy Group",
+      "rank": 5
+    },
+    {
+      "code": "ANZ",
+      "median_adv_aud": 141492139.725,
+      "name": "Anz Group Holdings",
+      "rank": 6
+    },
+    {
+      "code": "MQG",
+      "median_adv_aud": 126659482.535,
+      "name": "Macquarie Group",
+      "rank": 7
+    },
+    {
+      "code": "NAB",
+      "median_adv_aud": 126639115.86000001,
+      "name": "National Australia Bank",
+      "rank": 8
+    },
+    {
+      "code": "FMG",
+      "median_adv_aud": 121010224.695,
+      "name": "Fortescue",
+      "rank": 9
+    },
+    {
+      "code": "WBC",
+      "median_adv_aud": 117944845.75,
+      "name": "Westpac Banking",
+      "rank": 10
+    },
+    {
+      "code": "PLS",
+      "median_adv_aud": 116239704.0,
+      "name": "Pls Group",
+      "rank": 11
+    },
+    {
+      "code": "TLS",
+      "median_adv_aud": 81863564.285,
+      "name": "Telstra Group",
+      "rank": 12
+    },
+    {
+      "code": "WES",
+      "median_adv_aud": 73207083.65,
+      "name": "Wesfarmers",
+      "rank": 13
+    },
+    {
+      "code": "S32",
+      "median_adv_aud": 70706902.895,
+      "name": "South32",
+      "rank": 14
+    },
+    {
+      "code": "MIN",
+      "median_adv_aud": 66611781.629999995,
+      "name": "Mineral Resources",
+      "rank": 15
+    },
+    {
+      "code": "STO",
+      "median_adv_aud": 60809240.2,
+      "name": "Santos",
+      "rank": 16
+    },
+    {
+      "code": "GMG",
+      "median_adv_aud": 60387006.230000004,
+      "name": "Goodman Group",
+      "rank": 17
+    },
+    {
+      "code": "TCL",
+      "median_adv_aud": 59678111.74,
+      "name": "Transurban Group",
+      "rank": 18
+    },
+    {
+      "code": "WOW",
+      "median_adv_aud": 59486079.38,
+      "name": "Woolworths Group",
+      "rank": 19
+    },
+    {
+      "code": "WHC",
+      "median_adv_aud": 54933890.39,
+      "name": "Whitehaven Coal",
+      "rank": 20
+    },
+    {
+      "code": "NST",
+      "median_adv_aud": 51452224.785,
+      "name": "Northern Star Resources",
+      "rank": 21
+    },
+    {
+      "code": "QAN",
+      "median_adv_aud": 48341409.855000004,
+      "name": "Qantas Airways",
+      "rank": 22
+    },
+    {
+      "code": "JHX",
+      "median_adv_aud": 47684739.2,
+      "name": "James Hardie Industries",
+      "rank": 23
+    },
+    {
+      "code": "COL",
+      "median_adv_aud": 46465916.415,
+      "name": "Coles Group Limited.",
+      "rank": 24
+    },
+    {
+      "code": "QBE",
+      "median_adv_aud": 46454276.724999994,
+      "name": "Qbe Insurance Group",
+      "rank": 25
+    },
+    {
+      "code": "ALL",
+      "median_adv_aud": 44178439.934999995,
+      "name": "Aristocrat Leisure",
+      "rank": 26
+    },
+    {
+      "code": "IGO",
+      "median_adv_aud": 44024665.645,
+      "name": "Igo",
+      "rank": 27
+    },
+    {
+      "code": "BXB",
+      "median_adv_aud": 42211166.265,
+      "name": "Brambles",
+      "rank": 28
+    },
+    {
+      "code": "XRO",
+      "median_adv_aud": 36759472.2,
+      "name": "Xero",
+      "rank": 29
+    },
+    {
+      "code": "CPU",
+      "median_adv_aud": 36679571.28,
+      "name": "Computershare Limited.",
+      "rank": 30
+    },
+    {
+      "code": "ORG",
+      "median_adv_aud": 36456656.254999995,
+      "name": "Origin Energy",
+      "rank": 31
+    },
+    {
+      "code": "SUN",
+      "median_adv_aud": 36255916.7,
+      "name": "Suncorp Group",
+      "rank": 32
+    },
+    {
+      "code": "RMD",
+      "median_adv_aud": 35860766.47500001,
+      "name": "Resmed",
+      "rank": 33
+    },
+    {
+      "code": "WTC",
+      "median_adv_aud": 34899751.94,
+      "name": "Wisetech Global",
+      "rank": 34
+    },
+    {
+      "code": "SHL",
+      "median_adv_aud": 32232377.58,
+      "name": "Sonic Healthcare",
+      "rank": 35
+    },
+    {
+      "code": "IAG",
+      "median_adv_aud": 32072251.700000003,
+      "name": "Insurance Australia Group",
+      "rank": 36
+    },
+    {
+      "code": "BSL",
+      "median_adv_aud": 30502568.535,
+      "name": "Bluescope Steel",
+      "rank": 37
+    },
+    {
+      "code": "TWE",
+      "median_adv_aud": 29944519.355,
+      "name": "Treasury Wine Estates",
+      "rank": 38
+    },
+    {
+      "code": "COH",
+      "median_adv_aud": 29278849.56,
+      "name": "Cochlear",
+      "rank": 39
+    },
+    {
+      "code": "LYC",
+      "median_adv_aud": 28586890.965,
+      "name": "Lynas Rare Earths",
+      "rank": 40
+    },
+    {
+      "code": "DXS",
+      "median_adv_aud": 28483446.939999998,
+      "name": "Dexus",
+      "rank": 41
+    },
+    {
+      "code": "SCG",
+      "median_adv_aud": 27939622.4,
+      "name": "Scentre Group",
+      "rank": 42
+    },
+    {
+      "code": "EVN",
+      "median_adv_aud": 27837952.6,
+      "name": "Evolution Mining",
+      "rank": 43
+    },
+    {
+      "code": "ASX",
+      "median_adv_aud": 26712728.99,
+      "name": "Asx",
+      "rank": 44
+    },
+    {
+      "code": "SGP",
+      "median_adv_aud": 26580421.450000003,
+      "name": "Stockland",
+      "rank": 45
+    },
+    {
+      "code": "RHC",
+      "median_adv_aud": 26203449.825000003,
+      "name": "Ramsay Health Care",
+      "rank": 46
+    },
+    {
+      "code": "AMC",
+      "median_adv_aud": 25818180.125,
+      "name": "Amcor",
+      "rank": 47
+    },
+    {
+      "code": "MGR",
+      "median_adv_aud": 24113774.625,
+      "name": "Mirvac Group",
+      "rank": 48
+    },
+    {
+      "code": "EDV",
+      "median_adv_aud": 23649966.9,
+      "name": "Endeavour Group",
+      "rank": 49
+    },
+    {
+      "code": "NHC",
+      "median_adv_aud": 23529270.67,
+      "name": "New Hope",
+      "rank": 50
+    },
+    {
+      "code": "REA",
+      "median_adv_aud": 23486720.839999996,
+      "name": "Rea Group",
+      "rank": 51
+    },
+    {
+      "code": "AZJ",
+      "median_adv_aud": 22663088.04,
+      "name": "Aurizon Holdings",
+      "rank": 52
+    },
+    {
+      "code": "ALD",
+      "median_adv_aud": 21700471.665,
+      "name": "Ampol",
+      "rank": 53
+    },
+    {
+      "code": "LTR",
+      "median_adv_aud": 21494667.810000002,
+      "name": "Liontown",
+      "rank": 54
+    },
+    {
+      "code": "IEL",
+      "median_adv_aud": 21343983.7,
+      "name": "Idp Education",
+      "rank": 55
+    },
+    {
+      "code": "SEK",
+      "median_adv_aud": 20691455.365000002,
+      "name": "Seek",
+      "rank": 56
+    },
+    {
+      "code": "JBH",
+      "median_adv_aud": 20175553.13,
+      "name": "Jb Hi-Fi",
+      "rank": 57
+    },
+    {
+      "code": "TLC",
+      "median_adv_aud": 19912196.439999998,
+      "name": "The Lottery",
+      "rank": 58
+    },
+    {
+      "code": "AGL",
+      "median_adv_aud": 18857565.134999998,
+      "name": "Agl Energy Limited.",
+      "rank": 59
+    },
+    {
+      "code": "APA",
+      "median_adv_aud": 18725888.53,
+      "name": "Apa Group",
+      "rank": 60
+    },
+    {
+      "code": "CAR",
+      "median_adv_aud": 18436519.495,
+      "name": "Car Group",
+      "rank": 61
+    },
+    {
+      "code": "GPT",
+      "median_adv_aud": 18284936.810000002,
+      "name": "Gpt Group",
+      "rank": 62
+    },
+    {
+      "code": "FLT",
+      "median_adv_aud": 18150328.68,
+      "name": "Flight Centre Travel Group",
+      "rank": 63
+    },
+    {
+      "code": "WOR",
+      "median_adv_aud": 17565859.810000002,
+      "name": "Worley",
+      "rank": 64
+    },
+    {
+      "code": "VCX",
+      "median_adv_aud": 17441122.52,
+      "name": "Vicinity Centres",
+      "rank": 65
+    },
+    {
+      "code": "DMP",
+      "median_adv_aud": 17408602.36,
+      "name": "Domino'S Pizza Enterprises",
+      "rank": 66
+    },
+    {
+      "code": "LLC",
+      "median_adv_aud": 17292820.265,
+      "name": "Lendlease Group",
+      "rank": 67
+    },
+    {
+      "code": "CHC",
+      "median_adv_aud": 17192485.215,
+      "name": "Charter Hall Group",
+      "rank": 68
+    },
+    {
+      "code": "ILU",
+      "median_adv_aud": 15695780.975000001,
+      "name": "Iluka Resources",
+      "rank": 69
+    },
+    {
+      "code": "ALX",
+      "median_adv_aud": 15456661.219999999,
+      "name": "Atlas Arteria",
+      "rank": 70
+    },
+    {
+      "code": "BOQ",
+      "median_adv_aud": 15417254.0,
+      "name": "Bank Of Queensland Limited.",
+      "rank": 71
+    },
+    {
+      "code": "NXT",
+      "median_adv_aud": 14998663.37,
+      "name": "Nextdc",
+      "rank": 72
+    },
+    {
+      "code": "ORI",
+      "median_adv_aud": 14129457.864999998,
+      "name": "Orica",
+      "rank": 73
+    },
+    {
+      "code": "SFR",
+      "median_adv_aud": 12439462.629999999,
+      "name": "Sandfire Resources",
+      "rank": 74
+    },
+    {
+      "code": "CXO",
+      "median_adv_aud": 12327286.565000001,
+      "name": "Core Lithium",
+      "rank": 75
+    },
+    {
+      "code": "A2M",
+      "median_adv_aud": 12256697.100000001,
+      "name": "The A2 Milk Company",
+      "rank": 76
+    },
+    {
+      "code": "BEN",
+      "median_adv_aud": 11611537.355,
+      "name": "Bendigo And Adelaide Bank",
+      "rank": 77
+    },
+    {
+      "code": "AMP",
+      "median_adv_aud": 11463624.719999999,
+      "name": "Amp",
+      "rank": 78
+    },
+    {
+      "code": "SDF",
+      "median_adv_aud": 11305638.05,
+      "name": "Steadfast Group",
+      "rank": 79
+    },
+    {
+      "code": "YAL",
+      "median_adv_aud": 11073258.645,
+      "name": "Yancoal Australia",
+      "rank": 80
+    },
+    {
+      "code": "SOL",
+      "median_adv_aud": 10535333.715,
+      "name": "Washington H. Soul Pattinson And Company",
+      "rank": 81
+    },
+    {
+      "code": "ALQ",
+      "median_adv_aud": 10381409.400000002,
+      "name": "Als",
+      "rank": 82
+    },
+    {
+      "code": "BPT",
+      "median_adv_aud": 10304815.57,
+      "name": "Beach Energy",
+      "rank": 83
+    },
+    {
+      "code": "CWY",
+      "median_adv_aud": 9931486.754999999,
+      "name": "Cleanaway Waste Management",
+      "rank": 84
+    },
+    {
+      "code": "TNE",
+      "median_adv_aud": 9916504.719999999,
+      "name": "Technology One",
+      "rank": 85
+    },
+    {
+      "code": "HVN",
+      "median_adv_aud": 9897417.05,
+      "name": "Harvey Norman Holdings",
+      "rank": 86
+    },
+    {
+      "code": "PME",
+      "median_adv_aud": 9876319.975000001,
+      "name": "Pro Medicus",
+      "rank": 87
+    },
+    {
+      "code": "CIA",
+      "median_adv_aud": 9608623.32,
+      "name": "Champion Iron",
+      "rank": 88
+    },
+    {
+      "code": "CHN",
+      "median_adv_aud": 8862891.66,
+      "name": "Chalice Mining",
+      "rank": 89
+    },
+    {
+      "code": "PDN",
+      "median_adv_aud": 8626906.125,
+      "name": "Paladin Energy",
+      "rank": 90
+    },
+    {
+      "code": "SGR",
+      "median_adv_aud": 8496708.530000001,
+      "name": "The Star Entertainment Group",
+      "rank": 91
+    },
+    {
+      "code": "WEB",
+      "median_adv_aud": 8457827.735,
+      "name": "Web Travel Group",
+      "rank": 92
+    },
+    {
+      "code": "FPH",
+      "median_adv_aud": 8400234.014999999,
+      "name": "Fisher & Paykel Healthcare",
+      "rank": 93
+    },
+    {
+      "code": "CGF",
+      "median_adv_aud": 8383541.1,
+      "name": "Challenger",
+      "rank": 94
+    },
+    {
+      "code": "PPT",
+      "median_adv_aud": 8238558.105,
+      "name": "Perpetual",
+      "rank": 95
+    },
+    {
+      "code": "CTD",
+      "median_adv_aud": 8169484.17,
+      "name": "Corporate Travel Management",
+      "rank": 96
+    },
+    {
+      "code": "TLX",
+      "median_adv_aud": 8158917.34,
+      "name": "Telix Pharmaceuticals",
+      "rank": 97
+    },
+    {
+      "code": "MFG",
+      "median_adv_aud": 8085660.4,
+      "name": "Magellan Financial Group",
+      "rank": 98
+    },
+    {
+      "code": "SUL",
+      "median_adv_aud": 8063357.12,
+      "name": "Super Retail Group",
+      "rank": 99
+    },
+    {
+      "code": "MP1",
+      "median_adv_aud": 8003585.444999999,
+      "name": "Megaport",
+      "rank": 100
+    },
+    {
+      "code": "VEA",
+      "median_adv_aud": 7864627.34,
+      "name": "Viva Energy Group",
+      "rank": 101
+    },
+    {
+      "code": "DOW",
+      "median_adv_aud": 7132341.645,
+      "name": "Downer Edi",
+      "rank": 102
+    },
+    {
+      "code": "TAH",
+      "median_adv_aud": 7029869.77,
+      "name": "Tabcorp Holdings",
+      "rank": 103
+    },
+    {
+      "code": "NSR",
+      "median_adv_aud": 6948268.98,
+      "name": "National Storage Reit",
+      "rank": 104
+    },
+    {
+      "code": "RGN",
+      "median_adv_aud": 6542053.365,
+      "name": "Region Group",
+      "rank": 105
+    },
+    {
+      "code": "SGM",
+      "median_adv_aud": 6482758.375,
+      "name": "Sims",
+      "rank": 106
+    },
+    {
+      "code": "ANN",
+      "median_adv_aud": 6398715.105,
+      "name": "Ansell",
+      "rank": 107
+    },
+    {
+      "code": "NEC",
+      "median_adv_aud": 6372581.879999999,
+      "name": "Nine Entertainment Co. Holdings",
+      "rank": 108
+    },
+    {
+      "code": "REH",
+      "median_adv_aud": 6370003.055,
+      "name": "Reece",
+      "rank": 109
+    },
+    {
+      "code": "ORA",
+      "median_adv_aud": 6355232.555,
+      "name": "Orora",
+      "rank": 110
+    },
+    {
+      "code": "ELD",
+      "median_adv_aud": 6186106.609999999,
+      "name": "Elders",
+      "rank": 111
+    },
+    {
+      "code": "LOV",
+      "median_adv_aud": 6176477.59,
+      "name": "Lovisa Holdings",
+      "rank": 112
+    },
+    {
+      "code": "HUB",
+      "median_adv_aud": 5695505.62,
+      "name": "Hub24",
+      "rank": 113
+    },
+    {
+      "code": "CLW",
+      "median_adv_aud": 5565392.965,
+      "name": "Charter Hall Long Wale Reit",
+      "rank": 114
+    },
+    {
+      "code": "GNC",
+      "median_adv_aud": 5513918.595000001,
+      "name": "Graincorp",
+      "rank": 115
+    },
+    {
+      "code": "VNT",
+      "median_adv_aud": 5314909.955,
+      "name": "Ventia Services Group",
+      "rank": 116
+    },
+    {
+      "code": "AUB",
+      "median_adv_aud": 5198699.675,
+      "name": "Aub Group",
+      "rank": 117
+    },
+    {
+      "code": "TPG",
+      "median_adv_aud": 4956127.515,
+      "name": "Tpg Telecom Limited.",
+      "rank": 118
+    },
+    {
+      "code": "ARB",
+      "median_adv_aud": 4797350.24,
+      "name": "Arb Corporation Limited.",
+      "rank": 119
+    },
+    {
+      "code": "DRR",
+      "median_adv_aud": 4724832.635,
+      "name": "Deterra Royalties",
+      "rank": 120
+    }
+  ]
+}
