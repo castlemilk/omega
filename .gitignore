@@ -98,3 +98,8 @@ data/v272/
 # rebuild is verifiable rather than merely repeatable (the V219/V277 trade).
 data/frozen_series/asx/v3/
 data/frozen_series/asx/prices_api/
+
+# V307: the 5m ASX intraday corpus is a 60-day ROLLING yfinance window frozen for
+# audit only — md5s live in data/frozen_series/asx/intraday/MANIFEST.json; the
+# 1h study substrate next to it IS committed.
+data/frozen_series/asx/intraday/5m/
