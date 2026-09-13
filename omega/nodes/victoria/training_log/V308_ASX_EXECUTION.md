@@ -1,7 +1,7 @@
 # V308 — V304's capacity table was an execution schedule in disguise
 
 **Date:** 2026-09-13
-**Status:** PRE-REGISTERED — re-computation on frozen data; no new alpha claimed; results blank below until the run is done.
+**Status:** COMPLETE — pre-registered at `7b5eb983` before the script ran. F0 FAIL (V304 not reproduced; comparator identified), F1 FAIL, F2 PASS. The ASX verdict is restated in §8.
 **Parent:** V307 (the intraday map) / V304 (the verdict being re-priced)
 
 ---
@@ -98,12 +98,120 @@ rebalance trade cannot be priced without the book that was traded).
 
 ## 7. Results
 
-_(blank at pre-registration)_
+**Run:** 48 quarterly dates 2016-01-04 → 2026-08-18, **47 periods** (V304's n
+exactly), 990 codes in the panel, median eligible cross-section 240, median book
+50 names. Absolute, net of explicit cost: mean **+3.21%/qtr**, median +3.53%,
+hit rate 63.8%, top-3 share 45% (not outlier-driven).
+
+### 7.1 The harness defect this version had to fix first
+
+The first run reproduced nothing (−2.1% at $1M against V304's +4.9%) because
+`engine.run` built its own panel from the **default price source — the old
+68-name survivor freeze** — and had no parameter to take the v3 substrate. Every
+V294→V304 point-in-time result must therefore have been produced by assembling
+the panel by hand outside the engine, which is precisely why none of them were
+reproducible from a script. `run()` now takes `price_source` and `short_series`
+(additive); with v3 passed through, the period count lands on 47.
+
+### 7.2 F0 — reproduction: FAIL, and the decomposition says why
+
+At s = 1.00, k = 0.5 (annualised net excess, %/yr):
+
+| | $1M | $5M | $20M | $50M |
+|---|---:|---:|---:|---:|
+| V304 §1 | +4.87 | +4.00 | +2.52 | +1.39 |
+| **reconstruction (vs EW eligible universe)** | **−0.51** | **−1.97** | **−4.61** | **−7.68** |
+| Δ pp | −5.38 | −5.97 | −7.13 | −9.07 |
+
+Impact at $1M is 0.30%/qtr, so the 5-point gap is in the **gross** number.
+Per-period means at $1M, k = 0.5, s = 1:
+
+| component | %/qtr |
+|---|---:|
+| book gross | +3.376 |
+| explicit cost (15 bp/side) | −0.162 |
+| impact | −0.296 |
+| **comparator: EW eligible universe** | **3.045** |
+| comparator: EW whole panel | 5.681 |
+| comparator: *median* eligible name | 1.725 |
+
+Annualised net excess at $1M **by comparator**: vs EW eligible **−0.51**; vs EW
+whole panel −11.05; **vs median eligible +4.77 — V304's +4.87 to within 0.1 pp.**
+V304's code is not committed, so this is inference, but no other definition in
+the neighbourhood lands within five points. The journal's "universe-relative
+excess" was, on the evidence, the book against the *median* name.
+
+That comparator is wrong for this book. The book is **equal-weight**; a random
+equal-weight 20% draw from the universe earns the universe's equal-weight mean,
+not its median. On a right-skewed microcap universe the median name trails the
+mean by 1.3 pp/qtr, and that gap is the entire "edge".
+
+### 7.3 The grid (annualised net excess, %/yr, vs EW eligible universe)
+
+| schedule | s | k | $1M | $5M | $20M | $50M | breakeven AUM |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| full-day VWAP | 1.00 | 0.25 | +0.09 | −0.65 | −1.97 | −3.50 | $1.31M |
+| full-day VWAP | 1.00 | **0.5** | −0.51 | −1.97 | −4.61 | −7.68 | **$0.33M** |
+| full-day VWAP | 1.00 | 1.0 | −1.69 | −4.61 | −9.90 | −16.05 | — |
+| last hour + auction | 0.47 | 0.25 | −0.19 | −1.25 | −3.18 | −5.42 | $0.62M |
+| last hour + auction | 0.47 | 0.5 | −1.05 | −3.18 | −7.04 | −11.52 | $0.15M |
+| last hour + auction | 0.47 | 1.0 | −2.77 | −7.04 | −14.75 | −23.72 | — |
+| auction only | 0.36 | 0.25 | −0.31 | −1.53 | −3.73 | −6.29 | $0.47M |
+| auction only | 0.36 | 0.5 | −1.29 | −3.73 | −8.14 | −13.26 | $0.12M |
+| auction only | 0.36 | 1.0 | −3.27 | −8.14 | −16.95 | −27.19 | — |
+
+t-statistics at k = 0.5, full-day: −0.19 / −0.76 / −1.77 / −2.92 across the four
+sizes. 177 name-rebalances (of several thousand) had σ or ADV defaulted to the
+period median; reported, not hidden.
+
+**F1 — FAIL.** $5M, k = 0.5, auction-only: **−3.73%/yr.** But so is full-day
+(−1.97%): the schedule did not decide it, the comparator did.
+
+**F2 — PASS.** Breakeven ratio auction/full-day at k = 0.5: **0.360** against the
+predicted 0.36. The implementation computes what §3 says; the square-root law
+scales exactly as derived.
 
 ## 8. Verdict
 
-_(blank at pre-registration)_
+**The one positive configuration in the ASX line does not survive a committed
+reconstruction with the right comparator.** Against its own equal-weight eligible
+universe, the quarterly least-shorted book is net negative at every size and
+schedule for k ≥ 0.5, and clears zero only at $1M with k = 0.25 (+0.09%/yr). Gross
+of all costs it earns ~+1.3%/yr over its universe — a real but small long-only
+residue of the V303 spread, which was always a long-*short* statistic — and
+explicit cost (0.65%/yr) plus impact (1.2%/yr at $1M) eat it.
+
+The execution-schedule question is therefore moot: it moves breakeven from $0.33M
+to $0.12M, which is the difference between two sizes nobody would run. F2's exact
+scaling stands as a check that the pricing code is right.
+
+**Restated ASX verdict, superseding V304 §3:** the neglect *spread* is a
+statistical fact (V303, t = +2.85, long-short, weekly); the long-only *book* built
+from it has no net edge over its universe at any frequency, size or schedule
+under the stated cost model. Nothing in V286→V308 supports trading the ASX from
+this data, daily or otherwise.
+
+Two rules bought here, both about the same thing:
+
+- **A capacity number that exists only in a journal is not a result.** The
+  V299–V304 tables could not be re-run, and the first attempt to re-run them
+  found the harness could not even build the right panel. This script is the
+  first ASX capacity figure anyone can reproduce.
+- **The comparator is part of the strategy.** V304's edge was the distance between
+  a mean and a median. Report the comparator's definition next to every excess,
+  and match its weighting to the book's.
 
 ## 9. Next
 
-_(blank at pre-registration)_
+- **V309 — the forward ASX lane, re-scoped by this result.** Not a paper book
+  claiming PnL: a forward, daily, no-broker job that appends prices, short
+  positions and the 1h bars to the frozen substrate, and each week records the
+  realised **Q1−Q5 spread** and the **Q1 minus EW-universe excess** with the
+  comparator written into the artifact. One un-Goodhartable observation per week
+  of the only ASX statistic that is real. If the spread persists forward at the
+  V303 rate, a long-short version becomes the thing to price — with borrow, which
+  V289 ruled out for a retail account, priced explicitly.
+- **Not queued:** further re-pricing of the long-only book. It is negative before
+  the schedule matters.
+- **Housekeeping:** V304 §1's table should be read with this entry beside it. The
+  journal is not rewritten; the correction is a later entry, as with V303.

@@ -83,7 +83,7 @@ Window 1 = the soak's first completed cycle. The count is deliberately here and
 not derived on demand: V249's constraint is the whole reason the loop is paused,
 and a paused loop with no visible counter is how a pause becomes a stall.
 
-### V254–V307 — what happened while the tracker said "V253 NEXT"
+### V254–V308 — what happened while the tracker said "V253 NEXT"
 
 Summarised rather than enumerated; each has its own entry. Grouped by what they
 were actually doing, because the tracker's job is orientation, not an index.
@@ -125,6 +125,15 @@ were actually doing, because the tracker's job is orientation, not an index.
   of the window's first day, byte-identity PASS) and mapped into eight
   pre-registered time-of-day buckets. `V307_ASX_INTRADAY.md` carries the map,
   the verdict, and what it means for V304's "cheaper way to hold the exposure".
+- **V308 — V304's "+4%/yr at $5M" was the distance between a mean and a median.**
+  The V299–V304 capacity tables were never committed; the first committed
+  reconstruction found `engine.run` could not even take the v3 substrate, and
+  once it could, V304's row is reproduced only by comparing the equal-weight
+  book against the *median* eligible name. Against the equal-weight universe
+  the quarterly book is net negative at every size and schedule for k ≥ 0.5.
+  `V308_ASX_EXECUTION.md` restates the ASX verdict: the neglect spread is a
+  statistical fact; the long-only book has no net edge. Nothing supports
+  trading the ASX from this data.
 
 **Victoria's standing open problem is unchanged and named in V305:** V279-class
 inertness — components that import cleanly, are wired correctly, and do nothing.
