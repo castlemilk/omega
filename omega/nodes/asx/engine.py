@@ -90,6 +90,8 @@ def run(
     port_spec: PortfolioSpec | None = None,
     costs: CostModel | None = None,
     scale_fn: Any = None,
+    price_source: Any = None,
+    short_series: dict[str, list[tuple[str, float]]] | None = None,
 ) -> RunResult:
     """Walk the dates, rebalance, and charge costs.
 
@@ -101,7 +103,11 @@ def run(
     ospec = port_spec or PortfolioSpec()
     cm = costs or CostModel()
 
-    built = build_panel(dates, pspec)
+    # V308: the substrate is a parameter. Before this, run() always built its panel
+    # from the default (survivor-only yfinance) freeze, so every v3 point-in-time
+    # result had to be produced by hand-assembling the panel outside the engine —
+    # which is why none of V294-V304's runs were reproducible from a script.
+    built = build_panel(dates, pspec, price_source=price_source, short_series=short_series)
     panel = built["panel"]
     priced_later = _make_priced_later(panel)
     ordered = sorted(panel)
@@ -132,6 +138,7 @@ def run(
                     "net_return": 0.0,
                     "n": 0,
                     "skipped": tgt.diagnostics.get("reason"),
+                    "weights": {},
                 }
             )
             continue
@@ -180,6 +187,10 @@ def run(
                 # hole (#541). Counted rather than silently dropped.
                 "unpriced_at_exit": len(tgt.weights) - priced,
                 "data_gaps": gaps,
+                # V308: the book that was traded. Without it the rebalance cannot be
+                # priced afterwards, which is how V299-V304's impact numbers ended up
+                # existing only as tables in a journal.
+                "weights": dict(tgt.weights),
             }
         )
         prev = tgt.weights
