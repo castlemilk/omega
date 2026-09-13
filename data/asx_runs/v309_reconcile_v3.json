@@ -1,0 +1,502 @@
+{
+ "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+ "excess_q1_vs_ew": {
+  "mean_pct": -0.16100888089646112,
+  "n": 15,
+  "sd_pct": 1.541919104020125,
+  "t": -0.40442116105680503
+ },
+ "marks": [
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 334,
+   "excess_q1_vs_ew": 0.009507020945568139,
+   "formed_date": "2026-05-01",
+   "lag_days": 7,
+   "mark_date": "2026-05-08",
+   "panel_date": "2026-04-24",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 66,
+    "n_gap": 0,
+    "ret": 0.015479583371868015
+   },
+   "q5": {
+    "n": 66,
+    "n_gap": 0,
+    "ret": 0.007344013803169803
+   },
+   "spread_q1_q5": 0.008135569568698212,
+   "universe": {
+    "n": 334,
+    "n_gap": 0,
+    "ret": 0.0059725624262998754
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 341,
+   "excess_q1_vs_ew": 0.0007898017283823923,
+   "formed_date": "2026-05-08",
+   "lag_days": 7,
+   "mark_date": "2026-05-15",
+   "panel_date": "2026-05-01",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": -0.00825426593394272
+   },
+   "q5": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": -0.021621850521718278
+   },
+   "spread_q1_q5": 0.013367584587775557,
+   "universe": {
+    "n": 340,
+    "n_gap": 1,
+    "ret": -0.009044067662325113
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 340,
+   "excess_q1_vs_ew": -0.005835974612804594,
+   "formed_date": "2026-05-15",
+   "lag_days": 7,
+   "mark_date": "2026-05-22",
+   "panel_date": "2026-05-08",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": -0.01710704890142249
+   },
+   "q5": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": -0.006858022944520884
+   },
+   "spread_q1_q5": -0.010249025956901605,
+   "universe": {
+    "n": 340,
+    "n_gap": 0,
+    "ret": -0.011271074288617894
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 337,
+   "excess_q1_vs_ew": 0.010424741955581452,
+   "formed_date": "2026-05-22",
+   "lag_days": 7,
+   "mark_date": "2026-05-29",
+   "panel_date": "2026-05-15",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 66,
+    "n_gap": 1,
+    "ret": 0.0318644756671537
+   },
+   "q5": {
+    "n": 67,
+    "n_gap": 0,
+    "ret": 0.022821777213519395
+   },
+   "spread_q1_q5": 0.009042698453634302,
+   "universe": {
+    "n": 336,
+    "n_gap": 1,
+    "ret": 0.021439733711572245
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 336,
+   "excess_q1_vs_ew": -0.014694244980107126,
+   "formed_date": "2026-05-29",
+   "lag_days": 7,
+   "mark_date": "2026-06-05",
+   "panel_date": "2026-05-22",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 67,
+    "n_gap": 0,
+    "ret": -0.030531805233209513
+   },
+   "q5": {
+    "n": 67,
+    "n_gap": 0,
+    "ret": -0.014325117272242791
+   },
+   "spread_q1_q5": -0.01620668796096672,
+   "universe": {
+    "n": 336,
+    "n_gap": 0,
+    "ret": -0.015837560253102387
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 341,
+   "excess_q1_vs_ew": -0.02103540407764104,
+   "formed_date": "2026-06-05",
+   "lag_days": 7,
+   "mark_date": "2026-06-12",
+   "panel_date": "2026-05-29",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": -0.016931577311114682
+   },
+   "q5": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": 0.0025643133188536977
+   },
+   "spread_q1_q5": -0.01949589062996838,
+   "universe": {
+    "n": 341,
+    "n_gap": 0,
+    "ret": 0.004103826766526359
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 346,
+   "excess_q1_vs_ew": 0.005201365899312485,
+   "formed_date": "2026-06-12",
+   "lag_days": 7,
+   "mark_date": "2026-06-19",
+   "panel_date": "2026-06-05",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 69,
+    "n_gap": 0,
+    "ret": 0.02688955919574028
+   },
+   "q5": {
+    "n": 69,
+    "n_gap": 0,
+    "ret": 0.04301888509921837
+   },
+   "spread_q1_q5": -0.01612932590347809,
+   "universe": {
+    "n": 346,
+    "n_gap": 0,
+    "ret": 0.021688193296427793
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 341,
+   "excess_q1_vs_ew": 0.019513317898171338,
+   "formed_date": "2026-06-19",
+   "lag_days": 7,
+   "mark_date": "2026-06-26",
+   "panel_date": "2026-06-12",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 67,
+    "n_gap": 1,
+    "ret": -0.012146622644468419
+   },
+   "q5": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": -0.053957197928921195
+   },
+   "spread_q1_q5": 0.041810575284452776,
+   "universe": {
+    "n": 340,
+    "n_gap": 1,
+    "ret": -0.03165994054263976
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 344,
+   "excess_q1_vs_ew": -0.006540133329671592,
+   "formed_date": "2026-06-26",
+   "lag_days": 7,
+   "mark_date": "2026-07-03",
+   "panel_date": "2026-06-19",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": 0.01745657950613978
+   },
+   "q5": {
+    "n": 68,
+    "n_gap": 0,
+    "ret": 0.0427852782084312
+   },
+   "spread_q1_q5": -0.02532869870229142,
+   "universe": {
+    "n": 344,
+    "n_gap": 0,
+    "ret": 0.02399671283581137
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 339,
+   "excess_q1_vs_ew": -0.015319511737399219,
+   "formed_date": "2026-07-03",
+   "lag_days": 7,
+   "mark_date": "2026-07-10",
+   "panel_date": "2026-06-26",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 67,
+    "n_gap": 0,
+    "ret": -0.030014961934831753
+   },
+   "q5": {
+    "n": 67,
+    "n_gap": 0,
+    "ret": -0.008229038534120872
+   },
+   "spread_q1_q5": -0.02178592340071088,
+   "universe": {
+    "n": 339,
+    "n_gap": 0,
+    "ret": -0.014695450197432534
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 336,
+   "excess_q1_vs_ew": -0.022723648340351607,
+   "formed_date": "2026-07-10",
+   "lag_days": 7,
+   "mark_date": "2026-07-17",
+   "panel_date": "2026-07-03",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 67,
+    "n_gap": 0,
+    "ret": -0.04734673196532248
+   },
+   "q5": {
+    "n": 67,
+    "n_gap": 0,
+    "ret": -0.028259045778848954
+   },
+   "spread_q1_q5": -0.019087686186473524,
+   "universe": {
+    "n": 336,
+    "n_gap": 0,
+    "ret": -0.02462308362497087
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 323,
+   "excess_q1_vs_ew": 0.018054164911755637,
+   "formed_date": "2026-07-17",
+   "lag_days": 7,
+   "mark_date": "2026-07-24",
+   "panel_date": "2026-07-10",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 64,
+    "n_gap": 0,
+    "ret": 0.012687377363399593
+   },
+   "q5": {
+    "n": 64,
+    "n_gap": 0,
+    "ret": -0.01877436967655815
+   },
+   "spread_q1_q5": 0.031461747039957744,
+   "universe": {
+    "n": 322,
+    "n_gap": 1,
+    "ret": -0.005366787548356045
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 321,
+   "excess_q1_vs_ew": -0.017583350183135407,
+   "formed_date": "2026-07-24",
+   "lag_days": 7,
+   "mark_date": "2026-07-31",
+   "panel_date": "2026-07-17",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 64,
+    "n_gap": 0,
+    "ret": 0.0012318088575367942
+   },
+   "q5": {
+    "n": 64,
+    "n_gap": 0,
+    "ret": 0.02707614416447591
+   },
+   "spread_q1_q5": -0.025844335306939116,
+   "universe": {
+    "n": 321,
+    "n_gap": 0,
+    "ret": 0.018815159040672203
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 316,
+   "excess_q1_vs_ew": -0.007908229368318052,
+   "formed_date": "2026-07-31",
+   "lag_days": 7,
+   "mark_date": "2026-08-07",
+   "panel_date": "2026-07-24",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 63,
+    "n_gap": 0,
+    "ret": 0.05363581743631549
+   },
+   "q5": {
+    "n": 63,
+    "n_gap": 0,
+    "ret": 0.07907327526302295
+   },
+   "spread_q1_q5": -0.025437457826707456,
+   "universe": {
+    "n": 316,
+    "n_gap": 0,
+    "ret": 0.061544046804633545
+   }
+  },
+  {
+   "comparator": "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time ADV20 >= 500k AUD at the formed date); names priced at both ends only, a missing price is excluded not charged 0%",
+   "eligible_n": 321,
+   "excess_q1_vs_ew": 0.023998751156188027,
+   "formed_date": "2026-08-07",
+   "lag_days": 7,
+   "mark_date": "2026-08-14",
+   "panel_date": "2026-07-31",
+   "price_basis": "close_unadjusted",
+   "q1": {
+    "n": 64,
+    "n_gap": 0,
+    "ret": 0.027059628056543286
+   },
+   "q5": {
+    "n": 64,
+    "n_gap": 0,
+    "ret": -0.0013537326499278718
+   },
+   "spread_q1_q5": 0.028413360706471158,
+   "universe": {
+    "n": 321,
+    "n_gap": 0,
+    "ret": 0.0030608769003552592
+   }
+  }
+ ],
+ "spread_q1_q5": {
+  "mean_pct": -0.3155566415563163,
+  "n": 15,
+  "sd_pct": 2.318561486755264,
+  "t": -0.527113740357648
+ },
+ "v303_reference_pct_per_week": 0.298,
+ "version": "V309",
+ "weeks": [
+  [
+   "2026-05-01",
+   "2026-05-08",
+   "2026-04-24",
+   334
+  ],
+  [
+   "2026-05-08",
+   "2026-05-15",
+   "2026-05-01",
+   341
+  ],
+  [
+   "2026-05-15",
+   "2026-05-22",
+   "2026-05-08",
+   340
+  ],
+  [
+   "2026-05-22",
+   "2026-05-29",
+   "2026-05-15",
+   337
+  ],
+  [
+   "2026-05-29",
+   "2026-06-05",
+   "2026-05-22",
+   336
+  ],
+  [
+   "2026-06-05",
+   "2026-06-12",
+   "2026-05-29",
+   341
+  ],
+  [
+   "2026-06-12",
+   "2026-06-19",
+   "2026-06-05",
+   346
+  ],
+  [
+   "2026-06-19",
+   "2026-06-26",
+   "2026-06-12",
+   341
+  ],
+  [
+   "2026-06-26",
+   "2026-07-03",
+   "2026-06-19",
+   344
+  ],
+  [
+   "2026-07-03",
+   "2026-07-10",
+   "2026-06-26",
+   339
+  ],
+  [
+   "2026-07-10",
+   "2026-07-17",
+   "2026-07-03",
+   336
+  ],
+  [
+   "2026-07-17",
+   "2026-07-24",
+   "2026-07-10",
+   323
+  ],
+  [
+   "2026-07-24",
+   "2026-07-31",
+   "2026-07-17",
+   321
+  ],
+  [
+   "2026-07-31",
+   "2026-08-07",
+   "2026-07-24",
+   316
+  ],
+  [
+   "2026-08-07",
+   "2026-08-14",
+   "2026-07-31",
+   321
+  ]
+ ],
+ "what": "weekly mark over frozen v3 prices + committed 91-date short panel"
+}
