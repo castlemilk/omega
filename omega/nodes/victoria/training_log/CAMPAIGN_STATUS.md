@@ -83,7 +83,7 @@ Window 1 = the soak's first completed cycle. The count is deliberately here and
 not derived on demand: V249's constraint is the whole reason the loop is paused,
 and a paused loop with no visible counter is how a pause becomes a stall.
 
-### V254–V306 — what happened while the tracker said "V253 NEXT"
+### V254–V307 — what happened while the tracker said "V253 NEXT"
 
 Summarised rather than enumerated; each has its own entry. Grouped by what they
 were actually doing, because the tracker's job is orientation, not an index.
@@ -119,6 +119,12 @@ were actually doing, because the tracker's job is orientation, not an index.
   constants superseded ninety versions earlier, and the suite dirtied its own
   frozen substrate on every run. The rule it bought: *a test nobody runs is worse
   than no test — it reports coverage while guarding a contract that moved.*
+- **V307 — the ASX line REOPENED on a new resolution: the intraday map.**
+  yfinance serves 730 days of 1h bars for `.AX` codes, which is a resolution
+  V286–V304 never had. Frozen once (119 names, point-in-time top-120 by ADV as
+  of the window's first day, byte-identity PASS) and mapped into eight
+  pre-registered time-of-day buckets. `V307_ASX_INTRADAY.md` carries the map,
+  the verdict, and what it means for V304's "cheaper way to hold the exposure".
 
 **Victoria's standing open problem is unchanged and named in V305:** V279-class
 inertness — components that import cleanly, are wired correctly, and do nothing.
