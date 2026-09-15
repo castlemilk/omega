@@ -1,0 +1,40 @@
+# Cross-namespace ReferenceGrants for the paprika Gateway (envoy-gateway-system).
+#
+# The Gateway's HTTPS listener terminates TLS for certs in multiple namespaces.
+# Each non-paprika-e2e namespace needs a ReferenceGrant allowing the Gateway
+# to reference its TLS Secret, otherwise ResolvedRefs=False and the listener
+# is invalid.
+#
+# Apply once per namespace. The deephost and dns grants are owned by their
+# own charts (charts/deephost/templates/referencegrant.yaml and similar in
+# dns), so they're not listed here — see those repos.
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-tls-from-envoy-gateway
+  namespace: babybub
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: envoy-gateway-system
+  to:
+    - group: ""
+      kind: Secret
+      name: babybub-api-tls
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-tls-from-envoy-gateway
+  namespace: tautau
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      namespace: envoy-gateway-system
+  to:
+    - group: ""
+      kind: Secret
+      name: tautau-stt-tls

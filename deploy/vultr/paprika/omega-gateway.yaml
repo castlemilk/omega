@@ -34,6 +34,48 @@ spec:
           - kind: Secret
             name: paprika-tls
             namespace: paprika-e2e
+          - kind: Secret
+            name: babybub-api-tls
+            namespace: babybub
+          - kind: Secret
+            name: tautau-stt-tls
+            namespace: tautau
+          - kind: Secret
+            name: dh-cert-dom-deephost-benebsworth-com-tls
+            namespace: deephost
+          - kind: Secret
+            name: dh-wildcard-apps-deephost-benebsworth-com-tls
+            namespace: deephost
+          - kind: Secret
+            name: dh-cert-dom-www-deephost-benebsworth-com-tls
+            namespace: deephost
+          - kind: Secret
+            name: dh-cert-dom-e2e-remote-apps-deephost-benebsworth-com-tls
+            namespace: deephost
+          - kind: Secret
+            name: dh-cert-dom-resource-check-apps-deephost-benebsworth-com-tls
+            namespace: deephost
+          - kind: Secret
+            name: dh-cert-dom-smoke3-one-shot-apps-deephost-benebsworth-com-tls
+            namespace: deephost
+          - kind: Secret
+            name: deephost-grafana-tls
+            namespace: deephost
+          - kind: Secret
+            name: deephost-console-tls
+            namespace: deephost
+          - kind: Secret
+            name: dh-cert-dom-bbaceb3cd2255fcb00c4e55f5cdd50b7-tls
+            namespace: deephost
+          - kind: Secret
+            name: dns-tls
+            namespace: dns
+          - kind: Secret
+            name: dh-cert-dom-live-benebsworth-com-tls
+            namespace: deephost
+          - kind: Secret
+            name: dh-cert-dom-www-live-benebsworth-com-tls
+            namespace: deephost
       allowedRoutes:
         namespaces:
           from: All
