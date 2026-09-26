@@ -197,3 +197,91 @@ Two things to watch in the first fortnight, both mechanical: the first
 `forward: true` mark lands on the Friday after 2026-09-18 (a book formed on or
 after the lane start, realised a week later), and the panel window will roll
 past 2026-05-04 as ASIC publishes new dates — the store keeps what the API drops.
+
+---
+
+## 9. Postscript, 2026-09-26 — the first fortnight found the instrument's defects, as it should
+
+Fourteen ticks, every one at 09:00:00 UTC within half a second, no crash, and
+**the marks were wrong anyway.** A status check on the 26th found the latest
+mark spanning Friday 09-11 to *Wednesday* 09-16 with 62 of 85 Q1 names unpriced,
+and no forward mark although one was due on the 25th.
+
+### 9.1 What happened
+
+Every price session stored by the supervised daemon from 09-14 to 09-25 held
+**60–230 of ~740 codes** (the 1h sessions: 6–114 of 119). The manual `--once`
+runs on the 13th had stored 735+. The difference was the process, not the
+market: **launchd hands an agent 256 file descriptors.** Measured directly — the
+same 749-symbol threaded pull returns rows for 737 symbols from a shell and for
+**236** at `ulimit -n 256`, and the daemon's log carried exactly one
+`curl: (7) … Too many open files`, buried among the routine delisted-ticker
+noise. Cold-start DNS and trust-anchor failures added a few dozen more.
+
+Three of the lane's own design choices then turned a starved fetch into wrong
+records:
+
+1. **Write-once at the session level.** A sparse session could never be
+   completed, so the 5-day window re-fetched the missing codes every day and
+   threw them away.
+2. **The calendar was one ticker's dates.** When BHP's pull failed on the 17th
+   and 18th, those sessions vanished from the calendar and ISO week 38 "ended"
+   on the 16th.
+3. **No completeness guard on a mark.** A week with most of its universe
+   unpriced was marked and recorded as if it were an observation.
+
+Not one of the four falsifiers would have caught this: F1–F4 checked that the
+cycle ran, was idempotent, agreed with history and was supervised. None asked
+*how much of the market the cycle actually saw.* The V293 rule again — an input
+that quietly evaluates to something — in a shape the pre-registration did not
+anticipate: the store was full of files, and the files were mostly empty.
+
+### 9.2 The fix
+
+- **Wrapper:** `ulimit -n 4096` before exec. **Daemon:** chunked requests
+  (100 symbols) with two retry passes for symbols that came back empty, the
+  yfinance cache pinned under the store, and `coverage_latest` in every cycle
+  line so the next starvation is a number in the log rather than a silence.
+- **Store:** write-once is now per **(session, code)**. `fill_missing` adds
+  codes absent from a stored session and never changes a stored value; the
+  fills are counted in the manifest and stamped `filled_on` in the document.
+- **Calendar:** the union of every stored session, plus the calendar code's
+  frozen dates. A session is a session whether or not one ticker's pull
+  succeeded.
+- **Guard:** a mark whose equal-weight universe lost more than **10%** of its
+  names to a missing price at either end is **deferred**, with a warning, and
+  re-tried after the next cycle's fills. `universe_gap_share` is in the record.
+- **Marks are append-only with voids.** A defective mark is never edited: a void
+  record follows it naming the reason, `marks()` returns the last non-void
+  record per date, and `raw_marks()` keeps the whole history. Four new tests.
+
+### 9.3 The repair, and what the record now says
+
+Agent stopped, one repair cycle with a one-month window, agent restarted (it
+resumed from the day's checkpoint). The cycle **filled 7,081 (session, code)
+pairs**; the latest session's coverage went from ~24% to 100%; 11 of 749
+symbols stayed empty after retries (delisted units, the usual). The 09-16 mark
+was voided with its reason, and two marks were written on the repaired
+sessions:
+
+| formed | mark | panel | eligible n | gap share | Q1 | Q5 | Q1−Q5 | Q1 − EW | forward |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| 2026-09-11 | 2026-09-18 | 2026-09-04 | 428 | 2.1% | +2.46% | +0.10% | +2.36% | +1.24% | no (backfill) |
+| **2026-09-18** | **2026-09-25** | 2026-09-11 | 414 | 0.2% | −0.27% | −2.56% | **+2.29%** | +1.08% | **yes — the first** |
+
+After the repair every price session from 09-14 to 09-25 holds 729–750 codes
+and every 1h session all 119; the store is 21 effective marks over 23 raw lines
+(one void). Marks live in the store's `marks.jsonl`, not under `data/`.
+
+One forward observation of fifty-two. It is positive, it is one week, and it
+means nothing yet — which is exactly the property that makes it worth having.
+
+### 9.4 The rule
+
+**A supervised process is a different process.** Limits, environment, cache
+paths and DNS all differ from the shell the code was tested in, and a fetch
+that degrades silently under those limits produces files that look complete.
+Every forward lane must log *coverage* — the fraction of the expected universe
+each cycle actually received — and must gate every derived record on it. The
+four V309 falsifiers are amended: **F5 — coverage ≥ 90% on every session a
+mark depends on**, evaluated by the guard on every cycle from now on.
