@@ -31,6 +31,12 @@ export SCHEDULER_TICK_UTC="${SCHEDULER_TICK_UTC:-09:00:00}"
 export OMEGA_MACRO_CACHE_PATH="${OMEGA_MACRO_CACHE_PATH:-$OMEGA_ASX_FORWARD_DIR/scratch/macro_cache.db}"
 mkdir -p "$OMEGA_ASX_FORWARD_DIR/scratch" "$HOME/Library/Logs/omega"
 
+# launchd hands an agent 256 file descriptors. Measured 2026-09-26: at that limit a
+# 740-symbol yfinance pull returned rows for 236 symbols and every stored session
+# from 09-14 to 09-25 was 60-230 codes wide. The daemon also chunks its requests;
+# this is belt and braces.
+ulimit -n 4096 2>/dev/null || echo "$(date -u +%FT%TZ) WARNING: could not raise nofile limit ($(ulimit -n))" >&2
+
 PYTHON="$(pwd)/.venv/bin/python"
 if [ ! -x "$PYTHON" ]; then
   echo "$(date -u +%FT%TZ) FATAL: repo venv interpreter missing at $PYTHON" >&2

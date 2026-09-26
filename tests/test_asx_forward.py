@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import math
+from datetime import date, timedelta
 from pathlib import Path
 
 from omega.nodes.asx.forward import (
@@ -39,8 +40,12 @@ def test_knowable_panel_date_applies_publication_lag() -> None:
     dates = ["2026-08-28", "2026-09-01", "2026-09-04", "2026-09-07"]
     # formed 2026-09-11, lag 7 → cutoff 2026-09-04 → the 09-04 panel, not 09-07
     assert knowable_panel_date(dates, "2026-09-11", lag_days=7) == "2026-09-04"
-    assert knowable_panel_date(dates, "2026-09-04", lag_days=7) == "2026-08-28"  # cutoff 08-28 inclusive
-    assert knowable_panel_date(dates, "2026-09-03", lag_days=7) is None  # cutoff 08-27: nothing published
+    assert (
+        knowable_panel_date(dates, "2026-09-04", lag_days=7) == "2026-08-28"
+    )  # cutoff 08-28 inclusive
+    assert (
+        knowable_panel_date(dates, "2026-09-03", lag_days=7) is None
+    )  # cutoff 08-27: nothing published
     assert knowable_panel_date(dates, "2026-08-20", lag_days=7) is None
 
 
@@ -131,3 +136,88 @@ def test_store_records_lane_start_once(tmp_path: Path) -> None:
     assert st.ensure_lane_start("2026-09-13") == "2026-09-13"
     assert st.ensure_lane_start("2026-09-14") == "2026-09-13"  # first cycle wins, forever
     assert st.lane_start() == "2026-09-13"
+
+
+def test_fill_missing_adds_absent_codes_and_never_overwrites(tmp_path: Path) -> None:
+    st = ForwardStore(tmp_path)
+    st.write_once(
+        "prices", "2026-09-17", {"session": "2026-09-17", "n": 1, "rows": {"A": [1.0, 1.0, 5.0]}}
+    )
+    added = st.fill_missing(
+        "prices", "2026-09-17", "rows", {"A": [9.0, 9.0, 9.0], "B": [2.0, 2.0, 7.0]}
+    )
+    assert added == 1
+    doc = st.read("prices", "2026-09-17")
+    assert doc["rows"]["A"] == [1.0, 1.0, 5.0]  # stored value untouched
+    assert doc["rows"]["B"] == [2.0, 2.0, 7.0]
+    assert doc["n"] == 2 and doc["filled_on"][0]["codes"] == 1
+    assert st.fill_missing("prices", "2026-09-17", "rows", {"B": [0.0, 0.0, 0.0]}) == 0
+    assert (
+        st.fill_missing("prices", "2026-09-18", "rows", {"B": [0.0, 0.0, 0.0]}) == 0
+    )  # nothing to fill
+    assert json.loads((tmp_path / "MANIFEST.json").read_text())["fills"] == 1
+
+
+def test_void_mark_is_append_only_and_hidden_from_effective_marks(tmp_path: Path) -> None:
+    st = ForwardStore(tmp_path)
+    assert st.append_mark({"mark_date": "2026-09-16", "spread_q1_q5": 0.02})
+    assert not st.append_mark({"mark_date": "2026-09-16", "spread_q1_q5": 0.03})  # refused
+    assert st.void_mark("2026-09-16", "week ended on a Wednesday")
+    assert st.marks() == []  # voided: gone from the effective view
+    assert len(st.raw_marks()) == 2  # but nothing was edited or deleted
+    assert st.append_mark(
+        {"mark_date": "2026-09-16", "spread_q1_q5": 0.03}
+    )  # a re-mark supersedes
+    assert st.marks()[0]["spread_q1_q5"] == 0.03
+    assert not st.void_mark("2026-09-30", "nothing there")
+
+
+def test_calendar_is_the_union_of_store_sessions_not_one_ticker(tmp_path: Path) -> None:
+    from omega.nodes.asx.forward import PriceHistory
+
+    st = ForwardStore(tmp_path)
+    st.write_once(
+        "prices", "2026-09-17", {"session": "2026-09-17", "rows": {"CBA": [1.0, 1.0, 1.0]}}
+    )
+    st.write_once(
+        "prices", "2026-09-18", {"session": "2026-09-18", "rows": {"BHP": [1.0, 1.0, 1.0]}}
+    )
+    hist = PriceHistory.load(st, v3_root=None)
+    assert hist.sessions() == [
+        "2026-09-17",
+        "2026-09-18",
+    ]  # BHP absent on the 17th, still a session
+
+
+def test_due_marks_defers_a_week_whose_universe_is_mostly_unpriced(tmp_path: Path) -> None:
+    from omega.nodes.asx.forward import PriceHistory, due_marks
+
+    st = ForwardStore(tmp_path)
+    codes = [f"C{i:02d}" for i in range(60)]
+    full = {c: [10.0, 10.0, 1e6] for c in codes}
+    # 25 sessions so ADV20 exists: 23 complete, then the formed Friday and a sparse mark Friday
+    # 25 weekdays 07-27 → 08-28: ADV20 needs 20 sessions before the formed date.
+    days = [
+        (date(2026, 7, 27) + timedelta(days=i)).isoformat()
+        for i in range(33)
+        if (date(2026, 7, 27) + timedelta(days=i)).weekday() < 5
+    ]
+    for d in days:
+        st.write_once("prices", d, {"session": d, "rows": full})
+    st.write_once(
+        "prices",
+        "2026-09-04",
+        {"session": "2026-09-04", "rows": {c: [11.0, 11.0, 1e6] for c in codes[:10]}},
+    )
+    stocks = [{"productCode": c, "percentageShorted": float(i)} for i, c in enumerate(codes)]
+    st.write_once("short_panel", "2026-08-14", {"date": "2026-08-14", "stocks": stocks})
+    hist = PriceHistory.load(st, v3_root=None)
+    # week ending 08-28 → mark 09-04: only 10 of 60 priced at the mark → deferred
+    first = due_marks(st, hist, already=set(), frozen_dir=None)
+    assert "2026-09-04" not in {r["mark_date"] for r in first}  # deferred
+    assert "2026-08-28" in {r["mark_date"] for r in first}  # the fully-priced week still marks
+    st.fill_missing("prices", "2026-09-04", "rows", {c: [11.0, 11.0, 1e6] for c in codes})
+    hist = PriceHistory.load(st, v3_root=None)
+    recs = due_marks(st, hist, already=set(), frozen_dir=None)
+    assert [r["mark_date"] for r in recs][-1] == "2026-09-04"
+    assert recs[-1]["universe_gap_share"] == 0.0

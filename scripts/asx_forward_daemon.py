@@ -95,33 +95,75 @@ def refresh_panels(store: ForwardStore) -> dict[str, Any]:
     }
 
 
-def _yf_download(symbols: list[str], interval: str, period: str) -> Any:
+YF_CHUNK = 100  # symbols per request batch — 740 at once starved a 256-fd process
+YF_RETRY_PASSES = 2
+
+
+def _yf_frames(symbols: list[str], interval: str, period: str) -> dict[str, Any]:
+    """Per-symbol frames with rows, fetched in chunks, with retry passes for the
+    symbols that came back empty.
+
+    Under launchd the process had 256 file descriptors; one 740-symbol threaded
+    request returned rows for 236 of them and logged `curl: (7) Too many open
+    files` once, quietly. Chunking bounds the concurrent sockets; the retry pass
+    catches the transient DNS / trust-anchor failures that cluster on cold starts.
+    """
     import yfinance as yf
 
     warnings.filterwarnings("ignore")
-    return yf.download(
-        symbols,
-        interval=interval,
-        period=period,
-        progress=False,
-        auto_adjust=False,
-        group_by="ticker",
-        threads=True,
-    )
+    frames: dict[str, Any] = {}
+    todo = list(symbols)
+    for _pass in range(1 + YF_RETRY_PASSES):
+        if not todo:
+            break
+        missing: list[str] = []
+        for i in range(0, len(todo), YF_CHUNK):
+            chunk = todo[i : i + YF_CHUNK]
+            df = yf.download(
+                chunk,
+                interval=interval,
+                period=period,
+                progress=False,
+                auto_adjust=False,
+                group_by="ticker",
+                threads=True,
+            )
+            have = set(df.columns.get_level_values(0)) if hasattr(df.columns, "levels") else set()
+            for sym in chunk:
+                if sym in have:
+                    d = df[sym].dropna(how="all")
+                    if len(d):
+                        frames[sym] = d
+                        continue
+                missing.append(sym)
+        todo = missing
+        if todo:
+            time.sleep(2.0)
+    if todo:
+        log.warning(
+            "yfinance %s %s: %d of %d symbols empty after retries",
+            interval,
+            period,
+            len(todo),
+            len(symbols),
+        )
+    return frames
 
 
-def refresh_prices(store: ForwardStore, codes: list[str]) -> dict[str, Any]:
+def refresh_prices(
+    store: ForwardStore, codes: list[str], period: str | None = None
+) -> dict[str, Any]:
     import math
 
-    period = DAILY_PRICE_PERIOD if store.keys("prices") else FIRST_PRICE_PERIOD
-    df = _yf_download([f"{c}.AX" for c in codes], "1d", period)
+    period = period or (DAILY_PRICE_PERIOD if store.keys("prices") else FIRST_PRICE_PERIOD)
+    frames = _yf_frames([f"{c}.AX" for c in codes], "1d", period)
     by_session: dict[str, dict[str, list[float]]] = {}
-    have = set(df.columns.get_level_values(0)) if hasattr(df.columns, "levels") else set()
+    have = set(frames)
     for c in codes:
         sym = f"{c}.AX"
         if sym not in have:
             continue
-        d = df[sym].dropna(how="all")
+        d = frames[sym]
         for ts, row in d.iterrows():
             close = float(row["Close"])
             if not math.isfinite(close) or close <= 0:
@@ -137,35 +179,45 @@ def refresh_prices(store: ForwardStore, codes: list[str]) -> dict[str, Any]:
     # session dated after the cycle's own date.
     today = datetime.now(UTC).date().isoformat()
     new = []
+    filled = 0
     for sess in sorted(by_session):
-        if sess > today or store.has("prices", sess):
+        if sess > today:
+            continue
+        if store.has("prices", sess):
+            filled += store.fill_missing("prices", sess, "rows", by_session[sess])
             continue
         store.write_once("prices", sess, prices_doc(sess, by_session[sess]))
         new.append(sess)
+    latest = max(by_session) if by_session else None
     return {
         "period": period,
         "sessions_seen": sorted(by_session),
         "new": new,
+        "filled_codes": filled,
         "codes_with_data": len(have & {f"{c}.AX" for c in codes}),
+        # Coverage of the latest stored session: what the fetch actually delivered.
+        "coverage_latest": (
+            len(store.read("prices", latest)["rows"]) / max(1, len(codes)) if latest else None
+        ),
     }
 
 
-def refresh_intraday(store: ForwardStore) -> dict[str, Any]:
+def refresh_intraday(store: ForwardStore, period: str | None = None) -> dict[str, Any]:
     import math
 
     if not V307_MANIFEST.is_file():
         return {"skipped": "no V307 manifest"}
     man = json.loads(V307_MANIFEST.read_text())
     codes = sorted(k.split("/")[1][:-8] for k in man["files"] if k.startswith("1h/"))
-    period = DAILY_PRICE_PERIOD if store.keys("intraday_1h") else FIRST_PRICE_PERIOD
-    df = _yf_download([f"{c}.AX" for c in codes], "1h", period)
-    have = set(df.columns.get_level_values(0)) if hasattr(df.columns, "levels") else set()
+    period = period or (DAILY_PRICE_PERIOD if store.keys("intraday_1h") else FIRST_PRICE_PERIOD)
+    frames = _yf_frames([f"{c}.AX" for c in codes], "1h", period)
+    have = set(frames)
     by_session: dict[str, dict[str, list[list[Any]]]] = {}
     for c in codes:
         sym = f"{c}.AX"
         if sym not in have:
             continue
-        d = df[sym].dropna(how="all")
+        d = frames[sym]
         for ts, row in d.iterrows():
             close = float(row["Close"])
             if not math.isfinite(close):
@@ -183,12 +235,16 @@ def refresh_intraday(store: ForwardStore) -> dict[str, Any]:
             )
     today = datetime.now(UTC).date().isoformat()
     new = []
+    filled = 0
     for sess in sorted(by_session):
-        if sess > today or store.has("intraday_1h", sess):
+        if sess > today:
+            continue
+        if store.has("intraday_1h", sess):
+            filled += store.fill_missing("intraday_1h", sess, "bars", by_session[sess])
             continue
         store.write_once("intraday_1h", sess, intraday_doc(sess, by_session[sess]))
         new.append(sess)
-    return {"period": period, "new": new, "codes": len(codes)}
+    return {"period": period, "new": new, "filled_codes": filled, "codes": len(codes)}
 
 
 def write_marks(store: ForwardStore) -> list[dict[str, Any]]:
@@ -205,20 +261,37 @@ def write_marks(store: ForwardStore) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 # cycle
 # ---------------------------------------------------------------------------
-def make_cycle(store: ForwardStore):
+def _pin_yf_cache(store: ForwardStore) -> None:
+    """yfinance keeps a sqlite timezone cache under the user's cache dir; under
+    launchd that open failed once ("unable to open database file"). Pin it inside
+    the store's scratch dir, which the wrapper guarantees exists and is writable."""
+    try:
+        import yfinance as yf
+
+        d = store.root / "scratch" / "yf_cache"
+        d.mkdir(parents=True, exist_ok=True)
+        yf.set_tz_cache_location(str(d))
+    except Exception as exc:  # cache pinning is a nicety; the fetch must not depend on it
+        log.warning("could not pin yfinance cache dir (%s)", type(exc).__name__)
+
+
+def make_cycle(store: ForwardStore, price_period: str | None = None):
     def cycle(ctx: CycleContext) -> CycleResult:
         store.ensure_lane_start(ctx.cycle_date.isoformat())
+        _pin_yf_cache(store)
         panels = refresh_panels(store)
         latest = panels["latest"] or (store.keys("short_panel") or [None])[-1]
         codes = sorted(panel_shorts(store.read("short_panel", latest))) if latest else []
-        prices = refresh_prices(store, codes) if codes else {"skipped": "no panel"}
-        intraday = refresh_intraday(store)
+        prices = refresh_prices(store, codes, price_period) if codes else {"skipped": "no panel"}
+        intraday = refresh_intraday(store, price_period)
         marks = write_marks(store)
         extra = {
             "panel_tier": panels["tier"],
             "panel_latest": panels["latest"],
             "new_panels": len(panels["new"]),
             "new_price_sessions": len(prices.get("new", [])),
+            "filled_codes": prices.get("filled_codes", 0) + intraday.get("filled_codes", 0),
+            "coverage_latest": prices.get("coverage_latest"),
             "codes_with_data": prices.get("codes_with_data"),
             "new_1h_sessions": len(intraday.get("new", [])),
             "marks_written": len(marks),
@@ -239,14 +312,16 @@ def make_cycle(store: ForwardStore):
     return cycle
 
 
-def run_once(store: ForwardStore, checkpoint: Checkpoint, runner_log: Path) -> dict[str, Any]:
+def run_once(
+    store: ForwardStore, checkpoint: Checkpoint, runner_log: Path, price_period: str | None = None
+) -> dict[str, Any]:
     prior = checkpoint.load()
     now = datetime.now(UTC)
     store.ensure_lane_start(now.date().isoformat())
     ctx = CycleContext(
         cycle_date=now.date(), cycle_ts=now.isoformat(), prior=prior, initial_capital=0.0
     )
-    result = make_cycle(store)(ctx)
+    result = make_cycle(store, price_period)(ctx)
     record = {
         "cycle_ts": ctx.cycle_ts,
         "cycle_date": ctx.cycle_date.isoformat(),
@@ -311,6 +386,13 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--reconcile-v3", action="store_true")
     ap.add_argument("--max-cycles", type=int, default=None)
     ap.add_argument("--root", type=Path, default=None)
+    ap.add_argument(
+        "--price-period",
+        default=None,
+        help="yfinance window for a repair run (e.g. 1mo) — fills sparse stored sessions",
+    )
+    ap.add_argument("--void-mark", default=None, help="mark_date to void before the cycle")
+    ap.add_argument("--reason", default=None, help="why (required with --void-mark)")
     args = ap.parse_args(argv)
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s"
@@ -333,8 +415,15 @@ def main(argv: list[str] | None = None) -> int:
     checkpoint = Checkpoint(store.root / "checkpoints", keep_days=sched_cfg.checkpoint_keep_days)
     runner_log = store.root / "runner_log.jsonl"
 
+    if args.void_mark:
+        if not args.reason:
+            log.error("--void-mark needs --reason")
+            return 2
+        voided = store.void_mark(args.void_mark, args.reason)
+        log.info("void %s: %s", args.void_mark, "appended" if voided else "no effective mark")
+
     if args.once:
-        rec = run_once(store, checkpoint, runner_log)
+        rec = run_once(store, checkpoint, runner_log, args.price_period)
         print(json.dumps(rec, indent=1, sort_keys=True))
         return 0
 

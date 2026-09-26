@@ -31,7 +31,7 @@ import hashlib
 import json
 import logging
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -58,6 +58,9 @@ MIN_ADV_AUD = 500_000.0
 MIN_NAMES = 50
 QUINTILE = 0.20
 CALENDAR_CODE = "BHP"
+# A week whose equal-weight universe lost more than this share of names to a
+# missing price at either end is deferred rather than marked (see due_marks).
+MAX_GAP_SHARE = 0.10
 
 COMPARATOR = (
     "equal-weight eligible universe (unadjusted close >= 0.20 AUD and point-in-time "
@@ -133,7 +136,43 @@ class ForwardStore:
             self.manifest_path.write_text(json.dumps(man, indent=1, sort_keys=True) + "\n")
         return str(man["lane_start"])
 
-    def marks(self) -> list[dict[str, Any]]:
+    def fill_missing(self, kind: str, key: str, field: str, additions: dict[str, Any]) -> int:
+        """Add codes ABSENT from a stored document's ``field`` mapping. Never changes a
+        value already stored, so the write-once contract holds per (session, code).
+
+        Exists because a session pulled under a starved process (the 09-14 → 09-25
+        launchd cycles, 256 file descriptors) stored 60–230 of ~740 codes, and a
+        document that can only be written once was then permanently sparse. The
+        filled codes and the date they arrived are recorded in ``filled_on``.
+        """
+        path = self._path(kind, key)
+        if not path.exists():
+            return 0
+        doc = self.read(kind, key)
+        target = doc.setdefault(field, {})
+        added = {c: v for c, v in additions.items() if c not in target}
+        if not added:
+            return 0
+        target.update(added)
+        if "n" in doc:
+            doc["n"] = len(target)
+        if "n_codes" in doc:
+            doc["n_codes"] = len(target)
+        doc.setdefault("filled_on", []).append(
+            {"date": date.today().isoformat(), "codes": len(added)}
+        )
+        blob = (json.dumps(doc, sort_keys=True, separators=(",", ":")) + "\n").encode()
+        tmp = path.with_suffix(".json.tmp")
+        tmp.write_bytes(blob)
+        os.replace(tmp, path)
+        man = self.manifest()
+        man["files"][f"{kind}/{key}.json"] = _md5(blob)
+        man["fills"] = int(man.get("fills", 0)) + len(added)
+        self.manifest_path.write_text(json.dumps(man, indent=1, sort_keys=True) + "\n")
+        return len(added)
+
+    def raw_marks(self) -> list[dict[str, Any]]:
+        """Every line ever appended, voids included, in order."""
         if not self.marks_path.is_file():
             return []
         out = []
@@ -143,12 +182,43 @@ class ForwardStore:
                     out.append(json.loads(line))
         return out
 
+    def marks(self) -> list[dict[str, Any]]:
+        """Effective marks: the LAST record per ``mark_date``, voids excluded.
+
+        The file is append-only; a defective mark is never edited, it is followed by a
+        void record naming why, and a later re-mark supersedes both. ``raw_marks``
+        keeps the whole history readable.
+        """
+        latest: dict[str, dict[str, Any]] = {}
+        for m in self.raw_marks():
+            latest[m["mark_date"]] = m
+        return [m for _, m in sorted(latest.items()) if not m.get("void")]
+
     def append_mark(self, rec: dict[str, Any]) -> bool:
-        """Append unless a mark for the same ``mark_date`` exists. Returns whether written."""
-        if any(m.get("mark_date") == rec["mark_date"] for m in self.marks()):
+        """Append unless an effective mark for ``mark_date`` exists. Returns whether written."""
+        if any(m["mark_date"] == rec["mark_date"] for m in self.marks()):
             return False
         with open(self.marks_path, "a") as fh:
             fh.write(json.dumps(rec, sort_keys=True) + "\n")
+        return True
+
+    def void_mark(self, mark_date: str, reason: str) -> bool:
+        """Append a void record for an effective mark. Returns whether one existed."""
+        if not any(m["mark_date"] == mark_date for m in self.marks()):
+            return False
+        with open(self.marks_path, "a") as fh:
+            fh.write(
+                json.dumps(
+                    {
+                        "mark_date": mark_date,
+                        "void": True,
+                        "reason": reason,
+                        "voided_on": date.today().isoformat(),
+                    },
+                    sort_keys=True,
+                )
+                + "\n"
+            )
         return True
 
 
@@ -247,12 +317,19 @@ class PriceHistory:
     """Per-code ``{date: (close, adjusted_close, volume)}`` from v3 + forward sessions."""
 
     series: dict[str, dict[str, tuple[float, float, float]]]
+    # The session calendar: every date the forward store has a session document for,
+    # plus the calendar code's dates in the frozen history. It was the calendar
+    # code's dates ALONE until 2026-09-26, and a session where that one ticker's
+    # pull failed silently vanished from the calendar — which is how a week ended
+    # on a Wednesday.
+    calendar: list[str] = field(default_factory=list)
 
     @classmethod
     def load(
         cls, store: ForwardStore | None, v3_root: Path | None = V3, codes: set[str] | None = None
     ) -> PriceHistory:
         series: dict[str, dict[str, tuple[float, float, float]]] = {}
+        calendar: set[str] = set()
         if v3_root is not None and (v3_root / "prices").is_dir():
             for f in (v3_root / "prices").glob("*.csv"):
                 code = f.stem
@@ -272,9 +349,12 @@ class PriceHistory:
                             continue
                 if s:
                     series[code] = s
+                    if code == CALENDAR_CODE:
+                        calendar |= set(s)
         if store is not None:
             for sess in store.keys("prices"):
                 doc = store.read("prices", sess)
+                calendar.add(sess)
                 for code, row in doc["rows"].items():
                     if codes is not None and code not in codes:
                         continue
@@ -283,10 +363,10 @@ class PriceHistory:
                         float(row[1]),
                         float(row[2]),
                     )
-        return cls(series)
+        return cls(series, sorted(calendar))
 
     def sessions(self) -> list[str]:
-        return sorted(self.series.get(CALENDAR_CODE, {}))
+        return list(self.calendar) if self.calendar else sorted(self.series.get(CALENDAR_CODE, {}))
 
     def close(self, code: str, d: str) -> float | None:
         row = self.series.get(code, {}).get(d)
@@ -440,6 +520,23 @@ def due_marks(
             lag_days=lag_days,
             lane_start=lane_start,
         )
-        if rec is not None:
-            out.append(rec)
+        if rec is None:
+            continue
+        # A mark whose universe lost more than MAX_GAP_SHARE of its names to a
+        # missing price is not an observation of the week, it is an observation of
+        # the fetch. Deferred, loudly; the next cycle's fills get another chance.
+        un = rec["universe"]
+        gap_share = un["n_gap"] / max(1, un["n"] + un["n_gap"])
+        if gap_share > MAX_GAP_SHARE:
+            logger.warning(
+                "mark %s deferred: %.0f%% of the universe had no price at one end "
+                "(formed %s, mark %s)",
+                mark,
+                gap_share * 100,
+                formed,
+                mark,
+            )
+            continue
+        rec["universe_gap_share"] = gap_share
+        out.append(rec)
     return out
