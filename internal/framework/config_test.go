@@ -3,6 +3,7 @@ package framework_test
 import (
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -111,43 +112,70 @@ adversarial:
 }
 
 func TestConfig_HotReload(t *testing.T) {
-	dir := t.TempDir()
-	cfgFile := filepath.Join(dir, "omega.yaml")
+	for _, mode := range []string{"in_place", "empty_then_complete"} {
+		t.Run(mode, func(t *testing.T) {
+			cfgFile := filepath.Join(t.TempDir(), "omega.yaml")
+			initial := "orchestrator:\n  max_nodes: 1\n"
+			if err := os.WriteFile(cfgFile, []byte(initial), 0600); err != nil {
+				t.Fatal(err)
+			}
 
-	initial := "orchestrator:\n  max_nodes: 1\n"
-	if err := os.WriteFile(cfgFile, []byte(initial), 0600); err != nil {
-		t.Fatal(err)
-	}
+			cfg, err := framework.NewConfig(framework.ConfigOptions{
+				ConfigFile: cfgFile,
+				HotReload:  true,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer cfg.StopWatch()
+			if got := cfg.GetInt("orchestrator.max_nodes"); got != 1 {
+				t.Fatalf("expected initial value 1, got %d", got)
+			}
 
-	cfg, err := framework.NewConfig(framework.ConfigOptions{
-		ConfigFile: cfgFile,
-		HotReload:  true,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cfg.StopWatch()
+			// Read on Viper's watcher goroutine, after it reloads the file. Reading
+			// from the test goroutine can race with another filesystem event.
+			var observed atomic.Int64
+			changed := make(chan struct{}, 1)
+			cfg.OnChange(func() {
+				observed.Store(int64(cfg.GetInt("orchestrator.max_nodes")))
+				select {
+				case changed <- struct{}{}:
+				default: // duplicate events must never block the watcher
+				}
+			})
+			waitForValue := func(want int64) {
+				t.Helper()
+				timer := time.NewTimer(2 * time.Second)
+				defer timer.Stop()
+				for {
+					select {
+					case <-changed:
+						if observed.Load() == want {
+							return
+						}
+					case <-timer.C:
+						t.Fatalf("expected hot-reloaded value %d, last observed %d", want, observed.Load())
+					}
+				}
+			}
 
-	changed := make(chan struct{}, 1)
-	cfg.OnChange(func() {
-		changed <- struct{}{}
-	})
+			if mode == "empty_then_complete" {
+				// Force the truncate/write interleaving seen in CI: an empty YAML
+				// file loads defaults (32), before the completed write loads 42.
+				if err := os.WriteFile(cfgFile, nil, 0600); err != nil {
+					t.Fatal(err)
+				}
+				waitForValue(32)
+			}
 
-	// Write new value
-	updated := "orchestrator:\n  max_nodes: 42\n"
-	if err := os.WriteFile(cfgFile, []byte(updated), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case <-changed:
-		// good
-	case <-time.After(2 * time.Second):
-		t.Fatal("timed out waiting for config hot-reload notification")
-	}
-
-	if cfg.GetInt("orchestrator.max_nodes") != 42 {
-		t.Fatalf("expected hot-reloaded value 42, got %d", cfg.GetInt("orchestrator.max_nodes"))
+			updated := "orchestrator:\n  max_nodes: 42\n"
+			if err := os.WriteFile(cfgFile, []byte(updated), 0600); err != nil {
+				t.Fatal(err)
+			}
+			// A file write may emit several events, including one while the file
+			// is truncated. Assert the completed value, not the first notification.
+			waitForValue(42)
+		})
 	}
 }
 
