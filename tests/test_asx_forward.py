@@ -14,6 +14,8 @@ import math
 from datetime import date, timedelta
 from pathlib import Path
 
+import pytest
+
 from omega.nodes.asx.forward import (
     ForwardStore,
     complete_weeks,
@@ -52,11 +54,13 @@ def test_knowable_panel_date_applies_publication_lag() -> None:
 def test_quintile_books_are_fifths_of_the_eligible_set() -> None:
     shorts = {c: float(i) for i, c in enumerate("ABCDEFGHIJ")}  # A least shorted
     books = quintile_books(shorts, eligible=set("ABCDEFGHIJ"), min_names=10)
+    assert books is not None
     assert books["Q1"] == ["A", "B"]
     assert books["Q5"] == ["I", "J"]
     assert books["universe"] == sorted("ABCDEFGHIJ")
     # a name outside the eligible set never enters a book, however low its short
     books = quintile_books({**shorts, "Z": -1.0}, eligible=set("ABCDEFGHIJ"), min_names=10)
+    assert books is not None
     assert "Z" not in books["Q1"] and "Z" not in books["universe"]
 
 
@@ -109,9 +113,16 @@ def test_weekly_mark_from_synthetic_inputs() -> None:
     assert rec["forward"] is False  # no lane start given: a backfill, never a forward obs
 
 
-def test_forward_flag_needs_a_book_formed_on_or_after_lane_start() -> None:
+@pytest.mark.parametrize(
+    ("lane_start", "is_forward"), [("2026-09-05", False), ("2026-09-04", True)]
+)
+def test_forward_flag_needs_a_book_formed_on_or_after_lane_start(
+    lane_start: str, is_forward: bool
+) -> None:
     codes = list("ABCDEFGHIJ")
-    kw = dict(
+    rec = weekly_mark_from(
+        formed_date="2026-09-04",
+        lane_start=lane_start,
         mark_date="2026-09-11",
         panel_date="2026-08-28",
         shorts={c: float(i) for i, c in enumerate(codes)},
@@ -120,14 +131,8 @@ def test_forward_flag_needs_a_book_formed_on_or_after_lane_start() -> None:
         p1={c: 11.0 for c in codes},
         min_names=10,
     )
-    assert (
-        weekly_mark_from(formed_date="2026-09-04", lane_start="2026-09-05", **kw)["forward"]
-        is False
-    )
-    assert (
-        weekly_mark_from(formed_date="2026-09-04", lane_start="2026-09-04", **kw)["forward"]
-        is True
-    )
+    assert rec is not None
+    assert rec["forward"] is is_forward
 
 
 def test_store_records_lane_start_once(tmp_path: Path) -> None:
@@ -148,6 +153,7 @@ def test_fill_missing_adds_absent_codes_and_never_overwrites(tmp_path: Path) -> 
     )
     assert added == 1
     doc = st.read("prices", "2026-09-17")
+    assert doc is not None
     assert doc["rows"]["A"] == [1.0, 1.0, 5.0]  # stored value untouched
     assert doc["rows"]["B"] == [2.0, 2.0, 7.0]
     assert doc["n"] == 2 and doc["filled_on"][0]["codes"] == 1
