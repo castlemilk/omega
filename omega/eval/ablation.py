@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import math
 import random
+import statistics
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -220,12 +221,7 @@ class _AblationNode(Node):
         return False
 
     def _current_sharpe(self) -> float:
-        if len(self._returns) < 2:
-            return 0.0
-        mean_r = sum(self._returns) / len(self._returns)
-        var = sum((r - mean_r) ** 2 for r in self._returns) / (len(self._returns) - 1)
-        std = math.sqrt(var) if var > 0 else 0.0
-        return (mean_r / std * math.sqrt(252)) if std > 0 else 0.0
+        return _sharpe_from_returns(self._returns)
 
     @property
     def returns(self) -> list[float]:
@@ -576,8 +572,10 @@ def _sharpe_from_returns(returns: list[float], risk_free: float = 0.0) -> float:
         return 0.0
     daily_rf = risk_free / 252
     excess = [r - daily_rf for r in returns]
-    mean_e = sum(excess) / len(excess)
-    var = sum((x - mean_e) ** 2 for x in excess) / (len(excess) - 1)
+    # Accurate accumulation keeps identical floats at exactly zero sample variance
+    # without discarding legitimate near-constant variation via an epsilon cutoff.
+    mean_e = statistics.mean(excess)
+    var = statistics.variance(excess)
     std = math.sqrt(var) if var > 0 else 0.0
     return (mean_e / std * math.sqrt(252)) if std > 0 else 0.0
 
