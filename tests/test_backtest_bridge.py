@@ -8,6 +8,8 @@ strategy → adversarial → position → PnL) without mocking inner components.
 
 import math
 import random
+import urllib.request
+from unittest.mock import Mock
 
 import pytest
 
@@ -19,6 +21,17 @@ from omega.eval.metrics import EvalReport
 # Unmarked, they made `pytest tests/` appear to hang, so the suite was not run —
 # which is how a whole stale TestRegimeAdaptivity class sat failing unnoticed.
 pytestmark = pytest.mark.slow
+
+
+@pytest.fixture(autouse=True)
+def _offline_replay(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Exercise the real pipeline on historical inputs, with external I/O isolated."""
+    monkeypatch.setenv("OMEGA_FROZEN_CACHE", "1")
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        Mock(side_effect=OSError("historical replay tests do not fetch live feeds")),
+    )
 
 
 def _make_ohlcv(
