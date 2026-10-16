@@ -126,6 +126,7 @@ def _get_composites(signals: dict) -> dict[str, float]:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("neutral_signal_information")
 class TestBidirectionality:
     """After cross-sectional demeaning, the basket must produce both longs and shorts."""
 
