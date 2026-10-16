@@ -43,6 +43,7 @@ from typing import Any
 
 from omega.core.actions import NodeAction
 from omega.core.autonomy import AutonomyLevel
+from omega.core.node import NodeInput
 from omega.eval.baselines import BaselineResult, buy_and_hold, sma_crossover
 from omega.eval.metrics import EvalReport, TradeRecord, build_eval_report
 from omega.eval.significance import sharpe_is_significant
@@ -101,6 +102,13 @@ class BacktestResult:
     report: EvalReport | None = None
 
 
+class _ReplayVictoriaNode(VictoriaNode):
+    """Poll the historical window supplied by the bridge, without live ingestion."""
+
+    def _do_poll(self, inp: NodeInput) -> dict[str, Any]:
+        return self._last_market_data
+
+
 class OmegaBacktestBridge:
     """
     Runs the actual OmegaOrchestrator pipeline against historical OHLCV data.
@@ -140,7 +148,7 @@ class OmegaBacktestBridge:
         # Build orchestrator with a VictoriaNode (lazy import breaks circular dependency)
         from omega.core.orchestrator_v2 import OmegaOrchestrator
 
-        self._node = VictoriaNode()
+        self._node = _ReplayVictoriaNode()
         self._orchestrator = OmegaOrchestrator(name=f"backtest_{mode.value}")
         self._orchestrator.register_node(self._node, activate=True)
 
