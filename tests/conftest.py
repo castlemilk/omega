@@ -19,9 +19,56 @@ import hashlib
 import json
 import os
 import shutil
+import socket
+import urllib.request
+from collections.abc import Iterator
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
+
+
+@pytest.fixture
+def neutral_signal_information(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """A price-only signal scenario, independent of today's information feeds.
+
+    The bidirectionality fixtures supply synthetic OHLCV, not dated macro or
+    sentiment observations. Declare their information inputs neutral and their
+    combiners untrained rather than mixing live information into those prices.
+    Production indicators, composition, demeaning, and conviction gates still run.
+    """
+    from omega.nodes.victoria.ml_combiner import SignalCombiner
+    from omega.nodes.victoria.signal_decay import SignalDecayDetector
+    from omega.nodes.victoria.signals.dxy_signal import DXYSignal
+    from omega.nodes.victoria.signals.fear_greed import FearGreedSignal
+    from omega.nodes.victoria.signals.funding_rate import FundingRateSignal
+    from omega.nodes.victoria.signals.spy_signal import SPYSignal
+    from omega.nodes.victoria.signals.vix_signal import VIXSignal
+    from omega.nodes.victoria.signals.yield_curve import YieldCurveSignal
+
+    monkeypatch.setenv("VICTORIA_FEATURES", "{}")
+    monkeypatch.setenv("OMEGA_SIGNAL_NODE_V12", "0")
+    monkeypatch.setattr(SignalCombiner, "load", Mock(return_value=None))
+    monkeypatch.setattr(SignalDecayDetector, "load", Mock(return_value=None))
+    for provider in (
+        FundingRateSignal,
+        FearGreedSignal,
+        DXYSignal,
+        VIXSignal,
+        YieldCurveSignal,
+        SPYSignal,
+    ):
+        monkeypatch.setattr(provider, "compute", Mock(return_value=0.0))
+
+    no_network = Mock(side_effect=AssertionError("signal fixture attempted network IO"))
+    monkeypatch.setattr(urllib.request, "urlopen", no_network)
+    monkeypatch.setattr(socket, "create_connection", no_network)
+    monkeypatch.setattr(socket, "getaddrinfo", no_network)
+    monkeypatch.setattr(socket.socket, "connect", no_network)
+    monkeypatch.setattr(socket.socket, "connect_ex", no_network)
+    yield
+    # Signal providers catch exceptions: a swallowed network error must fail too.
+    no_network.assert_not_called()
 
 
 @pytest.fixture(scope="session", autouse=True)
