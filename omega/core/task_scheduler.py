@@ -241,11 +241,10 @@ class TaskScheduler:
                     if last_run is None or _minute_bucket(now) != _minute_bucket(last_run):
                         should_run = True
 
-            elif task.task_type == "one_shot":
-                if not task.last_run_iso:
-                    run_at = _parse_iso(task.run_at_iso)
-                    if run_at and now >= run_at:
-                        should_run = True
+            elif task.task_type == "one_shot" and not task.last_run_iso:
+                run_at = _parse_iso(task.run_at_iso)
+                if run_at and now >= run_at:
+                    should_run = True
 
             if should_run:
                 attempted.append(name)
