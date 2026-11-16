@@ -1,0 +1,28 @@
+[
+  {
+    "id": "VIS-04",
+    "path": "vis-04-preview.webp",
+    "sha256": "1bf40e6c0be0dee87f2d9f01cca062d11a2914c8e6c2c00e7df6fd8b6c38be23",
+    "bytes": 11142,
+    "width": 640,
+    "height": 360,
+    "original_sha256": "45e98a5df0149c82cd2046aaf5077c3b6e2d8f302e47366304718e1bd5ffe514",
+    "original": "a_cinematic_dark_sci_fi_dashboard_ui_for_omega.png",
+    "git_blob_sha": "478bab4432e78ac6f45afe691a1a74564d926fca",
+    "repository_path": "docs/venture-platform/screenshots/vis-04-preview.webp",
+    "role": "compressed concept reference, not acceptance screenshot"
+  },
+  {
+    "id": "VIS-15",
+    "path": "vis-15-preview.webp",
+    "sha256": "ee673f0954a16a61eba22a805a7e1b766f4a34a11479800c448de4c4d7ba9cc2",
+    "bytes": 14896,
+    "width": 640,
+    "height": 427,
+    "original_sha256": "31f2a0a665c0b5b90284188a0dca450b1e1b776a785a4a3357c5117215bf272e",
+    "original": "a_detailed_sci_fi_themed_ui_dashboard_design_for.png",
+    "git_blob_sha": "f8a4efe768b99b47ae2643b5ad2bcbeb6decbc6f",
+    "repository_path": "docs/venture-platform/screenshots/vis-15-preview.webp",
+    "role": "compressed concept reference, not acceptance screenshot"
+  }
+]
