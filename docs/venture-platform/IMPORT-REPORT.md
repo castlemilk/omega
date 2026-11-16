@@ -1,24 +1,25 @@
 # Verified backlog import
 
-## Verified GitHub import
-**96 feature issues, 12 epic trackers and this programme tracker.** Original priorities and Proposed implementation states are preserved.
+**96 feature issues, 12 epic trackers and [programme tracker #8](https://github.com/castlemilk/omega/issues/8).** Original priorities and Proposed implementation states are preserved.
+
+[Import verification run](https://github.com/castlemilk/omega/actions/runs/43798111517) completed successfully. The temporary issue-writing workflow was removed after completion. Documentation and assets are proposed for main in [PR #93](https://github.com/castlemilk/omega/pull/93); the issues themselves are already live.
 
 | Epic | Features | Issue |
 |---|---|---|
-| E01 Strategy and transition | OME-001–OME-008 | #9 |
-| E02 Design foundations | OME-009–OME-016 | #13 |
-| E03 Operational components | OME-017–OME-024 | #14 |
-| E04 Navigation and journeys | OME-025–OME-032 | #15 |
-| E05 Domain tenancy and migration | OME-033–OME-040 | #16 |
-| E06 Discovery and validation | OME-041–OME-048 | #17 |
-| E07 Agent authority and control | OME-049–OME-056 | #18 |
-| E08 Durable workflows | OME-057–OME-064 | #19 |
-| E09 Brand and product production | OME-065–OME-072 | #20 |
-| E10 Commerce and operations | OME-073–OME-080 | #21 |
-| E11 Economics and portfolio learning | OME-081–OME-088 | #22 |
-| E12 Integrations quality and rollout | OME-089–OME-096 | #23 |
+| E01 Strategy and transition | OME-001–OME-008 | [#9](https://github.com/castlemilk/omega/issues/9) |
+| E02 Design foundations | OME-009–OME-016 | [#13](https://github.com/castlemilk/omega/issues/13) |
+| E03 Operational components | OME-017–OME-024 | [#14](https://github.com/castlemilk/omega/issues/14) |
+| E04 Navigation and journeys | OME-025–OME-032 | [#15](https://github.com/castlemilk/omega/issues/15) |
+| E05 Domain tenancy and migration | OME-033–OME-040 | [#16](https://github.com/castlemilk/omega/issues/16) |
+| E06 Discovery and validation | OME-041–OME-048 | [#17](https://github.com/castlemilk/omega/issues/17) |
+| E07 Agent authority and control | OME-049–OME-056 | [#18](https://github.com/castlemilk/omega/issues/18) |
+| E08 Durable workflows | OME-057–OME-064 | [#19](https://github.com/castlemilk/omega/issues/19) |
+| E09 Brand and product production | OME-065–OME-072 | [#20](https://github.com/castlemilk/omega/issues/20) |
+| E10 Commerce and operations | OME-073–OME-080 | [#21](https://github.com/castlemilk/omega/issues/21) |
+| E11 Economics and portfolio learning | OME-081–OME-088 | [#22](https://github.com/castlemilk/omega/issues/22) |
+| E12 Integrations quality and rollout | OME-089–OME-096 | [#23](https://github.com/castlemilk/omega/issues/23) |
 
-[GitHub documentation](https://github.com/castlemilk/omega/blob/8efba564882dff72a1830398773bc793e3a94f6b/docs/venture-platform/README.md) · [Screen and workflow coverage](https://github.com/castlemilk/omega/blob/8efba564882dff72a1830398773bc793e3a94f6b/docs/venture-platform/ui-coverage.md) · [Screenshots and provenance](https://github.com/castlemilk/omega/blob/8efba564882dff72a1830398773bc793e3a94f6b/docs/venture-platform/screenshots/README.md) · [Full-resolution concept archive](https://chatgpt.com/space/page_8242867176f48191938ce84c887d3f31)
+[Documentation index](README.md) · [Screen and workflow coverage](ui-coverage.md) · [Screenshots and provenance](screenshots/README.md) · [Machine-readable issue map](issue-map.json) · [Full-resolution concept archive](https://chatgpt.com/space/page_8242867176f48191938ce84c887d3f31)
 
 Two hash-verified compressed screenshots are embedded in the feature issues. The full 20-image archive and interactive prototype retain their existing Space access controls. No production code, runtime permissions, customer operations or existing unrelated issues were changed.
 
