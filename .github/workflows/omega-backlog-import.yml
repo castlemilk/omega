@@ -1,0 +1,37 @@
+name: Omega reviewed backlog import
+
+on:
+  push:
+    branches:
+      - docs/omega-venture-backlog-2026-11-16
+    paths:
+      - .github/workflows/omega-backlog-import.yml
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: omega-reviewed-backlog-import-2026-11-16
+  cancel-in-progress: false
+
+jobs:
+  import:
+    if: github.repository == 'castlemilk/omega' && github.ref == 'refs/heads/docs/omega-venture-backlog-2026-11-16'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate source specifications without writes
+        run: |
+          python -m py_compile docs/venture-platform/tools/import_backlog.py
+          python docs/venture-platform/tools/import_backlog.py --dry-run
+      - name: Import requested issues and verified screenshot previews
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python docs/venture-platform/tools/import_backlog.py
