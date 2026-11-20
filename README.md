@@ -4,6 +4,8 @@
 
 Omega validates a core hypothesis: can we define node contracts, compose them via an orchestrator, evaluate collective performance, and improve individual nodes — automatically, iteratively, in a tight feedback loop?
 
+The [venture platform status and backlog](docs/venture-platform/status-2026-11-20.md) maps the public programme to its proposed pilot and acceptance evidence.
+
 ---
 
 ## Quick Start — Full Stack

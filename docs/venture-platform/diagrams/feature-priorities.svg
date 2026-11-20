@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 645" width="900" height="645" role="img" aria-labelledby="title description">
+  <title id="title">Proposed feature priorities by epic</title>
+  <desc id="description">There are eight proposed feature issues in each of 12 epics. Across all epics, 61 are P0, 28 P1, 6 P2 and one P3.</desc>
+  <style>
+    text { font-family: system-ui, sans-serif; }
+    .heading { fill: #f3e8d8; font-size: 32px; font-weight: 680; }
+    .caption, .tick { fill: #c8c2b7; font-size: 15px; }
+    .name { fill: #f3e8d8; font-size: 16px; font-weight: 500; }
+    .epic { fill: #e5ab82; font-size: 15px; font-weight: 650; }
+    .value { fill: #171b1a; font-size: 15px; font-weight: 650; }
+  </style>
+  <rect width="900" height="645" rx="18" fill="#171b1a"/>
+  <text class="heading" x="42" y="58">Proposed feature priorities</text>
+  <text class="caption" x="44" y="88">96 open feature issues across 12 epics · 20 November 2026</text>
+  <g class="caption">
+    <rect x="44" y="111" width="14" height="14" rx="3" fill="#efaa7d"/>
+    <text x="68" y="123">P0 · 61</text>
+    <rect x="169" y="111" width="14" height="14" rx="3" fill="#91c2b5"/>
+    <text x="193" y="123">P1 · 28</text>
+    <rect x="294" y="111" width="14" height="14" rx="3" fill="#dfccac"/>
+    <text x="318" y="123">P2 · 6</text>
+    <rect x="419" y="111" width="14" height="14" rx="3" fill="#a6adb4"/>
+    <text x="443" y="123">P3 · 1</text>
+  </g>
+  <path d="M411 152v424" stroke="#3c4844"/>
+  <text class="tick" x="411" y="598" text-anchor="middle">0</text>
+  <path d="M515 152v424" stroke="#3c4844"/>
+  <text class="tick" x="515" y="598" text-anchor="middle">2</text>
+  <path d="M619 152v424" stroke="#3c4844"/>
+  <text class="tick" x="619" y="598" text-anchor="middle">4</text>
+  <path d="M723 152v424" stroke="#3c4844"/>
+  <text class="tick" x="723" y="598" text-anchor="middle">6</text>
+  <path d="M827 152v424" stroke="#3c4844"/>
+  <text class="tick" x="827" y="598" text-anchor="middle">8</text>
+  <text class="caption" x="619" y="624" text-anchor="middle">Feature issues</text>
+  <text class="epic" x="44" y="176">E01</text>
+  <text class="name" x="91" y="176">Strategy, vocabulary and transition</text>
+  <rect x="411" y="158" width="260" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="541" y="176" text-anchor="middle">5</text>
+  <rect x="671" y="158" width="156" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="749" y="176" text-anchor="middle">3</text>
+  <rect x="34" y="189" width="812" height="33" rx="4" fill="#1d2321"/>
+  <text class="epic" x="44" y="211">E02</text>
+  <text class="name" x="91" y="211">Design foundations</text>
+  <rect x="411" y="193" width="260" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="541" y="211" text-anchor="middle">5</text>
+  <rect x="671" y="193" width="156" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="749" y="211" text-anchor="middle">3</text>
+  <text class="epic" x="44" y="246">E03</text>
+  <text class="name" x="91" y="246">Operational components</text>
+  <rect x="411" y="228" width="364" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="593" y="246" text-anchor="middle">7</text>
+  <rect x="775" y="228" width="52" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="801" y="246" text-anchor="middle">1</text>
+  <rect x="34" y="259" width="812" height="33" rx="4" fill="#1d2321"/>
+  <text class="epic" x="44" y="281">E04</text>
+  <text class="name" x="91" y="281">Navigation and journeys</text>
+  <rect x="411" y="263" width="260" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="541" y="281" text-anchor="middle">5</text>
+  <rect x="671" y="263" width="156" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="749" y="281" text-anchor="middle">3</text>
+  <text class="epic" x="44" y="316">E05</text>
+  <text class="name" x="91" y="316">Domain tenancy and migration</text>
+  <rect x="411" y="298" width="364" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="593" y="316" text-anchor="middle">7</text>
+  <rect x="775" y="298" width="52" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="801" y="316" text-anchor="middle">1</text>
+  <rect x="34" y="329" width="812" height="33" rx="4" fill="#1d2321"/>
+  <text class="epic" x="44" y="351">E06</text>
+  <text class="name" x="91" y="351">Discovery and validation</text>
+  <rect x="411" y="333" width="52" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="437" y="351" text-anchor="middle">1</text>
+  <rect x="463" y="333" width="364" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="645" y="351" text-anchor="middle">7</text>
+  <text class="epic" x="44" y="386">E07</text>
+  <text class="name" x="91" y="386">Agent authority and control</text>
+  <rect x="411" y="368" width="416" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="619" y="386" text-anchor="middle">8</text>
+  <rect x="34" y="399" width="812" height="33" rx="4" fill="#1d2321"/>
+  <text class="epic" x="44" y="421">E08</text>
+  <text class="name" x="91" y="421">Durable workflows</text>
+  <rect x="411" y="403" width="364" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="593" y="421" text-anchor="middle">7</text>
+  <rect x="775" y="403" width="52" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="801" y="421" text-anchor="middle">1</text>
+  <text class="epic" x="44" y="456">E09</text>
+  <text class="name" x="91" y="456">Brand and product production</text>
+  <rect x="411" y="438" width="208" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="515" y="456" text-anchor="middle">4</text>
+  <rect x="619" y="438" width="156" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="697" y="456" text-anchor="middle">3</text>
+  <rect x="775" y="438" width="52" height="25" rx="3" fill="#a6adb4" stroke="#171b1a"/>
+  <text class="value" x="801" y="456" text-anchor="middle">1</text>
+  <rect x="34" y="469" width="812" height="33" rx="4" fill="#1d2321"/>
+  <text class="epic" x="44" y="491">E10</text>
+  <text class="name" x="91" y="491">Commerce and operations</text>
+  <rect x="411" y="473" width="104" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="463" y="491" text-anchor="middle">2</text>
+  <rect x="515" y="473" width="156" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="593" y="491" text-anchor="middle">3</text>
+  <rect x="671" y="473" width="156" height="25" rx="3" fill="#dfccac" stroke="#171b1a"/>
+  <text class="value" x="749" y="491" text-anchor="middle">3</text>
+  <text class="epic" x="44" y="526">E11</text>
+  <text class="name" x="91" y="526">Economics and portfolio learning</text>
+  <rect x="411" y="508" width="156" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="489" y="526" text-anchor="middle">3</text>
+  <rect x="567" y="508" width="104" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="619" y="526" text-anchor="middle">2</text>
+  <rect x="671" y="508" width="156" height="25" rx="3" fill="#dfccac" stroke="#171b1a"/>
+  <text class="value" x="749" y="526" text-anchor="middle">3</text>
+  <rect x="34" y="539" width="812" height="33" rx="4" fill="#1d2321"/>
+  <text class="epic" x="44" y="561">E12</text>
+  <text class="name" x="91" y="561">Integrations quality and rollout</text>
+  <rect x="411" y="543" width="364" height="25" rx="3" fill="#efaa7d" stroke="#171b1a"/>
+  <text class="value" x="593" y="561" text-anchor="middle">7</text>
+  <rect x="775" y="543" width="52" height="25" rx="3" fill="#91c2b5" stroke="#171b1a"/>
+  <text class="value" x="801" y="561" text-anchor="middle">1</text>
+</svg>
