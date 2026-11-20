@@ -113,3 +113,28 @@ def test_task_exception_does_not_crash_scheduler():
     dt = datetime(2026, 3, 29, 10, 0, tzinfo=UTC)
     ran = scheduler.tick(dt)
     assert "bad_task" in ran  # it was attempted
+
+
+@pytest.mark.parametrize("raises", [False, True])
+def test_one_shot_attempt_is_not_repeated_after_reload(tmp_path, raises):
+    state_file = str(tmp_path / "state.json")
+    run_at = datetime(2026, 3, 29, 15, 0, tzinfo=UTC)
+    calls = []
+
+    def task():
+        calls.append(1)
+        if raises:
+            raise RuntimeError("task failure")
+
+    scheduler = TaskScheduler(state_file=state_file)
+    scheduler.add_one_shot("snapshot", run_at, task)
+    assert scheduler.tick(run_at) == ["snapshot"]
+    assert scheduler.tick(run_at) == []
+    scheduler.save()
+
+    restored = TaskScheduler(state_file=state_file)
+    restored.add_one_shot("snapshot", run_at, task)
+    restored.load()
+    assert restored.tick(datetime(2026, 3, 29, 15, 1, tzinfo=UTC)) == []
+    assert calls == [1]
+    assert restored.list_tasks()[0]["run_count"] == 1
