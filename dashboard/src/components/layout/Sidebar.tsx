@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
+  Briefcase,
   FolderOpen,
   Radio,
   TrendingUp,
@@ -27,11 +28,13 @@ import {
   GitMerge,
 } from "lucide-react";
 
+const studioCommand: string | null = import.meta.env.BUSINESS_STUDIO_COMMAND;
 const NAV_SECTIONS = [
   {
     label: "Overview",
     items: [
       { to: "/", icon: LayoutDashboard, label: "Home" },
+      ...(studioCommand ? [{ to: studioCommand, icon: Briefcase, label: "Business Studio" }] : []),
       { to: "/projects", icon: FolderOpen, label: "Projects" },
     ],
   },
@@ -119,6 +122,8 @@ export default function Sidebar() {
             <NavLink
               key={`${section.label}-${to}`}
               to={to}
+              reloadDocument={to === studioCommand}
+              referrerPolicy={to === studioCommand ? "no-referrer" : undefined}
               end={to === "/" || to === "/victoria"}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${

@@ -6,6 +6,8 @@ Omega validates a core hypothesis: can we define node contracts, compose them vi
 
 The [venture platform status and backlog](docs/venture-platform/status-2026-11-20.md) maps the public programme to its proposed pilot and acceptance evidence.
 
+Both runtime dashboards can open **Business Studio**, the private console for portfolio reviews and saved workflow runs. [Connect Business Studio](docs/venture-platform/business-studio.md)
+
 ---
 
 ## Quick Start — Full Stack

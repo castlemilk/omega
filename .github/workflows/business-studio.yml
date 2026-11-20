@@ -1,0 +1,39 @@
+name: Business Studio entry
+
+on:
+  pull_request:
+    paths:
+      - 'dashboard/**'
+      - 'web/dashboard/**'
+      - '.github/workflows/business-studio.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard/**'
+      - 'web/dashboard/**'
+      - '.github/workflows/business-studio.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  dashboards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            dashboard/package-lock.json
+            web/dashboard/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: dashboard
+      - run: npm ci && npm run build
+        working-directory: web/dashboard
+      - run: npx playwright install --with-deps chromium
+        working-directory: web/dashboard
+      - run: npm run test:e2e:studio
+        working-directory: web/dashboard

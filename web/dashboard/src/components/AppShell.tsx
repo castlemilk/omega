@@ -9,8 +9,10 @@ import { ProjectSwitcher } from './ProjectSwitcher'
 
 // ─── Nav config ──────────────────────────────────────────────────────────────
 
+const studioCommand: string | null = import.meta.env.BUSINESS_STUDIO_COMMAND
 const globalNav = [
   { to: '/',               label: 'Overview',       icon: LayoutDashboard, end: true },
+  ...(studioCommand ? [{ to: studioCommand, label: 'Business Studio', icon: Briefcase }] : []),
   { to: '/nodes/registry', label: 'Node Registry',  icon: Server },
   { to: '/training',       label: 'Training',       icon: Brain, pulse: true },
   { to: '/coordination',   label: 'Coordination',   icon: GitBranch },
@@ -65,6 +67,8 @@ function NavItem({
   return (
     <NavLink
       to={to}
+      reloadDocument={to === studioCommand}
+      referrerPolicy={to === studioCommand ? 'no-referrer' : undefined}
       end={end}
       className={({ isActive }) =>
         `w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
