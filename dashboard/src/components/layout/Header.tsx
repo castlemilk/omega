@@ -30,7 +30,7 @@ export default function Header({ systemStatus, connected }: HeaderProps) {
   }
 
   return (
-    <header className="h-14 bg-surface-800 border-b border-surface-600 flex items-center justify-between px-6 shrink-0">
+    <header className="sm:h-14 bg-surface-800 border-b border-surface-600 flex flex-wrap items-center justify-between gap-2 px-3 py-2 sm:flex-nowrap sm:px-6 sm:py-0 shrink-0">
       <div className="flex items-center gap-3">
         <span className={`w-2.5 h-2.5 rounded-full ${statusColor}`} />
         <span className="text-sm font-medium text-gray-300 capitalize">

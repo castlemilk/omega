@@ -86,7 +86,7 @@ export default function Dashboard({ health }: DashboardProps) {
   return (
     <div className="space-y-6">
       {/* Compact system facts strip */}
-      <div className="flex items-center gap-0 bg-gray-900 rounded-xl border border-gray-700 divide-x divide-gray-700 overflow-hidden text-sm">
+      <div className="grid grid-cols-2 sm:flex sm:items-center bg-gray-900 rounded-xl border border-gray-700 sm:divide-x divide-gray-700 text-sm">
         {[
           {
             label: "Status",
