@@ -1,0 +1,586 @@
+{
+  "repository": "castlemilk/omega",
+  "branch": "docs/omega-venture-backlog-2026-11-16",
+  "source_revision": "1a36c00b83676a6fb35e2caf309d7a84c4c7b366",
+  "asset_revision": "8efba564882dff72a1830398773bc793e3a94f6b",
+  "feature_count": 96,
+  "epic_count": 12,
+  "programme": 8,
+  "new_issues": 104,
+  "issues": {
+    "E01": {
+      "number": 9,
+      "url": "https://github.com/castlemilk/omega/issues/9",
+      "state": "open"
+    },
+    "E02": {
+      "number": 13,
+      "url": "https://github.com/castlemilk/omega/issues/13",
+      "state": "open"
+    },
+    "E03": {
+      "number": 14,
+      "url": "https://github.com/castlemilk/omega/issues/14",
+      "state": "open"
+    },
+    "E04": {
+      "number": 15,
+      "url": "https://github.com/castlemilk/omega/issues/15",
+      "state": "open"
+    },
+    "E05": {
+      "number": 16,
+      "url": "https://github.com/castlemilk/omega/issues/16",
+      "state": "open"
+    },
+    "E06": {
+      "number": 17,
+      "url": "https://github.com/castlemilk/omega/issues/17",
+      "state": "open"
+    },
+    "E07": {
+      "number": 18,
+      "url": "https://github.com/castlemilk/omega/issues/18",
+      "state": "open"
+    },
+    "E08": {
+      "number": 19,
+      "url": "https://github.com/castlemilk/omega/issues/19",
+      "state": "open"
+    },
+    "E09": {
+      "number": 20,
+      "url": "https://github.com/castlemilk/omega/issues/20",
+      "state": "open"
+    },
+    "E10": {
+      "number": 21,
+      "url": "https://github.com/castlemilk/omega/issues/21",
+      "state": "open"
+    },
+    "E11": {
+      "number": 22,
+      "url": "https://github.com/castlemilk/omega/issues/22",
+      "state": "open"
+    },
+    "E12": {
+      "number": 23,
+      "url": "https://github.com/castlemilk/omega/issues/23",
+      "state": "open"
+    },
+    "OME-001": {
+      "number": 10,
+      "url": "https://github.com/castlemilk/omega/issues/10",
+      "state": "open"
+    },
+    "OME-002": {
+      "number": 11,
+      "url": "https://github.com/castlemilk/omega/issues/11",
+      "state": "open"
+    },
+    "OME-003": {
+      "number": 12,
+      "url": "https://github.com/castlemilk/omega/issues/12",
+      "state": "open"
+    },
+    "OME-004": {
+      "number": 25,
+      "url": "https://github.com/castlemilk/omega/issues/25",
+      "state": "open"
+    },
+    "OME-005": {
+      "number": 26,
+      "url": "https://github.com/castlemilk/omega/issues/26",
+      "state": "open"
+    },
+    "OME-006": {
+      "number": 24,
+      "url": "https://github.com/castlemilk/omega/issues/24",
+      "state": "open"
+    },
+    "OME-007": {
+      "number": 28,
+      "url": "https://github.com/castlemilk/omega/issues/28",
+      "state": "open"
+    },
+    "OME-008": {
+      "number": 33,
+      "url": "https://github.com/castlemilk/omega/issues/33",
+      "state": "open"
+    },
+    "OME-009": {
+      "number": 27,
+      "url": "https://github.com/castlemilk/omega/issues/27",
+      "state": "open"
+    },
+    "OME-010": {
+      "number": 29,
+      "url": "https://github.com/castlemilk/omega/issues/29",
+      "state": "open"
+    },
+    "OME-011": {
+      "number": 30,
+      "url": "https://github.com/castlemilk/omega/issues/30",
+      "state": "open"
+    },
+    "OME-012": {
+      "number": 31,
+      "url": "https://github.com/castlemilk/omega/issues/31",
+      "state": "open"
+    },
+    "OME-013": {
+      "number": 34,
+      "url": "https://github.com/castlemilk/omega/issues/34",
+      "state": "open"
+    },
+    "OME-014": {
+      "number": 35,
+      "url": "https://github.com/castlemilk/omega/issues/35",
+      "state": "open"
+    },
+    "OME-015": {
+      "number": 38,
+      "url": "https://github.com/castlemilk/omega/issues/38",
+      "state": "open"
+    },
+    "OME-016": {
+      "number": 36,
+      "url": "https://github.com/castlemilk/omega/issues/36",
+      "state": "open"
+    },
+    "OME-017": {
+      "number": 39,
+      "url": "https://github.com/castlemilk/omega/issues/39",
+      "state": "open"
+    },
+    "OME-018": {
+      "number": 40,
+      "url": "https://github.com/castlemilk/omega/issues/40",
+      "state": "open"
+    },
+    "OME-019": {
+      "number": 41,
+      "url": "https://github.com/castlemilk/omega/issues/41",
+      "state": "open"
+    },
+    "OME-020": {
+      "number": 42,
+      "url": "https://github.com/castlemilk/omega/issues/42",
+      "state": "open"
+    },
+    "OME-021": {
+      "number": 43,
+      "url": "https://github.com/castlemilk/omega/issues/43",
+      "state": "open"
+    },
+    "OME-022": {
+      "number": 44,
+      "url": "https://github.com/castlemilk/omega/issues/44",
+      "state": "open"
+    },
+    "OME-023": {
+      "number": 45,
+      "url": "https://github.com/castlemilk/omega/issues/45",
+      "state": "open"
+    },
+    "OME-024": {
+      "number": 50,
+      "url": "https://github.com/castlemilk/omega/issues/50",
+      "state": "open"
+    },
+    "OME-025": {
+      "number": 55,
+      "url": "https://github.com/castlemilk/omega/issues/55",
+      "state": "open"
+    },
+    "OME-026": {
+      "number": 64,
+      "url": "https://github.com/castlemilk/omega/issues/64",
+      "state": "open"
+    },
+    "OME-027": {
+      "number": 65,
+      "url": "https://github.com/castlemilk/omega/issues/65",
+      "state": "open"
+    },
+    "OME-028": {
+      "number": 74,
+      "url": "https://github.com/castlemilk/omega/issues/74",
+      "state": "open"
+    },
+    "OME-029": {
+      "number": 66,
+      "url": "https://github.com/castlemilk/omega/issues/66",
+      "state": "open"
+    },
+    "OME-030": {
+      "number": 67,
+      "url": "https://github.com/castlemilk/omega/issues/67",
+      "state": "open"
+    },
+    "OME-031": {
+      "number": 68,
+      "url": "https://github.com/castlemilk/omega/issues/68",
+      "state": "open"
+    },
+    "OME-032": {
+      "number": 75,
+      "url": "https://github.com/castlemilk/omega/issues/75",
+      "state": "open"
+    },
+    "OME-033": {
+      "number": 32,
+      "url": "https://github.com/castlemilk/omega/issues/32",
+      "state": "open"
+    },
+    "OME-034": {
+      "number": 37,
+      "url": "https://github.com/castlemilk/omega/issues/37",
+      "state": "open"
+    },
+    "OME-035": {
+      "number": 46,
+      "url": "https://github.com/castlemilk/omega/issues/46",
+      "state": "open"
+    },
+    "OME-036": {
+      "number": 47,
+      "url": "https://github.com/castlemilk/omega/issues/47",
+      "state": "open"
+    },
+    "OME-037": {
+      "number": 48,
+      "url": "https://github.com/castlemilk/omega/issues/48",
+      "state": "open"
+    },
+    "OME-038": {
+      "number": 51,
+      "url": "https://github.com/castlemilk/omega/issues/51",
+      "state": "open"
+    },
+    "OME-039": {
+      "number": 49,
+      "url": "https://github.com/castlemilk/omega/issues/49",
+      "state": "open"
+    },
+    "OME-040": {
+      "number": 56,
+      "url": "https://github.com/castlemilk/omega/issues/56",
+      "state": "open"
+    },
+    "OME-041": {
+      "number": 57,
+      "url": "https://github.com/castlemilk/omega/issues/57",
+      "state": "open"
+    },
+    "OME-042": {
+      "number": 69,
+      "url": "https://github.com/castlemilk/omega/issues/69",
+      "state": "open"
+    },
+    "OME-043": {
+      "number": 76,
+      "url": "https://github.com/castlemilk/omega/issues/76",
+      "state": "open"
+    },
+    "OME-044": {
+      "number": 70,
+      "url": "https://github.com/castlemilk/omega/issues/70",
+      "state": "open"
+    },
+    "OME-045": {
+      "number": 77,
+      "url": "https://github.com/castlemilk/omega/issues/77",
+      "state": "open"
+    },
+    "OME-046": {
+      "number": 78,
+      "url": "https://github.com/castlemilk/omega/issues/78",
+      "state": "open"
+    },
+    "OME-047": {
+      "number": 83,
+      "url": "https://github.com/castlemilk/omega/issues/83",
+      "state": "open"
+    },
+    "OME-048": {
+      "number": 89,
+      "url": "https://github.com/castlemilk/omega/issues/89",
+      "state": "open"
+    },
+    "OME-049": {
+      "number": 52,
+      "url": "https://github.com/castlemilk/omega/issues/52",
+      "state": "open"
+    },
+    "OME-050": {
+      "number": 58,
+      "url": "https://github.com/castlemilk/omega/issues/58",
+      "state": "open"
+    },
+    "OME-051": {
+      "number": 71,
+      "url": "https://github.com/castlemilk/omega/issues/71",
+      "state": "open"
+    },
+    "OME-052": {
+      "number": 79,
+      "url": "https://github.com/castlemilk/omega/issues/79",
+      "state": "open"
+    },
+    "OME-053": {
+      "number": 80,
+      "url": "https://github.com/castlemilk/omega/issues/80",
+      "state": "open"
+    },
+    "OME-054": {
+      "number": 81,
+      "url": "https://github.com/castlemilk/omega/issues/81",
+      "state": "open"
+    },
+    "OME-055": {
+      "number": 84,
+      "url": "https://github.com/castlemilk/omega/issues/84",
+      "state": "open"
+    },
+    "OME-056": {
+      "number": 90,
+      "url": "https://github.com/castlemilk/omega/issues/90",
+      "state": "open"
+    },
+    "OME-057": {
+      "number": 59,
+      "url": "https://github.com/castlemilk/omega/issues/59",
+      "state": "open"
+    },
+    "OME-058": {
+      "number": 72,
+      "url": "https://github.com/castlemilk/omega/issues/72",
+      "state": "open"
+    },
+    "OME-059": {
+      "number": 85,
+      "url": "https://github.com/castlemilk/omega/issues/85",
+      "state": "open"
+    },
+    "OME-060": {
+      "number": 86,
+      "url": "https://github.com/castlemilk/omega/issues/86",
+      "state": "open"
+    },
+    "OME-061": {
+      "number": 91,
+      "url": "https://github.com/castlemilk/omega/issues/91",
+      "state": "open"
+    },
+    "OME-062": {
+      "number": 92,
+      "url": "https://github.com/castlemilk/omega/issues/92",
+      "state": "open"
+    },
+    "OME-063": {
+      "number": 82,
+      "url": "https://github.com/castlemilk/omega/issues/82",
+      "state": "open"
+    },
+    "OME-064": {
+      "number": 94,
+      "url": "https://github.com/castlemilk/omega/issues/94",
+      "state": "open"
+    },
+    "OME-065": {
+      "number": 53,
+      "url": "https://github.com/castlemilk/omega/issues/53",
+      "state": "open"
+    },
+    "OME-066": {
+      "number": 54,
+      "url": "https://github.com/castlemilk/omega/issues/54",
+      "state": "open"
+    },
+    "OME-067": {
+      "number": 60,
+      "url": "https://github.com/castlemilk/omega/issues/60",
+      "state": "open"
+    },
+    "OME-068": {
+      "number": 61,
+      "url": "https://github.com/castlemilk/omega/issues/61",
+      "state": "open"
+    },
+    "OME-069": {
+      "number": 87,
+      "url": "https://github.com/castlemilk/omega/issues/87",
+      "state": "open"
+    },
+    "OME-070": {
+      "number": 62,
+      "url": "https://github.com/castlemilk/omega/issues/62",
+      "state": "open"
+    },
+    "OME-071": {
+      "number": 100,
+      "url": "https://github.com/castlemilk/omega/issues/100",
+      "state": "open"
+    },
+    "OME-072": {
+      "number": 105,
+      "url": "https://github.com/castlemilk/omega/issues/105",
+      "state": "open"
+    },
+    "OME-073": {
+      "number": 101,
+      "url": "https://github.com/castlemilk/omega/issues/101",
+      "state": "open"
+    },
+    "OME-074": {
+      "number": 106,
+      "url": "https://github.com/castlemilk/omega/issues/106",
+      "state": "open"
+    },
+    "OME-075": {
+      "number": 107,
+      "url": "https://github.com/castlemilk/omega/issues/107",
+      "state": "open"
+    },
+    "OME-076": {
+      "number": 111,
+      "url": "https://github.com/castlemilk/omega/issues/111",
+      "state": "open"
+    },
+    "OME-077": {
+      "number": 112,
+      "url": "https://github.com/castlemilk/omega/issues/112",
+      "state": "open"
+    },
+    "OME-078": {
+      "number": 95,
+      "url": "https://github.com/castlemilk/omega/issues/95",
+      "state": "open"
+    },
+    "OME-079": {
+      "number": 113,
+      "url": "https://github.com/castlemilk/omega/issues/113",
+      "state": "open"
+    },
+    "OME-080": {
+      "number": 114,
+      "url": "https://github.com/castlemilk/omega/issues/114",
+      "state": "open"
+    },
+    "OME-081": {
+      "number": 63,
+      "url": "https://github.com/castlemilk/omega/issues/63",
+      "state": "open"
+    },
+    "OME-082": {
+      "number": 73,
+      "url": "https://github.com/castlemilk/omega/issues/73",
+      "state": "open"
+    },
+    "OME-083": {
+      "number": 102,
+      "url": "https://github.com/castlemilk/omega/issues/102",
+      "state": "open"
+    },
+    "OME-084": {
+      "number": 108,
+      "url": "https://github.com/castlemilk/omega/issues/108",
+      "state": "open"
+    },
+    "OME-085": {
+      "number": 115,
+      "url": "https://github.com/castlemilk/omega/issues/115",
+      "state": "open"
+    },
+    "OME-086": {
+      "number": 96,
+      "url": "https://github.com/castlemilk/omega/issues/96",
+      "state": "open"
+    },
+    "OME-087": {
+      "number": 109,
+      "url": "https://github.com/castlemilk/omega/issues/109",
+      "state": "open"
+    },
+    "OME-088": {
+      "number": 103,
+      "url": "https://github.com/castlemilk/omega/issues/103",
+      "state": "open"
+    },
+    "OME-089": {
+      "number": 97,
+      "url": "https://github.com/castlemilk/omega/issues/97",
+      "state": "open"
+    },
+    "OME-090": {
+      "number": 104,
+      "url": "https://github.com/castlemilk/omega/issues/104",
+      "state": "open"
+    },
+    "OME-091": {
+      "number": 88,
+      "url": "https://github.com/castlemilk/omega/issues/88",
+      "state": "open"
+    },
+    "OME-092": {
+      "number": 98,
+      "url": "https://github.com/castlemilk/omega/issues/98",
+      "state": "open"
+    },
+    "OME-093": {
+      "number": 99,
+      "url": "https://github.com/castlemilk/omega/issues/99",
+      "state": "open"
+    },
+    "OME-094": {
+      "number": 110,
+      "url": "https://github.com/castlemilk/omega/issues/110",
+      "state": "open"
+    },
+    "OME-095": {
+      "number": 116,
+      "url": "https://github.com/castlemilk/omega/issues/116",
+      "state": "open"
+    },
+    "OME-096": {
+      "number": 117,
+      "url": "https://github.com/castlemilk/omega/issues/117",
+      "state": "open"
+    },
+    "programme:2026-11-16": {
+      "number": 8,
+      "url": "https://github.com/castlemilk/omega/issues/8",
+      "state": "open"
+    }
+  },
+  "screenshots": [
+    {
+      "id": "VIS-04",
+      "path": "vis-04-preview.webp",
+      "sha256": "1bf40e6c0be0dee87f2d9f01cca062d11a2914c8e6c2c00e7df6fd8b6c38be23",
+      "bytes": 11142,
+      "width": 640,
+      "height": 360,
+      "original_sha256": "45e98a5df0149c82cd2046aaf5077c3b6e2d8f302e47366304718e1bd5ffe514",
+      "original": "a_cinematic_dark_sci_fi_dashboard_ui_for_omega.png",
+      "git_blob_sha": "478bab4432e78ac6f45afe691a1a74564d926fca",
+      "repository_path": "docs/venture-platform/screenshots/vis-04-preview.webp",
+      "role": "compressed concept reference, not acceptance screenshot"
+    },
+    {
+      "id": "VIS-15",
+      "path": "vis-15-preview.webp",
+      "sha256": "ee673f0954a16a61eba22a805a7e1b766f4a34a11479800c448de4c4d7ba9cc2",
+      "bytes": 14896,
+      "width": 640,
+      "height": 427,
+      "original_sha256": "31f2a0a665c0b5b90284188a0dca450b1e1b776a785a4a3357c5117215bf272e",
+      "original": "a_detailed_sci_fi_themed_ui_dashboard_design_for.png",
+      "git_blob_sha": "f8a4efe768b99b47ae2643b5ad2bcbeb6decbc6f",
+      "repository_path": "docs/venture-platform/screenshots/vis-15-preview.webp",
+      "role": "compressed concept reference, not acceptance screenshot"
+    }
+  ],
+  "verified_at": "2026-11-16T03:28:26Z"
+}
