@@ -110,7 +110,7 @@ export default function Dashboard({ health }: DashboardProps) {
           },
         ].map(({ label, value, cls }) => (
           <div key={label} className="flex items-center gap-2 px-5 py-3">
-            <span className="text-xs text-gray-500">{label}</span>
+            <span className="text-xs text-gray-400">{label}</span>
             <span className={`font-semibold ${cls}`}>{value}</span>
           </div>
         ))}
