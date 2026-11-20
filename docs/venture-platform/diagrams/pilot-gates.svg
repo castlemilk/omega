@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 720" width="780" height="720" role="img" aria-labelledby="title description">
+  <title id="title">Proposed Omega venture pilot gates</title>
+  <desc id="description">Five gates progress from design agreement through a scoped read-only shell, supervised internal review, one authorised external action, and measured bounded operation.</desc>
+  <style>
+    text { font-family: system-ui, sans-serif; }
+    .heading { fill: #f3e8d8; font-size: 34px; font-weight: 680; }
+    .subtitle, .detail { fill: #c8c2b7; font-size: 17px; }
+    .gate { fill: #f3ad7f; font-size: 23px; font-weight: 680; }
+    .name { fill: #f3e8d8; font-size: 23px; font-weight: 620; }
+  </style>
+  <rect width="780" height="720" rx="18" fill="#171b1a"/>
+  <text class="heading" x="38" y="59">Venture pilot gates</text>
+  <text class="subtitle" x="40" y="92">Proposed sequence from the public programme</text>
+  <path d="M57 146v508" stroke="#7d624f" stroke-width="2"/>
+  <g>
+    <circle cx="57" cy="168" r="20" fill="#242524" stroke="#ae7d59" stroke-width="1.5"/>
+    <text class="gate" x="57" y="176" text-anchor="middle">A</text>
+    <rect x="93" y="125" width="649" height="96" rx="10" fill="#202625" stroke="#3c4844"/>
+    <text class="name" x="118" y="161">Agree how the workbench should work</text>
+    <text class="detail" x="118" y="192">Set the design, tokens, navigation and operational views.</text>
+  </g>
+  <g>
+    <circle cx="57" cy="278" r="20" fill="#242524" stroke="#ae7d59" stroke-width="1.5"/>
+    <text class="gate" x="57" y="286" text-anchor="middle">B</text>
+    <rect x="93" y="235" width="649" height="96" rx="10" fill="#202625" stroke="#3c4844"/>
+    <text class="name" x="118" y="271">Verify a scoped read-only shell</text>
+    <text class="detail" x="118" y="302">Walk desktop, phone, keyboard and recovery paths.</text>
+  </g>
+  <g>
+    <circle cx="57" cy="388" r="20" fill="#242524" stroke="#ae7d59" stroke-width="1.5"/>
+    <text class="gate" x="57" y="396" text-anchor="middle">C</text>
+    <rect x="93" y="345" width="649" height="96" rx="10" fill="#202625" stroke="#3c4844"/>
+    <text class="name" x="118" y="381">Run one supervised product review</text>
+    <text class="detail" x="118" y="412">Pin the artwork and copy versions in the review packet.</text>
+  </g>
+  <g>
+    <circle cx="57" cy="510" r="20" fill="#242524" stroke="#ae7d59" stroke-width="1.5"/>
+    <text class="gate" x="57" y="518" text-anchor="middle">D</text>
+    <rect x="93" y="455" width="649" height="118" rx="10" fill="#29261f" stroke="#8d684e"/>
+    <text class="name" x="118" y="491">Authorise one external action</text>
+    <text class="detail" x="118" y="522">Bind approval to the action, scope credentials and reserve budget.</text>
+    <text class="detail" x="118" y="547">Prove safe reconciliation, audit receipts and emergency pause.</text>
+  </g>
+  <g>
+    <circle cx="57" cy="630" r="20" fill="#242524" stroke="#ae7d59" stroke-width="1.5"/>
+    <text class="gate" x="57" y="638" text-anchor="middle">E</text>
+    <rect x="93" y="587" width="649" height="96" rx="10" fill="#202625" stroke="#3c4844"/>
+    <text class="name" x="118" y="623">Review evidence before expanding</text>
+    <text class="detail" x="118" y="654">Use measured outcomes to continue, revise or stop.</text>
+  </g>
+</svg>
