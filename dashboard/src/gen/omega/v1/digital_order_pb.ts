@@ -4,13 +4,14 @@
 
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_google_protobuf_wrappers } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file omega/v1/digital_order.proto.
  */
 export const file_omega_v1_digital_order: GenFile = /*@__PURE__*/
-  fileDesc("ChxvbWVnYS92MS9kaWdpdGFsX29yZGVyLnByb3RvEghvbWVnYS52MSLGAQoMRGlnaXRhbE9mZmVyEhMKC2J1c2luZXNzX2lkGAEgASgJEhIKCnByb2R1Y3RfaWQYAiABKAkSDwoHZWRpdGlvbhgDIAEoCRIVCg1wYWNrZXRfc2hhMjU2GAQgASgJEhYKDmFyY2hpdmVfc2hhMjU2GAUgASgJEhQKDGFyY2hpdmVfbmFtZRgGIAEoCRIUCgxhbW91bnRfbWlub3IYByABKAMSEAoIY3VycmVuY3kYCCABKAkSDwoHbGljZW5jZRgJIAEoCSKEAQoRRGlnaXRhbE9yZGVyRXZlbnQSGQoRcHJvdmlkZXJfZXZlbnRfaWQYASABKAkSEgoKZXZlbnRfdHlwZRgCIAEoCRIZChFwcm9jZXNzaW5nX3N0YXR1cxgDIAEoCRIQCghhdHRlbXB0cxgEIAEoDRITCgtyZWNlaXZlZF9hdBgFIAEoCSLbAwoTRGlnaXRhbE9yZGVyUmVjZWlwdBIQCghvcmRlcl9pZBgBIAEoCRIlCgVvZmZlchgCIAEoCzIWLm9tZWdhLnYxLkRpZ2l0YWxPZmZlchIRCgl0ZXN0X21vZGUYAyABKAgSLgoHcGF5bWVudBgEIAEoDjIdLm9tZWdhLnYxLkRpZ2l0YWxQYXltZW50U3RhdGUSFgoOcmVmdW5kZWRfbWlub3IYBSABKAMSFgoOZW50aXRsZW1lbnRfaWQYBiABKAkSGgoSZG93bmxvYWRfYXZhaWxhYmxlGAcgASgIEhsKE2Rvd25sb2FkX2V4cGlyZXNfYXQYCCABKAkSGAoQZG93bmxvYWRzX2lzc3VlZBgJIAEoDRIbChNwcm92aWRlcl9zZXNzaW9uX2lkGAogASgJEhsKE3Byb3ZpZGVyX3BheW1lbnRfaWQYCyABKAkSGgoScHJvdmlkZXJfY2hhcmdlX2lkGAwgASgJEhMKC3ZlcmlmaWVkX2F0GA0gASgJEisKBmV2ZW50cxgOIAMoCzIbLm9tZWdhLnYxLkRpZ2l0YWxPcmRlckV2ZW50EhYKDmRpc3B1dGVfc3RhdHVzGA8gASgJEhUKDWNoZWNrb3V0X29wZW4YECABKAgqsQIKE0RpZ2l0YWxQYXltZW50U3RhdGUSJQohRElHSVRBTF9QQVlNRU5UX1NUQVRFX1VOU1BFQ0lGSUVEEAASIQodRElHSVRBTF9QQVlNRU5UX1NUQVRFX1BFTkRJTkcQARIeChpESUdJVEFMX1BBWU1FTlRfU1RBVEVfUEFJRBACEiAKHERJR0lUQUxfUEFZTUVOVF9TVEFURV9GQUlMRUQQAxIhCh1ESUdJVEFMX1BBWU1FTlRfU1RBVEVfRVhQSVJFRBAEEiIKHkRJR0lUQUxfUEFZTUVOVF9TVEFURV9SRUZVTkRFRBAFEiIKHkRJR0lUQUxfUEFZTUVOVF9TVEFURV9ESVNQVVRFRBAGEiMKH0RJR0lUQUxfUEFZTUVOVF9TVEFURV9DQU5DRUxMRUQQB0I2WjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxYgZwcm90bzM");
+  fileDesc("ChxvbWVnYS92MS9kaWdpdGFsX29yZGVyLnByb3RvEghvbWVnYS52MSLGAQoMRGlnaXRhbE9mZmVyEhMKC2J1c2luZXNzX2lkGAEgASgJEhIKCnByb2R1Y3RfaWQYAiABKAkSDwoHZWRpdGlvbhgDIAEoCRIVCg1wYWNrZXRfc2hhMjU2GAQgASgJEhYKDmFyY2hpdmVfc2hhMjU2GAUgASgJEhQKDGFyY2hpdmVfbmFtZRgGIAEoCRIUCgxhbW91bnRfbWlub3IYByABKAMSEAoIY3VycmVuY3kYCCABKAkSDwoHbGljZW5jZRgJIAEoCSKEAQoRRGlnaXRhbE9yZGVyRXZlbnQSGQoRcHJvdmlkZXJfZXZlbnRfaWQYASABKAkSEgoKZXZlbnRfdHlwZRgCIAEoCRIZChFwcm9jZXNzaW5nX3N0YXR1cxgDIAEoCRIQCghhdHRlbXB0cxgEIAEoDRITCgtyZWNlaXZlZF9hdBgFIAEoCSLbAwoTRGlnaXRhbE9yZGVyUmVjZWlwdBIQCghvcmRlcl9pZBgBIAEoCRIlCgVvZmZlchgCIAEoCzIWLm9tZWdhLnYxLkRpZ2l0YWxPZmZlchIRCgl0ZXN0X21vZGUYAyABKAgSLgoHcGF5bWVudBgEIAEoDjIdLm9tZWdhLnYxLkRpZ2l0YWxQYXltZW50U3RhdGUSFgoOcmVmdW5kZWRfbWlub3IYBSABKAMSFgoOZW50aXRsZW1lbnRfaWQYBiABKAkSGgoSZG93bmxvYWRfYXZhaWxhYmxlGAcgASgIEhsKE2Rvd25sb2FkX2V4cGlyZXNfYXQYCCABKAkSGAoQZG93bmxvYWRzX2lzc3VlZBgJIAEoDRIbChNwcm92aWRlcl9zZXNzaW9uX2lkGAogASgJEhsKE3Byb3ZpZGVyX3BheW1lbnRfaWQYCyABKAkSGgoScHJvdmlkZXJfY2hhcmdlX2lkGAwgASgJEhMKC3ZlcmlmaWVkX2F0GA0gASgJEisKBmV2ZW50cxgOIAMoCzIbLm9tZWdhLnYxLkRpZ2l0YWxPcmRlckV2ZW50EhYKDmRpc3B1dGVfc3RhdHVzGA8gASgJEhUKDWNoZWNrb3V0X29wZW4YECABKAgilgEKF0NvbW1lcmNlQmFsYW5jZU1vdmVtZW50EgoKAmlkGAEgASgJEgwKBGtpbmQYAiABKAkSEwoLb2NjdXJyZWRfYXQYAyABKAkSEAoIY3VycmVuY3kYBCABKAkSFAoMYW1vdW50X21pbm9yGAUgASgDEhEKCWZlZV9taW5vchgGIAEoAxIRCgluZXRfbWlub3IYByABKAMiyAQKFkNvbW1lcmNlU3RhdGVtZW50T3JkZXISEAoIb3JkZXJfaWQYASABKAkSEgoKY3JlYXRlZF9hdBgCIAEoCRIPCgdlZGl0aW9uGAMgASgJEhUKDXBhY2tldF9zaGEyNTYYBCABKAkSFgoOYXJjaGl2ZV9zaGEyNTYYBSABKAkSEAoIY3VycmVuY3kYBiABKAkSFAoMcXVvdGVkX21pbm9yGAcgASgDEi4KB3BheW1lbnQYCCABKA4yHS5vbWVnYS52MS5EaWdpdGFsUGF5bWVudFN0YXRlEjMKDmNhcHR1cmVkX21pbm9yGAkgASgLMhsuZ29vZ2xlLnByb3RvYnVmLkludDY0VmFsdWUSMwoOcmVmdW5kZWRfbWlub3IYCiABKAsyGy5nb29nbGUucHJvdG9idWYuSW50NjRWYWx1ZRIYChBkb3dubG9hZHNfaXNzdWVkGAsgASgNEhgKEHByb2Nlc3NlZF9ldmVudHMYDCABKA0SGQoRdW5yZXNvbHZlZF9ldmVudHMYDSABKA0SMQoLdmVyaWZpZWRfYXQYDiABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUSNAoOZGlzcHV0ZV9zdGF0dXMYDyABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUSGAoQYmFsYW5jZV9jb21wbGV0ZRgQIAEoCBI0Cgltb3ZlbWVudHMYESADKAsyIS5vbWVnYS52MS5Db21tZXJjZUJhbGFuY2VNb3ZlbWVudCKAAgoRQ29tbWVyY2VTdGF0ZW1lbnQSDgoGc2NoZW1hGAEgASgJEhMKC2J1c2luZXNzX2lkGAIgASgJEhIKCnByb2R1Y3RfaWQYAyABKAkSEQoJdGVzdF9tb2RlGAQgASgIEhAKCGZyb21fZGF5GAUgASgJEhMKC3Rocm91Z2hfZGF5GAYgASgJEhMKC3ZlcmlmaWVkX2F0GAcgASgJEjAKBm9yZGVycxgIIAMoCzIgLm9tZWdhLnYxLkNvbW1lcmNlU3RhdGVtZW50T3JkZXISEAoIY292ZXJhZ2UYCSABKAkSHwoXdW5yZXNvbHZlZF9zY29wZV9vcmRlcnMYCiABKA0qsQIKE0RpZ2l0YWxQYXltZW50U3RhdGUSJQohRElHSVRBTF9QQVlNRU5UX1NUQVRFX1VOU1BFQ0lGSUVEEAASIQodRElHSVRBTF9QQVlNRU5UX1NUQVRFX1BFTkRJTkcQARIeChpESUdJVEFMX1BBWU1FTlRfU1RBVEVfUEFJRBACEiAKHERJR0lUQUxfUEFZTUVOVF9TVEFURV9GQUlMRUQQAxIhCh1ESUdJVEFMX1BBWU1FTlRfU1RBVEVfRVhQSVJFRBAEEiIKHkRJR0lUQUxfUEFZTUVOVF9TVEFURV9SRUZVTkRFRBAFEiIKHkRJR0lUQUxfUEFZTUVOVF9TVEFURV9ESVNQVVRFRBAGEiMKH0RJR0lUQUxfUEFZTUVOVF9TVEFURV9DQU5DRUxMRUQQB0I2WjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxYgZwcm90bzM", [file_google_protobuf_wrappers]);
 
 /**
  * @generated from message omega.v1.DigitalOffer
@@ -199,6 +200,223 @@ export type DigitalOrderReceipt = Message<"omega.v1.DigitalOrderReceipt"> & {
  */
 export const DigitalOrderReceiptSchema: GenMessage<DigitalOrderReceipt> = /*@__PURE__*/
   messageDesc(file_omega_v1_digital_order, 2);
+
+/**
+ * Each movement uses its Stripe balance transaction's own settlement currency.
+ *
+ * @generated from message omega.v1.CommerceBalanceMovement
+ */
+export type CommerceBalanceMovement = Message<"omega.v1.CommerceBalanceMovement"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * charge or refund
+   *
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string occurred_at = 3;
+   */
+  occurredAt: string;
+
+  /**
+   * @generated from field: string currency = 4;
+   */
+  currency: string;
+
+  /**
+   * @generated from field: int64 amount_minor = 5;
+   */
+  amountMinor: bigint;
+
+  /**
+   * @generated from field: int64 fee_minor = 6;
+   */
+  feeMinor: bigint;
+
+  /**
+   * @generated from field: int64 net_minor = 7;
+   */
+  netMinor: bigint;
+};
+
+/**
+ * Describes the message omega.v1.CommerceBalanceMovement.
+ * Use `create(CommerceBalanceMovementSchema)` to create a new message.
+ */
+export const CommerceBalanceMovementSchema: GenMessage<CommerceBalanceMovement> = /*@__PURE__*/
+  messageDesc(file_omega_v1_digital_order, 3);
+
+/**
+ * @generated from message omega.v1.CommerceStatementOrder
+ */
+export type CommerceStatementOrder = Message<"omega.v1.CommerceStatementOrder"> & {
+  /**
+   * @generated from field: string order_id = 1;
+   */
+  orderId: string;
+
+  /**
+   * @generated from field: string created_at = 2;
+   */
+  createdAt: string;
+
+  /**
+   * @generated from field: string edition = 3;
+   */
+  edition: string;
+
+  /**
+   * @generated from field: string packet_sha256 = 4;
+   */
+  packetSha256: string;
+
+  /**
+   * @generated from field: string archive_sha256 = 5;
+   */
+  archiveSha256: string;
+
+  /**
+   * @generated from field: string currency = 6;
+   */
+  currency: string;
+
+  /**
+   * @generated from field: int64 quoted_minor = 7;
+   */
+  quotedMinor: bigint;
+
+  /**
+   * @generated from field: omega.v1.DigitalPaymentState payment = 8;
+   */
+  payment: DigitalPaymentState;
+
+  /**
+   * Both values are absent when current payment evidence is inconclusive.
+   *
+   * @generated from field: google.protobuf.Int64Value captured_minor = 9;
+   */
+  capturedMinor?: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Int64Value refunded_minor = 10;
+   */
+  refundedMinor?: bigint;
+
+  /**
+   * @generated from field: uint32 downloads_issued = 11;
+   */
+  downloadsIssued: number;
+
+  /**
+   * @generated from field: uint32 processed_events = 12;
+   */
+  processedEvents: number;
+
+  /**
+   * @generated from field: uint32 unresolved_events = 13;
+   */
+  unresolvedEvents: number;
+
+  /**
+   * @generated from field: google.protobuf.StringValue verified_at = 14;
+   */
+  verifiedAt?: string;
+
+  /**
+   * @generated from field: google.protobuf.StringValue dispute_status = 15;
+   */
+  disputeStatus?: string;
+
+  /**
+   * @generated from field: bool balance_complete = 16;
+   */
+  balanceComplete: boolean;
+
+  /**
+   * @generated from field: repeated omega.v1.CommerceBalanceMovement movements = 17;
+   */
+  movements: CommerceBalanceMovement[];
+};
+
+/**
+ * Describes the message omega.v1.CommerceStatementOrder.
+ * Use `create(CommerceStatementOrderSchema)` to create a new message.
+ */
+export const CommerceStatementOrderSchema: GenMessage<CommerceStatementOrder> = /*@__PURE__*/
+  messageDesc(file_omega_v1_digital_order, 4);
+
+/**
+ * Membership uses order creation in the inclusive UTC window. Financial and
+ * fulfilment evidence are current as of verification, across all editions.
+ *
+ * @generated from message omega.v1.CommerceStatement
+ */
+export type CommerceStatement = Message<"omega.v1.CommerceStatement"> & {
+  /**
+   * @generated from field: string schema = 1;
+   */
+  schema: string;
+
+  /**
+   * @generated from field: string business_id = 2;
+   */
+  businessId: string;
+
+  /**
+   * @generated from field: string product_id = 3;
+   */
+  productId: string;
+
+  /**
+   * @generated from field: bool test_mode = 4;
+   */
+  testMode: boolean;
+
+  /**
+   * @generated from field: string from_day = 5;
+   */
+  fromDay: string;
+
+  /**
+   * @generated from field: string through_day = 6;
+   */
+  throughDay: string;
+
+  /**
+   * @generated from field: string verified_at = 7;
+   */
+  verifiedAt: string;
+
+  /**
+   * @generated from field: repeated omega.v1.CommerceStatementOrder orders = 8;
+   */
+  orders: CommerceStatementOrder[];
+
+  /**
+   * complete, partial or empty
+   *
+   * @generated from field: string coverage = 9;
+   */
+  coverage: string;
+
+  /**
+   * @generated from field: uint32 unresolved_scope_orders = 10;
+   */
+  unresolvedScopeOrders: number;
+};
+
+/**
+ * Describes the message omega.v1.CommerceStatement.
+ * Use `create(CommerceStatementSchema)` to create a new message.
+ */
+export const CommerceStatementSchema: GenMessage<CommerceStatement> = /*@__PURE__*/
+  messageDesc(file_omega_v1_digital_order, 5);
 
 /**
  * The provider's test environment is explicit in every exported receipt.

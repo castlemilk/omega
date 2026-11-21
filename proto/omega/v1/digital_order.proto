@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package omega.v1;
 
+import "google/protobuf/wrappers.proto";
+
 option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
 
 // The provider's test environment is explicit in every exported receipt.
@@ -54,4 +56,51 @@ message DigitalOrderReceipt {
   string dispute_status = 15;
   // Whether this same checkout can still be resumed or cancelled.
   bool checkout_open = 16;
+}
+
+// Each movement uses its Stripe balance transaction's own settlement currency.
+message CommerceBalanceMovement {
+  string id = 1;
+  string kind = 2; // charge or refund
+  string occurred_at = 3;
+  string currency = 4;
+  int64 amount_minor = 5;
+  int64 fee_minor = 6;
+  int64 net_minor = 7;
+}
+
+message CommerceStatementOrder {
+  string order_id = 1;
+  string created_at = 2;
+  string edition = 3;
+  string packet_sha256 = 4;
+  string archive_sha256 = 5;
+  string currency = 6;
+  int64 quoted_minor = 7;
+  DigitalPaymentState payment = 8;
+  // Both values are absent when current payment evidence is inconclusive.
+  google.protobuf.Int64Value captured_minor = 9;
+  google.protobuf.Int64Value refunded_minor = 10;
+  uint32 downloads_issued = 11;
+  uint32 processed_events = 12;
+  uint32 unresolved_events = 13;
+  google.protobuf.StringValue verified_at = 14;
+  google.protobuf.StringValue dispute_status = 15;
+  bool balance_complete = 16;
+  repeated CommerceBalanceMovement movements = 17;
+}
+
+// Membership uses order creation in the inclusive UTC window. Financial and
+// fulfilment evidence are current as of verification, across all editions.
+message CommerceStatement {
+  string schema = 1;
+  string business_id = 2;
+  string product_id = 3;
+  bool test_mode = 4;
+  string from_day = 5;
+  string through_day = 6;
+  string verified_at = 7;
+  repeated CommerceStatementOrder orders = 8;
+  string coverage = 9; // complete, partial or empty
+  uint32 unresolved_scope_orders = 10;
 }

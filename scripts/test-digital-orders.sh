@@ -9,7 +9,7 @@ export OMEGA_DIGITAL_ORDER_TEST_DSN="postgres://postgres:local-order-test@${port
 export OMEGA_DIGITAL_ORDER_BROWSER=1
 for _ in {1..40}; do
   if docker exec "$container" pg_isready -h 127.0.0.1 -U postgres -d digital_orders >/dev/null; then
-    go test -race -count=1 -timeout=120s ./internal/commerce ./projects/posters
+    go test -race -count=1 -timeout=120s ./internal/commerce ./projects/posters ./cmd/omega
     exit 0
   fi
   sleep 0.5

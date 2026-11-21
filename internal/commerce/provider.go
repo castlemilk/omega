@@ -36,6 +36,8 @@ type (
 	fact    struct {
 		state                    v1.DigitalPaymentState
 		payment, charge, dispute string
+		chargeBalance            json.RawMessage
+		captured                 *int64
 		refunded                 int64
 		open                     bool
 	}
@@ -61,7 +63,10 @@ func NewStripeTest(key string) (*StripeTest, error) {
 	if !strings.HasPrefix(key, "sk_test_") && !strings.HasPrefix(key, "rk_test_") && !strings.HasPrefix(key, "rkcs_test_") {
 		return nil, errors.New("a Stripe test credential is required")
 	}
-	return &StripeTest{client: stripe.NewClient(key), integration: "omega_posters_qknjbsva"}, nil
+	// Stripe errors can include credential fragments. Our callers surface scoped
+	// errors and coverage, so the SDK must not write raw responses to stderr.
+	backends := stripe.NewBackendsWithConfig(&stripe.BackendConfig{LeveledLogger: &stripe.LeveledLogger{Level: stripe.LevelNull}})
+	return &StripeTest{client: stripe.NewClient(key, stripe.WithBackends(backends)), integration: "omega_posters_qknjbsva"}, nil
 }
 
 func (p *StripeTest) Account(ctx context.Context) (string, error) {
@@ -121,10 +126,18 @@ func (p *StripeTest) expire(ctx context.Context, id string) error {
 }
 
 func (p *StripeTest) check(ctx context.Context, order, id string, offer *v1.DigitalOffer) (fact, error) {
+	return p.checkSession(ctx, order, id, offer, "payment_intent.latest_charge")
+}
+
+func (p *StripeTest) statementFact(ctx context.Context, order, id string, offer *v1.DigitalOffer) (fact, error) {
+	return p.checkSession(ctx, order, id, offer, "payment_intent.latest_charge.balance_transaction")
+}
+
+func (p *StripeTest) checkSession(ctx context.Context, order, id string, offer *v1.DigitalOffer, expand string) (fact, error) {
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
 	params := &stripe.CheckoutSessionRetrieveParams{}
-	params.AddExpand("payment_intent.latest_charge")
+	params.AddExpand(expand)
 	s, err := p.client.V1CheckoutSessions.Retrieve(ctx, id, params)
 	if err != nil {
 		return fact{}, err
@@ -140,6 +153,9 @@ func (p *StripeTest) check(ctx context.Context, order, id string, offer *v1.Digi
 	}
 	pi := s.PaymentIntent
 	if pi == nil {
+		if s.PaymentStatus == "unpaid" && (s.Status == "open" || s.Status == "expired") {
+			f.captured = new(int64)
+		}
 		return f, nil
 	}
 	if pi.Livemode || pi.ID == "" || pi.Metadata["omega_order"] != order || pi.Metadata["omega_offer"] != offerKey(offer) ||
@@ -147,13 +163,17 @@ func (p *StripeTest) check(ctx context.Context, order, id string, offer *v1.Digi
 		return fact{}, errors.New("provider payment differs from the order")
 	}
 	f.payment = pi.ID
+	c := pi.LatestCharge
+	if s.PaymentStatus == "unpaid" && pi.Status != "succeeded" && pi.AmountReceived == 0 &&
+		(c == nil || (!c.Paid && c.AmountCaptured == 0 && !c.Livemode && c.PaymentIntent != nil && c.PaymentIntent.ID == pi.ID)) {
+		f.captured = new(int64)
+	}
 	if f.state == expired {
 		return f, nil
 	}
 	if pi.LastPaymentError != nil || pi.Status == "canceled" {
 		f.state = failed
 	}
-	c := pi.LatestCharge
 	if s.Status != "complete" || s.PaymentStatus != "paid" || pi.Status != "succeeded" || pi.AmountReceived != offer.AmountMinor {
 		return f, nil
 	}
@@ -162,6 +182,20 @@ func (p *StripeTest) check(ctx context.Context, order, id string, offer *v1.Digi
 		return fact{}, errors.New("the captured charge does not match the quoted order")
 	}
 	f.charge = c.ID
+	// Preserve missing versus zero for reporting. The Stripe SDK's scalar
+	// AmountRefunded alone cannot make this distinction on a partial response.
+	var source struct {
+		PaymentIntent struct {
+			LatestCharge struct {
+				AmountRefunded     *int64          `json:"amount_refunded"`
+				BalanceTransaction json.RawMessage `json:"balance_transaction"`
+			} `json:"latest_charge"`
+		} `json:"payment_intent"`
+	}
+	if s.LastResponse != nil && json.Unmarshal(s.LastResponse.RawJSON, &source) == nil && source.PaymentIntent.LatestCharge.AmountRefunded != nil {
+		f.captured = &c.AmountCaptured
+		f.chargeBalance = source.PaymentIntent.LatestCharge.BalanceTransaction
+	}
 	f.refunded = c.AmountRefunded
 	f.state = paid
 	if c.Disputed {

@@ -183,25 +183,33 @@ func (s *Shop) Record(ctx context.Context, raw []byte, signature string) error {
 	return err
 }
 
+func (a order) checkedFact(ctx context.Context, check func(context.Context, string, string, *v1.DigitalOffer) (fact, error)) (fact, error) {
+	if a.session == "" {
+		return fact{}, ErrConflict
+	}
+	f, err := check(ctx, a.id, a.session, a.offer)
+	if err != nil {
+		return fact{}, err
+	}
+	if (a.charge != "" && (a.charge != f.charge || a.payment != f.payment)) || f.refunded < a.refunded ||
+		(a.entitled.Valid && (f.state == pending || f.state == failed || f.state == expired)) {
+		return fact{}, ErrConflict
+	}
+	// Only an already-verified provider expiration can confirm cancellation.
+	if a.state == cancelled && f.state == expired {
+		f.state = cancelled
+	}
+	return f, nil
+}
+
 func (s *Shop) syncTx(ctx context.Context, tx *sql.Tx, id string, buyer []byte) (order, error) {
 	a, err := s.order(ctx, tx, id, buyer, true)
 	if err != nil {
 		return a, err
 	}
-	if a.session == "" {
-		return a, ErrConflict
-	}
-	f, err := s.provider.check(ctx, a.id, a.session, a.offer)
+	f, err := a.checkedFact(ctx, s.provider.check)
 	if err != nil {
 		return a, err
-	}
-	if (a.charge != "" && (a.charge != f.charge || a.payment != f.payment)) || f.refunded < a.refunded ||
-		(a.entitled.Valid && (f.state == pending || f.state == failed || f.state == expired)) {
-		return a, ErrConflict
-	}
-	// Only an already-verified provider expiration can confirm cancellation.
-	if a.state == cancelled && f.state == expired {
-		f.state = cancelled
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE omega_digital_orders SET payment_id=$3,charge_id=$4,payment=$5,refunded=$6,dispute=$7,
 		entitled_at=CASE WHEN $5=2 THEN coalesce(entitled_at,now()) ELSE entitled_at END,verified_at=clock_timestamp(),

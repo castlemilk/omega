@@ -902,6 +902,63 @@ class DigitalOrderReceipt(betterproto.Message):
 
 
 @dataclass
+class CommerceBalanceMovement(betterproto.Message):
+    """
+    Each movement uses its Stripe balance transaction's own settlement
+    currency.
+    """
+
+    id: str = betterproto.string_field(1)
+    kind: str = betterproto.string_field(2)
+    occurred_at: str = betterproto.string_field(3)
+    currency: str = betterproto.string_field(4)
+    amount_minor: int = betterproto.int64_field(5)
+    fee_minor: int = betterproto.int64_field(6)
+    net_minor: int = betterproto.int64_field(7)
+
+
+@dataclass
+class CommerceStatementOrder(betterproto.Message):
+    order_id: str = betterproto.string_field(1)
+    created_at: str = betterproto.string_field(2)
+    edition: str = betterproto.string_field(3)
+    packet_sha256: str = betterproto.string_field(4)
+    archive_sha256: str = betterproto.string_field(5)
+    currency: str = betterproto.string_field(6)
+    quoted_minor: int = betterproto.int64_field(7)
+    payment: "DigitalPaymentState" = betterproto.enum_field(8)
+    # Both values are absent when current payment evidence is inconclusive.
+    captured_minor: Optional[int] = betterproto.message_field(9, wraps=betterproto.TYPE_INT64)
+    refunded_minor: Optional[int] = betterproto.message_field(10, wraps=betterproto.TYPE_INT64)
+    downloads_issued: int = betterproto.uint32_field(11)
+    processed_events: int = betterproto.uint32_field(12)
+    unresolved_events: int = betterproto.uint32_field(13)
+    verified_at: Optional[str] = betterproto.message_field(14, wraps=betterproto.TYPE_STRING)
+    dispute_status: Optional[str] = betterproto.message_field(15, wraps=betterproto.TYPE_STRING)
+    balance_complete: bool = betterproto.bool_field(16)
+    movements: List["CommerceBalanceMovement"] = betterproto.message_field(17)
+
+
+@dataclass
+class CommerceStatement(betterproto.Message):
+    """
+    Membership uses order creation in the inclusive UTC window. Financial and
+    fulfilment evidence are current as of verification, across all editions.
+    """
+
+    schema: str = betterproto.string_field(1)
+    business_id: str = betterproto.string_field(2)
+    product_id: str = betterproto.string_field(3)
+    test_mode: bool = betterproto.bool_field(4)
+    from_day: str = betterproto.string_field(5)
+    through_day: str = betterproto.string_field(6)
+    verified_at: str = betterproto.string_field(7)
+    orders: List["CommerceStatementOrder"] = betterproto.message_field(8)
+    coverage: str = betterproto.string_field(9)
+    unresolved_scope_orders: int = betterproto.uint32_field(10)
+
+
+@dataclass
 class ScheduleEntry(betterproto.Message):
     node_id: str = betterproto.string_field(1)
     priority: float = betterproto.double_field(2)

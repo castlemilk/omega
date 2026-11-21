@@ -13,7 +13,7 @@ import (
 
 func init() {
 	command := &cobra.Command{Use: "posters", Short: "Operate the Signal Studies poster business"}
-	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand())
+	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand(), posterStatementCommand())
 	var edition string
 	prepare := &cobra.Command{
 		Use:   "prepare COLLECTION_DIRECTORY",

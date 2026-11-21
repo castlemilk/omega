@@ -9,6 +9,7 @@ package omegav1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -435,11 +436,395 @@ func (x *DigitalOrderReceipt) GetCheckoutOpen() bool {
 	return false
 }
 
+// Each movement uses its Stripe balance transaction's own settlement currency.
+type CommerceBalanceMovement struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"` // charge or refund
+	OccurredAt    string                 `protobuf:"bytes,3,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	Currency      string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
+	AmountMinor   int64                  `protobuf:"varint,5,opt,name=amount_minor,json=amountMinor,proto3" json:"amount_minor,omitempty"`
+	FeeMinor      int64                  `protobuf:"varint,6,opt,name=fee_minor,json=feeMinor,proto3" json:"fee_minor,omitempty"`
+	NetMinor      int64                  `protobuf:"varint,7,opt,name=net_minor,json=netMinor,proto3" json:"net_minor,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommerceBalanceMovement) Reset() {
+	*x = CommerceBalanceMovement{}
+	mi := &file_omega_v1_digital_order_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommerceBalanceMovement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommerceBalanceMovement) ProtoMessage() {}
+
+func (x *CommerceBalanceMovement) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_digital_order_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommerceBalanceMovement.ProtoReflect.Descriptor instead.
+func (*CommerceBalanceMovement) Descriptor() ([]byte, []int) {
+	return file_omega_v1_digital_order_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CommerceBalanceMovement) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CommerceBalanceMovement) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *CommerceBalanceMovement) GetOccurredAt() string {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return ""
+}
+
+func (x *CommerceBalanceMovement) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *CommerceBalanceMovement) GetAmountMinor() int64 {
+	if x != nil {
+		return x.AmountMinor
+	}
+	return 0
+}
+
+func (x *CommerceBalanceMovement) GetFeeMinor() int64 {
+	if x != nil {
+		return x.FeeMinor
+	}
+	return 0
+}
+
+func (x *CommerceBalanceMovement) GetNetMinor() int64 {
+	if x != nil {
+		return x.NetMinor
+	}
+	return 0
+}
+
+type CommerceStatementOrder struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OrderId       string                 `protobuf:"bytes,1,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
+	CreatedAt     string                 `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Edition       string                 `protobuf:"bytes,3,opt,name=edition,proto3" json:"edition,omitempty"`
+	PacketSha256  string                 `protobuf:"bytes,4,opt,name=packet_sha256,json=packetSha256,proto3" json:"packet_sha256,omitempty"`
+	ArchiveSha256 string                 `protobuf:"bytes,5,opt,name=archive_sha256,json=archiveSha256,proto3" json:"archive_sha256,omitempty"`
+	Currency      string                 `protobuf:"bytes,6,opt,name=currency,proto3" json:"currency,omitempty"`
+	QuotedMinor   int64                  `protobuf:"varint,7,opt,name=quoted_minor,json=quotedMinor,proto3" json:"quoted_minor,omitempty"`
+	Payment       DigitalPaymentState    `protobuf:"varint,8,opt,name=payment,proto3,enum=omega.v1.DigitalPaymentState" json:"payment,omitempty"`
+	// Both values are absent when current payment evidence is inconclusive.
+	CapturedMinor    *wrapperspb.Int64Value     `protobuf:"bytes,9,opt,name=captured_minor,json=capturedMinor,proto3" json:"captured_minor,omitempty"`
+	RefundedMinor    *wrapperspb.Int64Value     `protobuf:"bytes,10,opt,name=refunded_minor,json=refundedMinor,proto3" json:"refunded_minor,omitempty"`
+	DownloadsIssued  uint32                     `protobuf:"varint,11,opt,name=downloads_issued,json=downloadsIssued,proto3" json:"downloads_issued,omitempty"`
+	ProcessedEvents  uint32                     `protobuf:"varint,12,opt,name=processed_events,json=processedEvents,proto3" json:"processed_events,omitempty"`
+	UnresolvedEvents uint32                     `protobuf:"varint,13,opt,name=unresolved_events,json=unresolvedEvents,proto3" json:"unresolved_events,omitempty"`
+	VerifiedAt       *wrapperspb.StringValue    `protobuf:"bytes,14,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
+	DisputeStatus    *wrapperspb.StringValue    `protobuf:"bytes,15,opt,name=dispute_status,json=disputeStatus,proto3" json:"dispute_status,omitempty"`
+	BalanceComplete  bool                       `protobuf:"varint,16,opt,name=balance_complete,json=balanceComplete,proto3" json:"balance_complete,omitempty"`
+	Movements        []*CommerceBalanceMovement `protobuf:"bytes,17,rep,name=movements,proto3" json:"movements,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *CommerceStatementOrder) Reset() {
+	*x = CommerceStatementOrder{}
+	mi := &file_omega_v1_digital_order_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommerceStatementOrder) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommerceStatementOrder) ProtoMessage() {}
+
+func (x *CommerceStatementOrder) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_digital_order_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommerceStatementOrder.ProtoReflect.Descriptor instead.
+func (*CommerceStatementOrder) Descriptor() ([]byte, []int) {
+	return file_omega_v1_digital_order_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CommerceStatementOrder) GetOrderId() string {
+	if x != nil {
+		return x.OrderId
+	}
+	return ""
+}
+
+func (x *CommerceStatementOrder) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *CommerceStatementOrder) GetEdition() string {
+	if x != nil {
+		return x.Edition
+	}
+	return ""
+}
+
+func (x *CommerceStatementOrder) GetPacketSha256() string {
+	if x != nil {
+		return x.PacketSha256
+	}
+	return ""
+}
+
+func (x *CommerceStatementOrder) GetArchiveSha256() string {
+	if x != nil {
+		return x.ArchiveSha256
+	}
+	return ""
+}
+
+func (x *CommerceStatementOrder) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *CommerceStatementOrder) GetQuotedMinor() int64 {
+	if x != nil {
+		return x.QuotedMinor
+	}
+	return 0
+}
+
+func (x *CommerceStatementOrder) GetPayment() DigitalPaymentState {
+	if x != nil {
+		return x.Payment
+	}
+	return DigitalPaymentState_DIGITAL_PAYMENT_STATE_UNSPECIFIED
+}
+
+func (x *CommerceStatementOrder) GetCapturedMinor() *wrapperspb.Int64Value {
+	if x != nil {
+		return x.CapturedMinor
+	}
+	return nil
+}
+
+func (x *CommerceStatementOrder) GetRefundedMinor() *wrapperspb.Int64Value {
+	if x != nil {
+		return x.RefundedMinor
+	}
+	return nil
+}
+
+func (x *CommerceStatementOrder) GetDownloadsIssued() uint32 {
+	if x != nil {
+		return x.DownloadsIssued
+	}
+	return 0
+}
+
+func (x *CommerceStatementOrder) GetProcessedEvents() uint32 {
+	if x != nil {
+		return x.ProcessedEvents
+	}
+	return 0
+}
+
+func (x *CommerceStatementOrder) GetUnresolvedEvents() uint32 {
+	if x != nil {
+		return x.UnresolvedEvents
+	}
+	return 0
+}
+
+func (x *CommerceStatementOrder) GetVerifiedAt() *wrapperspb.StringValue {
+	if x != nil {
+		return x.VerifiedAt
+	}
+	return nil
+}
+
+func (x *CommerceStatementOrder) GetDisputeStatus() *wrapperspb.StringValue {
+	if x != nil {
+		return x.DisputeStatus
+	}
+	return nil
+}
+
+func (x *CommerceStatementOrder) GetBalanceComplete() bool {
+	if x != nil {
+		return x.BalanceComplete
+	}
+	return false
+}
+
+func (x *CommerceStatementOrder) GetMovements() []*CommerceBalanceMovement {
+	if x != nil {
+		return x.Movements
+	}
+	return nil
+}
+
+// Membership uses order creation in the inclusive UTC window. Financial and
+// fulfilment evidence are current as of verification, across all editions.
+type CommerceStatement struct {
+	state                 protoimpl.MessageState    `protogen:"open.v1"`
+	Schema                string                    `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
+	BusinessId            string                    `protobuf:"bytes,2,opt,name=business_id,json=businessId,proto3" json:"business_id,omitempty"`
+	ProductId             string                    `protobuf:"bytes,3,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"`
+	TestMode              bool                      `protobuf:"varint,4,opt,name=test_mode,json=testMode,proto3" json:"test_mode,omitempty"`
+	FromDay               string                    `protobuf:"bytes,5,opt,name=from_day,json=fromDay,proto3" json:"from_day,omitempty"`
+	ThroughDay            string                    `protobuf:"bytes,6,opt,name=through_day,json=throughDay,proto3" json:"through_day,omitempty"`
+	VerifiedAt            string                    `protobuf:"bytes,7,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
+	Orders                []*CommerceStatementOrder `protobuf:"bytes,8,rep,name=orders,proto3" json:"orders,omitempty"`
+	Coverage              string                    `protobuf:"bytes,9,opt,name=coverage,proto3" json:"coverage,omitempty"` // complete, partial or empty
+	UnresolvedScopeOrders uint32                    `protobuf:"varint,10,opt,name=unresolved_scope_orders,json=unresolvedScopeOrders,proto3" json:"unresolved_scope_orders,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *CommerceStatement) Reset() {
+	*x = CommerceStatement{}
+	mi := &file_omega_v1_digital_order_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommerceStatement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommerceStatement) ProtoMessage() {}
+
+func (x *CommerceStatement) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_digital_order_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommerceStatement.ProtoReflect.Descriptor instead.
+func (*CommerceStatement) Descriptor() ([]byte, []int) {
+	return file_omega_v1_digital_order_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CommerceStatement) GetSchema() string {
+	if x != nil {
+		return x.Schema
+	}
+	return ""
+}
+
+func (x *CommerceStatement) GetBusinessId() string {
+	if x != nil {
+		return x.BusinessId
+	}
+	return ""
+}
+
+func (x *CommerceStatement) GetProductId() string {
+	if x != nil {
+		return x.ProductId
+	}
+	return ""
+}
+
+func (x *CommerceStatement) GetTestMode() bool {
+	if x != nil {
+		return x.TestMode
+	}
+	return false
+}
+
+func (x *CommerceStatement) GetFromDay() string {
+	if x != nil {
+		return x.FromDay
+	}
+	return ""
+}
+
+func (x *CommerceStatement) GetThroughDay() string {
+	if x != nil {
+		return x.ThroughDay
+	}
+	return ""
+}
+
+func (x *CommerceStatement) GetVerifiedAt() string {
+	if x != nil {
+		return x.VerifiedAt
+	}
+	return ""
+}
+
+func (x *CommerceStatement) GetOrders() []*CommerceStatementOrder {
+	if x != nil {
+		return x.Orders
+	}
+	return nil
+}
+
+func (x *CommerceStatement) GetCoverage() string {
+	if x != nil {
+		return x.Coverage
+	}
+	return ""
+}
+
+func (x *CommerceStatement) GetUnresolvedScopeOrders() uint32 {
+	if x != nil {
+		return x.UnresolvedScopeOrders
+	}
+	return 0
+}
+
 var File_omega_v1_digital_order_proto protoreflect.FileDescriptor
 
 const file_omega_v1_digital_order_proto_rawDesc = "" +
 	"\n" +
-	"\x1comega/v1/digital_order.proto\x12\bomega.v1\"\xb0\x02\n" +
+	"\x1comega/v1/digital_order.proto\x12\bomega.v1\x1a\x1egoogle/protobuf/wrappers.proto\"\xb0\x02\n" +
 	"\fDigitalOffer\x12\x1f\n" +
 	"\vbusiness_id\x18\x01 \x01(\tR\n" +
 	"businessId\x12\x1d\n" +
@@ -478,7 +863,53 @@ const file_omega_v1_digital_order_proto_rawDesc = "" +
 	"verifiedAt\x123\n" +
 	"\x06events\x18\x0e \x03(\v2\x1b.omega.v1.DigitalOrderEventR\x06events\x12%\n" +
 	"\x0edispute_status\x18\x0f \x01(\tR\rdisputeStatus\x12#\n" +
-	"\rcheckout_open\x18\x10 \x01(\bR\fcheckoutOpen*\xb1\x02\n" +
+	"\rcheckout_open\x18\x10 \x01(\bR\fcheckoutOpen\"\xd7\x01\n" +
+	"\x17CommerceBalanceMovement\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x1f\n" +
+	"\voccurred_at\x18\x03 \x01(\tR\n" +
+	"occurredAt\x12\x1a\n" +
+	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12!\n" +
+	"\famount_minor\x18\x05 \x01(\x03R\vamountMinor\x12\x1b\n" +
+	"\tfee_minor\x18\x06 \x01(\x03R\bfeeMinor\x12\x1b\n" +
+	"\tnet_minor\x18\a \x01(\x03R\bnetMinor\"\xab\x06\n" +
+	"\x16CommerceStatementOrder\x12\x19\n" +
+	"\border_id\x18\x01 \x01(\tR\aorderId\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x02 \x01(\tR\tcreatedAt\x12\x18\n" +
+	"\aedition\x18\x03 \x01(\tR\aedition\x12#\n" +
+	"\rpacket_sha256\x18\x04 \x01(\tR\fpacketSha256\x12%\n" +
+	"\x0earchive_sha256\x18\x05 \x01(\tR\rarchiveSha256\x12\x1a\n" +
+	"\bcurrency\x18\x06 \x01(\tR\bcurrency\x12!\n" +
+	"\fquoted_minor\x18\a \x01(\x03R\vquotedMinor\x127\n" +
+	"\apayment\x18\b \x01(\x0e2\x1d.omega.v1.DigitalPaymentStateR\apayment\x12B\n" +
+	"\x0ecaptured_minor\x18\t \x01(\v2\x1b.google.protobuf.Int64ValueR\rcapturedMinor\x12B\n" +
+	"\x0erefunded_minor\x18\n" +
+	" \x01(\v2\x1b.google.protobuf.Int64ValueR\rrefundedMinor\x12)\n" +
+	"\x10downloads_issued\x18\v \x01(\rR\x0fdownloadsIssued\x12)\n" +
+	"\x10processed_events\x18\f \x01(\rR\x0fprocessedEvents\x12+\n" +
+	"\x11unresolved_events\x18\r \x01(\rR\x10unresolvedEvents\x12=\n" +
+	"\vverified_at\x18\x0e \x01(\v2\x1c.google.protobuf.StringValueR\n" +
+	"verifiedAt\x12C\n" +
+	"\x0edispute_status\x18\x0f \x01(\v2\x1c.google.protobuf.StringValueR\rdisputeStatus\x12)\n" +
+	"\x10balance_complete\x18\x10 \x01(\bR\x0fbalanceComplete\x12?\n" +
+	"\tmovements\x18\x11 \x03(\v2!.omega.v1.CommerceBalanceMovementR\tmovements\"\xf3\x02\n" +
+	"\x11CommerceStatement\x12\x16\n" +
+	"\x06schema\x18\x01 \x01(\tR\x06schema\x12\x1f\n" +
+	"\vbusiness_id\x18\x02 \x01(\tR\n" +
+	"businessId\x12\x1d\n" +
+	"\n" +
+	"product_id\x18\x03 \x01(\tR\tproductId\x12\x1b\n" +
+	"\ttest_mode\x18\x04 \x01(\bR\btestMode\x12\x19\n" +
+	"\bfrom_day\x18\x05 \x01(\tR\afromDay\x12\x1f\n" +
+	"\vthrough_day\x18\x06 \x01(\tR\n" +
+	"throughDay\x12\x1f\n" +
+	"\vverified_at\x18\a \x01(\tR\n" +
+	"verifiedAt\x128\n" +
+	"\x06orders\x18\b \x03(\v2 .omega.v1.CommerceStatementOrderR\x06orders\x12\x1a\n" +
+	"\bcoverage\x18\t \x01(\tR\bcoverage\x126\n" +
+	"\x17unresolved_scope_orders\x18\n" +
+	" \x01(\rR\x15unresolvedScopeOrders*\xb1\x02\n" +
 	"\x13DigitalPaymentState\x12%\n" +
 	"!DIGITAL_PAYMENT_STATE_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dDIGITAL_PAYMENT_STATE_PENDING\x10\x01\x12\x1e\n" +
@@ -502,22 +933,34 @@ func file_omega_v1_digital_order_proto_rawDescGZIP() []byte {
 }
 
 var file_omega_v1_digital_order_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_omega_v1_digital_order_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_omega_v1_digital_order_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_omega_v1_digital_order_proto_goTypes = []any{
-	(DigitalPaymentState)(0),    // 0: omega.v1.DigitalPaymentState
-	(*DigitalOffer)(nil),        // 1: omega.v1.DigitalOffer
-	(*DigitalOrderEvent)(nil),   // 2: omega.v1.DigitalOrderEvent
-	(*DigitalOrderReceipt)(nil), // 3: omega.v1.DigitalOrderReceipt
+	(DigitalPaymentState)(0),        // 0: omega.v1.DigitalPaymentState
+	(*DigitalOffer)(nil),            // 1: omega.v1.DigitalOffer
+	(*DigitalOrderEvent)(nil),       // 2: omega.v1.DigitalOrderEvent
+	(*DigitalOrderReceipt)(nil),     // 3: omega.v1.DigitalOrderReceipt
+	(*CommerceBalanceMovement)(nil), // 4: omega.v1.CommerceBalanceMovement
+	(*CommerceStatementOrder)(nil),  // 5: omega.v1.CommerceStatementOrder
+	(*CommerceStatement)(nil),       // 6: omega.v1.CommerceStatement
+	(*wrapperspb.Int64Value)(nil),   // 7: google.protobuf.Int64Value
+	(*wrapperspb.StringValue)(nil),  // 8: google.protobuf.StringValue
 }
 var file_omega_v1_digital_order_proto_depIdxs = []int32{
-	1, // 0: omega.v1.DigitalOrderReceipt.offer:type_name -> omega.v1.DigitalOffer
-	0, // 1: omega.v1.DigitalOrderReceipt.payment:type_name -> omega.v1.DigitalPaymentState
-	2, // 2: omega.v1.DigitalOrderReceipt.events:type_name -> omega.v1.DigitalOrderEvent
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	1,  // 0: omega.v1.DigitalOrderReceipt.offer:type_name -> omega.v1.DigitalOffer
+	0,  // 1: omega.v1.DigitalOrderReceipt.payment:type_name -> omega.v1.DigitalPaymentState
+	2,  // 2: omega.v1.DigitalOrderReceipt.events:type_name -> omega.v1.DigitalOrderEvent
+	0,  // 3: omega.v1.CommerceStatementOrder.payment:type_name -> omega.v1.DigitalPaymentState
+	7,  // 4: omega.v1.CommerceStatementOrder.captured_minor:type_name -> google.protobuf.Int64Value
+	7,  // 5: omega.v1.CommerceStatementOrder.refunded_minor:type_name -> google.protobuf.Int64Value
+	8,  // 6: omega.v1.CommerceStatementOrder.verified_at:type_name -> google.protobuf.StringValue
+	8,  // 7: omega.v1.CommerceStatementOrder.dispute_status:type_name -> google.protobuf.StringValue
+	4,  // 8: omega.v1.CommerceStatementOrder.movements:type_name -> omega.v1.CommerceBalanceMovement
+	5,  // 9: omega.v1.CommerceStatement.orders:type_name -> omega.v1.CommerceStatementOrder
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_digital_order_proto_init() }
@@ -531,7 +974,7 @@ func file_omega_v1_digital_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_digital_order_proto_rawDesc), len(file_omega_v1_digital_order_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   3,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

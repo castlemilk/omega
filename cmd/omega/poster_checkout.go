@@ -30,7 +30,10 @@ func posterTestConnection() (*commerce.StripeTest, *sql.DB, error) {
 		return nil, nil, errors.New("set OMEGA_POSTER_COMMERCE_DATABASE_URL to the sandbox order database")
 	}
 	db, err := sql.Open("pgx", dsn)
-	return gateway, db, err
+	if err != nil {
+		return nil, nil, errors.New("the sandbox order database connection could not be opened")
+	}
+	return gateway, db, nil
 }
 
 func posterOrderReceiptCommand() *cobra.Command {
@@ -56,6 +59,37 @@ func posterOrderReceiptCommand() *cobra.Command {
 			return err
 		},
 	}
+}
+
+func posterStatementCommand() *cobra.Command {
+	var from, through string
+	command := &cobra.Command{
+		Use: "test-statement", Short: "Export a provider-verified statement for Signal Studies test orders",
+		Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+			gateway, db, err := posterTestConnection()
+			if err != nil {
+				return err
+			}
+			defer func() { _ = db.Close() }()
+			ctx, cancel := context.WithTimeout(cmd.Context(), 5*time.Minute)
+			defer cancel()
+			statement, err := commerce.OperatorStatement(ctx, db, gateway, posters.StudioBusinessID, posters.StudioProductID, from, through)
+			if err != nil {
+				return err
+			}
+			body, err := commerce.StatementJSON(statement)
+			if err != nil {
+				return err
+			}
+			_, err = cmd.OutOrStdout().Write(body)
+			return err
+		},
+	}
+	command.Flags().StringVar(&from, "from", "", "First UTC order creation day (YYYY-MM-DD)")
+	command.Flags().StringVar(&through, "through", "", "Last UTC order creation day, inclusive (YYYY-MM-DD)")
+	_ = command.MarkFlagRequired("from")
+	_ = command.MarkFlagRequired("through")
+	return command
 }
 
 func posterCheckoutCommand() *cobra.Command {

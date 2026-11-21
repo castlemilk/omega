@@ -78,3 +78,17 @@ Open the printed loopback address, start checkout and use Stripe's published tes
 `make test-digital-orders` starts a fresh local PostgreSQL container, runs the race-enabled order, signature and reconciliation tests, and drives Chromium through purchase, download and revocation with a local provider fixture. It uses Docker, Node and the locked Playwright installation in `web/dashboard`. The local commit hook runs this suite for changes to the poster order flow.
 
 Set `OMEGA_POSTER_TEST_COLLECTION` to Studio’s `public/collections/signal-studies` directory when running those tests to include both reviewed editions. The test buys each edition through the local provider, switches to the corrected checkout, then verifies each order’s original download and receipt. Chromium also opens the Phase portrait preview, downloads the corrected ZIP, verifies its checksum and checks that a full simulated refund closes access.
+
+## Export a test order statement
+
+Use the same sandbox key and order database as the checkout. Select the first and last **order creation days in UTC**. Omega includes every Signal Studies edition sold by this business in that account. Rerunning an earlier period includes subsequent refunds, disputes, downloads and event processing on its orders.
+
+```sh
+omega posters test-statement --from 2026-11-01 --through 2026-11-21 > test-orders.json
+```
+
+The JSON identifies each edition by its approved packet and delivery ZIP checksums. It gives the quoted amount, verified capture and successful customer refunds in the order currency, plus downloads issued and counts of processed and unresolved signed events. Amounts use integer minor units encoded as decimal strings. An unresolved payment omits both amounts and the order verification time. A confirmed zero is recorded as `"0"`.
+
+Omega requests the balance transaction attached to the matching charge and each successful refund. Each movement carries its own settlement currency, signed amount, fee and net balance impact. Pending availability can have a verified fee. A missing fee or unexpanded transaction leaves `balanceComplete` false. A pending refund or dispute also leaves the statement partial. Customer amounts and processor movements can use different currencies. [Stripe balance transactions](https://docs.stripe.com/api/balance_transactions/object) [Stripe refund states](https://docs.stripe.com/api/refunds/object)
+
+Coverage is `empty` when the selected account and product have no orders in the window and every row could be identified. A `partial` statement preserves independent verified orders, flags incomplete evidence, and counts any records whose scope or immutable offer could not be verified in `unresolvedScopeOrders`. A `complete` statement contains the current verified rows and all matching charge and refund movements. The export accepts up to 366 days through today, checks at most 10,000 business orders and 500 product orders, and writes at most 160,000 bytes. A period exceeding any limit fails explicitly.

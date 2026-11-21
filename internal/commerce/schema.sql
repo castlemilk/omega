@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS omega_digital_orders (
 );
 -- Existing orders are checked with Stripe before the UI offers a retry.
 ALTER TABLE omega_digital_orders ADD COLUMN IF NOT EXISTS checkout_open boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS omega_digital_created ON omega_digital_orders(connection_id, created_at, id);
 CREATE INDEX IF NOT EXISTS omega_digital_by_payment ON omega_digital_orders(connection_id, payment_id) WHERE payment_id <> '';
 CREATE INDEX IF NOT EXISTS omega_digital_by_charge ON omega_digital_orders(connection_id, charge_id) WHERE charge_id <> '';
 CREATE TABLE IF NOT EXISTS omega_digital_inbox (
@@ -47,3 +48,4 @@ CREATE TABLE IF NOT EXISTS omega_digital_inbox (
 );
 CREATE INDEX IF NOT EXISTS omega_digital_ready ON omega_digital_inbox(connection_id, status, next_attempt);
 CREATE INDEX IF NOT EXISTS omega_digital_subject ON omega_digital_inbox(connection_id, subject_kind, subject_id);
+CREATE INDEX IF NOT EXISTS omega_digital_inbox_order ON omega_digital_inbox(connection_id, order_id) WHERE order_id IS NOT NULL;
