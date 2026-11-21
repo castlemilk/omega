@@ -31,9 +31,9 @@ var (
 const downloadLifetime = 24 * time.Hour
 
 type Shop struct {
-	db                                         *sql.DB
-	connection, offerID, origin, webhookSecret string
-	provider                                   Provider
+	db                                                  *sql.DB
+	connection, offerID, edition, origin, webhookSecret string
+	provider                                            Provider
 }
 
 func Open(ctx context.Context, db *sql.DB, account, origin, signingSecret string, provider Provider, offer *v1.DigitalOffer, archive []byte) (*Shop, error) {
@@ -47,7 +47,7 @@ func Open(ctx context.Context, db *sql.DB, account, origin, signingSecret string
 		!strings.HasSuffix(offer.ArchiveName, ".zip") || offer.AmountMinor <= 0 || len(offer.Currency) != 3 {
 		return nil, errors.New("incomplete test connection or immutable offer")
 	}
-	s := &Shop{db: db, connection: account + "/" + offer.BusinessId, offerID: offerKey(offer), origin: origin, webhookSecret: signingSecret, provider: provider}
+	s := &Shop{db: db, connection: account + "/" + offer.BusinessId, offerID: offerKey(offer), edition: offer.Edition, origin: origin, webhookSecret: signingSecret, provider: provider}
 	// Serialise first-start DDL across processes. DDL and the immutable offer
 	// become visible together. An order always retains its original offer key.
 	tx, err := db.BeginTx(ctx, nil)

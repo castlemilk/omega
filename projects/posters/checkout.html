@@ -149,12 +149,13 @@
 <body>
   <header><strong>Omega Business Studio</strong><a href="{{.Studio}}">Private poster store</a></header>
   <main>
+    {{- $editorial := eq .Edition "signal-studies-editorial-01" }}
     {{if .Receipt}}
       <p class="note">Test order · {{.Receipt.Offer.Edition}}</p>
       <h1>{{.Status}}</h1>
       <p>{{.Message}}</p>
       {{if .Receipt.DownloadAvailable}}
-        <form method="post" action="/orders/{{.ID}}/download"><button>Download the six PDFs</button></form>
+        <form method="post" action="/orders/{{.ID}}/download"><button>{{if $editorial}}Download the print ZIP{{else}}Download the six PDFs{{end}}</button></form>
       {{else if .Receipt.EntitlementId}}
         <p>Download access is closed. Copies already saved by the buyer stay on their device.</p>
       {{end}}
@@ -197,10 +198,10 @@
       <p class="note">Private checkout test</p>
       <h1>{{.Title}}</h1>
       <article>
-        <figure><img src="/artwork" width="708" height="1000" alt="Harmonic sum, the A4 print from the approved edition"></figure>
+        <figure><img src="/artwork" width="708" height="1000" alt="{{if $editorial}}Phase portrait{{else}}Harmonic sum{{end}}, the A4 print from the approved edition"></figure>
         <section>
           <h2>Three mathematical prints</h2>
-          <p>Six vector PDFs in A3 and A4, with the printing guide and font notice.</p>
+          <p>{{if $editorial}}One ZIP contains six vector PDFs in A3 and A4, a printing guide and a font notice.{{else}}Six vector PDFs in A3 and A4, with the printing guide and font notice.{{end}}</p>
           <p class="amount">{{.Amount}} in test funds</p>
           <p>Stripe simulates this purchase. Use test details at checkout.</p>
           <form method="post" action="/orders">

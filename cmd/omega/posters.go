@@ -14,12 +14,13 @@ import (
 func init() {
 	command := &cobra.Command{Use: "posters", Short: "Operate the Signal Studies poster business"}
 	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand())
-	command.AddCommand(&cobra.Command{
+	var edition string
+	prepare := &cobra.Command{
 		Use:   "prepare COLLECTION_DIRECTORY",
 		Short: "Verify the six delivery PDFs and emit the selected release candidate",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			candidate, err := posters.Candidate(os.DirFS(args[0]))
+			candidate, err := posters.CandidateForEdition(os.DirFS(args[0]), edition)
 			if err != nil {
 				return err
 			}
@@ -30,7 +31,9 @@ func init() {
 			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(data))
 			return err
 		},
-	})
+	}
+	prepare.Flags().StringVar(&edition, "edition", posters.OriginalEdition, "Edition to verify ("+posters.OriginalEdition+" or "+posters.EditorialEdition+")")
+	command.AddCommand(prepare)
 	var experiment, source, from, through, evidence string
 	measure := &cobra.Command{
 		Use:   "measure OBSERVATIONS.csv",

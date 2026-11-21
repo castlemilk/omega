@@ -4,13 +4,18 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
+	"mime"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -20,6 +25,8 @@ import (
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 // This gateway is used only for offline regression tests. The checkout URL
@@ -30,6 +37,8 @@ type fixtureGateway struct {
 	creates      int
 	loseResponse bool
 }
+
+const editorialPosterPacketSHA = "8e343a7789b0994d4093682e0849842929e47709dfe4121157670649ed19d33d"
 
 func (f *fixtureGateway) create(_ context.Context, id string, _ *v1.DigitalOffer, origin string) (session, error) {
 	f.mu.Lock()
@@ -78,7 +87,7 @@ func (f *fixtureGateway) expire(_ context.Context, sessionID string) error {
 	return errors.New("not an open session")
 }
 
-func testShop(t *testing.T, origin string) (*Shop, *fixtureGateway, []byte) {
+func testOrderDB(t *testing.T) *sql.DB {
 	t.Helper()
 	dsn := os.Getenv("OMEGA_DIGITAL_ORDER_TEST_DSN")
 	if dsn == "" {
@@ -87,12 +96,107 @@ func testShop(t *testing.T, origin string) (*Shop, *fixtureGateway, []byte) {
 	db, err := sql.Open("pgx", dsn)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
+	return db
+}
+
+func testShop(t *testing.T, origin string) (*Shop, *fixtureGateway, []byte) {
+	t.Helper()
+	db := testOrderDB(t)
 	g := &fixtureGateway{states: make(map[string]fact)}
 	archive := []byte("frozen first edition")
 	s, err := Open(t.Context(), db, "acct_fixture_"+uuid.NewString(), origin, testSecret, g, testOffer(archive), archive)
 	require.NoError(t, err)
 	buyer := bytes.Repeat([]byte{1}, 32)
 	return s, g, buyer
+}
+
+func TestOrdersKeepReviewedPosterEditions(t *testing.T) {
+	dir := os.Getenv("OMEGA_POSTER_TEST_COLLECTION")
+	if dir == "" {
+		t.Skip("set OMEGA_POSTER_TEST_COLLECTION to test both Studio editions with their actual files")
+	}
+	collection := os.DirFS(dir)
+	db := testOrderDB(t)
+	ctx := t.Context()
+	account := "acct_fixture_" + uuid.NewString()
+	gateway := &fixtureGateway{states: make(map[string]fact)}
+	const origin = "http://127.0.0.1"
+	var checkout *Shop
+	var handler http.Handler
+	var buyer *http.Cookie
+	request := func(method, route string, form url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, origin+route, strings.NewReader(form.Encode()))
+		if buyer != nil {
+			req.AddCookie(buyer)
+		}
+		if method == http.MethodPost {
+			req.Header.Set("Origin", origin)
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		}
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, req)
+		return response
+	}
+	type purchase struct {
+		id, label string
+		want      *v1.DigitalOffer
+	}
+	orders := make([]purchase, 0, 2)
+	for _, tc := range []struct{ edition, packetSHA, pack, preview, lead, label string }{
+		{posters.OriginalEdition, "18d06477efdfa9c34ebc6dfa08986457618faaf7afb32c0d2c8c38191c584afa", "signal-studies-print-candidate.zip", "print-1.png", "Harmonic sum", "Download the six PDFs"},
+		{posters.EditorialEdition, editorialPosterPacketSHA, "reader-proof-01/signal-studies.zip", "print-2.png", "Phase portrait", "Download the print ZIP"},
+	} {
+		packet, err := os.ReadFile("../../projects/posters/testdata/" + tc.edition + ".json")
+		require.NoError(t, err)
+		offer, pack, preview, err := posters.TestOffer(collection, packet, tc.packetSHA)
+		require.NoError(t, err)
+		wantPack, err := fs.ReadFile(collection, tc.pack)
+		require.NoError(t, err)
+		wantPreview, err := fs.ReadFile(collection, tc.preview)
+		require.NoError(t, err)
+		require.Equal(t, wantPack, pack)
+		require.Equal(t, wantPreview, preview)
+		require.Equal(t, filepath.Base(tc.pack), offer.ArchiveName)
+		require.Equal(t, tc.packetSHA, offer.PacketSha256)
+		require.Equal(t, tc.edition, offer.Edition)
+		require.Equal(t, int64(1200), offer.AmountMinor)
+		require.Equal(t, "aud", offer.Currency)
+		require.Equal(t, "private-test-download-v1", offer.Licence)
+		checkout, err = Open(ctx, db, account, origin, testSecret, gateway, offer, pack)
+		require.NoError(t, err)
+		handler = checkout.Handler(posters.CheckoutPage, "Signal Studies", "AUD 12.00", "https://studio.example.org", preview)
+		home := request(http.MethodGet, "/", nil)
+		require.Equal(t, http.StatusOK, home.Code)
+		require.Contains(t, home.Body.String(), `alt="`+tc.lead+", the A4 print")
+		require.Equal(t, wantPreview, request(http.MethodGet, "/artwork", nil).Body.Bytes())
+		if buyer == nil {
+			cookies := home.Result().Cookies()
+			require.Len(t, cookies, 1)
+			buyer = cookies[0]
+		}
+		id := uuid.NewString()
+		require.Equal(t, http.StatusSeeOther, request(http.MethodPost, "/orders", url.Values{"id": {id}}).Code)
+		gateway.set(id, paid, 0)
+		require.Equal(t, http.StatusSeeOther, request(http.MethodPost, "/orders/"+id+"/refresh", nil).Code)
+		orders = append(orders, purchase{id, tc.label, offer})
+	}
+	require.NotEqual(t, offerKey(orders[0].want), offerKey(orders[1].want))
+	// Re-open both orders through the checkout now serving the corrected ZIP.
+	for _, order := range orders {
+		page := request(http.MethodGet, "/orders/"+order.id, nil)
+		require.Equal(t, http.StatusOK, page.Code)
+		require.Contains(t, page.Body.String(), "<button>"+order.label+"</button>")
+		response := request(http.MethodPost, "/orders/"+order.id+"/download", nil)
+		require.Equal(t, http.StatusOK, response.Code)
+		_, params, err := mime.ParseMediaType(response.Header().Get("Content-Disposition"))
+		require.NoError(t, err)
+		require.Equal(t, order.want.ArchiveName, params["filename"])
+		require.Equal(t, order.want.ArchiveSha256, fingerprint(response.Body.Bytes()))
+		receipt, err := checkout.currentReceipt(ctx, posters.StudioProductID, order.id)
+		require.NoError(t, err)
+		require.True(t, proto.Equal(order.want, receipt.Offer))
+		require.EqualValues(t, 1, receipt.DownloadsIssued)
+	}
 }
 
 func TestOrderOwnershipRetriesAndFrozenEdition(t *testing.T) {
@@ -273,9 +377,20 @@ func TestDigitalOrderBrowser(t *testing.T) {
 	server := httptest.NewUnstartedServer(nil)
 	defer server.Close()
 	origin := "http://" + server.Listener.Addr().String()
-	s, g, _ := testShop(t, origin)
+	archive := []byte("frozen first edition")
+	offer := testOffer(archive)
+	var preview []byte
+	if dir := os.Getenv("OMEGA_POSTER_TEST_COLLECTION"); dir != "" {
+		raw, err := os.ReadFile("../../projects/posters/testdata/" + posters.EditorialEdition + ".json")
+		require.NoError(t, err)
+		offer, archive, preview, err = posters.TestOffer(os.DirFS(dir), raw, editorialPosterPacketSHA)
+		require.NoError(t, err)
+	}
+	g := &fixtureGateway{states: make(map[string]fact)}
+	s, err := Open(t.Context(), testOrderDB(t), "acct_fixture_"+uuid.NewString(), origin, testSecret, g, offer, archive)
+	require.NoError(t, err)
 	mux := http.NewServeMux()
-	mux.Handle("/", s.Handler(posters.CheckoutPage, "Signal Studies", "AUD 12.00", "https://studio.example.org", nil))
+	mux.Handle("/", s.Handler(posters.CheckoutPage, "Signal Studies", "AUD 12.00", "https://studio.example.org", preview))
 	// Local fixtures control authenticated provider reads independently of the buyer browser.
 	mux.HandleFunc("POST /fixture/{id}/{result}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
@@ -298,10 +413,14 @@ func TestDigitalOrderBrowser(t *testing.T) {
 	})
 	server.Config.Handler = mux
 	server.Start()
-	script, err := filepath.Abs("../../scripts/test-digital-order-browser.cjs")
-	require.NoError(t, err)
 	ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
 	defer cancel()
-	data, err := exec.CommandContext(ctx, "node", script, origin).CombinedOutput()
+	expected, err := protojson.Marshal(offer)
+	require.NoError(t, err)
+	input, err := json.Marshal(map[string]any{"origin": origin, "offer": json.RawMessage(expected)})
+	require.NoError(t, err)
+	cmd := exec.CommandContext(ctx, "node", "../../scripts/test-digital-order-browser.cjs")
+	cmd.Stdin = bytes.NewReader(input)
+	data, err := cmd.CombinedOutput()
 	require.NoError(t, err, fmt.Sprintf("browser: %s", data))
 }

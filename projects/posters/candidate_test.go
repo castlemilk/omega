@@ -15,6 +15,14 @@ func TestCandidateRejectsChangedPackage(t *testing.T) {
 	if err == nil {
 		t.Fatal("candidate accepted a substitute delivery file")
 	}
+	_, err = CandidateForEdition(fstest.MapFS{"reader-proof-01/signal-studies.zip": {Data: []byte("substitute edition")}}, EditorialEdition)
+	if err == nil || !strings.Contains(err.Error(), "reader-proof-01/signal-studies.zip does not match") {
+		t.Fatalf("editorial candidate did not reject changed delivery: %v", err)
+	}
+	_, err = CandidateForEdition(fstest.MapFS{}, "unregistered")
+	if err == nil || !strings.Contains(err.Error(), "unknown poster edition") {
+		t.Fatalf("unregistered edition: %v", err)
+	}
 }
 
 func TestCheckoutRequiresPrivateStudioPacket(t *testing.T) {
