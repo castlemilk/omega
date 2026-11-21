@@ -44,7 +44,8 @@ func StatementJSON(statement *v1.CommerceStatement) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
-func statementWindow(from, through string, now time.Time) (time.Time, time.Time, error) {
+// StatementWindow returns the inclusive UTC start and exclusive end of an accepted order period.
+func StatementWindow(from, through string, now time.Time) (time.Time, time.Time, error) {
 	first, err := time.Parse(time.DateOnly, from)
 	last, lastErr := time.Parse(time.DateOnly, through)
 	if err != nil || lastErr != nil || first.Year() < 1 || last.Before(first) ||
@@ -118,7 +119,7 @@ func (s *Shop) statementCohort(ctx context.Context, business, product string, fi
 // The window selects orders by creation time; later refunds and downloads
 // belong to their original order. Each provider read is independent.
 func OperatorStatement(ctx context.Context, db *sql.DB, gateway *StripeTest, business, product, from, through string) (*v1.CommerceStatement, error) {
-	first, end, err := statementWindow(from, through, time.Now())
+	first, end, err := StatementWindow(from, through, time.Now())
 	if err != nil {
 		return nil, err
 	}

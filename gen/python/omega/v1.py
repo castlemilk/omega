@@ -959,6 +959,17 @@ class CommerceStatement(betterproto.Message):
 
 
 @dataclass
+class CommerceReporterReceipt(betterproto.Message):
+    """
+    A receiver acknowledges the stored statement or an identical observation.
+    """
+
+    outcome: str = betterproto.string_field(1)
+    statement_id: str = betterproto.string_field(2)
+    checked_at: str = betterproto.string_field(3)
+
+
+@dataclass
 class ScheduleEntry(betterproto.Message):
     node_id: str = betterproto.string_field(1)
     priority: float = betterproto.double_field(2)

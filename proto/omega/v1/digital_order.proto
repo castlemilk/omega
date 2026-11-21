@@ -104,3 +104,10 @@ message CommerceStatement {
   string coverage = 9; // complete, partial or empty
   uint32 unresolved_scope_orders = 10;
 }
+
+// A receiver acknowledges the stored statement or an identical observation.
+message CommerceReporterReceipt {
+  string outcome = 1; // saved or unchanged
+  string statement_id = 2;
+  string checked_at = 3;
+}

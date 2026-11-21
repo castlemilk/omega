@@ -267,12 +267,12 @@ func TestStatementPagedRefundsAndDisputedBalance(t *testing.T) {
 
 func TestStatementWindowAndLimits(t *testing.T) {
 	now := time.Date(2024, 12, 31, 12, 0, 0, 0, time.UTC)
-	first, end, err := statementWindow("2024-01-01", "2024-12-31", now)
+	first, end, err := StatementWindow("2024-01-01", "2024-12-31", now)
 	require.NoError(t, err)
 	require.Equal(t, time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC), first)
 	require.Equal(t, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC), end)
 	for _, span := range [][2]string{{"2024-02-30", "2024-12-31"}, {"2024-02-01", "2024-01-01"}, {"2023-12-31", "2024-12-31"}, {"2024-01-01", "2025-01-01"}, {"2024-1-1", "2024-01-01"}} {
-		_, _, err := statementWindow(span[0], span[1], now)
+		_, _, err := StatementWindow(span[0], span[1], now)
 		require.Error(t, err)
 	}
 	_, err = StatementJSON(&v1.CommerceStatement{BusinessId: strings.Repeat("a", maxStatementBytes)})

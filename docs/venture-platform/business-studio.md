@@ -92,3 +92,33 @@ The JSON identifies each edition by its approved packet and delivery ZIP checksu
 Omega requests the balance transaction attached to the matching charge and each successful refund. Each movement carries its own settlement currency, signed amount, fee and net balance impact. Pending availability can have a verified fee. A missing fee or unexpanded transaction leaves `balanceComplete` false. A pending refund or dispute also leaves the statement partial. Customer amounts and processor movements can use different currencies. [Stripe balance transactions](https://docs.stripe.com/api/balance_transactions/object) [Stripe refund states](https://docs.stripe.com/api/refunds/object)
 
 Coverage is `empty` when the selected account and product have no orders in the window and every row could be identified. A `partial` statement preserves independent verified orders, flags incomplete evidence, and counts any records whose scope or immutable offer could not be verified in `unresolvedScopeOrders`. A `complete` statement contains the current verified rows and all matching charge and refund movements. The export accepts up to 366 days through today, checks at most 10,000 business orders and 500 product orders, and writes at most 160,000 bytes. A period exceeding any limit fails explicitly.
+
+## Automatically report test orders to Studio
+
+On the designated Mac, sign in as the user who runs the isolated checkout. Initialise its reporter and pair the printed public key in Signal Studies’ private Studio. Running `init` again returns the same public key.
+
+```sh
+omega posters reporter init
+```
+
+The default reporter directory is `~/Library/Application Support/Omega/Signal Studies Reporter`. It is owned by the current user with mode 0700. The signing seed is a 32-byte mode-0600 file called `signing.seed`. Keep that file on the Mac. Studio receives the unpadded base64url public key.
+
+Create `source.env` in the same directory using a private editor and set its mode to 0600. Put the existing isolated Stripe test key and the read-only login for the local qualification database on two literal lines. The database URL must name a user, a database and a loopback host. Use a database user with SELECT access to `omega_digital_orders`, `omega_digital_offers` and `omega_digital_inbox`. The reporter opens read-only PostgreSQL sessions. It checks the same Stripe account and immutable orders as `test-statement`.
+
+```text
+OMEGA_POSTER_STRIPE_TEST_KEY=<isolated test key>
+OMEGA_POSTER_COMMERCE_DATABASE_URL=postgres://<read-only user>:<encoded password>@127.0.0.1:<port>/<database>?sslmode=disable
+```
+
+Enter the actual values directly in that private file. The reader treats quotes, dollar signs and equal signs inside values literally. Use `--credentials /absolute/path/to/file` on `run` or `install` to select another owner-only file. Use `--directory` to choose the signing directory.
+
+Run a dated report, or use `--days 30` for a rolling window through today in UTC. A successful run prints Studio’s receipt with its `saved` or `unchanged` outcome, statement ID and check time. Omega verifies that the receipt identifies this product, period and check time. An unchanged result can point to an earlier saved statement for the same period.
+
+```sh
+omega posters reporter run --from 2026-11-20 --through 2026-11-21
+omega posters reporter install --executable "$(command -v omega)" --days 30
+```
+
+The per-user LaunchAgent `com.omega.signal-studies-reporter` runs at login and every five minutes while the Mac is awake and the user is signed in. Its configuration contains local paths and the day count. Scheduled output is discarded. Open the private Studio project to see the last accepted check, or run the reporter manually for a receipt. To inspect launchd's last exit status, run `launchctl print "gui/$(id -u)/com.omega.signal-studies-reporter"`. To stop reporting across future logins, run `omega posters reporter disable`. To resume after pairing, run `install` again.
+
+Omega posts the exact v1 statement JSON bytes to the fixed Signal Studies receiver. It signs the protocol version, HTTP method, full endpoint, Unix issue time and SHA-256 of the body with Ed25519. Transient connection failures, HTTP 408/429 and server errors get up to two retries with the same statement. Redirects end the attempt. Source or permission errors surface through the command's exit status. The next scheduled run rechecks the rolling window.

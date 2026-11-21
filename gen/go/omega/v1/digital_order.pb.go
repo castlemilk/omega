@@ -820,6 +820,67 @@ func (x *CommerceStatement) GetUnresolvedScopeOrders() uint32 {
 	return 0
 }
 
+// A receiver acknowledges the stored statement or an identical observation.
+type CommerceReporterReceipt struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Outcome       string                 `protobuf:"bytes,1,opt,name=outcome,proto3" json:"outcome,omitempty"` // saved or unchanged
+	StatementId   string                 `protobuf:"bytes,2,opt,name=statement_id,json=statementId,proto3" json:"statement_id,omitempty"`
+	CheckedAt     string                 `protobuf:"bytes,3,opt,name=checked_at,json=checkedAt,proto3" json:"checked_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommerceReporterReceipt) Reset() {
+	*x = CommerceReporterReceipt{}
+	mi := &file_omega_v1_digital_order_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommerceReporterReceipt) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommerceReporterReceipt) ProtoMessage() {}
+
+func (x *CommerceReporterReceipt) ProtoReflect() protoreflect.Message {
+	mi := &file_omega_v1_digital_order_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommerceReporterReceipt.ProtoReflect.Descriptor instead.
+func (*CommerceReporterReceipt) Descriptor() ([]byte, []int) {
+	return file_omega_v1_digital_order_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CommerceReporterReceipt) GetOutcome() string {
+	if x != nil {
+		return x.Outcome
+	}
+	return ""
+}
+
+func (x *CommerceReporterReceipt) GetStatementId() string {
+	if x != nil {
+		return x.StatementId
+	}
+	return ""
+}
+
+func (x *CommerceReporterReceipt) GetCheckedAt() string {
+	if x != nil {
+		return x.CheckedAt
+	}
+	return ""
+}
+
 var File_omega_v1_digital_order_proto protoreflect.FileDescriptor
 
 const file_omega_v1_digital_order_proto_rawDesc = "" +
@@ -909,7 +970,12 @@ const file_omega_v1_digital_order_proto_rawDesc = "" +
 	"\x06orders\x18\b \x03(\v2 .omega.v1.CommerceStatementOrderR\x06orders\x12\x1a\n" +
 	"\bcoverage\x18\t \x01(\tR\bcoverage\x126\n" +
 	"\x17unresolved_scope_orders\x18\n" +
-	" \x01(\rR\x15unresolvedScopeOrders*\xb1\x02\n" +
+	" \x01(\rR\x15unresolvedScopeOrders\"u\n" +
+	"\x17CommerceReporterReceipt\x12\x18\n" +
+	"\aoutcome\x18\x01 \x01(\tR\aoutcome\x12!\n" +
+	"\fstatement_id\x18\x02 \x01(\tR\vstatementId\x12\x1d\n" +
+	"\n" +
+	"checked_at\x18\x03 \x01(\tR\tcheckedAt*\xb1\x02\n" +
 	"\x13DigitalPaymentState\x12%\n" +
 	"!DIGITAL_PAYMENT_STATE_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dDIGITAL_PAYMENT_STATE_PENDING\x10\x01\x12\x1e\n" +
@@ -933,7 +999,7 @@ func file_omega_v1_digital_order_proto_rawDescGZIP() []byte {
 }
 
 var file_omega_v1_digital_order_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_omega_v1_digital_order_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_omega_v1_digital_order_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_omega_v1_digital_order_proto_goTypes = []any{
 	(DigitalPaymentState)(0),        // 0: omega.v1.DigitalPaymentState
 	(*DigitalOffer)(nil),            // 1: omega.v1.DigitalOffer
@@ -942,18 +1008,19 @@ var file_omega_v1_digital_order_proto_goTypes = []any{
 	(*CommerceBalanceMovement)(nil), // 4: omega.v1.CommerceBalanceMovement
 	(*CommerceStatementOrder)(nil),  // 5: omega.v1.CommerceStatementOrder
 	(*CommerceStatement)(nil),       // 6: omega.v1.CommerceStatement
-	(*wrapperspb.Int64Value)(nil),   // 7: google.protobuf.Int64Value
-	(*wrapperspb.StringValue)(nil),  // 8: google.protobuf.StringValue
+	(*CommerceReporterReceipt)(nil), // 7: omega.v1.CommerceReporterReceipt
+	(*wrapperspb.Int64Value)(nil),   // 8: google.protobuf.Int64Value
+	(*wrapperspb.StringValue)(nil),  // 9: google.protobuf.StringValue
 }
 var file_omega_v1_digital_order_proto_depIdxs = []int32{
 	1,  // 0: omega.v1.DigitalOrderReceipt.offer:type_name -> omega.v1.DigitalOffer
 	0,  // 1: omega.v1.DigitalOrderReceipt.payment:type_name -> omega.v1.DigitalPaymentState
 	2,  // 2: omega.v1.DigitalOrderReceipt.events:type_name -> omega.v1.DigitalOrderEvent
 	0,  // 3: omega.v1.CommerceStatementOrder.payment:type_name -> omega.v1.DigitalPaymentState
-	7,  // 4: omega.v1.CommerceStatementOrder.captured_minor:type_name -> google.protobuf.Int64Value
-	7,  // 5: omega.v1.CommerceStatementOrder.refunded_minor:type_name -> google.protobuf.Int64Value
-	8,  // 6: omega.v1.CommerceStatementOrder.verified_at:type_name -> google.protobuf.StringValue
-	8,  // 7: omega.v1.CommerceStatementOrder.dispute_status:type_name -> google.protobuf.StringValue
+	8,  // 4: omega.v1.CommerceStatementOrder.captured_minor:type_name -> google.protobuf.Int64Value
+	8,  // 5: omega.v1.CommerceStatementOrder.refunded_minor:type_name -> google.protobuf.Int64Value
+	9,  // 6: omega.v1.CommerceStatementOrder.verified_at:type_name -> google.protobuf.StringValue
+	9,  // 7: omega.v1.CommerceStatementOrder.dispute_status:type_name -> google.protobuf.StringValue
 	4,  // 8: omega.v1.CommerceStatementOrder.movements:type_name -> omega.v1.CommerceBalanceMovement
 	5,  // 9: omega.v1.CommerceStatement.orders:type_name -> omega.v1.CommerceStatementOrder
 	10, // [10:10] is the sub-list for method output_type
@@ -974,7 +1041,7 @@ func file_omega_v1_digital_order_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_omega_v1_digital_order_proto_rawDesc), len(file_omega_v1_digital_order_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

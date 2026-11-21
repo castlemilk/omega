@@ -126,6 +126,7 @@ func TestPosterStatementCommand(t *testing.T) {
 		require.NoError(t, json.Compact(&compact, out.Bytes()))
 		t.Log("CLI fixture statement", compact.String())
 	}
+	t.Run("send signed statement", func(t *testing.T) { checkPosterReporterCommand(t, dsn, day.Format(time.DateOnly), id) })
 }
 
 // All SDK traffic for the normal CLI command stays inside the test server.
