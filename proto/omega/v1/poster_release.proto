@@ -25,3 +25,44 @@ message PosterReleaseCandidate {
   PosterFile selected_artwork = 9;
   repeated PosterFile delivery_files = 10;
 }
+
+enum PosterObservationKind {
+  POSTER_OBSERVATION_KIND_UNSPECIFIED = 0;
+  POSTER_OBSERVATION_KIND_REPORTED = 1;
+  POSTER_OBSERVATION_KIND_SIMULATED = 2;
+}
+
+enum PosterChannelVerdict {
+  POSTER_CHANNEL_VERDICT_UNSPECIFIED = 0;
+  POSTER_CHANNEL_VERDICT_INSUFFICIENT_COVERAGE = 1;
+  POSTER_CHANNEL_VERDICT_INSUFFICIENT_TRAFFIC = 2;
+  POSTER_CHANNEL_VERDICT_READY_FOR_REVIEW = 3;
+  POSTER_CHANNEL_VERDICT_SIMULATED = 4;
+}
+
+message PosterMetricWindow {
+  string metric = 1;
+  string unit = 2;
+  string currency = 3;
+  uint32 observed_days = 4;
+  // Exact decimal. Empty when any day in the requested window is unknown.
+  string total = 5;
+}
+
+message PosterChannelReport {
+  string experiment_id = 1;
+  string source_url = 2;
+  PosterObservationKind observation_kind = 3;
+  string period_start = 4;
+  string period_end = 5;
+  uint32 window_days = 6;
+  repeated PosterMetricWindow metrics = 7;
+  PosterChannelVerdict verdict = 8;
+  // Rates are fractions. Empty when inputs are incomplete or the denominator is zero.
+  string click_through_rate = 9;
+  string orders_per_listing_visit = 10;
+  string source_file_sha256 = 11;
+  string next_action = 12;
+  // Set only for a rehearsal. Its main verdict is always SIMULATED.
+  PosterChannelVerdict simulation_result = 13;
+}

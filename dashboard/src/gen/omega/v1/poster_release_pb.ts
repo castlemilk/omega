@@ -2,15 +2,15 @@
 // @generated from file omega/v1/poster_release.proto (package omega.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file omega/v1/poster_release.proto.
  */
 export const file_omega_v1_poster_release: GenFile = /*@__PURE__*/
-  fileDesc("Ch1vbWVnYS92MS9wb3N0ZXJfcmVsZWFzZS5wcm90bxIIb21lZ2EudjEiOQoKUG9zdGVyRmlsZRIMCgRuYW1lGAEgASgJEg4KBnNoYTI1NhgCIAEoCRINCgVieXRlcxgDIAEoDSKbAwoWUG9zdGVyUmVsZWFzZUNhbmRpZGF0ZRIPCgdlZGl0aW9uGAEgASgJEhUKDWxpc3RpbmdfdGl0bGUYAiABKAkSGwoTbGlzdGluZ19kZXNjcmlwdGlvbhgDIAEoCRIoCgpwcmludF9wYWNrGAQgASgLMhQub21lZ2EudjEuUG9zdGVyRmlsZRItCg9kZXZlbG9wbWVudF9raXQYBSABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEigKCnJldmlld19wZGYYBiABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEi0KD2FydHdvcmtfcHJldmlldxgHIAEoCzIULm9tZWdhLnYxLlBvc3RlckZpbGUSLAoObGlzdGluZ19zb3VyY2UYCCABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEi4KEHNlbGVjdGVkX2FydHdvcmsYCSABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEiwKDmRlbGl2ZXJ5X2ZpbGVzGAogAygLMhQub21lZ2EudjEuUG9zdGVyRmlsZUI2WjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxYgZwcm90bzM");
+  fileDesc("Ch1vbWVnYS92MS9wb3N0ZXJfcmVsZWFzZS5wcm90bxIIb21lZ2EudjEiOQoKUG9zdGVyRmlsZRIMCgRuYW1lGAEgASgJEg4KBnNoYTI1NhgCIAEoCRINCgVieXRlcxgDIAEoDSKbAwoWUG9zdGVyUmVsZWFzZUNhbmRpZGF0ZRIPCgdlZGl0aW9uGAEgASgJEhUKDWxpc3RpbmdfdGl0bGUYAiABKAkSGwoTbGlzdGluZ19kZXNjcmlwdGlvbhgDIAEoCRIoCgpwcmludF9wYWNrGAQgASgLMhQub21lZ2EudjEuUG9zdGVyRmlsZRItCg9kZXZlbG9wbWVudF9raXQYBSABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEigKCnJldmlld19wZGYYBiABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEi0KD2FydHdvcmtfcHJldmlldxgHIAEoCzIULm9tZWdhLnYxLlBvc3RlckZpbGUSLAoObGlzdGluZ19zb3VyY2UYCCABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEi4KEHNlbGVjdGVkX2FydHdvcmsYCSABKAsyFC5vbWVnYS52MS5Qb3N0ZXJGaWxlEiwKDmRlbGl2ZXJ5X2ZpbGVzGAogAygLMhQub21lZ2EudjEuUG9zdGVyRmlsZSJqChJQb3N0ZXJNZXRyaWNXaW5kb3cSDgoGbWV0cmljGAEgASgJEgwKBHVuaXQYAiABKAkSEAoIY3VycmVuY3kYAyABKAkSFQoNb2JzZXJ2ZWRfZGF5cxgEIAEoDRINCgV0b3RhbBgFIAEoCSLEAwoTUG9zdGVyQ2hhbm5lbFJlcG9ydBIVCg1leHBlcmltZW50X2lkGAEgASgJEhIKCnNvdXJjZV91cmwYAiABKAkSOQoQb2JzZXJ2YXRpb25fa2luZBgDIAEoDjIfLm9tZWdhLnYxLlBvc3Rlck9ic2VydmF0aW9uS2luZBIUCgxwZXJpb2Rfc3RhcnQYBCABKAkSEgoKcGVyaW9kX2VuZBgFIAEoCRITCgt3aW5kb3dfZGF5cxgGIAEoDRItCgdtZXRyaWNzGAcgAygLMhwub21lZ2EudjEuUG9zdGVyTWV0cmljV2luZG93Ei8KB3ZlcmRpY3QYCCABKA4yHi5vbWVnYS52MS5Qb3N0ZXJDaGFubmVsVmVyZGljdBIaChJjbGlja190aHJvdWdoX3JhdGUYCSABKAkSIAoYb3JkZXJzX3Blcl9saXN0aW5nX3Zpc2l0GAogASgJEhoKEnNvdXJjZV9maWxlX3NoYTI1NhgLIAEoCRITCgtuZXh0X2FjdGlvbhgMIAEoCRI5ChFzaW11bGF0aW9uX3Jlc3VsdBgNIAEoDjIeLm9tZWdhLnYxLlBvc3RlckNoYW5uZWxWZXJkaWN0Ko0BChVQb3N0ZXJPYnNlcnZhdGlvbktpbmQSJwojUE9TVEVSX09CU0VSVkFUSU9OX0tJTkRfVU5TUEVDSUZJRUQQABIkCiBQT1NURVJfT0JTRVJWQVRJT05fS0lORF9SRVBPUlRFRBABEiUKIVBPU1RFUl9PQlNFUlZBVElPTl9LSU5EX1NJTVVMQVRFRBACKvQBChRQb3N0ZXJDaGFubmVsVmVyZGljdBImCiJQT1NURVJfQ0hBTk5FTF9WRVJESUNUX1VOU1BFQ0lGSUVEEAASMAosUE9TVEVSX0NIQU5ORUxfVkVSRElDVF9JTlNVRkZJQ0lFTlRfQ09WRVJBR0UQARIvCitQT1NURVJfQ0hBTk5FTF9WRVJESUNUX0lOU1VGRklDSUVOVF9UUkFGRklDEAISKwonUE9TVEVSX0NIQU5ORUxfVkVSRElDVF9SRUFEWV9GT1JfUkVWSUVXEAMSJAogUE9TVEVSX0NIQU5ORUxfVkVSRElDVF9TSU1VTEFURUQQBEI2WjRnaXRodWIuY29tL2JlbmVic3dvcnRoL29tZWdhL2dlbi9nby9vbWVnYS92MTtvbWVnYXYxYgZwcm90bzM");
 
 /**
  * Paths are relative to the private collection or to the named ZIP archive.
@@ -105,3 +105,185 @@ export type PosterReleaseCandidate = Message<"omega.v1.PosterReleaseCandidate"> 
  */
 export const PosterReleaseCandidateSchema: GenMessage<PosterReleaseCandidate> = /*@__PURE__*/
   messageDesc(file_omega_v1_poster_release, 1);
+
+/**
+ * @generated from message omega.v1.PosterMetricWindow
+ */
+export type PosterMetricWindow = Message<"omega.v1.PosterMetricWindow"> & {
+  /**
+   * @generated from field: string metric = 1;
+   */
+  metric: string;
+
+  /**
+   * @generated from field: string unit = 2;
+   */
+  unit: string;
+
+  /**
+   * @generated from field: string currency = 3;
+   */
+  currency: string;
+
+  /**
+   * @generated from field: uint32 observed_days = 4;
+   */
+  observedDays: number;
+
+  /**
+   * Exact decimal. Empty when any day in the requested window is unknown.
+   *
+   * @generated from field: string total = 5;
+   */
+  total: string;
+};
+
+/**
+ * Describes the message omega.v1.PosterMetricWindow.
+ * Use `create(PosterMetricWindowSchema)` to create a new message.
+ */
+export const PosterMetricWindowSchema: GenMessage<PosterMetricWindow> = /*@__PURE__*/
+  messageDesc(file_omega_v1_poster_release, 2);
+
+/**
+ * @generated from message omega.v1.PosterChannelReport
+ */
+export type PosterChannelReport = Message<"omega.v1.PosterChannelReport"> & {
+  /**
+   * @generated from field: string experiment_id = 1;
+   */
+  experimentId: string;
+
+  /**
+   * @generated from field: string source_url = 2;
+   */
+  sourceUrl: string;
+
+  /**
+   * @generated from field: omega.v1.PosterObservationKind observation_kind = 3;
+   */
+  observationKind: PosterObservationKind;
+
+  /**
+   * @generated from field: string period_start = 4;
+   */
+  periodStart: string;
+
+  /**
+   * @generated from field: string period_end = 5;
+   */
+  periodEnd: string;
+
+  /**
+   * @generated from field: uint32 window_days = 6;
+   */
+  windowDays: number;
+
+  /**
+   * @generated from field: repeated omega.v1.PosterMetricWindow metrics = 7;
+   */
+  metrics: PosterMetricWindow[];
+
+  /**
+   * @generated from field: omega.v1.PosterChannelVerdict verdict = 8;
+   */
+  verdict: PosterChannelVerdict;
+
+  /**
+   * Rates are fractions. Empty when inputs are incomplete or the denominator is zero.
+   *
+   * @generated from field: string click_through_rate = 9;
+   */
+  clickThroughRate: string;
+
+  /**
+   * @generated from field: string orders_per_listing_visit = 10;
+   */
+  ordersPerListingVisit: string;
+
+  /**
+   * @generated from field: string source_file_sha256 = 11;
+   */
+  sourceFileSha256: string;
+
+  /**
+   * @generated from field: string next_action = 12;
+   */
+  nextAction: string;
+
+  /**
+   * Set only for a rehearsal. Its main verdict is always SIMULATED.
+   *
+   * @generated from field: omega.v1.PosterChannelVerdict simulation_result = 13;
+   */
+  simulationResult: PosterChannelVerdict;
+};
+
+/**
+ * Describes the message omega.v1.PosterChannelReport.
+ * Use `create(PosterChannelReportSchema)` to create a new message.
+ */
+export const PosterChannelReportSchema: GenMessage<PosterChannelReport> = /*@__PURE__*/
+  messageDesc(file_omega_v1_poster_release, 3);
+
+/**
+ * @generated from enum omega.v1.PosterObservationKind
+ */
+export enum PosterObservationKind {
+  /**
+   * @generated from enum value: POSTER_OBSERVATION_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: POSTER_OBSERVATION_KIND_REPORTED = 1;
+   */
+  REPORTED = 1,
+
+  /**
+   * @generated from enum value: POSTER_OBSERVATION_KIND_SIMULATED = 2;
+   */
+  SIMULATED = 2,
+}
+
+/**
+ * Describes the enum omega.v1.PosterObservationKind.
+ */
+export const PosterObservationKindSchema: GenEnum<PosterObservationKind> = /*@__PURE__*/
+  enumDesc(file_omega_v1_poster_release, 0);
+
+/**
+ * @generated from enum omega.v1.PosterChannelVerdict
+ */
+export enum PosterChannelVerdict {
+  /**
+   * @generated from enum value: POSTER_CHANNEL_VERDICT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: POSTER_CHANNEL_VERDICT_INSUFFICIENT_COVERAGE = 1;
+   */
+  INSUFFICIENT_COVERAGE = 1,
+
+  /**
+   * @generated from enum value: POSTER_CHANNEL_VERDICT_INSUFFICIENT_TRAFFIC = 2;
+   */
+  INSUFFICIENT_TRAFFIC = 2,
+
+  /**
+   * @generated from enum value: POSTER_CHANNEL_VERDICT_READY_FOR_REVIEW = 3;
+   */
+  READY_FOR_REVIEW = 3,
+
+  /**
+   * @generated from enum value: POSTER_CHANNEL_VERDICT_SIMULATED = 4;
+   */
+  SIMULATED = 4,
+}
+
+/**
+ * Describes the enum omega.v1.PosterChannelVerdict.
+ */
+export const PosterChannelVerdictSchema: GenEnum<PosterChannelVerdict> = /*@__PURE__*/
+  enumDesc(file_omega_v1_poster_release, 1);

@@ -136,6 +136,20 @@ class NodeStatus(betterproto.Enum):
     NODE_STATUS_STOPPING = 5
 
 
+class PosterObservationKind(betterproto.Enum):
+    POSTER_OBSERVATION_KIND_UNSPECIFIED = 0
+    POSTER_OBSERVATION_KIND_REPORTED = 1
+    POSTER_OBSERVATION_KIND_SIMULATED = 2
+
+
+class PosterChannelVerdict(betterproto.Enum):
+    POSTER_CHANNEL_VERDICT_UNSPECIFIED = 0
+    POSTER_CHANNEL_VERDICT_INSUFFICIENT_COVERAGE = 1
+    POSTER_CHANNEL_VERDICT_INSUFFICIENT_TRAFFIC = 2
+    POSTER_CHANNEL_VERDICT_READY_FOR_REVIEW = 3
+    POSTER_CHANNEL_VERDICT_SIMULATED = 4
+
+
 class ConstraintSeverity(betterproto.Enum):
     CONSTRAINT_SEVERITY_UNSPECIFIED = 0
     CONSTRAINT_SEVERITY_HARD = 1
@@ -2260,6 +2274,36 @@ class PosterReleaseCandidate(betterproto.Message):
     listing_source: "PosterFile" = betterproto.message_field(8)
     selected_artwork: "PosterFile" = betterproto.message_field(9)
     delivery_files: List["PosterFile"] = betterproto.message_field(10)
+
+
+@dataclass
+class PosterMetricWindow(betterproto.Message):
+    metric: str = betterproto.string_field(1)
+    unit: str = betterproto.string_field(2)
+    currency: str = betterproto.string_field(3)
+    observed_days: int = betterproto.uint32_field(4)
+    # Exact decimal. Empty when any day in the requested window is unknown.
+    total: str = betterproto.string_field(5)
+
+
+@dataclass
+class PosterChannelReport(betterproto.Message):
+    experiment_id: str = betterproto.string_field(1)
+    source_url: str = betterproto.string_field(2)
+    observation_kind: "PosterObservationKind" = betterproto.enum_field(3)
+    period_start: str = betterproto.string_field(4)
+    period_end: str = betterproto.string_field(5)
+    window_days: int = betterproto.uint32_field(6)
+    metrics: List["PosterMetricWindow"] = betterproto.message_field(7)
+    verdict: "PosterChannelVerdict" = betterproto.enum_field(8)
+    # Rates are fractions. Empty when inputs are incomplete or the denominator is
+    # zero.
+    click_through_rate: str = betterproto.string_field(9)
+    orders_per_listing_visit: str = betterproto.string_field(10)
+    source_file_sha256: str = betterproto.string_field(11)
+    next_action: str = betterproto.string_field(12)
+    # Set only for a rehearsal. Its main verdict is always SIMULATED.
+    simulation_result: "PosterChannelVerdict" = betterproto.enum_field(13)
 
 
 @dataclass
