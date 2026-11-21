@@ -115,6 +115,12 @@ func TestStripeRetrievesAndChecksOriginalPayment(t *testing.T) {
 			x.session["status"] = "expired"
 			x.session["payment_status"] = "unpaid"
 		}, expired, false},
+		{"expired after decline", func(x *transaction) {
+			x.session["status"] = "expired"
+			x.session["payment_status"] = "unpaid"
+			x.intent["status"] = "canceled"
+			x.intent["last_payment_error"] = obj{"code": "card_declined"}
+		}, expired, false},
 		{"partial refund", func(x *transaction) { x.charge["amount_refunded"] = 200 }, paid, false},
 		{"full refund", func(x *transaction) { x.charge["amount_refunded"] = 1200 }, refunded, false},
 		{"open dispute", func(x *transaction) { x.charge["disputed"] = true; x.dispute = "needs_response" }, disputed, false},

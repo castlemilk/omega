@@ -45,6 +45,15 @@ async function run() {
         204,
       );
     };
+    await change("decline");
+    await page.getByRole("button", { name: "Check payment status" }).click();
+    await page.getByRole("heading", { name: "Payment failed" }).waitFor();
+    assert.equal(
+      await page.getByRole("button", { name: "Download the six PDFs" }).count(),
+      0,
+    );
+    await page.getByRole("button", { name: "Resume checkout" }).click();
+    assert.equal(page.url(), orderURL);
     await change("paid");
     await page.getByRole("button", { name: "Check payment status" }).click();
     await page.getByRole("heading", { name: "Payment confirmed" }).waitFor();

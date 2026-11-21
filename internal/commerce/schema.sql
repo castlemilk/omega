@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS omega_digital_orders (
   FOREIGN KEY (connection_id, offer_key) REFERENCES omega_digital_offers(connection_id, offer_key),
   UNIQUE (connection_id, session_id)
 );
+-- Existing orders are checked with Stripe before the UI offers a retry.
+ALTER TABLE omega_digital_orders ADD COLUMN IF NOT EXISTS checkout_open boolean NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS omega_digital_by_payment ON omega_digital_orders(connection_id, payment_id) WHERE payment_id <> '';
 CREATE INDEX IF NOT EXISTS omega_digital_by_charge ON omega_digital_orders(connection_id, charge_id) WHERE charge_id <> '';
 CREATE TABLE IF NOT EXISTS omega_digital_inbox (

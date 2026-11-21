@@ -36,7 +36,7 @@ func (f *fixtureGateway) create(_ context.Context, id string, _ *v1.DigitalOffer
 	defer f.mu.Unlock()
 	if _, ok := f.states[id]; !ok {
 		f.creates++
-		f.states[id] = fact{state: pending}
+		f.states[id] = fact{state: pending, open: true}
 	}
 	if f.loseResponse {
 		f.loseResponse = false
@@ -58,14 +58,19 @@ func (f *fixtureGateway) check(_ context.Context, order, sessionID string, _ *v1
 func (f *fixtureGateway) set(id string, state v1.DigitalPaymentState, amount int64) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.states[id] = fact{state: state, payment: "pi_" + id, charge: "ch_" + id, refunded: amount}
+	next := fact{state: state, payment: "pi_" + id, refunded: amount}
+	next.open = state == pending || state == failed
+	if !next.open {
+		next.charge = "ch_" + id
+	}
+	f.states[id] = next
 }
 
 func (f *fixtureGateway) expire(_ context.Context, sessionID string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	for id, state := range f.states {
-		if "cs_test_"+id == sessionID && state.state == pending {
+		if "cs_test_"+id == sessionID && state.open {
 			f.states[id] = fact{state: expired}
 			return nil
 		}
@@ -230,6 +235,37 @@ func TestOrderCancellationExpiryAndEventRecovery(t *testing.T) {
 	require.Equal(t, "processed", r.Events[0].ProcessingStatus)
 }
 
+func TestFirstDeclineCanResumeAndCancelOriginalCheckout(t *testing.T) {
+	ctx := t.Context()
+	s, g, buyer := testShop(t, "http://127.0.0.1")
+	id := uuid.NewString()
+	location, err := s.Start(ctx, id, buyer)
+	require.NoError(t, err)
+	g.set(id, failed, 0)
+	body := []byte(fmt.Sprintf(`{"id":"evt_decline","object":"event","livemode":false,"type":"payment_intent.payment_failed","created":%d,"data":{"object":{"id":"pi_%s","object":"payment_intent","metadata":{"omega_order":"%s","omega_offer":"%s"}}}}`, time.Now().Unix(), id, id, s.offerID))
+	require.NoError(t, s.Record(ctx, body, signAt(body, time.Now())))
+	require.NoError(t, s.Drain(ctx))
+	r, err := s.Receipt(ctx, id, buyer)
+	require.NoError(t, err)
+	require.Equal(t, failed, r.Payment)
+	require.True(t, r.CheckoutOpen)
+	require.Empty(t, r.EntitlementId)
+	require.Len(t, r.Events, 1)
+	require.Equal(t, "processed", r.Events[0].ProcessingStatus)
+	again, err := s.Start(ctx, id, buyer)
+	require.NoError(t, err)
+	require.Equal(t, location, again)
+	require.Equal(t, 1, g.creates)
+	require.NoError(t, s.Cancel(ctx, id, buyer))
+	r, err = s.Receipt(ctx, id, buyer)
+	require.NoError(t, err)
+	require.Equal(t, cancelled, r.Payment)
+	require.False(t, r.CheckoutOpen)
+	require.Empty(t, r.EntitlementId)
+	_, _, err = s.Download(ctx, id, buyer)
+	require.ErrorIs(t, err, ErrBlocked)
+}
+
 func TestDigitalOrderBrowser(t *testing.T) {
 	if os.Getenv("OMEGA_DIGITAL_ORDER_BROWSER") != "1" {
 		t.Skip("run make test-digital-orders for the browser journey")
@@ -248,6 +284,8 @@ func TestDigitalOrderBrowser(t *testing.T) {
 			return
 		}
 		switch r.PathValue("result") {
+		case "decline":
+			g.set(id, failed, 0)
 		case "paid":
 			g.set(id, paid, 0)
 		case "refund":

@@ -21,7 +21,7 @@ type checkoutView struct {
 	Title, Amount, Studio string
 	ID, Status, Message   string
 	Receipt               *v1.DigitalOrderReceipt
-	CanCancel             bool
+	CanCancel, Awaiting   bool
 }
 
 func statusText(p v1.DigitalPaymentState) (string, string) {
@@ -141,7 +141,7 @@ func (s *Shop) Handler(page *template.Template, title, amount, studio string, pr
 		if r.URL.Query().Get("returned") == "cancel" && receipt.Payment == pending {
 			message = "You left the payment page. This order can still be cancelled or completed."
 		}
-		render(w, checkoutView{ID: id, Status: status, Message: message, Receipt: receipt, CanCancel: receipt.Payment == pending})
+		render(w, checkoutView{ID: id, Status: status, Message: message, Receipt: receipt, CanCancel: receipt.CheckoutOpen, Awaiting: receipt.Payment == pending})
 	})
 	mux.HandleFunc("GET /orders/{id}/receipt", func(w http.ResponseWriter, r *http.Request) {
 		id, b, ok := owned(w, r)

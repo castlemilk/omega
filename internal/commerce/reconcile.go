@@ -56,7 +56,7 @@ func (s *Shop) Drain(ctx context.Context) error {
 	}
 	rows, err = s.db.QueryContext(ctx, `WITH due AS (
 		SELECT id FROM omega_digital_orders WHERE connection_id=$1 AND session_id IS NOT NULL AND next_check<=now()
-		AND ((payment=1 AND created_at>now()-interval '2 days') OR (entitled_at>now()-interval '24 hours'))
+		AND ((payment IN (1,3) AND created_at>now()-interval '2 days') OR (entitled_at>now()-interval '24 hours'))
 		ORDER BY next_check,id LIMIT 8 FOR UPDATE SKIP LOCKED)
 		UPDATE omega_digital_orders o SET next_check=now()+interval '1 minute' FROM due WHERE o.connection_id=$1 AND o.id=due.id RETURNING o.id`, s.connection)
 	if err != nil {

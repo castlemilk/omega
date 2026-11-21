@@ -897,6 +897,8 @@ class DigitalOrderReceipt(betterproto.Message):
     verified_at: str = betterproto.string_field(13)
     events: List["DigitalOrderEvent"] = betterproto.message_field(14)
     dispute_status: str = betterproto.string_field(15)
+    # Whether this same checkout can still be resumed or cancelled.
+    checkout_open: bool = betterproto.bool_field(16)
 
 
 @dataclass

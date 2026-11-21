@@ -88,6 +88,7 @@ type order struct {
 	state                                               v1.DigitalPaymentState
 	refunded                                            int64
 	downloads                                           uint32
+	open                                                bool
 }
 type queryer interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
@@ -95,13 +96,13 @@ type queryer interface {
 
 func (s *Shop) order(ctx context.Context, q queryer, id string, buyer []byte, lock bool) (order, error) {
 	var a order
-	stmt := `SELECT o.id,o.offer_key,o.buyer_hash,o.created_at,coalesce(o.session_id,''),o.checkout_url,o.payment_id,o.charge_id,o.payment,o.refunded,o.dispute,o.entitled_at,o.verified_at,o.downloads,f.definition
+	stmt := `SELECT o.id,o.offer_key,o.buyer_hash,o.created_at,coalesce(o.session_id,''),o.checkout_url,o.payment_id,o.charge_id,o.payment,o.refunded,o.dispute,o.entitled_at,o.verified_at,o.downloads,o.checkout_open,f.definition
 		FROM omega_digital_orders o JOIN omega_digital_offers f USING(connection_id,offer_key) WHERE o.connection_id=$1 AND o.id=$2`
 	if lock {
 		stmt += " FOR UPDATE OF o"
 	}
 	var definition []byte
-	err := q.QueryRowContext(ctx, stmt, s.connection, id).Scan(&a.id, &a.offerID, &a.buyer, &a.created, &a.session, &a.url, &a.payment, &a.charge, &a.state, &a.refunded, &a.dispute, &a.entitled, &a.verified, &a.downloads, &definition)
+	err := q.QueryRowContext(ctx, stmt, s.connection, id).Scan(&a.id, &a.offerID, &a.buyer, &a.created, &a.session, &a.url, &a.payment, &a.charge, &a.state, &a.refunded, &a.dispute, &a.entitled, &a.verified, &a.downloads, &a.open, &definition)
 	if errors.Is(err, sql.ErrNoRows) || (err == nil && buyer != nil && !bytes.Equal(a.buyer, buyer)) {
 		return a, ErrMissing
 	}
@@ -140,7 +141,7 @@ func (s *Shop) Start(ctx context.Context, id string, buyer []byte) (string, erro
 		return "", err
 	}
 	if a.url != "" {
-		if a.state != pending {
+		if !a.open {
 			return s.origin + "/orders/" + id, nil
 		}
 		return a.url, nil
@@ -152,14 +153,14 @@ func (s *Shop) Start(ctx context.Context, id string, buyer []byte) (string, erro
 	if err != nil {
 		return "", err
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE omega_digital_orders SET session_id=$3,checkout_url=$4 WHERE connection_id=$1 AND id=$2`, s.connection, id, sess.id, sess.url)
+	_, err = tx.ExecContext(ctx, `UPDATE omega_digital_orders SET session_id=$3,checkout_url=$4,checkout_open=true WHERE connection_id=$1 AND id=$2`, s.connection, id, sess.id, sess.url)
 	if err != nil {
 		return "", err
 	}
 	return sess.url, tx.Commit()
 }
 
-const subjectMatch = `((i.subject_kind='session' AND i.subject_id=o.session_id) OR (i.subject_kind='payment' AND i.subject_id=o.payment_id) OR (i.subject_kind='charge' AND i.subject_id=o.charge_id))`
+const subjectMatch = `((i.subject_kind='session' AND i.subject_id=o.session_id) OR (i.subject_kind='payment' AND i.subject_id=o.payment_id) OR (i.subject_kind='charge' AND i.subject_id=o.charge_id) OR (i.subject_kind='order_offer' AND i.subject_id=o.id::text || '/' || o.offer_key))`
 
 func (s *Shop) Record(ctx context.Context, raw []byte, signature string) error {
 	e, err := readEvent(raw, signature, s.webhookSecret, time.Now())
@@ -204,8 +205,8 @@ func (s *Shop) syncTx(ctx context.Context, tx *sql.Tx, id string, buyer []byte) 
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE omega_digital_orders SET payment_id=$3,charge_id=$4,payment=$5,refunded=$6,dispute=$7,
 		entitled_at=CASE WHEN $5=2 THEN coalesce(entitled_at,now()) ELSE entitled_at END,verified_at=clock_timestamp(),
-		next_check=now()+CASE WHEN $5=1 THEN interval '1 minute' ELSE interval '6 hours' END WHERE connection_id=$1 AND id=$2`,
-		s.connection, id, f.payment, f.charge, int(f.state), f.refunded, f.dispute)
+		checkout_open=$8,next_check=now()+CASE WHEN $5=1 OR $8 THEN interval '1 minute' ELSE interval '6 hours' END WHERE connection_id=$1 AND id=$2`,
+		s.connection, id, f.payment, f.charge, int(f.state), f.refunded, f.dispute, f.open)
 	if err != nil {
 		return a, err
 	}
@@ -250,10 +251,10 @@ func (s *Shop) Cancel(ctx context.Context, id string, buyer []byte) error {
 	if err != nil {
 		return err
 	}
-	if a.state == cancelled {
+	if a.state == cancelled || a.state == expired {
 		return nil
 	}
-	if a.session == "" || a.state != pending {
+	if a.session == "" || !a.open {
 		return ErrConflict
 	}
 	// The success/cancel browser redirects are read-only. Explicit cancellation
@@ -332,7 +333,7 @@ func (s *Shop) receipt(ctx context.Context, id string, buyer []byte) (*v1.Digita
 	r := &v1.DigitalOrderReceipt{
 		OrderId: a.id, Offer: a.offer, TestMode: true, Payment: a.state, RefundedMinor: a.refunded,
 		DownloadsIssued: a.downloads, ProviderSessionId: a.session, ProviderPaymentId: a.payment, ProviderChargeId: a.charge, DisputeStatus: a.dispute,
-		DownloadAvailable: eligible(a, time.Now()),
+		DownloadAvailable: eligible(a, time.Now()), CheckoutOpen: a.open,
 	}
 	if a.verified.Valid {
 		r.VerifiedAt = a.verified.Time.UTC().Format(time.RFC3339Nano)

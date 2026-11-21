@@ -287,8 +287,10 @@ type DigitalOrderReceipt struct {
 	VerifiedAt        string                 `protobuf:"bytes,13,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
 	Events            []*DigitalOrderEvent   `protobuf:"bytes,14,rep,name=events,proto3" json:"events,omitempty"`
 	DisputeStatus     string                 `protobuf:"bytes,15,opt,name=dispute_status,json=disputeStatus,proto3" json:"dispute_status,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// Whether this same checkout can still be resumed or cancelled.
+	CheckoutOpen  bool `protobuf:"varint,16,opt,name=checkout_open,json=checkoutOpen,proto3" json:"checkout_open,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DigitalOrderReceipt) Reset() {
@@ -426,6 +428,13 @@ func (x *DigitalOrderReceipt) GetDisputeStatus() string {
 	return ""
 }
 
+func (x *DigitalOrderReceipt) GetCheckoutOpen() bool {
+	if x != nil {
+		return x.CheckoutOpen
+	}
+	return false
+}
+
 var File_omega_v1_digital_order_proto protoreflect.FileDescriptor
 
 const file_omega_v1_digital_order_proto_rawDesc = "" +
@@ -450,7 +459,7 @@ const file_omega_v1_digital_order_proto_rawDesc = "" +
 	"\x11processing_status\x18\x03 \x01(\tR\x10processingStatus\x12\x1a\n" +
 	"\battempts\x18\x04 \x01(\rR\battempts\x12\x1f\n" +
 	"\vreceived_at\x18\x05 \x01(\tR\n" +
-	"receivedAt\"\x97\x05\n" +
+	"receivedAt\"\xbc\x05\n" +
 	"\x13DigitalOrderReceipt\x12\x19\n" +
 	"\border_id\x18\x01 \x01(\tR\aorderId\x12,\n" +
 	"\x05offer\x18\x02 \x01(\v2\x16.omega.v1.DigitalOfferR\x05offer\x12\x1b\n" +
@@ -468,7 +477,8 @@ const file_omega_v1_digital_order_proto_rawDesc = "" +
 	"\vverified_at\x18\r \x01(\tR\n" +
 	"verifiedAt\x123\n" +
 	"\x06events\x18\x0e \x03(\v2\x1b.omega.v1.DigitalOrderEventR\x06events\x12%\n" +
-	"\x0edispute_status\x18\x0f \x01(\tR\rdisputeStatus*\xb1\x02\n" +
+	"\x0edispute_status\x18\x0f \x01(\tR\rdisputeStatus\x12#\n" +
+	"\rcheckout_open\x18\x10 \x01(\bR\fcheckoutOpen*\xb1\x02\n" +
 	"\x13DigitalPaymentState\x12%\n" +
 	"!DIGITAL_PAYMENT_STATE_UNSPECIFIED\x10\x00\x12!\n" +
 	"\x1dDIGITAL_PAYMENT_STATE_PENDING\x10\x01\x12\x1e\n" +

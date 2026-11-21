@@ -15,6 +15,7 @@ import (
 	"time"
 
 	v1 "github.com/benebsworth/omega/gen/go/omega/v1"
+	"github.com/google/uuid"
 	"github.com/stripe/stripe-go/v87"
 	"github.com/stripe/stripe-go/v87/webhook"
 	"google.golang.org/protobuf/proto"
@@ -36,6 +37,7 @@ type (
 		state                    v1.DigitalPaymentState
 		payment, charge, dispute string
 		refunded                 int64
+		open                     bool
 	}
 )
 
@@ -132,7 +134,7 @@ func (p *StripeTest) check(ctx context.Context, order, id string, offer *v1.Digi
 		s.AmountTotal != offer.AmountMinor || string(s.Currency) != offer.Currency {
 		return fact{}, errors.New("provider session differs from this order and offer")
 	}
-	f := fact{state: pending}
+	f := fact{state: pending, open: s.Status == "open"}
 	if s.Status == "expired" {
 		f.state = expired
 	}
@@ -145,6 +147,9 @@ func (p *StripeTest) check(ctx context.Context, order, id string, offer *v1.Digi
 		return fact{}, errors.New("provider payment differs from the order")
 	}
 	f.payment = pi.ID
+	if f.state == expired {
+		return f, nil
+	}
 	if pi.LastPaymentError != nil || pi.Status == "canceled" {
 		f.state = failed
 	}
@@ -213,10 +218,11 @@ func readEvent(raw []byte, signature, secret string, now time.Time) (event, erro
 		Created int64  `json:"created"`
 		Data    struct {
 			Object struct {
-				ID      string          `json:"id"`
-				Type    string          `json:"object"`
-				Payment json.RawMessage `json:"payment_intent"`
-				Charge  json.RawMessage `json:"charge"`
+				ID       string            `json:"id"`
+				Type     string            `json:"object"`
+				Payment  json.RawMessage   `json:"payment_intent"`
+				Charge   json.RawMessage   `json:"charge"`
+				Metadata map[string]string `json:"metadata"`
 			} `json:"object"`
 		} `json:"data"`
 	}
@@ -231,7 +237,21 @@ func readEvent(raw []byte, signature, secret string, now time.Time) (event, erro
 		if obj.Type == "checkout.session" {
 			out.subject, out.ref = "session", obj.ID
 		}
-	case "charge.refunded", "charge.succeeded":
+	case "payment_intent.payment_failed":
+		if obj.Type == "payment_intent" && strings.HasPrefix(obj.ID, "pi_") {
+			// A first decline can arrive before Checkout has exposed its payment
+			// ID on an earlier read. Wake only the order AND offer named in the
+			// signed metadata previously set by our Checkout creation request.
+			orderID, err := uuid.Parse(obj.Metadata["omega_order"])
+			digest := obj.Metadata["omega_offer"]
+			decoded, digestErr := hex.DecodeString(digest)
+			if err == nil && orderID.String() == obj.Metadata["omega_order"] && digestErr == nil && len(decoded) == sha256.Size {
+				out.subject, out.ref = "order_offer", orderID.String()+"/"+digest
+				return out, nil
+			}
+			out.subject, out.ref = "payment", obj.ID
+		}
+	case "charge.refunded", "charge.succeeded", "charge.failed":
 		if obj.Type == "charge" {
 			out.subject, out.ref = "payment", stripeRef(obj.Payment)
 		}

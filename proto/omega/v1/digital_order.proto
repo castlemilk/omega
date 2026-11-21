@@ -52,4 +52,6 @@ message DigitalOrderReceipt {
   string verified_at = 13;
   repeated DigitalOrderEvent events = 14;
   string dispute_status = 15;
+  // Whether this same checkout can still be resumed or cancelled.
+  bool checkout_open = 16;
 }
