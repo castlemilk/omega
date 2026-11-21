@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.Title}} · Test order</title>
+  {{if .CanCancel}}<meta http-equiv="refresh" content="8">{{end}}
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      background: #f8f6ef;
+      color: #292b25;
+      font:
+        1rem/1.55 system-ui,
+        sans-serif;
+    }
+    main,
+    header {
+      max-width: 900px;
+      margin: auto;
+      padding: 24px clamp(20px, 5vw, 64px);
+    }
+    header {
+      border-bottom: 1px solid #c7c2b6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    a {
+      color: #783f28;
+      text-underline-offset: 0.22em;
+    }
+    a,
+    button {
+      touch-action: manipulation;
+    }
+    h1,
+    h2 {
+      font:
+        normal clamp(2rem, 6vw, 3.8rem)/1.12 Georgia,
+        serif;
+      letter-spacing: -0.03em;
+      margin: 0.35em 0;
+    }
+    h2 {
+      font-size: 1.6rem;
+    }
+    p {
+      max-width: 58ch;
+    }
+    article {
+      display: grid;
+      grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.1fr);
+      gap: clamp(24px, 5vw, 58px);
+      align-items: center;
+      margin: 1.4rem 0;
+    }
+    figure {
+      margin: 0;
+      padding: 20px 24px;
+      background: #e8e4d8;
+      text-align: center;
+    }
+    figure img {
+      width: 100%;
+      max-width: 240px;
+      height: auto;
+      display: block;
+      margin: auto;
+    }
+    button {
+      border: 1px solid #865134;
+      border-radius: 4px;
+      background: #82472f;
+      color: white;
+      padding: 0.65rem 1rem;
+      min-height: 44px;
+      font: 600 1rem system-ui;
+      cursor: pointer;
+    }
+    .quiet {
+      background: transparent;
+      color: #603922;
+    }
+    button:focus-visible,
+    a:focus-visible {
+      outline: 3px solid #123f68;
+      outline-offset: 4px;
+    }
+    .actions {
+      display: flex;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+    .amount {
+      font-weight: 650;
+    }
+    .note {
+      color: #55584f;
+    }
+    dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.3rem 1rem;
+    }
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+    details {
+      margin: 1.3rem 0;
+    }
+    summary {
+      cursor: pointer;
+      color: #783f28;
+    }
+    li {
+      overflow-wrap: anywhere;
+    }
+    small {
+      font-size: 0.9rem;
+    }
+    form {
+      margin: 0;
+    }
+    @media (max-width: 600px) {
+      header {
+        padding-block: 15px;
+      }
+      article {
+        grid-template-columns: 1fr;
+      }
+      figure img {
+        max-width: 145px;
+      }
+      figure {
+        padding: 12px;
+      }
+      main {
+        padding-top: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header><strong>Omega Business Studio</strong><a href="{{.Studio}}">Private poster store</a></header>
+  <main>
+    {{if .Receipt}}
+      <p class="note">Test order · {{.Receipt.Offer.Edition}}</p>
+      <h1>{{.Status}}</h1>
+      <p>{{.Message}}</p>
+      {{if .Receipt.DownloadAvailable}}
+        <form method="post" action="/orders/{{.ID}}/download"><button>Download the six PDFs</button></form>
+      {{else if .Receipt.EntitlementId}}
+        <p>Download access is closed. Copies already saved by the buyer stay on their device.</p>
+      {{end}}
+      <h2>Order details</h2>
+      <dl>
+        <dt>Test price</dt><dd>{{.Amount}}</dd>
+        <dt>Order</dt><dd>{{.ID}}</dd>
+        <dt>Downloads issued</dt><dd>{{.Receipt.DownloadsIssued}}</dd>
+        {{if .Receipt.DownloadExpiresAt}}<dt>Download expiry</dt><dd>{{.Receipt.DownloadExpiresAt}}</dd>{{end}}
+      </dl>
+      <div class="actions">
+        <form method="post" action="/orders/{{.ID}}/refresh"><button class="quiet">Check payment status</button></form>
+        {{if .CanCancel}}
+          <form method="post" action="/orders">
+            <input type="hidden" name="id" value="{{.ID}}"><button class="quiet">Resume checkout</button>
+          </form>
+          <form method="post" action="/orders/{{.ID}}/cancel"><button class="quiet">Cancel this order</button></form>
+        {{end}}
+      </div>
+      <details>
+        <summary>Provider evidence</summary>
+        {{if .Receipt.Events}}
+          <ul>
+          {{range .Receipt.Events}}
+            <li>{{.EventType}} · {{.ProcessingStatus}}
+              {{if eq .ProcessingStatus "needs_review"}}
+                <form method="post" action="/orders/{{$.ID}}/replay">
+                  <input type="hidden" name="event" value="{{.ProviderEventId}}">
+                  <button class="quiet">Retry this event</button>
+                </form>
+              {{end}}
+            </li>
+          {{end}}
+          </ul>
+        {{else}}<p>No provider events received yet.</p>{{end}}
+        <a href="/orders/{{.ID}}/receipt">View test order receipt</a>
+      </details>
+      <a href="/">Return to the test edition</a>
+    {{else}}
+      <p class="note">Private checkout test</p>
+      <h1>{{.Title}}</h1>
+      <article>
+        <figure><img src="/artwork" width="708" height="1000" alt="Harmonic sum, the A4 print from the approved edition"></figure>
+        <section>
+          <h2>Three mathematical prints</h2>
+          <p>Six vector PDFs in A3 and A4, with the printing guide and font notice.</p>
+          <p class="amount">{{.Amount}} in test funds</p>
+          <p>Stripe simulates this purchase. Use test details at checkout.</p>
+          <form method="post" action="/orders">
+            <input type="hidden" name="id" value="{{.ID}}"><button>Start test checkout</button>
+          </form>
+        </section>
+      </article>
+    {{end}}
+  </main>
+</body>
+</html>

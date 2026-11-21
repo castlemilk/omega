@@ -3,7 +3,7 @@
         fe-install fe-build fe-lint fe-typecheck fe-format \
         foreman-plugins-install foreman-plugins-check \
         py-test py-lint \
-        test-db test-handler test-integration all \
+        test-db test-digital-orders test-handler test-integration all \
         db-up db-down \
         dev dev-down \
         otel-up otel-down otel-logs
@@ -22,6 +22,9 @@ test:
 
 test-db:
 	go test ./internal/db/... -v -timeout 30s
+
+test-digital-orders:
+	bash scripts/test-digital-orders.sh
 
 test-handler:
 	go test ./internal/handler/... -v -timeout 30s

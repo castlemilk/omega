@@ -57,3 +57,20 @@ omega posters measure observations.csv \
 For a daily row, set `period_start` and `period_end` to the same YYYY-MM-DD date. Use an RFC 3339 `observed_at` from after the reporting day closed. Record `impressions`, `clicks`, `listing_visits`, `orders` and `refunds` as whole counts with unit `count`. For `gross_revenue`, `fees` and `ad_spend`, use decimal amounts with unit `currency` and the three-letter currency code. Refunds here count reported refunds. Record an observed zero as `0` and leave an unknown value empty. Identical daily observations count once. Conflicting values for the same day, metric and currency require reconciliation against the source.
 
 Omega computes a total only when that series covers every requested day. It reports each currency separately. Click-through uses clicks divided by impressions. Order conversion uses orders divided by listing visits. Missing inputs or a zero denominator leave the rate empty. At least 14 complete days and 100 relevant listing visits make the evidence eligible for an owner review. These thresholds come from the original launch plan and carry no claim about demand or profit. Use `--evidence simulated` for a rehearsal. Simulated reports always have a separate verdict.
+
+## Rehearse a poster purchase and refund
+
+The owner can run the current Signal Studies edition through a separate Stripe sandbox. The private Studio listing supplies the reviewed artwork and exact archive. Use the exported review packet and its SHA-256 from the private listing receipt. The sandbox offer charges A$12 in simulated funds and grants a 24-hour test download. The hosted store has its own checkout setting.
+
+Configure `OMEGA_POSTER_COMMERCE_DATABASE_URL` for a dedicated local PostgreSQL database and `OMEGA_POSTER_STRIPE_TEST_KEY` for the selected sandbox. Start the Stripe CLI listener in that same sandbox, forwarding to `http://127.0.0.1:9746/stripe/events`. Subscribe to Checkout completion, asynchronous success/failure and expiration, charge success/refund, dispute created/updated/closed, and refund created/updated/failed. Set `OMEGA_POSTER_STRIPE_SIGNING_SECRET` to the listener's signing secret.
+
+```sh
+omega posters test-checkout "$SIGNAL_STUDIES_COLLECTION" \
+  --packet "$APPROVED_PACKET" --packet-sha256 "$APPROVED_PACKET_SHA256"
+```
+
+Open the printed loopback address, start checkout and use Stripe's published test buyer details. On return, the order page displays the provider-confirmed state. A paid buyer can download the original six PDFs, printing guide and font notice. The same browser profile retains its private order access across restarts. The operator can refund the test charge in the same Stripe sandbox. A full refund closes future downloads, including requests from an already-open payment confirmation page. Partial refunds retain access. An open or lost dispute suspends downloads. Returned files already saved on a device stay there. [Stripe testing](https://docs.stripe.com/testing)
+
+`omega posters test-order-receipt ORDER_ID` checks the current provider state and exports the operator's receipt. It includes the edition, file checksum, test price, payment and refund state, number of downloads, entitlement and signed event processing. The reader requires the order database and the same sandbox account. Keep the receipt with the private pilot evidence. Reporting customer demand or revenue requires production observations.
+
+`make test-digital-orders` starts a fresh local PostgreSQL container, runs the race-enabled order, signature and reconciliation tests, and drives Chromium through purchase, download and revocation with a local provider fixture. It uses Docker, Node and the locked Playwright installation in `web/dashboard`. The local commit hook runs this suite for changes to the poster order flow.

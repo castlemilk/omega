@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -13,6 +14,19 @@ func TestCandidateRejectsChangedPackage(t *testing.T) {
 	_, err := Candidate(fstest.MapFS{"signal-studies-print-candidate.zip": {Data: []byte("substitute edition")}})
 	if err == nil {
 		t.Fatal("candidate accepted a substitute delivery file")
+	}
+}
+
+func TestCheckoutRequiresPrivateStudioPacket(t *testing.T) {
+	raw := []byte(`{"schema":"omega.poster-review/v1","decision":{"checkoutEnabled":true,"publicLaunch":true}}`)
+	digest := fmt.Sprintf("%x", sha256.Sum256(raw))
+	_, _, _, err := TestOffer(fstest.MapFS{}, raw, digest)
+	if err == nil || !strings.Contains(err.Error(), "private poster edition") {
+		t.Fatalf("invalid decision: %v", err)
+	}
+	_, _, _, err = TestOffer(fstest.MapFS{}, append(raw, ' '), digest)
+	if err == nil || !strings.Contains(err.Error(), "packet digest") {
+		t.Fatalf("changed packet: %v", err)
 	}
 }
 
