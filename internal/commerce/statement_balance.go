@@ -46,7 +46,7 @@ func statementMovement(raw json.RawMessage, source, kind, currency string, amoun
 		Currency: b.Currency, AmountMinor: gross, FeeMinor: fee, NetMinor: net}
 }
 
-func (p *StripeTest) statementBalance(ctx context.Context, row *v1.CommerceStatementOrder, f fact, created time.Time) {
+func (p *StripeTest) statementBalance(ctx context.Context, row *v1.CommerceStatementOrder, f fact, created time.Time) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	// Dispute debits/reversals are outside this charge/refund statement.
@@ -70,6 +70,9 @@ func (p *StripeTest) statementBalance(ctx context.Context, row *v1.CommerceState
 	allRefunds := true
 	refunds := p.client.V1Refunds.List(ctx, params)
 	for r, err := range refunds.All(ctx) {
+		if statementRateLimited(err) {
+			return ErrStatementRateLimited
+		}
 		if err != nil {
 			allRefunds = false
 			break
@@ -150,4 +153,5 @@ func (p *StripeTest) statementBalance(ctx context.Context, row *v1.CommerceState
 		return a.OccurredAt < b.OccurredAt
 	})
 	row.BalanceComplete = complete
+	return nil
 }

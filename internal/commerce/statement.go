@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
 	v1 "github.com/benebsworth/omega/gen/go/omega/v1"
+	"github.com/stripe/stripe-go/v87"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -25,6 +27,15 @@ const (
 )
 
 var statementEdition = regexp.MustCompile(`^[a-zA-Z0-9._-]{1,100}$`)
+
+// ErrStatementRateLimited defers the whole check. An interrupted provider
+// read cannot establish a change to any previously reported order or balance.
+var ErrStatementRateLimited = errors.New("Stripe is rate-limiting test order reads. Retry the statement later")
+
+func statementRateLimited(err error) bool {
+	var provider *stripe.Error
+	return errors.As(err, &provider) && provider.HTTPStatusCode == http.StatusTooManyRequests && provider.Code != stripe.ErrorCodeLockTimeout
+}
 
 // StatementJSON includes empty arrays and zero counts, while absent money and
 // timestamps retain protobuf presence. The final newline is part of the export.
@@ -127,6 +138,9 @@ func OperatorStatement(ctx context.Context, db *sql.DB, gateway *StripeTest, bus
 		return nil, errors.New("a scoped test merchant and order database are required")
 	}
 	account, err := gateway.Account(ctx)
+	if statementRateLimited(err) {
+		return nil, ErrStatementRateLimited
+	}
 	if err != nil {
 		return nil, errors.New("could not verify the test merchant account with Stripe")
 	}
@@ -179,6 +193,9 @@ func (s *Shop) statementOrder(ctx context.Context, gateway *StripeTest, a order)
 		Edition: a.offer.Edition, PacketSha256: a.offer.PacketSha256, ArchiveSha256: a.offer.ArchiveSha256,
 		Currency: a.offer.Currency, QuotedMinor: a.offer.AmountMinor, DownloadsIssued: a.downloads}
 	f, err := a.checkedFact(ctx, gateway.statementFact)
+	if statementRateLimited(err) {
+		return nil, ErrStatementRateLimited
+	}
 	if err == nil && f.captured != nil && knownDispute(f.dispute) {
 		row.Payment = f.state
 		row.CapturedMinor = wrapperspb.Int64(*f.captured)
@@ -188,7 +205,9 @@ func (s *Shop) statementOrder(ctx context.Context, gateway *StripeTest, a order)
 		}
 		row.BalanceComplete = f.charge == ""
 		if f.charge != "" {
-			gateway.statementBalance(ctx, row, f, a.created)
+			if err := gateway.statementBalance(ctx, row, f, a.created); err != nil {
+				return nil, err
+			}
 		}
 		if row.CapturedMinor != nil {
 			row.VerifiedAt = wrapperspb.String(time.Now().UTC().Format(time.RFC3339Nano))

@@ -84,6 +84,9 @@ func posterReporterCommand() *cobra.Command {
 			readCtx, endRead := context.WithTimeout(ctx, 5*time.Minute)
 			statement, err := commerce.OperatorStatement(readCtx, db, gateway, posters.StudioBusinessID, posters.StudioProductID, first, last)
 			endRead()
+			if errors.Is(err, commerce.ErrStatementRateLimited) {
+				return commerce.ErrStatementRateLimited
+			}
 			if err != nil {
 				return errors.New("the reporter could not verify this order period against its isolated database and Stripe account")
 			}

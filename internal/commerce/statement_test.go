@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -92,7 +93,7 @@ func TestStatementRefundAndSettlementEvidence(t *testing.T) {
 				payment = refunded
 			}
 			row := &v1.CommerceStatementOrder{Currency: "aud", CapturedMinor: wrapperspb.Int64(capture), RefundedMinor: wrapperspb.Int64(amountRefunded), Payment: payment, VerifiedAt: wrapperspb.String(now.Format(time.RFC3339))}
-			client.statementBalance(t.Context(), row, fact{captured: &capture, charge: "ch_one", payment: "pi_one", chargeBalance: chargeRaw, refunded: amountRefunded, state: payment}, now)
+			require.NoError(t, client.statementBalance(t.Context(), row, fact{captured: &capture, charge: "ch_one", payment: "pi_one", chargeBalance: chargeRaw, refunded: amountRefunded, state: payment}, now))
 			require.Equal(t, tc.complete, row.BalanceComplete)
 			require.Len(t, row.Movements, tc.movements)
 			if tc.refunded < 0 {
@@ -151,7 +152,7 @@ func TestStatementScopesOrdersAndPreservesUnknowns(t *testing.T) {
 	_, err = shop.db.ExecContext(ctx, `INSERT INTO omega_digital_inbox(connection_id,id,event_type,subject_kind,subject_id,observed_at,status) VALUES
 		($1,'evt_processed','charge.succeeded','session',$2,1,'processed'),($1,'evt_unresolved','charge.refunded','charge','ch_paid',2,'needs_review')`, shop.connection, "cs_test_"+first)
 	require.NoError(t, err)
-	client := statementStripe(t, func(w http.ResponseWriter, r *http.Request) {
+	serveOrders := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var value any
 		switch r.URL.Path {
@@ -174,7 +175,8 @@ func TestStatementScopesOrdersAndPreservesUnknowns(t *testing.T) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(value)
-	})
+	}
+	client := statementStripe(t, serveOrders)
 	on := day.Format(time.DateOnly)
 	report, err := OperatorStatement(ctx, shop.db, client, offer.BusinessId, offer.ProductId, on, on)
 	require.NoError(t, err)
@@ -223,6 +225,29 @@ func TestStatementScopesOrdersAndPreservesUnknowns(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, report.Orders)
 	require.Equal(t, "partial", report.Coverage)
+
+	for _, endpoint := range []string{"/v1/account", "/v1/checkout/sessions/cs_test_" + first, "/v1/refunds"} {
+		t.Run("rate limit at "+endpoint, func(t *testing.T) {
+			var deferred atomic.Bool
+			limited := statementStripe(t, func(w http.ResponseWriter, r *http.Request) {
+				if deferred.Load() {
+					t.Error("Statement continued reading Stripe after the rate limit")
+				}
+				if r.URL.Path != endpoint {
+					serveOrders(w, r)
+					return
+				}
+				deferred.Store(true)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusTooManyRequests)
+				_ = json.NewEncoder(w).Encode(obj{"error": obj{"type": "invalid_request_error", "code": "rate_limit", "message": privateValue}})
+			})
+			report, err := OperatorStatement(t.Context(), shop.db, limited, offer.BusinessId, offer.ProductId, on, on)
+			require.ErrorIs(t, err, ErrStatementRateLimited)
+			require.Nil(t, report)
+			require.NotContains(t, err.Error(), privateValue)
+		})
+	}
 }
 
 func TestStatementPagedRefundsAndDisputedBalance(t *testing.T) {
@@ -257,7 +282,7 @@ func TestStatementPagedRefundsAndDisputedBalance(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(obj{"object": "list", "has_more": more, "data": []obj{refund}})
 	})
 	row := &v1.CommerceStatementOrder{Currency: "aud", Payment: disputed, CapturedMinor: wrapperspb.Int64(capture), RefundedMinor: wrapperspb.Int64(400)}
-	client.statementBalance(t.Context(), row, f, created)
+	require.NoError(t, client.statementBalance(t.Context(), row, f, created))
 	require.False(t, row.BalanceComplete)
 	require.Equal(t, disputed, row.Payment)
 	require.EqualValues(t, 400, row.RefundedMinor.Value)
