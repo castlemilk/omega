@@ -45,7 +45,7 @@ if [ -n "$CHANGED_GO" ]; then
     go test ./... -timeout 30s -count=1
 fi
 
-if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(internal/commerce/|projects/posters/|cmd/omega/poster_checkout.go|proto/omega/v1/digital_order.proto|scripts/test-digital-order)'; then
+if git diff --cached --name-only --diff-filter=ACMR | grep -Eq '^(internal/commerce/|projects/posters/|cmd/omega/|proto/omega/v1/digital_order.proto|scripts/test-digital-order)'; then
     make test-digital-orders
 fi
 

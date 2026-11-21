@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -480,8 +481,8 @@ func runBrainEval(cmd *cobra.Command, _ []string) error {
 func loadDotEnv() {
 	// Walk up from cwd to find .env
 	dir, _ := os.Getwd()
-	for i := 0; i < 5; i++ {
-		path := dir + "/.env"
+	for i := 0; dir != "" && i < 5; i++ {
+		path := filepath.Join(dir, ".env")
 		data, err := os.ReadFile(path) //nolint:gosec
 		if err == nil {
 			for _, line := range strings.Split(string(data), "\n") {
@@ -501,7 +502,7 @@ func loadDotEnv() {
 			}
 			break
 		}
-		parent := dir[:strings.LastIndexByte(dir, '/')]
+		parent := filepath.Dir(dir)
 		if parent == dir {
 			break
 		}
