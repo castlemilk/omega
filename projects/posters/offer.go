@@ -27,6 +27,7 @@ const (
 
 	originalPacketSHA  = "18d06477efdfa9c34ebc6dfa08986457618faaf7afb32c0d2c8c38191c584afa"
 	editorialPacketSHA = "8e343a7789b0994d4093682e0849842929e47709dfe4121157670649ed19d33d"
+	captionPacketSHA   = "2a68ff21008e8554f9d4278a9a758c84d85526e69a08c593fc8c829bf7ec55b6"
 )
 
 type studioSource struct {
@@ -38,9 +39,9 @@ func (s studioSource) matches(recordID string) bool {
 	return s.BusinessID == StudioBusinessID && s.ProjectID == StudioProductID && s.RecordID == recordID && s.RecordRevision == 1
 }
 
-// Studio's two immutable exports bind the business, product, run, owner-only
-// decision, exact artwork and copy revisions. The editorial packet additionally
-// binds its parent packet, copy parent, AI reading and saved storefront draft.
+// Studio's immutable exports bind the business, product, run, private
+// destination and exact artwork and copy. A revision also binds its parent
+// and the evidence for the change.
 // The receipt supplies a separate digest for the operator's selected export.
 func reviewedCandidate(raw []byte, expected string) (*v1.PosterReleaseCandidate, error) {
 	sum := sha256.Sum256(raw)
@@ -53,6 +54,8 @@ func reviewedCandidate(raw []byte, expected string) (*v1.PosterReleaseCandidate,
 		edition, artID, copyID = OriginalEdition, "58ac9b0f-bdc6-56b9-8a1a-131ef87ce8fb", "821ab426-0868-5525-814f-24acbe3025d5"
 	case editorialPacketSHA:
 		edition, artID, copyID = EditorialEdition, "3a227c6c-1432-59a6-80d8-5c4af20ec341", "28cb2421-131b-4bc6-92d6-4613e2cab765"
+	case captionPacketSHA:
+		edition, artID, copyID = CaptionEdition, "3a227c6c-1432-59a6-80d8-5c4af20ec341", "28cb2421-131b-4bc6-92d6-4613e2cab765"
 	default:
 		return nil, errors.New("the packet does not identify this private poster edition")
 	}

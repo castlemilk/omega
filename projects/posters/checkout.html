@@ -149,7 +149,7 @@
 <body>
   <header><strong>Omega Business Studio</strong><a href="{{.Studio}}">Private poster store</a></header>
   <main>
-    {{- $editorial := eq .Edition "signal-studies-editorial-01" }}
+    {{- $editorial := or (eq .Edition "signal-studies-editorial-01") (eq .Edition "signal-studies-caption-01") }}
     {{if .Receipt}}
       <p class="note">Test order · {{.Receipt.Offer.Edition}}</p>
       <h1>{{.Status}}</h1>

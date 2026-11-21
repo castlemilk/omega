@@ -12,7 +12,7 @@ const { chromium } = require(
 
 async function run() {
   const { origin, offer } = JSON.parse(readFileSync(0, "utf8"));
-  const editorial = offer.edition === "signal-studies-editorial-01";
+  const editorial = ["signal-studies-editorial-01", "signal-studies-caption-01"].includes(offer.edition);
   const downloadLabel = editorial
     ? "Download the print ZIP"
     : "Download the six PDFs";

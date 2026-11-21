@@ -93,7 +93,7 @@ func posterStatementCommand() *cobra.Command {
 }
 
 func posterCheckoutCommand() *cobra.Command {
-	var packetFile, digest, address string
+	var packetFile, digest, address, captionFiles string
 	cmd := &cobra.Command{
 		Use: "test-checkout COLLECTION_DIRECTORY", Short: "Run the approved poster edition against a separate Stripe sandbox",
 		Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -110,7 +110,7 @@ func posterCheckoutCommand() *cobra.Command {
 			if err != nil || len(raw) > 1<<20 {
 				return errors.New("invalid poster review file")
 			}
-			offer, archive, preview, err := posters.TestOffer(os.DirFS(args[0]), raw, digest)
+			offer, archive, preview, err := posters.TestOffer(posterCollection(args[0], captionFiles), raw, digest)
 			if err != nil {
 				return err
 			}
@@ -172,6 +172,7 @@ func posterCheckoutCommand() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&packetFile, "packet", "", "Exact review packet downloaded from Studio")
+	cmd.Flags().StringVar(&captionFiles, "caption-files", "", "Directory containing the exported caption edition's signal-studies.zip and edition-preview.pdf")
 	cmd.Flags().StringVar(&digest, "packet-sha256", "", "Packet digest from the approved private listing receipt")
 	cmd.Flags().StringVar(&address, "listen", "127.0.0.1:9746", "Loopback listener for the test checkout and signed events")
 	_ = cmd.MarkFlagRequired("packet")

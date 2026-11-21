@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"time"
 
@@ -11,16 +12,24 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+func posterCollection(directory, captionFiles string) fs.FS {
+	collection := os.DirFS(directory)
+	if captionFiles == "" {
+		return collection
+	}
+	return posters.WithCaptionFiles(collection, os.DirFS(captionFiles))
+}
+
 func init() {
 	command := &cobra.Command{Use: "posters", Short: "Operate the Signal Studies poster business"}
 	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand(), posterStatementCommand(), posterReporterCommand())
-	var edition string
+	var edition, captionFiles string
 	prepare := &cobra.Command{
 		Use:   "prepare COLLECTION_DIRECTORY",
 		Short: "Verify the six delivery PDFs and emit the selected release candidate",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			candidate, err := posters.CandidateForEdition(os.DirFS(args[0]), edition)
+			candidate, err := posters.CandidateForEdition(posterCollection(args[0], captionFiles), edition)
 			if err != nil {
 				return err
 			}
@@ -32,7 +41,8 @@ func init() {
 			return err
 		},
 	}
-	prepare.Flags().StringVar(&edition, "edition", posters.OriginalEdition, "Edition to verify ("+posters.OriginalEdition+" or "+posters.EditorialEdition+")")
+	prepare.Flags().StringVar(&edition, "edition", posters.OriginalEdition, "Edition to verify ("+posters.OriginalEdition+", "+posters.EditorialEdition+", or "+posters.CaptionEdition+")")
+	prepare.Flags().StringVar(&captionFiles, "caption-files", "", "Directory containing the exported caption edition's signal-studies.zip and edition-preview.pdf")
 	command.AddCommand(prepare)
 	var experiment, source, from, through, evidence string
 	measure := &cobra.Command{

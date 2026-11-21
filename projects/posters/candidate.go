@@ -19,6 +19,7 @@ import (
 const (
 	OriginalEdition  = "signal-studies-v0.1"
 	EditorialEdition = "signal-studies-editorial-01"
+	CaptionEdition   = "signal-studies-caption-01"
 	originalPackSHA  = "1085e2cdf49cce6b566064312c0dc2d6a92b27ff67982d37861b0bb3a3d324ab"
 	maxFileSize      = 2 << 20
 )
@@ -42,6 +43,31 @@ var editions = map[string]editionFiles{
 		preview:   pinnedFile{"print-2.png", "7a5790747ac6b659688d6fa4420f294719475b2b7051e9846091a4b635cb1c5a"},
 		artwork:   pinnedFile{"phase-portrait-A4.pdf", "d69b1d703cb561cf3295c63d34990a331512c65db8a7b56b0972370abc7932fb"},
 	},
+	CaptionEdition: {
+		printPack: pinnedFile{"caption-01/signal-studies.zip", "9c6813f61fa1e98e19b741e6f368f0a7bfe8fbf2cfe285dfb2082a4789a2b8d8"},
+		reviewPDF: pinnedFile{"caption-01/edition-preview.pdf", "21dd034c6c1b0953bc9a4cbd536f6e5e300bc0859c2146991d2dff0e289daf2c"},
+		preview:   pinnedFile{"print-2.png", "7a5790747ac6b659688d6fa4420f294719475b2b7051e9846091a4b635cb1c5a"},
+		artwork:   pinnedFile{"phase-portrait-A4.pdf", "d69b1d703cb561cf3295c63d34990a331512c65db8a7b56b0972370abc7932fb"},
+	},
+}
+
+// WithCaptionFiles reads the two on-demand exports alongside the original
+// collection. All other inputs continue to come from their issued locations.
+func WithCaptionFiles(collection, downloads fs.FS) fs.FS {
+	if downloads == nil {
+		return collection
+	}
+	return captionCollection{collection, downloads}
+}
+
+type captionCollection struct{ collection, downloads fs.FS }
+
+func (c captionCollection) Open(name string) (fs.File, error) {
+	files := editions[CaptionEdition]
+	if name == files.printPack.name || name == files.reviewPDF.name {
+		return c.downloads.Open(strings.TrimPrefix(name, "caption-01/"))
+	}
+	return c.collection.Open(name)
 }
 
 func file(fsys fs.FS, name, expected string) (*omegav1.PosterFile, []byte, error) {
@@ -115,7 +141,7 @@ func CandidateForEdition(collection fs.FS, edition string) (*omegav1.PosterRelea
 	if c.GetSelectedArtwork().GetSha256() != files.artwork.sha256 {
 		return nil, fmt.Errorf("the selected A4 artwork is missing or changed")
 	}
-	if edition == EditorialEdition {
+	if edition == EditorialEdition || edition == CaptionEdition {
 		// Studio's saved Phase portrait record selects the A4 member inside the
 		// original Library ZIP. The corrected delivery must carry those bytes.
 		original := editions[OriginalEdition].printPack

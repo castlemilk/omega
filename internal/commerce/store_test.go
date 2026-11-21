@@ -39,6 +39,7 @@ type fixtureGateway struct {
 }
 
 const editorialPosterPacketSHA = "8e343a7789b0994d4093682e0849842929e47709dfe4121157670649ed19d33d"
+const captionPosterPacketSHA = "2a68ff21008e8554f9d4278a9a758c84d85526e69a08c593fc8c829bf7ec55b6"
 
 func (f *fixtureGateway) create(_ context.Context, id string, _ *v1.DigitalOffer, origin string) (session, error) {
 	f.mu.Lock()
@@ -115,7 +116,7 @@ func TestOrdersKeepReviewedPosterEditions(t *testing.T) {
 	if dir == "" {
 		t.Skip("set OMEGA_POSTER_TEST_COLLECTION to test both Studio editions with their actual files")
 	}
-	collection := os.DirFS(dir)
+	var collection fs.FS = os.DirFS(dir)
 	db := testOrderDB(t)
 	ctx := t.Context()
 	account := "acct_fixture_" + uuid.NewString()
@@ -141,11 +142,17 @@ func TestOrdersKeepReviewedPosterEditions(t *testing.T) {
 		id, label string
 		want      *v1.DigitalOffer
 	}
-	orders := make([]purchase, 0, 2)
-	for _, tc := range []struct{ edition, packetSHA, pack, preview, lead, label string }{
+	type selection struct{ edition, packetSHA, pack, preview, lead, label string }
+	cases := []selection{
 		{posters.OriginalEdition, "18d06477efdfa9c34ebc6dfa08986457618faaf7afb32c0d2c8c38191c584afa", "signal-studies-print-candidate.zip", "print-1.png", "Harmonic sum", "Download the six PDFs"},
 		{posters.EditorialEdition, editorialPosterPacketSHA, "reader-proof-01/signal-studies.zip", "print-2.png", "Phase portrait", "Download the print ZIP"},
-	} {
+	}
+	if downloads := os.Getenv("OMEGA_POSTER_CAPTION_FILES"); downloads != "" {
+		collection = posters.WithCaptionFiles(collection, os.DirFS(downloads))
+		cases = append(cases, selection{posters.CaptionEdition, captionPosterPacketSHA, "caption-01/signal-studies.zip", "print-2.png", "Phase portrait", "Download the print ZIP"})
+	}
+	orders := make([]purchase, 0, len(cases))
+	for _, tc := range cases {
 		packet, err := os.ReadFile("../../projects/posters/testdata/" + tc.edition + ".json")
 		require.NoError(t, err)
 		offer, pack, preview, err := posters.TestOffer(collection, packet, tc.packetSHA)
@@ -180,9 +187,11 @@ func TestOrdersKeepReviewedPosterEditions(t *testing.T) {
 		require.Equal(t, http.StatusSeeOther, request(http.MethodPost, "/orders/"+id+"/refresh", nil).Code)
 		orders = append(orders, purchase{id, tc.label, offer})
 	}
-	require.NotEqual(t, offerKey(orders[0].want), offerKey(orders[1].want))
-	// Re-open both orders through the checkout now serving the corrected ZIP.
+	// Reopen every order through the checkout that now serves the latest ZIP.
+	distinct := make(map[string]bool)
 	for _, order := range orders {
+		require.False(t, distinct[offerKey(order.want)])
+		distinct[offerKey(order.want)] = true
 		page := request(http.MethodGet, "/orders/"+order.id, nil)
 		require.Equal(t, http.StatusOK, page.Code)
 		require.Contains(t, page.Body.String(), "<button>"+order.label+"</button>")
@@ -381,9 +390,15 @@ func TestDigitalOrderBrowser(t *testing.T) {
 	offer := testOffer(archive)
 	var preview []byte
 	if dir := os.Getenv("OMEGA_POSTER_TEST_COLLECTION"); dir != "" {
-		raw, err := os.ReadFile("../../projects/posters/testdata/" + posters.EditorialEdition + ".json")
+		var collection fs.FS = os.DirFS(dir)
+		edition, packetSHA := posters.EditorialEdition, editorialPosterPacketSHA
+		if downloads := os.Getenv("OMEGA_POSTER_CAPTION_FILES"); downloads != "" {
+			collection = posters.WithCaptionFiles(collection, os.DirFS(downloads))
+			edition, packetSHA = posters.CaptionEdition, captionPosterPacketSHA
+		}
+		raw, err := os.ReadFile("../../projects/posters/testdata/" + edition + ".json")
 		require.NoError(t, err)
-		offer, archive, preview, err = posters.TestOffer(os.DirFS(dir), raw, editorialPosterPacketSHA)
+		offer, archive, preview, err = posters.TestOffer(collection, raw, packetSHA)
 		require.NoError(t, err)
 	}
 	g := &fixtureGateway{states: make(map[string]fact)}

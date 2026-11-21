@@ -23,6 +23,7 @@ func TestReviewedStudioSelections(t *testing.T) {
 	}{
 		{OriginalEdition, originalPacketSHA, "harmonic-sum", "58ac9b0f-bdc6-56b9-8a1a-131ef87ce8fb", "821ab426-0868-5525-814f-24acbe3025d5"},
 		{EditorialEdition, editorialPacketSHA, "phase-portrait", "3a227c6c-1432-59a6-80d8-5c4af20ec341", "28cb2421-131b-4bc6-92d6-4613e2cab765"},
+		{CaptionEdition, captionPacketSHA, "phase-portrait", "3a227c6c-1432-59a6-80d8-5c4af20ec341", "28cb2421-131b-4bc6-92d6-4613e2cab765"},
 	} {
 		t.Run(tc.edition, func(t *testing.T) {
 			raw, err := os.ReadFile("testdata/" + tc.edition + ".json")
@@ -65,6 +66,13 @@ func TestReviewedStudioSelections(t *testing.T) {
 				fields["experiment.editorial.copyRecordId"] = tc.copyID
 				fields["experiment.editorial.copyRevision"] = float64(1)
 				require.Len(t, strings.Split(selected.ListingDescription, "\n\n"), 3)
+			} else if tc.edition == CaptionEdition {
+				fields["review.copy.content.parentRecordId"] = "821ab426-0868-5525-814f-24acbe3025d5"
+				fields["experiment.cycle"] = float64(3)
+				fields["experiment.previousPacketSha256"] = editorialPacketSHA
+				fields["experiment.changedVariable"] = "scientific-caption"
+				fields["experiment.revisedCaption"] = "A parallel projection of a calculated field."
+				fields["experiment.captionProof.sha256"] = "3cac88cf702522085c26e1742be5fba5dbe6f60bd2868a0cabcdd83258a1b988"
 			} else {
 				require.NotContains(t, packet, "experiment")
 			}
@@ -100,10 +108,16 @@ func TestCandidatesFromStudioCollection(t *testing.T) {
 	if dir == "" {
 		t.Skip("set OMEGA_POSTER_TEST_COLLECTION to the Studio Signal Studies files")
 	}
-	collection := os.DirFS(dir)
-	for _, tc := range []struct{ edition, packetDigest string }{
+	var collection fs.FS = os.DirFS(dir)
+	type selection struct{ edition, packetDigest string }
+	cases := []selection{
 		{OriginalEdition, originalPacketSHA}, {EditorialEdition, editorialPacketSHA},
-	} {
+	}
+	if downloads := os.Getenv("OMEGA_POSTER_CAPTION_FILES"); downloads != "" {
+		collection = WithCaptionFiles(collection, os.DirFS(downloads))
+		cases = append(cases, selection{CaptionEdition, captionPacketSHA})
+	}
+	for _, tc := range cases {
 		t.Run(tc.edition, func(t *testing.T) {
 			raw, err := os.ReadFile("testdata/" + tc.edition + ".json")
 			require.NoError(t, err)

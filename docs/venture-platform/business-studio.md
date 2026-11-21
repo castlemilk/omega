@@ -42,6 +42,13 @@ Run `omega posters prepare /path/to/studio/public/collections/signal-studies` to
 
 To verify the corrected edition, run `omega posters prepare --edition signal-studies-editorial-01 "$SIGNAL_STUDIES_COLLECTION"`. It selects the Phase portrait A4 artwork, checks the corrected six-PDF ZIP and review PDF and reads the saved listing title and its three paragraphs from `reader-proof-01/listing.txt`. The original edition remains available as `signal-studies-v0.1` and is the default for `prepare`.
 
+For the Wave field caption revision, save the buyer ZIP and the three-page edition preview from Studio in one directory, using their supplied names `signal-studies.zip` and `edition-preview.pdf`. Omega checks those exports against the signed-in review and the original collection. The same `--caption-files` option is available on the isolated test checkout. An existing order downloads the ZIP recorded at purchase.
+
+```sh
+omega posters prepare "$SIGNAL_STUDIES_COLLECTION" \
+  --edition signal-studies-caption-01 --caption-files "$CAPTION_DOWNLOADS"
+```
+
 Studio's scheduled poster operation pairs the immutable artwork and copy revisions and presents the packet in the private console. Approval is bound to its digest and the private demo destination. A hold pauses release. The demo can record five distinct consenting readers' choices and whether they understood digital delivery. The resulting counts determine whether the next proposal concerns delivery wording, lead artwork or a measured channel test. A private reader screen supplies qualitative evidence. Sales, costs, refunds and order fulfilment require their own channel receipts.
 
 The switching test for the first store is two consecutive cycles inside the owner's mandate, with evidence of the executed action, the result, spend and operator effort for each. Public sales, buyer delivery and support must be demonstrated on the selected channel before handing Omega those responsibilities. [Poster pilot](https://github.com/castlemilk/omega/issues/28) · [Authorised publication](https://github.com/castlemilk/omega/issues/106) · [Operating outcomes](https://github.com/castlemilk/omega/issues/103)
