@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// Paths are relative to the private collection or to the named ZIP archive.
+message PosterFile {
+  string name = 1;
+  string sha256 = 2;
+  uint32 bytes = 3;
+}
+
+// A candidate identifies deliverables and copy. An owner decision and a
+// destination receipt are separate records.
+message PosterReleaseCandidate {
+  string edition = 1;
+  string listing_title = 2;
+  string listing_description = 3;
+  PosterFile print_pack = 4;
+  PosterFile development_kit = 5;
+  PosterFile review_pdf = 6;
+  PosterFile artwork_preview = 7;
+  PosterFile listing_source = 8;
+  PosterFile selected_artwork = 9;
+  repeated PosterFile delivery_files = 10;
+}
