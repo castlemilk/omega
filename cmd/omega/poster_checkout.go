@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
@@ -101,14 +100,9 @@ func posterCheckoutCommand() *cobra.Command {
 			if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
 				return errors.New("choose a loopback address and port")
 			}
-			f, err := os.Open(packetFile)
+			raw, err := readPosterReview(packetFile)
 			if err != nil {
 				return err
-			}
-			defer f.Close()
-			raw, err := io.ReadAll(io.LimitReader(f, 1<<20+1))
-			if err != nil || len(raw) > 1<<20 {
-				return errors.New("invalid poster review file")
 			}
 			offer, archive, preview, err := posters.TestOffer(posterCollection(args[0], captionFiles), raw, digest)
 			if err != nil {

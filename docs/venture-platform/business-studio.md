@@ -53,6 +53,16 @@ Studio's scheduled poster operation pairs the immutable artwork and copy revisio
 
 The switching test for the first store is two consecutive cycles inside the owner's mandate, with evidence of the executed action, the result, spend and operator effort for each. Public sales, buyer delivery and support must be demonstrated on the selected channel before handing Omega those responsibilities. [Poster pilot](https://github.com/castlemilk/omega/issues/28) · [Authorised publication](https://github.com/castlemilk/omega/issues/106) · [Operating outcomes](https://github.com/castlemilk/omega/issues/103)
 
+### Verify a seller download
+
+Open **Walkthrough → Seller draft** in Studio. Choose the issued edition or its proposal, download the seller ZIP, and copy that download link. From the same edition’s review, save the review packet. Omega checks both local files against the packet and draft identified by the link.
+
+```sh
+omega posters verify-seller "$SELLER_ZIP" "$REVIEW_PACKET" --from "$STUDIO_DOWNLOAD_URL"
+```
+
+On success the command writes Studio’s verified seller manifest to standard output. It checks the four listing photos and their source sheets, the listing text, seller notes, observation template and every file inside the buyer ZIP. The manifest records whether the materials describe a proposal or an issued edition. A mismatch exits with an error before output. The check runs offline.
+
 ## Measure the poster channel
 
 After an approved channel test, use the `metrics-template.csv` from the Signal Studies development kit. The report selects one experiment, one exact listing-specific measurement URL and an inclusive window of complete UTC days. The source URL identifies the supplied export. The report retains the file digest so the operator can reconcile it with the original.
