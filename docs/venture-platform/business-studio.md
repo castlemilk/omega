@@ -17,7 +17,7 @@ In either dashboard, choose **Business Studio** in the desktop sidebar or in the
 | Business | The existing parent record for products. Keep its source identity through the pilot. |
 | Product | A deliverable owned by one business. A business can have several products. |
 | Project | In Studio, the working view for a specific business and product. In the Omega runtime, a project groups orchestration nodes. An operator entering Studio selects business scope there. |
-| Venture | The proposed operating unit for a thesis, mandates, brands and products. Mapping a saved business to a venture requires a recorded decision. |
+| Venture draft | A private plan with an objective, first deliverable and versioned sources. It can refer to a product in an existing business or build on a parent venture. |
 | Brand, channel and legal entity | A market identity, a distribution destination and a legal owner respectively. An existing poster or card collection keeps its identity until its commercial relationship is verified. |
 | Workflow and agent | A workflow defines the steps. An agent can execute steps within a mandate. Reviewing a saved run leaves its authority and revision intact. |
 
@@ -33,6 +33,14 @@ In either dashboard, choose **Business Studio** in the desktop sidebar or in the
 | Request a run under another business | Show the unavailable state. The scoped list and detail reads use the current owner's workspace. |
 
 The dashboard regression test runs on two local servers and intercepts the outbound navigation at a synthetic Studio origin. Install the locked dependencies in both dashboard directories, install Chromium with `npx playwright install chromium` in `web/dashboard`, and run `npm run test:e2e:studio` there. The private Studio checkout owns the combined browser test with the compiled Worker, local D1 records and a synthetic identity provider.
+
+## Prepare a venture
+
+From **Command → Venture drafts**, choose **Prepare a venture**. To start from existing work, open a reviewed brief in **Set up a business**, choose a playbook version, or open a saved venture and select **Prepare a related venture**.
+
+The wizard moves through **Thesis → Blueprint → Resources → Review**. Name the venture and its first deliverable. Copy a finding to keep its wording, or reference a source to see when its version changes. The review lists the selected sources, the proposed budget and the approved spend. Creating the draft saves the plan. Agent activation and spending each require their own authority.
+
+For Signal Studies, open its business handover, copy the saved finding and reference the poster product and **Digital edition pilot v1**. To verify delivery, compare the SHA-256 of the ZIP from the private store with the editorial test order’s **Delivery ZIP** in **Walkthrough → Orders → Open order statement**. [Venture journey and review](https://github.com/dropshippr/studio/tree/main/docs/design/reviews/venture-formation)
 
 ## First operating business
 
