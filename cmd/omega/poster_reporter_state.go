@@ -20,6 +20,20 @@ const reporterRunTimeout = 6 * time.Minute
 const reporterLease = reporterRunTimeout + time.Minute
 
 var reporterBucket = []byte("local-reporter/v1")
+var errReporterInProgress = errors.New("another order check is already in progress")
+
+// Both an early wake and a newly deferred check have a durable retry time.
+// The scheduler can finish normally. A manual caller still receives an error
+// and cannot mistake an empty response for a statement receipt.
+type reporterWait struct {
+	cause error
+	next  string
+}
+
+func (w *reporterWait) Error() string {
+	return fmt.Sprintf("%s. Next eligible check %s", w.cause, w.next)
+}
+func (w *reporterWait) Unwrap() error { return w.cause }
 
 // Opening the database just for a transaction leaves status readable while
 // the provider or Studio is responding. A killed process has a bounded lease.
@@ -103,7 +117,7 @@ func (s reporterState) begin(now time.Time, from, through string) error {
 				return errors.New("invalid saved Stripe retry time")
 			}
 			if now.Before(next) {
-				return fmt.Errorf("%w. Next eligible check %s", commerce.ErrStatementRateLimited, status.NextProviderReadAt)
+				return &reporterWait{commerce.ErrStatementRateLimited, status.NextProviderReadAt}
 			}
 		}
 		if status.Outcome == "checking" {
@@ -112,7 +126,7 @@ func (s reporterState) begin(now time.Time, from, through string) error {
 				return errors.New("invalid saved reporter attempt time")
 			}
 			if now.Before(started.Add(reporterLease)) {
-				return errors.New("another order check is already in progress")
+				return errReporterInProgress
 			}
 		}
 		status.Outcome, status.AttemptAt, status.FinishedAt = "checking", reporterStamp(now), ""

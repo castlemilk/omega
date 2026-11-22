@@ -71,6 +71,7 @@ func posterReporterCommandWithClock(now func() time.Time) *cobra.Command {
 		}}
 	var from, through string
 	var days int
+	var scheduled bool
 	run := &cobra.Command{Use: "run", Short: "Verify the order period and send one signed statement", Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if (cmd.Flags().Changed("from") && from == "") || (cmd.Flags().Changed("through") && through == "") {
@@ -92,6 +93,10 @@ func posterReporterCommandWithClock(now func() time.Time) *cobra.Command {
 			receipt, err := runReporterCheck(state, first, last, now, func() (*v1.CommerceReporterReceipt, error) {
 				return sendReporterWindow(cmd.Context(), key, source, first, last, from == "" && through == "")
 			})
+			var waiting *reporterWait
+			if scheduled && (errors.As(err, &waiting) || errors.Is(err, errReporterInProgress)) {
+				err = nil
+			}
 			if receipt == nil {
 				return err
 			}
@@ -103,6 +108,7 @@ func posterReporterCommandWithClock(now func() time.Time) *cobra.Command {
 			return errors.Join(err, printErr)
 		}}
 	run.Flags().IntVar(&days, "days", 30, "Rolling UTC order creation days through today (1–366)")
+	run.Flags().BoolVar(&scheduled, "scheduled", false, "Finish a scheduled wake normally when the connection is busy or waiting to retry")
 	run.Flags().StringVar(&from, "from", "", "First UTC order creation day (YYYY-MM-DD)")
 	run.Flags().StringVar(&through, "through", "", "Last UTC order creation day, inclusive (YYYY-MM-DD)")
 	var asJSON bool
@@ -208,7 +214,7 @@ func runReporterCheck(state reporterState, from, through string, clock func() ti
 	}
 	status, saveErr := state.finish(started, clock(), receipt, result)
 	if saveErr == nil && errors.Is(result, commerce.ErrStatementRateLimited) {
-		result = fmt.Errorf("%w. Next eligible check %s", result, status.NextProviderReadAt)
+		result = &reporterWait{result, status.NextProviderReadAt}
 	}
 	return receipt, errors.Join(result, saveErr)
 }

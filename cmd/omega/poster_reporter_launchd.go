@@ -19,7 +19,7 @@ const reporterAgentLabel = "com.omega.signal-studies-reporter"
 
 func reporterAgentPlist(dir, source, binary string, days int) []byte {
 	var arguments strings.Builder
-	for _, arg := range []string{binary, "posters", "reporter", "run", "--directory", dir, "--credentials", source, "--days", strconv.Itoa(days)} {
+	for _, arg := range []string{binary, "posters", "reporter", "run", "--scheduled", "--directory", dir, "--credentials", source, "--days", strconv.Itoa(days)} {
 		arguments.WriteString("    <string>" + html.EscapeString(arg) + "</string>\n")
 	}
 	return []byte(fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
