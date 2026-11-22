@@ -109,19 +109,16 @@ func (s reporterState) status(now time.Time) (*v1.LocalReporterStatus, error) {
 	return status, nil
 }
 
-func (s reporterState) begin(now time.Time, from, through string) error {
-	_, err := s.transact(func(status *v1.LocalReporterStatus) error {
-		if status.NextProviderReadAt != "" {
-			next, err := time.Parse(time.RFC3339Nano, status.NextProviderReadAt)
-			if err != nil {
-				return errors.New("invalid saved Stripe retry time")
-			}
-			if now.Before(next) {
-				return &reporterWait{commerce.ErrStatementRateLimited, status.NextProviderReadAt}
-			}
+// Claim the whole wake, including a cooldown heartbeat, before contacting Studio.
+// The previous provider attempt remains intact until current authority is proven.
+func (s reporterState) claim(now time.Time) (*v1.LocalReporterStatus, error) {
+	return s.transact(func(status *v1.LocalReporterStatus) error {
+		lease := status.WakeLeaseAt
+		if lease == "" && status.Outcome == "checking" {
+			lease = status.AttemptAt // A reporter started by the previous binary.
 		}
-		if status.Outcome == "checking" {
-			started, err := time.Parse(time.RFC3339Nano, status.AttemptAt)
+		if lease != "" {
+			started, err := time.Parse(time.RFC3339Nano, lease)
 			if err != nil {
 				return errors.New("invalid saved reporter attempt time")
 			}
@@ -129,10 +126,52 @@ func (s reporterState) begin(now time.Time, from, through string) error {
 				return errReporterInProgress
 			}
 		}
+		if status.NextProviderReadAt != "" {
+			if _, err := time.Parse(time.RFC3339Nano, status.NextProviderReadAt); err != nil ||
+				(status.Outcome != "rate-limited" && status.Outcome != "recheck-rate-limited") {
+				return errors.New("invalid saved Stripe retry time")
+			}
+		}
+		status.WakeLeaseAt = reporterStamp(now)
+		return nil
+	})
+}
+
+func (s reporterState) owned(lease time.Time, change func(*v1.LocalReporterStatus)) (*v1.LocalReporterStatus, error) {
+	return s.transact(func(status *v1.LocalReporterStatus) error {
+		if status.WakeLeaseAt != reporterStamp(lease) {
+			return errors.New("a newer reporter wake owns this check")
+		}
+		change(status)
+		return nil
+	})
+}
+
+func (s reporterState) release(lease time.Time) error {
+	_, err := s.owned(lease, func(status *v1.LocalReporterStatus) { status.WakeLeaseAt = "" })
+	return err
+}
+
+func (s reporterState) noteCheckIn(lease time.Time, check *v1.ReporterCheckIn, revision uint32) error {
+	_, err := s.owned(lease, func(status *v1.LocalReporterStatus) {
+		status.LastCheckInAt = check.CheckedInAt
+		status.CheckInOutcome = "unconfirmed"
+		if revision != 0 {
+			status.CheckInOutcome = "confirmed"
+			if check.Activity == "provider-wait" && status.LimitConnectionRevision == 0 {
+				status.LimitConnectionRevision = revision
+			}
+		}
+	})
+	return err
+}
+
+func (s reporterState) startRead(lease, now time.Time, from, through string) error {
+	_, err := s.owned(lease, func(status *v1.LocalReporterStatus) {
 		status.Outcome, status.AttemptAt, status.FinishedAt = "checking", reporterStamp(now), ""
 		status.FromDay, status.ThroughDay = from, through
 		status.NextProviderReadAt, status.ProviderRetryAt, status.LimitReason, status.LimitedRead = "", "", "", ""
-		return nil
+		status.LimitConnectionRevision, status.LimitedAttemptAt = 0, ""
 	})
 	return err
 }
@@ -150,11 +189,8 @@ func nextReporterRead(now time.Time, count uint32, limit *commerce.StatementRead
 	return next
 }
 
-func (s reporterState) finish(started, now time.Time, receipt *v1.CommerceReporterReceipt, result error) (*v1.LocalReporterStatus, error) {
-	return s.transact(func(status *v1.LocalReporterStatus) error {
-		if status.Outcome != "checking" || status.AttemptAt != reporterStamp(started) {
-			return errors.New("a newer reporter attempt owns this check")
-		}
+func (s reporterState) finish(lease, now time.Time, receipt *v1.CommerceReporterReceipt, result error, revision uint32) (*v1.LocalReporterStatus, error) {
+	return s.owned(lease, func(status *v1.LocalReporterStatus) {
 		status.FinishedAt = reporterStamp(now)
 		if receipt != nil {
 			status.LastReceipt = receipt
@@ -163,6 +199,8 @@ func (s reporterState) finish(started, now time.Time, receipt *v1.CommerceReport
 		switch {
 		case errors.Is(result, commerce.ErrStatementRateLimited):
 			status.Outcome = "rate-limited"
+			status.LimitConnectionRevision = revision
+			status.LimitedAttemptAt = reporterStamp(now)
 			if receipt != nil {
 				status.Outcome = "recheck-rate-limited"
 			}
@@ -172,6 +210,9 @@ func (s reporterState) finish(started, now time.Time, receipt *v1.CommerceReport
 			var limit *commerce.StatementReadLimit
 			if errors.As(result, &limit) {
 				status.LimitedRead, status.LimitReason = limit.Read, limit.Reason
+				if !limit.ObservedAt.IsZero() {
+					status.LimitedAttemptAt = reporterStamp(limit.ObservedAt)
+				}
 				if !limit.RetryAt.IsZero() {
 					status.ProviderRetryAt = reporterStamp(limit.RetryAt)
 				}
@@ -187,6 +228,5 @@ func (s reporterState) finish(started, now time.Time, receipt *v1.CommerceReport
 			status.Outcome = "acknowledged"
 			status.ConsecutiveLimits = 0
 		}
-		return nil
 	})
 }

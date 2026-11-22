@@ -19,6 +19,7 @@ import (
 )
 
 const posterReporterEndpoint = "https://studio.dropshippr-apps.workers.dev/api/reporters/signal-studies/statement"
+const posterReporterCheckInEndpoint = "https://studio.dropshippr-apps.workers.dev/api/reporters/signal-studies/check-in"
 
 func defaultPosterReporterDir() (string, error) {
 	base, err := os.UserConfigDir()
@@ -90,9 +91,13 @@ func posterReporterCommandWithClock(now func() time.Time) *cobra.Command {
 				return err
 			}
 			state := localReporterState(dir, key)
-			receipt, err := runReporterCheck(state, first, last, now, func() (*v1.CommerceReporterReceipt, error) {
-				return sendReporterWindow(cmd.Context(), key, source, first, last, from == "" && through == "")
-			})
+			checkIn := func(ctx context.Context, check *v1.ReporterCheckIn) (*v1.ReporterCheckInReceipt, error) {
+				return commerce.CheckInReporter(ctx, posterReporterCheckInEndpoint, key, check)
+			}
+			send := func(ctx context.Context, revision uint32, renew func(context.Context, uint32) error) (*v1.CommerceReporterReceipt, error) {
+				return sendReporterWindow(ctx, key, source, first, last, from == "" && through == "", revision, renew)
+			}
+			receipt, err := runReporterCheck(cmd.Context(), state, first, last, now, checkIn, send)
 			var waiting *reporterWait
 			if scheduled && (errors.As(err, &waiting) || errors.Is(err, errReporterInProgress)) {
 				err = nil
@@ -176,9 +181,9 @@ func posterReporterCommandWithClock(now func() time.Time) *cobra.Command {
 	return parent
 }
 
-func sendReporterWindow(parent context.Context, key ed25519.PrivateKey, source, first, last string, rolling bool) (*v1.CommerceReporterReceipt, error) {
-	ctx, cancel := context.WithTimeout(parent, reporterRunTimeout)
-	defer cancel()
+func sendReporterWindow(ctx context.Context, key ed25519.PrivateKey, source, first, last string, rolling bool, revision uint32,
+	renew func(context.Context, uint32) error,
+) (*v1.CommerceReporterReceipt, error) {
 	gateway, db, err := reporterConnection(source)
 	if err != nil {
 		return nil, err
@@ -197,33 +202,17 @@ func sendReporterWindow(parent context.Context, key ed25519.PrivateKey, source, 
 	if err != nil {
 		return nil, err
 	}
-	if rolling {
-		return commerce.SubmitRollingStatement(ctx, posterReporterEndpoint, key, statement, read)
+	if !rolling {
+		read = nil
 	}
-	return commerce.SubmitStatement(ctx, posterReporterEndpoint, key, statement)
-}
-
-func runReporterCheck(state reporterState, from, through string, clock func() time.Time, check func() (*v1.CommerceReporterReceipt, error)) (*v1.CommerceReporterReceipt, error) {
-	started := clock()
-	if err := state.begin(started, from, through); err != nil {
-		return nil, err
-	}
-	receipt, result := check()
-	if receipt == nil && result == nil {
-		result = errors.New("Studio did not acknowledge the check")
-	}
-	status, saveErr := state.finish(started, clock(), receipt, result)
-	if saveErr == nil && errors.Is(result, commerce.ErrStatementRateLimited) {
-		result = &reporterWait{result, status.NextProviderReadAt}
-	}
-	return receipt, errors.Join(result, saveErr)
+	return commerce.SubmitPairedStatement(ctx, posterReporterEndpoint, key, statement, revision, read, renew)
 }
 
 func printReporterStatus(w io.Writer, s *v1.LocalReporterStatus) error {
 	var out string
 	switch s.Outcome {
 	case "never-run":
-		out = "This Mac has not recorded a check for this connection yet."
+		out = "The first provider read for this connection is pending."
 	case "checking":
 		out = "An order check is in progress."
 	case "interrupted":
@@ -247,6 +236,9 @@ func printReporterStatus(w io.Writer, s *v1.LocalReporterStatus) error {
 	}
 	if s.NextProviderReadAt != "" {
 		out += "\nNext eligible check " + s.NextProviderReadAt
+	}
+	if s.LastCheckInAt != "" {
+		out += "\nStudio connection check " + s.CheckInOutcome + " at " + s.LastCheckInAt
 	}
 	if s.LastReceipt != nil {
 		out += fmt.Sprintf("\nLast acknowledged check %s for %s through %s", s.LastReceipt.CheckedAt, s.ReceiptFromDay, s.ReceiptThroughDay)

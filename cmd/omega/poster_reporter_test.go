@@ -23,6 +23,7 @@ import (
 
 	v1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	"github.com/benebsworth/omega/internal/commerce"
+	"github.com/benebsworth/omega/projects/posters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -130,21 +131,35 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string, limitAcc
 	t.Setenv("OMEGA_POSTER_COMMERCE_DATABASE_URL", "unused")
 	t.Setenv("OMEGA_POSTER_STRIPE_SIGNING_SECRET", "")
 	rechecked := make(chan string, 4)
+	activities := make(chan *v1.ReporterCheckIn, 32)
 	var received atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		received.Add(1)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		assert.Equal(t, "POST", r.Method)
-		assert.Equal(t, "/api/reporters/signal-studies/statement", r.URL.Path)
 		raw, readErr := io.ReadAll(r.Body)
 		assert.NoError(t, readErr)
 		sig, decodeErr := base64.RawURLEncoding.DecodeString(r.Header.Get("X-Omega-Signature"))
 		assert.NoError(t, decodeErr)
+		if r.URL.Path == "/api/reporters/signal-studies/check-in" {
+			msg := fmt.Sprintf("omega-commerce-reporter-check-in-v1\nPOST\n%s\n%s\n%x", posterReporterCheckInEndpoint, r.Header.Get("X-Omega-Issued-At"), sha256.Sum256(raw))
+			assert.True(t, ed25519.Verify(public, []byte(msg), sig))
+			check := new(v1.ReporterCheckIn)
+			assert.NoError(t, protojson.Unmarshal(raw, check))
+			assert.Equal(t, posters.StudioBusinessID, check.BusinessId)
+			assert.Equal(t, posters.StudioProductID, check.ProductId)
+			activities <- check
+			_ = json.NewEncoder(w).Encode(map[string]any{"businessId": check.BusinessId, "productId": check.ProductId, "checkedInAt": check.CheckedInAt, "connectionRevision": 7})
+			return
+		}
+		received.Add(1)
+		assert.Equal(t, "/api/reporters/signal-studies/statement", r.URL.Path)
+		assert.Equal(t, "7", r.Header.Get("X-Omega-Connection-Revision"))
 		mode := r.Header.Get("X-Omega-Report-Recovery")
 		purpose := "omega-commerce-reporter-v1"
 		if mode == "recheck-v1" {
 			purpose = "omega-commerce-reporter-recheck-v1"
 		}
-		message := fmt.Sprintf("%s\nPOST\n%s\n%s\n%x", purpose, posterReporterEndpoint, r.Header.Get("X-Omega-Issued-At"), sha256.Sum256(raw))
+		message := fmt.Sprintf("%s\nPOST\n%s\n%s\n%x\n7", purpose, posterReporterEndpoint, r.Header.Get("X-Omega-Issued-At"), sha256.Sum256(raw))
 		assert.True(t, ed25519.Verify(public, []byte(message), sig))
 		var statement v1.CommerceStatement
 		assert.NoError(t, protojson.Unmarshal(raw, &statement))
@@ -204,13 +219,25 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string, limitAcc
 	require.True(t, strings.HasSuffix(receipt.StatementId, "/"+today+"/"+today))
 	require.Len(t, rechecked, 1)
 	require.Equal(t, orderID, <-rechecked)
+	for _, revision := range []uint32{0, 0, 7} {
+		require.NotEmpty(t, activities)
+		check := <-activities
+		require.Equal(t, "checking", check.Activity)
+		require.Equal(t, revision, check.ExpectedConnectionRevision)
+	}
 
 	// A distinct process reads the same private state at every scheduled wake.
 	// Advance only the scheduler clock. Stripe, Postgres, signing and the
 	// receiver use their real fixture endpoints and independently verify bytes.
 	now := time.Now().UTC()
 	wake := func(args ...string) ([]byte, error) {
-		cmd := posterReporterCommandWithClock(func() time.Time { return now })
+		started := time.Now()
+		cmd := posterReporterCommandWithClock(func() time.Time {
+			if now.After(started) {
+				return now.Add(time.Since(started))
+			}
+			return time.Now().UTC()
+		})
 		var out bytes.Buffer
 		cmd.SetOut(&out)
 		cmd.SetErr(io.Discard)
@@ -242,7 +269,7 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string, limitAcc
 	require.NoError(t, err)
 	require.Equal(t, state.ProviderRetryAt, state.NextProviderReadAt)
 	require.WithinDuration(t, now.Add(2*time.Hour), next, 30*time.Second)
-	now = next.Add(-time.Nanosecond)
+	now = next.Add(-time.Second)
 	body, err = wake("run", "--scheduled", "--days", "1")
 	require.NoError(t, err)
 	require.Empty(t, body)
@@ -251,6 +278,17 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string, limitAcc
 	require.Equal(t, state.AttemptAt, readStatus().AttemptAt)
 	require.Equal(t, beforeRead+1, accountReads.Load())
 	require.Equal(t, beforeSend, received.Load())
+	require.Equal(t, "checking", (<-activities).Activity)
+	for range 3 {
+		require.NotEmpty(t, activities)
+		check := <-activities
+		require.Equal(t, "provider-wait", check.Activity)
+		require.Equal(t, uint32(7), check.ExpectedConnectionRevision)
+		require.Equal(t, state.LimitedAttemptAt, check.AttemptAt)
+		require.Equal(t, state.NextProviderReadAt, check.NextReadAt)
+		require.Equal(t, "rate-limit", check.LimitReason)
+		require.False(t, check.Recheck)
+	}
 	limitAccount.Store(false)
 	now = next
 	body, err = wake("run", "--from", day, "--through", day)

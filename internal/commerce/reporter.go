@@ -22,7 +22,7 @@ import (
 // SubmitStatement only sends evidence obtained by the test statement exporter.
 // Each retry signs the same body; a lost acknowledgement may already be saved.
 func SubmitStatement(ctx context.Context, destination string, key ed25519.PrivateKey, statement *v1.CommerceStatement) (*v1.CommerceReporterReceipt, error) {
-	response, err := submitStatement(ctx, destination, key, statement, "")
+	response, err := submitStatement(ctx, destination, key, statement, "", 0)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,37 @@ type statementResponse struct {
 func SubmitRollingStatement(ctx context.Context, destination string, key ed25519.PrivateKey, statement *v1.CommerceStatement,
 	read func(context.Context, string, string) (*v1.CommerceStatement, error),
 ) (*v1.CommerceReporterReceipt, error) {
-	response, err := submitStatement(ctx, destination, key, statement, "1")
+	return submitRollingStatement(ctx, destination, key, statement, 0, read)
+}
+
+// SubmitPairedStatement always binds the evidence to the authority obtained
+// before the source was opened. A rolling read must renew that same authority
+// immediately before reading any of Studio's requested historical dates.
+func SubmitPairedStatement(ctx context.Context, destination string, key ed25519.PrivateKey, statement *v1.CommerceStatement, revision uint32,
+	read func(context.Context, string, string) (*v1.CommerceStatement, error), renew func(context.Context, uint32) error,
+) (*v1.CommerceReporterReceipt, error) {
+	if revision == 0 || (read != nil && renew == nil) {
+		return nil, errors.New("the paired reporter requires current Studio authority")
+	}
+	if read == nil {
+		response, err := submitStatement(ctx, destination, key, statement, "", revision)
+		if err != nil {
+			return nil, err
+		}
+		return response.receipt, nil
+	}
+	return submitRollingStatement(ctx, destination, key, statement, revision, func(ctx context.Context, from, through string) (*v1.CommerceStatement, error) {
+		if err := renew(ctx, revision); err != nil {
+			return nil, err
+		}
+		return read(ctx, from, through)
+	})
+}
+
+func submitRollingStatement(ctx context.Context, destination string, key ed25519.PrivateKey, statement *v1.CommerceStatement, revision uint32,
+	read func(context.Context, string, string) (*v1.CommerceStatement, error),
+) (*v1.CommerceReporterReceipt, error) {
+	response, err := submitStatement(ctx, destination, key, statement, "1", revision)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +89,7 @@ func SubmitRollingStatement(ctx context.Context, destination string, key ed25519
 		previous.BusinessId != statement.BusinessId || previous.ProductId != statement.ProductId {
 		return response.receipt, errors.New("the reporting period was saved, but the recheck produced a different product or period")
 	}
-	if _, err := submitStatement(ctx, destination, key, previous, "recheck-v1"); err != nil {
+	if _, err := submitStatement(ctx, destination, key, previous, "recheck-v1", revision); err != nil {
 		return response.receipt, fmt.Errorf("the reporting period was saved; the earlier statement was not acknowledged: %w", err)
 	}
 	return response.receipt, nil
@@ -75,10 +105,20 @@ func validRecheckWindow(statement *v1.CommerceStatement, from, through string) b
 	return statement.Coverage != "partial" && err == nil && normalErr == nil && first.Before(start) && !end.After(stop) && end.Sub(first) <= stop.Sub(start)
 }
 
-func submitStatement(ctx context.Context, destination string, key ed25519.PrivateKey, statement *v1.CommerceStatement, recoveryMode string) (*statementResponse, error) {
+func validReporterDestination(destination string, key ed25519.PrivateKey) bool {
 	target, err := url.Parse(destination)
-	if err != nil || target.Scheme != "https" || target.Host == "" || target.Path == "" || target.User != nil ||
-		target.RawQuery != "" || target.Fragment != "" || target.ForceQuery || len(key) != ed25519.PrivateKeySize {
+	return err == nil && target.Scheme == "https" && target.Host != "" && target.Path != "" && target.User == nil &&
+		target.RawQuery == "" && target.Fragment == "" && !target.ForceQuery && len(key) == ed25519.PrivateKeySize
+}
+
+func reporterHTTPClient() *http.Client {
+	return &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}}
+}
+
+func submitStatement(ctx context.Context, destination string, key ed25519.PrivateKey, statement *v1.CommerceStatement, recoveryMode string, revision uint32) (*statementResponse, error) {
+	if !validReporterDestination(destination, key) {
 		return nil, errors.New("invalid reporter destination or signing key")
 	}
 	if statement == nil || statement.Schema != "omega.commerce-statement/v1" || !statement.TestMode {
@@ -88,11 +128,9 @@ func submitStatement(ctx context.Context, destination string, key ed25519.Privat
 	if err != nil {
 		return nil, err
 	}
-	client := &http.Client{Timeout: 20 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	}}
+	client := reporterHTTPClient()
 	for attempt := 0; ; attempt++ {
-		response, retry, err := sendStatement(ctx, client, destination, key, body, recoveryMode)
+		response, retry, err := sendStatement(ctx, client, destination, key, body, recoveryMode, revision)
 		if err == nil && !reporterReceiptMatches(statement, response.receipt) {
 			return nil, errors.New("the receiver acknowledgement does not match the submitted statement")
 		}
@@ -107,20 +145,33 @@ func submitStatement(ctx context.Context, destination string, key ed25519.Privat
 	}
 }
 
-func sendStatement(ctx context.Context, client *http.Client, destination string, key ed25519.PrivateKey, body []byte, recoveryMode string) (*statementResponse, bool, error) {
+func signedReporterRequest(ctx context.Context, destination, purpose string, key ed25519.PrivateKey, body []byte, at time.Time, revision uint32) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, destination, bytes.NewReader(body))
 	if err != nil {
-		return nil, false, errors.New("could not construct the signed statement request")
+		return nil, errors.New("could not construct the signed reporter request")
 	}
-	issued := strconv.FormatInt(time.Now().Unix(), 10)
+	issued := strconv.FormatInt(at.Unix(), 10)
+	message := fmt.Sprintf("%s\nPOST\n%s\n%s\n%x", purpose, destination, issued, sha256.Sum256(body))
+	if revision > 0 {
+		generation := strconv.FormatUint(uint64(revision), 10)
+		message += "\n" + generation
+		req.Header.Set("X-Omega-Connection-Revision", generation)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Omega-Issued-At", issued)
+	req.Header.Set("X-Omega-Signature", base64.RawURLEncoding.EncodeToString(ed25519.Sign(key, []byte(message))))
+	return req, nil
+}
+
+func sendStatement(ctx context.Context, client *http.Client, destination string, key ed25519.PrivateKey, body []byte, recoveryMode string, revision uint32) (*statementResponse, bool, error) {
 	purpose := "omega-commerce-reporter-v1"
 	if recoveryMode == "recheck-v1" {
 		purpose = "omega-commerce-reporter-recheck-v1"
 	}
-	message := fmt.Sprintf("%s\nPOST\n%s\n%s\n%x", purpose, destination, issued, sha256.Sum256(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Omega-Issued-At", issued)
-	req.Header.Set("X-Omega-Signature", base64.RawURLEncoding.EncodeToString(ed25519.Sign(key, []byte(message))))
+	req, err := signedReporterRequest(ctx, destination, purpose, key, body, time.Now(), revision)
+	if err != nil {
+		return nil, false, err
+	}
 	if recoveryMode != "" {
 		req.Header.Set("X-Omega-Report-Recovery", recoveryMode)
 	}

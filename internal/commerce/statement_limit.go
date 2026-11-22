@@ -13,9 +13,10 @@ import (
 // StatementReadLimit carries only recognized scheduling information. Raw Stripe
 // errors can contain portions of a credential or a private sandbox claim URL.
 type StatementReadLimit struct {
-	Read    string
-	Reason  string
-	RetryAt time.Time
+	Read       string
+	Reason     string
+	RetryAt    time.Time
+	ObservedAt time.Time
 }
 
 func (l *StatementReadLimit) Error() string { return ErrStatementRateLimited.Error() }
@@ -26,13 +27,13 @@ func statementReadLimit(err error, read string) *StatementReadLimit {
 	if !errors.As(err, &provider) || provider.HTTPStatusCode != http.StatusTooManyRequests || provider.Code == stripe.ErrorCodeLockTimeout {
 		return nil
 	}
-	limit := &StatementReadLimit{Read: read}
+	limit := &StatementReadLimit{Read: read, ObservedAt: time.Now().UTC()}
 	if response := provider.LastResponse; response != nil {
 		switch reason := response.Header.Get("Stripe-Rate-Limited-Reason"); reason {
 		case "global-rate", "global-concurrency", "endpoint-rate", "endpoint-concurrency", "resource-specific":
 			limit.Reason = reason
 		}
-		limit.RetryAt = providerRetryTime(response.Header.Get("Retry-After"), time.Now().UTC())
+		limit.RetryAt = providerRetryTime(response.Header.Get("Retry-After"), limit.ObservedAt)
 	}
 	message := strings.ToLower(provider.Msg)
 	if limit.Reason == "" && strings.Contains(message, "sandbox") && strings.Contains(message, "rate limit") &&

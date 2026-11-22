@@ -12,10 +12,11 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file omega/v1/reporter_status.proto.
  */
 export const file_omega_v1_reporter_status: GenFile = /*@__PURE__*/
-  fileDesc("Ch5vbWVnYS92MS9yZXBvcnRlcl9zdGF0dXMucHJvdG8SCG9tZWdhLnYxIugCChNMb2NhbFJlcG9ydGVyU3RhdHVzEg8KB291dGNvbWUYASABKAkSEgoKYXR0ZW1wdF9hdBgCIAEoCRITCgtmaW5pc2hlZF9hdBgDIAEoCRIQCghmcm9tX2RheRgEIAEoCRITCgt0aHJvdWdoX2RheRgFIAEoCRIdChVuZXh0X3Byb3ZpZGVyX3JlYWRfYXQYBiABKAkSGgoSY29uc2VjdXRpdmVfbGltaXRzGAcgASgNEhQKDGxpbWl0ZWRfcmVhZBgIIAEoCRIUCgxsaW1pdF9yZWFzb24YCSABKAkSGQoRcHJvdmlkZXJfcmV0cnlfYXQYCiABKAkSNwoMbGFzdF9yZWNlaXB0GAsgASgLMiEub21lZ2EudjEuQ29tbWVyY2VSZXBvcnRlclJlY2VpcHQSGAoQcmVjZWlwdF9mcm9tX2RheRgMIAEoCRIbChNyZWNlaXB0X3Rocm91Z2hfZGF5GA0gASgJQjZaNGdpdGh1Yi5jb20vYmVuZWJzd29ydGgvb21lZ2EvZ2VuL2dvL29tZWdhL3YxO29tZWdhdjFiBnByb3RvMw", [file_omega_v1_digital_order]);
+  fileDesc("Ch5vbWVnYS92MS9yZXBvcnRlcl9zdGF0dXMucHJvdG8SCG9tZWdhLnYxIvIDChNMb2NhbFJlcG9ydGVyU3RhdHVzEg8KB291dGNvbWUYASABKAkSEgoKYXR0ZW1wdF9hdBgCIAEoCRITCgtmaW5pc2hlZF9hdBgDIAEoCRIQCghmcm9tX2RheRgEIAEoCRITCgt0aHJvdWdoX2RheRgFIAEoCRIdChVuZXh0X3Byb3ZpZGVyX3JlYWRfYXQYBiABKAkSGgoSY29uc2VjdXRpdmVfbGltaXRzGAcgASgNEhQKDGxpbWl0ZWRfcmVhZBgIIAEoCRIUCgxsaW1pdF9yZWFzb24YCSABKAkSGQoRcHJvdmlkZXJfcmV0cnlfYXQYCiABKAkSNwoMbGFzdF9yZWNlaXB0GAsgASgLMiEub21lZ2EudjEuQ29tbWVyY2VSZXBvcnRlclJlY2VpcHQSGAoQcmVjZWlwdF9mcm9tX2RheRgMIAEoCRIbChNyZWNlaXB0X3Rocm91Z2hfZGF5GA0gASgJEhUKDXdha2VfbGVhc2VfYXQYDiABKAkSIQoZbGltaXRfY29ubmVjdGlvbl9yZXZpc2lvbhgPIAEoDRIaChJsaW1pdGVkX2F0dGVtcHRfYXQYECABKAkSGAoQbGFzdF9jaGVja19pbl9hdBgRIAEoCRIYChBjaGVja19pbl9vdXRjb21lGBIgASgJQjZaNGdpdGh1Yi5jb20vYmVuZWJzd29ydGgvb21lZ2EvZ2VuL2dvL29tZWdhL3YxO29tZWdhdjFiBnByb3RvMw", [file_omega_v1_digital_order]);
 
 /**
- * Operational state kept on the paired Mac. Only CommerceStatement is sent to Studio.
+ * Operational state kept on the paired Mac. Check-ins share only the scoped
+ * activity and any actual provider wait. Receipts identify accepted statements.
  *
  * @generated from message omega.v1.LocalReporterStatus
  */
@@ -92,6 +93,39 @@ export type LocalReporterStatus = Message<"omega.v1.LocalReporterStatus"> & {
    * @generated from field: string receipt_through_day = 13;
    */
   receiptThroughDay: string;
+
+  /**
+   * a single wake owns authority checks and provider reads
+   *
+   * @generated from field: string wake_lease_at = 14;
+   */
+  wakeLeaseAt: string;
+
+  /**
+   * generation under which the provider deferred this read
+   *
+   * @generated from field: uint32 limit_connection_revision = 15;
+   */
+  limitConnectionRevision: number;
+
+  /**
+   * when the provider actually returned the limit
+   *
+   * @generated from field: string limited_attempt_at = 16;
+   */
+  limitedAttemptAt: string;
+
+  /**
+   * @generated from field: string last_check_in_at = 17;
+   */
+  lastCheckInAt: string;
+
+  /**
+   * confirmed or unconfirmed
+   *
+   * @generated from field: string check_in_outcome = 18;
+   */
+  checkInOutcome: string;
 };
 
 /**

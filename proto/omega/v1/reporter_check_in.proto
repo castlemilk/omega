@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// A signed check of the Mac's current authority for its paired private source.
+// A provider wait describes an actual earlier limited attempt.
+message ReporterCheckIn {
+  string business_id = 1;
+  string product_id = 2;
+  string checked_in_at = 3;
+  string activity = 4;
+  uint32 expected_connection_revision = 5;
+  string attempt_at = 6;
+  string next_read_at = 7;
+  string limit_reason = 8;
+  bool recheck = 9;
+}
+
+message ReporterCheckInReceipt {
+  string business_id = 1;
+  string product_id = 2;
+  string checked_in_at = 3;
+  uint32 connection_revision = 4;
+}

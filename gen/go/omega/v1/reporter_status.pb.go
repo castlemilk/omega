@@ -21,24 +21,30 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Operational state kept on the paired Mac. Only CommerceStatement is sent to Studio.
+// Operational state kept on the paired Mac. Check-ins share only the scoped
+// activity and any actual provider wait. Receipts identify accepted statements.
 type LocalReporterStatus struct {
-	state              protoimpl.MessageState   `protogen:"open.v1"`
-	Outcome            string                   `protobuf:"bytes,1,opt,name=outcome,proto3" json:"outcome,omitempty"` // never-run, checking, interrupted, acknowledged, failed, rate-limited, recheck-pending or recheck-rate-limited
-	AttemptAt          string                   `protobuf:"bytes,2,opt,name=attempt_at,json=attemptAt,proto3" json:"attempt_at,omitempty"`
-	FinishedAt         string                   `protobuf:"bytes,3,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
-	FromDay            string                   `protobuf:"bytes,4,opt,name=from_day,json=fromDay,proto3" json:"from_day,omitempty"`
-	ThroughDay         string                   `protobuf:"bytes,5,opt,name=through_day,json=throughDay,proto3" json:"through_day,omitempty"`
-	NextProviderReadAt string                   `protobuf:"bytes,6,opt,name=next_provider_read_at,json=nextProviderReadAt,proto3" json:"next_provider_read_at,omitempty"`
-	ConsecutiveLimits  uint32                   `protobuf:"varint,7,opt,name=consecutive_limits,json=consecutiveLimits,proto3" json:"consecutive_limits,omitempty"`
-	LimitedRead        string                   `protobuf:"bytes,8,opt,name=limited_read,json=limitedRead,proto3" json:"limited_read,omitempty"`                // account, order or refunds
-	LimitReason        string                   `protobuf:"bytes,9,opt,name=limit_reason,json=limitReason,proto3" json:"limit_reason,omitempty"`                // recognized provider category only
-	ProviderRetryAt    string                   `protobuf:"bytes,10,opt,name=provider_retry_at,json=providerRetryAt,proto3" json:"provider_retry_at,omitempty"` // only when Stripe provided a usable Retry-After
-	LastReceipt        *CommerceReporterReceipt `protobuf:"bytes,11,opt,name=last_receipt,json=lastReceipt,proto3" json:"last_receipt,omitempty"`
-	ReceiptFromDay     string                   `protobuf:"bytes,12,opt,name=receipt_from_day,json=receiptFromDay,proto3" json:"receipt_from_day,omitempty"`
-	ReceiptThroughDay  string                   `protobuf:"bytes,13,opt,name=receipt_through_day,json=receiptThroughDay,proto3" json:"receipt_through_day,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state                   protoimpl.MessageState   `protogen:"open.v1"`
+	Outcome                 string                   `protobuf:"bytes,1,opt,name=outcome,proto3" json:"outcome,omitempty"` // never-run, checking, interrupted, acknowledged, failed, rate-limited, recheck-pending or recheck-rate-limited
+	AttemptAt               string                   `protobuf:"bytes,2,opt,name=attempt_at,json=attemptAt,proto3" json:"attempt_at,omitempty"`
+	FinishedAt              string                   `protobuf:"bytes,3,opt,name=finished_at,json=finishedAt,proto3" json:"finished_at,omitempty"`
+	FromDay                 string                   `protobuf:"bytes,4,opt,name=from_day,json=fromDay,proto3" json:"from_day,omitempty"`
+	ThroughDay              string                   `protobuf:"bytes,5,opt,name=through_day,json=throughDay,proto3" json:"through_day,omitempty"`
+	NextProviderReadAt      string                   `protobuf:"bytes,6,opt,name=next_provider_read_at,json=nextProviderReadAt,proto3" json:"next_provider_read_at,omitempty"`
+	ConsecutiveLimits       uint32                   `protobuf:"varint,7,opt,name=consecutive_limits,json=consecutiveLimits,proto3" json:"consecutive_limits,omitempty"`
+	LimitedRead             string                   `protobuf:"bytes,8,opt,name=limited_read,json=limitedRead,proto3" json:"limited_read,omitempty"`                // account, order or refunds
+	LimitReason             string                   `protobuf:"bytes,9,opt,name=limit_reason,json=limitReason,proto3" json:"limit_reason,omitempty"`                // recognized provider category only
+	ProviderRetryAt         string                   `protobuf:"bytes,10,opt,name=provider_retry_at,json=providerRetryAt,proto3" json:"provider_retry_at,omitempty"` // only when Stripe provided a usable Retry-After
+	LastReceipt             *CommerceReporterReceipt `protobuf:"bytes,11,opt,name=last_receipt,json=lastReceipt,proto3" json:"last_receipt,omitempty"`
+	ReceiptFromDay          string                   `protobuf:"bytes,12,opt,name=receipt_from_day,json=receiptFromDay,proto3" json:"receipt_from_day,omitempty"`
+	ReceiptThroughDay       string                   `protobuf:"bytes,13,opt,name=receipt_through_day,json=receiptThroughDay,proto3" json:"receipt_through_day,omitempty"`
+	WakeLeaseAt             string                   `protobuf:"bytes,14,opt,name=wake_lease_at,json=wakeLeaseAt,proto3" json:"wake_lease_at,omitempty"`                                      // a single wake owns authority checks and provider reads
+	LimitConnectionRevision uint32                   `protobuf:"varint,15,opt,name=limit_connection_revision,json=limitConnectionRevision,proto3" json:"limit_connection_revision,omitempty"` // generation under which the provider deferred this read
+	LimitedAttemptAt        string                   `protobuf:"bytes,16,opt,name=limited_attempt_at,json=limitedAttemptAt,proto3" json:"limited_attempt_at,omitempty"`                       // when the provider actually returned the limit
+	LastCheckInAt           string                   `protobuf:"bytes,17,opt,name=last_check_in_at,json=lastCheckInAt,proto3" json:"last_check_in_at,omitempty"`
+	CheckInOutcome          string                   `protobuf:"bytes,18,opt,name=check_in_outcome,json=checkInOutcome,proto3" json:"check_in_outcome,omitempty"` // confirmed or unconfirmed
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *LocalReporterStatus) Reset() {
@@ -162,11 +168,46 @@ func (x *LocalReporterStatus) GetReceiptThroughDay() string {
 	return ""
 }
 
+func (x *LocalReporterStatus) GetWakeLeaseAt() string {
+	if x != nil {
+		return x.WakeLeaseAt
+	}
+	return ""
+}
+
+func (x *LocalReporterStatus) GetLimitConnectionRevision() uint32 {
+	if x != nil {
+		return x.LimitConnectionRevision
+	}
+	return 0
+}
+
+func (x *LocalReporterStatus) GetLimitedAttemptAt() string {
+	if x != nil {
+		return x.LimitedAttemptAt
+	}
+	return ""
+}
+
+func (x *LocalReporterStatus) GetLastCheckInAt() string {
+	if x != nil {
+		return x.LastCheckInAt
+	}
+	return ""
+}
+
+func (x *LocalReporterStatus) GetCheckInOutcome() string {
+	if x != nil {
+		return x.CheckInOutcome
+	}
+	return ""
+}
+
 var File_omega_v1_reporter_status_proto protoreflect.FileDescriptor
 
 const file_omega_v1_reporter_status_proto_rawDesc = "" +
 	"\n" +
-	"\x1eomega/v1/reporter_status.proto\x12\bomega.v1\x1a\x1comega/v1/digital_order.proto\"\x9f\x04\n" +
+	"\x1eomega/v1/reporter_status.proto\x12\bomega.v1\x1a\x1comega/v1/digital_order.proto\"\x80\x06\n" +
 	"\x13LocalReporterStatus\x12\x18\n" +
 	"\aoutcome\x18\x01 \x01(\tR\aoutcome\x12\x1d\n" +
 	"\n" +
@@ -184,7 +225,12 @@ const file_omega_v1_reporter_status_proto_rawDesc = "" +
 	" \x01(\tR\x0fproviderRetryAt\x12D\n" +
 	"\flast_receipt\x18\v \x01(\v2!.omega.v1.CommerceReporterReceiptR\vlastReceipt\x12(\n" +
 	"\x10receipt_from_day\x18\f \x01(\tR\x0ereceiptFromDay\x12.\n" +
-	"\x13receipt_through_day\x18\r \x01(\tR\x11receiptThroughDayB6Z4github.com/benebsworth/omega/gen/go/omega/v1;omegav1b\x06proto3"
+	"\x13receipt_through_day\x18\r \x01(\tR\x11receiptThroughDay\x12\"\n" +
+	"\rwake_lease_at\x18\x0e \x01(\tR\vwakeLeaseAt\x12:\n" +
+	"\x19limit_connection_revision\x18\x0f \x01(\rR\x17limitConnectionRevision\x12,\n" +
+	"\x12limited_attempt_at\x18\x10 \x01(\tR\x10limitedAttemptAt\x12'\n" +
+	"\x10last_check_in_at\x18\x11 \x01(\tR\rlastCheckInAt\x12(\n" +
+	"\x10check_in_outcome\x18\x12 \x01(\tR\x0echeckInOutcomeB6Z4github.com/benebsworth/omega/gen/go/omega/v1;omegav1b\x06proto3"
 
 var (
 	file_omega_v1_reporter_status_proto_rawDescOnce sync.Once

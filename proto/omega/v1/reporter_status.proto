@@ -6,7 +6,8 @@ import "omega/v1/digital_order.proto";
 
 option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
 
-// Operational state kept on the paired Mac. Only CommerceStatement is sent to Studio.
+// Operational state kept on the paired Mac. Check-ins share only the scoped
+// activity and any actual provider wait. Receipts identify accepted statements.
 message LocalReporterStatus {
   string outcome = 1; // never-run, checking, interrupted, acknowledged, failed, rate-limited, recheck-pending or recheck-rate-limited
   string attempt_at = 2;
@@ -21,4 +22,9 @@ message LocalReporterStatus {
   CommerceReporterReceipt last_receipt = 11;
   string receipt_from_day = 12;
   string receipt_through_day = 13;
+  string wake_lease_at = 14; // a single wake owns authority checks and provider reads
+  uint32 limit_connection_revision = 15; // generation under which the provider deferred this read
+  string limited_attempt_at = 16; // when the provider actually returned the limit
+  string last_check_in_at = 17;
+  string check_in_outcome = 18; // confirmed or unconfirmed
 }
