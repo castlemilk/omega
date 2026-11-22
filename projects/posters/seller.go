@@ -27,6 +27,7 @@ type studioSellerDraft struct {
 	BuyerFile, ListingText, SellerNotes           *v1.PosterFile
 	BuyerFileContents                             []*v1.PosterFile
 	Gallery                                       []studioSellerPhoto
+	reviewText                                    string
 }
 
 type studioSellerPhoto struct {
@@ -69,21 +70,29 @@ func VerifySellerPack(files fs.FS, name string, review []byte, link string) ([]b
 	if err != nil {
 		return nil, err
 	}
+	raw, _, err := readSellerPack(pack, selected, packet, manifest)
+	return raw, err
+}
+
+func readSellerPack(pack *zip.Reader, selected *v1.PosterReleaseCandidate, packet, manifest string) ([]byte, *studioSellerDraft, error) {
+	if len(pack.File) != 9 {
+		return nil, nil, errors.New("the seller ZIP must contain its four photographs, buyer ZIP and four seller files")
+	}
 	_, raw, err := file(pack, "seller/draft.json", manifest)
 	if err != nil {
-		return nil, fmt.Errorf("Studio seller manifest: %w", err)
+		return nil, nil, fmt.Errorf("Studio seller manifest: %w", err)
 	}
 	var draft studioSellerDraft
 	if err := json.Unmarshal(raw, &draft); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := draft.checkSelection(selected, packet); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := draft.checkFiles(pack, selected); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return raw, nil
+	return raw, &draft, nil
 }
 
 func (d *studioSellerDraft) checkSelection(selected *v1.PosterReleaseCandidate, packet string) error {
@@ -134,7 +143,8 @@ func exactSellerMembers(pack *zip.Reader, expected map[string]bool) error {
 		return errors.New("ZIP member count differs from the edition")
 	}
 	for _, member := range pack.File {
-		if !expected[member.Name] || !member.Mode().IsRegular() {
+		if !expected[member.Name] || !member.Mode().IsRegular() || member.Flags&1 != 0 ||
+			member.UncompressedSize64 == 0 || member.UncompressedSize64 > maxFileSize {
 			return fmt.Errorf("unexpected or duplicate ZIP member %q", member.Name)
 		}
 		delete(expected, member.Name)
@@ -181,9 +191,11 @@ func (d *studioSellerDraft) checkFiles(pack *zip.Reader, selected *v1.PosterRele
 	if string(text) != d.Title+"\n\n"+d.Description+"\n" {
 		return errors.New("listing text differs from the seller copy")
 	}
-	if _, err := checkedSellerFile(pack, notes, d.SellerNotes); err != nil {
+	review, err := checkedSellerFile(pack, notes, d.SellerNotes)
+	if err != nil {
 		return err
 	}
+	d.reviewText = string(review)
 	if _, _, err := file(pack, survey, d.ObservationTemplateSha256); err != nil {
 		return err
 	}

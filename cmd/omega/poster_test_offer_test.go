@@ -119,17 +119,33 @@ func TestPosterCheckoutCommandServesIssuedPrice(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "selected.json")
 	require.NoError(t, os.WriteFile(file, selected, 0600))
 	link := fmt.Sprintf("https://studio.dropshippr-apps.workers.dev/collections/signal-studies?view=test-offer-file&packet=%s&offer=%x", quote.PacketSha256, sha256.Sum256(selected))
-	for _, tc := range []struct {
+	type testQuote struct {
 		display string
-		extra   []string
-	}{{"AUD 12.00", nil}, {"USD 19.49", []string{"--offer-file", file, "--offer-from", link}}} {
+		args    []string
+	}
+	legacy := []string{"--packet", review, "--packet-sha256", quote.PacketSha256}
+	cases := []testQuote{{"AUD 12.00", legacy}, {"USD 19.49", append(append([]string{}, legacy...), "--offer-file", file, "--offer-from", link)}}
+	if casesDir := os.Getenv("OMEGA_POSTER_LAUNCH_REVIEWS"); casesDir != "" {
+		from, err := os.ReadFile(filepath.Join(casesDir, "revised-from.txt"))
+		require.NoError(t, err)
+		name := filepath.Join(casesDir, "revised.zip")
+		confirmed, _, err := readLaunchReview(name, strings.TrimSpace(string(from)))
+		require.NoError(t, err)
+		o := confirmed.Offer
+		args := []string{"--launch-review", name, "--launch-review-from", strings.TrimSpace(string(from))}
+		if caption := os.Getenv("OMEGA_POSTER_CAPTION_FILES"); caption != "" {
+			args = append(args, "--caption-files", caption)
+		}
+		cases = append(cases, testQuote{fmt.Sprintf("%s %d.%02d", strings.ToUpper(o.Currency), o.AmountMinor/100, o.AmountMinor%100), args})
+	}
+	for _, tc := range cases {
 		t.Run(tc.display, func(t *testing.T) {
 			cmd := posterCheckoutCommand()
 			out, writer := io.Pipe()
 			ctx, cancel := context.WithTimeout(t.Context(), 12*time.Second)
 			done := make(chan error, 1)
 			t.Cleanup(func() { cancel(); _ = out.Close(); require.NoError(t, <-done) })
-			cmd.SetArgs(append([]string{collection, "--listen", "127.0.0.1:0", "--packet", review, "--packet-sha256", quote.PacketSha256}, tc.extra...))
+			cmd.SetArgs(append([]string{collection, "--listen", "127.0.0.1:0"}, tc.args...))
 			cmd.SetOut(writer)
 			go func() { err := cmd.ExecuteContext(ctx); _ = writer.CloseWithError(err); done <- err }()
 			line, err := bufio.NewReader(out).ReadString('\n')
@@ -146,5 +162,5 @@ func TestPosterCheckoutCommandServesIssuedPrice(t *testing.T) {
 			require.Contains(t, string(body), tc.display+" in test funds")
 		})
 	}
-	require.EqualValues(t, 2, reads.Load())
+	require.EqualValues(t, len(cases), reads.Load())
 }

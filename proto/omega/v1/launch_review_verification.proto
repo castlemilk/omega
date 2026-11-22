@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package omega.v1;
+
+import "omega/v1/digital_order.proto";
+import "omega/v1/launch_review.proto";
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// Studio's existing private issue receipt, as exported alongside the packet.
+message LaunchReviewPrivateIssue {
+  string listing_id = 1;
+  string destination = 2;
+  string packet_sha256 = 3;
+  string recorded_at = 4;
+  string trigger = 5;
+}
+
+// An offline native check of the exact artifacts selected by the owner's URL.
+message VerifiedChannelLaunchReview {
+  string review_sha256 = 1;
+  string packet_sha256 = 2;
+  string offer_sha256 = 3;
+  ChannelLaunchReview review = 4;
+  DigitalOffer offer = 5;
+  LaunchReviewPrivateIssue private_issue = 6;
+}

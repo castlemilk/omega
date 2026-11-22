@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -126,8 +127,64 @@ func readStudioTestOffer(name string, review []byte, link string) (*v1.DigitalOf
 	return posters.VerifyTestOffer(body, review, link)
 }
 
+func readLaunchReview(name, link string) (*v1.VerifiedChannelLaunchReview, []byte, error) {
+	return posters.VerifyLaunchReview(os.DirFS(filepath.Dir(name)), filepath.Base(name), link)
+}
+
+func posterVerifyLaunchReviewCommand() *cobra.Command {
+	var link string
+	cmd := &cobra.Command{
+		Use: "verify-launch-review REVIEW_ZIP", Short: "Verify the private Etsy preparation package and its exact Studio checksum",
+		Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+			result, _, err := readLaunchReview(args[0], link)
+			if err != nil {
+				return err
+			}
+			body, err := (protojson.MarshalOptions{Indent: "  "}).Marshal(result)
+			if err != nil {
+				return err
+			}
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(body))
+			return err
+		},
+	}
+	cmd.Flags().StringVar(&link, "from", "", "Full launch review ZIP download link copied from Studio")
+	_ = cmd.MarkFlagRequired("from")
+	return cmd
+}
+
+type posterCheckoutSource struct {
+	packetFile, digest, offerFile, offerFrom, launchFile, launchFrom string
+}
+
+func (source posterCheckoutSource) selectOffer(cmd *cobra.Command) ([]byte, string, *v1.DigitalOffer, error) {
+	if cmd.Flags().Changed("launch-review") {
+		checked, packet, err := readLaunchReview(source.launchFile, source.launchFrom)
+		if err != nil {
+			return nil, "", nil, err
+		}
+		return packet, checked.PacketSha256, checked.Offer, nil
+	}
+	raw, err := readPosterDocument(source.packetFile)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	var offer *v1.DigitalOffer
+	if cmd.Flags().Changed("offer-file") {
+		offer, err = readStudioTestOffer(source.offerFile, raw, source.offerFrom)
+		if err != nil {
+			return nil, "", nil, err
+		}
+		if offer.PacketSha256 != source.digest {
+			return nil, "", nil, errors.New("the selected offer and the supplied packet digest differ")
+		}
+	}
+	return raw, source.digest, offer, nil
+}
+
 func posterCheckoutCommand() *cobra.Command {
-	var packetFile, digest, address, captionFiles, offerFile, offerFrom string
+	var source posterCheckoutSource
+	var address, captionFiles string
 	cmd := &cobra.Command{
 		Use: "test-checkout COLLECTION_DIRECTORY", Short: "Run the approved poster edition against a separate Stripe sandbox",
 		Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -135,19 +192,9 @@ func posterCheckoutCommand() *cobra.Command {
 			if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
 				return errors.New("choose a loopback address and port")
 			}
-			raw, err := readPosterDocument(packetFile)
+			raw, digest, studioOffer, err := source.selectOffer(cmd)
 			if err != nil {
 				return err
-			}
-			var studioOffer *v1.DigitalOffer
-			if cmd.Flags().Changed("offer-file") || cmd.Flags().Changed("offer-from") {
-				studioOffer, err = readStudioTestOffer(offerFile, raw, offerFrom)
-				if err != nil {
-					return err
-				}
-				if studioOffer.PacketSha256 != digest {
-					return errors.New("the selected offer and the supplied packet digest differ")
-				}
 			}
 			offer, archive, preview, err := posters.TestOffer(posterCollection(args[0], captionFiles), raw, digest)
 			if err != nil {
@@ -213,14 +260,19 @@ func posterCheckoutCommand() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVar(&packetFile, "packet", "", "Exact review packet downloaded from Studio")
+	cmd.Flags().StringVar(&source.packetFile, "packet", "", "Exact review packet downloaded from Studio")
 	cmd.Flags().StringVar(&captionFiles, "caption-files", "", "Directory containing the exported caption edition's signal-studies.zip and edition-preview.pdf")
-	cmd.Flags().StringVar(&digest, "packet-sha256", "", "Packet digest from the approved private listing receipt")
-	cmd.Flags().StringVar(&offerFile, "offer-file", "", "Optional issued Studio test offer JSON")
-	cmd.Flags().StringVar(&offerFrom, "offer-from", "", "Exact Studio download link for --offer-file")
+	cmd.Flags().StringVar(&source.digest, "packet-sha256", "", "Packet digest from the approved private listing receipt")
+	cmd.Flags().StringVar(&source.offerFile, "offer-file", "", "Optional issued Studio test offer JSON")
+	cmd.Flags().StringVar(&source.offerFrom, "offer-from", "", "Exact Studio download link for --offer-file")
 	cmd.MarkFlagsRequiredTogether("offer-file", "offer-from")
 	cmd.Flags().StringVar(&address, "listen", "127.0.0.1:9746", "Loopback listener for the test checkout and signed events")
-	_ = cmd.MarkFlagRequired("packet")
-	_ = cmd.MarkFlagRequired("packet-sha256")
+	cmd.Flags().StringVar(&source.launchFile, "launch-review", "", "Studio launch review ZIP containing its issued packet and test offer")
+	cmd.Flags().StringVar(&source.launchFrom, "launch-review-from", "", "Exact Studio download link for --launch-review")
+	cmd.MarkFlagsRequiredTogether("packet", "packet-sha256")
+	cmd.MarkFlagsRequiredTogether("launch-review", "launch-review-from")
+	cmd.MarkFlagsOneRequired("packet", "launch-review")
+	cmd.MarkFlagsMutuallyExclusive("packet", "launch-review")
+	cmd.MarkFlagsMutuallyExclusive("offer-file", "launch-review")
 	return cmd
 }

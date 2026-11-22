@@ -99,6 +99,16 @@ omega posters test-checkout "$SIGNAL_STUDIES_COLLECTION" \
 
 The link uses the issued Studio collection’s `view=test-offer-file`, `packet` and `offer` parameters to pin the review packet and exact offer bytes. The offer names the buyer ZIP, six PDFs, printing guide, font notice, seller draft, price source and any wording selected for the private seller draft. Its licence is `private-test-download-v1`. After a price revision, each existing buyer order retains its recorded amount, currency, offer checksum and download. A buyer with an unsubmitted earlier price must reopen the edition to see the new quote.
 
+Studio’s **Launch review** packages the private issue receipt, reviewed packet, test offer, seller ZIP and preparation notes for an issued Etsy draft. Download the ZIP and copy its full Studio download link. Omega checks the five companion files against the manifest, the four listing photos, all eight files in the buyer ZIP, the selected wording, price decision and preparation gates. The JSON verification receipt includes `reviewSha256` for the exact manifest bytes pinned in the link, plus the packet and offer checksums.
+
+```sh
+omega posters verify-launch-review "$LAUNCH_REVIEW_ZIP" --from "$STUDIO_LAUNCH_REVIEW_URL"
+omega posters test-checkout "$SIGNAL_STUDIES_COLLECTION" \
+  --launch-review "$LAUNCH_REVIEW_ZIP" --launch-review-from "$STUDIO_LAUNCH_REVIEW_URL"
+```
+
+Use the launch review and its own link as a pair, including when reopening a historical review after a price change. Keep the original ZIP and link with the order evidence. The checkout uses the package’s verified test offer and independently checks the local collection. The gates record the remaining physical proof, rights, shop, fees, support and publication decisions. Publication requires its own owner decision.
+
 Open the printed loopback address, start checkout and use Stripe's published test buyer details. On return, the order page displays the provider-confirmed state. A declined buyer can resume the same open checkout or cancel it. A paid buyer can download their edition’s six PDFs, printing guide and font notice. The same browser profile retains its private order access across restarts. The operator can refund the test charge in the same Stripe sandbox. A full refund closes future downloads, including requests from an already-open payment confirmation page. Partial refunds retain access. An open or lost dispute suspends downloads. Returned files already saved on a device stay there. [Stripe testing](https://docs.stripe.com/testing)
 
 `omega posters test-order-receipt ORDER_ID` checks the current provider state and exports the operator's receipt. It includes the edition, file checksum, test price, payment and refund state, number of downloads, entitlement and signed event processing. The reader requires the order database and the same sandbox account. Keep the receipt with the private pilot evidence. Reporting customer demand or revenue requires production observations.

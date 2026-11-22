@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// A private preparation snapshot for a named sales channel. Its source URL
+// pins the exact manifest bytes. Each file is addressed inside the review ZIP.
+message ChannelLaunchReview {
+  string schema = 1;
+  string business_id = 2;
+  string product_id = 3;
+  string edition = 4;
+  string channel = 5;
+  string action = 6;
+  string private_destination = 7;
+  string seller_draft_sha256 = 8;
+  string buyer_archive_sha256 = 9;
+  int64 amount_minor = 10;
+  string currency = 11;
+  string price_source = 12;
+  string wording_state = 13;
+  repeated LaunchReviewFile files = 14;
+  repeated LaunchReviewGate gates = 15;
+}
+
+message LaunchReviewFile {
+  string name = 1;
+  string sha256 = 2;
+  uint32 bytes = 3;
+}
+
+enum LaunchReviewGateState {
+  LAUNCH_REVIEW_GATE_STATE_UNSPECIFIED = 0;
+  LAUNCH_REVIEW_GATE_STATE_PREPARED = 1;
+  LAUNCH_REVIEW_GATE_STATE_NEEDS_DECISION = 2;
+  LAUNCH_REVIEW_GATE_STATE_NEEDS_EVIDENCE = 3;
+}
+
+message LaunchReviewGate {
+  string id = 1;
+  LaunchReviewGateState state = 2;
+  string title = 3;
+  string detail = 4;
+}

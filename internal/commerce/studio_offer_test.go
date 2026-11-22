@@ -3,10 +3,13 @@ package commerce
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -21,6 +24,12 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type studioPurchase struct {
+	id, display   string
+	offer         *v1.DigitalOffer
+	pack, preview []byte
+}
+
 // Exercise the actual Stripe SDK requests, order database and buyer handlers.
 // Both test prices describe exactly the same reviewed artwork.
 func TestStudioPricesKeepProviderReceiptAndDownload(t *testing.T) {
@@ -28,8 +37,6 @@ func TestStudioPricesKeepProviderReceiptAndDownload(t *testing.T) {
 	if collection == "" {
 		t.Skip("set OMEGA_POSTER_TEST_COLLECTION for the issued buyer archive")
 	}
-	db := testOrderDB(t)
-	ctx := t.Context()
 	const dir = "../../projects/posters/testdata/"
 	review, err := os.ReadFile(dir + posters.EditorialEdition + ".json")
 	require.NoError(t, err)
@@ -43,12 +50,7 @@ func TestStudioPricesKeepProviderReceiptAndDownload(t *testing.T) {
 	require.NoError(t, err)
 	defaultQuote := new(v1.PosterTestOffer)
 	require.NoError(t, protojson.Unmarshal(baseRaw, defaultQuote))
-	quotes := map[string]*v1.DigitalOffer{}
-	type purchase struct {
-		id, display string
-		offer       *v1.DigitalOffer
-	}
-	var orders []purchase
+	var orders []studioPurchase
 	for i, price := range []struct {
 		amount            int64
 		currency, display string
@@ -65,10 +67,45 @@ func TestStudioPricesKeepProviderReceiptAndDownload(t *testing.T) {
 		offer, err := posters.VerifyTestOffer(raw, review, link)
 		require.NoError(t, err)
 		require.NotEqual(t, legacyKey, offerKey(offer))
-		id := uuid.NewString()
-		quotes[id] = offer
-		orders = append(orders, purchase{id, price.display, offer})
+		orders = append(orders, studioPurchase{uuid.NewString(), price.display, offer, pack, preview})
 	}
+	checkStudioOrderHistory(t, orders)
+}
+
+func TestLaunchReviewKeepsEarlierOfferAndArchive(t *testing.T) {
+	dir, collection := os.Getenv("OMEGA_POSTER_LAUNCH_REVIEWS"), os.Getenv("OMEGA_POSTER_TEST_COLLECTION")
+	if dir == "" || collection == "" {
+		t.Skip("set the issued launch review pair and collection to replay the two buyer orders")
+	}
+	var files fs.FS = os.DirFS(collection)
+	if caption := os.Getenv("OMEGA_POSTER_CAPTION_FILES"); caption != "" {
+		files = posters.WithCaptionFiles(files, os.DirFS(caption))
+	}
+	var orders []studioPurchase
+	for _, label := range []string{"current", "revised"} {
+		link, err := os.ReadFile(filepath.Join(dir, label+"-from.txt"))
+		require.NoError(t, err)
+		checked, packet, err := posters.VerifyLaunchReview(os.DirFS(dir), label+".zip", strings.TrimSpace(string(link)))
+		require.NoError(t, err)
+		local, pack, preview, err := posters.TestOffer(files, packet, checked.PacketSha256)
+		require.NoError(t, err)
+		require.Equal(t, checked.Offer.ArchiveSha256, local.ArchiveSha256)
+		o := checked.Offer
+		display := fmt.Sprintf("%s %d.%02d", strings.ToUpper(o.Currency), o.AmountMinor/100, o.AmountMinor%100)
+		orders = append(orders, studioPurchase{uuid.NewString(), display, o, pack, preview})
+		t.Logf("%s review %s, packet %s, offer %s, buyer ZIP %s", label, checked.ReviewSha256, checked.PacketSha256, checked.OfferSha256, o.ArchiveSha256)
+	}
+	checkStudioOrderHistory(t, orders)
+}
+
+func checkStudioOrderHistory(t *testing.T, orders []studioPurchase) {
+	t.Helper()
+	db, ctx := testOrderDB(t), t.Context()
+	quotes := map[string]*v1.DigitalOffer{}
+	for _, o := range orders {
+		quotes[o.id] = o.offer
+	}
+	base := orders[0].offer
 	require.NotEqual(t, offerKey(orders[0].offer), offerKey(orders[1].offer))
 	account := "acct_offerprice_" + uuid.NewString()
 	var created atomic.Int32
@@ -135,9 +172,9 @@ func TestStudioPricesKeepProviderReceiptAndDownload(t *testing.T) {
 		return res
 	}
 	for i, o := range orders {
-		shop, err := Open(ctx, db, account, origin, testSecret, provider, o.offer, pack)
+		shop, err := Open(ctx, db, account, origin, testSecret, provider, o.offer, o.pack)
 		require.NoError(t, err)
-		handler = shop.Handler(posters.CheckoutPage, "Signal Studies", "https://studio.example.org", preview)
+		handler = shop.Handler(posters.CheckoutPage, "Signal Studies", "https://studio.example.org", o.preview)
 		home := request("GET", "/", nil)
 		require.Equal(t, 200, home.Code)
 		require.Contains(t, home.Body.String(), o.display+" in test funds")
@@ -168,7 +205,7 @@ func TestStudioPricesKeepProviderReceiptAndDownload(t *testing.T) {
 		require.Contains(t, page.Body.String(), "<dd>"+o.display+"</dd>")
 		download := request("POST", "/orders/"+o.id+"/download", nil)
 		require.Equal(t, 200, download.Code)
-		require.Equal(t, pack, download.Body.Bytes())
+		require.Equal(t, o.pack, download.Body.Bytes())
 		receipt := new(v1.DigitalOrderReceipt)
 		require.NoError(t, protojson.Unmarshal(request("GET", "/orders/"+o.id+"/receipt", nil).Body.Bytes(), receipt))
 		require.True(t, proto.Equal(o.offer, receipt.Offer))
@@ -195,5 +232,5 @@ func TestStudioPricesKeepProviderReceiptAndDownload(t *testing.T) {
 	var compact bytes.Buffer
 	require.NoError(t, json.Compact(&compact, raw))
 	t.Logf("Isolated provider statement %s", compact.String())
-	t.Logf("Verified %s and %s against Stripe session, payment and settlement. Buyer ZIP %s (%d bytes).", orders[0].display, orders[1].display, base.ArchiveSha256, len(pack))
+	t.Logf("Verified %s and %s against Stripe session, payment and settlement. Buyer ZIP %s (%d bytes).", orders[0].display, orders[1].display, base.ArchiveSha256, len(orders[0].pack))
 }

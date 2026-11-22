@@ -82,6 +82,10 @@ func VerifyTestOffer(raw, review []byte, link string) (*v1.DigitalOffer, error) 
 	if err := protojson.Unmarshal(raw, q); err != nil {
 		return nil, err
 	}
+	return checkStudioTestOffer(q, candidate, packet, digest)
+}
+
+func checkStudioTestOffer(q *v1.PosterTestOffer, candidate *v1.PosterReleaseCandidate, packet, digest string) (*v1.DigitalOffer, error) {
 	known, ok := issuedSellerSources[candidate.Edition]
 	if !ok || q.Schema != "omega.poster-test-offer/v1" || q.Environment != "stripe-test" ||
 		q.BusinessId != StudioBusinessID || q.ProductId != StudioProductID || q.PacketSha256 != packet ||
