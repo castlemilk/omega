@@ -20,6 +20,7 @@ const (
 	OriginalEdition  = "signal-studies-v0.1"
 	EditorialEdition = "signal-studies-editorial-01"
 	CaptionEdition   = "signal-studies-caption-01"
+	launchPlanSHA    = "5ea3fd82e4b28e810171799a107f8047547963e1d4a439a5ea9612d360332d2e"
 	originalPackSHA  = "1085e2cdf49cce6b566064312c0dc2d6a92b27ff67982d37861b0bb3a3d324ab"
 	maxFileSize      = 2 << 20
 )
@@ -164,7 +165,7 @@ func CandidateForEdition(collection fs.FS, edition string) (*omegav1.PosterRelea
 		return c, nil
 	}
 	var plan []byte
-	c.ListingSource, plan, err = file(source, "launch-plan.txt", "5ea3fd82e4b28e810171799a107f8047547963e1d4a439a5ea9612d360332d2e")
+	c.ListingSource, plan, err = file(source, "launch-plan.txt", launchPlanSHA)
 	if err != nil {
 		return nil, err
 	}

@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	v1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	"github.com/benebsworth/omega/internal/commerce"
 	"github.com/benebsworth/omega/projects/posters"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -91,8 +92,42 @@ func posterStatementCommand() *cobra.Command {
 	return command
 }
 
+func posterVerifyTestOfferCommand() *cobra.Command {
+	var link string
+	cmd := &cobra.Command{
+		Use: "verify-test-offer OFFER_FILE REVIEW_PACKET", Short: "Check a private Studio test quote and print the verified offer",
+		Args: cobra.ExactArgs(2), RunE: func(cmd *cobra.Command, args []string) error {
+			review, err := readPosterDocument(args[1])
+			if err != nil {
+				return err
+			}
+			offer, err := readStudioTestOffer(args[0], review, link)
+			if err != nil {
+				return err
+			}
+			raw, err := (protojson.MarshalOptions{Indent: "  "}).Marshal(offer)
+			if err != nil {
+				return err
+			}
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(raw))
+			return err
+		},
+	}
+	cmd.Flags().StringVar(&link, "from", "", "Full test offer download link copied from the issued Studio edition")
+	_ = cmd.MarkFlagRequired("from")
+	return cmd
+}
+
+func readStudioTestOffer(name string, review []byte, link string) (*v1.DigitalOffer, error) {
+	body, err := readPosterDocument(name)
+	if err != nil {
+		return nil, err
+	}
+	return posters.VerifyTestOffer(body, review, link)
+}
+
 func posterCheckoutCommand() *cobra.Command {
-	var packetFile, digest, address, captionFiles string
+	var packetFile, digest, address, captionFiles, offerFile, offerFrom string
 	cmd := &cobra.Command{
 		Use: "test-checkout COLLECTION_DIRECTORY", Short: "Run the approved poster edition against a separate Stripe sandbox",
 		Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
@@ -100,13 +135,26 @@ func posterCheckoutCommand() *cobra.Command {
 			if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
 				return errors.New("choose a loopback address and port")
 			}
-			raw, err := readPosterReview(packetFile)
+			raw, err := readPosterDocument(packetFile)
 			if err != nil {
 				return err
+			}
+			var studioOffer *v1.DigitalOffer
+			if cmd.Flags().Changed("offer-file") || cmd.Flags().Changed("offer-from") {
+				studioOffer, err = readStudioTestOffer(offerFile, raw, offerFrom)
+				if err != nil {
+					return err
+				}
+				if studioOffer.PacketSha256 != digest {
+					return errors.New("the selected offer and the supplied packet digest differ")
+				}
 			}
 			offer, archive, preview, err := posters.TestOffer(posterCollection(args[0], captionFiles), raw, digest)
 			if err != nil {
 				return err
+			}
+			if studioOffer != nil {
+				offer = studioOffer
 			}
 			gateway, db, err := posterTestConnection()
 			if err != nil {
@@ -132,7 +180,7 @@ func posterCheckoutCommand() *cobra.Command {
 				return err
 			}
 			server := &http.Server{
-				Handler:           shop.Handler(posters.CheckoutPage, "Signal Studies", "AUD 12.00", "https://studio.dropshippr-apps.workers.dev/collections/signal-studies?view=store", preview),
+				Handler:           shop.Handler(posters.CheckoutPage, "Signal Studies", "https://studio.dropshippr-apps.workers.dev/collections/signal-studies?view=store", preview),
 				ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 35 * time.Second, IdleTimeout: 60 * time.Second,
 			}
 			go func() {
@@ -168,6 +216,9 @@ func posterCheckoutCommand() *cobra.Command {
 	cmd.Flags().StringVar(&packetFile, "packet", "", "Exact review packet downloaded from Studio")
 	cmd.Flags().StringVar(&captionFiles, "caption-files", "", "Directory containing the exported caption edition's signal-studies.zip and edition-preview.pdf")
 	cmd.Flags().StringVar(&digest, "packet-sha256", "", "Packet digest from the approved private listing receipt")
+	cmd.Flags().StringVar(&offerFile, "offer-file", "", "Optional issued Studio test offer JSON")
+	cmd.Flags().StringVar(&offerFrom, "offer-from", "", "Exact Studio download link for --offer-file")
+	cmd.MarkFlagsRequiredTogether("offer-file", "offer-from")
 	cmd.Flags().StringVar(&address, "listen", "127.0.0.1:9746", "Loopback listener for the test checkout and signed events")
 	_ = cmd.MarkFlagRequired("packet")
 	_ = cmd.MarkFlagRequired("packet-sha256")

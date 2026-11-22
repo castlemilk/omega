@@ -12,6 +12,8 @@ const { chromium } = require(
 
 async function run() {
   const { origin, offer } = JSON.parse(readFileSync(0, "utf8"));
+  const minor = BigInt(offer.amountMinor);
+  const price = offer.currency.toUpperCase() + " " + (minor / 100n) + "." + (minor % 100n).toString().padStart(2, "0");
   const editorial = ["signal-studies-editorial-01", "signal-studies-caption-01"].includes(offer.edition);
   const downloadLabel = editorial
     ? "Download the print ZIP"
@@ -21,6 +23,7 @@ async function run() {
     const buyer = await browser.newContext({ acceptDownloads: true });
     const page = await buyer.newPage();
     await page.goto(origin);
+    await page.getByText(price + " in test funds", { exact: true }).waitFor();
     if (editorial) {
       const lead = page.getByRole("img", {
         name: "Phase portrait, the A4 print from the approved edition",
@@ -29,6 +32,7 @@ async function run() {
     }
     await page.getByRole("button", { name: "Start test checkout" }).click();
     await page.getByRole("heading", { name: "Awaiting payment" }).waitFor();
+    await page.getByText(price, { exact: true }).waitFor();
     const orderURL = page.url();
     const id = new URL(orderURL).pathname.split("/").pop();
     assert.match(id, /^[a-f0-9-]{36}$/);
@@ -98,7 +102,7 @@ async function run() {
     const receipt = await response.json();
     assert.deepEqual(receipt.offer, offer);
     assert.equal(receipt.payment, "DIGITAL_PAYMENT_STATE_REFUNDED");
-    assert.equal(receipt.refundedMinor, "1200");
+    assert.equal(receipt.refundedMinor, offer.amountMinor);
     assert.equal(receipt.downloadsIssued, 1);
     assert.ok(receipt.testMode);
   } finally {

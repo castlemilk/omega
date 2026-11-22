@@ -35,6 +35,11 @@ type studioSource struct {
 	RecordRevision                             int
 }
 
+func sourceDigest(raw []byte) string {
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
 func (s studioSource) matches(recordID string) bool {
 	return s.BusinessID == StudioBusinessID && s.ProjectID == StudioProductID && s.RecordID == recordID && s.RecordRevision == 1
 }
@@ -44,8 +49,7 @@ func (s studioSource) matches(recordID string) bool {
 // and the evidence for the change.
 // The receipt supplies a separate digest for the operator's selected export.
 func reviewedCandidate(raw []byte, expected string) (*v1.PosterReleaseCandidate, error) {
-	sum := sha256.Sum256(raw)
-	if hex.EncodeToString(sum[:]) != expected {
+	if sourceDigest(raw) != expected {
 		return nil, errors.New("the packet digest differs from the Studio receipt")
 	}
 	var edition, artID, copyID string
@@ -90,6 +94,16 @@ func reviewedCandidate(raw []byte, expected string) (*v1.PosterReleaseCandidate,
 	return selected, nil
 }
 
+const testDownloadLicence = "private-test-download-v1"
+
+func digitalOffer(candidate *v1.PosterReleaseCandidate, packet string) *v1.DigitalOffer {
+	return &v1.DigitalOffer{
+		BusinessId: StudioBusinessID, ProductId: StudioProductID, Edition: candidate.Edition, PacketSha256: packet,
+		ArchiveSha256: candidate.PrintPack.Sha256, ArchiveName: path.Base(candidate.PrintPack.Name),
+		AmountMinor: 1200, Currency: "aud", Licence: testDownloadLicence,
+	}
+}
+
 // TestOffer accepts the exact private packet exported by Studio. This binding
 // describes a sandbox offer and never conveys permission for a public sale.
 func TestOffer(collection fs.FS, raw []byte, expected string) (*v1.DigitalOffer, []byte, []byte, error) {
@@ -112,8 +126,5 @@ func TestOffer(collection fs.FS, raw []byte, expected string) (*v1.DigitalOffer,
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	return &v1.DigitalOffer{
-		BusinessId: StudioBusinessID, ProductId: StudioProductID, Edition: candidate.Edition, PacketSha256: expected,
-		ArchiveSha256: candidate.PrintPack.Sha256, ArchiveName: path.Base(candidate.PrintPack.Name), AmountMinor: 1200, Currency: "aud", Licence: "private-test-download-v1",
-	}, data, preview, nil
+	return digitalOffer(candidate, expected), data, preview, nil
 }

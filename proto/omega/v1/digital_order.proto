@@ -28,6 +28,8 @@ message DigitalOffer {
   int64 amount_minor = 7;
   string currency = 8;
   string licence = 9;
+  // A Studio-pinned quote, when selected. Older offer identities omit this field.
+  google.protobuf.StringValue studio_offer_sha256 = 10;
 }
 
 message DigitalOrderEvent {

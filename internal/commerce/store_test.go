@@ -171,7 +171,7 @@ func TestOrdersKeepReviewedPosterEditions(t *testing.T) {
 		require.Equal(t, "private-test-download-v1", offer.Licence)
 		checkout, err = Open(ctx, db, account, origin, testSecret, gateway, offer, pack)
 		require.NoError(t, err)
-		handler = checkout.Handler(posters.CheckoutPage, "Signal Studies", "AUD 12.00", "https://studio.example.org", preview)
+		handler = checkout.Handler(posters.CheckoutPage, "Signal Studies", "https://studio.example.org", preview)
 		home := request(http.MethodGet, "/", nil)
 		require.Equal(t, http.StatusOK, home.Code)
 		require.Contains(t, home.Body.String(), `alt="`+tc.lead+", the A4 print")
@@ -401,11 +401,13 @@ func TestDigitalOrderBrowser(t *testing.T) {
 		offer, archive, preview, err = posters.TestOffer(collection, raw, packetSHA)
 		require.NoError(t, err)
 	}
+	// Exercise a non-default price on each buyer screen through to the receipt.
+	offer.AmountMinor, offer.Currency = 1955, "cad"
 	g := &fixtureGateway{states: make(map[string]fact)}
 	s, err := Open(t.Context(), testOrderDB(t), "acct_fixture_"+uuid.NewString(), origin, testSecret, g, offer, archive)
 	require.NoError(t, err)
 	mux := http.NewServeMux()
-	mux.Handle("/", s.Handler(posters.CheckoutPage, "Signal Studies", "AUD 12.00", "https://studio.example.org", preview))
+	mux.Handle("/", s.Handler(posters.CheckoutPage, "Signal Studies", "https://studio.example.org", preview))
 	// Local fixtures control authenticated provider reads independently of the buyer browser.
 	mux.HandleFunc("POST /fixture/{id}/{result}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
@@ -419,7 +421,7 @@ func TestDigitalOrderBrowser(t *testing.T) {
 		case "paid":
 			g.set(id, paid, 0)
 		case "refund":
-			g.set(id, refunded, 1200)
+			g.set(id, refunded, offer.AmountMinor)
 		default:
 			http.NotFound(w, r)
 			return

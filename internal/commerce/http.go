@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"mime"
@@ -18,10 +19,10 @@ import (
 )
 
 type checkoutView struct {
-	Title, Amount, Studio, Edition string
-	ID, Status, Message            string
-	Receipt                        *v1.DigitalOrderReceipt
-	CanCancel, Awaiting            bool
+	Title, Amount, Studio, Edition, OfferKey string
+	ID, Status, Message                      string
+	Receipt                                  *v1.DigitalOrderReceipt
+	CanCancel, Awaiting                      bool
 }
 
 func statusText(p v1.DigitalPaymentState) (string, string) {
@@ -62,6 +63,8 @@ func writeFailure(w http.ResponseWriter, err error) {
 		http.Error(w, "Order unavailable.", http.StatusNotFound)
 	case errors.Is(err, ErrBlocked):
 		http.Error(w, "Download access is closed for this order. Return to the order to see its payment status.", http.StatusForbidden)
+	case errors.Is(err, errOfferChanged):
+		http.Error(w, "The test offer has changed. Reopen the test edition to review its price.", http.StatusConflict)
 	case errors.Is(err, ErrConflict):
 		http.Error(w, "The saved order needs reconciliation. Refresh the order.", http.StatusConflict)
 	case errors.Is(err, ErrInvalidEvent):
@@ -74,12 +77,19 @@ func writeFailure(w http.ResponseWriter, err error) {
 // Handler serves the loopback test checkout. All private order operations are
 // buyer-bound. The provider ingress uses its own signature, independently of
 // browser cookies and the success URL.
-func (s *Shop) Handler(page *template.Template, title, amount, studio string, preview []byte) http.Handler {
+func (s *Shop) Handler(page *template.Template, title, studio string, preview []byte) http.Handler {
 	mux := http.NewServeMux()
-	render := func(w http.ResponseWriter, v checkoutView) {
+	render := func(w http.ResponseWriter, v checkoutView, offer *v1.DigitalOffer) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		v.Title = title
-		v.Amount = amount
+		v.Edition, v.OfferKey = offer.Edition, offerKey(offer)
+		code := strings.ToUpper(offer.Currency)
+		switch code {
+		case "AUD", "CAD", "EUR", "GBP", "USD":
+			v.Amount = fmt.Sprintf("%s %d.%02d", code, offer.AmountMinor/100, offer.AmountMinor%100)
+		default:
+			v.Amount = fmt.Sprintf("%s %d minor units", code, offer.AmountMinor)
+		}
 		v.Studio = studio
 		_ = page.Execute(w, v)
 	}
@@ -95,7 +105,7 @@ func (s *Shop) Handler(page *template.Template, title, amount, studio string, pr
 				HttpOnly: true, Secure: strings.HasPrefix(s.origin, "https://"), SameSite: http.SameSiteLaxMode, MaxAge: 48 * 60 * 60,
 			})
 		}
-		render(w, checkoutView{ID: uuid.NewString(), Edition: s.edition})
+		render(w, checkoutView{ID: uuid.NewString()}, s.offer)
 	})
 	mux.HandleFunc("GET /artwork", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "image/png")
@@ -110,7 +120,8 @@ func (s *Shop) Handler(page *template.Template, title, amount, studio string, pr
 			http.Error(w, "Invalid order form.", 400)
 			return
 		}
-		target, err := s.Start(r.Context(), r.PostForm.Get("id"), buyerID(r))
+		quoted := r.PostForm.Get("offer")
+		target, err := s.start(r.Context(), r.PostForm.Get("id"), buyerID(r), &quoted)
 		if err != nil {
 			writeFailure(w, err)
 			return
@@ -141,7 +152,7 @@ func (s *Shop) Handler(page *template.Template, title, amount, studio string, pr
 		if r.URL.Query().Get("returned") == "cancel" && receipt.Payment == pending {
 			message = "You left the payment page. This order can still be cancelled or completed."
 		}
-		render(w, checkoutView{ID: id, Edition: receipt.Offer.Edition, Status: status, Message: message, Receipt: receipt, CanCancel: receipt.CheckoutOpen, Awaiting: receipt.Payment == pending})
+		render(w, checkoutView{ID: id, Status: status, Message: message, Receipt: receipt, CanCancel: receipt.CheckoutOpen, Awaiting: receipt.Payment == pending}, receipt.Offer)
 	})
 	mux.HandleFunc("GET /orders/{id}/receipt", func(w http.ResponseWriter, r *http.Request) {
 		id, b, ok := owned(w, r)

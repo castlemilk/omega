@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// A portable quote for one private Stripe test checkout. The download URL pins
+// the exact JSON bytes. Orders retain this identity and the original buyer ZIP.
+message PosterTestOffer {
+  string schema = 1;
+  string environment = 2;
+  string business_id = 3;
+  string product_id = 4;
+  string edition = 5;
+  string packet_sha256 = 6;
+  string seller_draft_sha256 = 7;
+  string archive_name = 8;
+  string archive_sha256 = 9;
+  uint32 archive_bytes = 10;
+  uint32 print_pdf_count = 11;
+  int64 amount_minor = 12;
+  string currency = 13;
+  string price_source = 14;
+  uint32 price_revision = 15;
+  string price_recorded_at = 16;
+  string launch_plan_sha256 = 17;
+  string licence = 18;
+  string guide_sha256 = 19;
+  string font_notice_sha256 = 20;
+  string buyer_wording = 21;
+  string ai_disclosure = 22;
+  string wording_review_sha256 = 23;
+  uint32 wording_revision = 24;
+  string market_day = 25;
+  string market_sha256 = 26;
+  string base_seller_draft_sha256 = 27;
+}

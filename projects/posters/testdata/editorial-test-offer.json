@@ -1,0 +1,21 @@
+{
+  "schema": "omega.poster-test-offer/v1",
+  "environment": "stripe-test",
+  "businessId": "business-d41cd8fc-2eab-48ac-a021-0b3790d02eee",
+  "productId": "product-9d215b3a-5cd7-4a1b-9a22-81ffb5140e65",
+  "edition": "signal-studies-editorial-01",
+  "packetSha256": "8e343a7789b0994d4093682e0849842929e47709dfe4121157670649ed19d33d",
+  "sellerDraftSha256": "d0c843b3375d619acbddbb22df74c286f2644d1d46cbd026d01948579aed66e4",
+  "archiveName": "signal-studies.zip",
+  "archiveSha256": "6fcfc7df642b32152537ca62d7bb3b21eeadb233b2eb4172046949c5b38c099e",
+  "archiveBytes": 616534,
+  "printPdfCount": 6,
+  "amountMinor": "1200",
+  "currency": "AUD",
+  "priceSource": "launch-plan",
+  "launchPlanSha256": "5ea3fd82e4b28e810171799a107f8047547963e1d4a439a5ea9612d360332d2e",
+  "licence": "private-test-download-v1",
+  "guideSha256": "7daf589a0258f413493b60d8e3719dea5328f360dffb900d08c1d98e4e7d31a2",
+  "fontNoticeSha256": "e180b3d65bf650dffffd71dd21b6180767b469a18dd87e1d8552be69bb9ecdf0",
+  "baseSellerDraftSha256": "d0c843b3375d619acbddbb22df74c286f2644d1d46cbd026d01948579aed66e4"
+}

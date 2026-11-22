@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net"
@@ -24,6 +25,7 @@ var schema string
 var (
 	ErrMissing      = errors.New("order unavailable for this buyer")
 	ErrBlocked      = errors.New("this order has no current download entitlement")
+	errOfferChanged = errors.New("the reviewed test offer has changed")
 	ErrConflict     = errors.New("order reference requires reconciliation")
 	ErrInvalidEvent = errors.New("unverified provider event")
 )
@@ -31,9 +33,10 @@ var (
 const downloadLifetime = 24 * time.Hour
 
 type Shop struct {
-	db                                                  *sql.DB
-	connection, offerID, edition, origin, webhookSecret string
-	provider                                            Provider
+	db                                         *sql.DB
+	connection, offerID, origin, webhookSecret string
+	offer                                      *v1.DigitalOffer
+	provider                                   Provider
 }
 
 func Open(ctx context.Context, db *sql.DB, account, origin, signingSecret string, provider Provider, offer *v1.DigitalOffer, archive []byte) (*Shop, error) {
@@ -47,7 +50,13 @@ func Open(ctx context.Context, db *sql.DB, account, origin, signingSecret string
 		!strings.HasSuffix(offer.ArchiveName, ".zip") || offer.AmountMinor <= 0 || len(offer.Currency) != 3 {
 		return nil, errors.New("incomplete test connection or immutable offer")
 	}
-	s := &Shop{db: db, connection: account + "/" + offer.BusinessId, offerID: offerKey(offer), edition: offer.Edition, origin: origin, webhookSecret: signingSecret, provider: provider}
+	if source := offer.StudioOfferSha256; source != nil {
+		digest, err := hex.DecodeString(source.Value)
+		if err != nil || len(digest) != 32 || strings.ToLower(source.Value) != source.Value {
+			return nil, errors.New("the Studio offer SHA-256 is invalid")
+		}
+	}
+	s := &Shop{db: db, connection: account + "/" + offer.BusinessId, offerID: offerKey(offer), offer: proto.CloneOf(offer), origin: origin, webhookSecret: signingSecret, provider: provider}
 	// Serialise first-start DDL across processes. DDL and the immutable offer
 	// become visible together. An order always retains its original offer key.
 	tx, err := db.BeginTx(ctx, nil)
@@ -123,13 +132,23 @@ func (s *Shop) order(ctx context.Context, q queryer, id string, buyer []byte, lo
 // id on retry, including after a response was lost. Provider idempotency keys
 // are not reused after their guaranteed retention window.
 func (s *Shop) Start(ctx context.Context, id string, buyer []byte) (string, error) {
+	return s.start(ctx, id, buyer, nil)
+}
+
+// A browser quote may outlive the active price. Only the currently advertised
+// quote can create an order. A previously saved order can resume at its own
+// quote, including after another server or concurrent request selected a new one.
+func (s *Shop) start(ctx context.Context, id string, buyer []byte, quoted *string) (string, error) {
 	uid, err := uuid.Parse(id)
 	if err != nil || uid == uuid.Nil || uid.String() != id || len(buyer) != 32 {
 		return "", ErrMissing
 	}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO omega_digital_orders(connection_id,id,buyer_hash,offer_key) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, s.connection, id, buyer, s.offerID)
-	if err != nil {
-		return "", err
+	create := quoted == nil || *quoted == s.offerID || (*quoted == "" && s.offer.StudioOfferSha256 == nil)
+	if create {
+		_, err = s.db.ExecContext(ctx, `INSERT INTO omega_digital_orders(connection_id,id,buyer_hash,offer_key) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, s.connection, id, buyer, s.offerID)
+		if err != nil {
+			return "", err
+		}
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -137,8 +156,14 @@ func (s *Shop) Start(ctx context.Context, id string, buyer []byte) (string, erro
 	}
 	defer tx.Rollback()
 	a, err := s.order(ctx, tx, id, buyer, true)
+	if !create && errors.Is(err, ErrMissing) {
+		return "", errOfferChanged
+	}
 	if err != nil {
 		return "", err
+	}
+	if quoted != nil && *quoted != "" && *quoted != a.offerID {
+		return "", errOfferChanged
 	}
 	if a.url != "" {
 		if !a.open {

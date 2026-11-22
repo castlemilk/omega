@@ -170,7 +170,7 @@
         <form method="post" action="/orders/{{.ID}}/refresh"><button class="quiet">Check payment status</button></form>
         {{if .CanCancel}}
           <form method="post" action="/orders">
-            <input type="hidden" name="id" value="{{.ID}}"><button class="quiet">Resume checkout</button>
+            <input type="hidden" name="id" value="{{.ID}}"><input type="hidden" name="offer" value="{{.OfferKey}}"><button class="quiet">Resume checkout</button>
           </form>
           <form method="post" action="/orders/{{.ID}}/cancel"><button class="quiet">Cancel this order</button></form>
         {{end}}
@@ -205,7 +205,7 @@
           <p class="amount">{{.Amount}} in test funds</p>
           <p>Stripe simulates this purchase. Use test details at checkout.</p>
           <form method="post" action="/orders">
-            <input type="hidden" name="id" value="{{.ID}}"><button>Start test checkout</button>
+            <input type="hidden" name="id" value="{{.ID}}"><input type="hidden" name="offer" value="{{.OfferKey}}"><button>Start test checkout</button>
           </form>
         </section>
       </article>

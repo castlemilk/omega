@@ -79,7 +79,7 @@ Omega computes a total only when that series covers every requested day. It repo
 
 ## Rehearse a poster purchase and refund
 
-The owner can run either reviewed Signal Studies edition through a separate Stripe sandbox. The private Studio listing supplies the reviewed artwork and exact archive. Use the exported review packet and its SHA-256 from the private listing receipt. The packet selects the edition for checkout. A buyer of the original edition receives `signal-studies-print-candidate.zip`. A buyer of the corrected edition receives `signal-studies.zip`. Each order keeps its original packet and files when the checkout switches editions. The sandbox offer charges A$12 in simulated funds and grants a 24-hour test download. The hosted store has its own checkout setting.
+The owner can run a reviewed Signal Studies edition through a separate Stripe sandbox. The private Studio listing supplies the reviewed artwork and exact archive. Use the exported review packet and its SHA-256 from the private listing receipt. The packet selects the edition for checkout. A buyer of the original edition receives `signal-studies-print-candidate.zip`. A buyer of the corrected edition receives `signal-studies.zip`. Each order keeps its original packet and files when the checkout switches editions. The collection checkout defaults to AUD 12.00 in simulated funds and grants a 24-hour test download. The hosted store has its own checkout setting.
 
 Configure `OMEGA_POSTER_COMMERCE_DATABASE_URL` for a dedicated local PostgreSQL database and `OMEGA_POSTER_STRIPE_TEST_KEY` for the selected sandbox. Start the Stripe CLI listener in that same sandbox, forwarding to `http://127.0.0.1:9746/stripe/events`. Subscribe to Checkout completion, asynchronous success/failure and expiration, payment intent failure, charge success/failure/refund, dispute created/updated/closed, and refund created/updated/failed. Set `OMEGA_POSTER_STRIPE_SIGNING_SECRET` to the listener's signing secret.
 
@@ -88,13 +88,24 @@ omega posters test-checkout "$SIGNAL_STUDIES_COLLECTION" \
   --packet "$APPROVED_PACKET" --packet-sha256 "$APPROVED_PACKET_SHA256"
 ```
 
+To use the issued edition’s current price, open **Offer and price** in Studio, download the test offer JSON and copy its full download link. Keep that link with the exact offer and review packet. The first command verifies both local files offline and prints the immutable order offer, including its amount, currency and Studio offer SHA-256. The second checks the collection’s actual files and opens checkout at that price.
+
+```sh
+omega posters verify-test-offer "$STUDIO_OFFER_FILE" "$APPROVED_PACKET" --from "$STUDIO_OFFER_URL"
+omega posters test-checkout "$SIGNAL_STUDIES_COLLECTION" \
+  --packet "$APPROVED_PACKET" --packet-sha256 "$APPROVED_PACKET_SHA256" \
+  --offer-file "$STUDIO_OFFER_FILE" --offer-from "$STUDIO_OFFER_URL"
+```
+
+The link uses the issued Studio collection’s `view=test-offer-file`, `packet` and `offer` parameters to pin the review packet and exact offer bytes. The offer names the buyer ZIP, six PDFs, printing guide, font notice, seller draft, price source and any wording selected for the private seller draft. Its licence is `private-test-download-v1`. After a price revision, each existing buyer order retains its recorded amount, currency, offer checksum and download. A buyer with an unsubmitted earlier price must reopen the edition to see the new quote.
+
 Open the printed loopback address, start checkout and use Stripe's published test buyer details. On return, the order page displays the provider-confirmed state. A declined buyer can resume the same open checkout or cancel it. A paid buyer can download their edition’s six PDFs, printing guide and font notice. The same browser profile retains its private order access across restarts. The operator can refund the test charge in the same Stripe sandbox. A full refund closes future downloads, including requests from an already-open payment confirmation page. Partial refunds retain access. An open or lost dispute suspends downloads. Returned files already saved on a device stay there. [Stripe testing](https://docs.stripe.com/testing)
 
 `omega posters test-order-receipt ORDER_ID` checks the current provider state and exports the operator's receipt. It includes the edition, file checksum, test price, payment and refund state, number of downloads, entitlement and signed event processing. The reader requires the order database and the same sandbox account. Keep the receipt with the private pilot evidence. Reporting customer demand or revenue requires production observations.
 
 `make test-digital-orders` starts a fresh local PostgreSQL container, runs the race-enabled order, signature and reconciliation tests, and drives Chromium through purchase, download and revocation with a local provider fixture. It uses Docker, Node and the locked Playwright installation in `web/dashboard`. The local commit hook runs this suite for changes to the poster order flow.
 
-Set `OMEGA_POSTER_TEST_COLLECTION` to Studio’s `public/collections/signal-studies` directory when running those tests to include both reviewed editions. The test buys each edition through the local provider, switches to the corrected checkout, then verifies each order’s original download and receipt. Chromium also opens the Phase portrait preview, downloads the corrected ZIP, verifies its checksum and checks that a full simulated refund closes access.
+Set `OMEGA_POSTER_TEST_COLLECTION` to Studio’s `public/collections/signal-studies` directory when running those tests to include both reviewed editions. The tests buy each edition through the local provider, exercise two prices for the same edition, then verify the original download, receipt and per-currency statement. Chromium also opens the Phase portrait preview, downloads the corrected ZIP, verifies its checksum and checks that a full simulated refund closes access.
 
 ## Read the poster sales journal
 

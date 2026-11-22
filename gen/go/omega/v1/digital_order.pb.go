@@ -98,8 +98,10 @@ type DigitalOffer struct {
 	AmountMinor   int64                  `protobuf:"varint,7,opt,name=amount_minor,json=amountMinor,proto3" json:"amount_minor,omitempty"`
 	Currency      string                 `protobuf:"bytes,8,opt,name=currency,proto3" json:"currency,omitempty"`
 	Licence       string                 `protobuf:"bytes,9,opt,name=licence,proto3" json:"licence,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// A Studio-pinned quote, when selected. Older offer identities omit this field.
+	StudioOfferSha256 *wrapperspb.StringValue `protobuf:"bytes,10,opt,name=studio_offer_sha256,json=studioOfferSha256,proto3" json:"studio_offer_sha256,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *DigitalOffer) Reset() {
@@ -193,6 +195,13 @@ func (x *DigitalOffer) GetLicence() string {
 		return x.Licence
 	}
 	return ""
+}
+
+func (x *DigitalOffer) GetStudioOfferSha256() *wrapperspb.StringValue {
+	if x != nil {
+		return x.StudioOfferSha256
+	}
+	return nil
 }
 
 type DigitalOrderEvent struct {
@@ -885,7 +894,7 @@ var File_omega_v1_digital_order_proto protoreflect.FileDescriptor
 
 const file_omega_v1_digital_order_proto_rawDesc = "" +
 	"\n" +
-	"\x1comega/v1/digital_order.proto\x12\bomega.v1\x1a\x1egoogle/protobuf/wrappers.proto\"\xb0\x02\n" +
+	"\x1comega/v1/digital_order.proto\x12\bomega.v1\x1a\x1egoogle/protobuf/wrappers.proto\"\xfe\x02\n" +
 	"\fDigitalOffer\x12\x1f\n" +
 	"\vbusiness_id\x18\x01 \x01(\tR\n" +
 	"businessId\x12\x1d\n" +
@@ -897,7 +906,9 @@ const file_omega_v1_digital_order_proto_rawDesc = "" +
 	"\farchive_name\x18\x06 \x01(\tR\varchiveName\x12!\n" +
 	"\famount_minor\x18\a \x01(\x03R\vamountMinor\x12\x1a\n" +
 	"\bcurrency\x18\b \x01(\tR\bcurrency\x12\x18\n" +
-	"\alicence\x18\t \x01(\tR\alicence\"\xc8\x01\n" +
+	"\alicence\x18\t \x01(\tR\alicence\x12L\n" +
+	"\x13studio_offer_sha256\x18\n" +
+	" \x01(\v2\x1c.google.protobuf.StringValueR\x11studioOfferSha256\"\xc8\x01\n" +
 	"\x11DigitalOrderEvent\x12*\n" +
 	"\x11provider_event_id\x18\x01 \x01(\tR\x0fproviderEventId\x12\x1d\n" +
 	"\n" +
@@ -1009,25 +1020,26 @@ var file_omega_v1_digital_order_proto_goTypes = []any{
 	(*CommerceStatementOrder)(nil),  // 5: omega.v1.CommerceStatementOrder
 	(*CommerceStatement)(nil),       // 6: omega.v1.CommerceStatement
 	(*CommerceReporterReceipt)(nil), // 7: omega.v1.CommerceReporterReceipt
-	(*wrapperspb.Int64Value)(nil),   // 8: google.protobuf.Int64Value
-	(*wrapperspb.StringValue)(nil),  // 9: google.protobuf.StringValue
+	(*wrapperspb.StringValue)(nil),  // 8: google.protobuf.StringValue
+	(*wrapperspb.Int64Value)(nil),   // 9: google.protobuf.Int64Value
 }
 var file_omega_v1_digital_order_proto_depIdxs = []int32{
-	1,  // 0: omega.v1.DigitalOrderReceipt.offer:type_name -> omega.v1.DigitalOffer
-	0,  // 1: omega.v1.DigitalOrderReceipt.payment:type_name -> omega.v1.DigitalPaymentState
-	2,  // 2: omega.v1.DigitalOrderReceipt.events:type_name -> omega.v1.DigitalOrderEvent
-	0,  // 3: omega.v1.CommerceStatementOrder.payment:type_name -> omega.v1.DigitalPaymentState
-	8,  // 4: omega.v1.CommerceStatementOrder.captured_minor:type_name -> google.protobuf.Int64Value
-	8,  // 5: omega.v1.CommerceStatementOrder.refunded_minor:type_name -> google.protobuf.Int64Value
-	9,  // 6: omega.v1.CommerceStatementOrder.verified_at:type_name -> google.protobuf.StringValue
-	9,  // 7: omega.v1.CommerceStatementOrder.dispute_status:type_name -> google.protobuf.StringValue
-	4,  // 8: omega.v1.CommerceStatementOrder.movements:type_name -> omega.v1.CommerceBalanceMovement
-	5,  // 9: omega.v1.CommerceStatement.orders:type_name -> omega.v1.CommerceStatementOrder
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	8,  // 0: omega.v1.DigitalOffer.studio_offer_sha256:type_name -> google.protobuf.StringValue
+	1,  // 1: omega.v1.DigitalOrderReceipt.offer:type_name -> omega.v1.DigitalOffer
+	0,  // 2: omega.v1.DigitalOrderReceipt.payment:type_name -> omega.v1.DigitalPaymentState
+	2,  // 3: omega.v1.DigitalOrderReceipt.events:type_name -> omega.v1.DigitalOrderEvent
+	0,  // 4: omega.v1.CommerceStatementOrder.payment:type_name -> omega.v1.DigitalPaymentState
+	9,  // 5: omega.v1.CommerceStatementOrder.captured_minor:type_name -> google.protobuf.Int64Value
+	9,  // 6: omega.v1.CommerceStatementOrder.refunded_minor:type_name -> google.protobuf.Int64Value
+	8,  // 7: omega.v1.CommerceStatementOrder.verified_at:type_name -> google.protobuf.StringValue
+	8,  // 8: omega.v1.CommerceStatementOrder.dispute_status:type_name -> google.protobuf.StringValue
+	4,  // 9: omega.v1.CommerceStatementOrder.movements:type_name -> omega.v1.CommerceBalanceMovement
+	5,  // 10: omega.v1.CommerceStatement.orders:type_name -> omega.v1.CommerceStatementOrder
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_omega_v1_digital_order_proto_init() }

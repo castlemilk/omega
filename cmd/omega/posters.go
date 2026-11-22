@@ -23,7 +23,7 @@ func posterCollection(directory, captionFiles string) fs.FS {
 	return posters.WithCaptionFiles(collection, os.DirFS(captionFiles))
 }
 
-func readPosterReview(name string) ([]byte, error) {
+func readPosterDocument(name string) ([]byte, error) {
 	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func readPosterReview(name string) ([]byte, error) {
 	const maxReviewSize = 1 << 20
 	raw, err := io.ReadAll(io.LimitReader(f, maxReviewSize+1))
 	if err != nil || len(raw) > maxReviewSize {
-		return nil, errors.New("invalid poster review file")
+		return nil, errors.New("invalid poster document")
 	}
 	return raw, nil
 }
@@ -44,7 +44,7 @@ func posterVerifySellerCommand() *cobra.Command {
 		Short: "Check the seller photos, listing and buyer files against the selected Studio download",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			raw, err := readPosterReview(args[1])
+			raw, err := readPosterDocument(args[1])
 			if err != nil {
 				return err
 			}
@@ -63,7 +63,7 @@ func posterVerifySellerCommand() *cobra.Command {
 
 func init() {
 	command := &cobra.Command{Use: "posters", Short: "Operate the Signal Studies poster business"}
-	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand(), posterStatementCommand(), posterSalesJournalCommand(), posterSettlementLedgerCommand(), posterReporterCommand(), posterVerifySellerCommand(), posterProductionCostsCommand())
+	command.AddCommand(posterCheckoutCommand(), posterVerifyTestOfferCommand(), posterOrderReceiptCommand(), posterStatementCommand(), posterSalesJournalCommand(), posterSettlementLedgerCommand(), posterReporterCommand(), posterVerifySellerCommand(), posterProductionCostsCommand())
 	var edition, captionFiles, costBook, costRun, costExperiment string
 	prepare := &cobra.Command{
 		Use:   "prepare COLLECTION_DIRECTORY",
