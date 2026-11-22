@@ -26,3 +26,7 @@ func openSettlementEvidenceDir(string) (*os.File, error) {
 func saveSettlementStatement(*os.File, string, []byte) error {
 	return errors.New("settlement evidence files require Unix private file permissions")
 }
+
+func openPrivateCostFile(string, int, os.FileMode) (*os.File, error) {
+	return nil, errors.New("local production cost books require Unix private file permissions")
+}

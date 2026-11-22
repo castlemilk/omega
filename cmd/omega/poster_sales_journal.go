@@ -36,7 +36,7 @@ func posterSalesJournalCommand() *cobra.Command {
 }
 
 func posterSettlementLedgerCommand() *cobra.Command {
-	var directory string
+	var directory, costBook string
 	read := func(ctx context.Context, db *sql.DB, gateway *commerce.StripeTest, business, product, month string) (*v1.SettlementLedger, error) {
 		var save commerce.SettlementSourceSink
 		if directory != "" {
@@ -47,13 +47,41 @@ func posterSettlementLedgerCommand() *cobra.Command {
 			defer func() { _ = dir.Close() }()
 			save = func(digest string, raw []byte) error { return saveSettlementStatement(dir, digest, raw) }
 		}
-		return commerce.OperatorSettlementLedger(ctx, db, gateway, business, product, month, save)
+		if costBook == "" {
+			return commerce.OperatorSettlementLedger(ctx, db, gateway, business, product, month, save)
+		}
+		sources := make(map[string][]byte)
+		ledger, account, err := commerce.OperatorSettlementLedgerWithMerchant(ctx, db, gateway, business, product, month, func(digest string, raw []byte) error {
+			if save != nil {
+				if err := save(digest, raw); err != nil {
+					return err
+				}
+			}
+			sources[digest] = raw
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		book, err := openPosterCostBook(costBook, false)
+		if err != nil {
+			return nil, err
+		}
+		defer book.Close()
+		if err := book.RecordTestFees(account, ledger, sources); err != nil {
+			return nil, err
+		}
+		return ledger, nil
 	}
 	command := posterMonthlySettlementCommand("test-ledger", "Read Signal Studies processor settlement postings and refund evidence from the isolated test merchant", read)
 	command.Flags().StringVar(&directory, "evidence-dir", "", "Keep each exact source statement as <sha256>.json in this private directory")
+	command.Flags().StringVar(&costBook, "cost-book", "", "Record verified Stripe test fees against each order's edition in this local cost book")
 	command.PreRunE = func(cmd *cobra.Command, _ []string) error {
 		if cmd.Flags().Changed("evidence-dir") && directory == "" {
 			return errors.New("--evidence-dir requires a directory path")
+		}
+		if cmd.Flags().Changed("cost-book") && costBook == "" {
+			return errors.New("--cost-book requires a file path")
 		}
 		return nil
 	}

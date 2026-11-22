@@ -29,11 +29,22 @@ type SettlementSourceSink func(sha256 string, statementJSON []byte) error
 // OperatorSettlementLedger reads the isolated test merchant and books its
 // observed processor movements in their individual settlement currencies.
 func OperatorSettlementLedger(ctx context.Context, db *sql.DB, gateway *StripeTest, business, product, month string, save SettlementSourceSink) (*v1.SettlementLedger, error) {
+	ledger, _, err := OperatorSettlementLedgerWithMerchant(ctx, db, gateway, business, product, month, save)
+	return ledger, err
+}
+
+// OperatorSettlementLedgerWithMerchant returns the account that scoped every
+// order read for the ledger, including the evidence used to attribute its fees.
+func OperatorSettlementLedgerWithMerchant(ctx context.Context, db *sql.DB, gateway *StripeTest, business, product, month string, save SettlementSourceSink) (*v1.SettlementLedger, string, error) {
 	sources, err := readSettlementSources(ctx, db, gateway, business, product, month, save)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return sources.settlementLedger()
+	ledger, err := sources.settlementLedger()
+	if err != nil {
+		return nil, "", err
+	}
+	return ledger, sources.merchant, nil
 }
 
 type settlementPair struct{ charge, refund string }

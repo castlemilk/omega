@@ -67,6 +67,7 @@ func readSettlementSources(ctx context.Context, db *sql.DB, gateway *StripeTest,
 	}
 	sources := newSettlementSources(business, product, month)
 	sources.save = save
+	sources.merchant = account
 	for _, day := range days {
 		report, err := shop.statement(ctx, gateway, business, product, day, day.AddDate(0, 0, 1))
 		if err != nil {
@@ -92,6 +93,7 @@ type journalFacts struct {
 }
 
 type settlementSources struct {
+	merchant  string
 	scope     *v1.SalesJournal
 	movements map[string]map[journalFacts]*v1.SalesJournalEntry
 	witnesses map[settlementPair]settlementWitness

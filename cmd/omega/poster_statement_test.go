@@ -158,7 +158,8 @@ func TestPosterStatementCommand(t *testing.T) {
 		archiveRoot, err := filepath.EvalSymlinks(t.TempDir())
 		require.NoError(t, err)
 		archiveDir := filepath.Join(archiveRoot, "statements")
-		rootCmd.SetArgs([]string{"posters", "test-ledger", "--month", day.Format("2006-01"), "--evidence-dir", archiveDir})
+		costPath := filepath.Join(archiveRoot, "costs.db")
+		rootCmd.SetArgs([]string{"posters", "test-ledger", "--month", day.Format("2006-01"), "--evidence-dir", archiveDir, "--cost-book", costPath})
 		require.NoError(t, rootCmd.Execute())
 		var ledger v1.SettlementLedger
 		require.NoError(t, protojson.Unmarshal(out.Bytes(), &ledger))
@@ -204,7 +205,58 @@ func TestPosterStatementCommand(t *testing.T) {
 		files, err := os.ReadDir(archiveDir)
 		require.NoError(t, err)
 		require.Len(t, files, int(ledger.SourceCount))
+		out.Reset()
+		rootCmd.SetArgs([]string{"posters", "costs", "statement", "--month", result.Month, "--book", costPath, "--simulated"})
+		require.NoError(t, rootCmd.Execute())
+		var fees v1.ProductionCostStatement
+		require.NoError(t, protojson.Unmarshal(out.Bytes(), &fees))
+		require.Len(t, fees.Items, 2)
+		require.Len(t, fees.Subtotals, 1)
+		require.Equal(t, "340000", fees.Subtotals[0].AmountMicros)
+		for _, item := range fees.Items {
+			require.Equal(t, ledger.Entries[0].Movement.SourceSha256, item.EvidenceSha256)
+			require.Equal(t, offer.ArchiveSha256, item.Allocations[0].Target.ArtifactSha256)
+		}
+		// Exercise an offline recovery into a new book. Change the mock
+		// transport to fail every request, including account discovery.
+		stripe.SetHTTPClient(&http.Client{Transport: unavailableCostProvider{t}})
+		t.Cleanup(func() {
+			stripe.SetHTTPClient(&http.Client{Transport: statementTestTransport{target, server.Client().Transport}})
+		})
+		archiveLedger := filepath.Join(archiveRoot, "ledger.json")
+		sourcePath := filepath.Join(archiveDir, ledger.Entries[0].Movement.SourceSha256+".json")
+		data, err := protojson.Marshal(&ledger)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(archiveLedger, data, 0600))
+		recoveredPath := filepath.Join(archiveRoot, "recovered.db")
+		out.Reset()
+		rootCmd.SetArgs([]string{"posters", "costs", "recover-test-fees", archiveLedger, sourcePath, "--book", recoveredPath})
+		require.NoError(t, rootCmd.Execute())
+		require.Contains(t, out.String(), ledger.LastCheckedAt)
+		out.Reset()
+		rootCmd.SetArgs([]string{"posters", "costs", "statement", "--simulated", "--month", ledger.Month, "--book", recoveredPath})
+		require.NoError(t, rootCmd.Execute())
+		recovered := new(v1.ProductionCostStatement)
+		require.NoError(t, protojson.Unmarshal(out.Bytes(), recovered))
+		for i, item := range recovered.Items {
+			require.Equal(t, fees.Items[i].ReceiptSha256, item.ReceiptSha256)
+			require.Equal(t, ledger.LastCheckedAt, item.SourceObservedAt)
+		}
+		require.Len(t, recovered.Items, 2)
+		ledger.Currencies[0].DebitsMinor = "0"
+		data, err = protojson.Marshal(&ledger)
+		require.NoError(t, err)
+		require.NoError(t, os.WriteFile(archiveLedger, data, 0600))
+		rootCmd.SetArgs([]string{"posters", "costs", "recover-test-fees", archiveLedger, sourcePath, "--book", recoveredPath})
+		require.ErrorContains(t, rootCmd.Execute(), "do not reproduce")
 	})
+}
+
+type unavailableCostProvider struct{ t *testing.T }
+
+func (u unavailableCostProvider) RoundTrip(*http.Request) (*http.Response, error) {
+	u.t.Error("archived test fee recovery contacted the provider")
+	return nil, fmt.Errorf("offline test")
 }
 
 // All SDK traffic for the normal CLI command stays inside the test server.

@@ -120,6 +120,45 @@ Omega requests the balance transaction attached to the matching charge and each 
 
 Coverage is `empty` when the selected account and product have no orders in the window and every row could be identified. A `partial` statement preserves independent verified orders, flags incomplete evidence, and counts any records whose scope or immutable offer could not be verified in `unresolvedScopeOrders`. A `complete` statement contains the current verified rows and all matching charge and refund movements. The export accepts up to 366 days through today, checks at most 10,000 business orders and 500 product orders, and writes at most 160,000 bytes. A period exceeding any limit fails explicitly.
 
+## Trace poster production costs
+
+The local order suite exercises the full buyer journey and fee attribution with a fresh PostgreSQL database. Run `make test-digital-orders` with Docker, or set `OMEGA_TEST_POSTGRES_BIN` to the directory containing an installed PostgreSQL server's `initdb`, `pg_ctl` and `createdb` tools. Both paths run the same browser and Go tests.
+
+Each completed preparation can leave a receipt in a private cost book on the Mac. Give the operation a stable run ID. Repeating it with the same verified files returns its original receipt, including across service days. A separate preparation has its own run ID. The normal candidate JSON is still written to standard output. The cost receipt digest is written to standard error.
+
+```sh
+omega posters prepare "$SIGNAL_STUDIES_COLLECTION" --edition signal-studies-editorial-01 \
+  --cost-book ./private/costs.db --cost-run editorial-proof-01 > editorial-manifest.json
+omega posters costs statement --book ./private/costs.db --month 2026-11
+```
+
+The receipt references the exact candidate manifest, verified buyer archive, edition, product and run. Use `--cost-experiment` when the preparation belongs to a named experiment. The initial amount is provisional. A failed verification produces no completed preparation receipt. Supplier charges for failed or stopped work can be recorded against their own run and supporting artifact.
+
+To record an invoice line, reservation, estimate, credit or correction, submit a [ProductionCostReceipt](../../proto/omega/v1/production_cost.proto) and its supporting file. Supply the document’s SHA-256, a stable provider and account alias, the supplier’s line ID, the UTC service date and an explicit simulated flag. A correction keeps the same source identity and includes the current receipt’s digest in `previousReceiptSha256` plus its `revisionReason`. The commands below read and write the exact bytes, including the original supporting file.
+
+```sh
+omega posters costs record cost-receipt.json supplier-document.pdf --book ./private/costs.db
+omega posters costs receipt "$RECEIPT_SHA" --book ./private/costs.db > saved-receipt.json
+omega posters costs evidence "$EVIDENCE_SHA" --book ./private/costs.db > saved-source.pdf
+```
+
+Amounts are signed millionths of one major currency unit. For example, AUD 2.40 is `"2400000"`. A documented zero is `"0"`. Provisional and withdrawn lines omit the amount. For dated unit prices, an estimate includes the effective date range, units, unit description and price per unit. The book checks that the service date falls within that range and the multiplication matches the estimate. An invoice or settlement can supersede the estimate. Only the current stage contributes to its currency subtotal. The statement covers the recorded lines for the selected product and UTC service month. Unreported costs have no inferred value.
+
+A shared line lists each target’s business, product, run, artifact checksum and share in basis points. Include the edition and experiment when applicable. Shares must sum to 10,000. Remaining millionths go to the largest fractional remainders with ties resolved by target identity. Credits use the same allocation rule. The product statement includes its share and the number of targets. It retains the link to the full receipt in the owner’s local book.
+
+The test processor ledger can record each verified charge or refund fee in the same book. It uses the balance transaction’s settlement currency and the exact source order’s archive. The original statement survives a later identical verification. A disagreement rolls back the batch and reports the affected line. Past corrections remain inspectable. Fees from this command are always simulated. The existing ledger continues to report coverage and gaps. [Stripe currency units](https://docs.stripe.com/currencies) · [Three-decimal currencies](https://support.stripe.com/questions/which-payments-methods-and-products-are-available-in-the-uae)
+
+```sh
+omega posters test-ledger --month 2026-11 --cost-book ./private/costs.db
+omega posters costs statement --month 2026-11 --simulated --book ./private/costs.db
+```
+
+During a provider outage, use the previously exported native ledger and its exact source statements. Omega reconstructs the ledger, checks the order identities, merchant and immutable offers in the local order database, and preserves the earlier provider observation time. A source mismatch stops the import. The cost book records when it accepted each line.
+
+```sh
+omega posters costs recover-test-fees november-ledger.json ./november-statements/*.json --book ./private/costs.db
+```
+
 ## Automatically report test orders to Studio
 
 On the designated Mac, sign in as the user who runs the isolated checkout. Initialise its reporter and pair the printed public key in Signal Studies’ private Studio. Running `init` again returns the same public key.

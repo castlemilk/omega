@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+enum ProductionCostStage {
+  PRODUCTION_COST_STAGE_UNSPECIFIED = 0;
+  PRODUCTION_COST_STAGE_PROVISIONAL = 1;
+  PRODUCTION_COST_STAGE_ESTIMATED = 2;
+  PRODUCTION_COST_STAGE_RESERVED = 3;
+  PRODUCTION_COST_STAGE_INCURRED = 4;
+  PRODUCTION_COST_STAGE_SETTLED = 5;
+  PRODUCTION_COST_STAGE_WITHDRAWN = 6;
+}
+
+enum ProductionCostCategory {
+  PRODUCTION_COST_CATEGORY_UNSPECIFIED = 0;
+  PRODUCTION_COST_CATEGORY_MODEL = 1;
+  PRODUCTION_COST_CATEGORY_MEDIA = 2;
+  PRODUCTION_COST_CATEGORY_BROWSER = 3;
+  PRODUCTION_COST_CATEGORY_COMPUTE = 4;
+  PRODUCTION_COST_CATEGORY_CHANNEL = 5;
+  PRODUCTION_COST_CATEGORY_PRODUCTION = 6;
+}
+
+// One allocation of a source line. Shares across a line total 10,000.
+message ProductionCostTarget {
+  string business_id = 1;
+  string product_id = 2;
+  string run_id = 3;
+  string experiment_id = 4;
+  string edition = 5;
+  string artifact_sha256 = 6;
+  uint32 share_bps = 7;
+}
+
+// Rate terms as observed on the source. Dates are inclusive UTC service days.
+// The currency follows the receipt. Quantities and prices use exact integers.
+message ProductionCostRate {
+  string effective_from = 1;
+  string effective_through = 2;
+  string unit = 3;
+  uint64 units = 4;
+  optional uint64 price_micros_per_unit = 5;
+}
+
+// Provider, account, line and simulated mode identify one economic item.
+// A revision supersedes its current receipt; earlier receipts remain retrievable.
+message ProductionCostReceipt {
+  string provider = 1;
+  string account = 2;
+  string line_id = 3;
+  optional bool simulated = 4;
+  string service_date = 5;
+  ProductionCostCategory category = 6;
+  ProductionCostStage stage = 7;
+  // Signed millionths of one major currency unit. Zero is a measured zero.
+  // Provisional and withdrawn items omit the amount.
+  optional int64 amount_micros = 8;
+  string currency = 9;
+  string evidence_sha256 = 10;
+  string description = 11;
+  string allocation_basis = 12;
+  repeated ProductionCostTarget targets = 13;
+  ProductionCostRate rate = 14;
+  string previous_receipt_sha256 = 15;
+  string revision_reason = 16;
+  // Verification time carried by the supporting source, when available.
+  string source_observed_at = 17;
+}
+
+message ProductionCostAllocation {
+  ProductionCostTarget target = 1;
+  optional int64 amount_micros = 2;
+}
+
+message ProductionCostItem {
+  string receipt_sha256 = 1;
+  string evidence_sha256 = 2;
+  string previous_receipt_sha256 = 3;
+  string provider = 4;
+  string line_id = 5;
+  string service_date = 6;
+  ProductionCostCategory category = 7;
+  ProductionCostStage stage = 8;
+  string description = 9;
+  string allocation_basis = 10;
+  string currency = 11;
+  // Only targets belonging to this product are included.
+  repeated ProductionCostAllocation allocations = 12;
+  optional int64 product_micros = 13;
+  uint32 source_target_count = 14;
+  // UTC time when this revision was accepted into the local cost book.
+  string recorded_at = 15;
+  string source_observed_at = 16;
+}
+
+message ProductionCostSubtotal {
+  string currency = 1;
+  ProductionCostStage stage = 2;
+  uint32 items = 3;
+  // A sum of int64 source amounts may exceed int64.
+  string amount_micros = 4;
+}
+
+// Snapshot of recorded source lines for one product and UTC service month.
+// Only the latest revision of each line contributes, in exactly one stage.
+message ProductionCostStatement {
+  string business_id = 1;
+  string product_id = 2;
+  string month = 3;
+  bool simulated = 4;
+  repeated ProductionCostItem items = 5;
+  repeated ProductionCostSubtotal subtotals = 6;
+  uint32 provisional_items = 7;
+  string schema = 8;
+}

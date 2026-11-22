@@ -63,13 +63,16 @@ func posterVerifySellerCommand() *cobra.Command {
 
 func init() {
 	command := &cobra.Command{Use: "posters", Short: "Operate the Signal Studies poster business"}
-	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand(), posterStatementCommand(), posterSalesJournalCommand(), posterSettlementLedgerCommand(), posterReporterCommand(), posterVerifySellerCommand())
-	var edition, captionFiles string
+	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand(), posterStatementCommand(), posterSalesJournalCommand(), posterSettlementLedgerCommand(), posterReporterCommand(), posterVerifySellerCommand(), posterProductionCostsCommand())
+	var edition, captionFiles, costBook, costRun, costExperiment string
 	prepare := &cobra.Command{
 		Use:   "prepare COLLECTION_DIRECTORY",
 		Short: "Verify the six delivery PDFs and emit the selected release candidate",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if costRun == "" && (cmd.Flags().Changed("cost-run") || cmd.Flags().Changed("cost-book") || cmd.Flags().Changed("cost-experiment")) {
+				return errors.New("--cost-run needs a stable ID for this preparation")
+			}
 			candidate, err := posters.CandidateForEdition(posterCollection(args[0], captionFiles), edition)
 			if err != nil {
 				return err
@@ -78,12 +81,25 @@ func init() {
 			if err != nil {
 				return err
 			}
-			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(data))
+			body := append(data, '\n')
+			if costRun != "" {
+				digest, err := recordPosterPreparation(costBook, costRun, costExperiment, candidate, body, time.Now())
+				if err != nil {
+					return err
+				}
+				if _, err := fmt.Fprintln(cmd.ErrOrStderr(), "Production cost receipt", digest); err != nil {
+					return err
+				}
+			}
+			_, err = cmd.OutOrStdout().Write(body)
 			return err
 		},
 	}
 	prepare.Flags().StringVar(&edition, "edition", posters.OriginalEdition, "Edition to verify ("+posters.OriginalEdition+", "+posters.EditorialEdition+", or "+posters.CaptionEdition+")")
 	prepare.Flags().StringVar(&captionFiles, "caption-files", "", "Directory containing the exported caption edition's signal-studies.zip and edition-preview.pdf")
+	prepare.Flags().StringVar(&costRun, "cost-run", "", "Record this completed preparation once under a stable run ID")
+	prepare.Flags().StringVar(&costBook, "cost-book", "", "Private cost book for this preparation (same as posters costs --book)")
+	prepare.Flags().StringVar(&costExperiment, "cost-experiment", "", "Experiment associated with this preparation, if any")
 	command.AddCommand(prepare)
 	var experiment, source, from, through, evidence string
 	measure := &cobra.Command{
