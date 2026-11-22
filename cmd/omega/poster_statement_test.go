@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -48,11 +49,21 @@ func TestPosterStatementCommand(t *testing.T) {
 	require.NoError(t, err)
 	key := fmt.Sprintf("%x", sha256.Sum256(definition))
 	type obj = map[string]any
+	var limitAccount atomic.Bool
+	var accountReads atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var response any
 		switch r.URL.Path {
 		case "/v1/account":
+			accountReads.Add(1)
+			if limitAccount.Load() {
+				w.Header().Set("Retry-After", "7200")
+				w.Header().Set("Stripe-Rate-Limited-Reason", "endpoint-rate")
+				w.WriteHeader(http.StatusTooManyRequests)
+				_ = json.NewEncoder(w).Encode(obj{"error": obj{"type": "invalid_request_error", "message": "private provider detail"}})
+				return
+			}
 			response = obj{"id": account, "object": "account"}
 		case "/v1/checkout/sessions/cs_test_statement":
 			assert.Equal(t, "payment_intent.latest_charge.balance_transaction", r.URL.Query().Get("expand[0]"))
@@ -128,7 +139,9 @@ func TestPosterStatementCommand(t *testing.T) {
 		require.NoError(t, json.Compact(&compact, out.Bytes()))
 		t.Log("CLI fixture statement", compact.String())
 	}
-	t.Run("send signed statement", func(t *testing.T) { checkPosterReporterCommand(t, dsn, day.Format(time.DateOnly), id) })
+	t.Run("send signed statement", func(t *testing.T) {
+		checkPosterReporterCommand(t, dsn, day.Format(time.DateOnly), id, &limitAccount, &accountReads)
+	})
 	t.Run("read settlement month including an older order", func(t *testing.T) {
 		// Put the order in an earlier creation cohort while preserving both
 		// genuine, independently expanded balance dates in the selected month.

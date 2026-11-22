@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package omega.v1;
+
+import "omega/v1/digital_order.proto";
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// Operational state kept on the paired Mac. Only CommerceStatement is sent to Studio.
+message LocalReporterStatus {
+  string outcome = 1; // never-run, checking, interrupted, acknowledged, failed, rate-limited, recheck-pending or recheck-rate-limited
+  string attempt_at = 2;
+  string finished_at = 3;
+  string from_day = 4;
+  string through_day = 5;
+  string next_provider_read_at = 6;
+  uint32 consecutive_limits = 7;
+  string limited_read = 8; // account, order or refunds
+  string limit_reason = 9; // recognized provider category only
+  string provider_retry_at = 10; // only when Stripe provided a usable Retry-After
+  CommerceReporterReceipt last_receipt = 11;
+  string receipt_from_day = 12;
+  string receipt_through_day = 13;
+}

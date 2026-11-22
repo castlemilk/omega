@@ -31,7 +31,7 @@ func openPosterCostBook(path string, readOnly bool) (*commerce.ProductionCostBoo
 			return nil, err
 		}
 	}
-	return commerce.OpenProductionCostBook(path, readOnly, openPrivateCostFile)
+	return commerce.OpenProductionCostBook(path, readOnly, openPrivateDataFile)
 }
 
 func readCostDocument(path string, limit int64) ([]byte, error) {

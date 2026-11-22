@@ -37,8 +37,8 @@ func readSettlementSources(ctx context.Context, db *sql.DB, gateway *StripeTest,
 		return nil, errors.New("a scoped test merchant and order database are required")
 	}
 	account, err := gateway.Account(ctx)
-	if statementRateLimited(err) {
-		return nil, ErrStatementRateLimited
+	if limit := statementReadLimit(err, "account"); limit != nil {
+		return nil, limit
 	}
 	if err != nil {
 		return nil, errors.New("could not verify the test merchant account with Stripe")

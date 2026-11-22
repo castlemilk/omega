@@ -70,8 +70,8 @@ func (p *StripeTest) statementBalance(ctx context.Context, row *v1.CommerceState
 	allRefunds := true
 	refunds := p.client.V1Refunds.List(ctx, params)
 	for r, err := range refunds.All(ctx) {
-		if statementRateLimited(err) {
-			return ErrStatementRateLimited
+		if limit := statementReadLimit(err, "refunds"); limit != nil {
+			return limit
 		}
 		if err != nil {
 			allRefunds = false

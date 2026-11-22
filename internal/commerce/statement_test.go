@@ -226,7 +226,7 @@ func TestStatementScopesOrdersAndPreservesUnknowns(t *testing.T) {
 	require.Empty(t, report.Orders)
 	require.Equal(t, "partial", report.Coverage)
 
-	for _, endpoint := range []string{"/v1/account", "/v1/checkout/sessions/cs_test_" + first, "/v1/refunds"} {
+	for endpoint, read := range map[string]string{"/v1/account": "account", "/v1/checkout/sessions/cs_test_" + first: "order", "/v1/refunds": "refunds"} {
 		t.Run("rate limit at "+endpoint, func(t *testing.T) {
 			var deferred atomic.Bool
 			limited := statementStripe(t, func(w http.ResponseWriter, r *http.Request) {
@@ -239,11 +239,18 @@ func TestStatementScopesOrdersAndPreservesUnknowns(t *testing.T) {
 				}
 				deferred.Store(true)
 				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Stripe-Rate-Limited-Reason", "endpoint-concurrency")
+				w.Header().Set("Retry-After", "3600")
 				w.WriteHeader(http.StatusTooManyRequests)
 				_ = json.NewEncoder(w).Encode(obj{"error": obj{"type": "invalid_request_error", "code": "rate_limit", "message": privateValue}})
 			})
 			report, err := OperatorStatement(t.Context(), shop.db, limited, offer.BusinessId, offer.ProductId, on, on)
 			require.ErrorIs(t, err, ErrStatementRateLimited)
+			var limit *StatementReadLimit
+			require.ErrorAs(t, err, &limit)
+			require.Equal(t, read, limit.Read)
+			require.Equal(t, "endpoint-concurrency", limit.Reason)
+			require.WithinDuration(t, time.Now().Add(time.Hour), limit.RetryAt, time.Minute)
 			require.Nil(t, report)
 			require.NotContains(t, err.Error(), privateValue)
 		})

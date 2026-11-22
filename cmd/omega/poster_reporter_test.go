@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -97,7 +98,7 @@ func TestReporterPeriodAndMacSchedule(t *testing.T) {
 
 // Go's normal poster CLI already seeded a genuine edition in isolated
 // PostgreSQL and bound a local fixture for every Stripe read.
-func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string) {
+func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string, limitAccount *atomic.Bool, accountReads *atomic.Int32) {
 	t.Helper()
 	if os.Geteuid() < 0 {
 		t.Skip("requires POSIX file ownership")
@@ -128,7 +129,9 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string) {
 	t.Setenv("OMEGA_POSTER_COMMERCE_DATABASE_URL", "unused")
 	t.Setenv("OMEGA_POSTER_STRIPE_SIGNING_SECRET", "")
 	rechecked := make(chan string, 4)
+	var received atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		received.Add(1)
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/api/reporters/signal-studies/statement", r.URL.Path)
 		raw, readErr := io.ReadAll(r.Body)
@@ -200,6 +203,63 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string) {
 	require.True(t, strings.HasSuffix(receipt.StatementId, "/"+today+"/"+today))
 	require.Len(t, rechecked, 1)
 	require.Equal(t, orderID, <-rechecked)
+
+	// A distinct process reads the same private state at every scheduled wake.
+	// Advance only the scheduler clock. Stripe, Postgres, signing and the
+	// receiver use their real fixture endpoints and independently verify bytes.
+	now := time.Now().UTC()
+	wake := func(args ...string) ([]byte, error) {
+		cmd := posterReporterCommandWithClock(func() time.Time { return now })
+		var out bytes.Buffer
+		cmd.SetOut(&out)
+		cmd.SetErr(io.Discard)
+		cmd.SilenceUsage = true
+		cmd.SetArgs(append([]string{"--directory", dir}, args...))
+		err := cmd.ExecuteContext(t.Context())
+		return out.Bytes(), err
+	}
+	readStatus := func() *v1.LocalReporterStatus {
+		raw, err := wake("status", "--json")
+		require.NoError(t, err)
+		require.NotContains(t, string(raw), "private provider detail")
+		var state v1.LocalReporterStatus
+		require.NoError(t, protojson.Unmarshal(raw, &state))
+		return &state
+	}
+	limitAccount.Store(true)
+	t.Cleanup(func() { limitAccount.Store(false) })
+	beforeRead, beforeSend := accountReads.Load(), received.Load()
+	_, err = wake("run", "--days", "1")
+	require.ErrorIs(t, err, commerce.ErrStatementRateLimited)
+	state := readStatus()
+	require.Equal(t, "rate-limited", state.Outcome)
+	require.Equal(t, "account", state.LimitedRead)
+	require.Equal(t, "endpoint-rate", state.LimitReason)
+	require.Equal(t, receipt.CheckedAt, state.LastReceipt.CheckedAt)
+	require.Equal(t, today, state.ReceiptThroughDay)
+	next, err := time.Parse(time.RFC3339Nano, state.NextProviderReadAt)
+	require.NoError(t, err)
+	require.Equal(t, state.ProviderRetryAt, state.NextProviderReadAt)
+	require.WithinDuration(t, now.Add(2*time.Hour), next, 30*time.Second)
+	now = next.Add(-time.Nanosecond)
+	_, err = wake("run", "--from", day, "--through", day)
+	require.ErrorIs(t, err, commerce.ErrStatementRateLimited)
+	require.Equal(t, state.AttemptAt, readStatus().AttemptAt)
+	require.Equal(t, beforeRead+1, accountReads.Load())
+	require.Equal(t, beforeSend, received.Load())
+	limitAccount.Store(false)
+	now = next
+	body, err = wake("run", "--from", day, "--through", day)
+	require.NoError(t, err)
+	require.NoError(t, protojson.Unmarshal(body, &receipt))
+	recovered := readStatus()
+	require.Equal(t, "acknowledged", recovered.Outcome)
+	require.Equal(t, receipt.CheckedAt, recovered.LastReceipt.CheckedAt)
+	require.Equal(t, day, recovered.ReceiptThroughDay)
+	require.Empty(t, recovered.NextProviderReadAt)
+	require.Zero(t, recovered.ConsecutiveLimits)
+	require.Equal(t, beforeRead+2, accountReads.Load())
+	require.Equal(t, beforeSend+1, received.Load())
 }
 
 func TestReporterScheduleInstallUpdateDisableAndResume(t *testing.T) {
