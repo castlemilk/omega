@@ -22,11 +22,10 @@ func TestSalesJournalBalanceIdentityAndExactSettlement(t *testing.T) {
 	later := proto.CloneOf(report)
 	later.VerifiedAt = "2026-05-02T00:01:00Z"
 	later.Orders[0].Movements[0].OccurredAt = "2026-04-03T01:02:03.000Z"
-	j := &v1.SalesJournal{Month: "2026-04", BusinessId: "biz", ProductId: "product", TestMode: true}
-	m := make(map[string]map[journalFacts]*v1.SalesJournalEntry)
-	require.NoError(t, observeJournalDay(j, m, later))
-	require.NoError(t, observeJournalDay(j, m, report))
-	result, err := finishSalesJournal(j, m)
+	sources := newSettlementSources("biz", "product", "2026-04")
+	require.NoError(t, sources.observe(later))
+	require.NoError(t, sources.observe(report))
+	result, err := sources.salesJournal()
 	require.NoError(t, err)
 	require.Empty(t, result.Conflicts)
 	require.False(t, result.IncompleteEvidence)
@@ -46,11 +45,10 @@ func TestSalesJournalBalanceIdentityAndExactSettlement(t *testing.T) {
 	changed.Orders[0].Movements[0].OccurredAt = "2026-03-31T23:59:59.999999999Z"
 	changed.VerifiedAt = "2026-05-03T00:01:00Z"
 	for _, selected := range []string{"2026-03", "2026-04"} {
-		j := &v1.SalesJournal{Month: selected, BusinessId: "biz", ProductId: "product", TestMode: true}
-		m := make(map[string]map[journalFacts]*v1.SalesJournalEntry)
-		require.NoError(t, observeJournalDay(j, m, changed))
-		require.NoError(t, observeJournalDay(j, m, report))
-		result, err := finishSalesJournal(j, m)
+		sources := newSettlementSources("biz", "product", selected)
+		require.NoError(t, sources.observe(changed))
+		require.NoError(t, sources.observe(report))
+		result, err := sources.salesJournal()
 		require.NoError(t, err)
 		require.True(t, result.IncompleteEvidence)
 		require.Equal(t, "order-1", result.Gaps[0].OrderId)

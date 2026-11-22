@@ -102,6 +102,8 @@ Open **Sales journal** from Signal Studies on Command or the Orders step in the 
 
 For an independent check on the reporting Mac, run `omega posters test-journal --month 2026-11`. Omega reads the isolated test merchant and its local orders, including older orders with refunds in the selected month. Compare the transaction IDs, dates, currencies and amounts with **Download journal** in Studio. Source IDs and check times identify the evidence used by each reader. The paired reporter's read-only source file is the default when the two test environment variables are absent.
 
+Run `omega posters test-ledger --month 2026-11` for the test processor’s clearing, order receipt and fee postings in each settlement currency. Bank cash, earned revenue and tax require separate evidence. Add `--evidence-dir ./settlement-statements` to keep the exact source bytes in a private directory. A movement points to `<sourceSha256>.json`. For a refund link, open `<witnessSha256>.json` in that directory, verify its SHA-256 matches the filename, and find both transaction IDs under `movements` on the cited original order. The related charge or refund can fall in a different UTC month.
+
 The journal covers observed test charges and refunds. A charge priced in AUD may settle in USD. The recorded net excludes bank payouts and other business costs. [Stripe balance transaction fields](https://docs.stripe.com/api/balance_transactions/object)
 
 ## Export a test order statement

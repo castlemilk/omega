@@ -3,15 +3,18 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	v1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	"github.com/benebsworth/omega/internal/commerce"
 	"github.com/benebsworth/omega/projects/posters"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 func journalConnection(source string) (*commerce.StripeTest, *sql.DB, error) {
@@ -29,8 +32,37 @@ func journalConnection(source string) (*commerce.StripeTest, *sql.DB, error) {
 }
 
 func posterSalesJournalCommand() *cobra.Command {
+	return posterMonthlySettlementCommand("test-journal", "Read Signal Studies settlement movements directly from the isolated test merchant", commerce.OperatorSalesJournal)
+}
+
+func posterSettlementLedgerCommand() *cobra.Command {
+	var directory string
+	read := func(ctx context.Context, db *sql.DB, gateway *commerce.StripeTest, business, product, month string) (*v1.SettlementLedger, error) {
+		var save commerce.SettlementSourceSink
+		if directory != "" {
+			dir, err := openSettlementEvidenceDir(directory)
+			if err != nil {
+				return nil, err
+			}
+			defer func() { _ = dir.Close() }()
+			save = func(digest string, raw []byte) error { return saveSettlementStatement(dir, digest, raw) }
+		}
+		return commerce.OperatorSettlementLedger(ctx, db, gateway, business, product, month, save)
+	}
+	command := posterMonthlySettlementCommand("test-ledger", "Read Signal Studies processor settlement postings and refund evidence from the isolated test merchant", read)
+	command.Flags().StringVar(&directory, "evidence-dir", "", "Keep each exact source statement as <sha256>.json in this private directory")
+	command.PreRunE = func(cmd *cobra.Command, _ []string) error {
+		if cmd.Flags().Changed("evidence-dir") && directory == "" {
+			return errors.New("--evidence-dir requires a directory path")
+		}
+		return nil
+	}
+	return command
+}
+
+func posterMonthlySettlementCommand[T proto.Message](use, short string, read func(context.Context, *sql.DB, *commerce.StripeTest, string, string, string) (T, error)) *cobra.Command {
 	var month, source string
-	command := &cobra.Command{Use: "test-journal", Short: "Read Signal Studies settlement movements directly from the isolated test merchant", Args: cobra.NoArgs,
+	command := &cobra.Command{Use: use, Short: short, Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			gateway, db, err := journalConnection(source)
 			if err != nil {
@@ -39,11 +71,11 @@ func posterSalesJournalCommand() *cobra.Command {
 			defer func() { _ = db.Close() }()
 			ctx, cancel := context.WithTimeout(cmd.Context(), 5*time.Minute)
 			defer cancel()
-			journal, err := commerce.OperatorSalesJournal(ctx, db, gateway, posters.StudioBusinessID, posters.StudioProductID, month)
+			report, err := read(ctx, db, gateway, posters.StudioBusinessID, posters.StudioProductID, month)
 			if err != nil {
 				return err
 			}
-			body, err := (protojson.MarshalOptions{Indent: "  ", EmitDefaultValues: true}).Marshal(journal)
+			body, err := (protojson.MarshalOptions{Indent: "  ", EmitDefaultValues: true}).Marshal(report)
 			if err != nil {
 				return err
 			}

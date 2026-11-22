@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package omega.v1;
+
+import "omega/v1/sales_journal.proto";
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// Entries describe the processor settlement subledger in each settlement
+// currency. Bank cash, revenue recognition and tax are separate observations.
+message SettlementLedger {
+  string month = 1;
+  string business_id = 2;
+  string product_id = 3;
+  bool test_mode = 4;
+  uint32 source_count = 5;
+  string last_checked_at = 6;
+  bool incomplete_evidence = 7;
+  repeated SettlementEntry entries = 8;
+  repeated SettlementCurrency currencies = 9;
+  repeated SalesJournalConflict conflicts = 10;
+  repeated SalesJournalGap gaps = 11;
+}
+
+enum SettlementAccount {
+  SETTLEMENT_ACCOUNT_UNSPECIFIED = 0;
+  SETTLEMENT_ACCOUNT_PROCESSOR_CLEARING = 1;
+  SETTLEMENT_ACCOUNT_ORDER_RECEIPTS = 2;
+  SETTLEMENT_ACCOUNT_PROCESSING_FEES = 3;
+}
+
+// Nonnegative base-10 minor units. Each entry line has a single nonzero
+// side. Account totals can contain debits and credits on both sides.
+message SettlementPosting {
+  SettlementAccount account = 1;
+  string debit_minor = 2;
+  string credit_minor = 3;
+}
+
+enum SettlementLineage {
+  SETTLEMENT_LINEAGE_UNSPECIFIED = 0;
+  SETTLEMENT_LINEAGE_VERIFIED = 1;
+  SETTLEMENT_LINEAGE_NO_RECORDED_REFUNDS = 2;
+  SETTLEMENT_LINEAGE_MISSING_EVIDENCE = 3;
+  SETTLEMENT_LINEAGE_CONFLICTING_EVIDENCE = 4;
+}
+
+// The witness is the immutable source which observed both movements on the
+// same verified charge. Their earliest individual sources can be different.
+message SettlementRelation {
+  SalesJournalEntry movement = 1;
+  string witness_source_id = 2;
+  string witness_sha256 = 3;
+}
+
+message SettlementEntry {
+  SalesJournalEntry movement = 1;
+  repeated SettlementPosting postings = 2;
+  SettlementLineage lineage = 3;
+  repeated SettlementRelation related = 4;
+}
+
+message SettlementCurrency {
+  string currency = 1;
+  repeated SettlementPosting accounts = 2;
+  string debits_minor = 3;
+  string credits_minor = 4;
+  string processor_net_minor = 5;
+}

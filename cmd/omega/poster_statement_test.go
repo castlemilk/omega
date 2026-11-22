@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -152,6 +153,57 @@ func TestPosterStatementCommand(t *testing.T) {
 		require.Equal(t, "txn_stmt_refund", result.Entries[0].TransactionId)
 		require.Equal(t, id, result.Entries[0].OrderId)
 		require.Contains(t, result.Entries[0].SourceId, old.Format(time.DateOnly))
+
+		out.Reset()
+		archiveRoot, err := filepath.EvalSymlinks(t.TempDir())
+		require.NoError(t, err)
+		archiveDir := filepath.Join(archiveRoot, "statements")
+		rootCmd.SetArgs([]string{"posters", "test-ledger", "--month", day.Format("2006-01"), "--evidence-dir", archiveDir})
+		require.NoError(t, rootCmd.Execute())
+		var ledger v1.SettlementLedger
+		require.NoError(t, protojson.Unmarshal(out.Bytes(), &ledger))
+		require.Equal(t, result.Month, ledger.Month)
+		require.Equal(t, result.BusinessId, ledger.BusinessId)
+		require.Equal(t, result.ProductId, ledger.ProductId)
+		require.True(t, ledger.TestMode)
+		require.False(t, ledger.IncompleteEvidence)
+		require.Len(t, ledger.Currencies, 1)
+		usd := ledger.Currencies[0]
+		require.Equal(t, result.Currencies[0].NetMinor, usd.ProcessorNetMinor)
+		require.Equal(t, "usd", usd.Currency)
+		require.Equal(t, "1050", usd.DebitsMinor)
+		require.Equal(t, "1050", usd.CreditsMinor)
+		require.Len(t, ledger.Entries, 2)
+		for i, entry := range ledger.Entries {
+			require.Equal(t, result.Entries[i].TransactionId, entry.Movement.TransactionId)
+			require.Equal(t, id, entry.Movement.OrderId)
+			require.Equal(t, v1.SettlementLineage_SETTLEMENT_LINEAGE_VERIFIED, entry.Lineage)
+			require.Len(t, entry.Related, 1)
+			relation := entry.Related[0]
+			require.True(t, proto.Equal(ledger.Entries[1-i].Movement, relation.Movement))
+			require.Equal(t, entry.Movement.SourceSha256, relation.WitnessSha256)
+			require.Equal(t, entry.Movement.SourceId, relation.WitnessSourceId)
+			require.Contains(t, relation.WitnessSourceId, old.Format(time.DateOnly))
+			raw, err := os.ReadFile(filepath.Join(archiveDir, relation.WitnessSha256+".json"))
+			require.NoError(t, err)
+			require.Equal(t, relation.WitnessSha256, fmt.Sprintf("%x", sha256.Sum256(raw)))
+			var source v1.CommerceStatement
+			require.NoError(t, protojson.Unmarshal(raw, &source))
+			canonical, err := commerce.StatementJSON(&source)
+			require.NoError(t, err)
+			require.Equal(t, raw, canonical)
+			require.Len(t, source.Orders, 1)
+			require.Equal(t, id, source.Orders[0].OrderId)
+			require.NotEmpty(t, source.Orders[0].VerifiedAt.GetValue())
+			ids := make([]string, 0, len(source.Orders[0].Movements))
+			for _, movement := range source.Orders[0].Movements {
+				ids = append(ids, movement.Id)
+			}
+			require.ElementsMatch(t, []string{entry.Movement.TransactionId, relation.Movement.TransactionId}, ids)
+		}
+		files, err := os.ReadDir(archiveDir)
+		require.NoError(t, err)
+		require.Len(t, files, int(ledger.SourceCount))
 	})
 }
 

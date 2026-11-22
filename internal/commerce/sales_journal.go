@@ -12,13 +12,22 @@ import (
 	"time"
 
 	v1 "github.com/benebsworth/omega/gen/go/omega/v1"
+	"google.golang.org/protobuf/proto"
 )
 
-// OperatorSalesJournal independently reads the test merchant's original orders
-// and current Stripe balance records. An order created before the month can
-// have a refund inside it. Day-sized reads reuse the statement verification
-// rules and never enumerate account-wide balance transactions.
+// OperatorSalesJournal reports independently observed test merchant movements by UTC month.
 func OperatorSalesJournal(ctx context.Context, db *sql.DB, gateway *StripeTest, business, product, month string) (*v1.SalesJournal, error) {
+	sources, err := readSettlementSources(ctx, db, gateway, business, product, month, nil)
+	if err != nil {
+		return nil, err
+	}
+	return sources.salesJournal()
+}
+
+// Both monthly reports use the same scoped order and Stripe verifier. A
+// selected movement can belong to an older order, and any observed movement
+// from that order can establish or contradict its lineage across month cuts.
+func readSettlementSources(ctx context.Context, db *sql.DB, gateway *StripeTest, business, product, month string, save SettlementSourceSink) (*settlementSources, error) {
 	now := time.Now().UTC()
 	first, err := time.Parse("2006-01", month)
 	if err != nil || first.Year() < 1 || first.After(now) {
@@ -56,8 +65,8 @@ func OperatorSalesJournal(ctx context.Context, db *sql.DB, gateway *StripeTest, 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	journal := &v1.SalesJournal{Month: month, BusinessId: business, ProductId: product, TestMode: true}
-	movements := make(map[string]map[journalFacts]*v1.SalesJournalEntry)
+	sources := newSettlementSources(business, product, month)
+	sources.save = save
 	for _, day := range days {
 		report, err := shop.statement(ctx, gateway, business, product, day, day.AddDate(0, 0, 1))
 		if err != nil {
@@ -66,11 +75,11 @@ func OperatorSalesJournal(ctx context.Context, db *sql.DB, gateway *StripeTest, 
 		if len(report.Orders) == 0 && report.UnresolvedScopeOrders == 0 {
 			continue
 		}
-		if err := observeJournalDay(journal, movements, report); err != nil {
+		if err := sources.observe(report); err != nil {
 			return nil, err
 		}
 	}
-	return finishSalesJournal(journal, movements)
+	return sources, nil
 }
 
 // The same balance identity and economic facts may appear in several sources.
@@ -82,7 +91,23 @@ type journalFacts struct {
 	amount, fee, net                       int64
 }
 
-func observeJournalDay(j *v1.SalesJournal, movements map[string]map[journalFacts]*v1.SalesJournalEntry, s *v1.CommerceStatement) error {
+type settlementSources struct {
+	scope     *v1.SalesJournal
+	movements map[string]map[journalFacts]*v1.SalesJournalEntry
+	witnesses map[settlementPair]settlementWitness
+	save      SettlementSourceSink
+}
+
+func newSettlementSources(business, product, month string) *settlementSources {
+	return &settlementSources{
+		scope:     &v1.SalesJournal{Month: month, BusinessId: business, ProductId: product, TestMode: true},
+		movements: make(map[string]map[journalFacts]*v1.SalesJournalEntry),
+		witnesses: make(map[settlementPair]settlementWitness),
+	}
+}
+
+func (sources *settlementSources) observe(s *v1.CommerceStatement) error {
+	j := sources.scope
 	if !s.TestMode || s.BusinessId != j.BusinessId || s.ProductId != j.ProductId {
 		return errors.New("journal source scope mismatch")
 	}
@@ -112,16 +137,17 @@ func observeJournalDay(j *v1.SalesJournal, movements map[string]map[journalFacts
 		if !o.BalanceComplete {
 			addGap(o.OrderId)
 		}
+		sources.observeWitnesses(o, settlementWitness{source, digest, attested})
 		for _, m := range o.Movements {
 			when, err := time.Parse(time.RFC3339Nano, m.OccurredAt)
 			if err != nil {
 				return err
 			}
 			facts := journalFacts{o.OrderId, o.Edition, o.PacketSha256, m.Kind, m.Currency, when.UTC(), m.AmountMinor, m.FeeMinor, m.NetMinor}
-			versions := movements[m.Id]
+			versions := sources.movements[m.Id]
 			if versions == nil {
 				versions = make(map[journalFacts]*v1.SalesJournalEntry)
-				movements[m.Id] = versions
+				sources.movements[m.Id] = versions
 			}
 			if prior := versions[facts]; prior != nil {
 				at, _ := time.Parse(time.RFC3339Nano, prior.AttestedAt)
@@ -135,6 +161,9 @@ func observeJournalDay(j *v1.SalesJournal, movements map[string]map[journalFacts
 				SourceId: source, SourceSha256: digest, AttestedAt: s.VerifiedAt}
 		}
 	}
+	if sources.save != nil {
+		return sources.save(digest, raw)
+	}
 	return nil
 }
 
@@ -143,9 +172,10 @@ type journalAmounts struct {
 	count                       uint32
 }
 
-func finishSalesJournal(j *v1.SalesJournal, movements map[string]map[journalFacts]*v1.SalesJournalEntry) (*v1.SalesJournal, error) {
+func (sources *settlementSources) salesJournal() (*v1.SalesJournal, error) {
+	j := proto.CloneOf(sources.scope)
 	amounts := make(map[string]*journalAmounts)
-	for id, versions := range movements {
+	for id, versions := range sources.movements {
 		var facts journalFacts
 		var entry *v1.SalesJournalEntry
 		for f, e := range versions {
