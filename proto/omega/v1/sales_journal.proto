@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package omega.v1;
+
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// An order-linked Stripe test journal selects movements by their UTC creation
+// month. The order's charge currency, bank payouts and earned profit are separate.
+message SalesJournal {
+  string month = 1;
+  bool test_mode = 2;
+  uint32 source_count = 3;
+  string last_checked_at = 4;
+  bool incomplete_evidence = 5;
+  repeated SalesJournalCurrency currencies = 6;
+  repeated SalesJournalEntry entries = 7;
+  repeated SalesJournalConflict conflicts = 8;
+  string business_id = 9;
+  string product_id = 10;
+  repeated SalesJournalGap gaps = 11;
+}
+
+// Amounts are signed base-10 minor units. A monthly sum can exceed int64.
+// Refunds are expressed as positive deductions. Net = charges - refunds - fees.
+message SalesJournalCurrency {
+  string currency = 1;
+  string charges_minor = 2;
+  string refunds_minor = 3;
+  string fees_minor = 4;
+  string net_minor = 5;
+  uint32 movement_count = 6;
+}
+
+message SalesJournalEntry {
+  string transaction_id = 1;
+  string kind = 2;
+  string occurred_at = 3;
+  string currency = 4;
+  string amount_minor = 5;
+  string fee_minor = 6;
+  string net_minor = 7;
+  string order_id = 8;
+  string edition = 9;
+  string packet_sha256 = 10;
+  string source_id = 11;
+  string source_sha256 = 12;
+  string attested_at = 13;
+}
+
+// The conflicting versions are withheld from booked amounts. Keep one exact
+// source for each distinct version, including versions outside the chosen month.
+message SalesJournalConflict {
+  string transaction_id = 1;
+  repeated SalesJournalEntry versions = 2;
+}
+
+message SalesJournalGap {
+  string source_id = 1;
+  string source_sha256 = 2;
+  string order_id = 3; // Empty for orders that could not be assigned to a product.
+}

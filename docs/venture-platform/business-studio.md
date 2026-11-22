@@ -96,6 +96,14 @@ Open the printed loopback address, start checkout and use Stripe's published tes
 
 Set `OMEGA_POSTER_TEST_COLLECTION` to Studio’s `public/collections/signal-studies` directory when running those tests to include both reviewed editions. The test buys each edition through the local provider, switches to the corrected checkout, then verifies each order’s original download and receipt. Chromium also opens the Phase portrait preview, downloads the corrected ZIP, verifies its checksum and checks that a full simulated refund closes access.
 
+## Read the poster sales journal
+
+Open **Sales journal** from Signal Studies on Command or the Orders step in the walkthrough. Select a UTC month to see charges, refunds, fees and net movement by settlement currency. Each transaction opens its order in the saved statement. An owner-imported file enters the journal when the reporting Mac independently confirms its facts. Reports that describe the same Stripe transaction count once. If reports disagree, Studio shows both sources and withholds that transaction from the totals.
+
+For an independent check on the reporting Mac, run `omega posters test-journal --month 2026-11`. Omega reads the isolated test merchant and its local orders, including older orders with refunds in the selected month. Compare the transaction IDs, dates, currencies and amounts with **Download journal** in Studio. Source IDs and check times identify the evidence used by each reader. The paired reporter's read-only source file is the default when the two test environment variables are absent.
+
+The journal covers observed test charges and refunds. A charge priced in AUD may settle in USD. The recorded net excludes bank payouts and other business costs. [Stripe balance transaction fields](https://docs.stripe.com/api/balance_transactions/object)
+
 ## Export a test order statement
 
 Use the same sandbox key and order database as the checkout. Select the first and last **order creation days in UTC**. Omega includes every Signal Studies edition sold by this business in that account. Rerunning an earlier period includes subsequent refunds, disputes, downloads and event processing on its orders.

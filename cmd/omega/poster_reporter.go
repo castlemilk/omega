@@ -19,6 +19,14 @@ import (
 
 const posterReporterEndpoint = "https://studio.dropshippr-apps.workers.dev/api/reporters/signal-studies/statement"
 
+func defaultPosterReporterDir() (string, error) {
+	base, err := os.UserConfigDir()
+	if err != nil {
+		return "", errors.New("could not locate the current user's application support directory")
+	}
+	return filepath.Join(base, "Omega", "Signal Studies Reporter"), nil
+}
+
 func posterReporterCommand() *cobra.Command {
 	var directory, credentials string
 	parent := &cobra.Command{Use: "reporter", Short: "Send verified Signal Studies test order statements to the private Studio"}
@@ -27,11 +35,11 @@ func posterReporterCommand() *cobra.Command {
 	paths := func() (string, string, error) {
 		dir := directory
 		if dir == "" {
-			base, err := os.UserConfigDir()
+			located, err := defaultPosterReporterDir()
 			if err != nil {
-				return "", "", errors.New("could not locate the current user's application support directory")
+				return "", "", err
 			}
-			dir = filepath.Join(base, "Omega", "Signal Studies Reporter")
+			dir = located
 		}
 		dir, err := filepath.Abs(dir)
 		if err != nil {

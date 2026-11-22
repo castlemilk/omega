@@ -145,12 +145,16 @@ func OperatorStatement(ctx context.Context, db *sql.DB, gateway *StripeTest, bus
 		return nil, errors.New("could not verify the test merchant account with Stripe")
 	}
 	s := &Shop{db: db, provider: gateway, connection: account + "/" + business}
+	return s.statement(ctx, gateway, business, product, first, end)
+}
+
+func (s *Shop) statement(ctx context.Context, gateway *StripeTest, business, product string, first, end time.Time) (*v1.CommerceStatement, error) {
 	cohort, unknown, err := s.statementCohort(ctx, business, product, first, end)
 	if err != nil {
 		return nil, err
 	}
 	report := &v1.CommerceStatement{Schema: "omega.commerce-statement/v1", BusinessId: business, ProductId: product,
-		TestMode: true, FromDay: from, ThroughDay: through, UnresolvedScopeOrders: unknown, Coverage: "complete"}
+		TestMode: true, FromDay: first.Format(time.DateOnly), ThroughDay: end.AddDate(0, 0, -1).Format(time.DateOnly), UnresolvedScopeOrders: unknown, Coverage: "complete"}
 	movementCounts := make(map[string]int)
 	for _, a := range cohort {
 		row, err := s.statementOrder(ctx, gateway, a)

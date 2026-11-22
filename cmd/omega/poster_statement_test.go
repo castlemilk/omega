@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stripe/stripe-go/v87"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -127,6 +128,31 @@ func TestPosterStatementCommand(t *testing.T) {
 		t.Log("CLI fixture statement", compact.String())
 	}
 	t.Run("send signed statement", func(t *testing.T) { checkPosterReporterCommand(t, dsn, day.Format(time.DateOnly), id) })
+	t.Run("read settlement month including an older order", func(t *testing.T) {
+		// Put the order in an earlier creation cohort while preserving both
+		// genuine, independently expanded balance dates in the selected month.
+		old := time.Date(day.Year(), day.Month(), 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -1)
+		_, err := db.ExecContext(ctx, `UPDATE omega_digital_orders SET created_at=$1 WHERE connection_id=$2 AND id=$3`, old, account+"/"+offer.BusinessId, id)
+		require.NoError(t, err)
+		out.Reset()
+		rootCmd.SetOut(&out)
+		rootCmd.SetArgs([]string{"posters", "test-journal", "--month", day.Format("2006-01")})
+		require.NoError(t, rootCmd.Execute())
+		var result v1.SalesJournal
+		require.NoError(t, protojson.Unmarshal(out.Bytes(), &result))
+		require.Equal(t, day.Format("2006-01"), result.Month)
+		require.True(t, result.TestMode)
+		require.False(t, result.IncompleteEvidence)
+		require.Len(t, result.Currencies, 1)
+		require.Equal(t, "850", result.Currencies[0].ChargesMinor)
+		require.Equal(t, "200", result.Currencies[0].RefundsMinor)
+		require.Equal(t, "34", result.Currencies[0].FeesMinor)
+		require.Equal(t, "616", result.Currencies[0].NetMinor)
+		require.Len(t, result.Entries, 2)
+		require.Equal(t, "txn_stmt_refund", result.Entries[0].TransactionId)
+		require.Equal(t, id, result.Entries[0].OrderId)
+		require.Contains(t, result.Entries[0].SourceId, old.Format(time.DateOnly))
+	})
 }
 
 // All SDK traffic for the normal CLI command stays inside the test server.

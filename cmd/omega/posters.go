@@ -63,7 +63,7 @@ func posterVerifySellerCommand() *cobra.Command {
 
 func init() {
 	command := &cobra.Command{Use: "posters", Short: "Operate the Signal Studies poster business"}
-	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand(), posterStatementCommand(), posterReporterCommand(), posterVerifySellerCommand())
+	command.AddCommand(posterCheckoutCommand(), posterOrderReceiptCommand(), posterStatementCommand(), posterSalesJournalCommand(), posterReporterCommand(), posterVerifySellerCommand())
 	var edition, captionFiles string
 	prepare := &cobra.Command{
 		Use:   "prepare COLLECTION_DIRECTORY",
