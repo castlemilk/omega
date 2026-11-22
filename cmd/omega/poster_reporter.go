@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	v1 "github.com/benebsworth/omega/gen/go/omega/v1"
 	"github.com/benebsworth/omega/internal/commerce"
 	"github.com/benebsworth/omega/projects/posters"
 	"github.com/spf13/cobra"
@@ -81,25 +82,34 @@ func posterReporterCommand() *cobra.Command {
 			defer func() { _ = db.Close() }()
 			ctx, cancel := context.WithTimeout(cmd.Context(), 6*time.Minute)
 			defer cancel()
-			readCtx, endRead := context.WithTimeout(ctx, 5*time.Minute)
-			statement, err := commerce.OperatorStatement(readCtx, db, gateway, posters.StudioBusinessID, posters.StudioProductID, first, last)
-			endRead()
-			if errors.Is(err, commerce.ErrStatementRateLimited) {
-				return commerce.ErrStatementRateLimited
+			read := func(parent context.Context, first, last string) (*v1.CommerceStatement, error) {
+				readCtx, endRead := context.WithTimeout(parent, 5*time.Minute)
+				defer endRead()
+				statement, err := commerce.OperatorStatement(readCtx, db, gateway, posters.StudioBusinessID, posters.StudioProductID, first, last)
+				if err != nil && !errors.Is(err, commerce.ErrStatementRateLimited) {
+					return nil, errors.New("the reporter could not verify this order period against its isolated database and Stripe account")
+				}
+				return statement, err
 			}
-			if err != nil {
-				return errors.New("the reporter could not verify this order period against its isolated database and Stripe account")
-			}
-			receipt, err := commerce.SubmitStatement(ctx, posterReporterEndpoint, key, statement)
+			statement, err := read(ctx, first, last)
 			if err != nil {
 				return err
 			}
-			data, err := protojson.Marshal(receipt)
-			if err != nil {
+			var receipt *v1.CommerceReporterReceipt
+			if from == "" && through == "" {
+				receipt, err = commerce.SubmitRollingStatement(ctx, posterReporterEndpoint, key, statement, read)
+			} else {
+				receipt, err = commerce.SubmitStatement(ctx, posterReporterEndpoint, key, statement)
+			}
+			if receipt == nil {
+				return err
+			}
+			data, marshalErr := protojson.Marshal(receipt)
+			if marshalErr != nil {
 				return errors.New("could not format the receipt")
 			}
-			_, err = fmt.Fprintln(cmd.OutOrStdout(), string(data))
-			return err
+			_, printErr := fmt.Fprintln(cmd.OutOrStdout(), string(data))
+			return errors.Join(err, printErr)
 		}}
 	run.Flags().IntVar(&days, "days", 30, "Rolling UTC order creation days through today (1–366)")
 	run.Flags().StringVar(&from, "from", "", "First UTC order creation day (YYYY-MM-DD)")

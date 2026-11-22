@@ -127,6 +127,7 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string) {
 	t.Setenv("OMEGA_POSTER_STRIPE_TEST_KEY", "unused")
 	t.Setenv("OMEGA_POSTER_COMMERCE_DATABASE_URL", "unused")
 	t.Setenv("OMEGA_POSTER_STRIPE_SIGNING_SECRET", "")
+	rechecked := make(chan string, 4)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "POST", r.Method)
 		assert.Equal(t, "/api/reporters/signal-studies/statement", r.URL.Path)
@@ -134,14 +135,24 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string) {
 		assert.NoError(t, readErr)
 		sig, decodeErr := base64.RawURLEncoding.DecodeString(r.Header.Get("X-Omega-Signature"))
 		assert.NoError(t, decodeErr)
-		message := fmt.Sprintf("omega-commerce-reporter-v1\nPOST\n%s\n%s\n%x", posterReporterEndpoint, r.Header.Get("X-Omega-Issued-At"), sha256.Sum256(raw))
+		mode := r.Header.Get("X-Omega-Report-Recovery")
+		purpose := "omega-commerce-reporter-v1"
+		if mode == "recheck-v1" {
+			purpose = "omega-commerce-reporter-recheck-v1"
+		}
+		message := fmt.Sprintf("%s\nPOST\n%s\n%s\n%x", purpose, posterReporterEndpoint, r.Header.Get("X-Omega-Issued-At"), sha256.Sum256(raw))
 		assert.True(t, ed25519.Verify(public, []byte(message), sig))
 		var statement v1.CommerceStatement
 		assert.NoError(t, protojson.Unmarshal(raw, &statement))
 		canonical, marshalErr := commerce.StatementJSON(&statement)
 		assert.NoError(t, marshalErr)
 		assert.Equal(t, canonical, raw)
-		if assert.Len(t, statement.Orders, 1) {
+		if mode == "1" {
+			assert.Empty(t, statement.Orders)
+			assert.Equal(t, "empty", statement.Coverage)
+			assert.Equal(t, time.Now().UTC().Format(time.DateOnly), statement.FromDay)
+		} else if assert.Len(t, statement.Orders, 1) {
+			assert.Equal(t, day, statement.FromDay)
 			assert.Equal(t, orderID, statement.Orders[0].OrderId)
 			assert.EqualValues(t, 1200, statement.Orders[0].CapturedMinor.GetValue())
 			assert.EqualValues(t, 300, statement.Orders[0].RefundedMinor.GetValue())
@@ -155,7 +166,14 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string) {
 			}
 			return '9' - (r - '0')
 		}, checked.UTC().Format("20060102150405.000000000"))
-		id := strings.Join([]string{statement.ProductId, descending, day, day}, "/")
+		// Fixed-date runs ignore hints, and a historical check may never chain
+		// another provider read even when a receiver repeats the headers.
+		w.Header().Set("X-Omega-Recheck-From", day)
+		w.Header().Set("X-Omega-Recheck-Through", day)
+		id := strings.Join([]string{statement.ProductId, descending, statement.FromDay, statement.ThroughDay}, "/")
+		if mode == "recheck-v1" && len(statement.Orders) == 1 {
+			rechecked <- statement.Orders[0].OrderId
+		}
 		_ = json.NewEncoder(w).Encode(map[string]string{"outcome": "saved", "statementId": id, "checkedAt": statement.VerifiedAt})
 	}))
 	defer server.Close()
@@ -170,6 +188,18 @@ func checkPosterReporterCommand(t *testing.T, dsn, day, orderID string) {
 	require.NoError(t, protojson.Unmarshal(body, &receipt))
 	require.Equal(t, "saved", receipt.Outcome)
 	require.Contains(t, receipt.StatementId, "/"+day+"/"+day)
+
+	// A scheduled process constructs a fresh command on each launch.
+	rolling := posterReporterCommand()
+	var output bytes.Buffer
+	rolling.SetOut(&output)
+	rolling.SetArgs([]string{"--directory", dir, "run", "--days", "1"})
+	require.NoError(t, rolling.ExecuteContext(t.Context()))
+	require.NoError(t, protojson.Unmarshal(output.Bytes(), &receipt))
+	today := time.Now().UTC().Format(time.DateOnly)
+	require.True(t, strings.HasSuffix(receipt.StatementId, "/"+today+"/"+today))
+	require.Len(t, rechecked, 1)
+	require.Equal(t, orderID, <-rechecked)
 }
 
 func TestReporterScheduleInstallUpdateDisableAndResume(t *testing.T) {

@@ -2,10 +2,12 @@ package commerce
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -124,6 +126,75 @@ func TestReporterReceiptMustMatchSubmittedWindowAndVerificationTime(t *testing.T
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.valid, reporterReceiptMatches(statement, &v1.CommerceReporterReceipt{Outcome: tc.outcome, StatementId: tc.id, CheckedAt: tc.at}))
+		})
+	}
+}
+
+func TestReporterRechecksOnlyAnEarlierPeriodWithinItsConfiguredLength(t *testing.T) {
+	statement := &v1.CommerceStatement{FromDay: "2026-10-24", ThroughDay: "2026-11-22", VerifiedAt: "2026-11-22T00:01:00Z", Coverage: "complete"}
+	for _, tc := range []struct {
+		from, through string
+		valid         bool
+	}{
+		{"2026-10-23", "2026-11-21", true},
+		{"2026-09-01", "2026-09-02", true},
+		{"2026-10-24", "2026-11-22", false},
+		{"2026-10-23", "2026-11-22", false},
+		{"2026-10-25", "2026-11-23", false},
+		{"2026-10-23", "2026-10-22", false},
+		{"2026-09-31", "2026-10-02", false},
+		{"", "2026-11-21", false},
+	} {
+		require.Equal(t, tc.valid, validRecheckWindow(statement, tc.from, tc.through), "%s through %s", tc.from, tc.through)
+	}
+	statement.Coverage = "partial"
+	require.False(t, validRecheckWindow(statement, "2026-10-23", "2026-11-21"))
+}
+
+func TestReporterKeepsTheOrdinaryReceiptWhenHistoricalVerificationIsDeferred(t *testing.T) {
+	_, key, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	statement := &v1.CommerceStatement{Schema: "omega.commerce-statement/v1", TestMode: true, Coverage: "empty", ProductId: "product",
+		FromDay: "2026-11-21", ThroughDay: "2026-11-21", VerifiedAt: "2026-11-21T02:00:00.000Z"}
+	ordinary := "product/79738878979999999999999/2026-11-21/2026-11-21"
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "1", r.Header.Get("X-Omega-Report-Recovery"))
+		w.Header().Set("X-Omega-Recheck-From", "2026-11-20")
+		if r.URL.Path != "/malformed" {
+			w.Header().Set("X-Omega-Recheck-Through", "2026-11-20")
+		}
+		id := ordinary
+		if r.URL.Path == "/unmatched" {
+			id = "other/" + ordinary
+		}
+		_ = json.NewEncoder(w).Encode(map[string]string{"outcome": "saved", "statementId": id, "checkedAt": statement.VerifiedAt})
+	}))
+	defer server.Close()
+	original := http.DefaultTransport
+	http.DefaultTransport = server.Client().Transport
+	t.Cleanup(func() { http.DefaultTransport = original })
+	for _, path := range []string{"/malformed", "/unmatched", "/limited"} {
+		t.Run(path[1:], func(t *testing.T) {
+			reads := 0
+			receipt, err := SubmitRollingStatement(t.Context(), server.URL+path, key, statement,
+				func(_ context.Context, from, through string) (*v1.CommerceStatement, error) {
+					reads++
+					assert.Equal(t, "2026-11-20", from)
+					assert.Equal(t, from, through)
+					return nil, ErrStatementRateLimited
+				})
+			require.Error(t, err)
+			if path == "/unmatched" {
+				require.Nil(t, receipt)
+			} else {
+				require.Equal(t, ordinary, receipt.StatementId)
+			}
+			if path == "/limited" {
+				require.ErrorIs(t, err, ErrStatementRateLimited)
+				require.Equal(t, 1, reads)
+			} else {
+				require.Zero(t, reads)
+			}
 		})
 	}
 }
