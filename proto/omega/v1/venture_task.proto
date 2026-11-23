@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+package omega.v1;
+option go_package = "github.com/benebsworth/omega/gen/go/omega/v1;omegav1";
+
+// Grants name immutable resource versions. An objective or a displayed role
+// never grants access to a tool, resource or external action.
+message VentureResourceGrant {
+  string role = 1;
+  string id = 2;
+  string sha256 = 3;
+}
+
+enum VentureEffectPolicy {
+  VENTURE_EFFECT_POLICY_UNSPECIFIED = 0;
+  VENTURE_EFFECT_POLICY_READ_ONLY = 1;
+}
+
+message VentureTaskMandate {
+  string run_id = 1;
+  string tenant_id = 2;
+  string venture_id = 3;
+  uint32 venture_revision = 4;
+  string authorizing_actor = 5;
+  string principal = 6;
+  string objective = 7;
+  repeated string tools = 8;
+  repeated VentureResourceGrant resources = 9;
+  string issued_at = 10;
+  string expires_at = 11;
+  uint64 model_limit_usd_micros = 12;
+  uint64 tool_limit_usd_micros = 13;
+  uint32 max_tasks = 14;
+  uint32 max_delegation_depth = 15;
+  VentureEffectPolicy effect_policy = 16;
+}
+
+// The host constructs this context from its authenticated owner, stored
+// venture and fresh clock. It cannot be supplied by an agent or a buyer.
+message VentureTaskContext {
+  string tenant_id = 1;
+  string venture_id = 2;
+  uint32 venture_revision = 3;
+  string authorizing_actor = 4;
+  string checked_at = 5;
+  bool revoked = 6;
+}
+
+message DeliveryCheckRequest {
+  VentureTaskMandate mandate = 1;
+  VentureTaskContext context = 2;
+  string business_id = 3;
+  string product_id = 4;
+  string statement_id = 5;
+  string order_id = 6;
+  bytes statement_json = 7;
+  bytes edition_packet_json = 8;
+  bytes buyer_zip = 9;
+}
+
+message CheckedDeliveryFile {
+  string name = 1;
+  string sha256 = 2;
+  uint32 bytes = 3;
+}
+
+message DeliveryCheckEvidence {
+  string order_id = 1;
+  string statement_id = 2;
+  string statement_sha256 = 3;
+  string order_verified_at = 4;
+  string edition = 5;
+  string packet_sha256 = 6;
+  CheckedDeliveryFile archive = 7;
+  repeated CheckedDeliveryFile files = 8;
+  uint32 downloads_issued = 9;
+  bool test_mode = 10;
+}
+
+message DeliveryCheckResult {
+  // Exactly one outcome is present. The host records failures as well as
+  // successful evidence, and rechecks the current mandate before committing.
+  oneof outcome {
+    DeliveryCheckEvidence evidence = 1;
+    string failure = 2;
+  }
+}
